@@ -15,10 +15,10 @@ export const LoganLogo = ({ size = "md", className, showGlow = true }: LoganLogo
   };
 
   const iconSizes = {
-    sm: { inner: 28 },
-    md: { inner: 38 },
-    lg: { inner: 54 },
-    xl: { inner: 76 },
+    sm: { inner: 32 },
+    md: { inner: 44 },
+    lg: { inner: 64 },
+    xl: { inner: 88 },
   };
 
   const { inner } = iconSizes[size];
@@ -26,8 +26,8 @@ export const LoganLogo = ({ size = "md", className, showGlow = true }: LoganLogo
   return (
     <div
       className={cn(
-        "relative flex items-center justify-center rounded-full bg-logan-graphite border border-logan-blue/30",
-        showGlow && "shadow-[0_0_40px_hsl(var(--logan-blue)/0.4)]",
+        "relative flex items-center justify-center rounded-full bg-logan-graphite",
+        showGlow && "shadow-[0_0_40px_hsl(var(--logan-blue)/0.3)]",
         sizeClasses[size],
         className
       )}
@@ -35,49 +35,49 @@ export const LoganLogo = ({ size = "md", className, showGlow = true }: LoganLogo
       <svg
         width={inner}
         height={inner}
-        viewBox="0 0 64 64"
+        viewBox="0 0 48 48"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
         {/* Antenna ball */}
-        <circle cx="32" cy="6" r="4" fill="hsl(var(--logan-blue))" />
+        <circle cx="24" cy="4" r="2.5" fill="hsl(var(--logan-blue))" />
         
         {/* Antenna stem */}
         <line
-          x1="32"
-          y1="10"
-          x2="32"
-          y2="18"
+          x1="24"
+          y1="6.5"
+          x2="24"
+          y2="11"
           stroke="hsl(var(--logan-blue))"
-          strokeWidth="2.5"
+          strokeWidth="1.8"
           strokeLinecap="round"
         />
 
         {/* Robot Head - rounded rectangle */}
         <rect
-          x="8"
-          y="18"
-          width="48"
-          height="38"
-          rx="10"
+          x="6"
+          y="11"
+          width="36"
+          height="32"
+          rx="8"
           stroke="hsl(var(--logan-blue))"
-          strokeWidth="3"
+          strokeWidth="2"
           fill="transparent"
         />
 
-        {/* Left Eye */}
-        <circle cx="22" cy="36" r="6" fill="hsl(var(--logan-red))" />
-        <circle cx="24" cy="34" r="2" fill="hsl(0 0% 100% / 0.5)" />
+        {/* Left Eye - oval */}
+        <ellipse cx="16" cy="25" rx="4" ry="5" fill="hsl(var(--logan-red))" />
+        <circle cx="17.5" cy="23.5" r="1.2" fill="hsl(0 0% 100% / 0.4)" />
 
-        {/* Right Eye */}
-        <circle cx="42" cy="36" r="6" fill="hsl(var(--logan-red))" />
-        <circle cx="44" cy="34" r="2" fill="hsl(0 0% 100% / 0.5)" />
+        {/* Right Eye - oval */}
+        <ellipse cx="32" cy="25" rx="4" ry="5" fill="hsl(var(--logan-red))" />
+        <circle cx="33.5" cy="23.5" r="1.2" fill="hsl(0 0% 100% / 0.4)" />
 
         {/* Smile */}
         <path
-          d="M22 48 Q32 55 42 48"
+          d="M16 35 Q24 41 32 35"
           stroke="hsl(var(--logan-blue))"
-          strokeWidth="3"
+          strokeWidth="2"
           strokeLinecap="round"
           fill="transparent"
         />
@@ -85,20 +85,20 @@ export const LoganLogo = ({ size = "md", className, showGlow = true }: LoganLogo
         {/* Left Ear */}
         <rect
           x="2"
-          y="30"
-          width="5"
-          height="14"
-          rx="2.5"
+          y="22"
+          width="3"
+          height="10"
+          rx="1.5"
           fill="hsl(var(--logan-blue))"
         />
 
         {/* Right Ear */}
         <rect
-          x="57"
-          y="30"
-          width="5"
-          height="14"
-          rx="2.5"
+          x="43"
+          y="22"
+          width="3"
+          height="10"
+          rx="1.5"
           fill="hsl(var(--logan-blue))"
         />
       </svg>
