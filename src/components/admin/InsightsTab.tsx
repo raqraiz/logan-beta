@@ -153,20 +153,20 @@ export function InsightsTab({ userId }: InsightsTabProps) {
 
   const sendToWhatsApp = async (insight: Insight) => {
     try {
-      const { error } = await supabase.functions.invoke("send-whatsapp", {
-        body: {
-          insightId: insight.id,
-          phoneNumber: insight.participants?.whatsapp_number,
-          message: insight.content,
-        },
+      const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+        body: { insightId: insight.id },
       });
 
       if (error) throw error;
-
-      await supabase
-        .from("insights")
-        .update({ status: "sent", sent_at: new Date().toISOString() })
-        .eq("id", insight.id);
+      
+      if (data?.error) {
+        toast({ 
+          title: data.error, 
+          description: data.currentStatus ? `Current status: ${data.currentStatus}` : undefined,
+          variant: "destructive" 
+        });
+        return;
+      }
 
       setInsights(prev =>
         prev.map(i => (i.id === insight.id ? { ...i, status: "sent" as const } : i))
