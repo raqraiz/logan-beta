@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { OnboardingForm } from "@/components/OnboardingForm";
 import { Heart, MessageCircle, Sparkles, Calendar, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import heroIllustration from "@/assets/hero-illustration.png";
 
 const Index = () => {
   return (
@@ -22,8 +23,18 @@ const Index = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-16 px-4">
-        <div className="container mx-auto max-w-6xl">
+      <section className="pt-32 pb-16 px-4 relative overflow-hidden">
+        {/* Background Illustration */}
+        <div className="absolute inset-0 z-0">
+          <img 
+            src={heroIllustration} 
+            alt="" 
+            className="w-full h-full object-cover opacity-20"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background" />
+        </div>
+
+        <div className="container mx-auto max-w-6xl relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left - Hero Content */}
             <div className="space-y-6 animate-fade-in">
