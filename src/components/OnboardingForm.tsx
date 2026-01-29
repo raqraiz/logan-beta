@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { Check, CalendarIcon } from "lucide-react";
+import { Check, CalendarIcon, MessageCircle, ExternalLink } from "lucide-react";
 import { LoganLogo } from "./LoganLogo";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -69,6 +69,7 @@ export function OnboardingForm() {
   const [anchorSymptom, setAnchorSymptom] = useState<string>("");
   const [anchorOther, setAnchorOther] = useState<string>("");
   const [consentGiven, setConsentGiven] = useState(false);
+  const [whatsappConnected, setWhatsappConnected] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [lastPeriodDate, setLastPeriodDate] = useState<Date | undefined>();
@@ -174,7 +175,7 @@ export function OnboardingForm() {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* Progress indicator */}
       <div className="flex gap-2 mb-6">
-        {[1, 2, 3, 4, 5].map((s) => (
+        {[1, 2, 3, 4, 5, 6].map((s) => (
           <div 
             key={s}
             className={`h-1.5 flex-1 rounded-full transition-colors ${
@@ -430,8 +431,94 @@ export function OnboardingForm() {
         </div>
       )}
 
-      {/* Slide 5 - Consent Form */}
+      {/* Slide 5 - WhatsApp Connection */}
       {step === 5 && (
+        <div className="space-y-5 animate-fade-in">
+          <div className="text-center mb-4">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/10 flex items-center justify-center">
+              <MessageCircle className="w-8 h-8 text-green-500" />
+            </div>
+            <h3 className="text-xl font-display font-semibold mb-2">Connect to Logan on WhatsApp</h3>
+            <p className="text-muted-foreground text-sm">
+              To receive your personalized insights, you need to connect with Logan on WhatsApp first.
+            </p>
+          </div>
+
+          <div className="bg-muted/50 rounded-xl p-5 border border-border space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-xs font-bold text-primary">1</span>
+                </div>
+                <p className="text-sm text-foreground">
+                  Open WhatsApp on your phone
+                </p>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-xs font-bold text-primary">2</span>
+                </div>
+                <p className="text-sm text-foreground">
+                  Send this exact message to <strong className="text-primary">+1 415 523 8886</strong>:
+                </p>
+              </div>
+              
+              <div className="ml-9 bg-card rounded-lg p-3 border border-primary/30">
+                <code className="text-lg font-mono font-semibold text-primary">join night-shadow</code>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-xs font-bold text-primary">3</span>
+                </div>
+                <p className="text-sm text-foreground">
+                  Wait for the confirmation message from Logan
+                </p>
+              </div>
+            </div>
+
+            <a 
+              href="https://wa.me/14155238886?text=join%20night-shadow" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition-colors"
+            >
+              <MessageCircle className="w-5 h-5" />
+              Open WhatsApp
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          </div>
+
+          <label className="flex items-start gap-3 p-4 rounded-xl border border-border bg-card cursor-pointer hover:border-primary/50 transition-colors">
+            <Checkbox 
+              checked={whatsappConnected} 
+              onCheckedChange={(checked) => setWhatsappConnected(checked === true)}
+              className="mt-0.5"
+            />
+            <span className="text-sm text-foreground leading-relaxed">
+              I've sent the message and received a confirmation from Logan on WhatsApp
+            </span>
+          </label>
+
+          <div className="flex gap-3 mt-4">
+            <Button type="button" variant="outline" onClick={() => setStep(4)} className="flex-1 h-12">
+              Back
+            </Button>
+            <Button 
+              type="button" 
+              onClick={() => setStep(6)} 
+              className="flex-1 h-12"
+              disabled={!whatsappConnected}
+            >
+              Continue
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Slide 6 - Consent Form */}
+      {step === 6 && (
         <div className="space-y-4 animate-fade-in">
           <div className="text-center mb-2">
             <h3 className="text-lg font-display font-semibold">Data Processing Consent</h3>
@@ -534,7 +621,7 @@ export function OnboardingForm() {
           </label>
 
           <div className="flex gap-3 mt-4">
-            <Button type="button" variant="outline" onClick={() => setStep(4)} className="flex-1 h-12">
+            <Button type="button" variant="outline" onClick={() => setStep(5)} className="flex-1 h-12">
               Back
             </Button>
             <Button 
