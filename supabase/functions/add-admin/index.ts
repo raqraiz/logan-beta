@@ -30,16 +30,16 @@ serve(async (req) => {
     });
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: claims, error: claimsError } = await userClient.auth.getClaims(token);
+    const { data: { user: requestingUser }, error: authError } = await userClient.auth.getUser(token);
     
-    if (claimsError || !claims?.claims?.sub) {
+    if (authError || !requestingUser) {
       return new Response(
         JSON.stringify({ error: "Invalid token" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const requestingUserId = claims.claims.sub;
+    const requestingUserId = requestingUser.id;
 
     // Use service role to check admin status and perform operations
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
