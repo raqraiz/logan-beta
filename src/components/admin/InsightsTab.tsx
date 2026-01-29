@@ -38,6 +38,7 @@ export function InsightsTab({ userId }: InsightsTabProps) {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [sendingId, setSendingId] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedParticipant, setSelectedParticipant] = useState<string>("");
   const [insightType, setInsightType] = useState<string>("recommendation");
@@ -152,6 +153,9 @@ export function InsightsTab({ userId }: InsightsTabProps) {
   };
 
   const sendToWhatsApp = async (insight: Insight) => {
+    if (sendingId) return; // Prevent double-clicks
+    
+    setSendingId(insight.id);
     try {
       const { data, error } = await supabase.functions.invoke("send-whatsapp", {
         body: { insightId: insight.id },
@@ -176,6 +180,8 @@ export function InsightsTab({ userId }: InsightsTabProps) {
     } catch (error) {
       console.error("Error sending WhatsApp:", error);
       toast({ title: "Failed to send WhatsApp message", variant: "destructive" });
+    } finally {
+      setSendingId(null);
     }
   };
 
@@ -340,9 +346,13 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                     </>
                   )}
                   {insight.status === "approved" && insight.participants?.whatsapp_number && (
-                    <Button size="sm" onClick={() => sendToWhatsApp(insight)}>
+                    <Button 
+                      size="sm" 
+                      onClick={() => sendToWhatsApp(insight)}
+                      disabled={sendingId === insight.id}
+                    >
                       <Send className="w-4 h-4 mr-1" />
-                      Send to WhatsApp
+                      {sendingId === insight.id ? "Sending..." : "Send to WhatsApp"}
                     </Button>
                   )}
                 </div>
