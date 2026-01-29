@@ -107,11 +107,28 @@ serve(async (req) => {
     const result = await response.json();
 
     if (!response.ok) {
-      console.error("Twilio error:", result);
+      console.error("Twilio error details:", JSON.stringify({
+        status: response.status,
+        code: result.code,
+        message: result.message,
+        moreInfo: result.more_info,
+        fullResponse: result
+      }, null, 2));
+      
+      // Provide helpful error messages for common issues
+      let userMessage = result.message || "Unknown error";
+      if (result.code === 63007) {
+        userMessage = "Twilio sandbox not configured for this From number. Check that the Account SID/Auth Token match the sandbox owner.";
+      } else if (result.code === 21608) {
+        userMessage = "Participant hasn't joined the Twilio sandbox. They need to send 'join night-shadow' to +1 415 523 8886.";
+      }
+      
       return new Response(
         JSON.stringify({ 
-          error: `WhatsApp send failed: ${result.message || "Unknown error"}`,
-          code: result.code 
+          error: userMessage,
+          twilioCode: result.code,
+          twilioMessage: result.message,
+          moreInfo: result.more_info
         }),
         { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
