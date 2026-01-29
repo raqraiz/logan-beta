@@ -6,9 +6,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { Heart, Sparkles, Check } from "lucide-react";
+import { Check, CalendarIcon } from "lucide-react";
+import { LoganLogo } from "./LoganLogo";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 const onboardingSchema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters").max(100),
@@ -16,38 +24,56 @@ const onboardingSchema = z.object({
   email: z.string().email("Please enter a valid email").optional().or(z.literal("")),
   age: z.number().min(13).max(65).optional(),
   cycle_length_days: z.number().min(21).max(45).optional(),
-  last_period_start: z.string().optional(),
-  cycle_regularity: z.string().optional(),
+  last_period_start: z.date().optional(),
 });
 
 type OnboardingData = z.infer<typeof onboardingSchema>;
 
-const symptoms = [
-  "Cramps", "Bloating", "Mood swings", "Fatigue", "Headaches", 
-  "Breast tenderness", "Acne", "Food cravings", "Insomnia"
-];
-
-const goals = [
-  "Better understand my cycle",
-  "Predict my period",
-  "Manage symptoms",
-  "Track mood patterns",
-  "Optimize energy levels",
-  "Support fertility awareness"
-];
+const symptomCategories = {
+  "EMOTIONAL & COGNITIVE": [
+    "Rage spikes",
+    "Anxiety spikes",
+    "Short fuse",
+    "Sudden dread",
+    "Feeling overwhelmed",
+    "Low stress tolerance",
+    "Irritability",
+    "Brain fog",
+  ],
+  "PHYSICAL": [
+    "Energy crashes",
+    "Wired but tired",
+    "Full body inflammation",
+    "Nausea",
+    "Dizziness",
+    "Ringing in ears",
+    "Muffled hearing",
+    "Migraines",
+    "Deep fatigue",
+    "Smell sensitivity",
+    "Chin or jaw acne breakouts",
+  ],
+  "IS IT JUST ME?": [
+    "Random shame spiral",
+    "One stinky armpit",
+    "Feeling emotionally allergic to people",
+    "Sudden urge to delete your whole life online",
+  ],
+};
 
 export function OnboardingForm() {
   const [step, setStep] = useState(1);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
-  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
+  const [anchorSymptom, setAnchorSymptom] = useState<string>("");
+  const [anchorOther, setAnchorOther] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [lastPeriodDate, setLastPeriodDate] = useState<Date | undefined>();
 
-  const { register, handleSubmit, formState: { errors }, watch } = useForm<OnboardingData>({
+  const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm<OnboardingData>({
     resolver: zodResolver(onboardingSchema),
     defaultValues: {
       cycle_length_days: 28,
-      cycle_regularity: "regular",
     }
   });
 
@@ -59,27 +85,26 @@ export function OnboardingForm() {
     );
   };
 
-  const toggleGoal = (goal: string) => {
-    setSelectedGoals(prev => 
-      prev.includes(goal) 
-        ? prev.filter(g => g !== goal)
-        : [...prev, goal]
-    );
+  const handleDateSelect = (date: Date | undefined) => {
+    setLastPeriodDate(date);
+    setValue("last_period_start", date);
   };
 
   const onSubmit = async (data: OnboardingData) => {
     setIsSubmitting(true);
     try {
+      const finalAnchor = anchorSymptom === "Other" ? anchorOther : anchorSymptom;
+      
       const { error } = await supabase.from("participants").insert({
         full_name: data.full_name,
         whatsapp_number: data.whatsapp_number,
         email: data.email || null,
         age: data.age || null,
         cycle_length_days: data.cycle_length_days || 28,
-        last_period_start: data.last_period_start || null,
-        cycle_regularity: data.cycle_regularity || "regular",
+        last_period_start: data.last_period_start ? format(data.last_period_start, "yyyy-MM-dd") : null,
+        cycle_regularity: "regular",
         typical_symptoms: selectedSymptoms,
-        goals: selectedGoals,
+        goals: [finalAnchor], // Using goals to store anchor symptom
       });
 
       if (error) {
@@ -111,9 +136,13 @@ export function OnboardingForm() {
     }
   };
 
+  const canProceedStep1 = watch("full_name") && watch("whatsapp_number");
+  const canProceedStep4 = anchorSymptom && (anchorSymptom !== "Other" || anchorOther.trim());
+
+  // Slide 5 - Confirmation
   if (isComplete) {
     return (
-      <div className="text-center py-12 animate-fade-in">
+      <div className="text-center py-8 animate-fade-in">
         <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
           <Check className="w-10 h-10 text-primary" />
         </div>
@@ -129,8 +158,8 @@ export function OnboardingForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* Progress indicator */}
-      <div className="flex gap-2 mb-8">
-        {[1, 2, 3].map((s) => (
+      <div className="flex gap-2 mb-6">
+        {[1, 2, 3, 4].map((s) => (
           <div 
             key={s}
             className={`h-1.5 flex-1 rounded-full transition-colors ${
@@ -140,15 +169,16 @@ export function OnboardingForm() {
         ))}
       </div>
 
+      {/* Slide 1 - Authentication */}
       {step === 1 && (
-        <div className="space-y-4 animate-fade-in">
+        <div className="space-y-5 animate-fade-in">
           <div className="text-center mb-6">
-            <Heart className="w-8 h-8 mx-auto text-primary mb-2" />
-            <h3 className="text-lg font-display font-medium">Let's get to know you</h3>
+            <LoganLogo size="md" showGlow={false} className="mx-auto mb-3" />
+            <h3 className="text-xl font-display font-semibold">Welcome to Logan</h3>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="full_name">Your name</Label>
+            <Label htmlFor="full_name">Your Name</Label>
             <Input
               id="full_name"
               placeholder="How should Logan address you?"
@@ -161,7 +191,7 @@ export function OnboardingForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="whatsapp_number">WhatsApp number</Label>
+            <Label htmlFor="whatsapp_number">WhatsApp Number</Label>
             <Input
               id="whatsapp_number"
               placeholder="+972 50 123 4567"
@@ -171,11 +201,10 @@ export function OnboardingForm() {
             {errors.whatsapp_number && (
               <p className="text-sm text-destructive">{errors.whatsapp_number.message}</p>
             )}
-            <p className="text-xs text-muted-foreground">Include country code</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email (optional)</Label>
+            <Label htmlFor="email">Email (Optional)</Label>
             <Input
               id="email"
               type="email"
@@ -185,37 +214,37 @@ export function OnboardingForm() {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="age">Age (optional)</Label>
-            <Input
-              id="age"
-              type="number"
-              placeholder="25"
-              {...register("age", { valueAsNumber: true })}
-              className="h-12"
-            />
-          </div>
-
           <Button 
             type="button" 
             onClick={() => setStep(2)} 
             className="w-full h-12 mt-4"
-            disabled={!watch("full_name") || !watch("whatsapp_number")}
+            disabled={!canProceedStep1}
           >
             Continue
           </Button>
         </div>
       )}
 
+      {/* Slide 2 - Cycle Data */}
       {step === 2 && (
-        <div className="space-y-4 animate-fade-in">
+        <div className="space-y-5 animate-fade-in">
           <div className="text-center mb-6">
-            <Sparkles className="w-8 h-8 mx-auto text-primary mb-2" />
-            <h3 className="text-lg font-display font-medium">Tell us about your cycle</h3>
+            <h3 className="text-xl font-display font-semibold">Your Personal Cycle</h3>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cycle_length_days">Average cycle length (days)</Label>
+            <Label htmlFor="age">Age</Label>
+            <Input
+              id="age"
+              type="number"
+              placeholder="35"
+              {...register("age", { valueAsNumber: true })}
+              className="h-12"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cycle_length_days">Average Cycle Length (Days)</Label>
             <Input
               id="cycle_length_days"
               type="number"
@@ -226,33 +255,31 @@ export function OnboardingForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="last_period_start">When did your last period start?</Label>
-            <Input
-              id="last_period_start"
-              type="date"
-              {...register("last_period_start")}
-              className="h-12"
-            />
-          </div>
-
-          <div className="space-y-3">
-            <Label>How regular is your cycle?</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {["regular", "irregular", "very_irregular"].map((reg) => (
-                <label 
-                  key={reg}
-                  className="flex items-center justify-center p-3 rounded-lg border cursor-pointer transition-colors hover:bg-secondary/50 has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:checked]:border-primary"
+            <Label>When Did Your Last Period Start?</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full h-12 justify-start text-left font-normal",
+                    !lastPeriodDate && "text-muted-foreground"
+                  )}
                 >
-                  <input
-                    type="radio"
-                    value={reg}
-                    {...register("cycle_regularity")}
-                    className="sr-only"
-                  />
-                  <span className="text-sm capitalize">{reg.replace("_", " ")}</span>
-                </label>
-              ))}
-            </div>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {lastPeriodDate ? format(lastPeriodDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 z-50" align="start">
+                <Calendar
+                  mode="single"
+                  selected={lastPeriodDate}
+                  onSelect={handleDateSelect}
+                  disabled={(date) => date > new Date()}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="flex gap-3 mt-6">
@@ -266,60 +293,121 @@ export function OnboardingForm() {
         </div>
       )}
 
+      {/* Slide 3 - Symptoms */}
       {step === 3 && (
-        <div className="space-y-4 animate-fade-in">
-          <div className="text-center mb-6">
-            <Heart className="w-8 h-8 mx-auto text-primary mb-2" />
-            <h3 className="text-lg font-display font-medium">What do you experience?</h3>
+        <div className="space-y-5 animate-fade-in">
+          <div className="text-center mb-4">
+            <h3 className="text-xl font-display font-semibold mb-2">Understand Your Symptoms</h3>
+            <p className="text-muted-foreground">
+              What are the symptoms that are the most <strong className="text-foreground">confusing or troubling</strong> around your cycle?
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">Select all that apply</p>
           </div>
 
-          <div className="space-y-3">
-            <Label>Common symptoms (select all that apply)</Label>
-            <div className="flex flex-wrap gap-2">
-              {symptoms.map((symptom) => (
-                <button
-                  key={symptom}
-                  type="button"
-                  onClick={() => toggleSymptom(symptom)}
-                  className={`px-4 py-2 rounded-full text-sm transition-all ${
-                    selectedSymptoms.includes(symptom)
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                  }`}
-                >
-                  {symptom}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <Label>What are your goals?</Label>
-            <div className="space-y-2">
-              {goals.map((goal) => (
-                <label 
-                  key={goal}
-                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                    selectedGoals.includes(goal)
-                      ? "bg-primary/5 border-primary"
-                      : "hover:bg-secondary/50"
-                  }`}
-                >
-                  <Checkbox
-                    checked={selectedGoals.includes(goal)}
-                    onCheckedChange={() => toggleGoal(goal)}
-                  />
-                  <span className="text-sm">{goal}</span>
-                </label>
-              ))}
-            </div>
+          <div className="space-y-6 max-h-[400px] overflow-y-auto pr-2">
+            {Object.entries(symptomCategories).map(([category, symptoms]) => (
+              <div key={category} className="space-y-3">
+                <h4 className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">
+                  {category}
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {symptoms.map((symptom) => (
+                    <button
+                      key={symptom}
+                      type="button"
+                      onClick={() => toggleSymptom(symptom)}
+                      className={`px-3 py-2 rounded-full text-sm transition-all ${
+                        selectedSymptoms.includes(symptom)
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                      }`}
+                    >
+                      {symptom}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="flex gap-3 mt-6">
             <Button type="button" variant="outline" onClick={() => setStep(2)} className="flex-1 h-12">
               Back
             </Button>
-            <Button type="submit" className="flex-1 h-12" disabled={isSubmitting}>
+            <Button type="button" onClick={() => setStep(4)} className="flex-1 h-12">
+              Continue
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Slide 4 - Anchor Symptom */}
+      {step === 4 && (
+        <div className="space-y-5 animate-fade-in">
+          <div className="text-center mb-4">
+            <h3 className="text-xl font-display font-semibold mb-2">Which Troubles You Most?</h3>
+            <p className="text-muted-foreground">
+              Choose the <strong className="text-foreground">one symptom</strong> that affects your life the most. This becomes your Anchor Symptom.
+            </p>
+          </div>
+
+          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+            {selectedSymptoms.length > 0 ? (
+              selectedSymptoms.map((symptom) => (
+                <button
+                  key={symptom}
+                  type="button"
+                  onClick={() => setAnchorSymptom(symptom)}
+                  className={`w-full p-4 rounded-xl text-left text-sm transition-all border ${
+                    anchorSymptom === symptom
+                      ? "bg-primary/10 border-primary text-foreground"
+                      : "bg-card border-border hover:border-primary/50"
+                  }`}
+                >
+                  {symptom}
+                </button>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No symptoms selected. You can still choose "Other" below.
+              </p>
+            )}
+            
+            {/* Other option */}
+            <button
+              type="button"
+              onClick={() => setAnchorSymptom("Other")}
+              className={`w-full p-4 rounded-xl text-left text-sm transition-all border ${
+                anchorSymptom === "Other"
+                  ? "bg-primary/10 border-primary text-foreground"
+                  : "bg-card border-border hover:border-primary/50"
+              }`}
+            >
+              Other
+            </button>
+            
+            {anchorSymptom === "Other" && (
+              <div className="pt-2">
+                <Input
+                  placeholder="Describe your anchor symptom..."
+                  value={anchorOther}
+                  onChange={(e) => setAnchorOther(e.target.value)}
+                  className="h-12"
+                  required
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <Button type="button" variant="outline" onClick={() => setStep(3)} className="flex-1 h-12">
+              Back
+            </Button>
+            <Button 
+              type="submit" 
+              className="flex-1 h-12" 
+              disabled={isSubmitting || !canProceedStep4}
+            >
               {isSubmitting ? "Joining..." : "Join the Pilot 🌸"}
             </Button>
           </div>
