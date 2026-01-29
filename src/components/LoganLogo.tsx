@@ -35,69 +35,69 @@ export const LoganLogo = ({ size = "md", className, showGlow = true }: LoganLogo
       <svg
         width={inner}
         height={inner}
-        viewBox="0 0 48 48"
+        viewBox="0 0 50 50"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        {/* Antenna ball */}
-        <circle cx="24" cy="4" r="2.5" fill="hsl(var(--logan-blue))" />
+        {/* Antenna ball - small circle */}
+        <circle cx="25" cy="3.5" r="2" fill="hsl(var(--logan-blue))" />
         
-        {/* Antenna stem */}
+        {/* Antenna stem - thin line */}
         <line
-          x1="24"
-          y1="6.5"
-          x2="24"
-          y2="11"
+          x1="25"
+          y1="5.5"
+          x2="25"
+          y2="10"
           stroke="hsl(var(--logan-blue))"
-          strokeWidth="1.8"
+          strokeWidth="1.5"
           strokeLinecap="round"
         />
 
-        {/* Robot Head - rounded rectangle */}
+        {/* Robot Head - rounded rectangle with softer corners */}
         <rect
-          x="6"
-          y="11"
+          x="7"
+          y="10"
           width="36"
-          height="32"
-          rx="8"
+          height="34"
+          rx="9"
           stroke="hsl(var(--logan-blue))"
           strokeWidth="2"
           fill="transparent"
         />
 
-        {/* Left Eye - oval */}
-        <ellipse cx="16" cy="25" rx="4" ry="5" fill="hsl(var(--logan-red))" />
-        <circle cx="17.5" cy="23.5" r="1.2" fill="hsl(0 0% 100% / 0.4)" />
+        {/* Left Eye - circular */}
+        <circle cx="17" cy="25" r="4.5" fill="hsl(var(--logan-red))" />
+        <circle cx="15.5" cy="23.5" r="1.5" fill="hsl(0 0% 100% / 0.5)" />
 
-        {/* Right Eye - oval */}
-        <ellipse cx="32" cy="25" rx="4" ry="5" fill="hsl(var(--logan-red))" />
-        <circle cx="33.5" cy="23.5" r="1.2" fill="hsl(0 0% 100% / 0.4)" />
+        {/* Right Eye - circular */}
+        <circle cx="33" cy="25" r="4.5" fill="hsl(var(--logan-red))" />
+        <circle cx="31.5" cy="23.5" r="1.5" fill="hsl(0 0% 100% / 0.5)" />
 
-        {/* Smile */}
+        {/* Smile - gentle curve */}
         <path
-          d="M16 35 Q24 41 32 35"
+          d="M17 36 Q25 40 33 36"
           stroke="hsl(var(--logan-blue))"
           strokeWidth="2"
           strokeLinecap="round"
           fill="transparent"
         />
 
-        {/* Left Ear */}
+        {/* Left Ear - small rounded rectangle */}
         <rect
-          x="2"
-          y="22"
+          x="3"
+          y="23"
           width="3"
-          height="10"
+          height="8"
           rx="1.5"
           fill="hsl(var(--logan-blue))"
         />
 
-        {/* Right Ear */}
+        {/* Right Ear - small rounded rectangle */}
         <rect
-          x="43"
-          y="22"
+          x="44"
+          y="23"
           width="3"
-          height="10"
+          height="8"
           rx="1.5"
           fill="hsl(var(--logan-blue))"
         />
