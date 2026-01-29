@@ -25,9 +25,11 @@ function getCycleInfo(lastPeriodStart: string | null, cycleLengthDays: number | 
   const currentDay = ((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
 
   // Determine phase based on typical cycle phases
+  // Luteal phase is typically fixed at ~14 days before next period
   const menstruationEnd = 5;
-  const follicularEnd = Math.floor(cycleLengthDays * 0.45);
-  const ovulationEnd = Math.floor(cycleLengthDays * 0.55);
+  const ovulationDay = cycleLengthDays - 14; // Ovulation occurs ~14 days before next period
+  const ovulationStart = ovulationDay - 1; // 1 day before ovulation
+  const ovulationEnd = ovulationDay + 2; // 2 days after ovulation (fertile window)
 
   let phaseInfo: PhaseInfo;
 
@@ -37,7 +39,7 @@ function getCycleInfo(lastPeriodStart: string | null, cycleLengthDays: number | 
       color: "text-rose-600",
       bgColor: "from-rose-500/20 to-rose-600/20",
     };
-  } else if (currentDay <= follicularEnd) {
+  } else if (currentDay < ovulationStart) {
     phaseInfo = {
       phase: "Follicular",
       color: "text-emerald-600",
