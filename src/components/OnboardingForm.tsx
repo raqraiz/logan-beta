@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { Check, CalendarIcon } from "lucide-react";
 import { LoganLogo } from "./LoganLogo";
@@ -17,6 +18,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const onboardingSchema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters").max(100),
@@ -66,6 +68,7 @@ export function OnboardingForm() {
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [anchorSymptom, setAnchorSymptom] = useState<string>("");
   const [anchorOther, setAnchorOther] = useState<string>("");
+  const [consentGiven, setConsentGiven] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [lastPeriodDate, setLastPeriodDate] = useState<Date | undefined>();
@@ -91,6 +94,15 @@ export function OnboardingForm() {
   };
 
   const onSubmit = async (data: OnboardingData) => {
+    if (!consentGiven) {
+      toast({
+        title: "Consent required",
+        description: "Please provide your consent to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const finalAnchor = anchorSymptom === "Other" ? anchorOther : anchorSymptom;
@@ -104,7 +116,7 @@ export function OnboardingForm() {
         last_period_start: data.last_period_start ? format(data.last_period_start, "yyyy-MM-dd") : null,
         cycle_regularity: "regular",
         typical_symptoms: selectedSymptoms,
-        goals: [finalAnchor], // Using goals to store anchor symptom
+        goals: [finalAnchor],
       });
 
       if (error) {
@@ -139,7 +151,7 @@ export function OnboardingForm() {
   const canProceedStep1 = watch("full_name") && watch("whatsapp_number");
   const canProceedStep4 = anchorSymptom && (anchorSymptom !== "Other" || anchorOther.trim());
 
-  // Slide 5 - Confirmation
+  // Slide 6 - Confirmation
   if (isComplete) {
     return (
       <div className="text-center py-8 animate-fade-in">
@@ -159,7 +171,7 @@ export function OnboardingForm() {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* Progress indicator */}
       <div className="flex gap-2 mb-6">
-        {[1, 2, 3, 4].map((s) => (
+        {[1, 2, 3, 4, 5].map((s) => (
           <div 
             key={s}
             className={`h-1.5 flex-1 rounded-full transition-colors ${
@@ -404,9 +416,128 @@ export function OnboardingForm() {
               Back
             </Button>
             <Button 
+              type="button" 
+              onClick={() => setStep(5)} 
+              className="flex-1 h-12"
+              disabled={!canProceedStep4}
+            >
+              Continue
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Slide 5 - Consent Form */}
+      {step === 5 && (
+        <div className="space-y-4 animate-fade-in">
+          <div className="text-center mb-2">
+            <h3 className="text-lg font-display font-semibold">Data Processing Consent</h3>
+            <p className="text-xs text-muted-foreground">Logan MVP Pilot</p>
+          </div>
+
+          <ScrollArea className="h-[320px] rounded-lg border border-border bg-muted/30 p-4">
+            <div className="space-y-4 text-sm text-muted-foreground pr-4">
+              <section>
+                <h4 className="font-semibold text-foreground mb-1">Purpose of the Pilot</h4>
+                <p>
+                  Logan is a research and pilot product designed to test how cycle-related insights can support wellbeing, communication, and health awareness. This pilot collects limited personal and health-related data to generate insights and evaluate product effectiveness.
+                </p>
+              </section>
+
+              <section>
+                <h4 className="font-semibold text-foreground mb-1">Data We Collect</h4>
+                <p className="mb-2">By participating, you consent to the collection and processing of the following data:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>Menstrual cycle information (cycle length, phase tracking, symptoms, timing)</li>
+                  <li>Self-reported health and wellbeing data</li>
+                  <li>Interaction data within the Logan platform</li>
+                  <li>Optional feedback and responses</li>
+                  <li>Basic identifiers (e.g. email or user ID)</li>
+                </ul>
+                <p className="mt-2 text-xs italic">This may include special category data under GDPR (health data).</p>
+              </section>
+
+              <section>
+                <h4 className="font-semibold text-foreground mb-1">Legal Basis for Processing</h4>
+                <p>We process your data based on:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>Explicit consent (GDPR Article 6(1)(a))</li>
+                  <li>Explicit consent for health data (GDPR Article 9(2)(a))</li>
+                </ul>
+              </section>
+
+              <section>
+                <h4 className="font-semibold text-foreground mb-1">How Your Data Is Used</h4>
+                <p className="mb-2">Your data will be used only for:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>Generating cycle-based insights</li>
+                  <li>Improving product functionality</li>
+                  <li>Research and evaluation of the pilot</li>
+                  <li>Internal analytics and reporting</li>
+                </ul>
+                <p className="mt-2 font-medium text-foreground">Your data will not be sold, shared with third parties for marketing, or used for advertising.</p>
+              </section>
+
+              <section>
+                <h4 className="font-semibold text-foreground mb-1">Data Storage & Security</h4>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>Data is stored securely</li>
+                  <li>Access is restricted to the Logan development and research team</li>
+                  <li>Data is retained only for the duration of the pilot and evaluation period unless you consent otherwise</li>
+                </ul>
+              </section>
+
+              <section>
+                <h4 className="font-semibold text-foreground mb-1">Your Rights (GDPR)</h4>
+                <p className="mb-2">You have the right to:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>Access your data</li>
+                  <li>Correct your data</li>
+                  <li>Withdraw consent at any time</li>
+                  <li>Request deletion of your data</li>
+                  <li>Request data portability</li>
+                  <li>Restrict processing</li>
+                </ul>
+                <p className="mt-2 text-xs italic">Withdrawal of consent will not affect prior lawful processing.</p>
+              </section>
+
+              <section>
+                <h4 className="font-semibold text-foreground mb-1">Voluntary Participation</h4>
+                <p>Participation in this pilot is voluntary. You may exit the pilot at any time without consequence.</p>
+              </section>
+
+              <section>
+                <h4 className="font-semibold text-foreground mb-1">Consent Declaration</h4>
+                <p>By proceeding, you confirm that:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>You understand what data is being collected</li>
+                  <li>You understand how your data will be used</li>
+                  <li>You consent to the processing of your personal and health data for the Logan MVP pilot</li>
+                  <li>You understand that this is a research/pilot product, not a medical service</li>
+                </ul>
+              </section>
+            </div>
+          </ScrollArea>
+
+          <label className="flex items-start gap-3 p-4 rounded-xl border border-border bg-card cursor-pointer hover:border-primary/50 transition-colors">
+            <Checkbox 
+              checked={consentGiven} 
+              onCheckedChange={(checked) => setConsentGiven(checked === true)}
+              className="mt-0.5"
+            />
+            <span className="text-sm text-foreground leading-relaxed">
+              I give explicit consent to the processing of my personal and health data for the Logan MVP pilot.
+            </span>
+          </label>
+
+          <div className="flex gap-3 mt-4">
+            <Button type="button" variant="outline" onClick={() => setStep(4)} className="flex-1 h-12">
+              Back
+            </Button>
+            <Button 
               type="submit" 
               className="flex-1 h-12" 
-              disabled={isSubmitting || !canProceedStep4}
+              disabled={isSubmitting || !consentGiven}
             >
               {isSubmitting ? "Joining..." : "Join the Pilot 🌸"}
             </Button>
