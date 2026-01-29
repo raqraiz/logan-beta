@@ -39,67 +39,73 @@ export const LoganLogo = ({ size = "md", className, showGlow = true }: LoganLogo
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        {/* Antenna ball - small circle */}
-        <circle cx="25" cy="3.5" r="2" fill="hsl(var(--logan-blue))" />
-        
-        {/* Antenna stem - thin line */}
+        {/* Antenna: hollow rounded-square loop + stem */}
+        <rect
+          x="22.5"
+          y="2"
+          width="5"
+          height="5"
+          rx="1.4"
+          stroke="hsl(var(--logan-blue))"
+          strokeWidth="2.5"
+          fill="transparent"
+        />
         <line
           x1="25"
-          y1="5.5"
+          y1="7.2"
           x2="25"
-          y2="10"
+          y2="11"
           stroke="hsl(var(--logan-blue))"
-          strokeWidth="1.5"
+          strokeWidth="2.5"
           strokeLinecap="round"
         />
 
-        {/* Robot Head - rounded rectangle with softer corners */}
+        {/* Head outline */}
         <rect
-          x="7"
-          y="10"
-          width="36"
-          height="34"
-          rx="9"
+          x="8"
+          y="11"
+          width="34"
+          height="30"
+          rx="8"
           stroke="hsl(var(--logan-blue))"
-          strokeWidth="2"
+          strokeWidth="2.5"
           fill="transparent"
         />
 
-        {/* Left Eye - circular */}
-        <circle cx="17" cy="25" r="4.5" fill="hsl(var(--logan-red))" />
-        <circle cx="15.5" cy="23.5" r="1.5" fill="hsl(0 0% 100% / 0.5)" />
+        {/* Ears: outlined rounded tabs */}
+        <rect
+          x="3.8"
+          y="22"
+          width="6.2"
+          height="8"
+          rx="4"
+          stroke="hsl(var(--logan-blue))"
+          strokeWidth="2.5"
+          fill="transparent"
+        />
+        <rect
+          x="40"
+          y="22"
+          width="6.2"
+          height="8"
+          rx="4"
+          stroke="hsl(var(--logan-blue))"
+          strokeWidth="2.5"
+          fill="transparent"
+        />
 
-        {/* Right Eye - circular */}
-        <circle cx="33" cy="25" r="4.5" fill="hsl(var(--logan-red))" />
-        <circle cx="31.5" cy="23.5" r="1.5" fill="hsl(0 0% 100% / 0.5)" />
+        {/* Eyes: red rounded-rectangles */}
+        <rect x="15.5" y="20.5" width="7" height="9" rx="3.2" fill="hsl(var(--logan-red))" />
+        <rect x="27.5" y="20.5" width="7" height="9" rx="3.2" fill="hsl(var(--logan-red))" />
 
-        {/* Smile - gentle curve */}
+        {/* Mouth: thick cyan smile */}
         <path
-          d="M17 36 Q25 40 33 36"
+          d="M18 33 Q25 38 32 33"
           stroke="hsl(var(--logan-blue))"
-          strokeWidth="2"
+          strokeWidth="5"
           strokeLinecap="round"
+          strokeLinejoin="round"
           fill="transparent"
-        />
-
-        {/* Left Ear - small rounded rectangle */}
-        <rect
-          x="3"
-          y="23"
-          width="3"
-          height="8"
-          rx="1.5"
-          fill="hsl(var(--logan-blue))"
-        />
-
-        {/* Right Ear - small rounded rectangle */}
-        <rect
-          x="44"
-          y="23"
-          width="3"
-          height="8"
-          rx="1.5"
-          fill="hsl(var(--logan-blue))"
         />
       </svg>
     </div>
