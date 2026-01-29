@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { Users, RefreshCw, Phone, Calendar, Target } from "lucide-react";
 import { format } from "date-fns";
+import { CycleCircle } from "./CycleCircle";
 
 interface Participant {
   id: string;
@@ -105,17 +106,24 @@ export function ParticipantsTab() {
           {participants.map((participant) => (
             <Card key={participant.id} className={!participant.is_active ? "opacity-60" : ""}>
               <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      {participant.full_name}
-                      <Badge variant={participant.is_active ? "default" : "secondary"}>
-                        {participant.is_active ? "Active" : "Inactive"}
-                      </Badge>
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Joined {format(new Date(participant.created_at), "MMM d, yyyy")}
-                    </p>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <CycleCircle 
+                      lastPeriodStart={participant.last_period_start} 
+                      cycleLengthDays={participant.cycle_length_days}
+                      size="sm"
+                    />
+                    <div>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        {participant.full_name}
+                        <Badge variant={participant.is_active ? "default" : "secondary"}>
+                          {participant.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Joined {format(new Date(participant.created_at), "MMM d, yyyy")}
+                      </p>
+                    </div>
                   </div>
                   <Button 
                     variant="ghost" 
