@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Lock, Mail, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { LoganLogo } from "@/components/LoganLogo";
 
@@ -26,34 +26,43 @@ type AuthView = "login" | "signup" | "forgot-password" | "reset-password";
 
 const Auth = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const [view, setView] = useState<AuthView>("login");
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    // Check if this is a password reset callback
-    const type = searchParams.get("type");
-    if (type === "recovery") {
-      setView("reset-password");
-    }
-  }, [searchParams]);
-
-  useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth event:", event);
+      
       if (event === "PASSWORD_RECOVERY") {
+        // User clicked the password reset link - show reset form
         setView("reset-password");
-      } else if (session?.user && view !== "reset-password") {
+        setIsCheckingSession(false);
+      } else if (event === "SIGNED_IN" && view !== "reset-password") {
+        // Normal sign in - redirect to admin
         navigate("/admin");
+      } else if (event === "USER_UPDATED") {
+        // Password was successfully updated
+        toast({
+          title: "Password updated! 🎉",
+          description: "You can now log in with your new password.",
+        });
+        setView("login");
+        setPassword("");
       }
+      
+      setIsCheckingSession(false);
     });
 
+    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user && view !== "reset-password") {
         navigate("/admin");
       }
+      setIsCheckingSession(false);
     });
 
     return () => subscription.unsubscribe();
@@ -77,7 +86,7 @@ const Auth = () => {
         }
 
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/auth?type=recovery`,
+          redirectTo: `${window.location.origin}/auth`,
         });
         
         if (error) throw error;
@@ -103,6 +112,9 @@ const Auth = () => {
         const { error } = await supabase.auth.updateUser({ password });
         
         if (error) throw error;
+        
+        // Sign out after password update so user can log in fresh
+        await supabase.auth.signOut();
         
         toast({
           title: "Password updated! 🎉",
@@ -193,6 +205,15 @@ const Auth = () => {
         return "Log In";
     }
   };
+
+  // Show loading while checking for recovery session
+  if (isCheckingSession) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
