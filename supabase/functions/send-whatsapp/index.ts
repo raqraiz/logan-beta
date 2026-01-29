@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,9 +14,50 @@ serve(async (req) => {
   try {
     const { insightId, phoneNumber, message } = await req.json();
 
-    if (!phoneNumber || !message) {
+    if (!insightId) {
       return new Response(
-        JSON.stringify({ error: "phoneNumber and message are required" }),
+        JSON.stringify({ error: "insightId is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify insight exists and is approved
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data: insight, error: insightError } = await supabase
+      .from("insights")
+      .select("*, participants(whatsapp_number)")
+      .eq("id", insightId)
+      .single();
+
+    if (insightError || !insight) {
+      console.error("Insight not found:", insightError);
+      return new Response(
+        JSON.stringify({ error: "Insight not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if insight is approved
+    if (insight.status !== "approved") {
+      console.error("Insight not approved. Current status:", insight.status);
+      return new Response(
+        JSON.stringify({ 
+          error: "Insight must be approved before sending",
+          currentStatus: insight.status 
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const recipientPhone = phoneNumber || insight.participants?.whatsapp_number;
+    const messageContent = message || insight.content;
+
+    if (!recipientPhone || !messageContent) {
+      return new Response(
+        JSON.stringify({ error: "Phone number and message content are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -35,16 +77,16 @@ serve(async (req) => {
     const fromNumber = "whatsapp:+14155238886";
     
     // Format the recipient number
-    let formattedTo = phoneNumber.replace(/\s+/g, "").replace(/-/g, "");
+    let formattedTo = recipientPhone.replace(/\s+/g, "").replace(/-/g, "");
     if (!formattedTo.startsWith("+")) {
       formattedTo = "+" + formattedTo;
     }
     const toNumber = `whatsapp:${formattedTo}`;
 
-    console.log(`Sending WhatsApp message from ${fromNumber} to ${toNumber}`);
+    console.log(`Sending WhatsApp message from ${fromNumber} to ${toNumber} for insight ${insightId}`);
 
     // Add Logan's signature to the message
-    const fullMessage = `${message}\n\n💕 Logan\n\n_Reply to share your feedback or tell me about any changes in your cycle!_`;
+    const fullMessage = `${messageContent}\n\n💕 Logan\n\n_Reply to share your feedback or tell me about any changes in your cycle!_`;
 
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
 
@@ -74,6 +116,12 @@ serve(async (req) => {
         { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Update insight status to sent
+    await supabase
+      .from("insights")
+      .update({ status: "sent", sent_at: new Date().toISOString() })
+      .eq("id", insightId);
 
     console.log("WhatsApp message sent successfully:", result.sid);
 
