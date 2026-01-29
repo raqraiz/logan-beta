@@ -14,11 +14,7 @@ const Index = () => {
             <LoganLogo size="sm" showGlow={false} />
             <span className="font-display font-semibold text-lg text-foreground">Logan</span>
           </div>
-          <Link to="/admin">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              Admin
-            </Button>
-          </Link>
+          {/* Admin access hidden - use /logan-admin-access */}
         </div>
       </header>
 
