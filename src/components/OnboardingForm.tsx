@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm, type FieldErrors } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,19 +21,12 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { QRCodeSVG } from "qrcode.react";
 
-const emptyToUndefinedNumber = (v: unknown) => {
-  // react-hook-form with valueAsNumber turns empty input into NaN
-  if (v === "" || v === null || v === undefined) return undefined;
-  if (typeof v === "number" && Number.isNaN(v)) return undefined;
-  return v;
-};
-
 const onboardingSchema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters").max(100),
   whatsapp_number: z.string().min(10, "Please enter a valid WhatsApp number").max(20),
   email: z.string().email("Please enter a valid email").optional().or(z.literal("")),
-  age: z.preprocess(emptyToUndefinedNumber, z.number().min(13).max(65).optional()),
-  cycle_length_days: z.preprocess(emptyToUndefinedNumber, z.number().min(21).max(45).optional()),
+  age: z.number().min(13).max(65).optional(),
+  cycle_length_days: z.number().min(21).max(45).optional(),
   last_period_start: z.date().optional(),
 });
 
@@ -160,22 +153,6 @@ export function OnboardingForm() {
     }
   };
 
-  const onInvalid = (formErrors: FieldErrors<OnboardingData>) => {
-    // If validation fails on a previous step, users can feel like the submit button "does nothing".
-    // Jump them to the relevant step and show a message.
-    if (formErrors.full_name || formErrors.whatsapp_number || formErrors.email) {
-      setStep(1);
-    } else if (formErrors.age || formErrors.cycle_length_days || formErrors.last_period_start) {
-      setStep(2);
-    }
-
-    toast({
-      title: "Please check your details",
-      description: "Some fields are missing or invalid. We’ve highlighted the step that needs attention.",
-      variant: "destructive",
-    });
-  };
-
   const canProceedStep1 = watch("full_name") && watch("whatsapp_number");
   const canProceedStep4 = anchorSymptom && (anchorSymptom !== "Other" || anchorOther.trim());
 
@@ -196,7 +173,7 @@ export function OnboardingForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* Progress indicator */}
       <div className="flex gap-2 mb-6">
         {[1, 2, 3, 4, 5, 6].map((s) => (
