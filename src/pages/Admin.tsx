@@ -1,0 +1,122 @@
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Session } from "@supabase/supabase-js";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
+import { Heart, Users, FileCheck, MessageSquare, LogOut, Sparkles, RefreshCw } from "lucide-react";
+import { ParticipantsTab } from "@/components/admin/ParticipantsTab";
+import { InsightsTab } from "@/components/admin/InsightsTab";
+import { FeedbackTab } from "@/components/admin/FeedbackTab";
+
+const Admin = () => {
+  const navigate = useNavigate();
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!loading && !session) {
+      navigate("/auth");
+    }
+  }, [session, loading, navigate]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
+    toast({ title: "Signed out successfully" });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center gradient-soft">
+        <RefreshCw className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link to="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full gradient-hero flex items-center justify-center">
+                <Heart className="w-4 h-4 text-primary-foreground" />
+              </div>
+              <span className="font-display font-semibold text-lg">Logan</span>
+            </Link>
+            <span className="text-muted-foreground text-sm">Admin Dashboard</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground hidden md:block">{session.user.email}</span>
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign out
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-display font-bold mb-2">Pilot Dashboard</h1>
+          <p className="text-muted-foreground">
+            Manage participants, approve insights, and track feedback
+          </p>
+        </div>
+
+        <Tabs defaultValue="participants" className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-3">
+            <TabsTrigger value="participants" className="gap-2">
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">Participants</span>
+            </TabsTrigger>
+            <TabsTrigger value="insights" className="gap-2">
+              <Sparkles className="w-4 h-4" />
+              <span className="hidden sm:inline">Insights</span>
+            </TabsTrigger>
+            <TabsTrigger value="feedback" className="gap-2">
+              <MessageSquare className="w-4 h-4" />
+              <span className="hidden sm:inline">Feedback</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="participants">
+            <ParticipantsTab />
+          </TabsContent>
+
+          <TabsContent value="insights">
+            <InsightsTab userId={session.user.id} />
+          </TabsContent>
+
+          <TabsContent value="feedback">
+            <FeedbackTab />
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  );
+};
+
+export default Admin;

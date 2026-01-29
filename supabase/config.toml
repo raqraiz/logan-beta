@@ -1,0 +1,7 @@
+project_id = "tpohsmxpcqqgxcgectfs"
+
+[functions.generate-insight]
+verify_jwt = false
+
+[functions.send-whatsapp]
+verify_jwt = false

@@ -2,95 +2,112 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+
+/* Logan Design System - Warm, feminine, empowering */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Core palette - warm rose/coral tones */
+    --background: 30 40% 98%;
+    --foreground: 350 25% 20%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 30 30% 99%;
+    --card-foreground: 350 25% 20%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 30 30% 99%;
+    --popover-foreground: 350 25% 20%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary - warm coral/rose */
+    --primary: 350 65% 55%;
+    --primary-foreground: 30 40% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary - soft blush */
+    --secondary: 350 30% 94%;
+    --secondary-foreground: 350 25% 25%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted - warm cream */
+    --muted: 30 25% 92%;
+    --muted-foreground: 350 15% 45%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent - coral highlight */
+    --accent: 15 75% 60%;
+    --accent-foreground: 30 40% 98%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 350 20% 88%;
+    --input: 350 20% 88%;
+    --ring: 350 65% 55%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
+    /* Custom Logan tokens */
+    --logan-rose: 350 65% 55%;
+    --logan-coral: 15 75% 60%;
+    --logan-blush: 350 40% 92%;
+    --logan-cream: 30 40% 96%;
+    --logan-burgundy: 350 45% 30%;
+    --logan-sage: 150 25% 45%;
+    
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(350 65% 55%) 0%, hsl(15 75% 60%) 50%, hsl(350 50% 65%) 100%);
+    --gradient-soft: linear-gradient(180deg, hsl(30 40% 98%) 0%, hsl(350 30% 96%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(30 30% 99%) 0%, hsl(350 25% 97%) 100%);
+    
+    /* Shadows */
+    --shadow-soft: 0 4px 20px -4px hsl(350 30% 50% / 0.1);
+    --shadow-glow: 0 8px 40px -8px hsl(350 65% 55% / 0.25);
+    --shadow-card: 0 2px 12px -2px hsl(350 30% 50% / 0.08);
 
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 30 40% 98%;
+    --sidebar-foreground: 350 25% 20%;
+    --sidebar-primary: 350 65% 55%;
+    --sidebar-primary-foreground: 30 40% 98%;
+    --sidebar-accent: 350 30% 94%;
+    --sidebar-accent-foreground: 350 25% 25%;
+    --sidebar-border: 350 20% 88%;
+    --sidebar-ring: 350 65% 55%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 350 25% 8%;
+    --foreground: 30 30% 95%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 350 20% 12%;
+    --card-foreground: 30 30% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 350 20% 12%;
+    --popover-foreground: 30 30% 95%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 350 55% 60%;
+    --primary-foreground: 350 25% 8%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 350 20% 18%;
+    --secondary-foreground: 30 30% 90%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 350 15% 20%;
+    --muted-foreground: 350 15% 60%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 15 60% 55%;
+    --accent-foreground: 350 25% 8%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: 350 15% 20%;
+    --input: 350 15% 20%;
+    --ring: 350 55% 60%;
+
+    --sidebar-background: 350 25% 8%;
+    --sidebar-foreground: 30 30% 95%;
+    --sidebar-primary: 350 55% 60%;
+    --sidebar-primary-foreground: 350 25% 8%;
+    --sidebar-accent: 350 20% 18%;
+    --sidebar-accent-foreground: 30 30% 90%;
+    --sidebar-border: 350 15% 20%;
+    --sidebar-ring: 350 55% 60%;
   }
 }
 
@@ -100,6 +117,44 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'DM Sans', sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+}
+
+@layer utilities {
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+  
+  .gradient-soft {
+    background: var(--gradient-soft);
+  }
+  
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+  
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+  
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+  
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  
+  .text-gradient {
+    background: var(--gradient-hero);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 }
