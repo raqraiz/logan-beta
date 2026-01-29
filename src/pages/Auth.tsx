@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Heart, Lock, Mail } from "lucide-react";
+import { Lock, Mail, Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
+import { LoganLogo } from "@/components/LoganLogo";
 
 const authSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -19,6 +20,7 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -58,7 +60,7 @@ const Auth = () => {
           password,
         });
         if (error) throw error;
-        toast({ title: "Welcome back! 🌸" });
+        toast({ title: "Welcome back! 🤖" });
       } else {
         const { error } = await supabase.auth.signUp({
           email,
@@ -97,52 +99,62 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen gradient-soft flex items-center justify-center px-4">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full gradient-hero flex items-center justify-center">
-            <Heart className="w-8 h-8 text-primary-foreground" />
+        <div className="bg-card rounded-2xl p-8 md:p-10 shadow-card border border-border">
+          {/* Logo and Header */}
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <LoganLogo size="lg" showGlow />
+            </div>
+            <h1 className="text-2xl font-display font-bold text-primary">Logan</h1>
+            <p className="text-muted-foreground mt-2">
+              {isLogin ? "Welcome back" : "Create your account"}
+            </p>
           </div>
-          <h1 className="text-2xl font-display font-bold">Logan Admin</h1>
-          <p className="text-muted-foreground mt-2">
-            {isLogin ? "Sign in to manage insights" : "Create your admin account"}
-          </p>
-        </div>
 
-        <div className="bg-card rounded-2xl p-6 md:p-8 shadow-card border border-border/50">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-muted-foreground">Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   id="email"
                   type="email"
-                  placeholder="admin@example.com"
+                  placeholder="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 pl-10"
+                  className="h-14 bg-input border-border text-foreground placeholder:text-muted-foreground rounded-xl"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-muted-foreground">Password</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   id="password"
-                  type="password"
-                  placeholder="••••••••"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 pl-10"
+                  className="h-14 bg-input border-border text-foreground placeholder:text-muted-foreground rounded-xl pr-12"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
             </div>
 
-            <Button type="submit" className="w-full h-12" disabled={isLoading}>
-              {isLoading ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
+            <Button 
+              type="submit" 
+              className="w-full h-14 rounded-xl text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow" 
+              disabled={isLoading}
+            >
+              {isLoading ? "Please wait..." : isLogin ? "Log In" : "Sign Up"}
             </Button>
           </form>
 
@@ -152,7 +164,7 @@ const Auth = () => {
               onClick={() => setIsLogin(!isLogin)}
               className="text-sm text-muted-foreground hover:text-primary transition-colors"
             >
-              {isLogin ? "Need an account? Sign up" : "Already have an account? Sign in"}
+              {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
             </button>
           </div>
         </div>

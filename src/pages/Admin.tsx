@@ -5,11 +5,12 @@ import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Heart, Users, MessageSquare, LogOut, Sparkles, RefreshCw, Shield } from "lucide-react";
+import { Users, MessageSquare, LogOut, Sparkles, RefreshCw, Shield } from "lucide-react";
 import { ParticipantsTab } from "@/components/admin/ParticipantsTab";
 import { InsightsTab } from "@/components/admin/InsightsTab";
 import { FeedbackTab } from "@/components/admin/FeedbackTab";
 import { AdminManagement } from "@/components/admin/AdminManagement";
+import { LoganLogo } from "@/components/LoganLogo";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -44,7 +45,7 @@ const Admin = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center gradient-soft">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <RefreshCw className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -57,20 +58,18 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+      <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full gradient-hero flex items-center justify-center">
-                <Heart className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <span className="font-display font-semibold text-lg">Logan</span>
+            <Link to="/" className="flex items-center gap-3">
+              <LoganLogo size="sm" showGlow={false} />
+              <span className="font-display font-semibold text-lg text-foreground">Logan</span>
             </Link>
             <span className="text-muted-foreground text-sm">Admin Dashboard</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground hidden md:block">{session.user.email}</span>
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground hover:text-foreground">
               <LogOut className="w-4 h-4 mr-2" />
               Sign out
             </Button>
@@ -81,27 +80,27 @@ const Admin = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-display font-bold mb-2">Pilot Dashboard</h1>
+          <h1 className="text-3xl font-display font-bold mb-2 text-foreground">Pilot Dashboard</h1>
           <p className="text-muted-foreground">
             Manage participants, approve insights, and track feedback
           </p>
         </div>
 
         <Tabs defaultValue="participants" className="space-y-6">
-          <TabsList className="grid w-full max-w-lg grid-cols-4">
-            <TabsTrigger value="participants" className="gap-2">
+          <TabsList className="grid w-full max-w-lg grid-cols-4 bg-muted border border-border">
+            <TabsTrigger value="participants" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Participants</span>
             </TabsTrigger>
-            <TabsTrigger value="insights" className="gap-2">
+            <TabsTrigger value="insights" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Sparkles className="w-4 h-4" />
               <span className="hidden sm:inline">Insights</span>
             </TabsTrigger>
-            <TabsTrigger value="feedback" className="gap-2">
+            <TabsTrigger value="feedback" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <MessageSquare className="w-4 h-4" />
               <span className="hidden sm:inline">Feedback</span>
             </TabsTrigger>
-            <TabsTrigger value="admins" className="gap-2">
+            <TabsTrigger value="admins" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Shield className="w-4 h-4" />
               <span className="hidden sm:inline">Admins</span>
             </TabsTrigger>
