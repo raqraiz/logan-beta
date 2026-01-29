@@ -635,16 +635,27 @@ export function OnboardingForm() {
             </div>
           </ScrollArea>
 
-          <label className="flex items-start gap-3 p-4 rounded-xl border border-border bg-card cursor-pointer hover:border-primary/50 transition-colors">
+          <label className={cn(
+            "flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all",
+            consentGiven 
+              ? "bg-primary/10 border-primary" 
+              : "bg-card border-border hover:border-primary/50"
+          )}>
             <Checkbox 
               checked={consentGiven} 
               onCheckedChange={(checked) => setConsentGiven(checked === true)}
-              className="mt-0.5"
+              className="mt-0.5 min-w-[20px] min-h-[20px]"
             />
             <span className="text-sm text-foreground leading-relaxed">
               I give explicit consent to the processing of my personal and health data for the Logan MVP pilot.
             </span>
           </label>
+
+          {!consentGiven && (
+            <p className="text-xs text-muted-foreground text-center">
+              ☝️ Please check the box above to continue
+            </p>
+          )}
 
           <div className="flex gap-3 mt-4">
             <Button type="button" variant="outline" onClick={() => setStep(5)} className="flex-1 h-12">
