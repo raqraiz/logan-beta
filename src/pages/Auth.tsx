@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Heart, Lock, Mail } from "lucide-react";
+import { Eye, EyeOff, Bot } from "lucide-react";
 import { z } from "zod";
 
 const authSchema = z.object({
@@ -19,6 +19,7 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -58,7 +59,7 @@ const Auth = () => {
           password,
         });
         if (error) throw error;
-        toast({ title: "Welcome back! 🌸" });
+        toast({ title: "Welcome back! 💪" });
       } else {
         const { error } = await supabase.auth.signUp({
           email,
@@ -97,52 +98,65 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen gradient-soft flex items-center justify-center px-4">
+    <div className="min-h-screen bg-logan-jet flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full gradient-hero flex items-center justify-center">
-            <Heart className="w-8 h-8 text-primary-foreground" />
+        {/* Login Card */}
+        <div className="bg-logan-graphite rounded-2xl p-8 border border-logan-slate/30 shadow-2xl">
+          {/* Robot Icon */}
+          <div className="flex justify-center mb-6">
+            <div className="w-20 h-20 rounded-full bg-logan-graphite border-2 border-logan-slate/50 flex items-center justify-center shadow-lg shadow-logan-cyan/10">
+              <Bot className="w-10 h-10 text-logan-cyan" />
+            </div>
           </div>
-          <h1 className="text-2xl font-display font-bold">Logan Admin</h1>
-          <p className="text-muted-foreground mt-2">
-            {isLogin ? "Sign in to manage insights" : "Create your admin account"}
-          </p>
-        </div>
 
-        <div className="bg-card rounded-2xl p-6 md:p-8 shadow-card border border-border/50">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Title */}
+          <h1 className="text-3xl font-display font-bold text-center text-logan-cyan mb-2">
+            Logan
+          </h1>
+          <p className="text-center text-logan-frost/70 mb-8">
+            {isLogin ? "Welcome back" : "Create your account"}
+          </p>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="admin@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 pl-10"
-                />
-              </div>
+              <Label htmlFor="email" className="text-logan-frost/70 text-sm">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-14 bg-logan-jet border-logan-slate/30 text-logan-frost placeholder:text-logan-frost/40 focus:border-logan-cyan focus:ring-logan-cyan/20"
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-logan-frost/70 text-sm">Password</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   id="password"
-                  type="password"
-                  placeholder="••••••••"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 pl-10"
+                  className="h-14 bg-logan-jet border-logan-slate/30 text-logan-frost placeholder:text-logan-frost/40 focus:border-logan-cyan focus:ring-logan-cyan/20 pr-12"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-logan-frost/50 hover:text-logan-frost transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
             </div>
 
-            <Button type="submit" className="w-full h-12" disabled={isLoading}>
-              {isLoading ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
+            <Button 
+              type="submit" 
+              className="w-full h-14 bg-logan-cyan hover:bg-logan-cyan/90 text-logan-jet font-semibold text-lg rounded-xl shadow-lg shadow-logan-cyan/25 transition-all hover:shadow-logan-cyan/40" 
+              disabled={isLoading}
+            >
+              {isLoading ? "Please wait..." : isLogin ? "Log In" : "Create Account"}
             </Button>
           </form>
 
@@ -150,15 +164,15 @@ const Auth = () => {
             <button
               type="button"
               onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              className="text-sm text-logan-frost/60 hover:text-logan-cyan transition-colors"
             >
-              {isLogin ? "Need an account? Sign up" : "Already have an account? Sign in"}
+              {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
             </button>
           </div>
         </div>
 
         <div className="mt-6 text-center">
-          <a href="/" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+          <a href="/" className="text-sm text-logan-frost/50 hover:text-logan-cyan transition-colors">
             ← Back to home
           </a>
         </div>
