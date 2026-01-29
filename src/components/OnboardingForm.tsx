@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { Check, CalendarIcon, MessageCircle, ExternalLink } from "lucide-react";
+import { Check, CalendarIcon, MessageCircle, ExternalLink, Smartphone } from "lucide-react";
 import { LoganLogo } from "./LoganLogo";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { QRCodeSVG } from "qrcode.react";
 
 const onboardingSchema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters").max(100),
@@ -445,13 +446,38 @@ export function OnboardingForm() {
           </div>
 
           <div className="bg-muted/50 rounded-xl p-5 border border-border space-y-4">
+            {/* QR Code Section */}
+            <div className="flex flex-col items-center gap-3 pb-4 border-b border-border">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Smartphone className="w-4 h-4" />
+                <span>Scan with your phone</span>
+              </div>
+              <div className="bg-white p-3 rounded-xl shadow-sm">
+                <QRCodeSVG 
+                  value="https://wa.me/14155238886?text=join%20night-shadow"
+                  size={140}
+                  level="M"
+                  includeMargin={false}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Scan to open WhatsApp with the message pre-filled
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <div className="flex-1 h-px bg-border" />
+              <span>or follow these steps</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+
             <div className="space-y-3">
               <div className="flex items-start gap-3">
                 <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <span className="text-xs font-bold text-primary">1</span>
                 </div>
                 <p className="text-sm text-foreground">
-                  Open WhatsApp on your phone
+                  Open WhatsApp and message <strong className="text-primary">+1 415 523 8886</strong>
                 </p>
               </div>
               
@@ -460,7 +486,7 @@ export function OnboardingForm() {
                   <span className="text-xs font-bold text-primary">2</span>
                 </div>
                 <p className="text-sm text-foreground">
-                  Send this exact message to <strong className="text-primary">+1 415 523 8886</strong>:
+                  Send this exact message:
                 </p>
               </div>
               
