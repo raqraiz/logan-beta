@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { Heart, Sparkles, Check } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 const onboardingSchema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters").max(100),
@@ -43,14 +42,6 @@ export function OnboardingForm() {
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
-
-  const inputClass = "h-14 bg-input border-border text-foreground placeholder:text-muted-foreground rounded-xl";
-  const labelClass = "text-muted-foreground";
-  const primaryButtonClass = "h-14 rounded-xl text-base font-semibold shadow-glow";
-  const secondaryButtonClass = "h-14 rounded-xl";
-  const choicePillBase =
-    "flex items-center justify-center px-4 py-3 rounded-xl border border-border bg-input text-muted-foreground cursor-pointer transition-colors hover:bg-muted";
-  const choicePillActive = "bg-primary text-primary-foreground border-primary hover:bg-primary/90";
 
   const { register, handleSubmit, formState: { errors }, watch } = useForm<OnboardingData>({
     resolver: zodResolver(onboardingSchema),
@@ -126,7 +117,7 @@ export function OnboardingForm() {
         <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
           <Check className="w-10 h-10 text-primary" />
         </div>
-        <h3 className="text-2xl font-display font-semibold mb-3 text-foreground">You're In!</h3>
+        <h3 className="text-2xl font-display font-semibold mb-3">You're In! 🌸</h3>
         <p className="text-muted-foreground max-w-sm mx-auto">
           Logan will reach out via WhatsApp on Saturday or Tuesday evening (Israel time) 
           with your first personalized insight.
@@ -150,19 +141,19 @@ export function OnboardingForm() {
       </div>
 
       {step === 1 && (
-        <div className="space-y-5 animate-fade-in">
+        <div className="space-y-4 animate-fade-in">
           <div className="text-center mb-6">
             <Heart className="w-8 h-8 mx-auto text-primary mb-2" />
-            <h3 className="text-lg font-display font-medium text-foreground">Let's get to know you</h3>
+            <h3 className="text-lg font-display font-medium">Let's get to know you</h3>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="full_name" className={labelClass}>Your name</Label>
+            <Label htmlFor="full_name">Your name</Label>
             <Input
               id="full_name"
               placeholder="How should Logan address you?"
               {...register("full_name")}
-              className={inputClass}
+              className="h-12"
             />
             {errors.full_name && (
               <p className="text-sm text-destructive">{errors.full_name.message}</p>
@@ -170,12 +161,12 @@ export function OnboardingForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="whatsapp_number" className={labelClass}>WhatsApp number</Label>
+            <Label htmlFor="whatsapp_number">WhatsApp number</Label>
             <Input
               id="whatsapp_number"
               placeholder="+972 50 123 4567"
               {...register("whatsapp_number")}
-              className={inputClass}
+              className="h-12"
             />
             {errors.whatsapp_number && (
               <p className="text-sm text-destructive">{errors.whatsapp_number.message}</p>
@@ -184,31 +175,31 @@ export function OnboardingForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email" className={labelClass}>Email (optional)</Label>
+            <Label htmlFor="email">Email (optional)</Label>
             <Input
               id="email"
               type="email"
               placeholder="your@email.com"
               {...register("email")}
-              className={inputClass}
+              className="h-12"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="age" className={labelClass}>Age (optional)</Label>
+            <Label htmlFor="age">Age (optional)</Label>
             <Input
               id="age"
               type="number"
               placeholder="25"
               {...register("age", { valueAsNumber: true })}
-              className={inputClass}
+              className="h-12"
             />
           </div>
 
           <Button 
             type="button" 
             onClick={() => setStep(2)} 
-            className={cn("w-full mt-2", primaryButtonClass)}
+            className="w-full h-12 mt-4"
             disabled={!watch("full_name") || !watch("whatsapp_number")}
           >
             Continue
@@ -217,43 +208,40 @@ export function OnboardingForm() {
       )}
 
       {step === 2 && (
-        <div className="space-y-5 animate-fade-in">
+        <div className="space-y-4 animate-fade-in">
           <div className="text-center mb-6">
             <Sparkles className="w-8 h-8 mx-auto text-primary mb-2" />
-            <h3 className="text-lg font-display font-medium text-foreground">Tell us about your cycle</h3>
+            <h3 className="text-lg font-display font-medium">Tell us about your cycle</h3>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cycle_length_days" className={labelClass}>Average cycle length (days)</Label>
+            <Label htmlFor="cycle_length_days">Average cycle length (days)</Label>
             <Input
               id="cycle_length_days"
               type="number"
               placeholder="28"
               {...register("cycle_length_days", { valueAsNumber: true })}
-              className={inputClass}
+              className="h-12"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="last_period_start" className={labelClass}>When did your last period start?</Label>
+            <Label htmlFor="last_period_start">When did your last period start?</Label>
             <Input
               id="last_period_start"
               type="date"
               {...register("last_period_start")}
-              className={inputClass}
+              className="h-12"
             />
           </div>
 
           <div className="space-y-3">
-            <Label className={labelClass}>How regular is your cycle?</Label>
+            <Label>How regular is your cycle?</Label>
             <div className="grid grid-cols-3 gap-2">
               {["regular", "irregular", "very_irregular"].map((reg) => (
                 <label 
                   key={reg}
-                  className={cn(
-                    choicePillBase,
-                    "has-[:checked]:" + choicePillActive
-                  )}
+                  className="flex items-center justify-center p-3 rounded-lg border cursor-pointer transition-colors hover:bg-secondary/50 has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:checked]:border-primary"
                 >
                   <input
                     type="radio"
@@ -261,22 +249,17 @@ export function OnboardingForm() {
                     {...register("cycle_regularity")}
                     className="sr-only"
                   />
-                  <span className="text-sm capitalize">{reg.replace(/_/g, " ")}</span>
+                  <span className="text-sm capitalize">{reg.replace("_", " ")}</span>
                 </label>
               ))}
             </div>
           </div>
 
           <div className="flex gap-3 mt-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setStep(1)}
-              className={cn("flex-1", secondaryButtonClass)}
-            >
+            <Button type="button" variant="outline" onClick={() => setStep(1)} className="flex-1 h-12">
               Back
             </Button>
-            <Button type="button" onClick={() => setStep(3)} className={cn("flex-1", primaryButtonClass)}>
+            <Button type="button" onClick={() => setStep(3)} className="flex-1 h-12">
               Continue
             </Button>
           </div>
@@ -284,26 +267,25 @@ export function OnboardingForm() {
       )}
 
       {step === 3 && (
-        <div className="space-y-5 animate-fade-in">
+        <div className="space-y-4 animate-fade-in">
           <div className="text-center mb-6">
             <Heart className="w-8 h-8 mx-auto text-primary mb-2" />
-            <h3 className="text-lg font-display font-medium text-foreground">What do you experience?</h3>
+            <h3 className="text-lg font-display font-medium">What do you experience?</h3>
           </div>
 
           <div className="space-y-3">
-            <Label className={labelClass}>Common symptoms (select all that apply)</Label>
+            <Label>Common symptoms (select all that apply)</Label>
             <div className="flex flex-wrap gap-2">
               {symptoms.map((symptom) => (
                 <button
                   key={symptom}
                   type="button"
                   onClick={() => toggleSymptom(symptom)}
-                  className={cn(
-                    "px-4 py-2 rounded-full text-sm transition-all border",
+                  className={`px-4 py-2 rounded-full text-sm transition-all ${
                     selectedSymptoms.includes(symptom)
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-input text-muted-foreground border-border hover:bg-muted"
-                  )}
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                  }`}
                 >
                   {symptom}
                 </button>
@@ -312,38 +294,32 @@ export function OnboardingForm() {
           </div>
 
           <div className="space-y-3">
-            <Label className={labelClass}>What are your goals?</Label>
+            <Label>What are your goals?</Label>
             <div className="space-y-2">
               {goals.map((goal) => (
                 <label 
                   key={goal}
-                  className={cn(
-                    "flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-colors",
+                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                     selectedGoals.includes(goal)
-                      ? "bg-primary/10 border-primary"
-                      : "bg-input border-border hover:bg-muted"
-                  )}
+                      ? "bg-primary/5 border-primary"
+                      : "hover:bg-secondary/50"
+                  }`}
                 >
                   <Checkbox
                     checked={selectedGoals.includes(goal)}
                     onCheckedChange={() => toggleGoal(goal)}
                   />
-                  <span className="text-sm text-foreground">{goal}</span>
+                  <span className="text-sm">{goal}</span>
                 </label>
               ))}
             </div>
           </div>
 
           <div className="flex gap-3 mt-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setStep(2)}
-              className={cn("flex-1", secondaryButtonClass)}
-            >
+            <Button type="button" variant="outline" onClick={() => setStep(2)} className="flex-1 h-12">
               Back
             </Button>
-            <Button type="submit" className={cn("flex-1", primaryButtonClass)} disabled={isSubmitting}>
+            <Button type="submit" className="flex-1 h-12" disabled={isSubmitting}>
               {isSubmitting ? "Joining..." : "Join the Pilot 🌸"}
             </Button>
           </div>
