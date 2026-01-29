@@ -5,10 +5,11 @@ import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Heart, Users, FileCheck, MessageSquare, LogOut, Sparkles, RefreshCw } from "lucide-react";
+import { Heart, Users, MessageSquare, LogOut, Sparkles, RefreshCw, Shield } from "lucide-react";
 import { ParticipantsTab } from "@/components/admin/ParticipantsTab";
 import { InsightsTab } from "@/components/admin/InsightsTab";
 import { FeedbackTab } from "@/components/admin/FeedbackTab";
+import { AdminManagement } from "@/components/admin/AdminManagement";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -87,7 +88,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="participants" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsList className="grid w-full max-w-lg grid-cols-4">
             <TabsTrigger value="participants" className="gap-2">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Participants</span>
@@ -99,6 +100,10 @@ const Admin = () => {
             <TabsTrigger value="feedback" className="gap-2">
               <MessageSquare className="w-4 h-4" />
               <span className="hidden sm:inline">Feedback</span>
+            </TabsTrigger>
+            <TabsTrigger value="admins" className="gap-2">
+              <Shield className="w-4 h-4" />
+              <span className="hidden sm:inline">Admins</span>
             </TabsTrigger>
           </TabsList>
 
@@ -113,7 +118,12 @@ const Admin = () => {
           <TabsContent value="feedback">
             <FeedbackTab />
           </TabsContent>
+
+          <TabsContent value="admins">
+            <AdminManagement />
+          </TabsContent>
         </Tabs>
+
       </main>
     </div>
   );
