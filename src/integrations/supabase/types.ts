@@ -162,6 +162,9 @@ export type Database = {
       participants: {
         Row: {
           age: number | null
+          anchor_symptom: string | null
+          consent_given: boolean | null
+          consent_given_at: string | null
           created_at: string
           cycle_length_days: number | null
           cycle_regularity: string | null
@@ -178,6 +181,9 @@ export type Database = {
         }
         Insert: {
           age?: number | null
+          anchor_symptom?: string | null
+          consent_given?: boolean | null
+          consent_given_at?: string | null
           created_at?: string
           cycle_length_days?: number | null
           cycle_regularity?: string | null
@@ -194,6 +200,9 @@ export type Database = {
         }
         Update: {
           age?: number | null
+          anchor_symptom?: string | null
+          consent_given?: boolean | null
+          consent_given_at?: string | null
           created_at?: string
           cycle_length_days?: number | null
           cycle_regularity?: string | null

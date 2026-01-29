@@ -116,7 +116,10 @@ export function OnboardingForm() {
         last_period_start: data.last_period_start ? format(data.last_period_start, "yyyy-MM-dd") : null,
         cycle_regularity: "regular",
         typical_symptoms: selectedSymptoms,
-        goals: [finalAnchor],
+        goals: selectedSymptoms.length > 0 ? ["Understand my symptoms"] : [],
+        anchor_symptom: finalAnchor,
+        consent_given: consentGiven,
+        consent_given_at: consentGiven ? new Date().toISOString() : null,
       });
 
       if (error) {
