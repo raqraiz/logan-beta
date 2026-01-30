@@ -88,12 +88,12 @@ function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: 
           labels: [
             {
               text: day.toString(),
-              font: { size: 24, weight: "bold" },
+              font: { size: 52, weight: "bold" },
               color: colors.main,
             },
             {
               text: phase,
-              font: { size: 10 },
+              font: { size: 16 },
               color: colors.main,
             },
           ],
@@ -103,7 +103,8 @@ function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: 
   };
 
   const encodedConfig = encodeURIComponent(JSON.stringify(chartConfig));
-  return `https://quickchart.io/chart?c=${encodedConfig}&v=2.9.4&w=120&h=120&bkg=%231C1E22`;
+  // Use a 2:1 image so it takes less vertical space in WhatsApp, while keeping enough pixels for sharpness.
+  return `https://quickchart.io/chart?c=${encodedConfig}&v=2.9.4&w=600&h=300&bkg=%231C1E22`;
 }
 
 interface ParticipantBasic {
@@ -639,7 +640,7 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                     <img 
                       src={imageUrl} 
                       alt={`Cycle day ${cycleInfo.day} - ${cycleInfo.phase}`}
-                      className="w-[120px] h-[120px]"
+                      className="w-[300px] h-[150px]"
                     />
                   </div>
                   <div className="text-center">

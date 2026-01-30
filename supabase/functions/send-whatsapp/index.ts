@@ -57,12 +57,14 @@ async function generateCycleImage(day: number, phase: CyclePhase, cycleLengthDay
   const progress = day;
   const remaining = cycleLengthDays - day;
   
-  // Compact image for WhatsApp (120x120)
+  // Render a 2:1 image so it takes less vertical space in WhatsApp threads,
+  // but keep enough pixels (and DPR) so it stays crisp after WhatsApp compression.
   const chartConfig = {
     version: "2",
     format: "png",
-    width: 120,
-    height: 120,
+    width: 600,
+    height: 300,
+    devicePixelRatio: 2,
     backgroundColor: "#1C1E22",
     chart: {
       type: "doughnut",
@@ -85,12 +87,12 @@ async function generateCycleImage(day: number, phase: CyclePhase, cycleLengthDay
             labels: [
               {
                 text: day.toString(),
-                font: { size: 24, weight: "bold" },
+                font: { size: 52, weight: "bold" },
                 color: colors.main
               },
               {
                 text: phase,
-                font: { size: 10 },
+                font: { size: 16 },
                 color: colors.main
               },
             ]
