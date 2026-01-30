@@ -166,7 +166,7 @@ const Index = () => {
             <span className="font-display font-medium text-foreground">Logan</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            Made with 🤖 for women everywhere
+            Made by women for women everywhere
           </p>
         </div>
       </footer>
