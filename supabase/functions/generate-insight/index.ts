@@ -1,10 +1,62 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { differenceInDays } from "https://esm.sh/date-fns@3.6.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+type CyclePhase = "Menstruation" | "Follicular" | "Ovulation" | "Luteal";
+
+interface CycleInfo {
+  day: number;
+  phase: CyclePhase;
+  daysUntilNextPhase: number;
+  nextPhase: CyclePhase;
+}
+
+function getCycleInfo(lastPeriodStart: string | null, cycleLengthDays: number | null): CycleInfo | null {
+  if (!lastPeriodStart || !cycleLengthDays) return null;
+
+  const today = new Date();
+  const periodStart = new Date(lastPeriodStart);
+  const daysSinceStart = differenceInDays(today, periodStart);
+  
+  // Calculate current day in cycle (1-indexed, wrapping around)
+  const currentDay = ((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
+
+  // Phase boundaries - same logic as CycleCircle.tsx
+  const menstruationEnd = 5;
+  const ovulationDay = cycleLengthDays - 14;
+  const ovulationStart = ovulationDay - 1;
+  const ovulationEnd = ovulationDay + 2;
+  const lutealStart = ovulationEnd + 1;
+
+  let phase: CyclePhase;
+  let daysUntilNextPhase: number;
+  let nextPhase: CyclePhase;
+
+  if (currentDay <= menstruationEnd) {
+    phase = "Menstruation";
+    daysUntilNextPhase = menstruationEnd - currentDay + 1;
+    nextPhase = "Follicular";
+  } else if (currentDay < ovulationStart) {
+    phase = "Follicular";
+    daysUntilNextPhase = ovulationStart - currentDay;
+    nextPhase = "Ovulation";
+  } else if (currentDay <= ovulationEnd) {
+    phase = "Ovulation";
+    daysUntilNextPhase = ovulationEnd - currentDay + 1;
+    nextPhase = "Luteal";
+  } else {
+    phase = "Luteal";
+    daysUntilNextPhase = cycleLengthDays - currentDay + 1;
+    nextPhase = "Menstruation";
+  }
+
+  return { day: currentDay, phase, daysUntilNextPhase, nextPhase };
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -49,6 +101,9 @@ serve(async (req) => {
       );
     }
 
+    // Calculate current cycle phase using the SAME logic as the UI
+    const cycleInfo = getCycleInfo(participant.last_period_start, participant.cycle_length_days);
+
     // Get recent cycle updates for context
     const { data: recentUpdates } = await supabase
       .from("cycle_updates")
@@ -65,27 +120,42 @@ serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(3);
 
+    // Build insight type specific instructions
+    const insightTypeInstructions = {
+      awareness: "Educate them about what's happening in their body during this specific phase. Explain the biology in accessible terms. Help them understand WHY they might feel certain ways.",
+      pattern: "Share a personal observation about their data. Use phrases like 'We noticed...' or 'Looking at your cycle...' to show you're paying attention to THEIR specific patterns.",
+      validation: "Normalize their experience. Acknowledge that what they're feeling is real and valid. Provide emotional support without toxic positivity.",
+      action: "Give ONE specific, actionable recommendation based on their current phase and patterns. Be concrete - not 'try to rest' but 'consider a 20-minute walk after lunch'.",
+    };
+
     const systemPrompt = `You are Logan, a warm, empathetic, and knowledgeable women's health companion. You provide personalized insights about menstrual cycles with a tone that is supportive, encouraging, and non-clinical.
 
 Guidelines:
 - Be warm and conversational, like a caring friend
 - Use emojis sparingly but meaningfully (1-2 per message)
 - Keep messages concise but impactful (under 200 words)
-- Base insights on the participant's specific data
+- CRITICAL: Base ALL phase references on the EXACT phase data provided - do not calculate or guess phases
 - Acknowledge the unique experience of each person
-- If giving predictions, explain your reasoning gently
 - Include actionable tips when appropriate
 - End with an invitation to share feedback or updates`;
 
-    const userPrompt = `Generate a ${insightType || "recommendation"} for ${participant.full_name}.
+    const cycleContext = cycleInfo 
+      ? `CURRENT CYCLE STATUS (use this exactly, do not calculate):
+- Current cycle day: ${cycleInfo.day} of ${participant.cycle_length_days}
+- Current phase: ${cycleInfo.phase}
+- Days until next phase (${cycleInfo.nextPhase}): ${cycleInfo.daysUntilNextPhase}`
+      : "Cycle data not available - focus on general wellness";
+
+    const userPrompt = `Generate a "${insightType}" insight for ${participant.full_name}.
+
+${cycleContext}
 
 Their profile:
 - Age: ${participant.age || "not specified"}
-- Cycle length: ${participant.cycle_length_days || 28} days
-- Regularity: ${participant.cycle_regularity || "regular"}
-- Last period start: ${participant.last_period_start || "not tracked"}
+- Cycle regularity: ${participant.cycle_regularity || "regular"}
 - Common symptoms: ${participant.typical_symptoms?.join(", ") || "none specified"}
 - Goals: ${participant.goals?.join(", ") || "general wellness"}
+- Anchor symptom: ${participant.anchor_symptom || "none specified"}
 
 ${recentUpdates?.length ? `Recent updates they've shared:
 ${recentUpdates.map(u => `- ${u.description} (${u.category})`).join("\n")}` : ""}
@@ -93,7 +163,9 @@ ${recentUpdates.map(u => `- ${u.description} (${u.category})`).join("\n")}` : ""
 ${recentFeedback?.length ? `Recent feedback patterns:
 ${recentFeedback.map(f => `- ${f.is_useful ? "Found useful" : "Not useful"}, emotion: ${f.emotion || "not shared"}`).join("\n")}` : ""}
 
-Create a personalized ${insightType === "prediction" ? "cycle prediction" : insightType === "check_in" ? "wellness check-in" : "health recommendation"} that feels tailored specifically to them. Remember to be warm, concise, and actionable.`;
+Insight type guidance: ${insightTypeInstructions[insightType as keyof typeof insightTypeInstructions] || insightTypeInstructions.awareness}
+
+IMPORTANT: When referring to their cycle phase, use EXACTLY "${cycleInfo?.phase || 'their current'}" phase. Do not say "late luteal", "early follicular", etc. unless the day number clearly indicates it.`;
 
     console.log("Generating insight for participant:", participant.full_name);
 
