@@ -36,7 +36,7 @@ const Index = () => {
               
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold leading-tight text-foreground">
                 Meet <span className="text-primary">Logan</span>, your{" "}
-                <span className="text-primary">cycle companion</span>
+                <span className="text-primary">smart cycle tracker</span>
               </h1>
               
               <p className="text-lg text-muted-foreground max-w-lg">
