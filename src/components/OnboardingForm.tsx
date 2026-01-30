@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { Check, CalendarIcon, MessageCircle, ExternalLink, Smartphone } from "lucide-react";
 import { LoganLogo } from "./LoganLogo";
@@ -114,6 +115,11 @@ export function OnboardingForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [lastPeriodDate, setLastPeriodDate] = useState<Date | undefined>();
+  
+  // Free-form text fields
+  const [cycleNotes, setCycleNotes] = useState<string>("");
+  const [symptomNotes, setSymptomNotes] = useState<string>("");
+  const [anchorNotes, setAnchorNotes] = useState<string>("");
 
   const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm<OnboardingData>({
     resolver: zodResolver(onboardingSchema),
@@ -163,6 +169,7 @@ export function OnboardingForm() {
         anchor_symptom: finalAnchor,
         consent_given: consentGiven,
         consent_given_at: consentGiven ? new Date().toISOString() : null,
+        additional_notes: [cycleNotes, symptomNotes, anchorNotes].filter(Boolean).join("\n\n---\n\n") || null,
       });
 
       if (error) {
@@ -351,6 +358,19 @@ export function OnboardingForm() {
             </Popover>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="cycle_notes" className="text-sm">
+              Anything else about your cycle? <span className="text-muted-foreground">(optional)</span>
+            </Label>
+            <Textarea
+              id="cycle_notes"
+              placeholder="Irregular patterns, hormonal conditions, medications, or anything Logan should know..."
+              value={cycleNotes}
+              onChange={(e) => setCycleNotes(e.target.value)}
+              className="min-h-[80px] resize-none"
+            />
+          </div>
+
           <div className="flex gap-3 mt-6">
             <Button type="button" variant="outline" onClick={() => setStep(1)} className="flex-1 h-12">
               Back
@@ -397,6 +417,19 @@ export function OnboardingForm() {
                 </div>
               </div>
             ))}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="symptom_notes" className="text-sm">
+              Tell us more about your symptoms <span className="text-muted-foreground">(optional)</span>
+            </Label>
+            <Textarea
+              id="symptom_notes"
+              placeholder="When do they usually appear? How do they affect your day? Any patterns you've noticed..."
+              value={symptomNotes}
+              onChange={(e) => setSymptomNotes(e.target.value)}
+              className="min-h-[80px] resize-none"
+            />
           </div>
 
           <div className="flex gap-3 mt-6">
@@ -466,6 +499,19 @@ export function OnboardingForm() {
                 />
               </div>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="anchor_notes" className="text-sm">
+              How does this symptom affect your life? <span className="text-muted-foreground">(optional)</span>
+            </Label>
+            <Textarea
+              id="anchor_notes"
+              placeholder="Work, relationships, daily routines, self-perception... share as much or as little as you'd like"
+              value={anchorNotes}
+              onChange={(e) => setAnchorNotes(e.target.value)}
+              className="min-h-[80px] resize-none"
+            />
           </div>
 
           <div className="flex gap-3 mt-6">
