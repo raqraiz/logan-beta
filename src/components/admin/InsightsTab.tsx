@@ -70,7 +70,8 @@ function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: 
       data: {
         datasets: [{
           data: [progress, remaining],
-          backgroundColor: [colors.main, "#e5e7eb"],
+          // Match dark track seen in CycleCircle
+          backgroundColor: [colors.main, "#2c2f34"],
           borderWidth: 0,
         }]
       },
@@ -80,6 +81,9 @@ function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: 
         circumference: Math.PI * 2,
         legend: { display: false },
         plugins: {
+          // QuickChart registers chartjs-plugin-datalabels by default; disable it to avoid
+          // showing the dataset values (e.g., 21/78) on the chart.
+          datalabels: { display: false },
           doughnutlabel: {
             labels: [
               {
@@ -87,21 +91,26 @@ function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: 
                 font: { size: 52, weight: "bold" },
                 color: colors.main
               },
-              {
-                text: phase,
-                font: { size: 18 },
-                color: colors.main
-              }
             ]
           }
-        }
+        },
+        // Put phase label below the ring (like CycleCircle)
+        title: {
+          display: true,
+          text: phase,
+          position: "bottom",
+          fontSize: 18,
+          fontColor: colors.main,
+          padding: 16,
+        },
       }
     }
   };
 
   // Use POST endpoint via URL with base64 encoded config for preview
   const encodedConfig = encodeURIComponent(JSON.stringify(chartConfig));
-  return `https://quickchart.io/chart?c=${encodedConfig}&w=300&h=350&bkg=white`;
+  // Dark background to match app UI
+  return `https://quickchart.io/chart?c=${encodedConfig}&w=300&h=350&bkg=0B0B0D`;
 }
 
 interface ParticipantBasic {
@@ -633,11 +642,11 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                   <p className="text-sm text-muted-foreground text-center">
                     This is the image that will be sent with the WhatsApp message for <strong>{participant.full_name}</strong>
                   </p>
-                  <div className="border rounded-lg p-4 bg-white">
+                  <div className="rounded-lg p-4 bg-card border border-border shadow-card">
                     <img 
                       src={imageUrl} 
                       alt={`Cycle day ${cycleInfo.day} - ${cycleInfo.phase}`}
-                      className="w-[300px] h-[300px]"
+                      className="w-[300px] h-[350px]"
                     />
                   </div>
                   <div className="text-center">
