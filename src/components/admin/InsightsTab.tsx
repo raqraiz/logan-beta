@@ -78,24 +78,22 @@ function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: 
     },
     options: {
       cutoutPercentage: 70,
-      // Start from top (equivalent to -90deg)
       rotation: 4.71238898038469,
       circumference: 6.283185307179586,
       legend: { display: false },
       title: { display: false },
       plugins: {
-        // QuickChart registers chartjs-plugin-datalabels by default; disable it
         datalabels: { display: false },
         doughnutlabel: {
           labels: [
             {
               text: day.toString(),
-              font: { size: 36, weight: "bold" },
+              font: { size: 24, weight: "bold" },
               color: colors.main,
             },
             {
               text: phase,
-              font: { size: 14 },
+              font: { size: 10 },
               color: colors.main,
             },
           ],
@@ -104,10 +102,8 @@ function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: 
     },
   };
 
-  // Use POST endpoint via URL with base64 encoded config for preview
   const encodedConfig = encodeURIComponent(JSON.stringify(chartConfig));
-  // Smaller image for preview (matching WhatsApp size)
-  return `https://quickchart.io/chart?c=${encodedConfig}&v=2.9.4&w=180&h=180&bkg=%231C1E22`;
+  return `https://quickchart.io/chart?c=${encodedConfig}&v=2.9.4&w=120&h=120&bkg=%231C1E22`;
 }
 
 interface ParticipantBasic {
@@ -643,7 +639,7 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                     <img 
                       src={imageUrl} 
                       alt={`Cycle day ${cycleInfo.day} - ${cycleInfo.phase}`}
-                      className="w-[180px] h-[180px]"
+                      className="w-[120px] h-[120px]"
                     />
                   </div>
                   <div className="text-center">

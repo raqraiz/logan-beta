@@ -57,13 +57,12 @@ async function generateCycleImage(day: number, phase: CyclePhase, cycleLengthDay
   const progress = day;
   const remaining = cycleLengthDays - day;
   
-  // Use doughnut chart with doughnutlabel plugin - POST API handles this better
-  // Smaller image for WhatsApp (180x180)
+  // Compact image for WhatsApp (120x120)
   const chartConfig = {
     version: "2",
     format: "png",
-    width: 180,
-    height: 180,
+    width: 120,
+    height: 120,
     backgroundColor: "#1C1E22",
     chart: {
       type: "doughnut",
@@ -86,12 +85,12 @@ async function generateCycleImage(day: number, phase: CyclePhase, cycleLengthDay
             labels: [
               {
                 text: day.toString(),
-                font: { size: 36, weight: "bold" },
+                font: { size: 24, weight: "bold" },
                 color: colors.main
               },
               {
                 text: phase,
-                font: { size: 14 },
+                font: { size: 10 },
                 color: colors.main
               },
             ]
