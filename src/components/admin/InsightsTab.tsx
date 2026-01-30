@@ -82,37 +82,32 @@ function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: 
       rotation: 4.71238898038469,
       circumference: 6.283185307179586,
       legend: { display: false },
+      title: { display: false },
       plugins: {
-        // QuickChart registers chartjs-plugin-datalabels by default; disable it to avoid
-        // showing the dataset values (e.g., 21/78) on the chart.
+        // QuickChart registers chartjs-plugin-datalabels by default; disable it
         datalabels: { display: false },
         doughnutlabel: {
           labels: [
             {
               text: day.toString(),
-              font: { size: 52, weight: "bold" },
+              font: { size: 36, weight: "bold" },
+              color: colors.main,
+            },
+            {
+              text: phase,
+              font: { size: 14 },
               color: colors.main,
             },
           ],
         },
-      },
-      // Put phase label below the ring (like CycleCircle)
-      title: {
-        display: true,
-        text: phase,
-        position: "bottom",
-        fontSize: 18,
-        fontColor: colors.main,
-        padding: 16,
       },
     },
   };
 
   // Use POST endpoint via URL with base64 encoded config for preview
   const encodedConfig = encodeURIComponent(JSON.stringify(chartConfig));
-  // Dark background to match app UI (hex needs %23 prefix for QuickChart)
-  // Use graphite (not pure black) so the ring + center read clearly
-  return `https://quickchart.io/chart?c=${encodedConfig}&v=2.9.4&w=300&h=350&bkg=%231C1E22`;
+  // Smaller image for preview (matching WhatsApp size)
+  return `https://quickchart.io/chart?c=${encodedConfig}&v=2.9.4&w=180&h=180&bkg=%231C1E22`;
 }
 
 interface ParticipantBasic {
@@ -644,11 +639,11 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                   <p className="text-sm text-muted-foreground text-center">
                     This is the image that will be sent with the WhatsApp message for <strong>{participant.full_name}</strong>
                   </p>
-                  <div className="rounded-lg p-4 bg-card border border-border shadow-card">
+                  <div className="rounded-lg p-4 bg-card border border-border shadow-card flex justify-center">
                     <img 
                       src={imageUrl} 
                       alt={`Cycle day ${cycleInfo.day} - ${cycleInfo.phase}`}
-                      className="w-[300px] h-[350px]"
+                      className="w-[180px] h-[180px]"
                     />
                   </div>
                   <div className="text-center">

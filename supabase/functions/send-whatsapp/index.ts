@@ -58,19 +58,18 @@ async function generateCycleImage(day: number, phase: CyclePhase, cycleLengthDay
   const remaining = cycleLengthDays - day;
   
   // Use doughnut chart with doughnutlabel plugin - POST API handles this better
+  // Smaller image for WhatsApp (180x180)
   const chartConfig = {
     version: "2",
     format: "png",
-    width: 300,
-    height: 350,
-    // Match app aesthetic but avoid pure black so ring reads clearly in WhatsApp
+    width: 180,
+    height: 180,
     backgroundColor: "#1C1E22",
     chart: {
       type: "doughnut",
       data: {
         datasets: [{
           data: [progress, remaining],
-          // Match dark track seen in CycleCircle
           backgroundColor: [colors.main, "#3E4348"],
           borderWidth: 0,
         }]
@@ -80,28 +79,23 @@ async function generateCycleImage(day: number, phase: CyclePhase, cycleLengthDay
         rotation: Math.PI * 1.5,
         circumference: Math.PI * 2,
         legend: { display: false },
+        title: { display: false },
         plugins: {
-          // QuickChart registers chartjs-plugin-datalabels by default; disable it to avoid
-          // showing the dataset values (e.g., 21/79) on the chart.
           datalabels: { display: false },
           doughnutlabel: {
             labels: [
               {
                 text: day.toString(),
-                font: { size: 52, weight: "bold" },
+                font: { size: 36, weight: "bold" },
+                color: colors.main
+              },
+              {
+                text: phase,
+                font: { size: 14 },
                 color: colors.main
               },
             ]
           }
-        },
-        // Put phase label below the ring (like CycleCircle)
-        title: {
-          display: true,
-          text: phase,
-          position: "bottom",
-          fontSize: 18,
-          fontColor: colors.main,
-          padding: 16,
         },
       }
     }
