@@ -161,6 +161,7 @@ export type Database = {
       }
       participants: {
         Row: {
+          additional_notes: string | null
           age: number | null
           anchor_symptom: string | null
           consent_given: boolean | null
@@ -180,6 +181,7 @@ export type Database = {
           whatsapp_number: string
         }
         Insert: {
+          additional_notes?: string | null
           age?: number | null
           anchor_symptom?: string | null
           consent_given?: boolean | null
@@ -199,6 +201,7 @@ export type Database = {
           whatsapp_number: string
         }
         Update: {
+          additional_notes?: string | null
           age?: number | null
           anchor_symptom?: string | null
           consent_given?: boolean | null
