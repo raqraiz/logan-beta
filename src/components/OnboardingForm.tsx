@@ -21,9 +21,33 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { QRCodeSVG } from "qrcode.react";
 
+// Normalize phone number: remove spaces/dashes, ensure + prefix, remove leading 0 after country code
+const normalizePhoneNumber = (phone: string): string => {
+  // Remove all whitespace and dashes
+  let normalized = phone.replace(/[\s\-\(\)]/g, "");
+  
+  // Ensure it starts with +
+  if (!normalized.startsWith("+")) {
+    normalized = "+" + normalized;
+  }
+  
+  // Fix common Israeli format issue: +9720... should be +972...
+  // This handles cases where users include the local leading 0 after country code
+  normalized = normalized.replace(/^\+(\d{1,3})0(\d)/, "+$1$2");
+  
+  return normalized;
+};
+
 const onboardingSchema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters").max(100),
-  whatsapp_number: z.string().min(10, "Please enter a valid WhatsApp number").max(20),
+  whatsapp_number: z.string()
+    .min(10, "Please enter a valid WhatsApp number")
+    .max(20)
+    .refine((val) => {
+      const normalized = normalizePhoneNumber(val);
+      // Must start with + and have 10-15 digits after
+      return /^\+\d{10,15}$/.test(normalized);
+    }, "Enter number with country code (e.g., +972501234567)"),
   email: z.string().email("Please enter a valid email").optional().or(z.literal("")),
   age: z.number().min(13).max(65).optional(),
   cycle_length_days: z.number().min(21).max(45).optional(),
@@ -108,10 +132,11 @@ export function OnboardingForm() {
     setIsSubmitting(true);
     try {
       const finalAnchor = anchorSymptom === "Other" ? anchorOther : anchorSymptom;
+      const normalizedPhone = normalizePhoneNumber(data.whatsapp_number);
       
       const { error } = await supabase.from("participants").insert({
         full_name: data.full_name,
-        whatsapp_number: data.whatsapp_number,
+        whatsapp_number: normalizedPhone,
         email: data.email || null,
         age: data.age || null,
         cycle_length_days: data.cycle_length_days || 28,
@@ -211,10 +236,13 @@ export function OnboardingForm() {
             <Label htmlFor="whatsapp_number">WhatsApp Number</Label>
             <Input
               id="whatsapp_number"
-              placeholder="+972 50 123 4567"
+              placeholder="+972501234567"
               {...register("whatsapp_number")}
               className="h-12"
             />
+            <p className="text-xs text-muted-foreground">
+              Include country code without the leading 0 (e.g., +972 not +9720)
+            </p>
             {errors.whatsapp_number && (
               <p className="text-sm text-destructive">{errors.whatsapp_number.message}</p>
             )}
