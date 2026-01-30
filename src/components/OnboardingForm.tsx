@@ -250,15 +250,33 @@ export function OnboardingForm() {
 
           <div className="space-y-2">
             <Label htmlFor="whatsapp_number">WhatsApp Number</Label>
-            <Input
-              id="whatsapp_number"
-              placeholder="+972501234567"
-              {...register("whatsapp_number")}
-              className="h-12"
-            />
-            <p className="text-xs text-muted-foreground">
-              Include country code without the leading 0 (e.g., +972 not +9720)
-            </p>
+            <div className="flex gap-2">
+              <Input
+                id="whatsapp_number"
+                placeholder="0501234567"
+                {...register("whatsapp_number")}
+                className="h-12 flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 px-4"
+                onClick={() => {
+                  const current = watch("whatsapp_number");
+                  if (current) {
+                    const normalized = normalizePhoneNumber(current);
+                    setValue("whatsapp_number", normalized);
+                  }
+                }}
+              >
+                Format
+              </Button>
+            </div>
+            {watch("whatsapp_number") && watch("whatsapp_number").length >= 10 && (
+              <p className="text-xs text-primary font-medium">
+                Will be saved as: {normalizePhoneNumber(watch("whatsapp_number"))}
+              </p>
+            )}
             {errors.whatsapp_number && (
               <p className="text-sm text-destructive">{errors.whatsapp_number.message}</p>
             )}
