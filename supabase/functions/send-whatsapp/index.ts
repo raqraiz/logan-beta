@@ -9,16 +9,19 @@ const corsHeaders = {
 
 type CyclePhase = "Menstruation" | "Follicular" | "Ovulation" | "Luteal";
 
+// Phase colors matching the CycleCircle component exactly
+// main = the phase accent color (for progress arc + text)
+// track = muted dark track (matches text-muted/30 on dark bg)
 interface PhaseColors {
   main: string;
-  bg: string;
+  track: string;
 }
 
 const phaseColors: Record<CyclePhase, PhaseColors> = {
-  Menstruation: { main: "#e11d48", bg: "#fecdd3" },
-  Follicular: { main: "#059669", bg: "#a7f3d0" },
-  Ovulation: { main: "#d97706", bg: "#fde68a" },
-  Luteal: { main: "#7c3aed", bg: "#ddd6fe" },
+  Menstruation: { main: "#e11d48", track: "#3E4348" },  // rose-600
+  Follicular: { main: "#059669", track: "#3E4348" },    // emerald-600
+  Ovulation: { main: "#d97706", track: "#3E4348" },     // amber-600
+  Luteal: { main: "#7c3aed", track: "#3E4348" },        // violet-600
 };
 
 function getCycleInfo(lastPeriodStart: string | null, cycleLengthDays: number | null): { day: number; phase: CyclePhase } | null {
@@ -50,45 +53,36 @@ function getCycleInfo(lastPeriodStart: string | null, cycleLengthDays: number | 
   return { day: currentDay, phase };
 }
 
-// Darken a hex color by a percentage (0-100)
-function darkenColor(hex: string, percent: number): string {
-  const num = parseInt(hex.replace("#", ""), 16);
-  const r = Math.max(0, (num >> 16) - Math.round(255 * (percent / 100)));
-  const g = Math.max(0, ((num >> 8) & 0x00ff) - Math.round(255 * (percent / 100)));
-  const b = Math.max(0, (num & 0x0000ff) - Math.round(255 * (percent / 100)));
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
-}
-
-// Generate cycle image using QuickChart.io POST API with custom config
+// Generate cycle image using QuickChart.io POST API
+// Matches the CycleCircle component design exactly:
+// - Dark graphite background (#1C1E22)
+// - Thin ring with muted track (#3E4348)
+// - Phase-colored progress arc + center text
 async function generateCycleImage(day: number, phase: CyclePhase, cycleLengthDays: number): Promise<ArrayBuffer | null> {
   const colors = phaseColors[phase];
-  // Use absolute day values (not percentage) for proper ring proportion
   const progress = day;
   const remaining = cycleLengthDays - day;
   
-  // Create a darker track color from the phase background
-  const trackColor = darkenColor(colors.bg, 15);
-  
-  // Render a 2:1 image with phase-colored background and thin ring
+  // Match the CycleCircle design: dark bg, thin ring, phase color accent
   const chartConfig = {
     version: "2",
     format: "png",
     width: 600,
     height: 300,
     devicePixelRatio: 2,
-    backgroundColor: colors.bg,
+    backgroundColor: "#1C1E22",  // Dark graphite background
     chart: {
       type: "doughnut",
       data: {
         datasets: [{
           data: [progress, remaining],
-          backgroundColor: [colors.main, trackColor],
+          backgroundColor: [colors.main, colors.track],  // Phase color + muted track
           borderWidth: 0,
         }]
       },
       options: {
-        cutoutPercentage: 80,
-        rotation: Math.PI * 1.5,
+        cutoutPercentage: 75,  // Thin ring like CycleCircle
+        rotation: Math.PI * 1.5,  // Start from top
         circumference: Math.PI * 2,
         legend: { display: false },
         title: { display: false },
@@ -98,13 +92,13 @@ async function generateCycleImage(day: number, phase: CyclePhase, cycleLengthDay
             labels: [
               {
                 text: day.toString(),
-                font: { size: 52, weight: "bold" },
-                color: colors.main
+                font: { size: 48, weight: "bold" },
+                color: colors.main  // Phase color for day number
               },
               {
                 text: phase,
-                font: { size: 16 },
-                color: colors.main
+                font: { size: 14 },
+                color: colors.main  // Phase color for phase label
               },
             ]
           }
