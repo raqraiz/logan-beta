@@ -21,18 +21,34 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { QRCodeSVG } from "qrcode.react";
 
-// Normalize phone number: remove spaces/dashes, ensure + prefix, remove leading 0 after country code
+// Normalize phone number to international format
+// Handles common Israeli formats: 0501234567, +9720501234567, 972501234567, etc.
 const normalizePhoneNumber = (phone: string): string => {
-  // Remove all whitespace and dashes
+  // Remove all whitespace, dashes, parentheses
   let normalized = phone.replace(/[\s\-\(\)]/g, "");
+  
+  // Israeli mobile prefixes (without leading 0)
+  const israeliMobilePrefixes = ["50", "51", "52", "53", "54", "55", "56", "57", "58", "59"];
+  
+  // Case 1: Starts with 0 (local Israeli format like 0501234567)
+  if (normalized.startsWith("0") && normalized.length === 10) {
+    const prefix = normalized.substring(1, 3);
+    if (israeliMobilePrefixes.includes(prefix)) {
+      return "+972" + normalized.substring(1);
+    }
+  }
+  
+  // Case 2: Starts with 972 without + (like 972501234567 or 9720501234567)
+  if (normalized.startsWith("972")) {
+    normalized = "+" + normalized;
+  }
   
   // Ensure it starts with +
   if (!normalized.startsWith("+")) {
     normalized = "+" + normalized;
   }
   
-  // Fix common Israeli format issue: +9720... should be +972...
-  // This handles cases where users include the local leading 0 after country code
+  // Fix leading 0 after any country code: +9720... -> +972...
   normalized = normalized.replace(/^\+(\d{1,3})0(\d)/, "+$1$2");
   
   return normalized;
