@@ -10,16 +10,15 @@ const corsHeaders = {
 type CyclePhase = "Menstruation" | "Follicular" | "Ovulation" | "Luteal";
 
 interface PhaseColors {
-  stroke: string;
-  fill: string;
-  text: string;
+  main: string;
+  bg: string;
 }
 
 const phaseColors: Record<CyclePhase, PhaseColors> = {
-  Menstruation: { stroke: "#e11d48", fill: "#ffe4e6", text: "#be123c" },
-  Follicular: { stroke: "#059669", fill: "#d1fae5", text: "#047857" },
-  Ovulation: { stroke: "#d97706", fill: "#fef3c7", text: "#b45309" },
-  Luteal: { stroke: "#7c3aed", fill: "#ede9fe", text: "#6d28d9" },
+  Menstruation: { main: "#e11d48", bg: "#ffe4e6" },
+  Follicular: { main: "#059669", bg: "#d1fae5" },
+  Ovulation: { main: "#d97706", bg: "#fef3c7" },
+  Luteal: { main: "#7c3aed", bg: "#ede9fe" },
 };
 
 function getCycleInfo(lastPeriodStart: string | null, cycleLengthDays: number | null): { day: number; phase: CyclePhase } | null {
@@ -51,45 +50,47 @@ function getCycleInfo(lastPeriodStart: string | null, cycleLengthDays: number | 
   return { day: currentDay, phase };
 }
 
-function generateCycleCircleSVG(day: number, phase: CyclePhase, cycleLengthDays: number): string {
+// Generate cycle image URL using QuickChart.io API
+function generateCycleImageUrl(day: number, phase: CyclePhase, cycleLengthDays: number): string {
   const colors = phaseColors[phase];
-  const progress = (day / cycleLengthDays) * 100;
-  const size = 200;
-  const r = 80;
-  const cx = size / 2;
-  const cy = size / 2;
-  const circumference = 2 * Math.PI * r;
-  const strokeDashoffset = circumference - (progress / 100) * circumference;
+  const progress = Math.round((day / cycleLengthDays) * 100);
+  const remaining = 100 - progress;
+  
+  // Create a doughnut chart that looks like a progress circle
+  const chartConfig = {
+    type: "doughnut",
+    data: {
+      datasets: [{
+        data: [progress, remaining],
+        backgroundColor: [colors.main, "#e5e7eb"],
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      cutoutPercentage: 70,
+      rotation: -90,
+      circumference: 360,
+      plugins: {
+        doughnutlabel: {
+          labels: [
+            {
+              text: day.toString(),
+              font: { size: 48, weight: "bold" },
+              color: colors.main
+            },
+            {
+              text: phase,
+              font: { size: 16, weight: "600" },
+              color: colors.main
+            }
+          ]
+        }
+      }
+    }
+  };
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size + 40}" viewBox="0 0 ${size} ${size + 40}">
-  <defs>
-    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:${colors.fill};stop-opacity:0.8" />
-      <stop offset="100%" style="stop-color:${colors.fill};stop-opacity:0.4" />
-    </linearGradient>
-  </defs>
-  
-  <!-- Background circle -->
-  <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#e5e7eb" stroke-width="12" />
-  
-  <!-- Progress arc -->
-  <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${colors.stroke}" stroke-width="12" 
-    stroke-linecap="round" stroke-dasharray="${circumference}" stroke-dashoffset="${strokeDashoffset}"
-    transform="rotate(-90 ${cx} ${cy})" />
-  
-  <!-- Center circle with gradient -->
-  <circle cx="${cx}" cy="${cy}" r="${r - 15}" fill="url(#bgGradient)" />
-  
-  <!-- Day number -->
-  <text x="${cx}" y="${cy + 10}" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="${colors.text}">
-    ${day}
-  </text>
-  
-  <!-- Phase label below -->
-  <text x="${cx}" y="${size + 25}" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="${colors.text}">
-    ${phase}
-  </text>
-</svg>`;
+  const encodedConfig = encodeURIComponent(JSON.stringify(chartConfig));
+  return `https://quickchart.io/chart?c=${encodedConfig}&w=300&h=300&bkg=white`;
 }
 
 async function generateAndUploadCycleImage(
@@ -104,29 +105,30 @@ async function generateAndUploadCycleImage(
     return null;
   }
 
-  const svg = generateCycleCircleSVG(cycleInfo.day, cycleInfo.phase, cycleLengthDays || 28);
-  
-  // Convert SVG to PNG using resvg-wasm
   try {
-    const { Resvg, initWasm } = await import("@aspect-dev/resvg-wasm");
+    // Generate chart URL from QuickChart
+    const chartUrl = generateCycleImageUrl(cycleInfo.day, cycleInfo.phase, cycleLengthDays || 28);
     
-    // Initialize WASM
-    await initWasm();
+    console.log("Fetching cycle chart from QuickChart:", chartUrl);
     
-    const resvg = new Resvg(svg, {
-      fitTo: { mode: "width", value: 400 },
-    });
+    // Fetch the image from QuickChart
+    const imageResponse = await fetch(chartUrl);
+    if (!imageResponse.ok) {
+      console.error("Failed to fetch chart from QuickChart:", imageResponse.status);
+      return null;
+    }
     
-    const pngData = resvg.render().asPng();
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const imageData = new Uint8Array(imageBuffer);
     
     // Create unique filename
     const timestamp = Date.now();
     const filename = `${participantId}/${timestamp}.png`;
     
     // Upload to Supabase storage
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from("cycle-images")
-      .upload(filename, pngData, {
+      .upload(filename, imageData, {
         contentType: "image/png",
         upsert: true,
       });
