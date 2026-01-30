@@ -148,9 +148,9 @@ const Index = () => {
               </div>
               <div className="flex items-center justify-center">
                 <div className="text-center p-8 rounded-2xl bg-muted/50 border border-border">
-                  <p className="text-sm text-muted-foreground mb-2">Insights from</p>
-                  <p className="text-2xl font-display font-bold text-primary">+1 415 523 8886</p>
-                  <p className="text-sm text-muted-foreground mt-2">Save this number as "Logan" 🤖</p>
+                  <p className="text-sm text-muted-foreground mb-2">Insights from Twilio</p>
+                  <p className="text-2xl font-display font-bold text-primary">+1 (415) 523-8886</p>
+                  <p className="text-sm text-muted-foreground mt-2">Save this number as Logan in your contacts</p>
                 </div>
               </div>
             </div>
