@@ -15,10 +15,10 @@ interface PhaseColors {
 }
 
 const phaseColors: Record<CyclePhase, PhaseColors> = {
-  Menstruation: { main: "#e11d48", bg: "#ffe4e6" },
-  Follicular: { main: "#059669", bg: "#d1fae5" },
-  Ovulation: { main: "#d97706", bg: "#fef3c7" },
-  Luteal: { main: "#7c3aed", bg: "#ede9fe" },
+  Menstruation: { main: "#e11d48", bg: "#fecdd3" },
+  Follicular: { main: "#059669", bg: "#a7f3d0" },
+  Ovulation: { main: "#d97706", bg: "#fde68a" },
+  Luteal: { main: "#7c3aed", bg: "#ddd6fe" },
 };
 
 function getCycleInfo(lastPeriodStart: string | null, cycleLengthDays: number | null): { day: number; phase: CyclePhase } | null {
@@ -50,6 +50,15 @@ function getCycleInfo(lastPeriodStart: string | null, cycleLengthDays: number | 
   return { day: currentDay, phase };
 }
 
+// Darken a hex color by a percentage (0-100)
+function darkenColor(hex: string, percent: number): string {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const r = Math.max(0, (num >> 16) - Math.round(255 * (percent / 100)));
+  const g = Math.max(0, ((num >> 8) & 0x00ff) - Math.round(255 * (percent / 100)));
+  const b = Math.max(0, (num & 0x0000ff) - Math.round(255 * (percent / 100)));
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+}
+
 // Generate cycle image using QuickChart.io POST API with custom config
 async function generateCycleImage(day: number, phase: CyclePhase, cycleLengthDays: number): Promise<ArrayBuffer | null> {
   const colors = phaseColors[phase];
@@ -57,26 +66,28 @@ async function generateCycleImage(day: number, phase: CyclePhase, cycleLengthDay
   const progress = day;
   const remaining = cycleLengthDays - day;
   
-  // Render a 2:1 image so it takes less vertical space in WhatsApp threads,
-  // but keep enough pixels (and DPR) so it stays crisp after WhatsApp compression.
+  // Create a darker track color from the phase background
+  const trackColor = darkenColor(colors.bg, 15);
+  
+  // Render a 2:1 image with phase-colored background and thin ring
   const chartConfig = {
     version: "2",
     format: "png",
     width: 600,
     height: 300,
     devicePixelRatio: 2,
-    backgroundColor: "#1C1E22",
+    backgroundColor: colors.bg,
     chart: {
       type: "doughnut",
       data: {
         datasets: [{
           data: [progress, remaining],
-          backgroundColor: [colors.main, "#3E4348"],
+          backgroundColor: [colors.main, trackColor],
           borderWidth: 0,
         }]
       },
       options: {
-        cutoutPercentage: 70,
+        cutoutPercentage: 80,
         rotation: Math.PI * 1.5,
         circumference: Math.PI * 2,
         legend: { display: false },
@@ -184,7 +195,7 @@ serve(async (req) => {
   }
 
   try {
-    const { insightId, phoneNumber, message } = await req.json();
+    const { insightId, phoneNumber, message, includeCycleImage } = await req.json();
 
     if (!insightId) {
       return new Response(
@@ -246,9 +257,9 @@ serve(async (req) => {
       );
     }
 
-    // Generate cycle circle image if participant data is available
+    // Generate cycle circle image only if admin explicitly requests it
     let cycleImageUrl: string | null = null;
-    if (participant?.id && participant?.last_period_start) {
+    if (includeCycleImage && participant?.id && participant?.last_period_start) {
       cycleImageUrl = await generateAndUploadCycleImage(
         supabase,
         participant.id,
