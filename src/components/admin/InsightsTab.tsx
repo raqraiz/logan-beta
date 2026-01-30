@@ -11,10 +11,22 @@ import { toast } from "@/hooks/use-toast";
 import { Sparkles, RefreshCw, Check, X, Send, Plus, Wand2 } from "lucide-react";
 import { format } from "date-fns";
 
-interface Participant {
+interface ParticipantBasic {
   id: string;
   full_name: string;
   whatsapp_number: string;
+}
+
+interface ParticipantFull extends ParticipantBasic {
+  email: string | null;
+  age: number | null;
+  cycle_length_days: number | null;
+  cycle_regularity: string | null;
+  last_period_start: string | null;
+  anchor_symptom: string | null;
+  typical_symptoms: string[] | null;
+  goals: string[] | null;
+  timezone: string | null;
 }
 
 interface Insight {
@@ -26,7 +38,7 @@ interface Insight {
   status: "pending" | "approved" | "rejected" | "sent";
   scheduled_for: string | null;
   admin_notes: string | null;
-  participants?: Participant;
+  participants?: ParticipantBasic;
 }
 
 interface InsightsTabProps {
@@ -35,7 +47,7 @@ interface InsightsTabProps {
 
 export function InsightsTab({ userId }: InsightsTabProps) {
   const [insights, setInsights] = useState<Insight[]>([]);
-  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [participants, setParticipants] = useState<ParticipantFull[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
@@ -54,7 +66,7 @@ export function InsightsTab({ userId }: InsightsTabProps) {
           .order("created_at", { ascending: false }),
         supabase
           .from("participants")
-          .select("id, full_name, whatsapp_number")
+          .select("id, full_name, whatsapp_number, email, age, cycle_length_days, cycle_regularity, last_period_start, anchor_symptom, typical_symptoms, goals, timezone")
           .eq("is_active", true),
       ]);
 
@@ -222,60 +234,144 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                 Create Insight
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
               <DialogHeader>
                 <DialogTitle>Create New Insight</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Participant</Label>
-                  <Select value={selectedParticipant} onValueChange={setSelectedParticipant}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select participant" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {participants.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.full_name} ({p.whatsapp_number})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Type</Label>
-                  <Select value={insightType} onValueChange={setInsightType}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="prediction">Prediction</SelectItem>
-                      <SelectItem value="recommendation">Recommendation</SelectItem>
-                      <SelectItem value="check_in">Check-in</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Content</Label>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={generateInsight}
-                      disabled={!selectedParticipant || generating}
-                    >
-                      <Wand2 className="w-4 h-4 mr-2" />
-                      {generating ? "Generating..." : "AI Generate"}
-                    </Button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4 overflow-y-auto max-h-[70vh]">
+                {/* Left side: Form */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Participant</Label>
+                    <Select value={selectedParticipant} onValueChange={setSelectedParticipant}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select participant" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {participants.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.full_name} ({p.whatsapp_number})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <Textarea
-                    value={insightContent}
-                    onChange={(e) => setInsightContent(e.target.value)}
-                    placeholder="Write a personalized insight for this participant..."
-                    rows={6}
-                  />
+
+                  <div className="space-y-2">
+                    <Label>Type</Label>
+                    <Select value={insightType} onValueChange={setInsightType}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="prediction">Prediction</SelectItem>
+                        <SelectItem value="recommendation">Recommendation</SelectItem>
+                        <SelectItem value="check_in">Check-in</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Content</Label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={generateInsight}
+                        disabled={!selectedParticipant || generating}
+                      >
+                        <Wand2 className="w-4 h-4 mr-2" />
+                        {generating ? "Generating..." : "AI Generate"}
+                      </Button>
+                    </div>
+                    <Textarea
+                      value={insightContent}
+                      onChange={(e) => setInsightContent(e.target.value)}
+                      placeholder="Write a personalized insight for this participant..."
+                      rows={8}
+                    />
+                  </div>
+                </div>
+
+                {/* Right side: Participant Profile */}
+                <div className="space-y-4 border-l pl-6">
+                  <Label className="text-base font-semibold">Participant Profile</Label>
+                  {selectedParticipant ? (
+                    (() => {
+                      const p = participants.find(p => p.id === selectedParticipant);
+                      if (!p) return <p className="text-sm text-muted-foreground">Participant not found</p>;
+                      return (
+                        <div className="space-y-3 text-sm">
+                          <div>
+                            <span className="font-medium text-muted-foreground">Name:</span>
+                            <p>{p.full_name}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-muted-foreground">WhatsApp:</span>
+                            <p>{p.whatsapp_number}</p>
+                          </div>
+                          {p.email && (
+                            <div>
+                              <span className="font-medium text-muted-foreground">Email:</span>
+                              <p>{p.email}</p>
+                            </div>
+                          )}
+                          {p.age && (
+                            <div>
+                              <span className="font-medium text-muted-foreground">Age:</span>
+                              <p>{p.age}</p>
+                            </div>
+                          )}
+                          <div className="border-t pt-3">
+                            <span className="font-medium text-muted-foreground">Cycle Info:</span>
+                            <div className="mt-1 space-y-1">
+                              <p>Length: {p.cycle_length_days || 28} days</p>
+                              <p>Regularity: {p.cycle_regularity || "Not specified"}</p>
+                              {p.last_period_start && (
+                                <p>Last period: {format(new Date(p.last_period_start), "MMM d, yyyy")}</p>
+                              )}
+                            </div>
+                          </div>
+                          {p.anchor_symptom && (
+                            <div className="border-t pt-3">
+                              <span className="font-medium text-muted-foreground">Anchor Symptom:</span>
+                              <p className="mt-1">{p.anchor_symptom}</p>
+                            </div>
+                          )}
+                          {p.typical_symptoms && p.typical_symptoms.length > 0 && (
+                            <div className="border-t pt-3">
+                              <span className="font-medium text-muted-foreground">Typical Symptoms:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {p.typical_symptoms.map((s, i) => (
+                                  <Badge key={i} variant="secondary" className="text-xs">{s}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {p.goals && p.goals.length > 0 && (
+                            <div className="border-t pt-3">
+                              <span className="font-medium text-muted-foreground">Goals:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {p.goals.map((g, i) => (
+                                  <Badge key={i} variant="outline" className="text-xs">{g}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {p.timezone && (
+                            <div className="border-t pt-3">
+                              <span className="font-medium text-muted-foreground">Timezone:</span>
+                              <p>{p.timezone}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">
+                      Select a participant to view their profile
+                    </p>
+                  )}
                 </div>
               </div>
               <DialogFooter>
