@@ -61,56 +61,58 @@ function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: 
   // Use day / remaining days ratio (not percentage) to match edge function
   const progress = day;
   const remaining = cycleLength - day;
-  
-  // Use doughnut chart with doughnutlabel plugin - matches edge function config
+
+  // IMPORTANT: QuickChart URL mode (?c=...) expects a Chart.js config object.
+  // Do NOT send the POST wrapper object (e.g., { chart, width, height, backgroundColor }).
   const chartConfig = {
-    version: "2",
-    chart: {
-      type: "doughnut",
-      data: {
-        datasets: [{
+    type: "doughnut",
+    data: {
+      datasets: [
+        {
           data: [progress, remaining],
           // Match dark track seen in CycleCircle
-          backgroundColor: [colors.main, "#2c2f34"],
+          backgroundColor: [colors.main, "#3E4348"],
           borderWidth: 0,
-        }]
+        },
+      ],
+    },
+    options: {
+      cutoutPercentage: 70,
+      // Start from top (equivalent to -90deg)
+      rotation: 4.71238898038469,
+      circumference: 6.283185307179586,
+      legend: { display: false },
+      plugins: {
+        // QuickChart registers chartjs-plugin-datalabels by default; disable it to avoid
+        // showing the dataset values (e.g., 21/78) on the chart.
+        datalabels: { display: false },
+        doughnutlabel: {
+          labels: [
+            {
+              text: day.toString(),
+              font: { size: 52, weight: "bold" },
+              color: colors.main,
+            },
+          ],
+        },
       },
-      options: {
-        cutoutPercentage: 70,
-        rotation: Math.PI * 1.5,
-        circumference: Math.PI * 2,
-        legend: { display: false },
-        plugins: {
-          // QuickChart registers chartjs-plugin-datalabels by default; disable it to avoid
-          // showing the dataset values (e.g., 21/78) on the chart.
-          datalabels: { display: false },
-          doughnutlabel: {
-            labels: [
-              {
-                text: day.toString(),
-                font: { size: 52, weight: "bold" },
-                color: colors.main
-              },
-            ]
-          }
-        },
-        // Put phase label below the ring (like CycleCircle)
-        title: {
-          display: true,
-          text: phase,
-          position: "bottom",
-          fontSize: 18,
-          fontColor: colors.main,
-          padding: 16,
-        },
-      }
-    }
+      // Put phase label below the ring (like CycleCircle)
+      title: {
+        display: true,
+        text: phase,
+        position: "bottom",
+        fontSize: 18,
+        fontColor: colors.main,
+        padding: 16,
+      },
+    },
   };
 
   // Use POST endpoint via URL with base64 encoded config for preview
   const encodedConfig = encodeURIComponent(JSON.stringify(chartConfig));
   // Dark background to match app UI (hex needs %23 prefix for QuickChart)
-  return `https://quickchart.io/chart?c=${encodedConfig}&w=300&h=350&bkg=%230B0B0D`;
+  // Use graphite (not pure black) so the ring + center read clearly
+  return `https://quickchart.io/chart?c=${encodedConfig}&v=2.9.4&w=300&h=350&bkg=%231C1E22`;
 }
 
 interface ParticipantBasic {
