@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "@aspect-dev/resvg-wasm": "npm:@aspect-dev/resvg-wasm@1.0.0"
+  }
+}
