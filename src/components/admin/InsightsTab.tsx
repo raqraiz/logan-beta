@@ -8,9 +8,92 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Sparkles, RefreshCw, Check, X, Send, Plus, Wand2 } from "lucide-react";
-import { format } from "date-fns";
+import { Sparkles, RefreshCw, Check, X, Send, Plus, Wand2, Image } from "lucide-react";
+import { format, differenceInDays } from "date-fns";
 import { CycleCircle } from "./CycleCircle";
+
+type CyclePhase = "Menstruation" | "Follicular" | "Ovulation" | "Luteal";
+
+const phaseColors: Record<CyclePhase, { main: string }> = {
+  Menstruation: { main: "#e11d48" },
+  Follicular: { main: "#059669" },
+  Ovulation: { main: "#d97706" },
+  Luteal: { main: "#7c3aed" },
+};
+
+function getCycleInfo(lastPeriodStart: string | null, cycleLengthDays: number | null): { day: number; phase: CyclePhase } | null {
+  if (!lastPeriodStart || !cycleLengthDays) return null;
+
+  const today = new Date();
+  const periodStart = new Date(lastPeriodStart);
+  const daysSinceStart = differenceInDays(today, periodStart);
+  
+  const currentDay = ((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
+
+  const menstruationEnd = 5;
+  const ovulationDay = cycleLengthDays - 14;
+  const ovulationStart = ovulationDay - 1;
+  const ovulationEnd = ovulationDay + 2;
+
+  let phase: CyclePhase;
+
+  if (currentDay <= menstruationEnd) {
+    phase = "Menstruation";
+  } else if (currentDay < ovulationStart) {
+    phase = "Follicular";
+  } else if (currentDay <= ovulationEnd) {
+    phase = "Ovulation";
+  } else {
+    phase = "Luteal";
+  }
+
+  return { day: currentDay, phase };
+}
+
+function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: number | null): string | null {
+  const cycleInfo = getCycleInfo(lastPeriodStart, cycleLengthDays);
+  if (!cycleInfo) return null;
+
+  const { day, phase } = cycleInfo;
+  const colors = phaseColors[phase];
+  const progress = Math.round((day / (cycleLengthDays || 28)) * 100);
+  const remaining = 100 - progress;
+  
+  const chartConfig = {
+    type: "doughnut",
+    data: {
+      datasets: [{
+        data: [progress, remaining],
+        backgroundColor: [colors.main, "#e5e7eb"],
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      cutoutPercentage: 70,
+      rotation: -90,
+      circumference: 360,
+      plugins: {
+        doughnutlabel: {
+          labels: [
+            {
+              text: day.toString(),
+              font: { size: 48, weight: "bold" },
+              color: colors.main
+            },
+            {
+              text: phase,
+              font: { size: 16, weight: "600" },
+              color: colors.main
+            }
+          ]
+        }
+      }
+    }
+  };
+
+  const encodedConfig = encodeURIComponent(JSON.stringify(chartConfig));
+  return `https://quickchart.io/chart?c=${encodedConfig}&w=300&h=300&bkg=white`;
+}
 
 interface ParticipantBasic {
   id: string;
@@ -53,6 +136,8 @@ export function InsightsTab({ userId }: InsightsTabProps) {
   const [generating, setGenerating] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showImagePreview, setShowImagePreview] = useState(false);
+  const [previewParticipantId, setPreviewParticipantId] = useState<string | null>(null);
   const [selectedParticipant, setSelectedParticipant] = useState<string>("");
   const [insightType, setInsightType] = useState<string>("awareness");
   const [insightContent, setInsightContent] = useState("");
@@ -317,7 +402,7 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                               cycleLengthDays={p.cycle_length_days}
                               size="md"
                             />
-                            <div>
+                            <div className="flex-1">
                               <p className="font-medium">{p.full_name}</p>
                               <p className="text-xs text-muted-foreground">
                                 {p.cycle_length_days || 28} day cycle
@@ -328,6 +413,19 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                                 </p>
                               )}
                             </div>
+                            {p.last_period_start && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setPreviewParticipantId(p.id);
+                                  setShowImagePreview(true);
+                                }}
+                              >
+                                <Image className="w-4 h-4 mr-1" />
+                                Preview
+                              </Button>
+                            )}
                           </div>
                           
                           <div>
@@ -474,14 +572,27 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                     </>
                   )}
                   {insight.status === "approved" && insight.participants?.whatsapp_number && (
-                    <Button 
-                      size="sm" 
-                      onClick={() => sendToWhatsApp(insight)}
-                      disabled={sendingId === insight.id}
-                    >
-                      <Send className="w-4 h-4 mr-1" />
-                      {sendingId === insight.id ? "Sending..." : "Send to WhatsApp"}
-                    </Button>
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setPreviewParticipantId(insight.participant_id);
+                          setShowImagePreview(true);
+                        }}
+                      >
+                        <Image className="w-4 h-4 mr-1" />
+                        Preview Image
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={() => sendToWhatsApp(insight)}
+                        disabled={sendingId === insight.id}
+                      >
+                        <Send className="w-4 h-4 mr-1" />
+                        {sendingId === insight.id ? "Sending..." : "Send to WhatsApp"}
+                      </Button>
+                    </>
                   )}
                 </div>
               </CardContent>
@@ -489,6 +600,52 @@ export function InsightsTab({ userId }: InsightsTabProps) {
           ))}
         </div>
       )}
+
+      {/* Cycle Image Preview Dialog */}
+      <Dialog open={showImagePreview} onOpenChange={setShowImagePreview}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>WhatsApp Cycle Image Preview</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            {(() => {
+              const participant = participants.find(p => p.id === previewParticipantId);
+              if (!participant) return <p className="text-muted-foreground">Participant not found</p>;
+              
+              const imageUrl = generateCycleImageUrl(participant.last_period_start, participant.cycle_length_days);
+              const cycleInfo = getCycleInfo(participant.last_period_start, participant.cycle_length_days);
+              
+              if (!imageUrl || !cycleInfo) {
+                return <p className="text-muted-foreground">No cycle data available</p>;
+              }
+              
+              return (
+                <>
+                  <p className="text-sm text-muted-foreground text-center">
+                    This is the image that will be sent with the WhatsApp message for <strong>{participant.full_name}</strong>
+                  </p>
+                  <div className="border rounded-lg p-4 bg-white">
+                    <img 
+                      src={imageUrl} 
+                      alt={`Cycle day ${cycleInfo.day} - ${cycleInfo.phase}`}
+                      className="w-[300px] h-[300px]"
+                    />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-medium">Day {cycleInfo.day} of {participant.cycle_length_days || 28}</p>
+                    <p className="text-sm text-muted-foreground">{cycleInfo.phase} Phase</p>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowImagePreview(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
