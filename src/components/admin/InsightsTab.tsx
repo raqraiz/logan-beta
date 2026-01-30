@@ -59,40 +59,46 @@ function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: 
   const progress = Math.round((day / (cycleLengthDays || 28)) * 100);
   const remaining = 100 - progress;
   
+  // Use doughnut chart with doughnutlabel plugin - matches edge function config
   const chartConfig = {
-    type: "doughnut",
-    data: {
-      datasets: [{
-        data: [progress, remaining],
-        backgroundColor: [colors.main, "#e5e7eb"],
-        borderWidth: 0,
-      }]
-    },
-    options: {
-      cutoutPercentage: 70,
-      rotation: -90,
-      circumference: 360,
-      plugins: {
-        doughnutlabel: {
-          labels: [
-            {
-              text: day.toString(),
-              font: { size: 48, weight: "bold" },
-              color: colors.main
-            },
-            {
-              text: phase,
-              font: { size: 16, weight: "600" },
-              color: colors.main
-            }
-          ]
+    version: "2",
+    chart: {
+      type: "doughnut",
+      data: {
+        datasets: [{
+          data: [progress, remaining],
+          backgroundColor: [colors.main, "#e5e7eb"],
+          borderWidth: 0,
+        }]
+      },
+      options: {
+        cutoutPercentage: 70,
+        rotation: Math.PI * 1.5,
+        circumference: Math.PI * 2,
+        legend: { display: false },
+        plugins: {
+          doughnutlabel: {
+            labels: [
+              {
+                text: day.toString(),
+                font: { size: 52, weight: "bold" },
+                color: colors.main
+              },
+              {
+                text: phase,
+                font: { size: 18 },
+                color: colors.main
+              }
+            ]
+          }
         }
       }
     }
   };
 
+  // Use POST endpoint via URL with base64 encoded config for preview
   const encodedConfig = encodeURIComponent(JSON.stringify(chartConfig));
-  return `https://quickchart.io/chart?c=${encodedConfig}&w=300&h=300&bkg=white`;
+  return `https://quickchart.io/chart?c=${encodedConfig}&w=300&h=350&bkg=white`;
 }
 
 interface ParticipantBasic {
