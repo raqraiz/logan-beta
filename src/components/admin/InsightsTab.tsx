@@ -109,8 +109,8 @@ function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: 
 
   // Use POST endpoint via URL with base64 encoded config for preview
   const encodedConfig = encodeURIComponent(JSON.stringify(chartConfig));
-  // Dark background to match app UI
-  return `https://quickchart.io/chart?c=${encodedConfig}&w=300&h=350&bkg=0B0B0D`;
+  // Dark background to match app UI (hex needs %23 prefix for QuickChart)
+  return `https://quickchart.io/chart?c=${encodedConfig}&w=300&h=350&bkg=%230B0B0D`;
 }
 
 interface ParticipantBasic {

@@ -53,8 +53,9 @@ function getCycleInfo(lastPeriodStart: string | null, cycleLengthDays: number | 
 // Generate cycle image using QuickChart.io POST API with custom config
 async function generateCycleImage(day: number, phase: CyclePhase, cycleLengthDays: number): Promise<ArrayBuffer | null> {
   const colors = phaseColors[phase];
-  const progress = Math.round((day / cycleLengthDays) * 100);
-  const remaining = 100 - progress;
+  // Use absolute day values (not percentage) for proper ring proportion
+  const progress = day;
+  const remaining = cycleLengthDays - day;
   
   // Use doughnut chart with doughnutlabel plugin - POST API handles this better
   const chartConfig = {
