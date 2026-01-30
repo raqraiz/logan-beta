@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { toast } from "@/hooks/use-toast";
 import { Sparkles, RefreshCw, Check, X, Send, Plus, Wand2 } from "lucide-react";
 import { format } from "date-fns";
+import { CycleCircle } from "./CycleCircle";
 
 interface ParticipantBasic {
   id: string;
@@ -309,9 +310,29 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                       if (!p) return <p className="text-sm text-muted-foreground">Participant not found</p>;
                       return (
                         <div className="space-y-3 text-sm">
+                          {/* Cycle Circle at top for quick reference */}
+                          <div className="flex items-center gap-4 pb-3 border-b">
+                            <CycleCircle 
+                              lastPeriodStart={p.last_period_start} 
+                              cycleLengthDays={p.cycle_length_days}
+                              size="md"
+                            />
+                            <div>
+                              <p className="font-medium">{p.full_name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {p.cycle_length_days || 28} day cycle
+                              </p>
+                              {p.last_period_start && (
+                                <p className="text-xs text-muted-foreground">
+                                  Last period: {format(new Date(p.last_period_start), "MMM d")}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          
                           <div>
-                            <span className="font-medium text-muted-foreground">Name:</span>
-                            <p>{p.full_name}</p>
+                            <span className="font-medium text-muted-foreground">WhatsApp:</span>
+                            <p>{p.whatsapp_number}</p>
                           </div>
                           <div>
                             <span className="font-medium text-muted-foreground">WhatsApp:</span>
