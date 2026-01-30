@@ -63,15 +63,15 @@ async function generateCycleImage(day: number, phase: CyclePhase, cycleLengthDay
     format: "png",
     width: 300,
     height: 350,
-    // Match dark CycleCircle aesthetic
-    backgroundColor: "#0B0B0D",
+    // Match app aesthetic but avoid pure black so ring reads clearly in WhatsApp
+    backgroundColor: "#1C1E22",
     chart: {
       type: "doughnut",
       data: {
         datasets: [{
           data: [progress, remaining],
           // Match dark track seen in CycleCircle
-          backgroundColor: [colors.main, "#2c2f34"],
+          backgroundColor: [colors.main, "#3E4348"],
           borderWidth: 0,
         }]
       },
