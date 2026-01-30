@@ -15,21 +15,13 @@ import { CycleCircle } from "./CycleCircle";
 
 type CyclePhase = "Menstruation" | "Follicular" | "Ovulation" | "Luteal";
 
-const phaseColors: Record<CyclePhase, { main: string; bg: string }> = {
-  Menstruation: { main: "#e11d48", bg: "#fecdd3" },
-  Follicular: { main: "#059669", bg: "#a7f3d0" },
-  Ovulation: { main: "#d97706", bg: "#fde68a" },
-  Luteal: { main: "#7c3aed", bg: "#ddd6fe" },
+// Phase colors matching the CycleCircle component exactly
+const phaseColors: Record<CyclePhase, { main: string; track: string }> = {
+  Menstruation: { main: "#e11d48", track: "#3E4348" },  // rose-600
+  Follicular: { main: "#059669", track: "#3E4348" },    // emerald-600
+  Ovulation: { main: "#d97706", track: "#3E4348" },     // amber-600
+  Luteal: { main: "#7c3aed", track: "#3E4348" },        // violet-600
 };
-
-// Darken a hex color by a percentage (0-100)
-function darkenColor(hex: string, percent: number): string {
-  const num = parseInt(hex.replace("#", ""), 16);
-  const r = Math.max(0, (num >> 16) - Math.round(255 * (percent / 100)));
-  const g = Math.max(0, ((num >> 8) & 0x00ff) - Math.round(255 * (percent / 100)));
-  const b = Math.max(0, (num & 0x0000ff) - Math.round(255 * (percent / 100)));
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
-}
 
 function getCycleInfo(lastPeriodStart: string | null, cycleLengthDays: number | null): { day: number; phase: CyclePhase } | null {
   if (!lastPeriodStart || !cycleLengthDays) return null;
@@ -60,6 +52,10 @@ function getCycleInfo(lastPeriodStart: string | null, cycleLengthDays: number | 
   return { day: currentDay, phase };
 }
 
+// Generate preview URL matching CycleCircle design exactly:
+// - Dark graphite background (#1C1E22)
+// - Thin ring with muted track (#3E4348)
+// - Phase-colored progress arc + center text
 function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: number | null): string | null {
   const cycleInfo = getCycleInfo(lastPeriodStart, cycleLengthDays);
   if (!cycleInfo) return null;
@@ -68,31 +64,24 @@ function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: 
   const colors = phaseColors[phase];
   const cycleLength = cycleLengthDays || 28;
   
-  // Use day / remaining days ratio (not percentage) to match edge function
   const progress = day;
   const remaining = cycleLength - day;
-  
-  // Create a darker track color from the phase background
-  const trackColor = darkenColor(colors.bg, 15);
 
-  // IMPORTANT: QuickChart URL mode (?c=...) expects a Chart.js config object.
-  // Do NOT send the POST wrapper object (e.g., { chart, width, height, backgroundColor }).
   const chartConfig = {
     type: "doughnut",
     data: {
       datasets: [
         {
           data: [progress, remaining],
-          // Phase-colored background with thin darker track
-          backgroundColor: [colors.main, trackColor],
+          backgroundColor: [colors.main, colors.track],
           borderWidth: 0,
         },
       ],
     },
     options: {
-      cutoutPercentage: 80,
-      rotation: 4.71238898038469,
-      circumference: 6.283185307179586,
+      cutoutPercentage: 75,
+      rotation: 4.71238898038469,  // Math.PI * 1.5
+      circumference: 6.283185307179586,  // Math.PI * 2
       legend: { display: false },
       title: { display: false },
       plugins: {
@@ -101,12 +90,12 @@ function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: 
           labels: [
             {
               text: day.toString(),
-              font: { size: 52, weight: "bold" },
+              font: { size: 48, weight: "bold" },
               color: colors.main,
             },
             {
               text: phase,
-              font: { size: 16 },
+              font: { size: 14 },
               color: colors.main,
             },
           ],
@@ -116,10 +105,8 @@ function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: 
   };
 
   const encodedConfig = encodeURIComponent(JSON.stringify(chartConfig));
-  // Encode the background color (phase bg)
-  const encodedBg = encodeURIComponent(colors.bg);
-  // Use a 2:1 image so it takes less vertical space in WhatsApp, while keeping enough pixels for sharpness.
-  return `https://quickchart.io/chart?c=${encodedConfig}&v=2.9.4&w=600&h=300&bkg=${encodedBg}`;
+  // Dark graphite background matching the app theme
+  return `https://quickchart.io/chart?c=${encodedConfig}&v=2.9.4&w=600&h=300&bkg=%231C1E22`;
 }
 
 interface ParticipantBasic {
