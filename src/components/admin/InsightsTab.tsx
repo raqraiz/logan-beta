@@ -56,8 +56,11 @@ function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: 
 
   const { day, phase } = cycleInfo;
   const colors = phaseColors[phase];
-  const progress = Math.round((day / (cycleLengthDays || 28)) * 100);
-  const remaining = 100 - progress;
+  const cycleLength = cycleLengthDays || 28;
+  
+  // Use day / remaining days ratio (not percentage) to match edge function
+  const progress = day;
+  const remaining = cycleLength - day;
   
   // Use doughnut chart with doughnutlabel plugin - matches edge function config
   const chartConfig = {
