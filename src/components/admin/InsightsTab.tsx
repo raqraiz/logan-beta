@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { Sparkles, RefreshCw, Check, X, Send, Plus, Wand2, Image } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
@@ -14,12 +15,21 @@ import { CycleCircle } from "./CycleCircle";
 
 type CyclePhase = "Menstruation" | "Follicular" | "Ovulation" | "Luteal";
 
-const phaseColors: Record<CyclePhase, { main: string }> = {
-  Menstruation: { main: "#e11d48" },
-  Follicular: { main: "#059669" },
-  Ovulation: { main: "#d97706" },
-  Luteal: { main: "#7c3aed" },
+const phaseColors: Record<CyclePhase, { main: string; bg: string }> = {
+  Menstruation: { main: "#e11d48", bg: "#fecdd3" },
+  Follicular: { main: "#059669", bg: "#a7f3d0" },
+  Ovulation: { main: "#d97706", bg: "#fde68a" },
+  Luteal: { main: "#7c3aed", bg: "#ddd6fe" },
 };
+
+// Darken a hex color by a percentage (0-100)
+function darkenColor(hex: string, percent: number): string {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const r = Math.max(0, (num >> 16) - Math.round(255 * (percent / 100)));
+  const g = Math.max(0, ((num >> 8) & 0x00ff) - Math.round(255 * (percent / 100)));
+  const b = Math.max(0, (num & 0x0000ff) - Math.round(255 * (percent / 100)));
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+}
 
 function getCycleInfo(lastPeriodStart: string | null, cycleLengthDays: number | null): { day: number; phase: CyclePhase } | null {
   if (!lastPeriodStart || !cycleLengthDays) return null;
@@ -61,6 +71,9 @@ function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: 
   // Use day / remaining days ratio (not percentage) to match edge function
   const progress = day;
   const remaining = cycleLength - day;
+  
+  // Create a darker track color from the phase background
+  const trackColor = darkenColor(colors.bg, 15);
 
   // IMPORTANT: QuickChart URL mode (?c=...) expects a Chart.js config object.
   // Do NOT send the POST wrapper object (e.g., { chart, width, height, backgroundColor }).
@@ -70,14 +83,14 @@ function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: 
       datasets: [
         {
           data: [progress, remaining],
-          // Match dark track seen in CycleCircle
-          backgroundColor: [colors.main, "#3E4348"],
+          // Phase-colored background with thin darker track
+          backgroundColor: [colors.main, trackColor],
           borderWidth: 0,
         },
       ],
     },
     options: {
-      cutoutPercentage: 70,
+      cutoutPercentage: 80,
       rotation: 4.71238898038469,
       circumference: 6.283185307179586,
       legend: { display: false },
@@ -103,8 +116,10 @@ function generateCycleImageUrl(lastPeriodStart: string | null, cycleLengthDays: 
   };
 
   const encodedConfig = encodeURIComponent(JSON.stringify(chartConfig));
+  // Encode the background color (phase bg)
+  const encodedBg = encodeURIComponent(colors.bg);
   // Use a 2:1 image so it takes less vertical space in WhatsApp, while keeping enough pixels for sharpness.
-  return `https://quickchart.io/chart?c=${encodedConfig}&v=2.9.4&w=600&h=300&bkg=%231C1E22`;
+  return `https://quickchart.io/chart?c=${encodedConfig}&v=2.9.4&w=600&h=300&bkg=${encodedBg}`;
 }
 
 interface ParticipantBasic {
@@ -153,6 +168,7 @@ export function InsightsTab({ userId }: InsightsTabProps) {
   const [selectedParticipant, setSelectedParticipant] = useState<string>("");
   const [insightType, setInsightType] = useState<string>("awareness");
   const [insightContent, setInsightContent] = useState("");
+  const [includeCycleImage, setIncludeCycleImage] = useState<Record<string, boolean>>({});
 
   const fetchData = async () => {
     setLoading(true);
@@ -267,8 +283,9 @@ export function InsightsTab({ userId }: InsightsTabProps) {
     
     setSendingId(insight.id);
     try {
+      const shouldIncludeImage = includeCycleImage[insight.id] ?? false;
       const { data, error } = await supabase.functions.invoke("send-whatsapp", {
-        body: { insightId: insight.id },
+        body: { insightId: insight.id, includeCycleImage: shouldIncludeImage },
       });
 
       if (error) throw error;
@@ -286,7 +303,11 @@ export function InsightsTab({ userId }: InsightsTabProps) {
         prev.map(i => (i.id === insight.id ? { ...i, status: "sent" as const } : i))
       );
 
-      toast({ title: "Message sent via WhatsApp! 📱" });
+      toast({ 
+        title: shouldIncludeImage 
+          ? "Message with cycle image sent via WhatsApp! 📱" 
+          : "Message sent via WhatsApp! 📱" 
+      });
     } catch (error) {
       console.error("Error sending WhatsApp:", error);
       toast({ title: "Failed to send WhatsApp message", variant: "destructive" });
@@ -584,18 +605,36 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                     </>
                   )}
                   {insight.status === "approved" && insight.participants?.whatsapp_number && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setPreviewParticipantId(insight.participant_id);
-                          setShowImagePreview(true);
-                        }}
-                      >
-                        <Image className="w-4 h-4 mr-1" />
-                        Preview Image
-                      </Button>
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`include-image-${insight.id}`}
+                          checked={includeCycleImage[insight.id] ?? false}
+                          onCheckedChange={(checked) => 
+                            setIncludeCycleImage(prev => ({ ...prev, [insight.id]: !!checked }))
+                          }
+                        />
+                        <label 
+                          htmlFor={`include-image-${insight.id}`}
+                          className="text-sm text-muted-foreground cursor-pointer"
+                        >
+                          Include cycle image
+                        </label>
+                        {(includeCycleImage[insight.id] ?? false) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setPreviewParticipantId(insight.participant_id);
+                              setShowImagePreview(true);
+                            }}
+                            className="text-xs h-7 px-2"
+                          >
+                            <Image className="w-3 h-3 mr-1" />
+                            Preview
+                          </Button>
+                        )}
+                      </div>
                       <Button 
                         size="sm" 
                         onClick={() => sendToWhatsApp(insight)}
@@ -604,7 +643,7 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                         <Send className="w-4 h-4 mr-1" />
                         {sendingId === insight.id ? "Sending..." : "Send to WhatsApp"}
                       </Button>
-                    </>
+                    </div>
                   )}
                 </div>
               </CardContent>
