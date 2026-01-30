@@ -53,7 +53,7 @@ export function InsightsTab({ userId }: InsightsTabProps) {
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedParticipant, setSelectedParticipant] = useState<string>("");
-  const [insightType, setInsightType] = useState<string>("recommendation");
+  const [insightType, setInsightType] = useState<string>("awareness");
   const [insightContent, setInsightContent] = useState("");
 
   const fetchData = async () => {
@@ -264,11 +264,18 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="prediction">Prediction</SelectItem>
-                        <SelectItem value="recommendation">Recommendation</SelectItem>
-                        <SelectItem value="check_in">Check-in</SelectItem>
+                        <SelectItem value="awareness">🌙 Awareness</SelectItem>
+                        <SelectItem value="pattern">🔍 Pattern</SelectItem>
+                        <SelectItem value="validation">💜 Validation</SelectItem>
+                        <SelectItem value="action">⚡ Action</SelectItem>
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {insightType === "awareness" && "Phase education — what's happening in their body right now"}
+                      {insightType === "pattern" && "Personal pattern — \"We noticed X happens for you during Y\""}
+                      {insightType === "validation" && "Emotional support — normalizing their experience"}
+                      {insightType === "action" && "Specific recommendation — based on their data and patterns"}
+                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -408,6 +415,10 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                       </Badge>
                       {insight.insight_type && (
                         <Badge variant="outline" className="capitalize">
+                          {insight.insight_type === "awareness" && "🌙 "}
+                          {insight.insight_type === "pattern" && "🔍 "}
+                          {insight.insight_type === "validation" && "💜 "}
+                          {insight.insight_type === "action" && "⚡ "}
                           {insight.insight_type.replace("_", " ")}
                         </Badge>
                       )}
