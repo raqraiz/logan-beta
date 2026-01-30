@@ -62,13 +62,15 @@ async function generateCycleImage(day: number, phase: CyclePhase, cycleLengthDay
     format: "png",
     width: 300,
     height: 350,
-    backgroundColor: "white",
+    // Match dark CycleCircle aesthetic
+    backgroundColor: "#0B0B0D",
     chart: {
       type: "doughnut",
       data: {
         datasets: [{
           data: [progress, remaining],
-          backgroundColor: [colors.main, "#e5e7eb"],
+          // Match dark track seen in CycleCircle
+          backgroundColor: [colors.main, "#2c2f34"],
           borderWidth: 0,
         }]
       },
@@ -78,6 +80,9 @@ async function generateCycleImage(day: number, phase: CyclePhase, cycleLengthDay
         circumference: Math.PI * 2,
         legend: { display: false },
         plugins: {
+          // QuickChart registers chartjs-plugin-datalabels by default; disable it to avoid
+          // showing the dataset values (e.g., 21/79) on the chart.
+          datalabels: { display: false },
           doughnutlabel: {
             labels: [
               {
@@ -85,14 +90,18 @@ async function generateCycleImage(day: number, phase: CyclePhase, cycleLengthDay
                 font: { size: 52, weight: "bold" },
                 color: colors.main
               },
-              {
-                text: phase,
-                font: { size: 18 },
-                color: colors.main
-              }
             ]
           }
-        }
+        },
+        // Put phase label below the ring (like CycleCircle)
+        title: {
+          display: true,
+          text: phase,
+          position: "bottom",
+          fontSize: 18,
+          fontColor: colors.main,
+          padding: 16,
+        },
       }
     }
   };
