@@ -50,47 +50,72 @@ function getCycleInfo(lastPeriodStart: string | null, cycleLengthDays: number | 
   return { day: currentDay, phase };
 }
 
-// Generate cycle image URL using QuickChart.io API
-function generateCycleImageUrl(day: number, phase: CyclePhase, cycleLengthDays: number): string {
+// Generate cycle image using QuickChart.io POST API with custom config
+async function generateCycleImage(day: number, phase: CyclePhase, cycleLengthDays: number): Promise<ArrayBuffer | null> {
   const colors = phaseColors[phase];
   const progress = Math.round((day / cycleLengthDays) * 100);
   const remaining = 100 - progress;
   
-  // Create a doughnut chart that looks like a progress circle
+  // Use doughnut chart with doughnutlabel plugin - POST API handles this better
   const chartConfig = {
-    type: "doughnut",
-    data: {
-      datasets: [{
-        data: [progress, remaining],
-        backgroundColor: [colors.main, "#e5e7eb"],
-        borderWidth: 0,
-      }]
-    },
-    options: {
-      cutoutPercentage: 70,
-      rotation: -90,
-      circumference: 360,
-      plugins: {
-        doughnutlabel: {
-          labels: [
-            {
-              text: day.toString(),
-              font: { size: 48, weight: "bold" },
-              color: colors.main
-            },
-            {
-              text: phase,
-              font: { size: 16, weight: "600" },
-              color: colors.main
-            }
-          ]
+    version: "2",
+    format: "png",
+    width: 300,
+    height: 350,
+    backgroundColor: "white",
+    chart: {
+      type: "doughnut",
+      data: {
+        datasets: [{
+          data: [progress, remaining],
+          backgroundColor: [colors.main, "#e5e7eb"],
+          borderWidth: 0,
+        }]
+      },
+      options: {
+        cutoutPercentage: 70,
+        rotation: Math.PI * 1.5,
+        circumference: Math.PI * 2,
+        legend: { display: false },
+        plugins: {
+          doughnutlabel: {
+            labels: [
+              {
+                text: day.toString(),
+                font: { size: 52, weight: "bold" },
+                color: colors.main
+              },
+              {
+                text: phase,
+                font: { size: 18 },
+                color: colors.main
+              }
+            ]
+          }
         }
       }
     }
   };
 
-  const encodedConfig = encodeURIComponent(JSON.stringify(chartConfig));
-  return `https://quickchart.io/chart?c=${encodedConfig}&w=300&h=300&bkg=white`;
+  try {
+    console.log("Calling QuickChart POST API...");
+    const response = await fetch("https://quickchart.io/chart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(chartConfig),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("QuickChart error:", response.status, errorText);
+      return null;
+    }
+
+    return await response.arrayBuffer();
+  } catch (error) {
+    console.error("Error generating chart:", error);
+    return null;
+  }
 }
 
 async function generateAndUploadCycleImage(
@@ -106,19 +131,16 @@ async function generateAndUploadCycleImage(
   }
 
   try {
-    // Generate chart URL from QuickChart
-    const chartUrl = generateCycleImageUrl(cycleInfo.day, cycleInfo.phase, cycleLengthDays || 28);
+    // Generate chart image from QuickChart POST API
+    console.log(`Generating cycle image: Day ${cycleInfo.day}, ${cycleInfo.phase} phase`);
     
-    console.log("Fetching cycle chart from QuickChart:", chartUrl);
+    const imageBuffer = await generateCycleImage(cycleInfo.day, cycleInfo.phase, cycleLengthDays || 28);
     
-    // Fetch the image from QuickChart
-    const imageResponse = await fetch(chartUrl);
-    if (!imageResponse.ok) {
-      console.error("Failed to fetch chart from QuickChart:", imageResponse.status);
+    if (!imageBuffer) {
+      console.error("Failed to generate chart image");
       return null;
     }
     
-    const imageBuffer = await imageResponse.arrayBuffer();
     const imageData = new Uint8Array(imageBuffer);
     
     // Create unique filename
