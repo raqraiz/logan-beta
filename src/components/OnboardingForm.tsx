@@ -602,11 +602,14 @@ export function OnboardingForm() {
               href="https://t.me/AskLoganBot"
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-[#0088cc] hover:bg-[#0077b5] text-white font-medium transition-colors"
+              onClick={(e) => e.stopPropagation()}
+              className="block w-full py-3 rounded-lg bg-[#0088cc] hover:bg-[#0077b5] text-white font-medium transition-colors text-center cursor-pointer"
             >
-              <MessageCircle className="w-5 h-5" />
-              Open Telegram
-              <ExternalLink className="w-4 h-4" />
+              <span className="flex items-center justify-center gap-2">
+                <MessageCircle className="w-5 h-5" />
+                Open Telegram
+                <ExternalLink className="w-4 h-4" />
+              </span>
             </a>
           </div>
 
