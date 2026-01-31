@@ -167,22 +167,151 @@ const Index = () => {
       <section id="consent" className="py-16 px-4 bg-muted/30">
         <div className="container mx-auto max-w-3xl">
           <h2 className="text-2xl font-display font-bold mb-6 text-foreground text-center">Pilot Consent & Privacy Terms</h2>
-          <div className="bg-card rounded-2xl p-6 md:p-8 border border-border shadow-card space-y-4 text-sm text-muted-foreground">
-            <p>
-              By participating in this pilot program, you acknowledge and agree to the following:
-            </p>
-            <ul className="space-y-3 list-disc list-inside">
-              <li><strong>Educational Purpose Only:</strong> Logan provides educational information about menstrual cycles and is not a substitute for professional medical advice, diagnosis, or treatment.</li>
-              <li><strong>Data Collection:</strong> We collect cycle-related data you voluntarily provide to personalize your experience. This includes cycle dates, symptoms, and preferences.</li>
-              <li><strong>Data Usage:</strong> Your data is used solely to generate personalized insights and improve the Logan experience. We do not sell your data to third parties.</li>
-              <li><strong>AI-Assisted Content:</strong> Insights are generated using AI technology and reviewed by humans before delivery.</li>
-              <li><strong>Age Requirement:</strong> You confirm you are 18 years of age or older.</li>
-              <li><strong>Voluntary Participation:</strong> Your participation is voluntary and you may withdraw at any time by contacting us.</li>
-              <li><strong>Messaging:</strong> You consent to receive messages via your chosen channel (WhatsApp or Telegram) at the frequency described (twice weekly).</li>
-            </ul>
-            <p className="pt-2">
-              For questions about your data or to request deletion, please contact us through your messaging channel.
-            </p>
+          <div className="bg-card rounded-2xl p-6 md:p-8 border border-border shadow-card space-y-6 text-sm text-muted-foreground">
+            
+            {/* Section 1 */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-foreground">1. Nature of the Pilot: Educational Only - Not Medical Care</h3>
+              <p>This pilot provides <strong>educational information, general wellness insights, and lifestyle suggestions only</strong> related to menstrual cycles, general health, and symptoms.</p>
+              <p>We are <strong>not</strong>: doctors, nurses, licensed healthcare providers, a clinic or medical service.</p>
+              <p>We do <strong>not</strong> diagnose, treat, or provide medical advice.</p>
+              <p>Nothing shared should replace care from a qualified medical professional. Always consult a licensed healthcare provider before making health or medical decisions. This is solely the responsibility of the participants.</p>
+              <p className="font-medium">If you have severe symptoms or a medical emergency, seek medical care immediately.</p>
+            </div>
+
+            {/* Section 2 */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-foreground">2. Organized by Individuals (No Company or Clinical Relationship)</h3>
+              <p>You understand that:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>this is an early-stage MVP/research pilot</li>
+                <li>it is operated by private individuals, not a registered medical entity</li>
+                <li>no doctor–patient or therapeutic relationship is created</li>
+                <li>no professional or fiduciary duty of care is assumed</li>
+              </ul>
+              <p>Participation is informal and voluntary.</p>
+            </div>
+
+            {/* Section 3 */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-foreground">3. Voluntary Participation</h3>
+              <p>You may:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>stop participating at any time</li>
+                <li>decline to answer any question or respond</li>
+                <li>request deletion of your information</li>
+              </ul>
+              <p>There is no obligation to follow any recommendation.</p>
+            </div>
+
+            {/* Section 4 */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-foreground">4. Assumption of Risk & Personal Responsibility</h3>
+              <p>Health related decisions carry inherent risks.</p>
+              <p>You accept full responsibility for:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>how you use the information shared</li>
+                <li>any changes you make to your lifestyle or health practices</li>
+                <li>your personal health outcomes</li>
+              </ul>
+              <p className="font-medium">You participate entirely at your own risk.</p>
+            </div>
+
+            {/* Section 5 */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-foreground">5. Limitation of Liability & Release</h3>
+              <p>To the maximum extent permitted by law, you agree that the Organizers, individually and collectively, including their collaborators, contractors, volunteers, advisors, service providers, and anyone assisting with or tangentially involved in the pilot, <strong>shall not be liable</strong> for any injury, illness, damages, losses, claims, or liabilities of any kind arising from or related to:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>participation in the pilot</li>
+                <li>reliance on any information or recommendations</li>
+                <li>failure to seek medical care</li>
+                <li>sharing personal or health information digitally</li>
+                <li>use of third-party platforms or software (including WhatsApp or related tools)</li>
+                <li>unauthorized access, data breaches, or system failures</li>
+              </ul>
+              <p>The pilot is provided <strong>"as is" without warranties of any kind</strong>, expressed or implied.</p>
+              <p>You expressly release and waive any claims against the Organizers related to participation.</p>
+            </div>
+
+            {/* Section 6 */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-foreground">6. Communication Platforms & Technology Risks</h3>
+              <p>This pilot uses third-party communication and software tools, including WhatsApp, and additional messaging, storage, and database systems operated by the Organizers.</p>
+              <p>These tools are general-purpose consumer or early-stage software and <strong>are not medical-grade or healthcare-certified systems</strong>.</p>
+              <p>You acknowledge that:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>these platforms are not controlled by the Organizers</li>
+                <li>they do not meet healthcare or HIPAA-level security standards</li>
+                <li>messages and data may be stored on devices or external servers</li>
+                <li>no digital transmission or database is completely secure</li>
+                <li>information may be intercepted, lost, accessed, or disclosed without authorization</li>
+              </ul>
+              <p>By participating, you <strong>explicitly consent to communicating and storing personal and sensitive health information using these systems despite these risks</strong>.</p>
+              <p className="font-medium">If you are uncomfortable with this level of risk, you should not participate.</p>
+            </div>
+
+            {/* Section 7 */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-foreground">7. Data Collection, Storage & Security Limitations</h3>
+              <p>You may choose to share sensitive personal and health information, including menstrual cycle, symptom, reproductive, and wellness data.</p>
+              <p>You consent to the Organizers: collecting, storing, processing, analyzing, and using this information for the pilot, product, and any other related research/product development.</p>
+              
+              <h4 className="font-medium text-foreground mt-4">Security Efforts</h4>
+              <p>We make reasonable, good-faith efforts to protect your information using practical technical and organizational measures appropriate for an early-stage pilot.</p>
+              <p>However, because this is an MVP/research project:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>systems may be experimental or minimally secured</li>
+                <li>software may be developed by small or junior teams</li>
+                <li>formal security audits may not have been conducted</li>
+                <li>vulnerabilities or breaches may occur</li>
+              </ul>
+
+              <h4 className="font-medium text-foreground mt-4">No Security Guarantee</h4>
+              <p>We <strong>do not guarantee</strong>: confidentiality, security, encryption, or protection against unauthorized access.</p>
+              <p className="font-medium">You understand and accept that submitting information is at your own risk.</p>
+
+              <h4 className="font-medium text-foreground mt-4">Data Retention</h4>
+              <p>Your information may be stored and retained indefinitely for research and product development purposes unless you request deletion in writing. Aggregated or anonymized information that cannot reasonably identify you may be retained indefinitely.</p>
+              <p>To request deletion, email: <a href="mailto:Raquella.Siegel@gmail.com" className="text-primary hover:underline">Raquella.Siegel@gmail.com</a></p>
+              <p>We will remove identifiable data within a reasonable time after receiving such request, except where retention is legally required.</p>
+            </div>
+
+            {/* Section 8 */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-foreground">8. Legal & Privacy Compliance</h3>
+              
+              <h4 className="font-medium text-foreground">Israel</h4>
+              <p>You consent to the collection, storage, and processing of your sensitive personal and health information in accordance with the <strong>Protection of Privacy Law</strong>, under which medical and health data are classified as sensitive information.</p>
+              
+              <h4 className="font-medium text-foreground mt-3">United States</h4>
+              <p>This pilot is not a healthcare provider or medical service and is not subject to the <strong>Health Insurance Portability and Accountability Act (HIPAA)</strong>. Communications and data shared through this pilot do not receive HIPAA protections.</p>
+              <p>This agreement is governed by the laws of the State of Israel, and any disputes shall be resolved exclusively in Israel.</p>
+            </div>
+
+            {/* Section 10 */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-foreground">9. Eligibility</h3>
+              <p>You confirm that you:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>are 18 years or older</li>
+                <li>understand this consent</li>
+                <li>voluntarily choose to participate</li>
+              </ul>
+            </div>
+
+            {/* Section 11 */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-foreground">10. Consent</h3>
+              <p>By checking the <strong>"I CONSENT"</strong> box or continuing to participate, you confirm that:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>you have read and understood this document</li>
+                <li>you understand the risks</li>
+                <li>you agree to the collection, storage, and retention of your data</li>
+                <li>you release the Organizers from liability</li>
+                <li>you voluntarily consent to participate</li>
+              </ul>
+            </div>
+
           </div>
         </div>
       </section>
