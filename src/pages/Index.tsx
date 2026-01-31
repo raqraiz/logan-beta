@@ -41,13 +41,13 @@ const Index = () => {
               
               <p className="text-lg text-muted-foreground max-w-lg">
                 Hyper-personalized insights and suggestions delivered directly 
-                to your WhatsApp or Telegram. Because your cycle deserves 
+                to your Telegram. Because your cycle deserves 
                 attention, not guesswork.
               </p>
 
               <div className="flex flex-wrap gap-6 pt-4">
                 {[
-                  { icon: MessageCircle, text: "WhatsApp insights" },
+                  { icon: MessageCircle, text: "Telegram insights" },
                   { icon: Bot, text: "AI-powered" },
                   { icon: Calendar, text: "2x weekly" },
                 ].map(({ icon: Icon, text }) => (
@@ -138,7 +138,7 @@ const Index = () => {
                   {[
                     "4 weeks of personalized insights",
                     "Messages on Saturday & Tuesday nights (Israel time)",
-                    "WhatsApp or Telegram delivery",
+                    "Telegram delivery via @AskLoganBot",
                     "AI-assisted educational insights, reviewed by humans",
                     "Your feedback shapes the experience",
                   ].map((item) => (
@@ -153,9 +153,9 @@ const Index = () => {
               </div>
               <div className="flex items-center justify-center">
                 <div className="text-center p-8 rounded-2xl bg-muted/50 border border-border">
-                  <p className="text-sm text-muted-foreground mb-2">Insights from Twilio</p>
-                  <p className="text-2xl font-display font-bold text-primary">+1 (415) 523-8886</p>
-                  <p className="text-sm text-muted-foreground mt-2">Save this number as Logan in your contacts</p>
+                  <p className="text-sm text-muted-foreground mb-2">Connect with Logan on Telegram</p>
+                  <p className="text-2xl font-display font-bold text-primary">@AskLoganBot</p>
+                  <p className="text-sm text-muted-foreground mt-2">You'll connect during sign-up</p>
                 </div>
               </div>
             </div>
