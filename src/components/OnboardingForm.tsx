@@ -534,8 +534,187 @@ export function OnboardingForm() {
         </div>
       )}
 
-      {/* Slide 5 - Channel Selection & Connection */}
+      {/* Slide 5 - Consent Form */}
       {step === 5 && (
+        <div className="space-y-4 animate-fade-in">
+          <div className="text-center mb-2">
+            <h3 className="text-lg font-display font-semibold">Pilot Consent & Privacy Terms</h3>
+            <p className="text-xs text-muted-foreground">Please read and agree to continue</p>
+          </div>
+
+          <ScrollArea className="h-[320px] rounded-lg border border-border bg-muted/30 p-4">
+            <div className="space-y-4 text-sm text-muted-foreground pr-4">
+              {/* Section 1 */}
+              <section>
+                <h4 className="font-semibold text-foreground mb-1">1. Nature of the Pilot: Educational Only - Not Medical Care</h4>
+                <p>This pilot provides <strong>educational information, general wellness insights, and lifestyle suggestions only</strong> related to menstrual cycles, general health, and symptoms.</p>
+                <p className="mt-2">We are <strong>not</strong>: doctors, nurses, licensed healthcare providers, a clinic or medical service.</p>
+                <p className="mt-2">We do <strong>not</strong> diagnose, treat, or provide medical advice.</p>
+                <p className="mt-2">Nothing shared should replace care from a qualified medical professional. Always consult a licensed healthcare provider before making health or medical decisions.</p>
+                <p className="mt-2 font-medium text-foreground">If you have severe symptoms or a medical emergency, seek medical care immediately.</p>
+              </section>
+
+              {/* Section 2 */}
+              <section>
+                <h4 className="font-semibold text-foreground mb-1">2. Organized by Individuals (No Company or Clinical Relationship)</h4>
+                <p>You understand that:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2 mt-1">
+                  <li>This is an early-stage MVP/research pilot</li>
+                  <li>It is operated by private individuals, not a registered medical entity</li>
+                  <li>No doctor–patient or therapeutic relationship is created</li>
+                  <li>No professional or fiduciary duty of care is assumed</li>
+                </ul>
+                <p className="mt-2">Participation is informal and voluntary.</p>
+              </section>
+
+              {/* Section 3 */}
+              <section>
+                <h4 className="font-semibold text-foreground mb-1">3. Voluntary Participation</h4>
+                <p>You may:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2 mt-1">
+                  <li>Stop participating at any time</li>
+                  <li>Decline to answer any question or respond</li>
+                  <li>Request deletion of your information</li>
+                </ul>
+                <p className="mt-2">There is no obligation to follow any recommendation.</p>
+              </section>
+
+              {/* Section 4 */}
+              <section>
+                <h4 className="font-semibold text-foreground mb-1">4. Assumption of Risk & Personal Responsibility</h4>
+                <p>Health related decisions carry inherent risks.</p>
+                <p className="mt-2">You accept full responsibility for:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2 mt-1">
+                  <li>How you use the information shared</li>
+                  <li>Any changes you make to your lifestyle or health practices</li>
+                  <li>Your personal health outcomes</li>
+                </ul>
+                <p className="mt-2 font-medium text-foreground">You participate entirely at your own risk.</p>
+              </section>
+
+              {/* Section 5 */}
+              <section>
+                <h4 className="font-semibold text-foreground mb-1">5. Limitation of Liability & Release</h4>
+                <p>To the maximum extent permitted by law, you agree that the Organizers, individually and collectively, including their collaborators, contractors, volunteers, advisors, service providers, and anyone assisting with the pilot, <strong>shall not be liable</strong> for any injury, illness, damages, losses, claims, or liabilities of any kind arising from or related to:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2 mt-1">
+                  <li>Participation in the pilot</li>
+                  <li>Reliance on any information or recommendations</li>
+                  <li>Failure to seek medical care</li>
+                  <li>Sharing personal or health information digitally</li>
+                  <li>Use of third-party platforms or software</li>
+                  <li>Unauthorized access, data breaches, or system failures</li>
+                </ul>
+                <p className="mt-2">The pilot is provided <strong>"as is" without warranties of any kind</strong>.</p>
+              </section>
+
+              {/* Section 6 */}
+              <section>
+                <h4 className="font-semibold text-foreground mb-1">6. Communication Platforms & Technology Risks</h4>
+                <p>This pilot uses third-party tools including WhatsApp/Telegram and additional messaging systems. These are <strong>not medical-grade or healthcare-certified systems</strong>.</p>
+                <p className="mt-2">You acknowledge that:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2 mt-1">
+                  <li>These platforms are not controlled by the Organizers</li>
+                  <li>They do not meet healthcare or HIPAA-level security standards</li>
+                  <li>Messages and data may be stored on devices or external servers</li>
+                  <li>No digital transmission is completely secure</li>
+                </ul>
+                <p className="mt-2">By participating, you <strong>explicitly consent to communicating and storing personal health information using these systems despite these risks</strong>.</p>
+              </section>
+
+              {/* Section 7 */}
+              <section>
+                <h4 className="font-semibold text-foreground mb-1">7. Data Collection, Storage & Security</h4>
+                <p>You consent to the Organizers collecting, storing, processing, analyzing, and using your information for the pilot and related research/product development.</p>
+                
+                <p className="mt-3 font-medium text-foreground">Security Efforts</p>
+                <p>We make reasonable, good-faith efforts to protect your information. However, because this is an MVP/research project:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2 mt-1">
+                  <li>Systems may be experimental or minimally secured</li>
+                  <li>Formal security audits may not have been conducted</li>
+                  <li>Vulnerabilities or breaches may occur</li>
+                </ul>
+
+                <p className="mt-3 font-medium text-foreground">No Security Guarantee</p>
+                <p>We <strong>do not guarantee</strong> confidentiality, security, encryption, or protection against unauthorized access. Submitting information is at your own risk.</p>
+
+                <p className="mt-3 font-medium text-foreground">Data Retention</p>
+                <p>Your information may be stored indefinitely for research purposes unless you request deletion. To request deletion, email: <a href="mailto:Raquella.Siegel@gmail.com" className="text-primary hover:underline">Raquella.Siegel@gmail.com</a></p>
+              </section>
+
+              {/* Section 8 */}
+              <section>
+                <h4 className="font-semibold text-foreground mb-1">8. Legal & Privacy Compliance</h4>
+                <p><strong>Israel:</strong> You consent to processing in accordance with the Protection of Privacy Law.</p>
+                <p className="mt-2"><strong>United States:</strong> This pilot is not subject to HIPAA. Communications do not receive HIPAA protections.</p>
+                <p className="mt-2">This agreement is governed by the laws of the State of Israel.</p>
+              </section>
+
+              {/* Section 9 */}
+              <section>
+                <h4 className="font-semibold text-foreground mb-1">9. Eligibility</h4>
+                <p>You confirm that you:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2 mt-1">
+                  <li>Are 18 years or older</li>
+                  <li>Understand this consent</li>
+                  <li>Voluntarily choose to participate</li>
+                </ul>
+              </section>
+
+              {/* Section 10 */}
+              <section>
+                <h4 className="font-semibold text-foreground mb-1">10. Consent</h4>
+                <p>By checking "I CONSENT" below, you confirm that:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2 mt-1">
+                  <li>You have read and understood this document</li>
+                  <li>You understand the risks</li>
+                  <li>You agree to the collection, storage, and retention of your data</li>
+                  <li>You release the Organizers from liability</li>
+                  <li>You voluntarily consent to participate</li>
+                </ul>
+              </section>
+            </div>
+          </ScrollArea>
+
+          <label className={cn(
+            "flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all",
+            consentGiven 
+              ? "bg-primary/10 border-primary" 
+              : "bg-card border-border hover:border-primary/50"
+          )}>
+            <Checkbox 
+              checked={consentGiven} 
+              onCheckedChange={(checked) => setConsentGiven(checked === true)}
+              className="mt-0.5 min-w-[20px] min-h-[20px]"
+            />
+            <span className="text-sm text-foreground leading-relaxed">
+              <strong>I CONSENT</strong> – I have read, understood, and agree to all terms above.
+            </span>
+          </label>
+
+          {!consentGiven && (
+            <p className="text-xs text-muted-foreground text-center">
+              ☝️ Please check the box above to continue
+            </p>
+          )}
+
+          <div className="flex gap-3 mt-4">
+            <Button type="button" variant="outline" onClick={() => setStep(4)} className="flex-1 h-12">
+              Back
+            </Button>
+            <Button 
+              type="button" 
+              onClick={() => setStep(6)} 
+              className="flex-1 h-12"
+              disabled={!consentGiven}
+            >
+              Continue
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Slide 6 - Channel Selection & Connection */}
+      {step === 6 && (
         <div className="space-y-5 animate-fade-in">
           {/* Channel Selection */}
           {!preferredChannel && (
@@ -581,7 +760,7 @@ export function OnboardingForm() {
               </div>
 
               <div className="flex gap-3 mt-4">
-                <Button type="button" variant="outline" onClick={() => setStep(4)} className="flex-1 h-12">
+                <Button type="button" variant="outline" onClick={() => setStep(5)} className="flex-1 h-12">
                   Back
                 </Button>
               </div>
@@ -649,12 +828,11 @@ export function OnboardingForm() {
                   Back
                 </Button>
                 <Button 
-                  type="button" 
-                  onClick={() => { setChannelConnected(true); setStep(6); }} 
-                  className="flex-1 h-12"
-                  disabled={!telegramChatId.trim()}
+                  type="submit" 
+                  className="flex-1 h-12" 
+                  disabled={isSubmitting || !telegramChatId.trim()}
                 >
-                  Continue
+                  {isSubmitting ? "Joining..." : "Complete Sign Up"}
                 </Button>
               </div>
             </>
@@ -721,12 +899,11 @@ export function OnboardingForm() {
                   Back
                 </Button>
                 <Button 
-                  type="button" 
-                  onClick={() => setStep(6)} 
-                  className="flex-1 h-12"
-                  disabled={!channelConnected}
+                  type="submit" 
+                  className="flex-1 h-12" 
+                  disabled={isSubmitting || !channelConnected}
                 >
-                  Continue
+                  {isSubmitting ? "Joining..." : "Complete Sign Up"}
                 </Button>
               </div>
             </>
@@ -734,134 +911,6 @@ export function OnboardingForm() {
         </div>
       )}
 
-      {/* Slide 6 - Consent Form */}
-      {step === 6 && (
-        <div className="space-y-4 animate-fade-in">
-          <div className="text-center mb-2">
-            <h3 className="text-lg font-display font-semibold">Data Processing Consent</h3>
-            <p className="text-xs text-muted-foreground">Logan MVP Pilot</p>
-          </div>
-
-          <ScrollArea className="h-[320px] rounded-lg border border-border bg-muted/30 p-4">
-            <div className="space-y-4 text-sm text-muted-foreground pr-4">
-              <section>
-                <h4 className="font-semibold text-foreground mb-1">Purpose of the Pilot</h4>
-                <p>
-                  Logan is a research and pilot product designed to test how cycle-related insights can support wellbeing, communication, and health awareness. This pilot collects limited personal and health-related data to generate insights and evaluate product effectiveness.
-                </p>
-              </section>
-
-              <section>
-                <h4 className="font-semibold text-foreground mb-1">Data We Collect</h4>
-                <p className="mb-2">By participating, you consent to the collection and processing of the following data:</p>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>Menstrual cycle information (cycle length, phase tracking, symptoms, timing)</li>
-                  <li>Self-reported health and wellbeing data</li>
-                  <li>Interaction data within the Logan platform</li>
-                  <li>Optional feedback and responses</li>
-                  <li>Basic identifiers (e.g. email or user ID)</li>
-                </ul>
-                <p className="mt-2 text-xs italic">This may include special category data under GDPR (health data).</p>
-              </section>
-
-              <section>
-                <h4 className="font-semibold text-foreground mb-1">Legal Basis for Processing</h4>
-                <p>We process your data based on:</p>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>Explicit consent (GDPR Article 6(1)(a))</li>
-                  <li>Explicit consent for health data (GDPR Article 9(2)(a))</li>
-                </ul>
-              </section>
-
-              <section>
-                <h4 className="font-semibold text-foreground mb-1">How Your Data Is Used</h4>
-                <p className="mb-2">Your data will be used only for:</p>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>Generating cycle-based insights</li>
-                  <li>Improving product functionality</li>
-                  <li>Research and evaluation of the pilot</li>
-                  <li>Internal analytics and reporting</li>
-                </ul>
-                <p className="mt-2 font-medium text-foreground">Your data will not be sold, shared with third parties for marketing, or used for advertising.</p>
-              </section>
-
-              <section>
-                <h4 className="font-semibold text-foreground mb-1">Data Storage & Security</h4>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>Data is stored securely</li>
-                  <li>Access is restricted to the Logan development and research team</li>
-                  <li>Data is retained only for the duration of the pilot and evaluation period unless you consent otherwise</li>
-                </ul>
-              </section>
-
-              <section>
-                <h4 className="font-semibold text-foreground mb-1">Your Rights (GDPR)</h4>
-                <p className="mb-2">You have the right to:</p>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>Access your data</li>
-                  <li>Correct your data</li>
-                  <li>Withdraw consent at any time</li>
-                  <li>Request deletion of your data</li>
-                  <li>Request data portability</li>
-                  <li>Restrict processing</li>
-                </ul>
-                <p className="mt-2 text-xs italic">Withdrawal of consent will not affect prior lawful processing.</p>
-              </section>
-
-              <section>
-                <h4 className="font-semibold text-foreground mb-1">Voluntary Participation</h4>
-                <p>Participation in this pilot is voluntary. You may exit the pilot at any time without consequence.</p>
-              </section>
-
-              <section>
-                <h4 className="font-semibold text-foreground mb-1">Consent Declaration</h4>
-                <p>By proceeding, you confirm that:</p>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>You understand what data is being collected</li>
-                  <li>You understand how your data will be used</li>
-                  <li>You consent to the processing of your personal and health data for the Logan MVP pilot</li>
-                  <li>You understand that this is a research/pilot product, not a medical service</li>
-                </ul>
-              </section>
-            </div>
-          </ScrollArea>
-
-          <label className={cn(
-            "flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all",
-            consentGiven 
-              ? "bg-primary/10 border-primary" 
-              : "bg-card border-border hover:border-primary/50"
-          )}>
-            <Checkbox 
-              checked={consentGiven} 
-              onCheckedChange={(checked) => setConsentGiven(checked === true)}
-              className="mt-0.5 min-w-[20px] min-h-[20px]"
-            />
-            <span className="text-sm text-foreground leading-relaxed">
-              I give explicit consent to the processing of my personal and health data for the Logan MVP pilot.
-            </span>
-          </label>
-
-          {!consentGiven && (
-            <p className="text-xs text-muted-foreground text-center">
-              ☝️ Please check the box above to continue
-            </p>
-          )}
-
-          <div className="flex gap-3 mt-4">
-            <Button type="button" variant="outline" onClick={() => setStep(5)} className="flex-1 h-12">
-              Back
-            </Button>
-            <Button 
-              type="submit" 
-              className="flex-1 h-12" 
-              disabled={isSubmitting || !consentGiven}
-            >
-              {isSubmitting ? "Joining..." : "Join the Pilot 🌸"}
-            </Button>
-          </div>
-        </div>
-      )}
     </form>
   );
 }
