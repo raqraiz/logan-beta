@@ -36,12 +36,12 @@ const Index = () => {
               
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold leading-tight text-foreground">
                 Meet <span className="text-primary">Logan</span>, your{" "}
-                <span className="text-primary">smart cycle tracker</span>
+                <span className="text-primary">cycle companion</span>
               </h1>
               
               <p className="text-lg text-muted-foreground max-w-lg">
-                Hyper-personalized predictions, recommendations, and check-ins 
-                delivered directly to your WhatsApp. Because your cycle deserves 
+                Hyper-personalized insights and suggestions delivered directly 
+                to your WhatsApp or Telegram. Because your cycle deserves 
                 attention, not guesswork.
               </p>
 
@@ -69,6 +69,11 @@ const Index = () => {
                   </p>
                 </div>
                 <OnboardingForm />
+                <p className="text-xs text-muted-foreground text-center mt-4 leading-relaxed">
+                  By continuing, you agree to the <a href="#consent" className="text-primary hover:underline">Pilot Consent & Privacy Terms</a>. 
+                  This program provides educational information only and is not medical advice. 
+                  By interacting with this program you consent you are 18+ years old.
+                </p>
               </div>
             </div>
           </div>
@@ -133,8 +138,8 @@ const Index = () => {
                   {[
                     "4 weeks of personalized insights",
                     "Messages on Saturday & Tuesday nights (Israel time)",
-                    "Direct WhatsApp from Logan (+14155238886)",
-                    "AI-powered, human-approved content",
+                    "WhatsApp or Telegram delivery",
+                    "AI-assisted educational insights, reviewed by humans",
                     "Your feedback shapes the experience",
                   ].map((item) => (
                     <li key={item} className="flex items-start gap-3">
@@ -154,6 +159,30 @@ const Index = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Consent Section */}
+      <section id="consent" className="py-16 px-4 bg-muted/30">
+        <div className="container mx-auto max-w-3xl">
+          <h2 className="text-2xl font-display font-bold mb-6 text-foreground text-center">Pilot Consent & Privacy Terms</h2>
+          <div className="bg-card rounded-2xl p-6 md:p-8 border border-border shadow-card space-y-4 text-sm text-muted-foreground">
+            <p>
+              By participating in this pilot program, you acknowledge and agree to the following:
+            </p>
+            <ul className="space-y-3 list-disc list-inside">
+              <li><strong>Educational Purpose Only:</strong> Logan provides educational information about menstrual cycles and is not a substitute for professional medical advice, diagnosis, or treatment.</li>
+              <li><strong>Data Collection:</strong> We collect cycle-related data you voluntarily provide to personalize your experience. This includes cycle dates, symptoms, and preferences.</li>
+              <li><strong>Data Usage:</strong> Your data is used solely to generate personalized insights and improve the Logan experience. We do not sell your data to third parties.</li>
+              <li><strong>AI-Assisted Content:</strong> Insights are generated using AI technology and reviewed by humans before delivery.</li>
+              <li><strong>Age Requirement:</strong> You confirm you are 18 years of age or older.</li>
+              <li><strong>Voluntary Participation:</strong> Your participation is voluntary and you may withdraw at any time by contacting us.</li>
+              <li><strong>Messaging:</strong> You consent to receive messages via your chosen channel (WhatsApp or Telegram) at the frequency described (twice weekly).</li>
+            </ul>
+            <p className="pt-2">
+              For questions about your data or to request deletion, please contact us through your messaging channel.
+            </p>
           </div>
         </div>
       </section>
