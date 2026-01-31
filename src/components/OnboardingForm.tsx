@@ -58,7 +58,7 @@ const normalizePhoneNumber = (phone: string): string => {
 const onboardingSchema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters").max(100),
   whatsapp_number: z.string()
-    .min(10, "Please enter a valid WhatsApp number")
+    .min(10, "Please enter a valid phone number")
     .max(20)
     .refine((val) => {
       const normalized = normalizePhoneNumber(val);
@@ -178,7 +178,7 @@ export function OnboardingForm() {
         if (error.code === "23505") {
           toast({
             title: "Already registered",
-            description: "This WhatsApp number is already in the pilot. We'll be in touch soon! 💕",
+            description: "This phone number is already in the pilot. We'll be in touch soon!",
             variant: "default",
           });
         } else {
@@ -258,7 +258,7 @@ export function OnboardingForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="whatsapp_number">WhatsApp Number</Label>
+            <Label htmlFor="whatsapp_number">Phone Number</Label>
             <Input
               id="whatsapp_number"
               placeholder="0501234567"
@@ -608,7 +608,7 @@ export function OnboardingForm() {
               {/* Section 6 */}
               <section>
                 <h4 className="font-semibold text-foreground mb-1">6. Communication Platforms & Technology Risks</h4>
-                <p>This pilot uses third-party tools including WhatsApp/Telegram and additional messaging systems. These are <strong>not medical-grade or healthcare-certified systems</strong>.</p>
+                <p>This pilot uses third-party tools including Telegram and additional messaging systems. These are <strong>not medical-grade or healthcare-certified systems</strong>.</p>
                 <p className="mt-2">You acknowledge that:</p>
                 <ul className="list-disc list-inside space-y-1 ml-2 mt-1">
                   <li>These platforms are not controlled by the Organizers</li>
@@ -757,6 +757,22 @@ export function OnboardingForm() {
               href="https://t.me/AskLoganBot?start=getchatid"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={(e) => {
+                // Safari (especially iOS) can ignore target=_blank unless opened via window.open.
+                // IMPORTANT: never navigate this tab (otherwise the user loses onboarding state).
+                // We always prevent default and only open a new tab when allowed.
+                const url = "https://t.me/AskLoganBot?start=getchatid";
+                e.preventDefault();
+                const w = window.open(url, "_blank", "noopener,noreferrer");
+                if (w) {
+                  w.focus();
+                } else {
+                  toast({
+                    title: "Can't open a new tab",
+                    description: "On Safari, try long-pressing the button and choosing 'Open in New Tab', or use the QR code.",
+                  });
+                }
+              }}
               className="block w-full py-3 rounded-lg bg-[#0088cc] hover:bg-[#0077b5] text-white font-medium transition-colors text-center"
             >
               <span className="flex items-center justify-center gap-2">
@@ -765,6 +781,27 @@ export function OnboardingForm() {
                 <ExternalLink className="w-4 h-4" />
               </span>
             </a>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={async () => {
+                const url = "https://t.me/AskLoganBot?start=getchatid";
+                try {
+                  await navigator.clipboard.writeText(url);
+                  toast({ title: "Link copied", description: "Paste it into Telegram or your browser" });
+                } catch {
+                  toast({
+                    title: "Copy failed",
+                    description: "Select and copy: https://t.me/AskLoganBot?start=getchatid",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
+              Copy Telegram Link
+            </Button>
 
             <p className="text-xs text-muted-foreground text-center">
               Or search <strong className="text-foreground">@AskLoganBot</strong> in Telegram

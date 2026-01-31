@@ -138,16 +138,11 @@ export function ParticipantsTab() {
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                  {participant.preferred_channel && (
-                    <div className="flex items-center gap-2">
-                      <Badge 
-                        variant="outline" 
-                        className={participant.preferred_channel === "telegram" ? "border-[#0088cc] text-[#0088cc]" : "border-green-500 text-green-500"}
-                      >
-                        {participant.preferred_channel === "telegram" ? "📱 Telegram" : "💬 WhatsApp"}
-                      </Badge>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="border-[#0088cc] text-[#0088cc]">
+                      📱 Telegram
+                    </Badge>
+                  </div>
                   {participant.telegram_chat_id && (
                     <div className="flex items-center gap-2">
                       <MessageCircle className="w-4 h-4 text-muted-foreground" />

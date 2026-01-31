@@ -305,44 +305,6 @@ export function InsightsTab({ userId }: InsightsTabProps) {
     }
   };
 
-  const sendToWhatsApp = async (insight: Insight) => {
-    if (sendingId) return;
-    
-    setSendingId(insight.id);
-    try {
-      const shouldIncludeImage = includeCycleImage[insight.id] ?? false;
-      const { data, error } = await supabase.functions.invoke("send-whatsapp", {
-        body: { insightId: insight.id, includeCycleImage: shouldIncludeImage },
-      });
-
-      if (error) throw error;
-      
-      if (data?.error) {
-        toast({ 
-          title: data.error, 
-          description: data.currentStatus ? `Current status: ${data.currentStatus}` : undefined,
-          variant: "destructive" 
-        });
-        return;
-      }
-
-      setInsights(prev =>
-        prev.map(i => (i.id === insight.id ? { ...i, status: "sent" as const } : i))
-      );
-
-      toast({ 
-        title: shouldIncludeImage 
-          ? "Message with cycle image sent via WhatsApp! 📱" 
-          : "Message sent via WhatsApp! 📱" 
-      });
-    } catch (error) {
-      console.error("Error sending WhatsApp:", error);
-      toast({ title: "Failed to send WhatsApp message", variant: "destructive" });
-    } finally {
-      setSendingId(null);
-    }
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending": return "bg-yellow-100 text-yellow-800";
@@ -630,27 +592,15 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                   {insight.status === "approved" && (
                     (() => {
                       const p = insight.participants;
-                      const channel = p?.preferred_channel;
-                      const canSendTelegram = p?.telegram_chat_id;
-                      const canSendWhatsApp = p?.whatsapp_number;
+                      const canSendTelegram = !!p?.telegram_chat_id;
                       
-                      // No channel configured
-                      if (!canSendTelegram && !canSendWhatsApp) {
+                      if (!canSendTelegram) {
                         return (
                           <p className="text-sm text-muted-foreground italic">
-                            No messaging channel configured for this participant
+                            Telegram is not connected for this participant
                           </p>
                         );
                       }
-                      
-                      // Determine which channel to use
-                      const useTelegram = channel === "telegram" && canSendTelegram;
-                      const useWhatsApp = channel === "whatsapp" && canSendWhatsApp;
-                      const fallbackTelegram = !channel && canSendTelegram;
-                      const fallbackWhatsApp = !channel && !canSendTelegram && canSendWhatsApp;
-                      
-                      const sendChannel = useTelegram || fallbackTelegram ? "telegram" : "whatsapp";
-                      const sendFn = sendChannel === "telegram" ? sendToTelegram : sendToWhatsApp;
                       
                       return (
                         <div className="flex items-center gap-4 flex-wrap">
@@ -685,12 +635,12 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                           </div>
                           <Button 
                             size="sm" 
-                            onClick={() => sendFn(insight)}
+                            onClick={() => sendToTelegram(insight)}
                             disabled={sendingId === insight.id}
-                            className={sendChannel === "telegram" ? "bg-[#0088cc] hover:bg-[#0077b5]" : "bg-green-500 hover:bg-green-600"}
+                            className="bg-[#0088cc] hover:bg-[#0077b5]"
                           >
                             <Send className="w-4 h-4 mr-1" />
-                            {sendingId === insight.id ? "Sending..." : `Send to ${sendChannel === "telegram" ? "Telegram" : "WhatsApp"}`}
+                            {sendingId === insight.id ? "Sending..." : "Send to Telegram"}
                           </Button>
                         </div>
                       );
