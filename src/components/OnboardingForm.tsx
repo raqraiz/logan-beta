@@ -552,7 +552,7 @@ export function OnboardingForm() {
               </div>
               <div className="bg-white p-3 rounded-xl shadow-sm">
                 <QRCodeSVG 
-                  value="https://t.me/LoganCycleBot"
+                  value="https://t.me/AskLoganBot"
                   size={140}
                   level="M"
                   includeMargin={false}
@@ -575,7 +575,7 @@ export function OnboardingForm() {
                   <span className="text-xs font-bold text-primary">1</span>
                 </div>
                 <p className="text-sm text-foreground">
-                  Open Telegram and search for <strong className="text-primary">@LoganCycleBot</strong>
+                  Open Telegram and search for <strong className="text-primary">@AskLoganBot</strong>
                 </p>
               </div>
               
@@ -599,7 +599,7 @@ export function OnboardingForm() {
             </div>
 
             <a 
-              href="https://t.me/LoganCycleBot" 
+              href="https://t.me/AskLoganBot"
               target="_blank" 
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-[#0088cc] hover:bg-[#0077b5] text-white font-medium transition-colors"
