@@ -1,7 +1,8 @@
+import { Link } from "react-router-dom";
 import { OnboardingForm } from "@/components/OnboardingForm";
 import { MessageCircle, Sparkles, Calendar, ArrowRight, Bot } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { LoganLogo } from "@/components/LoganLogo";
-import { LoganChat } from "@/components/LoganChat";
 
 const Index = () => {
   return (
@@ -165,13 +166,10 @@ const Index = () => {
             <span className="font-display font-medium text-foreground">Logan</span>
           </div>
           <p className="text-sm text-muted-foreground">
-          Made by women for women everywhere
-        </p>
+            Made by women for women everywhere
+          </p>
         </div>
       </footer>
-
-      {/* Logan Chat Widget */}
-      <LoganChat />
     </div>
   );
 };
