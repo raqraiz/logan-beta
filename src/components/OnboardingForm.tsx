@@ -753,18 +753,17 @@ export function OnboardingForm() {
               className="h-12 text-center font-mono text-lg"
             />
 
-            <a 
-              href="https://t.me/AskLoganBot"
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="block w-full py-3 rounded-lg bg-[#0088cc] hover:bg-[#0077b5] text-white font-medium transition-colors text-center"
+            <Button
+              type="button"
+              onClick={() => window.open("https://t.me/AskLoganBot", "_blank")}
+              className="w-full py-3 rounded-lg bg-[#0088cc] hover:bg-[#0077b5] text-white font-medium transition-colors"
             >
               <span className="flex items-center justify-center gap-2">
                 <MessageCircle className="w-5 h-5" />
                 Open Telegram
                 <ExternalLink className="w-4 h-4" />
               </span>
-            </a>
+            </Button>
           </div>
 
           <div className="flex gap-3 mt-4">
