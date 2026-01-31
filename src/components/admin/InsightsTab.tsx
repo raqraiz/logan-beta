@@ -113,6 +113,7 @@ interface ParticipantBasic {
   id: string;
   full_name: string;
   whatsapp_number: string;
+  telegram_chat_id: string | null;
 }
 
 interface ParticipantFull extends ParticipantBasic {
@@ -163,11 +164,11 @@ export function InsightsTab({ userId }: InsightsTabProps) {
       const [insightsRes, participantsRes] = await Promise.all([
         supabase
           .from("insights")
-          .select("*, participants(id, full_name, whatsapp_number)")
+          .select("*, participants(id, full_name, whatsapp_number, telegram_chat_id)")
           .order("created_at", { ascending: false }),
         supabase
           .from("participants")
-          .select("id, full_name, whatsapp_number, email, age, cycle_length_days, cycle_regularity, last_period_start, anchor_symptom, typical_symptoms, goals, timezone")
+          .select("id, full_name, whatsapp_number, telegram_chat_id, email, age, cycle_length_days, cycle_regularity, last_period_start, anchor_symptom, typical_symptoms, goals, timezone")
           .eq("is_active", true),
       ]);
 
@@ -265,13 +266,13 @@ export function InsightsTab({ userId }: InsightsTabProps) {
     }
   };
 
-  const sendToWhatsApp = async (insight: Insight) => {
-    if (sendingId) return; // Prevent double-clicks
+  const sendToTelegram = async (insight: Insight) => {
+    if (sendingId) return;
     
     setSendingId(insight.id);
     try {
       const shouldIncludeImage = includeCycleImage[insight.id] ?? false;
-      const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+      const { data, error } = await supabase.functions.invoke("send-telegram", {
         body: { insightId: insight.id, includeCycleImage: shouldIncludeImage },
       });
 
@@ -292,12 +293,12 @@ export function InsightsTab({ userId }: InsightsTabProps) {
 
       toast({ 
         title: shouldIncludeImage 
-          ? "Message with cycle image sent via WhatsApp! 📱" 
-          : "Message sent via WhatsApp! 📱" 
+          ? "Message with cycle image sent via Telegram! 📱" 
+          : "Message sent via Telegram! 📱" 
       });
     } catch (error) {
-      console.error("Error sending WhatsApp:", error);
-      toast({ title: "Failed to send WhatsApp message", variant: "destructive" });
+      console.error("Error sending Telegram:", error);
+      toast({ title: "Failed to send Telegram message", variant: "destructive" });
     } finally {
       setSendingId(null);
     }
@@ -449,12 +450,8 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                           </div>
                           
                           <div>
-                            <span className="font-medium text-muted-foreground">WhatsApp:</span>
-                            <p>{p.whatsapp_number}</p>
-                          </div>
-                          <div>
-                            <span className="font-medium text-muted-foreground">WhatsApp:</span>
-                            <p>{p.whatsapp_number}</p>
+                            <span className="font-medium text-muted-foreground">Telegram:</span>
+                            <p>{p.telegram_chat_id || "Not connected"}</p>
                           </div>
                           {p.email && (
                             <div>
@@ -591,7 +588,7 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                       </Button>
                     </>
                   )}
-                  {insight.status === "approved" && insight.participants?.whatsapp_number && (
+                  {insight.status === "approved" && insight.participants?.telegram_chat_id && (
                     <div className="flex items-center gap-4 flex-wrap">
                       <div className="flex items-center space-x-2">
                         <Checkbox
@@ -624,13 +621,18 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                       </div>
                       <Button 
                         size="sm" 
-                        onClick={() => sendToWhatsApp(insight)}
+                        onClick={() => sendToTelegram(insight)}
                         disabled={sendingId === insight.id}
                       >
                         <Send className="w-4 h-4 mr-1" />
-                        {sendingId === insight.id ? "Sending..." : "Send to WhatsApp"}
+                        {sendingId === insight.id ? "Sending..." : "Send to Telegram"}
                       </Button>
                     </div>
+                  )}
+                  {insight.status === "approved" && !insight.participants?.telegram_chat_id && (
+                    <p className="text-sm text-muted-foreground italic">
+                      No Telegram chat ID set for this participant
+                    </p>
                   )}
                 </div>
               </CardContent>
@@ -643,7 +645,7 @@ export function InsightsTab({ userId }: InsightsTabProps) {
       <Dialog open={showImagePreview} onOpenChange={setShowImagePreview}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>WhatsApp Cycle Image Preview</DialogTitle>
+            <DialogTitle>Telegram Cycle Image Preview</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col items-center gap-4 py-4">
             {(() => {
@@ -660,7 +662,7 @@ export function InsightsTab({ userId }: InsightsTabProps) {
               return (
                 <>
                   <p className="text-sm text-muted-foreground text-center">
-                    This is the image that will be sent with the WhatsApp message for <strong>{participant.full_name}</strong>
+                    This is the image that will be sent with the Telegram message for <strong>{participant.full_name}</strong>
                   </p>
                   <div className="rounded-lg p-4 bg-card border border-border shadow-card flex justify-center">
                     <img 

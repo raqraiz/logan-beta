@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { Users, RefreshCw, Phone, Calendar, Target } from "lucide-react";
+import { Users, RefreshCw, Phone, Calendar, Target, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import { CycleCircle } from "./CycleCircle";
 
@@ -13,6 +13,7 @@ interface Participant {
   created_at: string;
   full_name: string;
   whatsapp_number: string;
+  telegram_chat_id: string | null;
   email: string | null;
   age: number | null;
   cycle_length_days: number | null;
@@ -136,6 +137,14 @@ export function ParticipantsTab() {
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                  {participant.telegram_chat_id && (
+                    <div className="flex items-center gap-2">
+                      <MessageCircle className="w-4 h-4 text-muted-foreground" />
+                      <span className="truncate" title={participant.telegram_chat_id}>
+                        Telegram: {participant.telegram_chat_id}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     <Phone className="w-4 h-4 text-muted-foreground" />
                     <span>{participant.whatsapp_number}</span>
