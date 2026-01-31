@@ -99,7 +99,7 @@ const Index = () => {
               {
                 step: "02",
                 title: "Receive insights",
-                description: "Get personalized predictions and recommendations via WhatsApp on Saturdays and Tuesdays.",
+                description: "Get personalized insights and recommendations via Telegram on Saturdays and Tuesdays.",
                 icon: MessageCircle,
               },
               {
