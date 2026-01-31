@@ -602,7 +602,6 @@ export function OnboardingForm() {
               href="https://t.me/AskLoganBot"
               target="_blank" 
               rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
               className="block w-full py-3 rounded-lg bg-[#0088cc] hover:bg-[#0077b5] text-white font-medium transition-colors text-center cursor-pointer"
             >
               <span className="flex items-center justify-center gap-2">
@@ -611,6 +610,10 @@ export function OnboardingForm() {
                 <ExternalLink className="w-4 h-4" />
               </span>
             </a>
+            
+            <p className="text-xs text-center text-muted-foreground">
+              Or open directly: <a href="https://t.me/AskLoganBot" target="_blank" rel="noopener noreferrer" className="text-primary underline">t.me/AskLoganBot</a>
+            </p>
           </div>
 
           <label className="flex items-start gap-3 p-4 rounded-xl border border-border bg-card cursor-pointer hover:border-primary/50 transition-colors">
