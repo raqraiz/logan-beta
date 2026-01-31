@@ -111,8 +111,6 @@ export function OnboardingForm() {
   const [anchorSymptom, setAnchorSymptom] = useState<string>("");
   const [anchorOther, setAnchorOther] = useState<string>("");
   const [consentGiven, setConsentGiven] = useState(false);
-  const [preferredChannel, setPreferredChannel] = useState<"whatsapp" | "telegram" | null>(null);
-  const [channelConnected, setChannelConnected] = useState(false);
   const [telegramChatId, setTelegramChatId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
@@ -172,8 +170,8 @@ export function OnboardingForm() {
         consent_given: consentGiven,
         consent_given_at: consentGiven ? new Date().toISOString() : null,
         additional_notes: [cycleNotes, symptomNotes, anchorNotes].filter(Boolean).join("\n\n---\n\n") || null,
-        preferred_channel: preferredChannel,
-        telegram_chat_id: preferredChannel === "telegram" ? telegramChatId : null,
+        preferred_channel: "telegram",
+        telegram_chat_id: telegramChatId,
       });
 
       if (error) {
@@ -190,7 +188,7 @@ export function OnboardingForm() {
         setIsComplete(true);
         toast({
           title: "Welcome to Logan! 🌸",
-          description: `You're all set. Expect your first insight soon via ${preferredChannel === "telegram" ? "Telegram" : "WhatsApp"}!`,
+          description: "You're all set. Expect your first insight soon via Telegram!",
         });
       }
     } catch (error) {
@@ -217,7 +215,7 @@ export function OnboardingForm() {
         </div>
         <h3 className="text-2xl font-display font-semibold mb-3">You're In! 🌸</h3>
         <p className="text-muted-foreground max-w-sm mx-auto">
-          Logan will reach out via {preferredChannel === "telegram" ? "Telegram" : "WhatsApp"} on Saturday or Tuesday evening (Israel time) 
+          Logan will reach out via Telegram on Saturday or Tuesday evening (Israel time) 
           with your first personalized insight.
         </p>
       </div>
@@ -713,201 +711,74 @@ export function OnboardingForm() {
         </div>
       )}
 
-      {/* Slide 6 - Channel Selection & Connection */}
+      {/* Slide 6 - Telegram Connection */}
       {step === 6 && (
         <div className="space-y-5 animate-fade-in">
-          {/* Channel Selection */}
-          {!preferredChannel && (
-            <>
-              <div className="text-center mb-4">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-                  <MessageCircle className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-display font-semibold mb-2">How Should Logan Reach You?</h3>
-                <p className="text-muted-foreground text-sm">
-                  Choose your preferred messaging app to receive personalized insights.
-                </p>
+          <div className="text-center mb-4">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#0088cc]/10 flex items-center justify-center">
+              <MessageCircle className="w-8 h-8 text-[#0088cc]" />
+            </div>
+            <h3 className="text-xl font-display font-semibold mb-2">Connect to Logan on Telegram</h3>
+            <p className="text-muted-foreground text-sm">
+              Start a chat with Logan to receive your personalized insights.
+            </p>
+          </div>
+
+          <div className="bg-muted/50 rounded-xl p-5 border border-border space-y-4">
+            <div className="flex flex-col items-center gap-3 pb-4 border-b border-border">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Smartphone className="w-4 h-4" />
+                <span>Scan with your phone</span>
               </div>
-
-              <div className="space-y-3">
-                <button
-                  type="button"
-                  onClick={() => setPreferredChannel("telegram")}
-                  className="w-full p-4 rounded-xl border border-border bg-card hover:border-[#0088cc] transition-all flex items-center gap-4"
-                >
-                  <div className="w-12 h-12 rounded-full bg-[#0088cc]/10 flex items-center justify-center">
-                    <MessageCircle className="w-6 h-6 text-[#0088cc]" />
-                  </div>
-                  <div className="text-left flex-1">
-                    <p className="font-medium">Telegram</p>
-                    <p className="text-xs text-muted-foreground">Recommended • Easy setup</p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPreferredChannel("whatsapp")}
-                  className="w-full p-4 rounded-xl border border-border bg-card hover:border-green-500 transition-all flex items-center gap-4"
-                >
-                  <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                    <MessageCircle className="w-6 h-6 text-green-500" />
-                  </div>
-                  <div className="text-left flex-1">
-                    <p className="font-medium">WhatsApp</p>
-                    <p className="text-xs text-muted-foreground">Requires sandbox connection</p>
-                  </div>
-                </button>
-              </div>
-
-              <div className="flex gap-3 mt-4">
-                <Button type="button" variant="outline" onClick={() => setStep(5)} className="flex-1 h-12">
-                  Back
-                </Button>
-              </div>
-            </>
-          )}
-
-          {/* Telegram Connection */}
-          {preferredChannel === "telegram" && (
-            <>
-              <div className="text-center mb-4">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#0088cc]/10 flex items-center justify-center">
-                  <MessageCircle className="w-8 h-8 text-[#0088cc]" />
-                </div>
-                <h3 className="text-xl font-display font-semibold mb-2">Connect to Logan on Telegram</h3>
-                <p className="text-muted-foreground text-sm">
-                  Start a chat with Logan to receive your personalized insights.
-                </p>
-              </div>
-
-              <div className="bg-muted/50 rounded-xl p-5 border border-border space-y-4">
-                <div className="flex flex-col items-center gap-3 pb-4 border-b border-border">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Smartphone className="w-4 h-4" />
-                    <span>Scan with your phone</span>
-                  </div>
-                  <div className="bg-white p-3 rounded-xl shadow-sm">
-                    <QRCodeSVG 
-                      value="https://t.me/AskLoganBot"
-                      size={120}
-                      level="M"
-                      includeMargin={false}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-sm">
-                  <p><strong>1.</strong> Open <a href="https://t.me/AskLoganBot" target="_blank" rel="noopener noreferrer" className="text-primary underline">@AskLoganBot</a> on Telegram</p>
-                  <p><strong>2.</strong> Tap <strong>Start</strong> and copy your Chat ID</p>
-                  <p><strong>3.</strong> Paste it below:</p>
-                </div>
-
-                <Input
-                  placeholder="Your Chat ID (e.g., 5264001213)"
-                  value={telegramChatId}
-                  onChange={(e) => setTelegramChatId(e.target.value)}
-                  className="h-12 text-center font-mono text-lg"
+              <div className="bg-white p-3 rounded-xl shadow-sm">
+                <QRCodeSVG 
+                  value="https://t.me/AskLoganBot"
+                  size={120}
+                  level="M"
+                  includeMargin={false}
                 />
-
-                <a 
-                  href="https://t.me/AskLoganBot"
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block w-full py-3 rounded-lg bg-[#0088cc] hover:bg-[#0077b5] text-white font-medium transition-colors text-center"
-                >
-                  <span className="flex items-center justify-center gap-2">
-                    <MessageCircle className="w-5 h-5" />
-                    Open Telegram
-                    <ExternalLink className="w-4 h-4" />
-                  </span>
-                </a>
               </div>
+            </div>
 
-              <div className="flex gap-3 mt-4">
-                <Button type="button" variant="outline" onClick={() => setPreferredChannel(null)} className="flex-1 h-12">
-                  Back
-                </Button>
-                <Button 
-                  type="submit" 
-                  className="flex-1 h-12" 
-                  disabled={isSubmitting || !telegramChatId.trim()}
-                >
-                  {isSubmitting ? "Joining..." : "Complete Sign Up"}
-                </Button>
-              </div>
-            </>
-          )}
+            <div className="space-y-2 text-sm">
+              <p><strong>1.</strong> Open <a href="https://t.me/AskLoganBot" target="_blank" rel="noopener noreferrer" className="text-primary underline">@AskLoganBot</a> on Telegram</p>
+              <p><strong>2.</strong> Tap <strong>Start</strong> and copy your Chat ID</p>
+              <p><strong>3.</strong> Paste it below:</p>
+            </div>
 
-          {/* WhatsApp Connection */}
-          {preferredChannel === "whatsapp" && (
-            <>
-              <div className="text-center mb-4">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/10 flex items-center justify-center">
-                  <MessageCircle className="w-8 h-8 text-green-500" />
-                </div>
-                <h3 className="text-xl font-display font-semibold mb-2">Connect to Logan on WhatsApp</h3>
-                <p className="text-muted-foreground text-sm">
-                  Join Logan's WhatsApp sandbox to receive your insights.
-                </p>
-              </div>
+            <Input
+              placeholder="Your Chat ID (e.g., 5264001213)"
+              value={telegramChatId}
+              onChange={(e) => setTelegramChatId(e.target.value)}
+              className="h-12 text-center font-mono text-lg"
+            />
 
-              <div className="bg-muted/50 rounded-xl p-5 border border-border space-y-4">
-                <div className="flex flex-col items-center gap-3 pb-4 border-b border-border">
-                  <div className="bg-white p-3 rounded-xl shadow-sm">
-                    <QRCodeSVG 
-                      value="https://wa.me/14155238886?text=join%20night-shadow"
-                      size={120}
-                      level="M"
-                      includeMargin={false}
-                    />
-                  </div>
-                </div>
+            <a 
+              href="https://t.me/AskLoganBot"
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="block w-full py-3 rounded-lg bg-[#0088cc] hover:bg-[#0077b5] text-white font-medium transition-colors text-center"
+            >
+              <span className="flex items-center justify-center gap-2">
+                <MessageCircle className="w-5 h-5" />
+                Open Telegram
+                <ExternalLink className="w-4 h-4" />
+              </span>
+            </a>
+          </div>
 
-                <div className="space-y-2 text-sm">
-                  <p><strong>1.</strong> Message <strong className="text-primary">+1 415 523 8886</strong> on WhatsApp</p>
-                  <p><strong>2.</strong> Send: <code className="bg-card px-2 py-1 rounded text-primary font-mono">join night-shadow</code></p>
-                  <p><strong>3.</strong> Wait for confirmation from Logan</p>
-                </div>
-
-                <a 
-                  href="https://wa.me/14155238886?text=join%20night-shadow"
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block w-full py-3 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition-colors text-center"
-                >
-                  <span className="flex items-center justify-center gap-2">
-                    <MessageCircle className="w-5 h-5" />
-                    Open WhatsApp
-                    <ExternalLink className="w-4 h-4" />
-                  </span>
-                </a>
-              </div>
-
-              <label className="flex items-start gap-3 p-4 rounded-xl border border-border bg-card cursor-pointer hover:border-primary/50 transition-colors">
-                <Checkbox 
-                  checked={channelConnected} 
-                  onCheckedChange={(checked) => setChannelConnected(checked === true)}
-                  className="mt-0.5"
-                />
-                <span className="text-sm text-foreground leading-relaxed">
-                  I've sent the message and received a confirmation from Logan
-                </span>
-              </label>
-
-              <div className="flex gap-3 mt-4">
-                <Button type="button" variant="outline" onClick={() => setPreferredChannel(null)} className="flex-1 h-12">
-                  Back
-                </Button>
-                <Button 
-                  type="submit" 
-                  className="flex-1 h-12" 
-                  disabled={isSubmitting || !channelConnected}
-                >
-                  {isSubmitting ? "Joining..." : "Complete Sign Up"}
-                </Button>
-              </div>
-            </>
-          )}
+          <div className="flex gap-3 mt-4">
+            <Button type="button" variant="outline" onClick={() => setStep(5)} className="flex-1 h-12">
+              Back
+            </Button>
+            <Button 
+              type="submit" 
+              className="flex-1 h-12" 
+              disabled={isSubmitting || !telegramChatId.trim()}
+            >
+              {isSubmitting ? "Joining..." : "Complete Sign Up"}
+            </Button>
+          </div>
         </div>
       )}
 
