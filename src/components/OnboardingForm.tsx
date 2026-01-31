@@ -756,40 +756,22 @@ export function OnboardingForm() {
             <Button
               type="button"
               onClick={() => {
-                const url = "https://t.me/AskLoganBot";
-
+                navigator.clipboard.writeText("https://t.me/AskLoganBot");
                 toast({
-                  title: "Opening Telegram…",
-                  description: "If nothing happens, use the link below to open or copy it.",
+                  title: "Link copied! 📋",
+                  description: "Paste it in your browser or Telegram app to find @AskLoganBot",
                 });
-
-                // NOTE: In the Lovable preview iframe, popups/new tabs are often blocked.
-                // This tries top-level navigation first, then falls back to same-frame navigation.
-                try {
-                  window.top?.location.assign(url);
-                } catch {
-                  window.location.assign(url);
-                }
               }}
               className="w-full py-3 rounded-lg bg-[#0088cc] hover:bg-[#0077b5] text-white font-medium transition-colors"
             >
               <span className="flex items-center justify-center gap-2">
                 <MessageCircle className="w-5 h-5" />
-                Open Telegram
-                <ExternalLink className="w-4 h-4" />
+                Copy Telegram Link
               </span>
             </Button>
 
             <p className="text-xs text-muted-foreground text-center">
-              If the button doesn’t open, use this link: {" "}
-              <a
-                href="https://t.me/AskLoganBot"
-                target="_top"
-                rel="noopener noreferrer"
-                className="text-primary underline"
-              >
-                https://t.me/AskLoganBot
-              </a>
+              Or search <strong className="text-foreground">@AskLoganBot</strong> in Telegram
             </p>
           </div>
 
