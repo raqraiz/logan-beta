@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.receive-telegram]
 verify_jwt = false
+
+[functions.logan-chat]
+verify_jwt = false
