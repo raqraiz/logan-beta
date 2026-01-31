@@ -114,6 +114,7 @@ interface ParticipantBasic {
   full_name: string;
   whatsapp_number: string;
   telegram_chat_id: string | null;
+  preferred_channel: string | null;
 }
 
 interface ParticipantFull extends ParticipantBasic {
@@ -164,11 +165,11 @@ export function InsightsTab({ userId }: InsightsTabProps) {
       const [insightsRes, participantsRes] = await Promise.all([
         supabase
           .from("insights")
-          .select("*, participants(id, full_name, whatsapp_number, telegram_chat_id)")
+          .select("*, participants(id, full_name, whatsapp_number, telegram_chat_id, preferred_channel)")
           .order("created_at", { ascending: false }),
         supabase
           .from("participants")
-          .select("id, full_name, whatsapp_number, telegram_chat_id, email, age, cycle_length_days, cycle_regularity, last_period_start, anchor_symptom, typical_symptoms, goals, timezone")
+          .select("id, full_name, whatsapp_number, telegram_chat_id, preferred_channel, email, age, cycle_length_days, cycle_regularity, last_period_start, anchor_symptom, typical_symptoms, goals, timezone")
           .eq("is_active", true),
       ]);
 
@@ -299,6 +300,44 @@ export function InsightsTab({ userId }: InsightsTabProps) {
     } catch (error) {
       console.error("Error sending Telegram:", error);
       toast({ title: "Failed to send Telegram message", variant: "destructive" });
+    } finally {
+      setSendingId(null);
+    }
+  };
+
+  const sendToWhatsApp = async (insight: Insight) => {
+    if (sendingId) return;
+    
+    setSendingId(insight.id);
+    try {
+      const shouldIncludeImage = includeCycleImage[insight.id] ?? false;
+      const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+        body: { insightId: insight.id, includeCycleImage: shouldIncludeImage },
+      });
+
+      if (error) throw error;
+      
+      if (data?.error) {
+        toast({ 
+          title: data.error, 
+          description: data.currentStatus ? `Current status: ${data.currentStatus}` : undefined,
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      setInsights(prev =>
+        prev.map(i => (i.id === insight.id ? { ...i, status: "sent" as const } : i))
+      );
+
+      toast({ 
+        title: shouldIncludeImage 
+          ? "Message with cycle image sent via WhatsApp! 📱" 
+          : "Message sent via WhatsApp! 📱" 
+      });
+    } catch (error) {
+      console.error("Error sending WhatsApp:", error);
+      toast({ title: "Failed to send WhatsApp message", variant: "destructive" });
     } finally {
       setSendingId(null);
     }
@@ -588,51 +627,74 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                       </Button>
                     </>
                   )}
-                  {insight.status === "approved" && insight.participants?.telegram_chat_id && (
-                    <div className="flex items-center gap-4 flex-wrap">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`include-image-${insight.id}`}
-                          checked={includeCycleImage[insight.id] ?? false}
-                          onCheckedChange={(checked) => 
-                            setIncludeCycleImage(prev => ({ ...prev, [insight.id]: !!checked }))
-                          }
-                        />
-                        <label 
-                          htmlFor={`include-image-${insight.id}`}
-                          className="text-sm text-muted-foreground cursor-pointer"
-                        >
-                          Include cycle image
-                        </label>
-                        {(includeCycleImage[insight.id] ?? false) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setPreviewParticipantId(insight.participant_id);
-                              setShowImagePreview(true);
-                            }}
-                            className="text-xs h-7 px-2"
+                  {insight.status === "approved" && (
+                    (() => {
+                      const p = insight.participants;
+                      const channel = p?.preferred_channel;
+                      const canSendTelegram = p?.telegram_chat_id;
+                      const canSendWhatsApp = p?.whatsapp_number;
+                      
+                      // No channel configured
+                      if (!canSendTelegram && !canSendWhatsApp) {
+                        return (
+                          <p className="text-sm text-muted-foreground italic">
+                            No messaging channel configured for this participant
+                          </p>
+                        );
+                      }
+                      
+                      // Determine which channel to use
+                      const useTelegram = channel === "telegram" && canSendTelegram;
+                      const useWhatsApp = channel === "whatsapp" && canSendWhatsApp;
+                      const fallbackTelegram = !channel && canSendTelegram;
+                      const fallbackWhatsApp = !channel && !canSendTelegram && canSendWhatsApp;
+                      
+                      const sendChannel = useTelegram || fallbackTelegram ? "telegram" : "whatsapp";
+                      const sendFn = sendChannel === "telegram" ? sendToTelegram : sendToWhatsApp;
+                      
+                      return (
+                        <div className="flex items-center gap-4 flex-wrap">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`include-image-${insight.id}`}
+                              checked={includeCycleImage[insight.id] ?? false}
+                              onCheckedChange={(checked) => 
+                                setIncludeCycleImage(prev => ({ ...prev, [insight.id]: !!checked }))
+                              }
+                            />
+                            <label 
+                              htmlFor={`include-image-${insight.id}`}
+                              className="text-sm text-muted-foreground cursor-pointer"
+                            >
+                              Include cycle image
+                            </label>
+                            {(includeCycleImage[insight.id] ?? false) && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setPreviewParticipantId(insight.participant_id);
+                                  setShowImagePreview(true);
+                                }}
+                                className="text-xs h-7 px-2"
+                              >
+                                <Image className="w-3 h-3 mr-1" />
+                                Preview
+                              </Button>
+                            )}
+                          </div>
+                          <Button 
+                            size="sm" 
+                            onClick={() => sendFn(insight)}
+                            disabled={sendingId === insight.id}
+                            className={sendChannel === "telegram" ? "bg-[#0088cc] hover:bg-[#0077b5]" : "bg-green-500 hover:bg-green-600"}
                           >
-                            <Image className="w-3 h-3 mr-1" />
-                            Preview
+                            <Send className="w-4 h-4 mr-1" />
+                            {sendingId === insight.id ? "Sending..." : `Send to ${sendChannel === "telegram" ? "Telegram" : "WhatsApp"}`}
                           </Button>
-                        )}
-                      </div>
-                      <Button 
-                        size="sm" 
-                        onClick={() => sendToTelegram(insight)}
-                        disabled={sendingId === insight.id}
-                      >
-                        <Send className="w-4 h-4 mr-1" />
-                        {sendingId === insight.id ? "Sending..." : "Send to Telegram"}
-                      </Button>
-                    </div>
-                  )}
-                  {insight.status === "approved" && !insight.participants?.telegram_chat_id && (
-                    <p className="text-sm text-muted-foreground italic">
-                      No Telegram chat ID set for this participant
-                    </p>
+                        </div>
+                      );
+                    })()
                   )}
                 </div>
               </CardContent>

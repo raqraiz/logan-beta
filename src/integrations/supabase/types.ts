@@ -175,6 +175,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           last_period_start: string | null
+          preferred_channel: string | null
           telegram_chat_id: string | null
           timezone: string | null
           typical_symptoms: string[] | null
@@ -196,6 +197,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           last_period_start?: string | null
+          preferred_channel?: string | null
           telegram_chat_id?: string | null
           timezone?: string | null
           typical_symptoms?: string[] | null
@@ -217,6 +219,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           last_period_start?: string | null
+          preferred_channel?: string | null
           telegram_chat_id?: string | null
           timezone?: string | null
           typical_symptoms?: string[] | null
