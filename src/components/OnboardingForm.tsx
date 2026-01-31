@@ -111,7 +111,7 @@ export function OnboardingForm() {
   const [anchorSymptom, setAnchorSymptom] = useState<string>("");
   const [anchorOther, setAnchorOther] = useState<string>("");
   const [consentGiven, setConsentGiven] = useState(false);
-  const [whatsappConnected, setWhatsappConnected] = useState(false);
+  const [telegramConnected, setTelegramConnected] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [lastPeriodDate, setLastPeriodDate] = useState<Date | undefined>();
@@ -186,7 +186,7 @@ export function OnboardingForm() {
         setIsComplete(true);
         toast({
           title: "Welcome to Logan! 🌸",
-          description: "You're all set. Expect your first insight soon via WhatsApp!",
+          description: "You're all set. Expect your first insight soon via Telegram!",
         });
       }
     } catch (error) {
@@ -213,7 +213,7 @@ export function OnboardingForm() {
         </div>
         <h3 className="text-2xl font-display font-semibold mb-3">You're In! 🌸</h3>
         <p className="text-muted-foreground max-w-sm mx-auto">
-          Logan will reach out via WhatsApp on Saturday or Tuesday evening (Israel time) 
+          Logan will reach out via Telegram on Saturday or Tuesday evening (Israel time) 
           with your first personalized insight.
         </p>
       </div>
@@ -530,16 +530,16 @@ export function OnboardingForm() {
         </div>
       )}
 
-      {/* Slide 5 - WhatsApp Connection */}
+      {/* Slide 5 - Telegram Connection */}
       {step === 5 && (
         <div className="space-y-5 animate-fade-in">
           <div className="text-center mb-4">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/10 flex items-center justify-center">
-              <MessageCircle className="w-8 h-8 text-green-500" />
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#0088cc]/10 flex items-center justify-center">
+              <MessageCircle className="w-8 h-8 text-[#0088cc]" />
             </div>
-            <h3 className="text-xl font-display font-semibold mb-2">Connect to Logan on WhatsApp</h3>
+            <h3 className="text-xl font-display font-semibold mb-2">Connect to Logan on Telegram</h3>
             <p className="text-muted-foreground text-sm">
-              To receive your personalized insights, you need to connect with Logan on WhatsApp first.
+              To receive your personalized insights, start a chat with Logan on Telegram.
             </p>
           </div>
 
@@ -552,14 +552,14 @@ export function OnboardingForm() {
               </div>
               <div className="bg-white p-3 rounded-xl shadow-sm">
                 <QRCodeSVG 
-                  value="https://wa.me/14155238886?text=join%20night-shadow"
+                  value="https://t.me/LoganCycleBot"
                   size={140}
                   level="M"
                   includeMargin={false}
                 />
               </div>
               <p className="text-xs text-muted-foreground text-center">
-                Scan to open WhatsApp with the message pre-filled
+                Scan to open Telegram and start chatting with Logan
               </p>
             </div>
 
@@ -575,7 +575,7 @@ export function OnboardingForm() {
                   <span className="text-xs font-bold text-primary">1</span>
                 </div>
                 <p className="text-sm text-foreground">
-                  Open WhatsApp and message <strong className="text-primary">+1 415 523 8886</strong>
+                  Open Telegram and search for <strong className="text-primary">@LoganCycleBot</strong>
                 </p>
               </div>
               
@@ -584,12 +584,8 @@ export function OnboardingForm() {
                   <span className="text-xs font-bold text-primary">2</span>
                 </div>
                 <p className="text-sm text-foreground">
-                  Send this exact message:
+                  Tap <strong>Start</strong> or send any message to begin
                 </p>
-              </div>
-              
-              <div className="ml-9 bg-card rounded-lg p-3 border border-primary/30">
-                <code className="text-lg font-mono font-semibold text-primary">join night-shadow</code>
               </div>
               
               <div className="flex items-start gap-3">
@@ -597,31 +593,31 @@ export function OnboardingForm() {
                   <span className="text-xs font-bold text-primary">3</span>
                 </div>
                 <p className="text-sm text-foreground">
-                  Wait for the confirmation message from Logan
+                  Logan will send you your <strong>Chat ID</strong> — copy it below!
                 </p>
               </div>
             </div>
 
             <a 
-              href="https://wa.me/14155238886?text=join%20night-shadow" 
+              href="https://t.me/LoganCycleBot" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition-colors"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-[#0088cc] hover:bg-[#0077b5] text-white font-medium transition-colors"
             >
               <MessageCircle className="w-5 h-5" />
-              Open WhatsApp
+              Open Telegram
               <ExternalLink className="w-4 h-4" />
             </a>
           </div>
 
           <label className="flex items-start gap-3 p-4 rounded-xl border border-border bg-card cursor-pointer hover:border-primary/50 transition-colors">
             <Checkbox 
-              checked={whatsappConnected} 
-              onCheckedChange={(checked) => setWhatsappConnected(checked === true)}
+              checked={telegramConnected} 
+              onCheckedChange={(checked) => setTelegramConnected(checked === true)}
               className="mt-0.5"
             />
             <span className="text-sm text-foreground leading-relaxed">
-              I've sent the message and received a confirmation from Logan on WhatsApp
+              I've started a chat with Logan on Telegram and received my Chat ID
             </span>
           </label>
 
@@ -633,7 +629,7 @@ export function OnboardingForm() {
               type="button" 
               onClick={() => setStep(6)} 
               className="flex-1 h-12"
-              disabled={!whatsappConnected}
+              disabled={!telegramConnected}
             >
               Continue
             </Button>
