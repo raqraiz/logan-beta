@@ -753,22 +753,18 @@ export function OnboardingForm() {
               className="h-12 text-center font-mono text-lg"
             />
 
-            <Button
-              type="button"
-              onClick={() => {
-                navigator.clipboard.writeText("https://t.me/AskLoganBot");
-                toast({
-                  title: "Link copied! 📋",
-                  description: "Paste it in your browser or Telegram app to find @AskLoganBot",
-                });
-              }}
-              className="w-full py-3 rounded-lg bg-[#0088cc] hover:bg-[#0077b5] text-white font-medium transition-colors"
+            <a
+              href="https://t.me/AskLoganBot?start=getchatid"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full py-3 rounded-lg bg-[#0088cc] hover:bg-[#0077b5] text-white font-medium transition-colors text-center"
             >
               <span className="flex items-center justify-center gap-2">
                 <MessageCircle className="w-5 h-5" />
-                Copy Telegram Link
+                Open Telegram
+                <ExternalLink className="w-4 h-4" />
               </span>
-            </Button>
+            </a>
 
             <p className="text-xs text-muted-foreground text-center">
               Or search <strong className="text-foreground">@AskLoganBot</strong> in Telegram
