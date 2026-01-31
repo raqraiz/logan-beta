@@ -69,11 +69,6 @@ const Index = () => {
                   </p>
                 </div>
                 <OnboardingForm />
-                <p className="text-xs text-muted-foreground text-center mt-4 leading-relaxed">
-                  By continuing, you agree to the Pilot Consent & Privacy Terms (shown during sign-up). 
-                  This program provides educational information only and is not medical advice. 
-                  By interacting with this program you consent you are 18+ years old.
-                </p>
               </div>
             </div>
           </div>
