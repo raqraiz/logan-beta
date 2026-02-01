@@ -84,8 +84,16 @@ serve(async (req) => {
     let updateType: string | null = null;
     let category: string | null = null;
 
-    // Check for period-related updates
-    if (lowerText.includes("period") || lowerText.includes("started") || lowerText.includes("bleeding")) {
+    // Check for questions FIRST (before other categorizations)
+    const isQuestion = lowerText.includes("?") || 
+      (lowerText.startsWith("what") || lowerText.startsWith("why") || lowerText.startsWith("how") || 
+       lowerText.startsWith("when") || lowerText.startsWith("can you") || lowerText.startsWith("is it") ||
+       lowerText.startsWith("do i") || lowerText.startsWith("should i") || lowerText.startsWith("will"));
+
+    if (isQuestion) {
+      updateType = "question";
+      category = "inquiry";
+    } else if (lowerText.includes("period") || lowerText.includes("started") || lowerText.includes("bleeding")) {
       updateType = "period_update";
       category = "menstruation";
       
@@ -156,6 +164,8 @@ serve(async (req) => {
         ackMessage = "Logged. This will inform your next insight.";
       } else if (updateType === "feedback" && category === "positive") {
         ackMessage = "Noted. Glad it landed.";
+      } else if (updateType === "question") {
+        ackMessage = "Good question. I'm drafting a response now. A human will review it before it reaches you, so give it a moment.";
       }
       
       await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
