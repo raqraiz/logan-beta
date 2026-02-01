@@ -148,14 +148,14 @@ serve(async (req) => {
     // Send acknowledgment
     const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
     if (TELEGRAM_BOT_TOKEN) {
-      let ackMessage = "Thanks for sharing! I've noted this down. 💕";
+      let ackMessage = "Noted.";
       
       if (updateType === "period_update" && (lowerText.includes("started") || lowerText.includes("today"))) {
-        ackMessage = "Got it! I've updated your cycle tracking. Take care of yourself during this time! 💕";
+        ackMessage = "Cycle updated. I'll adjust your insights accordingly.";
       } else if (updateType === "symptom_update") {
-        ackMessage = "I hear you. I've logged your symptoms. Remember to rest and stay hydrated! 💕";
+        ackMessage = "Logged. This will inform your next insight.";
       } else if (updateType === "feedback" && category === "positive") {
-        ackMessage = "That means so much! I'm here for you. 💕";
+        ackMessage = "Noted. Glad it landed.";
       }
       
       await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
