@@ -245,8 +245,8 @@ serve(async (req) => {
       );
     }
 
-    // Add Logan's signature to the message
-    const fullMessage = `${messageContent}\n\n💕 Logan\n\n_Reply to share your feedback or tell me about any changes in your cycle!_`;
+    // Send the insight content directly - the AI-generated message already includes a personalized engagement prompt
+    const fullMessage = messageContent;
 
     console.log(`Sending Telegram message to chat ${recipientChatId} for insight ${insightId}`);
 
