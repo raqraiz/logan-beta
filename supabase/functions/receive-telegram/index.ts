@@ -6,6 +6,134 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+async function generateQuestionResponse(
+  supabase: any,
+  participant: any,
+  questionText: string
+): Promise<string | null> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) {
+    console.error("LOVABLE_API_KEY not configured");
+    return null;
+  }
+
+  // Get recent conversation history
+  const { data: recentInsights } = await supabase
+    .from("insights")
+    .select("content, insight_type, sent_at")
+    .eq("participant_id", participant.id)
+    .eq("status", "sent")
+    .order("sent_at", { ascending: false })
+    .limit(3);
+
+  const { data: recentUpdates } = await supabase
+    .from("cycle_updates")
+    .select("update_type, description, category, created_at")
+    .eq("participant_id", participant.id)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  // Calculate cycle day
+  let cycleDay = null;
+  if (participant.last_period_start) {
+    const lastPeriod = new Date(participant.last_period_start);
+    const today = new Date();
+    const diffTime = today.getTime() - lastPeriod.getTime();
+    cycleDay = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  }
+
+  const systemPrompt = `You are Logan, a health intelligence designed to help women understand their own cycle patterns with clarity and emotional stability.
+
+CRITICAL CONSTRAINTS:
+- Maximum 4 sentences total. No exceptions.
+- NEVER use emojis. Not one.
+- You are answering a direct question from the user.
+
+Your voice is: Calm. Precise. Non-patronizing. Grounded. Direct.
+
+You do NOT use:
+- Emojis (STRICTLY FORBIDDEN)
+- Exclamation points
+- Em dashes
+- Over-validation or motivational language
+- Softeners or filler phrases
+
+Your style:
+- Maximum 4 sentences, then stop
+- Clear and direct
+- Practical framing
+- Authority through simplicity
+
+When answering questions:
+1. Answer their specific question directly
+2. Connect it to their cycle context if relevant
+3. Keep it grounded in what's known about menstrual health
+4. Don't over-explain or hedge excessively`;
+
+  const conversationContext = recentInsights?.map((i: any) => 
+    `[Insight sent]: ${i.content}`
+  ).join("\n") || "";
+
+  const recentActivity = recentUpdates?.map((u: any) =>
+    `[${u.update_type}]: ${u.description}`
+  ).join("\n") || "";
+
+  const userPrompt = `Answer ${participant.full_name}'s question directly.
+
+THEIR QUESTION:
+"${questionText}"
+
+PARTICIPANT CONTEXT:
+- Name: ${participant.full_name}
+- Cycle day: ${cycleDay ? `Day ${cycleDay}` : "unknown"}
+- Cycle length: ${participant.cycle_length_days || 28} days
+- Common symptoms: ${participant.typical_symptoms?.join(", ") || "none specified"}
+- Goals: ${participant.goals?.join(", ") || "general wellness"}
+- Anchor symptom: ${participant.anchor_symptom || "none specified"}
+
+${conversationContext ? `RECENT INSIGHTS SENT:\n${conversationContext}` : ""}
+
+${recentActivity ? `RECENT MESSAGES FROM THEM:\n${recentActivity}` : ""}
+
+Answer their question clearly and concisely. Connect to their cycle context when relevant.`;
+
+  console.log("Generating AI response to question:", questionText);
+
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("AI gateway error:", response.status);
+      return null;
+    }
+
+    const aiResponse = await response.json();
+    const content = aiResponse.choices?.[0]?.message?.content;
+    
+    if (content) {
+      console.log("AI response generated successfully");
+      return content;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error generating AI response:", error);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -39,7 +167,7 @@ serve(async (req) => {
     // Find participant by telegram_chat_id
     const { data: participant, error: participantError } = await supabase
       .from("participants")
-      .select("id, full_name")
+      .select("id, full_name, typical_symptoms, goals, anchor_symptom, cycle_regularity, last_period_start, cycle_length_days")
       .eq("telegram_chat_id", chatId)
       .single();
 
@@ -153,6 +281,31 @@ serve(async (req) => {
       }
     }
 
+    // If it's a question, generate an AI response and queue for approval
+    let generatedResponse: string | null = null;
+    if (updateType === "question") {
+      generatedResponse = await generateQuestionResponse(supabase, participant, text);
+      
+      if (generatedResponse) {
+        // Store as pending insight for admin approval
+        const { error: insightError } = await supabase
+          .from("insights")
+          .insert({
+            participant_id: participant.id,
+            content: generatedResponse,
+            insight_type: "question_response",
+            status: "pending",
+            ai_prompt_used: `Question: ${text}`,
+          });
+
+        if (insightError) {
+          console.error("Error storing pending insight:", insightError);
+        } else {
+          console.log("Stored AI response as pending insight for admin approval");
+        }
+      }
+    }
+
     // Send acknowledgment
     const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
     if (TELEGRAM_BOT_TOKEN) {
@@ -179,7 +332,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, participantId: participant.id, updateType }),
+      JSON.stringify({ ok: true, participantId: participant.id, updateType, generatedResponse: !!generatedResponse }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
