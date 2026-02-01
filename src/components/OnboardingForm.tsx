@@ -757,22 +757,6 @@ export function OnboardingForm() {
               href="https://t.me/AskLoganBot?start=getchatid"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={(e) => {
-                // Safari (especially iOS) can ignore target=_blank unless opened via window.open.
-                // IMPORTANT: never navigate this tab (otherwise the user loses onboarding state).
-                // We always prevent default and only open a new tab when allowed.
-                const url = "https://t.me/AskLoganBot?start=getchatid";
-                e.preventDefault();
-                const w = window.open(url, "_blank", "noopener,noreferrer");
-                if (w) {
-                  w.focus();
-                } else {
-                  toast({
-                    title: "Can't open a new tab",
-                    description: "On Safari, try long-pressing the button and choosing 'Open in New Tab', or use the QR code.",
-                  });
-                }
-              }}
               className="block w-full py-3 rounded-lg bg-[#0088cc] hover:bg-[#0077b5] text-white font-medium transition-colors text-center"
             >
               <span className="flex items-center justify-center gap-2">
