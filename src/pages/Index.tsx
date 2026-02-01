@@ -166,9 +166,17 @@ const Index = () => {
             <LoganLogo size="sm" showGlow={false} />
             <span className="font-display font-medium text-foreground">Logan</span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Made by women for women everywhere
-          </p>
+          <div className="flex flex-col md:flex-row items-center gap-4">
+            <Link 
+              to="/consent" 
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              Consent & Privacy Policy
+            </Link>
+            <p className="text-sm text-muted-foreground">
+              Made by women for women everywhere
+            </p>
+          </div>
         </div>
       </footer>
     </div>
