@@ -165,7 +165,7 @@ serve(async (req) => {
       } else if (updateType === "feedback" && category === "positive") {
         ackMessage = "Noted. Glad it landed.";
       } else if (updateType === "question") {
-        ackMessage = "Good question. I'm drafting a response now. A human will review it before it reaches you, so give it a moment.";
+        ackMessage = "On it. As an alpha tester, your questions help shape Logan. A human will review my response before sending. Should be quick.";
       }
       
       await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
