@@ -124,6 +124,18 @@ const Admin = () => {
         </Tabs>
 
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-border py-6 mt-8">
+        <div className="container mx-auto px-4 flex items-center justify-center">
+          <Link 
+            to="/consent" 
+            className="text-sm text-muted-foreground hover:text-primary transition-colors"
+          >
+            Consent & Privacy Policy
+          </Link>
+        </div>
+      </footer>
     </div>
   );
 };
