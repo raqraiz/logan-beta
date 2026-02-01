@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { MessageSquare, RefreshCw, ThumbsUp, ThumbsDown, Heart, Activity } from "lucide-react";
+import { MessageSquare, RefreshCw, ThumbsUp, ThumbsDown, Heart, Activity, ChevronDown, ChevronUp, Reply } from "lucide-react";
 import { format } from "date-fns";
+import { FeedbackReplyForm } from "./FeedbackReplyForm";
 
 interface Feedback {
   id: string;
@@ -18,6 +19,9 @@ interface Feedback {
   action_taken: boolean | null;
   improvement_suggestion: string | null;
   free_form_text: string | null;
+  admin_reply: string | null;
+  admin_reply_at: string | null;
+  admin_reply_sent: boolean | null;
   participants?: {
     full_name: string;
   };
@@ -30,6 +34,7 @@ interface Feedback {
 export function FeedbackTab() {
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
 
   const fetchFeedback = async () => {
     setLoading(true);
@@ -56,6 +61,18 @@ export function FeedbackTab() {
   useEffect(() => {
     fetchFeedback();
   }, []);
+
+  const toggleReply = (id: string) => {
+    setExpandedReplies((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   if (loading) {
     return (
@@ -160,7 +177,12 @@ export function FeedbackTab() {
                       {format(new Date(item.created_at), "MMM d, yyyy 'at' h:mm a")}
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap justify-end">
+                    {item.admin_reply_sent && (
+                      <Badge variant="outline" className="text-green-600 border-green-600">
+                        Replied
+                      </Badge>
+                    )}
                     {item.is_useful !== null && (
                       <Badge variant={item.is_useful ? "default" : "secondary"}>
                         {item.is_useful ? (
@@ -206,6 +228,57 @@ export function FeedbackTab() {
                     </div>
                   )}
                 </div>
+
+                {/* Existing admin reply display */}
+                {item.admin_reply && !expandedReplies.has(item.id) && (
+                  <div className="mt-4 p-3 rounded-lg bg-muted/50 border text-sm">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Reply className="w-3 h-3" />
+                        Your reply {item.admin_reply_at && `· ${format(new Date(item.admin_reply_at), "MMM d")}`}
+                      </p>
+                      {item.admin_reply_sent ? (
+                        <Badge variant="outline" className="text-green-600 border-green-600 text-xs">Sent</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-amber-600 border-amber-600 text-xs">Draft</Badge>
+                      )}
+                    </div>
+                    <p>{item.admin_reply}</p>
+                  </div>
+                )}
+
+                {/* Reply toggle button */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleReply(item.id)}
+                  className="mt-3 text-muted-foreground hover:text-foreground"
+                >
+                  {expandedReplies.has(item.id) ? (
+                    <>
+                      <ChevronUp className="w-4 h-4 mr-1" />
+                      Hide reply
+                    </>
+                  ) : (
+                    <>
+                      <Reply className="w-4 h-4 mr-1" />
+                      {item.admin_reply ? "Edit reply" : "Reply"}
+                    </>
+                  )}
+                </Button>
+
+                {/* Reply form */}
+                {expandedReplies.has(item.id) && (
+                  <FeedbackReplyForm
+                    feedbackId={item.id}
+                    participantId={item.participant_id}
+                    existingReply={item.admin_reply}
+                    onReplySaved={() => {
+                      fetchFeedback();
+                      toggleReply(item.id);
+                    }}
+                  />
+                )}
               </CardContent>
             </Card>
           ))}
