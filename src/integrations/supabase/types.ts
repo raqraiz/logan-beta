@@ -52,6 +52,9 @@ export type Database = {
       feedback: {
         Row: {
           action_taken: boolean | null
+          admin_reply: string | null
+          admin_reply_at: string | null
+          admin_reply_sent: boolean | null
           created_at: string
           emoji_reaction: string | null
           emotion: string | null
@@ -64,6 +67,9 @@ export type Database = {
         }
         Insert: {
           action_taken?: boolean | null
+          admin_reply?: string | null
+          admin_reply_at?: string | null
+          admin_reply_sent?: boolean | null
           created_at?: string
           emoji_reaction?: string | null
           emotion?: string | null
@@ -76,6 +82,9 @@ export type Database = {
         }
         Update: {
           action_taken?: boolean | null
+          admin_reply?: string | null
+          admin_reply_at?: string | null
+          admin_reply_sent?: boolean | null
           created_at?: string
           emoji_reaction?: string | null
           emotion?: string | null
