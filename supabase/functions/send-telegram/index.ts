@@ -245,8 +245,16 @@ serve(async (req) => {
       );
     }
 
-    // Send the insight content directly - the AI-generated message already includes a personalized engagement prompt
-    const fullMessage = messageContent;
+    // Format message with line breaks between sentences for better readability
+    const formatWithBreaks = (text: string): string => {
+      // Split on sentence endings (. ! ?) followed by space and capital letter
+      // Add double line break between sentences
+      return text
+        .replace(/([.!?])\s+(?=[A-Z])/g, '$1\n\n')
+        .trim();
+    };
+    
+    const fullMessage = formatWithBreaks(messageContent);
 
     console.log(`Sending Telegram message to chat ${recipientChatId} for insight ${insightId}`);
 
