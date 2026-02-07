@@ -124,55 +124,70 @@ export function UnifiedParticipantsTab({ userId }: UnifiedParticipantsTabProps) 
   // If a participant is selected, show the detail panel
   if (selectedId) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[600px]">
-        {/* Left: Participant list (collapsed on mobile) */}
-        <div className="hidden lg:block border rounded-lg overflow-hidden">
-          <div className="p-3 border-b bg-muted/50 flex items-center justify-between">
-            <span className="font-medium text-sm">{participants.length} Participants</span>
-            <Button variant="ghost" size="sm" onClick={fetchParticipants}>
-              <RefreshCw className="w-4 h-4" />
-            </Button>
-          </div>
-          <div className="overflow-y-auto max-h-[calc(100vh-300px)]">
-            {filtered.map((p) => (
-              <div
-                key={p.id}
-                onClick={() => setSelectedId(p.id)}
-                className={cn(
-                  "px-3 py-2 cursor-pointer border-b transition-colors flex items-center gap-3",
-                  selectedId === p.id ? "bg-primary/10" : "hover:bg-muted/50"
-                )}
-              >
-                <CycleCircle 
-                  lastPeriodStart={p.last_period_start} 
-                  cycleLengthDays={p.cycle_length_days}
-                  size="xs"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium truncate text-sm">{p.full_name}</span>
-                    {(p.pendingCount > 0 || p.unrepliedCount > 0) && (
-                      <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
-                    )}
-                  </div>
-                  {p.lastActivity && (
-                    <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(p.lastActivity), { addSuffix: true })}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+      <div className="space-y-4">
+        {/* Mobile: Back button to show all participants */}
+        <div className="lg:hidden">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedId(null)}
+            className="gap-2"
+          >
+            <ChevronRight className="w-4 h-4 rotate-180" />
+            All Participants ({participants.length})
+          </Button>
         </div>
 
-        {/* Right: Detail panel */}
-        <div className="lg:col-span-2 border rounded-lg overflow-hidden">
-          <ParticipantDetailPanel
-            participantId={selectedId}
-            userId={userId}
-            onClose={() => setSelectedId(null)}
-          />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[600px]">
+          {/* Left: Participant list (collapsed on mobile) */}
+          <div className="hidden lg:block border rounded-lg overflow-hidden">
+            <div className="p-3 border-b bg-muted/50 flex items-center justify-between">
+              <span className="font-medium text-sm">{participants.length} Participants</span>
+              <Button variant="ghost" size="sm" onClick={fetchParticipants}>
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="overflow-y-auto max-h-[calc(100vh-300px)]">
+              {filtered.map((p) => (
+                <div
+                  key={p.id}
+                  onClick={() => setSelectedId(p.id)}
+                  className={cn(
+                    "px-3 py-2 cursor-pointer border-b transition-colors flex items-center gap-3",
+                    selectedId === p.id ? "bg-primary/10" : "hover:bg-muted/50"
+                  )}
+                >
+                  <CycleCircle 
+                    lastPeriodStart={p.last_period_start} 
+                    cycleLengthDays={p.cycle_length_days}
+                    size="xs"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium truncate text-sm">{p.full_name}</span>
+                      {(p.pendingCount > 0 || p.unrepliedCount > 0) && (
+                        <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
+                      )}
+                    </div>
+                    {p.lastActivity && (
+                      <p className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(p.lastActivity), { addSuffix: true })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: Detail panel */}
+          <div className="lg:col-span-2 border rounded-lg overflow-hidden">
+            <ParticipantDetailPanel
+              participantId={selectedId}
+              userId={userId}
+              onClose={() => setSelectedId(null)}
+            />
+          </div>
         </div>
       </div>
     );
