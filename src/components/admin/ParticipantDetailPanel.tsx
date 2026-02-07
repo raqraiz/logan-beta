@@ -160,8 +160,9 @@ export function ParticipantDetailPanel({
 
       setThread(threadItems);
 
-      // Get pending insights
-      const pending = insightsRes.data?.filter(i => i.status === "pending" || i.status === "approved") || [];
+      // Only show pending insights in the queue (approved ones are now auto-sent)
+      const pending = insightsRes.data?.filter(i => i.status === "pending") || [];
+      setPendingInsights(pending);
       setPendingInsights(pending);
 
     } catch (error) {
@@ -213,17 +214,32 @@ export function ParticipantDetailPanel({
     }
   };
 
-  const approveInsight = async (id: string) => {
+  const approveAndSendInsight = async (id: string) => {
+    if (sendingId) return;
+    setSendingId(id);
     try {
+      // First approve the insight
       await supabase.from("insights").update({
         status: "approved",
         approved_by: userId,
         approved_at: new Date().toISOString(),
       }).eq("id", id);
-      toast({ title: "Approved ✅" });
+
+      // Then immediately send via Telegram
+      const { data, error } = await supabase.functions.invoke("send-telegram", {
+        body: { insightId: id },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: data.error, variant: "destructive" });
+        return;
+      }
+      toast({ title: "Approved & sent" });
       fetchData();
     } catch {
-      toast({ title: "Failed to approve", variant: "destructive" });
+      toast({ title: "Failed to approve & send", variant: "destructive" });
+    } finally {
+      setSendingId(null);
     }
   };
 
@@ -234,27 +250,6 @@ export function ParticipantDetailPanel({
       fetchData();
     } catch {
       toast({ title: "Failed to reject", variant: "destructive" });
-    }
-  };
-
-  const sendInsight = async (insight: Insight) => {
-    if (sendingId) return;
-    setSendingId(insight.id);
-    try {
-      const { data, error } = await supabase.functions.invoke("send-telegram", {
-        body: { insightId: insight.id },
-      });
-      if (error) throw error;
-      if (data?.error) {
-        toast({ title: data.error, variant: "destructive" });
-        return;
-      }
-      toast({ title: "Sent via Telegram 📱" });
-      fetchData();
-    } catch {
-      toast({ title: "Failed to send", variant: "destructive" });
-    } finally {
-      setSendingId(null);
     }
   };
 
@@ -383,10 +378,7 @@ export function ParticipantDetailPanel({
         {pendingInsights.length > 0 && (
           <div className="flex items-center gap-2 text-sm">
             <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
-              {pendingInsights.filter(i => i.status === "pending").length} pending approval
-            </Badge>
-            <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
-              {pendingInsights.filter(i => i.status === "approved").length} ready to send
+              {pendingInsights.length} pending approval
             </Badge>
           </div>
         )}
@@ -600,20 +592,20 @@ export function ParticipantDetailPanel({
                           <Button variant="outline" size="sm" onClick={() => rejectInsight(insight.id)}>
                             <X className="w-4 h-4 mr-1" /> Reject
                           </Button>
-                          <Button size="sm" onClick={() => approveInsight(insight.id)}>
-                            <Check className="w-4 h-4 mr-1" /> Approve
+                          <Button size="sm" onClick={() => approveAndSendInsight(insight.id)} disabled={sendingId === insight.id}>
+                            {sendingId === insight.id ? (
+                              <RefreshCw className="w-4 h-4 animate-spin mr-1" />
+                            ) : (
+                              <Send className="w-4 h-4 mr-1" />
+                            )}
+                            Approve & Send
                           </Button>
                         </>
                       )}
                       {insight.status === "approved" && (
-                        <Button size="sm" onClick={() => sendInsight(insight)} disabled={sendingId === insight.id}>
-                          {sendingId === insight.id ? (
-                            <RefreshCw className="w-4 h-4 animate-spin mr-1" />
-                          ) : (
-                            <Send className="w-4 h-4 mr-1" />
-                          )}
-                          Send via Telegram
-                        </Button>
+                        <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600">
+                          Ready - click to resend if needed
+                        </Badge>
                       )}
                     </div>
                   </CardContent>
