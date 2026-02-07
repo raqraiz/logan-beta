@@ -3,7 +3,7 @@ import { differenceInDays } from "date-fns";
 interface CycleCircleProps {
   lastPeriodStart: string | null;
   cycleLengthDays: number | null;
-  size?: "sm" | "md";
+  size?: "xs" | "sm" | "md";
 }
 
 type CyclePhase = "Menstruation" | "Follicular" | "Ovulation" | "Luteal";
@@ -65,42 +65,65 @@ function getCycleInfo(lastPeriodStart: string | null, cycleLengthDays: number | 
 export function CycleCircle({ lastPeriodStart, cycleLengthDays, size = "sm" }: CycleCircleProps) {
   const cycleInfo = getCycleInfo(lastPeriodStart, cycleLengthDays);
 
+  const sizeClasses = {
+    xs: "w-8 h-8",
+    sm: "w-14 h-14",
+    md: "w-20 h-20",
+  };
+
+  const dimensions = {
+    xs: { svg: 32, r: 12, cx: 16, cy: 16 },
+    sm: { svg: 56, r: 22, cx: 28, cy: 28 },
+    md: { svg: 80, r: 32, cx: 40, cy: 40 },
+  };
+
   if (!cycleInfo) {
     return (
-      <div className={`${size === "sm" ? "w-14 h-14" : "w-20 h-20"} rounded-full bg-muted flex items-center justify-center`}>
-        <span className="text-xs text-muted-foreground">N/A</span>
+      <div className={`${sizeClasses[size]} rounded-full bg-muted flex items-center justify-center`}>
+        <span className="text-[8px] text-muted-foreground">N/A</span>
       </div>
     );
   }
 
   const { day, phase } = cycleInfo;
   const progress = (day / (cycleLengthDays || 28)) * 100;
-  const circumference = 2 * Math.PI * (size === "sm" ? 22 : 32);
+  const dim = dimensions[size];
+  const circumference = 2 * Math.PI * dim.r;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
-  const dimensions = size === "sm" ? { svg: 56, r: 22, cx: 28, cy: 28 } : { svg: 80, r: 32, cx: 40, cy: 40 };
+  const textSizes = {
+    xs: "text-[10px]",
+    sm: "text-base",
+    md: "text-xl",
+  };
+
+  const labelSizes = {
+    xs: "text-[8px]",
+    sm: "text-[10px]",
+    md: "text-xs",
+  };
 
   return (
     <div className="relative flex flex-col items-center">
-      <div className={`relative ${size === "sm" ? "w-14 h-14" : "w-20 h-20"}`}>
+      <div className={`relative ${sizeClasses[size]}`}>
         {/* Background circle */}
-        <svg className="w-full h-full -rotate-90" viewBox={`0 0 ${dimensions.svg} ${dimensions.svg}`}>
+        <svg className="w-full h-full -rotate-90" viewBox={`0 0 ${dim.svg} ${dim.svg}`}>
           <circle
-            cx={dimensions.cx}
-            cy={dimensions.cy}
-            r={dimensions.r}
+            cx={dim.cx}
+            cy={dim.cy}
+            r={dim.r}
             fill="none"
             stroke="currentColor"
-            strokeWidth="4"
+            strokeWidth={size === "xs" ? 2 : 4}
             className="text-muted/30"
           />
           <circle
-            cx={dimensions.cx}
-            cy={dimensions.cy}
-            r={dimensions.r}
+            cx={dim.cx}
+            cy={dim.cy}
+            r={dim.r}
             fill="none"
             stroke="currentColor"
-            strokeWidth="4"
+            strokeWidth={size === "xs" ? 2 : 4}
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
@@ -110,16 +133,18 @@ export function CycleCircle({ lastPeriodStart, cycleLengthDays, size = "sm" }: C
         
         {/* Center content */}
         <div className={`absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br ${phase.bgColor} rounded-full`}>
-          <span className={`${size === "sm" ? "text-base" : "text-xl"} font-bold ${phase.color}`}>
+          <span className={`${textSizes[size]} font-bold ${phase.color}`}>
             {day}
           </span>
         </div>
       </div>
       
-      {/* Phase label */}
-      <span className={`mt-1 ${size === "sm" ? "text-[10px]" : "text-xs"} font-medium ${phase.color} text-center leading-tight`}>
-        {phase.phase}
-      </span>
+      {/* Phase label - hide for xs size */}
+      {size !== "xs" && (
+        <span className={`mt-1 ${labelSizes[size]} font-medium ${phase.color} text-center leading-tight`}>
+          {phase.phase}
+        </span>
+      )}
     </div>
   );
 }
