@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.receive-telegram]
 verify_jwt = false
+
+[functions.send-reply-telegram]
+verify_jwt = false

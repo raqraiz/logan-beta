@@ -109,11 +109,12 @@ export function FeedbackReplyForm({
       if (participantError) throw participantError;
 
       if (participant?.preferred_channel === "telegram" && participant?.telegram_chat_id) {
-        // Send via Telegram
-        const { error: sendError } = await supabase.functions.invoke("send-telegram", {
+        // Send via Telegram using the dedicated reply function
+        const { error: sendError } = await supabase.functions.invoke("send-reply-telegram", {
           body: {
             chatId: participant.telegram_chat_id,
             message: reply.trim(),
+            feedbackId,
           },
         });
 
