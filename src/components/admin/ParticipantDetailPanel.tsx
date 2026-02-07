@@ -6,11 +6,20 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { 
   RefreshCw, Send, Sparkles, Wand2, Check, X, 
   MessageSquare, Calendar, Target, ThumbsUp, ThumbsDown, Reply,
-  Plus, Clock, User
+  Plus, Clock, User, Trash2
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -62,12 +71,14 @@ interface ParticipantDetailPanelProps {
   participantId: string;
   userId: string;
   onClose: () => void;
+  onDelete?: () => void;
 }
 
 export function ParticipantDetailPanel({ 
   participantId, 
   userId,
-  onClose 
+  onClose,
+  onDelete 
 }: ParticipantDetailPanelProps) {
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [pendingInsights, setPendingInsights] = useState<Insight[]>([]);
@@ -89,6 +100,10 @@ export function ParticipantDetailPanel({
   
   // Sending insight state
   const [sendingId, setSendingId] = useState<string | null>(null);
+  
+  // Delete state
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -302,6 +317,34 @@ export function ParticipantDetailPanel({
     }
   };
 
+  const deleteParticipant = async () => {
+    setIsDeleting(true);
+    try {
+      // Delete related data first (due to foreign keys)
+      await supabase.from("feedback").delete().eq("participant_id", participantId);
+      await supabase.from("insights").delete().eq("participant_id", participantId);
+      await supabase.from("cycle_updates").delete().eq("participant_id", participantId);
+      
+      // Delete the participant
+      const { error } = await supabase
+        .from("participants")
+        .delete()
+        .eq("id", participantId);
+
+      if (error) throw error;
+
+      toast({ title: "Participant deleted" });
+      setDeleteDialogOpen(false);
+      onDelete?.();
+      onClose();
+    } catch (error) {
+      console.error("Error deleting participant:", error);
+      toast({ title: "Failed to delete participant", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -350,9 +393,39 @@ export function ParticipantDetailPanel({
               </div>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={fetchData}>
-            <RefreshCw className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={fetchData}>
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete Participant</DialogTitle>
+                  <DialogDescription>
+                    Are you sure you want to delete <strong>{participant.full_name}</strong>? This will permanently remove all their data including insights, feedback, and cycle updates.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    onClick={deleteParticipant}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                    Delete
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {/* Symptoms & Goals */}
