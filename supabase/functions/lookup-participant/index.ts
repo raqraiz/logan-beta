@@ -12,8 +12,43 @@ serve(async (req) => {
   }
 
   try {
-    const { phone } = await req.json();
+    const { phone, action, participantId, chatId } = await req.json();
 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Action: connect telegram
+    if (action === "connect-telegram") {
+      if (!participantId || !chatId) {
+        return new Response(
+          JSON.stringify({ error: "Missing participantId or chatId" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log("Connecting Telegram for participant:", participantId);
+
+      const { error } = await supabase
+        .from("participants")
+        .update({ telegram_chat_id: chatId })
+        .eq("id", participantId);
+
+      if (error) {
+        console.error("Update error:", error);
+        return new Response(
+          JSON.stringify({ error: "Failed to connect Telegram" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Default action: lookup by phone
     if (!phone) {
       return new Response(
         JSON.stringify({ error: "Phone number is required" }),
@@ -25,11 +60,6 @@ serve(async (req) => {
     const normalizedPhone = phone.replace(/[\s\-\(\)]/g, "");
     
     console.log("Looking up participant with phone:", normalizedPhone);
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Look up participant by phone number
     const { data: participant, error } = await supabase
