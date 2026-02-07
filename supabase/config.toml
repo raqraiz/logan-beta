@@ -1,5 +1,8 @@
 project_id = "tpohsmxpcqqgxcgectfs"
 
+[functions.lookup-participant]
+verify_jwt = false
+
 [functions.generate-insight]
 verify_jwt = false
 
