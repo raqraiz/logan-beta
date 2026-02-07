@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Check, CalendarIcon, MessageCircle, ExternalLink, Smartphone } from "lucide-react";
+import { Check, CalendarIcon, MessageCircle, ExternalLink, Smartphone, RefreshCw } from "lucide-react";
 import { LoganLogo } from "./LoganLogo";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -22,16 +22,13 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { QRCodeSVG } from "qrcode.react";
 
+const STORAGE_KEY = "logan_onboarding_draft";
+
 // Normalize phone number to international format
-// Handles common Israeli formats: 0501234567, +9720501234567, 972501234567, etc.
 const normalizePhoneNumber = (phone: string): string => {
-  // Remove all whitespace, dashes, parentheses
   let normalized = phone.replace(/[\s\-\(\)]/g, "");
-  
-  // Israeli mobile prefixes (without leading 0)
   const israeliMobilePrefixes = ["50", "51", "52", "53", "54", "55", "56", "57", "58", "59"];
   
-  // Case 1: Starts with 0 (local Israeli format like 0501234567)
   if (normalized.startsWith("0") && normalized.length === 10) {
     const prefix = normalized.substring(1, 3);
     if (israeliMobilePrefixes.includes(prefix)) {
@@ -39,17 +36,14 @@ const normalizePhoneNumber = (phone: string): string => {
     }
   }
   
-  // Case 2: Starts with 972 without + (like 972501234567 or 9720501234567)
   if (normalized.startsWith("972")) {
     normalized = "+" + normalized;
   }
   
-  // Ensure it starts with +
   if (!normalized.startsWith("+")) {
     normalized = "+" + normalized;
   }
   
-  // Fix leading 0 after any country code: +9720... -> +972...
   normalized = normalized.replace(/^\+(\d{1,3})0(\d)/, "+$1$2");
   
   return normalized;
@@ -62,7 +56,6 @@ const onboardingSchema = z.object({
     .max(20)
     .refine((val) => {
       const normalized = normalizePhoneNumber(val);
-      // Must start with + and have 10-15 digits after
       return /^\+\d{10,15}$/.test(normalized);
     }, "Enter number with country code (e.g., +972501234567)"),
   email: z.string().email("Please enter a valid email").optional().or(z.literal("")),
@@ -72,6 +65,21 @@ const onboardingSchema = z.object({
 });
 
 type OnboardingData = z.infer<typeof onboardingSchema>;
+
+interface SavedDraft {
+  participantId?: string;
+  step: number;
+  formData: Partial<OnboardingData>;
+  selectedSymptoms: string[];
+  anchorSymptom: string;
+  anchorOther: string;
+  consentGiven: boolean;
+  telegramChatId: string;
+  cycleNotes: string;
+  symptomNotes: string;
+  anchorNotes: string;
+  lastPeriodDate?: string;
+}
 
 const symptomCategories = {
   "EMOTIONAL & COGNITIVE": [
@@ -115,18 +123,91 @@ export function OnboardingForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [lastPeriodDate, setLastPeriodDate] = useState<Date | undefined>();
+  const [savedParticipantId, setSavedParticipantId] = useState<string | null>(null);
   
   // Free-form text fields
   const [cycleNotes, setCycleNotes] = useState<string>("");
   const [symptomNotes, setSymptomNotes] = useState<string>("");
   const [anchorNotes, setAnchorNotes] = useState<string>("");
 
-  const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm<OnboardingData>({
+  const { register, handleSubmit, formState: { errors }, watch, setValue, getValues } = useForm<OnboardingData>({
     resolver: zodResolver(onboardingSchema),
     defaultValues: {
       cycle_length_days: 28,
     }
   });
+
+  // Load saved draft on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const draft: SavedDraft = JSON.parse(saved);
+        
+        // Restore form state
+        if (draft.formData.full_name) setValue("full_name", draft.formData.full_name);
+        if (draft.formData.whatsapp_number) setValue("whatsapp_number", draft.formData.whatsapp_number);
+        if (draft.formData.email) setValue("email", draft.formData.email);
+        if (draft.formData.age) setValue("age", draft.formData.age);
+        if (draft.formData.cycle_length_days) setValue("cycle_length_days", draft.formData.cycle_length_days);
+        if (draft.lastPeriodDate) {
+          const date = new Date(draft.lastPeriodDate);
+          setLastPeriodDate(date);
+          setValue("last_period_start", date);
+        }
+        
+        setSelectedSymptoms(draft.selectedSymptoms || []);
+        setAnchorSymptom(draft.anchorSymptom || "");
+        setAnchorOther(draft.anchorOther || "");
+        setConsentGiven(draft.consentGiven || false);
+        setTelegramChatId(draft.telegramChatId || "");
+        setCycleNotes(draft.cycleNotes || "");
+        setSymptomNotes(draft.symptomNotes || "");
+        setAnchorNotes(draft.anchorNotes || "");
+        
+        if (draft.participantId) {
+          setSavedParticipantId(draft.participantId);
+          // If they already saved their data, go to Telegram step
+          setStep(6);
+          toast({
+            title: "Welcome back! 👋",
+            description: "Your signup was saved. Just connect Telegram to finish.",
+          });
+        } else if (draft.step > 1) {
+          setStep(draft.step);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load draft:", e);
+    }
+  }, [setValue]);
+
+  // Save draft whenever important state changes
+  useEffect(() => {
+    const formData = getValues();
+    const draft: SavedDraft = {
+      participantId: savedParticipantId || undefined,
+      step,
+      formData: {
+        full_name: formData.full_name,
+        whatsapp_number: formData.whatsapp_number,
+        email: formData.email,
+        age: formData.age,
+        cycle_length_days: formData.cycle_length_days,
+      },
+      selectedSymptoms,
+      anchorSymptom,
+      anchorOther,
+      consentGiven,
+      telegramChatId,
+      cycleNotes,
+      symptomNotes,
+      anchorNotes,
+      lastPeriodDate: lastPeriodDate?.toISOString(),
+    };
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+  }, [step, selectedSymptoms, anchorSymptom, anchorOther, consentGiven, telegramChatId, cycleNotes, symptomNotes, anchorNotes, lastPeriodDate, savedParticipantId, getValues]);
 
   const toggleSymptom = (symptom: string) => {
     setSelectedSymptoms(prev => 
@@ -141,14 +222,21 @@ export function OnboardingForm() {
     setValue("last_period_start", date);
   };
 
-  const onSubmit = async (data: OnboardingData) => {
-    if (!consentGiven) {
+  // Save participant data after consent (step 5 -> 6)
+  const saveParticipantData = async () => {
+    const data = getValues();
+    const validationResult = onboardingSchema.safeParse({
+      ...data,
+      last_period_start: lastPeriodDate,
+    });
+    
+    if (!validationResult.success) {
       toast({
-        title: "Consent required",
-        description: "Please provide your consent to continue.",
+        title: "Please check your info",
+        description: "Some required fields are missing.",
         variant: "destructive",
       });
-      return;
+      return false;
     }
 
     setIsSubmitting(true);
@@ -156,46 +244,109 @@ export function OnboardingForm() {
       const finalAnchor = anchorSymptom === "Other" ? anchorOther : anchorSymptom;
       const normalizedPhone = normalizePhoneNumber(data.whatsapp_number);
       
-      const { error } = await supabase.from("participants").insert({
+      const { data: participant, error } = await supabase.from("participants").insert({
         full_name: data.full_name,
         whatsapp_number: normalizedPhone,
         email: data.email || null,
         age: data.age || null,
         cycle_length_days: data.cycle_length_days || 28,
-        last_period_start: data.last_period_start ? format(data.last_period_start, "yyyy-MM-dd") : null,
+        last_period_start: lastPeriodDate ? format(lastPeriodDate, "yyyy-MM-dd") : null,
         cycle_regularity: "regular",
         typical_symptoms: selectedSymptoms,
         goals: selectedSymptoms.length > 0 ? ["Understand my symptoms"] : [],
         anchor_symptom: finalAnchor,
         consent_given: consentGiven,
-        consent_given_at: consentGiven ? new Date().toISOString() : null,
+        consent_given_at: new Date().toISOString(),
         additional_notes: [cycleNotes, symptomNotes, anchorNotes].filter(Boolean).join("\n\n---\n\n") || null,
         preferred_channel: "telegram",
-        telegram_chat_id: telegramChatId,
-      });
+        telegram_chat_id: null, // Will be set in final step
+      }).select("id").single();
 
       if (error) {
         if (error.code === "23505") {
-          toast({
-            title: "Already registered",
-            description: "This phone number is already in the pilot. We'll be in touch soon!",
-            variant: "default",
-          });
-        } else {
-          throw error;
+          // Already registered - try to find existing participant
+          const { data: existing } = await supabase
+            .from("participants")
+            .select("id, telegram_chat_id")
+            .eq("whatsapp_number", normalizedPhone)
+            .single();
+          
+          if (existing) {
+            setSavedParticipantId(existing.id);
+            if (existing.telegram_chat_id) {
+              // Already fully registered
+              setIsComplete(true);
+              localStorage.removeItem(STORAGE_KEY);
+              toast({
+                title: "You're already registered! 🌸",
+                description: "Logan will reach out soon via Telegram.",
+              });
+              return false;
+            }
+            toast({
+              title: "Welcome back! 👋",
+              description: "Just connect Telegram to finish your signup.",
+            });
+            return true;
+          }
         }
-      } else {
-        setIsComplete(true);
-        toast({
-          title: "Welcome to Logan! 🌸",
-          description: "You're all set. Expect your first insight soon via Telegram!",
-        });
+        throw error;
       }
+
+      setSavedParticipantId(participant.id);
+      toast({
+        title: "Info saved! ✨",
+        description: "Now let's connect you to Telegram.",
+      });
+      return true;
     } catch (error) {
-      console.error("Onboarding error:", error);
+      console.error("Save error:", error);
       toast({
         title: "Something went wrong",
-        description: "Please try again or contact support.",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Update Telegram ID for existing participant
+  const updateTelegramId = async () => {
+    if (!savedParticipantId || !telegramChatId.trim()) return;
+    
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from("participants")
+        .update({ telegram_chat_id: telegramChatId.trim() })
+        .eq("id", savedParticipantId);
+
+      if (error) throw error;
+
+      // Verify the update worked
+      const { data: verified } = await supabase
+        .from("participants")
+        .select("id, telegram_chat_id")
+        .eq("id", savedParticipantId)
+        .single();
+
+      if (!verified?.telegram_chat_id) {
+        throw new Error("Update not saved");
+      }
+
+      localStorage.removeItem(STORAGE_KEY);
+      setIsComplete(true);
+      toast({
+        title: "Welcome to Logan! 🌸",
+        description: "You're all set. Expect your first insight soon via Telegram!",
+      });
+    } catch (error) {
+      console.error("Update error:", error);
+      toast({
+        title: "Couldn't save Telegram ID",
+        description: "Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -203,10 +354,34 @@ export function OnboardingForm() {
     }
   };
 
+  // Handle proceeding from consent to Telegram step
+  const proceedToTelegram = async () => {
+    if (savedParticipantId) {
+      // Already saved, just move to step 6
+      setStep(6);
+    } else {
+      // Save first, then move to step 6
+      const success = await saveParticipantData();
+      if (success) {
+        setStep(6);
+      }
+    }
+  };
+
+  const onSubmit = async () => {
+    await updateTelegramId();
+  };
+
   const canProceedStep1 = watch("full_name") && watch("whatsapp_number");
   const canProceedStep4 = anchorSymptom && (anchorSymptom !== "Other" || anchorOther.trim());
 
-  // Slide 6 - Confirmation
+  // Clear draft and start over
+  const clearDraft = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    window.location.reload();
+  };
+
+  // Confirmation screen
   if (isComplete) {
     return (
       <div className="text-center py-8 animate-fade-in">
@@ -701,11 +876,18 @@ export function OnboardingForm() {
             </Button>
             <Button 
               type="button" 
-              onClick={() => setStep(6)} 
+              onClick={proceedToTelegram} 
               className="flex-1 h-12"
-              disabled={!consentGiven}
+              disabled={!consentGiven || isSubmitting}
             >
-              Continue
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Continue"
+              )}
             </Button>
           </div>
         </div>
@@ -720,7 +902,7 @@ export function OnboardingForm() {
             </div>
             <h3 className="text-xl font-display font-semibold mb-2">Connect to Logan on Telegram</h3>
             <p className="text-muted-foreground text-sm">
-              Start a chat with Logan to receive your personalized insights.
+              Your info is saved! Now connect Telegram to receive your insights.
             </p>
           </div>
 
@@ -801,9 +983,27 @@ export function OnboardingForm() {
               className="flex-1 h-12" 
               disabled={isSubmitting || !telegramChatId.trim()}
             >
-              {isSubmitting ? "Joining..." : "Complete Sign Up"}
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Finishing...
+                </>
+              ) : (
+                "Complete Sign Up"
+              )}
             </Button>
           </div>
+
+          <p className="text-xs text-muted-foreground text-center pt-2">
+            Need to start over?{" "}
+            <button 
+              type="button" 
+              onClick={clearDraft}
+              className="text-primary underline hover:no-underline"
+            >
+              Clear and restart
+            </button>
+          </p>
         </div>
       )}
 
