@@ -37,12 +37,16 @@ serve(async (req) => {
     // Format message with line breaks between sentences for better readability
     const formatWithBreaks = (text: string): string => {
       return text
-        .replace(/([.!?])\s+(?=[A-Z])/g, '$1\n\n')
+        .replace(/([.!?])\s+(?=[A-Z])/g, "$1\n\n")
         .trim();
     };
-    
-    // Add Logan signature
-    const fullMessage = `${formatWithBreaks(message)}\n\n💕 Logan`;
+
+    // Ensure we never append or re-send a signature/sign-off
+    const cleanedMessage = message
+      .replace(/\n?\s*💕\s*Logan\s*$/i, "")
+      .trim();
+
+    const fullMessage = `${formatWithBreaks(cleanedMessage)}`;
 
     const telegramResponse = await fetch(
       `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
