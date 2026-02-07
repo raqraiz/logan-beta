@@ -186,6 +186,10 @@ export function UnifiedParticipantsTab({ userId }: UnifiedParticipantsTabProps) 
               participantId={selectedId}
               userId={userId}
               onClose={() => setSelectedId(null)}
+              onDelete={() => {
+                setSelectedId(null);
+                fetchParticipants();
+              }}
             />
           </div>
         </div>
