@@ -71,12 +71,20 @@ const Resume = () => {
 
     setIsConnecting(true);
     try {
-      const { error } = await supabase
-        .from("participants")
-        .update({ telegram_chat_id: chatId.trim() })
-        .eq("id", participant.participantId);
+      const { data, error } = await supabase.functions.invoke("lookup-participant", {
+        body: { 
+          action: "connect-telegram",
+          participantId: participant.participantId,
+          chatId: chatId.trim()
+        },
+      });
 
       if (error) throw error;
+
+      if (data.error) {
+        toast({ title: data.error, variant: "destructive" });
+        return;
+      }
 
       toast({ title: "Telegram connected! 🎉", description: "You'll start receiving insights from Logan soon." });
       setParticipant({ ...participant, telegramConnected: true });
