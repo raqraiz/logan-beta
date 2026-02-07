@@ -244,66 +244,63 @@ export function OnboardingForm() {
       const finalAnchor = anchorSymptom === "Other" ? anchorOther : anchorSymptom;
       const normalizedPhone = normalizePhoneNumber(data.whatsapp_number);
       
-      const { data: participant, error } = await supabase.from("participants").insert({
-        full_name: data.full_name,
-        whatsapp_number: normalizedPhone,
-        email: data.email || null,
-        age: data.age || null,
-        cycle_length_days: data.cycle_length_days || 28,
-        last_period_start: lastPeriodDate ? format(lastPeriodDate, "yyyy-MM-dd") : null,
-        cycle_regularity: "regular",
-        typical_symptoms: selectedSymptoms,
-        goals: selectedSymptoms.length > 0 ? ["Understand my symptoms"] : [],
-        anchor_symptom: finalAnchor,
-        consent_given: consentGiven,
-        consent_given_at: new Date().toISOString(),
-        additional_notes: [cycleNotes, symptomNotes, anchorNotes].filter(Boolean).join("\n\n---\n\n") || null,
-        preferred_channel: "telegram",
-        telegram_chat_id: null, // Will be set in final step
-      }).select("id").single();
-
-      if (error) {
-        if (error.code === "23505") {
-          // Already registered - try to find existing participant
-          const { data: existing } = await supabase
-            .from("participants")
-            .select("id, telegram_chat_id")
-            .eq("whatsapp_number", normalizedPhone)
-            .single();
-          
-          if (existing) {
-            setSavedParticipantId(existing.id);
-            if (existing.telegram_chat_id) {
-              // Already fully registered
-              setIsComplete(true);
-              localStorage.removeItem(STORAGE_KEY);
-              toast({
-                title: "You're already registered! 🌸",
-                description: "Logan will reach out soon via Telegram.",
-              });
-              return false;
-            }
-            toast({
-              title: "Welcome back! 👋",
-              description: "Just connect Telegram to finish your signup.",
-            });
-            return true;
+      // Use edge function to register participant (bypasses RLS)
+      const { data: result, error } = await supabase.functions.invoke("lookup-participant", {
+        body: {
+          action: "register",
+          participantData: {
+            full_name: data.full_name,
+            whatsapp_number: normalizedPhone,
+            email: data.email || null,
+            age: data.age || null,
+            cycle_length_days: data.cycle_length_days || 28,
+            last_period_start: lastPeriodDate ? format(lastPeriodDate, "yyyy-MM-dd") : null,
+            cycle_regularity: "regular",
+            typical_symptoms: selectedSymptoms,
+            goals: selectedSymptoms.length > 0 ? ["Understand my symptoms"] : [],
+            anchor_symptom: finalAnchor,
+            consent_given: consentGiven,
+            consent_given_at: new Date().toISOString(),
+            additional_notes: [cycleNotes, symptomNotes, anchorNotes].filter(Boolean).join("\n\n---\n\n") || null,
+            preferred_channel: "telegram",
           }
-        }
-        throw error;
+        },
+      });
+
+      if (error) throw error;
+
+      if (result.error) {
+        throw new Error(result.error);
       }
 
-      setSavedParticipantId(participant.id);
-      toast({
-        title: "Info saved! ✨",
-        description: "Now let's connect you to Telegram.",
-      });
+      setSavedParticipantId(result.participantId);
+      
+      if (result.alreadyExists) {
+        if (result.telegramConnected) {
+          setIsComplete(true);
+          localStorage.removeItem(STORAGE_KEY);
+          toast({
+            title: "You're already registered! 🌸",
+            description: "Logan will reach out soon via Telegram.",
+          });
+          return false;
+        }
+        toast({
+          title: "Welcome back! 👋",
+          description: "Just connect Telegram to finish your signup.",
+        });
+      } else {
+        toast({
+          title: "Info saved! ✨",
+          description: "Now let's connect you to Telegram.",
+        });
+      }
       return true;
     } catch (error) {
       console.error("Save error:", error);
       toast({
         title: "Something went wrong",
-        description: "Please try again.",
+        description: "Please try again or contact support.",
         variant: "destructive",
       });
       return false;
@@ -318,23 +315,17 @@ export function OnboardingForm() {
     
     setIsSubmitting(true);
     try {
-      const { error } = await supabase
-        .from("participants")
-        .update({ telegram_chat_id: telegramChatId.trim() })
-        .eq("id", savedParticipantId);
+      // Use edge function to update Telegram ID (bypasses RLS)
+      const { data: result, error } = await supabase.functions.invoke("lookup-participant", {
+        body: {
+          action: "connect-telegram",
+          participantId: savedParticipantId,
+          chatId: telegramChatId.trim(),
+        },
+      });
 
       if (error) throw error;
-
-      // Verify the update worked
-      const { data: verified } = await supabase
-        .from("participants")
-        .select("id, telegram_chat_id")
-        .eq("id", savedParticipantId)
-        .single();
-
-      if (!verified?.telegram_chat_id) {
-        throw new Error("Update not saved");
-      }
+      if (result.error) throw new Error(result.error);
 
       localStorage.removeItem(STORAGE_KEY);
       setIsComplete(true);
