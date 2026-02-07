@@ -215,10 +215,11 @@ export function ConversationThread({
         .single();
 
       if (participant?.preferred_channel === "telegram" && participant?.telegram_chat_id) {
-        const { error: sendError } = await supabase.functions.invoke("send-telegram", {
+        const { error: sendError } = await supabase.functions.invoke("send-reply-telegram", {
           body: {
             chatId: participant.telegram_chat_id,
             message: replyText.trim(),
+            feedbackId,
           },
         });
 

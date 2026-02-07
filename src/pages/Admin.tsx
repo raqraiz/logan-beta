@@ -5,10 +5,9 @@ import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Users, MessageSquare, LogOut, Sparkles, RefreshCw, Shield } from "lucide-react";
-import { ParticipantsTab } from "@/components/admin/ParticipantsTab";
+import { Users, LogOut, Sparkles, RefreshCw, Shield } from "lucide-react";
+import { UnifiedParticipantsTab } from "@/components/admin/UnifiedParticipantsTab";
 import { InsightsTab } from "@/components/admin/InsightsTab";
-import { FeedbackTab } from "@/components/admin/FeedbackTab";
 import { AdminManagement } from "@/components/admin/AdminManagement";
 import { LoganLogo } from "@/components/LoganLogo";
 
@@ -87,18 +86,14 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="participants" className="space-y-6">
-          <TabsList className="grid w-full max-w-lg grid-cols-4 bg-muted border border-border">
+          <TabsList className="grid w-full max-w-md grid-cols-3 bg-muted border border-border">
             <TabsTrigger value="participants" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Participants</span>
             </TabsTrigger>
             <TabsTrigger value="insights" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Sparkles className="w-4 h-4" />
-              <span className="hidden sm:inline">Insights</span>
-            </TabsTrigger>
-            <TabsTrigger value="feedback" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <MessageSquare className="w-4 h-4" />
-              <span className="hidden sm:inline">Feedback</span>
+              <span className="hidden sm:inline">All Insights</span>
             </TabsTrigger>
             <TabsTrigger value="admins" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Shield className="w-4 h-4" />
@@ -107,15 +102,11 @@ const Admin = () => {
           </TabsList>
 
           <TabsContent value="participants">
-            <ParticipantsTab />
+            <UnifiedParticipantsTab userId={session.user.id} />
           </TabsContent>
 
           <TabsContent value="insights">
             <InsightsTab userId={session.user.id} />
-          </TabsContent>
-
-          <TabsContent value="feedback">
-            <FeedbackTab />
           </TabsContent>
 
           <TabsContent value="admins">
