@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { OnboardingForm } from "@/components/OnboardingForm";
 import { MessageCircle, Sparkles, Calendar, ArrowRight, Bot } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { LoganLogo } from "@/components/LoganLogo";
 
 const Index = () => {
@@ -41,13 +40,13 @@ const Index = () => {
               
               <p className="text-lg text-muted-foreground max-w-lg">
                 Hyper-personalized insights and suggestions delivered directly 
-                to your Telegram. Because your cycle deserves 
+                to you. Because your cycle deserves 
                 attention, not guesswork.
               </p>
 
               <div className="flex flex-wrap gap-6 pt-4">
                 {[
-                  { icon: MessageCircle, text: "Telegram insights" },
+                  { icon: MessageCircle, text: "Personal chat" },
                   { icon: Bot, text: "AI-powered" },
                   { icon: Calendar, text: "2x weekly" },
                 ].map(({ icon: Icon, text }) => (
@@ -87,20 +86,20 @@ const Index = () => {
             {[
               {
                 step: "01",
-                title: "Share your info",
-                description: "Tell Logan about your cycle, symptoms, and goals. Takes less than 2 minutes.",
+                title: "Sign up",
+                description: "Create your account with just your name and email. Takes 30 seconds.",
                 icon: Bot,
               },
               {
                 step: "02",
                 title: "Receive insights",
-                description: "Get personalized insights and recommendations via Telegram on Saturdays and Tuesdays.",
+                description: "Get personalized insights and recommendations in your personal chat.",
                 icon: MessageCircle,
               },
               {
                 step: "03",
-                title: "Give feedback",
-                description: "React, share what works, and help Logan learn what matters most to you.",
+                title: "Chat & learn",
+                description: "Share your symptoms, ask questions, and help Logan learn what matters to you.",
                 icon: Sparkles,
               },
             ].map(({ step, title, description, icon: Icon }) => (
@@ -132,10 +131,10 @@ const Index = () => {
                 <ul className="space-y-3">
                   {[
                     "4 weeks of personalized insights",
-                    "Messages on Saturday & Tuesday nights (Israel time)",
-                    "Telegram delivery via @AskLoganBot",
-                    "AI-assisted educational insights, reviewed by humans",
+                    "Insights delivered twice weekly",
+                    "AI-assisted educational content, reviewed by humans",
                     "Your feedback shapes the experience",
+                    "Collect your cycle info naturally through chat",
                   ].map((item) => (
                     <li key={item} className="flex items-start gap-3">
                       <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -148,9 +147,9 @@ const Index = () => {
               </div>
               <div className="flex items-center justify-center">
                 <div className="text-center p-8 rounded-2xl bg-muted/50 border border-border">
-                  <p className="text-sm text-muted-foreground mb-2">Connect with Logan on Telegram</p>
-                  <p className="text-2xl font-display font-bold text-primary">@AskLoganBot</p>
-                  <p className="text-sm text-muted-foreground mt-2">You'll connect during sign-up</p>
+                  <p className="text-sm text-muted-foreground mb-2">Your personal space</p>
+                  <p className="text-2xl font-display font-bold text-primary">Private Chat</p>
+                  <p className="text-sm text-muted-foreground mt-2">Access anytime via magic link</p>
                 </div>
               </div>
             </div>

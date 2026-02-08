@@ -13,13 +13,13 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { phone, action, participantId, chatId, participantData } = body;
+    const { email, action, participantData } = body;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Action: register participant
+    // Action: register participant (web-based signup)
     if (action === "register") {
       if (!participantData) {
         return new Response(
@@ -28,14 +28,13 @@ serve(async (req) => {
         );
       }
 
-      console.log("Registering participant:", participantData.full_name);
+      console.log("Registering participant:", participantData.full_name, participantData.email);
 
-      // Check if phone already exists
-      const normalizedPhone = participantData.whatsapp_number.replace(/[\s\-\(\)]/g, "");
+      // Check if email already exists
       const { data: existing } = await supabase
         .from("participants")
-        .select("id, telegram_chat_id")
-        .eq("whatsapp_number", normalizedPhone)
+        .select("id, email")
+        .eq("email", participantData.email)
         .single();
 
       if (existing) {
@@ -45,7 +44,6 @@ serve(async (req) => {
             success: true, 
             participantId: existing.id,
             alreadyExists: true,
-            telegramConnected: !!existing.telegram_chat_id
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -56,20 +54,12 @@ serve(async (req) => {
         .from("participants")
         .insert({
           full_name: participantData.full_name,
-          whatsapp_number: normalizedPhone,
-          email: participantData.email || null,
-          age: participantData.age || null,
-          cycle_length_days: participantData.cycle_length_days || 28,
-          last_period_start: participantData.last_period_start || null,
-          cycle_regularity: participantData.cycle_regularity || "regular",
-          typical_symptoms: participantData.typical_symptoms || [],
-          goals: participantData.goals || [],
-          anchor_symptom: participantData.anchor_symptom || null,
+          email: participantData.email,
+          whatsapp_number: participantData.email, // Using email as fallback for required field
           consent_given: participantData.consent_given || false,
           consent_given_at: participantData.consent_given_at || null,
-          additional_notes: participantData.additional_notes || null,
-          preferred_channel: participantData.preferred_channel || "telegram",
-          telegram_chat_id: null,
+          preferred_channel: "web",
+          is_active: true,
         })
         .select("id")
         .single();
@@ -89,76 +79,46 @@ serve(async (req) => {
       );
     }
 
-    // Action: connect telegram
-    if (action === "connect-telegram") {
-      if (!participantId || !chatId) {
+    // Action: lookup by email
+    if (action === "lookup") {
+      if (!email) {
         return new Response(
-          JSON.stringify({ error: "Missing participantId or chatId" }),
+          JSON.stringify({ error: "Email is required" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      console.log("Connecting Telegram for participant:", participantId);
+      console.log("Looking up participant with email:", email);
 
-      const { error } = await supabase
+      const { data: participant, error } = await supabase
         .from("participants")
-        .update({ telegram_chat_id: chatId })
-        .eq("id", participantId);
+        .select("id, full_name, consent_given")
+        .eq("email", email)
+        .single();
 
-      if (error) {
-        console.error("Update error:", error);
+      if (error || !participant) {
+        console.log("No participant found for email:", email);
         return new Response(
-          JSON.stringify({ error: "Failed to connect Telegram" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ found: false }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
+      console.log("Found participant:", participant.id);
       return new Response(
-        JSON.stringify({ success: true }),
+        JSON.stringify({
+          found: true,
+          participantId: participant.id,
+          firstName: participant.full_name.split(" ")[0],
+          consentGiven: participant.consent_given,
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Default action: lookup by phone
-    if (!phone) {
-      return new Response(
-        JSON.stringify({ error: "Phone number is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Normalize phone number - remove spaces, dashes, keep only digits and +
-    const normalizedPhone = phone.replace(/[\s\-\(\)]/g, "");
-    
-    console.log("Looking up participant with phone:", normalizedPhone);
-
-    // Look up participant by phone number
-    const { data: participant, error } = await supabase
-      .from("participants")
-      .select("id, full_name, telegram_chat_id, consent_given")
-      .eq("whatsapp_number", normalizedPhone)
-      .single();
-
-    if (error || !participant) {
-      console.log("No participant found for phone:", normalizedPhone);
-      return new Response(
-        JSON.stringify({ found: false }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log("Found participant:", participant.id, "Telegram connected:", !!participant.telegram_chat_id);
-
-    // Return limited info - don't expose full participant data
     return new Response(
-      JSON.stringify({
-        found: true,
-        participantId: participant.id,
-        firstName: participant.full_name.split(" ")[0],
-        telegramConnected: !!participant.telegram_chat_id,
-        consentGiven: participant.consent_given,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: "Invalid action" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Lookup error:", error);
