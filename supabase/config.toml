@@ -1,28 +1,7 @@
 project_id = "tpohsmxpcqqgxcgectfs"
 
-[functions.lookup-participant]
-verify_jwt = false
-
-[functions.generate-insight]
-verify_jwt = false
-
-[functions.generate-reply]
-verify_jwt = false
-
-[functions.send-whatsapp]
-verify_jwt = false
-
-[functions.receive-whatsapp]
-verify_jwt = false
-
 [functions.add-admin]
 verify_jwt = false
 
-[functions.send-telegram]
-verify_jwt = false
-
-[functions.receive-telegram]
-verify_jwt = false
-
-[functions.send-reply-telegram]
+[functions.trial-chat]
 verify_jwt = false
