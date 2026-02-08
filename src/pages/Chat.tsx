@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { AnchorPicker } from "@/components/chat/AnchorPicker";
 import { DatePickerInput } from "@/components/chat/DatePickerInput";
 import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
+import { InlineChatAuth } from "@/components/chat/InlineChatAuth";
 
 interface SymptomCategory {
   label: string;
@@ -54,7 +55,7 @@ const EMOJI_REACTIONS = ["👍", "❤️", "🤔", "😊", "💪"];
 const Chat = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [isOnboarding, setIsOnboarding] = useState(false);
@@ -62,17 +63,9 @@ const Chat = () => {
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   
   const { user, loading: authLoading, signOut } = useAuth();
-  const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const onboardingInitialized = useRef(false);
-
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/login");
-    }
-  }, [user, authLoading, navigate]);
 
   // Fetch messages and initialize onboarding if needed
   useEffect(() => {
@@ -307,10 +300,51 @@ const Chat = () => {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate("/");
+    // Stay on the same page, UI will update to show auth form
   };
 
-  if (authLoading || isLoading) {
+  // Show loading only while checking auth status
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show inline auth if not logged in
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        {/* Header */}
+        <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <LoganLogo size="sm" />
+              <div>
+                <h1 className="font-display font-semibold text-foreground">Logan</h1>
+                <p className="text-xs text-muted-foreground">Intelligent cycle guidance</p>
+              </div>
+            </div>
+            <Link
+              to="/consent"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              Privacy
+            </Link>
+          </div>
+        </header>
+
+        {/* Inline Auth */}
+        <div className="flex-1 flex items-center justify-center">
+          <InlineChatAuth />
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading while fetching messages for logged-in user
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
