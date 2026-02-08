@@ -22,27 +22,8 @@ const authSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-const emailSchema = z.object({
-  email: z.string().email("Please enter a valid email"),
-});
-
-const passwordSchema = z.object({
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-type AuthView = "login" | "signup" | "forgot-password" | "reset-password";
-
-const getInitialView = (): AuthView => {
-  // Check sessionStorage flag set by index.html inline script
-  if (sessionStorage.getItem("supabase_password_recovery") === "true") {
-    sessionStorage.removeItem("supabase_password_recovery");
-    return "reset-password";
-  }
-  return "login";
-};
-
 const Login = () => {
-  const [view, setView] = useState<AuthView>(getInitialView);
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -53,107 +34,33 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setView("reset-password");
-        return;
-      }
-
-      if (event === "USER_UPDATED") {
-        toast({
-          title: "Password updated",
-          description: "You can now sign in with your new password.",
-        });
-        setView("login");
-        setPassword("");
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!loading && user && view !== "reset-password") {
+    if (!loading && user) {
       navigate("/chat");
     }
-  }, [user, loading, navigate, view]);
+  }, [user, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const validation = authSchema.safeParse({ email, password });
+    if (!validation.success) {
+      toast({
+        title: "Validation error",
+        description: validation.error.errors[0].message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isSignUp && !fullName.trim()) {
+      toast({ title: "Please enter your name", variant: "destructive" });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      if (view === "forgot-password") {
-        const validation = emailSchema.safeParse({ email });
-        if (!validation.success) {
-          toast({
-            title: "Validation error",
-            description: validation.error.errors[0].message,
-            variant: "destructive",
-          });
-          return;
-        }
-
-        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-          redirectTo: `${window.location.origin}/login`,
-        });
-
-        if (error) throw error;
-
-        toast({
-          title: "Check your email",
-          description: "We sent you a password reset link.",
-        });
-
-        setView("login");
-        setEmail("");
-        return;
-      }
-
-      if (view === "reset-password") {
-        const validation = passwordSchema.safeParse({ password });
-        if (!validation.success) {
-          toast({
-            title: "Validation error",
-            description: validation.error.errors[0].message,
-            variant: "destructive",
-          });
-          return;
-        }
-
-        const { error } = await supabase.auth.updateUser({ password });
-        if (error) throw error;
-
-        await supabase.auth.signOut();
-
-        toast({
-          title: "Password updated",
-          description: "Please sign in with your new password.",
-        });
-
-        setView("login");
-        setPassword("");
-        return;
-      }
-
-      const validation = authSchema.safeParse({ email, password });
-      if (!validation.success) {
-        toast({
-          title: "Validation error",
-          description: validation.error.errors[0].message,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (view === "signup") {
-        if (!fullName.trim()) {
-          toast({ title: "Please enter your name", variant: "destructive" });
-          return;
-        }
-
+      if (isSignUp) {
         const { error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
@@ -178,20 +85,18 @@ const Login = () => {
             title: "Account created",
             description: "Please check your email to verify your account.",
           });
-          setView("login");
+          setIsSignUp(false);
           setPassword("");
         }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
 
-        return;
+        if (error) throw error;
+        toast({ title: "Signed in" });
       }
-
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
-
-      if (error) throw error;
-      toast({ title: "Signed in" });
     } catch (error) {
       console.error("Auth error:", error);
       toast({
@@ -201,71 +106,6 @@ const Login = () => {
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const getTitle = () => {
-    switch (view) {
-      case "forgot-password":
-        return "Reset password";
-      case "reset-password":
-        return "Set a new password";
-      case "signup":
-        return "Join Logan";
-      default:
-        return "Welcome back";
-    }
-  };
-
-  const getSubtitle = () => {
-    switch (view) {
-      case "forgot-password":
-        return "Enter your email to receive a reset link";
-      case "reset-password":
-        return "Choose a new password for your account";
-      case "signup":
-        return "Get personalized cycle insights delivered to you";
-      default:
-        return "Sign in to continue your conversation";
-    }
-  };
-
-  const getCardTitle = () => {
-    switch (view) {
-      case "forgot-password":
-        return "Forgot password";
-      case "reset-password":
-        return "New password";
-      case "signup":
-        return "Create account";
-      default:
-        return "Sign in";
-    }
-  };
-
-  const getButtonText = () => {
-    if (isLoading) {
-      switch (view) {
-        case "forgot-password":
-          return "Sending...";
-        case "reset-password":
-          return "Updating...";
-        case "signup":
-          return "Creating...";
-        default:
-          return "Signing in...";
-      }
-    }
-
-    switch (view) {
-      case "forgot-password":
-        return "Send reset link";
-      case "reset-password":
-        return "Update password";
-      case "signup":
-        return "Create account";
-      default:
-        return "Sign in";
     }
   };
 
@@ -284,19 +124,23 @@ const Login = () => {
           <div className="flex justify-center mb-4">
             <LoganLogo size="lg" showGlow />
           </div>
-          <h1 className="text-2xl font-display font-bold text-primary">{getTitle()}</h1>
-          <p className="text-muted-foreground mt-2">{getSubtitle()}</p>
+          <h1 className="text-2xl font-display font-bold text-primary">
+            {isSignUp ? "Join Logan" : "Welcome back"}
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            {isSignUp
+              ? "Get personalized cycle insights delivered to you"
+              : "Sign in to continue your conversation"}
+          </p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">{getCardTitle()}</CardTitle>
+            <CardTitle className="text-lg">
+              {isSignUp ? "Create account" : "Sign in"}
+            </CardTitle>
             <CardDescription>
-              {view === "forgot-password"
-                ? "We'll email you a reset link"
-                : view === "reset-password"
-                ? "Enter your new password below"
-                : view === "signup"
+              {isSignUp
                 ? "Enter your details to get started"
                 : "Enter your email and password"}
             </CardDescription>
@@ -304,7 +148,7 @@ const Login = () => {
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {view === "signup" && (
+              {isSignUp && (
                 <div className="space-y-2">
                   <Label htmlFor="fullName">Your name</Label>
                   <Input
@@ -318,104 +162,70 @@ const Login = () => {
                 </div>
               )}
 
-              {(view === "login" || view === "signup" || view === "forgot-password") && (
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12"
+                  autoComplete="email"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="h-12"
-                    autoComplete="email"
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-12 pr-12"
+                    autoComplete={isSignUp ? "new-password" : "current-password"}
                   />
-                </div>
-              )}
-
-              {(view === "login" || view === "signup" || view === "reset-password") && (
-                <div className="space-y-2">
-                  <Label htmlFor="password">
-                    {view === "reset-password" ? "New password" : "Password"}
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder={view === "reset-password" ? "Enter new password" : "••••••••"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="h-12 pr-12"
-                      autoComplete={
-                        view === "signup" || view === "reset-password"
-                          ? "new-password"
-                          : "current-password"
-                      }
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="w-5 h-5" />
-                      ) : (
-                        <Eye className="w-5 h-5" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {view === "login" && (
-                <div className="text-right">
                   <button
                     type="button"
-                    onClick={() => {
-                      setView("forgot-password");
-                      setPassword("");
-                    }}
-                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    Forgot password?
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
-              )}
+              </div>
 
               <Button type="submit" disabled={isLoading} className="w-full h-12">
                 {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {getButtonText()}
+                {isLoading
+                  ? isSignUp
+                    ? "Creating..."
+                    : "Signing in..."
+                  : isSignUp
+                  ? "Create account"
+                  : "Sign in"}
               </Button>
             </form>
 
             <div className="mt-6 text-center">
-              {view === "forgot-password" || view === "reset-password" ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setView("login");
-                    setEmail("");
-                    setPassword("");
-                  }}
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-1"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  Back to sign in
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setView(view === "login" ? "signup" : "login");
-                    setPassword("");
-                  }}
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                >
-                  {view === "login"
-                    ? "New here? Create an account"
-                    : "Already have an account? Sign in"}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setPassword("");
+                }}
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                {isSignUp
+                  ? "Already have an account? Sign in"
+                  : "New here? Create an account"}
+              </button>
             </div>
           </CardContent>
         </Card>
