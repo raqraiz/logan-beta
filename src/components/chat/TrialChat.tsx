@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoganLogo } from "@/components/LoganLogo";
 import { Send, Loader2, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { InlineChatAuth } from "./InlineChatAuth";
 
 interface TrialMessage {
@@ -13,17 +14,12 @@ interface TrialMessage {
   content: string;
 }
 
-const LOGAN_RESPONSES = [
-  "I love that you're curious! 💜 I'm Logan - I help you understand and work *with* your cycle, not against it. Think of me as your personal performance coach who knows exactly where you are in your cycle and what that means for your energy, focus, and mood.\n\nWhat brings you here today? Are you looking to optimize your training, understand your patterns better, or just tired of feeling like you're fighting your own body?",
-  "That's exactly what I'm here for! Most cycle tracking apps just tell you *what day* you're on. I tell you *what to do about it* - when to push hard, when to protect your energy, and how to plan smarter around your biology.\n\nTo give you personalized insights, I'll need to learn a bit about you first. Ready to create your account and get started? It only takes about 2 minutes. 🚀",
-];
-
 export const TrialChat = () => {
   const [messages, setMessages] = useState<TrialMessage[]>([
     {
       id: "welcome",
       role: "assistant",
-      content: "Hey! 👋 I'm Logan, your intelligent cycle companion. I deliver proactive, personalized guidance so you can plan smarter around your biology.\n\nGo ahead - ask me anything about what I can help with, or just say hi!",
+      content: "Hey, I'm Logan - your intelligent cycle companion. I help you understand and work with your cycle, not against it. Ask me anything about menstrual phases, hormones, or how cycle awareness can help with your energy and performance.",
     },
   ]);
   const [inputValue, setInputValue] = useState("");
@@ -49,30 +45,54 @@ export const TrialChat = () => {
     setInputValue("");
     
     // Add user message
-    setMessages(prev => [...prev, {
+    const newUserMessage: TrialMessage = {
       id: `user-${Date.now()}`,
       role: "user",
       content: userMessage,
-    }]);
-
+    };
+    
+    setMessages(prev => [...prev, newUserMessage]);
     setIsTyping(true);
 
-    // Simulate typing delay
-    await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
+    try {
+      // Call the trial-chat edge function
+      const { data, error } = await supabase.functions.invoke("trial-chat", {
+        body: {
+          messages: [...messages, newUserMessage].map(m => ({
+            role: m.role,
+            content: m.content,
+          })),
+        },
+      });
 
-    // Add Logan's response
-    const responseIndex = Math.min(trialMessageCount, LOGAN_RESPONSES.length - 1);
-    setMessages(prev => [...prev, {
-      id: `assistant-${Date.now()}`,
-      role: "assistant",
-      content: LOGAN_RESPONSES[responseIndex],
-    }]);
+      if (error) throw error;
+
+      const aiResponse = data?.response || "I'd love to help you understand your cycle better. What would you like to know?";
+      
+      // Add signup nudge after first response
+      const responseWithNudge = trialMessageCount >= 1
+        ? `${aiResponse}\n\nTo get personalized insights based on YOUR cycle, create a free account - it only takes a minute.`
+        : aiResponse;
+
+      setMessages(prev => [...prev, {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content: responseWithNudge,
+      }]);
+    } catch (error) {
+      console.error("Trial chat error:", error);
+      setMessages(prev => [...prev, {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content: "I can help you understand your cycle phases and how they affect your energy and mood. What would you like to know?",
+      }]);
+    }
 
     setTrialMessageCount(prev => prev + 1);
     setIsTyping(false);
 
-    // After 2 exchanges, show auth prompt
-    if (trialMessageCount >= 1) {
+    // After 3 exchanges, show auth prompt
+    if (trialMessageCount >= 2) {
       setTimeout(() => setShowAuth(true), 500);
     }
 
