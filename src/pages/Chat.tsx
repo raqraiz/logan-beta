@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { SymptomPicker } from "@/components/chat/SymptomPicker";
 import { AnchorPicker } from "@/components/chat/AnchorPicker";
 import { DatePickerInput } from "@/components/chat/DatePickerInput";
+import { NotificationPreferencePicker } from "@/components/chat/NotificationPreferencePicker";
 import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
 import { TrialChat } from "@/components/chat/TrialChat";
@@ -196,7 +197,8 @@ const Chat = () => {
     messageContent: string,
     symptoms?: string[],
     anchor?: string,
-    date?: Date
+    date?: Date,
+    notificationPrefs?: { frequency: string; preferredTime: string; preferredDays: string[] }
   ) => {
     if (!user || isSending) return;
     
@@ -211,7 +213,9 @@ const Chat = () => {
           ? `Anchor symptom: ${anchor}`
           : date
             ? `Last period: ${format(date, "PPP")}`
-            : messageContent;
+            : notificationPrefs
+              ? `Notifications: ${notificationPrefs.frequency === "daily" ? "Daily" : notificationPrefs.frequency === "twice_weekly" ? "2x/week" : "Weekly"} in the ${notificationPrefs.preferredTime}`
+              : messageContent;
 
       const { error } = await supabase.from("chat_messages").insert({
         user_id: user.id,
@@ -235,6 +239,9 @@ const Chat = () => {
         }
         if (date) {
           body.selectedDate = format(date, "yyyy-MM-dd");
+        }
+        if (notificationPrefs) {
+          body.notificationPreferences = notificationPrefs;
         }
 
         const { data, error: onboardingError } = await supabase.functions.invoke("chat-onboarding", {
@@ -270,13 +277,17 @@ const Chat = () => {
     sendOnboardingResponse(format(date, "PPP"), undefined, undefined, date);
   };
 
+  const handleNotificationPrefsSubmit = (prefs: { frequency: string; preferredTime: string; preferredDays: string[] }) => {
+    sendOnboardingResponse("Notification preferences set", undefined, undefined, undefined, prefs);
+  };
+
   // Check if we should show an interactive picker instead of text input
   const shouldShowInteractivePicker = () => {
     if (!isOnboarding || messages.length === 0) return false;
     const lastMessage = messages[messages.length - 1];
     if (lastMessage.role !== "assistant") return false;
     const inputType = lastMessage.metadata?.input_type;
-    return inputType === "symptom_picker" || inputType === "anchor_picker" || inputType === "date_picker";
+    return inputType === "symptom_picker" || inputType === "anchor_picker" || inputType === "date_picker" || inputType === "notification_picker";
   };
   const sendReaction = async (messageId: string, emoji: string) => {
     if (!user) return;
@@ -349,7 +360,7 @@ const Chat = () => {
 
       {/* Onboarding Progress Bar */}
       {isOnboarding && (
-        <OnboardingProgress currentStep={onboardingStep} totalSteps={5} />
+        <OnboardingProgress currentStep={onboardingStep} totalSteps={6} />
       )}
 
       {/* Messages */}
@@ -463,6 +474,15 @@ const Chat = () => {
                     <div className="mt-3">
                       <DatePickerInput
                         onSubmit={handleDateSubmit}
+                        isSubmitting={isSending}
+                      />
+                    </div>
+                  )}
+
+                  {showInteractiveInput && inputType === "notification_picker" && (
+                    <div className="mt-3">
+                      <NotificationPreferencePicker
+                        onSubmit={handleNotificationPrefsSubmit}
                         isSubmitting={isSending}
                       />
                     </div>

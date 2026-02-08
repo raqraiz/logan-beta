@@ -11,7 +11,8 @@ const STEP_LABELS = [
   "Cycle length",
   "Last period",
   "Symptoms",
-  "Anchor symptom"
+  "Anchor symptom",
+  "Notifications"
 ];
 
 export const OnboardingProgress = ({ currentStep, totalSteps }: OnboardingProgressProps) => {

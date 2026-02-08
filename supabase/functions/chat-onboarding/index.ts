@@ -93,6 +93,13 @@ const ONBOARDING_QUESTIONS = [
     inputType: "anchor_picker"
   },
   {
+    key: "notification_preferences",
+    message: "Last thing: when's the best time for me to check in with insights? Pick what works for your schedule.",
+    field: "notification_preferences",
+    parseType: "notification_preferences",
+    inputType: "notification_picker"
+  },
+  {
     key: "complete",
     message: "You're all set. I'll start learning your patterns and send you insights you can actually use: when to push, when to ease up, and how to plan around what's coming. Welcome aboard.",
     field: null,
@@ -133,7 +140,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { action, userMessage, selectedSymptoms, anchorSymptom, selectedDate } = body;
+    const { action, userMessage, selectedSymptoms, anchorSymptom, selectedDate, notificationPreferences } = body;
 
     console.log("Chat onboarding action:", action, "for user:", user.id);
 
@@ -252,6 +259,9 @@ serve(async (req) => {
       } else if (parseType === "anchor") {
         // Use anchor symptom
         parsedValue = anchorSymptom || userMessage?.trim() || "";
+      } else if (parseType === "notification_preferences") {
+        // Use notification preferences object
+        parsedValue = notificationPreferences || { frequency: "twice_weekly", preferredTime: "evening", preferredDays: ["tuesday", "saturday"] };
       }
 
       // Get user's name from profile for participant creation
@@ -268,15 +278,30 @@ serve(async (req) => {
 
       // Update participant record if we have one
       if (participant && currentQuestion.field) {
-        const updateData: Record<string, any> = {};
-        updateData[currentQuestion.field] = parsedValue;
-        
-        await supabase
-          .from("participants")
-          .update(updateData)
-          .eq("id", participant.id);
-        
-        console.log("Updated participant field:", currentQuestion.field, "=", parsedValue);
+        // Special handling for notification preferences - goes to separate table
+        if (currentQuestion.field === "notification_preferences") {
+          const prefs = parsedValue;
+          await supabase
+            .from("notification_preferences")
+            .upsert({
+              user_id: user.id,
+              frequency: prefs.frequency || "twice_weekly",
+              preferred_time: prefs.preferredTime || "evening",
+              preferred_days: prefs.preferredDays || ["tuesday", "saturday"],
+              is_enabled: true
+            }, { onConflict: "user_id" });
+          console.log("Saved notification preferences for user:", user.id);
+        } else {
+          const updateData: Record<string, any> = {};
+          updateData[currentQuestion.field] = parsedValue;
+          
+          await supabase
+            .from("participants")
+            .update(updateData)
+            .eq("id", participant.id);
+          
+          console.log("Updated participant field:", currentQuestion.field, "=", parsedValue);
+        }
       } else if (!participant && currentQuestion.field) {
         // Create participant record on first response (age question)
         const { data: newParticipant, error: createError } = await supabase
