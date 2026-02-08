@@ -19,7 +19,7 @@ const AuthCallback = () => {
 
   const nextPath = useMemo(() => {
     const next = searchParams.get("next");
-    return next && next.startsWith("/") ? next : "/chat";
+    return next && next.startsWith("/") ? next : "/";
   }, [searchParams]);
 
   useEffect(() => {
