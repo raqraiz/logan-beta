@@ -190,7 +190,60 @@ const Chat = () => {
     if (!inputValue.trim() || !user || isSending) return;
 
     const messageContent = inputValue.trim();
-    await sendOnboardingResponse(messageContent);
+    
+    // If onboarding is complete, use AI chat; otherwise use onboarding flow
+    if (!isOnboarding) {
+      await sendAIMessage(messageContent);
+    } else {
+      await sendOnboardingResponse(messageContent);
+    }
+  };
+
+  const sendAIMessage = async (messageContent: string) => {
+    if (!user || isSending) return;
+    
+    setInputValue("");
+    setIsSending(true);
+
+    try {
+      // First, insert the user's message
+      const { error: insertError } = await supabase.from("chat_messages").insert({
+        user_id: user.id,
+        role: "user",
+        content: messageContent,
+        message_type: "text",
+      });
+
+      if (insertError) throw insertError;
+
+      // Call the AI chat function
+      const { data, error } = await supabase.functions.invoke("chat-ai", {
+        body: { userMessage: messageContent },
+      });
+
+      if (error) {
+        console.error("AI chat error:", error);
+        toast({ 
+          title: "Logan couldn't respond", 
+          description: "Please try again in a moment.",
+          variant: "destructive" 
+        });
+      } else if (data?.error) {
+        // Handle rate limiting and other errors
+        toast({ 
+          title: data.error, 
+          variant: "destructive" 
+        });
+      }
+      
+      inputRef.current?.focus();
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast({ title: "Failed to send message", variant: "destructive" });
+      setInputValue(messageContent);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const sendOnboardingResponse = async (
@@ -226,33 +279,31 @@ const Chat = () => {
 
       if (error) throw error;
 
-      // If we're in onboarding mode, trigger the onboarding response
-      if (isOnboarding) {
-        const body: Record<string, any> = { action: "respond", userMessage: messageContent };
-        
-        if (symptoms) {
-          body.selectedSymptoms = symptoms;
-          setSelectedSymptoms(symptoms);
-        }
-        if (anchor) {
-          body.anchorSymptom = anchor;
-        }
-        if (date) {
-          body.selectedDate = format(date, "yyyy-MM-dd");
-        }
-        if (notificationPrefs) {
-          body.notificationPreferences = notificationPrefs;
-        }
+      // Trigger the onboarding response
+      const body: Record<string, any> = { action: "respond", userMessage: messageContent };
+      
+      if (symptoms) {
+        body.selectedSymptoms = symptoms;
+        setSelectedSymptoms(symptoms);
+      }
+      if (anchor) {
+        body.anchorSymptom = anchor;
+      }
+      if (date) {
+        body.selectedDate = format(date, "yyyy-MM-dd");
+      }
+      if (notificationPrefs) {
+        body.notificationPreferences = notificationPrefs;
+      }
 
-        const { data, error: onboardingError } = await supabase.functions.invoke("chat-onboarding", {
-          body,
-        });
+      const { data, error: onboardingError } = await supabase.functions.invoke("chat-onboarding", {
+        body,
+      });
 
-        if (onboardingError) {
-          console.error("Onboarding error:", onboardingError);
-        } else if (data?.onboardingComplete) {
-          setIsOnboarding(false);
-        }
+      if (onboardingError) {
+        console.error("Onboarding error:", onboardingError);
+      } else if (data?.onboardingComplete) {
+        setIsOnboarding(false);
       }
       
       inputRef.current?.focus();

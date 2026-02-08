@@ -1,5 +1,8 @@
 project_id = "tpohsmxpcqqgxcgectfs"
 
+[functions.chat-ai]
+verify_jwt = true
+
 [functions.add-admin]
 verify_jwt = false
 
