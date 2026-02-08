@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { LoganLogo } from "@/components/LoganLogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,17 +7,24 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Mail, Loader2, CheckCircle2, ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { z } from "zod";
+
+const authSchema = z.object({
+  email: z.string().email("Please enter a valid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
 
 const Login = () => {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
-  const { user, loading, signInWithMagicLink } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,8 +36,13 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email.trim()) {
-      toast({ title: "Please enter your email", variant: "destructive" });
+    const validation = authSchema.safeParse({ email, password });
+    if (!validation.success) {
+      toast({
+        title: "Validation error",
+        description: validation.error.errors[0].message,
+        variant: "destructive",
+      });
       return;
     }
 
@@ -42,17 +54,43 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await signInWithMagicLink(email.trim());
+      if (isSignUp) {
+        const { error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/chat`,
+            data: { full_name: fullName.trim() },
+          },
+        });
 
-      if (error) {
-        throw error;
+        if (error) {
+          if (error.message.includes("already registered")) {
+            toast({
+              title: "Account exists",
+              description: "This email is already registered. Try signing in instead.",
+              variant: "destructive",
+            });
+          } else {
+            throw error;
+          }
+        } else {
+          toast({
+            title: "Account created! 🎉",
+            description: "Please check your email to verify your account.",
+          });
+          setIsSignUp(false);
+          setPassword("");
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+
+        if (error) throw error;
+        toast({ title: "Welcome back! 🌸" });
       }
-
-      setEmailSent(true);
-      toast({
-        title: "Check your email",
-        description: "We sent you a magic link to sign in.",
-      });
     } catch (error) {
       console.error("Auth error:", error);
       toast({
@@ -90,100 +128,98 @@ const Login = () => {
           </p>
         </div>
 
-        {emailSent ? (
-          <Card className="border-primary/50 bg-primary/5">
-            <CardContent className="pt-6 text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-8 h-8 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-foreground">Check your inbox</h2>
-                <p className="text-muted-foreground mt-2">
-                  We sent a magic link to <strong>{email}</strong>
-                </p>
-                <p className="text-sm text-muted-foreground mt-4">
-                  Click the link in the email to sign in. No password needed.
-                </p>
-              </div>
-              <Button 
-                variant="outline" 
-                className="mt-4"
-                onClick={() => setEmailSent(false)}
-              >
-                Use a different email
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Mail className="w-5 h-5" />
-                {isSignUp ? "Create Account" : "Sign In"}
-              </CardTitle>
-              <CardDescription>
-                {isSignUp 
-                  ? "Enter your details to get started"
-                  : "Enter your email to receive a magic link"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {isSignUp && (
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Your Name</Label>
-                    <Input
-                      id="fullName"
-                      type="text"
-                      placeholder="How should Logan address you?"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="h-12"
-                    />
-                  </div>
-                )}
-                
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">
+              {isSignUp ? "Create Account" : "Sign In"}
+            </CardTitle>
+            <CardDescription>
+              {isSignUp 
+                ? "Enter your details to get started"
+                : "Enter your email and password"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {isSignUp && (
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="fullName">Your Name</Label>
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="fullName"
+                    type="text"
+                    placeholder="How should Logan address you?"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
                     className="h-12"
-                    autoComplete="email"
                   />
                 </div>
-
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full h-12"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Sending link...
-                    </>
-                  ) : (
-                    "Continue with Email"
-                  )}
-                </Button>
-              </form>
-
-              <div className="mt-6 text-center">
-                <button
-                  type="button"
-                  onClick={() => setIsSignUp(!isSignUp)}
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                >
-                  {isSignUp ? "Already have an account? Sign in" : "New here? Create an account"}
-                </button>
+              )}
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12"
+                  autoComplete="email"
+                />
               </div>
-            </CardContent>
-          </Card>
-        )}
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-12 pr-12"
+                    autoComplete={isSignUp ? "new-password" : "current-password"}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-12"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {isSignUp ? "Creating account..." : "Signing in..."}
+                  </>
+                ) : (
+                  isSignUp ? "Create Account" : "Sign In"
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setPassword("");
+                }}
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                {isSignUp ? "Already have an account? Sign in" : "New here? Create an account"}
+              </button>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="mt-6 text-center">
           <Link
