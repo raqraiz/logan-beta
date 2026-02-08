@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.trial-chat]
 verify_jwt = false
+
+[functions.delete-user]
+verify_jwt = false
