@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, ArrowRight, Sparkles } from "lucide-react";
 import { z } from "zod";
@@ -23,6 +25,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
   const [fullName, setFullName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +45,15 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
       return;
     }
 
+    if (isSignUp && !consentGiven) {
+      toast({ 
+        title: "Consent required", 
+        description: "Please review and accept the terms to continue.",
+        variant: "destructive" 
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -51,7 +63,11 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
-            data: { full_name: fullName.trim() },
+            data: { 
+              full_name: fullName.trim(),
+              consent_given: true,
+              consent_given_at: new Date().toISOString(),
+            },
           },
         });
 
@@ -167,7 +183,33 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
             </div>
           </div>
 
-          <Button type="submit" disabled={isLoading} className="w-full h-12">
+          {/* Consent checkbox for signup */}
+          {isSignUp && (
+            <div className="flex items-start gap-3 py-2">
+              <Checkbox
+                id="consent"
+                checked={consentGiven}
+                onCheckedChange={(checked) => setConsentGiven(checked === true)}
+                className="mt-0.5"
+              />
+              <Label 
+                htmlFor="consent" 
+                className="text-sm text-muted-foreground leading-relaxed cursor-pointer"
+              >
+                I agree to the{" "}
+                <Link 
+                  to="/consent" 
+                  target="_blank"
+                  className="text-primary underline hover:text-primary/80"
+                >
+                  terms & privacy policy
+                </Link>
+                , including consent to receive cycle guidance through Logan.
+              </Label>
+            </div>
+          )}
+
+          <Button type="submit" disabled={isLoading || (isSignUp && !consentGiven)} className="w-full h-12">
             {isLoading ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : (
@@ -196,17 +238,6 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
           </button>
         </div>
 
-        {/* Trust indicators */}
-        {isSignUp && (
-          <div className="mt-6 pt-4 border-t border-border">
-            <p className="text-xs text-muted-foreground text-center">
-              By signing up, you agree to our{" "}
-              <a href="/consent" className="underline hover:text-primary">
-                privacy policy
-              </a>
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
