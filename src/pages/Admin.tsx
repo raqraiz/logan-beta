@@ -5,9 +5,8 @@ import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Users, LogOut, Sparkles, RefreshCw, Shield } from "lucide-react";
-import { UnifiedParticipantsTab } from "@/components/admin/UnifiedParticipantsTab";
-import { InsightsTab } from "@/components/admin/InsightsTab";
+import { MessageSquare, LogOut, RefreshCw, Shield } from "lucide-react";
+import { ChatUsersTab } from "@/components/admin/ChatUsersTab";
 import { AdminManagement } from "@/components/admin/AdminManagement";
 import { LoganLogo } from "@/components/LoganLogo";
 
@@ -85,15 +84,11 @@ const Admin = () => {
           </p>
         </div>
 
-        <Tabs defaultValue="participants" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3 bg-muted border border-border">
-            <TabsTrigger value="participants" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Participants</span>
-            </TabsTrigger>
-            <TabsTrigger value="insights" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Sparkles className="w-4 h-4" />
-              <span className="hidden sm:inline">All Insights</span>
+        <Tabs defaultValue="chats" className="space-y-6">
+          <TabsList className="grid w-full max-w-xs grid-cols-2 bg-muted border border-border">
+            <TabsTrigger value="chats" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <MessageSquare className="w-4 h-4" />
+              <span className="hidden sm:inline">Chats</span>
             </TabsTrigger>
             <TabsTrigger value="admins" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Shield className="w-4 h-4" />
@@ -101,12 +96,8 @@ const Admin = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="participants">
-            <UnifiedParticipantsTab userId={session.user.id} />
-          </TabsContent>
-
-          <TabsContent value="insights">
-            <InsightsTab userId={session.user.id} />
+          <TabsContent value="chats">
+            <ChatUsersTab adminUserId={session.user.id} />
           </TabsContent>
 
           <TabsContent value="admins">
