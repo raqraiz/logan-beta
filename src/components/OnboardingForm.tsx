@@ -231,9 +231,19 @@ export function OnboardingForm() {
     });
     
     if (!validationResult.success) {
+      const missingFields: string[] = [];
+      validationResult.error.errors.forEach((err) => {
+        if (err.path[0] === "full_name") missingFields.push("Name");
+        if (err.path[0] === "whatsapp_number") missingFields.push("Phone Number");
+      });
+      
+      const fieldList = missingFields.length > 0 
+        ? missingFields.join(" and ") 
+        : "required fields";
+      
       toast({
         title: "Please check your info",
-        description: "Some required fields are missing.",
+        description: `${fieldList} ${missingFields.length === 1 ? "is" : "are"} missing or invalid.`,
         variant: "destructive",
       });
       return false;
@@ -448,7 +458,9 @@ export function OnboardingForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email (Optional)</Label>
+            <Label htmlFor="email" className="text-sm">
+              Email <span className="text-muted-foreground">(optional)</span>
+            </Label>
             <Input
               id="email"
               type="email"
@@ -477,7 +489,9 @@ export function OnboardingForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="age">Age</Label>
+            <Label htmlFor="age" className="text-sm">
+              Age <span className="text-muted-foreground">(optional)</span>
+            </Label>
             <Input
               id="age"
               type="number"
@@ -488,7 +502,9 @@ export function OnboardingForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cycle_length_days">Average Cycle Length (Days)</Label>
+            <Label htmlFor="cycle_length_days" className="text-sm">
+              Average Cycle Length (Days) <span className="text-muted-foreground">(optional)</span>
+            </Label>
             <Input
               id="cycle_length_days"
               type="number"
@@ -499,7 +515,9 @@ export function OnboardingForm() {
           </div>
 
           <div className="space-y-2">
-            <Label>When Did Your Last Period Start?</Label>
+            <Label className="text-sm">
+              When Did Your Last Period Start? <span className="text-muted-foreground">(optional)</span>
+            </Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
