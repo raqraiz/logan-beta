@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
 import { Send, Loader2, LogOut, Smile } from "lucide-react";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { SymptomPicker } from "@/components/chat/SymptomPicker";
 import { AnchorPicker } from "@/components/chat/AnchorPicker";
 import { DatePickerInput } from "@/components/chat/DatePickerInput";
@@ -53,6 +53,12 @@ interface ChatMessage {
 
 const EMOJI_REACTIONS = ["👍", "❤️", "🤔", "😊", "💪"];
 
+interface CycleData {
+  cycleDay: number;
+  phase: string;
+  cycleLengthDays: number;
+}
+
 const Chat = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -62,6 +68,7 @@ const Chat = () => {
   const [isOnboarding, setIsOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
+  const [cycleData, setCycleData] = useState<CycleData | null>(null);
   
   const { user, loading: authLoading, signOut } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -157,6 +164,60 @@ const Chat = () => {
       supabase.removeChannel(channel);
     };
   }, [user]);
+
+  // Fetch cycle data for the header
+  useEffect(() => {
+    if (!user || isOnboarding) {
+      setCycleData(null);
+      return;
+    }
+
+    const fetchCycleData = async () => {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.email) return;
+
+      const { data: participant } = await supabase
+        .from("participants")
+        .select("last_period_start, cycle_length_days")
+        .eq("email", profile.email.toLowerCase())
+        .single();
+
+      if (!participant?.last_period_start || !participant?.cycle_length_days) return;
+
+      const daysSince = differenceInDays(new Date(), new Date(participant.last_period_start));
+      const cycleDay = (daysSince % participant.cycle_length_days) + 1;
+      
+      // Determine phase
+      const menstruationEnd = 5;
+      const ovulationDay = participant.cycle_length_days - 14;
+      const ovulationStart = ovulationDay - 1;
+      const ovulationEnd = ovulationDay + 2;
+
+      let phase: string;
+      if (cycleDay <= menstruationEnd) {
+        phase = "Menstruation";
+      } else if (cycleDay < ovulationStart) {
+        phase = "Follicular";
+      } else if (cycleDay <= ovulationEnd) {
+        phase = "Ovulation";
+      } else {
+        phase = "Luteal";
+      }
+
+      setCycleData({
+        cycleDay,
+        phase,
+        cycleLengthDays: participant.cycle_length_days,
+      });
+    };
+
+    fetchCycleData();
+  }, [user, isOnboarding]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -402,10 +463,20 @@ const Chat = () => {
               </p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign out
-          </Button>
+          <div className="flex items-center gap-3">
+            {cycleData && !isOnboarding && (
+              <ChatCycleCircle
+                cycleDay={cycleData.cycleDay}
+                phase={cycleData.phase}
+                cycleLengthDays={cycleData.cycleLengthDays}
+                size="sm"
+              />
+            )}
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign out
+            </Button>
+          </div>
         </div>
       </header>
 
