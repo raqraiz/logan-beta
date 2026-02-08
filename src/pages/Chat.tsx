@@ -13,6 +13,7 @@ import { SymptomPicker } from "@/components/chat/SymptomPicker";
 import { AnchorPicker } from "@/components/chat/AnchorPicker";
 import { DatePickerInput } from "@/components/chat/DatePickerInput";
 import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
+import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
 
 interface SymptomCategory {
   label: string;
@@ -40,6 +41,11 @@ interface ChatMessage {
     input_type?: string;
     symptom_categories?: SymptomCategories;
     available_symptoms?: string[];
+    has_cycle_visual?: boolean;
+    cycle_day?: number;
+    cycle_phase?: string;
+    cycle_length_days?: number;
+    insight_type?: string;
   };
 }
 
@@ -368,6 +374,17 @@ const Chat = () => {
                           : "bg-card border border-border"
                       }`}
                     >
+                      {/* Cycle visual for insight messages */}
+                      {message.metadata?.has_cycle_visual && message.metadata?.cycle_day && message.metadata?.cycle_phase && (
+                        <div className="mb-3">
+                          <ChatCycleCircle
+                            cycleDay={message.metadata.cycle_day}
+                            phase={message.metadata.cycle_phase}
+                            cycleLengthDays={message.metadata.cycle_length_days || 28}
+                          />
+                        </div>
+                      )}
+                      
                       {message.message_type !== "reaction" && (
                         <p className="whitespace-pre-wrap">{message.content}</p>
                       )}
