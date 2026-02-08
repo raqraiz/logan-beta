@@ -23,17 +23,22 @@
     <div id="root"></div>
     <script>
       // Capture password recovery state BEFORE any modules load
-      // Supabase cleans the URL hash during initialization, so we must save it first
       (function() {
         try {
-          var hash = window.location.hash.substring(1);
-          if (hash) {
-            var params = new URLSearchParams(hash);
-            if (params.get('type') === 'recovery') {
+          var hash = window.location.hash;
+          console.log('[Recovery Debug] Hash on page load:', hash);
+          if (hash && hash.length > 1) {
+            var params = new URLSearchParams(hash.substring(1));
+            var type = params.get('type');
+            console.log('[Recovery Debug] Type param:', type);
+            if (type === 'recovery') {
               sessionStorage.setItem('supabase_password_recovery', 'true');
+              console.log('[Recovery Debug] Saved recovery flag to sessionStorage');
             }
           }
-        } catch (e) {}
+        } catch (e) {
+          console.error('[Recovery Debug] Error:', e);
+        }
       })();
     </script>
     <script type="module" src="/src/main.tsx"></script>
