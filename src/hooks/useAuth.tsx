@@ -18,54 +18,98 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+    let isMounted = true;
 
-        // Create profile on sign up
-        if (event === "SIGNED_IN" && session?.user) {
-          setTimeout(async () => {
-            const { data: existingProfile } = await supabase
-              .from("profiles")
-              .select("id")
-              .eq("id", session.user.id)
-              .single();
+    const ensureProfile = async (user: User) => {
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", user.id)
+        .single();
 
-            if (!existingProfile) {
-              await supabase.from("profiles").insert({
-                id: session.user.id,
-                email: session.user.email || "",
-                full_name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "User",
-              });
-            }
-          }, 0);
-        }
+      if (!existingProfile) {
+        await supabase.from("profiles").insert({
+          id: user.id,
+          email: user.email || "",
+          full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
+        });
       }
-    );
+    };
 
-    // Check if URL has auth tokens (magic link callback)
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const hasAuthTokens = hashParams.has('access_token') || hashParams.has('refresh_token');
+    // Listener for ongoing auth changes (does NOT control loading)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
 
-    // Only check session from storage if no URL tokens pending
-    // If URL has tokens, wait for onAuthStateChange to process them
-    if (!hasAuthTokens) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      // Defer DB calls; never await inside the callback
+      if (event === "SIGNED_IN" && session?.user) {
+        setTimeout(() => {
+          ensureProfile(session.user).catch(() => {
+            // Intentionally swallow to avoid leaking sensitive details in console
+          });
+        }, 0);
+      }
+    });
+
+    // Initial load (controls loading)
+    const initializeAuth = async () => {
+      try {
+        const url = new URL(window.location.href);
+        const code = url.searchParams.get("code");
+
+        // PKCE magic-link flow: exchange code for a session
+        if (code) {
+          await supabase.auth.exchangeCodeForSession(code);
+          url.searchParams.delete("code");
+          url.searchParams.delete("type");
+          window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+        }
+
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const hasHashTokens =
+          hashParams.has("access_token") || hashParams.has("refresh_token");
+
+        // Wait briefly for the SDK to hydrate session from URL tokens (hash or exchanged code)
+        const start = Date.now();
+        const maxWaitMs = hasHashTokens || code ? 2500 : 0;
+
+        let session: Session | null = null;
+        do {
+          const { data } = await supabase.auth.getSession();
+          session = data.session;
+          if (session) break;
+          if (!maxWaitMs) break;
+          await new Promise((r) => setTimeout(r, 100));
+        } while (Date.now() - start < maxWaitMs);
+
+        if (!isMounted) return;
+
         setSession(session);
         setUser(session?.user ?? null);
-        setLoading(false);
-      });
-    }
 
-    return () => subscription.unsubscribe();
+        if (session?.user) {
+          await ensureProfile(session.user);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signInWithMagicLink = async (email: string) => {
     const redirectUrl = `${window.location.origin}/chat`;
-    
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
