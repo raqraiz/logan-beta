@@ -55,53 +55,53 @@ const ALL_SYMPTOMS = [
   ...SYMPTOM_CATEGORIES.quirky.symptoms
 ];
 
-// Onboarding question flow
+// Onboarding question flow - Strategic, performance-focused voice
 const ONBOARDING_QUESTIONS = [
   {
     key: "welcome",
-    message: "Hey there! 👋 I'm Logan, your personal cycle companion. I'm here to help you understand your patterns and feel more prepared for what's ahead. Let's get to know each other a bit first—what's your name?",
+    message: "I'm Logan. I turn cycle data into strategic decisions for energy, focus, training, and recovery. To build your personal playbook, I need to understand your patterns. What's your name?",
     field: "full_name",
     parseType: "text",
     inputType: "text"
   },
   {
     key: "age",
-    message: "Nice to meet you, {name}! 🌸 To personalize your experience, how old are you?",
+    message: "Good to meet you, {name}. Your age helps me calibrate predictions around hormonal timing and recovery windows. How old are you?",
     field: "age",
     parseType: "number",
     inputType: "text"
   },
   {
     key: "cycle_length",
-    message: "Thanks! And how long is your typical cycle? Most people are between 24-35 days. If you're not sure, 28 days is a good starting point.",
+    message: "Noted. How long is your typical cycle in days? Most fall between 24-35. If you're unsure, 28 is a reasonable starting point.",
     field: "cycle_length_days",
     parseType: "number",
     inputType: "text"
   },
   {
     key: "last_period",
-    message: "Got it! When did your last period start? You can type a date or pick one from the calendar 📅",
+    message: "When did your last period start? This anchors your timeline so I can map your current phase and what's coming.",
     field: "last_period_start",
     parseType: "date",
     inputType: "date_picker"
   },
   {
     key: "symptoms",
-    message: "Now let's understand what troubles you most. Select all the symptoms that are confusing or troubling around your cycle:",
+    message: "Now the important part. Select all the symptoms that disrupt your performance, mood, or energy around your cycle. These become patterns I track for you.",
     field: "typical_symptoms",
     parseType: "symptoms",
     inputType: "symptom_picker"
   },
   {
     key: "anchor_symptom",
-    message: "Which one troubles you the most? This becomes your **Anchor Symptom** – the one I'll especially watch for and help you prepare for.",
+    message: "Which one derails you the most? This becomes your Anchor Symptom—the signal I'll monitor most closely and help you prepare for before it arrives.",
     field: "anchor_symptom",
     parseType: "anchor",
     inputType: "anchor_picker"
   },
   {
     key: "complete",
-    message: "Perfect! 🎯 I've got everything I need to start giving you personalized insights. You'll hear from me with predictions and tips based on where you are in your cycle. Feel free to message me anytime!",
+    message: "Your baseline is set. I'll now track your patterns and send you strategic insights—when to push harder, when to protect your capacity, and when to adjust your approach. This is intelligent performance guidance, not passive tracking.",
     field: null,
     parseType: null,
     inputType: null
