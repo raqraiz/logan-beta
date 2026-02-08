@@ -14,7 +14,7 @@ import { AnchorPicker } from "@/components/chat/AnchorPicker";
 import { DatePickerInput } from "@/components/chat/DatePickerInput";
 import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
-import { InlineChatAuth } from "@/components/chat/InlineChatAuth";
+import { TrialChat } from "@/components/chat/TrialChat";
 
 interface SymptomCategory {
   label: string;
@@ -312,35 +312,9 @@ const Chat = () => {
     );
   }
 
-  // Show inline auth if not logged in
+  // Show trial chat experience for unauthenticated users
   if (!user) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        {/* Header */}
-        <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-          <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <LoganLogo size="sm" />
-              <div>
-                <h1 className="font-display font-semibold text-foreground">Logan</h1>
-                <p className="text-xs text-muted-foreground">Intelligent cycle guidance</p>
-              </div>
-            </div>
-            <Link
-              to="/consent"
-              className="text-sm text-muted-foreground hover:text-primary transition-colors"
-            >
-              Privacy
-            </Link>
-          </div>
-        </header>
-
-        {/* Inline Auth */}
-        <div className="flex-1 flex items-center justify-center">
-          <InlineChatAuth />
-        </div>
-      </div>
-    );
+    return <TrialChat />;
   }
 
   // Show loading while fetching messages for logged-in user
