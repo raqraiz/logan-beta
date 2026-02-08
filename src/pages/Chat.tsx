@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { SymptomPicker } from "@/components/chat/SymptomPicker";
 import { AnchorPicker } from "@/components/chat/AnchorPicker";
 import { DatePickerInput } from "@/components/chat/DatePickerInput";
+import { NotificationPreferencePicker } from "@/components/chat/NotificationPreferencePicker";
 import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
 import { TrialChat } from "@/components/chat/TrialChat";
@@ -189,14 +190,68 @@ const Chat = () => {
     if (!inputValue.trim() || !user || isSending) return;
 
     const messageContent = inputValue.trim();
-    await sendOnboardingResponse(messageContent);
+    
+    // If onboarding is complete, use AI chat; otherwise use onboarding flow
+    if (!isOnboarding) {
+      await sendAIMessage(messageContent);
+    } else {
+      await sendOnboardingResponse(messageContent);
+    }
+  };
+
+  const sendAIMessage = async (messageContent: string) => {
+    if (!user || isSending) return;
+    
+    setInputValue("");
+    setIsSending(true);
+
+    try {
+      // First, insert the user's message
+      const { error: insertError } = await supabase.from("chat_messages").insert({
+        user_id: user.id,
+        role: "user",
+        content: messageContent,
+        message_type: "text",
+      });
+
+      if (insertError) throw insertError;
+
+      // Call the AI chat function
+      const { data, error } = await supabase.functions.invoke("chat-ai", {
+        body: { userMessage: messageContent },
+      });
+
+      if (error) {
+        console.error("AI chat error:", error);
+        toast({ 
+          title: "Logan couldn't respond", 
+          description: "Please try again in a moment.",
+          variant: "destructive" 
+        });
+      } else if (data?.error) {
+        // Handle rate limiting and other errors
+        toast({ 
+          title: data.error, 
+          variant: "destructive" 
+        });
+      }
+      
+      inputRef.current?.focus();
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast({ title: "Failed to send message", variant: "destructive" });
+      setInputValue(messageContent);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const sendOnboardingResponse = async (
     messageContent: string,
     symptoms?: string[],
     anchor?: string,
-    date?: Date
+    date?: Date,
+    notificationPrefs?: { frequency: string; preferredTime: string; preferredDays: string[] }
   ) => {
     if (!user || isSending) return;
     
@@ -211,7 +266,9 @@ const Chat = () => {
           ? `Anchor symptom: ${anchor}`
           : date
             ? `Last period: ${format(date, "PPP")}`
-            : messageContent;
+            : notificationPrefs
+              ? `Notifications: ${notificationPrefs.frequency === "daily" ? "Daily" : notificationPrefs.frequency === "twice_weekly" ? "2x/week" : "Weekly"} in the ${notificationPrefs.preferredTime}`
+              : messageContent;
 
       const { error } = await supabase.from("chat_messages").insert({
         user_id: user.id,
@@ -222,30 +279,31 @@ const Chat = () => {
 
       if (error) throw error;
 
-      // If we're in onboarding mode, trigger the onboarding response
-      if (isOnboarding) {
-        const body: Record<string, any> = { action: "respond", userMessage: messageContent };
-        
-        if (symptoms) {
-          body.selectedSymptoms = symptoms;
-          setSelectedSymptoms(symptoms);
-        }
-        if (anchor) {
-          body.anchorSymptom = anchor;
-        }
-        if (date) {
-          body.selectedDate = format(date, "yyyy-MM-dd");
-        }
+      // Trigger the onboarding response
+      const body: Record<string, any> = { action: "respond", userMessage: messageContent };
+      
+      if (symptoms) {
+        body.selectedSymptoms = symptoms;
+        setSelectedSymptoms(symptoms);
+      }
+      if (anchor) {
+        body.anchorSymptom = anchor;
+      }
+      if (date) {
+        body.selectedDate = format(date, "yyyy-MM-dd");
+      }
+      if (notificationPrefs) {
+        body.notificationPreferences = notificationPrefs;
+      }
 
-        const { data, error: onboardingError } = await supabase.functions.invoke("chat-onboarding", {
-          body,
-        });
+      const { data, error: onboardingError } = await supabase.functions.invoke("chat-onboarding", {
+        body,
+      });
 
-        if (onboardingError) {
-          console.error("Onboarding error:", onboardingError);
-        } else if (data?.onboardingComplete) {
-          setIsOnboarding(false);
-        }
+      if (onboardingError) {
+        console.error("Onboarding error:", onboardingError);
+      } else if (data?.onboardingComplete) {
+        setIsOnboarding(false);
       }
       
       inputRef.current?.focus();
@@ -270,13 +328,17 @@ const Chat = () => {
     sendOnboardingResponse(format(date, "PPP"), undefined, undefined, date);
   };
 
+  const handleNotificationPrefsSubmit = (prefs: { frequency: string; preferredTime: string; preferredDays: string[] }) => {
+    sendOnboardingResponse("Notification preferences set", undefined, undefined, undefined, prefs);
+  };
+
   // Check if we should show an interactive picker instead of text input
   const shouldShowInteractivePicker = () => {
     if (!isOnboarding || messages.length === 0) return false;
     const lastMessage = messages[messages.length - 1];
     if (lastMessage.role !== "assistant") return false;
     const inputType = lastMessage.metadata?.input_type;
-    return inputType === "symptom_picker" || inputType === "anchor_picker" || inputType === "date_picker";
+    return inputType === "symptom_picker" || inputType === "anchor_picker" || inputType === "date_picker" || inputType === "notification_picker";
   };
   const sendReaction = async (messageId: string, emoji: string) => {
     if (!user) return;
@@ -349,7 +411,7 @@ const Chat = () => {
 
       {/* Onboarding Progress Bar */}
       {isOnboarding && (
-        <OnboardingProgress currentStep={onboardingStep} totalSteps={5} />
+        <OnboardingProgress currentStep={onboardingStep} totalSteps={6} />
       )}
 
       {/* Messages */}
@@ -463,6 +525,15 @@ const Chat = () => {
                     <div className="mt-3">
                       <DatePickerInput
                         onSubmit={handleDateSubmit}
+                        isSubmitting={isSending}
+                      />
+                    </div>
+                  )}
+
+                  {showInteractiveInput && inputType === "notification_picker" && (
+                    <div className="mt-3">
+                      <NotificationPreferencePicker
+                        onSubmit={handleNotificationPrefsSubmit}
                         isSubmitting={isSending}
                       />
                     </div>
