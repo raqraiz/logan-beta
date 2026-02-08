@@ -309,16 +309,22 @@ serve(async (req) => {
     // Send acknowledgment
     const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
     if (TELEGRAM_BOT_TOKEN) {
-      let ackMessage = "Noted.";
+      let ackMessage = "Got it. Feel free to share more details anytime, like how intense it feels or what time of day it hit.";
       
       if (updateType === "period_update" && (lowerText.includes("started") || lowerText.includes("today"))) {
-        ackMessage = "Cycle updated. I'll adjust your insights accordingly.";
+        ackMessage = "Cycle day 1 logged. Your insights will now sync to this new cycle.\n\nHow are you feeling so far? Any cramps, fatigue, or mood shifts worth noting?";
+      } else if (updateType === "period_update") {
+        ackMessage = "Noted on the cycle update. If your period just started, let me know and I'll reset your cycle day.\n\nAnything else you're noticing right now?";
       } else if (updateType === "symptom_update") {
-        ackMessage = "Logged. This will inform your next insight.";
+        ackMessage = "Logged. This shapes what I send you next.\n\nIf there's more context, like intensity (1-10) or when it started, drop it here.";
+      } else if (updateType === "mood_update") {
+        ackMessage = "Mood noted. These patterns matter.\n\nAnything else going on? Sleep, stress, food changes can all connect.";
       } else if (updateType === "feedback" && category === "positive") {
-        ackMessage = "Noted. Glad it landed.";
+        ackMessage = "Glad it landed. Your feedback helps me learn what works for you.\n\nFeel free to share what specifically resonated.";
       } else if (updateType === "question") {
-        ackMessage = "On it. As an alpha tester, your questions help shape Logan. A human will review my response before sending. Should be quick.";
+        ackMessage = "On it. As an alpha tester, your questions help shape Logan.\n\nA human will review my response before sending. Should be quick.";
+      } else if (updateType === "general") {
+        ackMessage = "Got it. I'm tracking this.\n\nThe more detail you share, the more personalized your insights become. What else is on your mind?";
       }
       
       await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
