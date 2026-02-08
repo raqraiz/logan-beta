@@ -21,6 +21,21 @@
 
   <body>
     <div id="root"></div>
+    <script>
+      // Capture password recovery state BEFORE any modules load
+      // Supabase cleans the URL hash during initialization, so we must save it first
+      (function() {
+        try {
+          var hash = window.location.hash.substring(1);
+          if (hash) {
+            var params = new URLSearchParams(hash);
+            if (params.get('type') === 'recovery') {
+              sessionStorage.setItem('supabase_password_recovery', 'true');
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
