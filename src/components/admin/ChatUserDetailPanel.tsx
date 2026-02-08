@@ -89,21 +89,13 @@ export function ChatUserDetailPanel({
   const handleDeleteUser = async () => {
     setDeleting(true);
     try {
-      // Delete chat messages first (cascade)
-      const { error: messagesError } = await supabase
-        .from("chat_messages")
-        .delete()
-        .eq("user_id", userId);
+      // Call edge function to fully delete user (including auth)
+      const { data, error } = await supabase.functions.invoke("delete-user", {
+        body: { userId },
+      });
 
-      if (messagesError) throw messagesError;
-
-      // Delete profile
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .delete()
-        .eq("id", userId);
-
-      if (profileError) throw profileError;
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       toast({ title: "User deleted successfully" });
       onRefresh();
