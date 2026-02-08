@@ -8,7 +8,6 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import Consent from "./pages/Consent";
-import Resume from "./pages/Resume";
 import Login from "./pages/Login";
 import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
@@ -29,7 +28,6 @@ const App = () => (
             <Route path="/logan-admin-access" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/consent" element={<Consent />} />
-            <Route path="/resume" element={<Resume />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
