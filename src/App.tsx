@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import Consent from "./pages/Consent";
 import Login from "./pages/Login";
+import AuthCallback from "./pages/AuthCallback";
 import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
 
@@ -24,6 +25,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/logan-admin-access" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />
