@@ -21,6 +21,7 @@ import {
   ChevronLeft, Trash2, Loader2, Activity, Target, Clock
 } from "lucide-react";
 import { formatDistanceToNow, format, differenceInDays } from "date-fns";
+import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
 
 interface Profile {
   id: string;
@@ -342,15 +343,18 @@ export function ProfilesTab() {
             </CardHeader>
             <CardContent>
               {participant ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
+                  {/* Cycle Circle Visualization */}
                   {cycleDay && phase && (
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="text-base px-3 py-1">
-                        Day {cycleDay}
-                      </Badge>
-                      <Badge>{phase}</Badge>
+                    <div className="flex justify-center py-2">
+                      <ChatCycleCircle
+                        cycleDay={cycleDay}
+                        phase={phase}
+                        cycleLengthDays={participant.cycle_length_days || 28}
+                      />
                     </div>
                   )}
+                  
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <p className="text-muted-foreground">Cycle Length</p>
