@@ -9,6 +9,20 @@ import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
 import { Send, Loader2, LogOut, Smile } from "lucide-react";
 import { format } from "date-fns";
+import { SymptomPicker } from "@/components/chat/SymptomPicker";
+import { AnchorPicker } from "@/components/chat/AnchorPicker";
+import { DatePickerInput } from "@/components/chat/DatePickerInput";
+
+interface SymptomCategory {
+  label: string;
+  symptoms: string[];
+}
+
+interface SymptomCategories {
+  emotional: SymptomCategory;
+  physical: SymptomCategory;
+  quirky: SymptomCategory;
+}
 
 interface ChatMessage {
   id: string;
@@ -22,6 +36,9 @@ interface ChatMessage {
     onboarding_step?: number;
     onboarding_complete?: boolean;
     reaction_to?: string;
+    input_type?: string;
+    symptom_categories?: SymptomCategories;
+    available_symptoms?: string[];
   };
 }
 
@@ -34,6 +51,7 @@ const Chat = () => {
   const [isSending, setIsSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [isOnboarding, setIsOnboarding] = useState(false);
+  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   
   const { user, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
@@ -157,15 +175,34 @@ const Chat = () => {
     if (!inputValue.trim() || !user || isSending) return;
 
     const messageContent = inputValue.trim();
+    await sendOnboardingResponse(messageContent);
+  };
+
+  const sendOnboardingResponse = async (
+    messageContent: string,
+    symptoms?: string[],
+    anchor?: string,
+    date?: Date
+  ) => {
+    if (!user || isSending) return;
+    
     setInputValue("");
     setIsSending(true);
 
     try {
       // First, insert the user's message
+      const displayContent = symptoms 
+        ? `Selected: ${symptoms.join(", ")}`
+        : anchor 
+          ? `Anchor symptom: ${anchor}`
+          : date
+            ? `Last period: ${format(date, "PPP")}`
+            : messageContent;
+
       const { error } = await supabase.from("chat_messages").insert({
         user_id: user.id,
         role: "user",
-        content: messageContent,
+        content: displayContent,
         message_type: "text",
       });
 
@@ -173,8 +210,21 @@ const Chat = () => {
 
       // If we're in onboarding mode, trigger the onboarding response
       if (isOnboarding) {
+        const body: Record<string, any> = { action: "respond", userMessage: messageContent };
+        
+        if (symptoms) {
+          body.selectedSymptoms = symptoms;
+          setSelectedSymptoms(symptoms);
+        }
+        if (anchor) {
+          body.anchorSymptom = anchor;
+        }
+        if (date) {
+          body.selectedDate = format(date, "yyyy-MM-dd");
+        }
+
         const { data, error: onboardingError } = await supabase.functions.invoke("chat-onboarding", {
-          body: { action: "respond", userMessage: messageContent },
+          body,
         });
 
         if (onboardingError) {
@@ -194,6 +244,26 @@ const Chat = () => {
     }
   };
 
+  const handleSymptomSubmit = (symptoms: string[]) => {
+    sendOnboardingResponse(`Selected symptoms: ${symptoms.join(", ")}`, symptoms);
+  };
+
+  const handleAnchorSubmit = (anchor: string) => {
+    sendOnboardingResponse(`Anchor: ${anchor}`, undefined, anchor);
+  };
+
+  const handleDateSubmit = (date: Date) => {
+    sendOnboardingResponse(format(date, "PPP"), undefined, undefined, date);
+  };
+
+  // Check if we should show an interactive picker instead of text input
+  const shouldShowInteractivePicker = () => {
+    if (!isOnboarding || messages.length === 0) return false;
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage.role !== "assistant") return false;
+    const inputType = lastMessage.metadata?.input_type;
+    return inputType === "symptom_picker" || inputType === "anchor_picker" || inputType === "date_picker";
+  };
   const sendReaction = async (messageId: string, emoji: string) => {
     if (!user) return;
 
@@ -259,103 +329,142 @@ const Chat = () => {
               <p className="text-muted-foreground">Starting your conversation...</p>
             </div>
           ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`relative max-w-[85%] rounded-2xl px-4 py-3 ${
-                    message.role === "user"
-                      ? message.message_type === "reaction"
-                        ? "bg-transparent text-3xl"
-                        : "bg-primary text-primary-foreground"
-                      : "bg-card border border-border"
-                  }`}
-                >
-                  {message.message_type !== "reaction" && (
-                    <p className="whitespace-pre-wrap">{message.content}</p>
-                  )}
-                  {message.message_type === "reaction" && (
-                    <span className="text-3xl">{message.content}</span>
-                  )}
-                  
-                  <div className={`flex items-center gap-2 mt-1 ${
-                    message.role === "user" ? "justify-end" : "justify-start"
-                  }`}>
-                    <span className={`text-xs ${
-                      message.role === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
-                    }`}>
-                      {format(new Date(message.created_at), "h:mm a")}
-                    </span>
-                    
-                    {/* Emoji reaction button for assistant messages */}
-                    {message.role === "assistant" && message.message_type !== "reaction" && (
-                      <div className="relative">
-                        <button
-                          onClick={() => setShowEmojiPicker(showEmojiPicker === message.id ? null : message.id)}
-                          className="text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          <Smile className="w-4 h-4" />
-                        </button>
+            messages.map((message, index) => {
+              const isLastMessage = index === messages.length - 1;
+              const inputType = message.metadata?.input_type;
+              const showInteractiveInput = isLastMessage && message.role === "assistant" && isOnboarding && !isSending;
+
+              return (
+                <div key={message.id}>
+                  <div
+                    className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`relative max-w-[85%] rounded-2xl px-4 py-3 ${
+                        message.role === "user"
+                          ? message.message_type === "reaction"
+                            ? "bg-transparent text-3xl"
+                            : "bg-primary text-primary-foreground"
+                          : "bg-card border border-border"
+                      }`}
+                    >
+                      {message.message_type !== "reaction" && (
+                        <p className="whitespace-pre-wrap">{message.content}</p>
+                      )}
+                      {message.message_type === "reaction" && (
+                        <span className="text-3xl">{message.content}</span>
+                      )}
+                      
+                      <div className={`flex items-center gap-2 mt-1 ${
+                        message.role === "user" ? "justify-end" : "justify-start"
+                      }`}>
+                        <span className={`text-xs ${
+                          message.role === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
+                        }`}>
+                          {format(new Date(message.created_at), "h:mm a")}
+                        </span>
                         
-                        {showEmojiPicker === message.id && (
-                          <div className="absolute bottom-full left-0 mb-2 bg-popover border border-border rounded-lg shadow-lg p-2 flex gap-1 z-20">
-                            {EMOJI_REACTIONS.map((emoji) => (
-                              <button
-                                key={emoji}
-                                onClick={() => sendReaction(message.id, emoji)}
-                                className="hover:bg-accent rounded p-1 text-lg transition-colors"
-                              >
-                                {emoji}
-                              </button>
-                            ))}
+                        {/* Emoji reaction button for assistant messages */}
+                        {message.role === "assistant" && message.message_type !== "reaction" && !showInteractiveInput && (
+                          <div className="relative">
+                            <button
+                              onClick={() => setShowEmojiPicker(showEmojiPicker === message.id ? null : message.id)}
+                              className="text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              <Smile className="w-4 h-4" />
+                            </button>
+                            
+                            {showEmojiPicker === message.id && (
+                              <div className="absolute bottom-full left-0 mb-2 bg-popover border border-border rounded-lg shadow-lg p-2 flex gap-1 z-20">
+                                {EMOJI_REACTIONS.map((emoji) => (
+                                  <button
+                                    key={emoji}
+                                    onClick={() => sendReaction(message.id, emoji)}
+                                    className="hover:bg-accent rounded p-1 text-lg transition-colors"
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
-                    )}
+                    </div>
                   </div>
+
+                  {/* Interactive inputs for onboarding */}
+                  {showInteractiveInput && inputType === "symptom_picker" && message.metadata?.symptom_categories && (
+                    <div className="mt-3">
+                      <SymptomPicker
+                        categories={message.metadata.symptom_categories}
+                        onSubmit={handleSymptomSubmit}
+                        isSubmitting={isSending}
+                      />
+                    </div>
+                  )}
+
+                  {showInteractiveInput && inputType === "anchor_picker" && (
+                    <div className="mt-3">
+                      <AnchorPicker
+                        symptoms={message.metadata?.available_symptoms || selectedSymptoms}
+                        onSubmit={handleAnchorSubmit}
+                        isSubmitting={isSending}
+                      />
+                    </div>
+                  )}
+
+                  {showInteractiveInput && inputType === "date_picker" && (
+                    <div className="mt-3">
+                      <DatePickerInput
+                        onSubmit={handleDateSubmit}
+                        isSubmitting={isSending}
+                      />
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
           <div ref={scrollRef} />
         </div>
       </ScrollArea>
 
-      {/* Input */}
-      <div className="border-t border-border/50 bg-card/50 backdrop-blur-sm sticky bottom-0">
-        <form onSubmit={sendMessage} className="max-w-3xl mx-auto px-4 py-4">
-          <div className="flex gap-3">
-            <Input
-              ref={inputRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder={isOnboarding ? "Type your answer..." : "Share an update or ask a question..."}
-              className="flex-1 h-12"
-              disabled={isSending}
-            />
-            <Button 
-              type="submit" 
-              size="icon" 
-              className="h-12 w-12"
-              disabled={!inputValue.trim() || isSending}
-            >
-              {isSending ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Send className="w-5 h-5" />
-              )}
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground text-center mt-2">
-            {isOnboarding 
-              ? "Answer Logan's questions to personalize your experience"
-              : "Logan learns from your updates to personalize your insights"
-            }
-          </p>
-        </form>
-      </div>
+      {/* Input - hide when showing interactive pickers */}
+      {!shouldShowInteractivePicker() && (
+        <div className="border-t border-border/50 bg-card/50 backdrop-blur-sm sticky bottom-0">
+          <form onSubmit={sendMessage} className="max-w-3xl mx-auto px-4 py-4">
+            <div className="flex gap-3">
+              <Input
+                ref={inputRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder={isOnboarding ? "Type your answer..." : "Share an update or ask a question..."}
+                className="flex-1 h-12"
+                disabled={isSending}
+              />
+              <Button 
+                type="submit" 
+                size="icon" 
+                className="h-12 w-12"
+                disabled={!inputValue.trim() || isSending}
+              >
+                {isSending ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              {isOnboarding 
+                ? "Answer Logan's questions to personalize your experience"
+                : "Logan learns from your updates to personalize your insights"
+              }
+            </p>
+          </form>
+        </div>
+      )}
     </div>
   );
 };
