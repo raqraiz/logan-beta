@@ -58,50 +58,43 @@ const ALL_SYMPTOMS = [
 // Onboarding question flow - Strategic, performance-focused voice
 const ONBOARDING_QUESTIONS = [
   {
-    key: "welcome",
-    message: "I'm Logan. I turn cycle data into strategic decisions for energy, focus, training, and recovery. To build your personal playbook, I need to understand your patterns. What's your name?",
-    field: "full_name",
-    parseType: "text",
-    inputType: "text"
-  },
-  {
     key: "age",
-    message: "Good to meet you, {name}. Your age helps me calibrate predictions around hormonal timing and recovery windows. How old are you?",
+    message: "Hey {name}. I'm Logan—I help you work with your cycle instead of against it. To give you useful insights on energy, focus, and recovery, I need to learn your patterns. Let's start simple: how old are you?",
     field: "age",
     parseType: "number",
     inputType: "text"
   },
   {
     key: "cycle_length",
-    message: "Noted. How long is your typical cycle in days? Most fall between 24-35. If you're unsure, 28 is a reasonable starting point.",
+    message: "Got it. How long is your typical cycle in days? Most fall between 24-35. If you're not sure, 28 is a fair starting point.",
     field: "cycle_length_days",
     parseType: "number",
     inputType: "text"
   },
   {
     key: "last_period",
-    message: "When did your last period start? This anchors your timeline so I can map your current phase and what's coming.",
+    message: "When did your last period start? This helps me figure out where you are in your cycle right now.",
     field: "last_period_start",
     parseType: "date",
     inputType: "date_picker"
   },
   {
     key: "symptoms",
-    message: "Now the important part. Select all the symptoms that disrupt your performance, mood, or energy around your cycle. These become patterns I track for you.",
+    message: "Now the important part. Which of these tend to hit you around your cycle? Select everything that disrupts your energy, mood, or focus.",
     field: "typical_symptoms",
     parseType: "symptoms",
     inputType: "symptom_picker"
   },
   {
     key: "anchor_symptom",
-    message: "Which one derails you the most? This becomes your Anchor Symptom—the signal I'll monitor most closely and help you prepare for before it arrives.",
+    message: "Which one throws you off the most? This becomes your Anchor Symptom—the thing I'll help you see coming before it arrives.",
     field: "anchor_symptom",
     parseType: "anchor",
     inputType: "anchor_picker"
   },
   {
     key: "complete",
-    message: "Your baseline is set. I'll now track your patterns and send you strategic insights—when to push harder, when to protect your capacity, and when to adjust your approach. This is intelligent performance guidance, not passive tracking.",
+    message: "You're all set. I'll start learning your patterns and send you insights you can actually use—when to push, when to ease up, and how to plan around what's coming. Welcome aboard.",
     field: null,
     parseType: null,
     inputType: null
@@ -172,12 +165,30 @@ serve(async (req) => {
         );
       }
 
-      // Send welcome message
+      // Get user's name from profile or participant record
+      let userName = "there";
+      
+      // Try to get name from profiles table
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
+      
+      if (profile?.full_name) {
+        userName = profile.full_name.split(" ")[0];
+      } else if (participant?.full_name) {
+        userName = participant.full_name.split(" ")[0];
+      }
+
+      // Send welcome message with personalized name
       const welcomeQ = ONBOARDING_QUESTIONS[0];
+      const personalizedMessage = welcomeQ.message.replace("{name}", userName);
+      
       const { error: insertError } = await supabase.from("chat_messages").insert({
         user_id: user.id,
         role: "assistant",
-        content: welcomeQ.message,
+        content: personalizedMessage,
         message_type: "onboarding",
         metadata: { 
           onboarding_step: 0, 
@@ -191,7 +202,7 @@ serve(async (req) => {
         throw insertError;
       }
 
-      console.log("Sent welcome message");
+      console.log("Sent welcome message to:", userName);
       return new Response(
         JSON.stringify({ success: true }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -243,6 +254,18 @@ serve(async (req) => {
         parsedValue = anchorSymptom || userMessage?.trim() || "";
       }
 
+      // Get user's name from profile for participant creation
+      let userName = "";
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
+      
+      if (profile?.full_name) {
+        userName = profile.full_name;
+      }
+
       // Update participant record if we have one
       if (participant && currentQuestion.field) {
         const updateData: Record<string, any> = {};
@@ -255,44 +278,33 @@ serve(async (req) => {
         
         console.log("Updated participant field:", currentQuestion.field, "=", parsedValue);
       } else if (!participant && currentQuestion.field) {
-        // Create participant record if this is the name question
-        if (currentQuestion.field === "full_name") {
-          const { data: newParticipant, error: createError } = await supabase
-            .from("participants")
-            .insert({
-              full_name: parsedValue,
-              email: user.email,
-              whatsapp_number: user.email || "web-user",
-              consent_given: true,
-              consent_given_at: new Date().toISOString(),
-              preferred_channel: "web",
-              is_active: true
-            })
-            .select()
-            .single();
-          
-          if (createError) {
-            console.error("Error creating participant:", createError);
-          } else {
-            participant = newParticipant;
-            console.log("Created new participant:", participant?.id);
-          }
+        // Create participant record on first response (age question)
+        const { data: newParticipant, error: createError } = await supabase
+          .from("participants")
+          .insert({
+            full_name: userName || user.email?.split("@")[0] || "User",
+            email: user.email,
+            whatsapp_number: user.email || "web-user",
+            consent_given: true,
+            consent_given_at: new Date().toISOString(),
+            preferred_channel: "web",
+            is_active: true,
+            [currentQuestion.field]: parsedValue
+          })
+          .select()
+          .single();
+        
+        if (createError) {
+          console.error("Error creating participant:", createError);
+        } else {
+          participant = newParticipant;
+          console.log("Created new participant:", participant?.id);
         }
       }
 
       // Move to next question
       const nextStep = currentStep + 1;
       const nextQuestion = ONBOARDING_QUESTIONS[nextStep];
-
-      // Personalize message with name if available
-      let nextMessage = nextQuestion.message;
-      if (participant?.full_name) {
-        const firstName = participant.full_name.split(" ")[0];
-        nextMessage = nextMessage.replace("{name}", firstName);
-      } else if (currentQuestion.field === "full_name") {
-        const firstName = parsedValue.split(" ")[0];
-        nextMessage = nextMessage.replace("{name}", firstName);
-      }
 
       // Build metadata for next message
       const nextMetadata: Record<string, any> = { 
