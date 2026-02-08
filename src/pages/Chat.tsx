@@ -18,7 +18,11 @@ interface ChatMessage {
   emoji_reaction?: string | null;
   created_at: string;
   user_id: string;
-  metadata?: unknown;
+  metadata?: {
+    onboarding_step?: number;
+    onboarding_complete?: boolean;
+    reaction_to?: string;
+  };
 }
 
 const EMOJI_REACTIONS = ["👍", "❤️", "🤔", "😊", "💪"];
@@ -29,11 +33,13 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+  const [isOnboarding, setIsOnboarding] = useState(false);
   
   const { user, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const onboardingInitialized = useRef(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -42,7 +48,7 @@ const Chat = () => {
     }
   }, [user, authLoading, navigate]);
 
-  // Fetch messages
+  // Fetch messages and initialize onboarding if needed
   useEffect(() => {
     if (!user) return;
 
@@ -56,15 +62,33 @@ const Chat = () => {
       if (error) {
         console.error("Error fetching messages:", error);
         toast({ title: "Failed to load messages", variant: "destructive" });
-      } else {
-        // Cast role to expected type
-        const typedMessages = (data || []).map((m) => ({
-          ...m,
-          role: m.role as "user" | "assistant" | "system",
-        }));
-        setMessages(typedMessages);
+        setIsLoading(false);
+        return;
       }
+
+      const typedMessages = (data || []).map((m) => ({
+        ...m,
+        role: m.role as "user" | "assistant" | "system",
+        metadata: m.metadata as ChatMessage["metadata"],
+      }));
+      setMessages(typedMessages);
       setIsLoading(false);
+
+      // Check if onboarding is in progress
+      const hasOnboardingMessages = typedMessages.some(
+        m => m.message_type === "onboarding" || m.metadata?.onboarding_step !== undefined
+      );
+      const isOnboardingComplete = typedMessages.some(
+        m => m.metadata?.onboarding_complete === true
+      );
+      
+      setIsOnboarding(hasOnboardingMessages && !isOnboardingComplete);
+
+      // If no messages and hasn't been initialized, start onboarding
+      if (typedMessages.length === 0 && !onboardingInitialized.current) {
+        onboardingInitialized.current = true;
+        initializeOnboarding();
+      }
     };
 
     fetchMessages();
@@ -81,10 +105,16 @@ const Chat = () => {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
+          const newMessage = payload.new as ChatMessage;
           setMessages((prev) => {
-            // Avoid duplicates
-            if (prev.some((m) => m.id === payload.new.id)) return prev;
-            return [...prev, payload.new as ChatMessage];
+            if (prev.some((m) => m.id === newMessage.id)) return prev;
+            
+            // Check if onboarding is complete
+            if (newMessage.metadata?.onboarding_complete) {
+              setIsOnboarding(false);
+            }
+            
+            return [...prev, newMessage];
           });
         }
       )
@@ -102,6 +132,25 @@ const Chat = () => {
     }
   }, [messages]);
 
+  const initializeOnboarding = async () => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.access_token) return;
+
+      const { error } = await supabase.functions.invoke("chat-onboarding", {
+        body: { action: "init" },
+      });
+
+      if (error) {
+        console.error("Error initializing onboarding:", error);
+      } else {
+        setIsOnboarding(true);
+      }
+    } catch (error) {
+      console.error("Error initializing onboarding:", error);
+    }
+  };
+
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -112,6 +161,7 @@ const Chat = () => {
     setIsSending(true);
 
     try {
+      // First, insert the user's message
       const { error } = await supabase.from("chat_messages").insert({
         user_id: user.id,
         role: "user",
@@ -120,6 +170,19 @@ const Chat = () => {
       });
 
       if (error) throw error;
+
+      // If we're in onboarding mode, trigger the onboarding response
+      if (isOnboarding) {
+        const { data, error: onboardingError } = await supabase.functions.invoke("chat-onboarding", {
+          body: { action: "respond", userMessage: messageContent },
+        });
+
+        if (onboardingError) {
+          console.error("Onboarding error:", onboardingError);
+        } else if (data?.onboardingComplete) {
+          setIsOnboarding(false);
+        }
+      }
       
       inputRef.current?.focus();
     } catch (error) {
@@ -173,7 +236,9 @@ const Chat = () => {
             <LoganLogo size="sm" />
             <div>
               <h1 className="font-display font-semibold text-foreground">Logan</h1>
-              <p className="text-xs text-muted-foreground">Your cycle companion</p>
+              <p className="text-xs text-muted-foreground">
+                {isOnboarding ? "Getting to know you..." : "Your cycle companion"}
+              </p>
             </div>
           </div>
           <Button variant="ghost" size="sm" onClick={handleSignOut}>
@@ -186,16 +251,12 @@ const Chat = () => {
       {/* Messages */}
       <ScrollArea className="flex-1 px-4">
         <div className="max-w-3xl mx-auto py-6 space-y-4">
-          {messages.length === 0 ? (
+          {messages.length === 0 && !isLoading ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <LoganLogo size="sm" />
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
-              <h2 className="text-lg font-semibold text-foreground mb-2">Welcome to Logan</h2>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                I'm here to help you understand your cycle patterns. You'll receive personalized insights, 
-                and you can share updates or ask questions anytime.
-              </p>
+              <p className="text-muted-foreground">Starting your conversation...</p>
             </div>
           ) : (
             messages.map((message) => (
@@ -270,7 +331,7 @@ const Chat = () => {
               ref={inputRef}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Share an update or ask a question..."
+              placeholder={isOnboarding ? "Type your answer..." : "Share an update or ask a question..."}
               className="flex-1 h-12"
               disabled={isSending}
             />
@@ -288,7 +349,10 @@ const Chat = () => {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground text-center mt-2">
-            Logan learns from your updates to personalize your insights
+            {isOnboarding 
+              ? "Answer Logan's questions to personalize your experience"
+              : "Logan learns from your updates to personalize your insights"
+            }
           </p>
         </form>
       </div>
