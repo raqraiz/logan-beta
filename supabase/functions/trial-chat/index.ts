@@ -3,34 +3,59 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `You are Logan, an intelligent menstrual cycle companion. You help women understand and work WITH their cycle, not against it.
+type TrialMsg = { role: "user" | "assistant"; content: string };
 
-Your role in this trial conversation:
-- Answer questions about menstrual cycles, phases, hormones, and symptoms knowledgeably
-- Explain how cycle awareness can help with training, work, mood, and energy management
-- Be warm, supportive, and conversational
-- Keep responses concise (2-3 sentences max for simple questions, up to 5 for complex ones)
-- Use simple language, avoid medical jargon unless explaining a term
-- Occasionally mention that you can provide personalized insights once the user creates an account
+function normalize(input: string) {
+  return input.toLowerCase().replace(/\s+/g, " ").trim();
+}
 
-Key knowledge:
-- Menstrual cycle phases: Menstrual (days 1-5), Follicular (days 6-13), Ovulation (days 14-17), Luteal (days 18-28)
-- The luteal phase is the ~14 days after ovulation, before the next period. Progesterone rises, which can cause PMS symptoms like mood changes, bloating, fatigue, and cravings.
-- Ovulation typically happens around day 14 of a 28-day cycle
-- Energy and estrogen peak during late follicular/ovulation
-- The luteal phase often brings lower energy, need for more rest and recovery
+function pickResponse(lastUserMessage: string) {
+  const q = normalize(lastUserMessage);
 
-IMPORTANT RULES:
-- Never provide medical advice or diagnoses
-- Don't use exclamation points excessively
-- Be encouraging but not over-the-top
-- If asked something outside your scope, gently redirect to cycle-related topics`;
+  const isAbout = (terms: string[]) => terms.some((t) => q.includes(t));
+
+  // Phase definitions
+  if (isAbout(["luteal"])) {
+    return "The luteal phase is the part of your cycle after ovulation and before your next period, usually about 12-14 days. Progesterone rises during this phase, and many people notice more fatigue, cravings, lower stress tolerance, or PMS-like symptoms. Do you want a simple guide for how to train and plan during luteal?";
+  }
+
+  if (isAbout(["follicular"])) {
+    return "The follicular phase starts on day 1 of your period and runs up to ovulation. Estrogen tends to rise, and many people feel more energetic, optimistic, and resilient as they get closer to ovulation. Are you asking because your mood or training feels different at certain times of the month?";
+  }
+
+  if (isAbout(["ovulation", "ovulate", "ovulating"])) {
+    return "Ovulation is when an egg is released, typically mid-cycle, and it often coincides with higher estrogen (and sometimes a brief testosterone bump). Many people feel stronger and more social around this window, though some notice ovulation pain or a slight dip the day after. Are you trying to time workouts, productivity, or symptoms?";
+  }
+
+  if (isAbout(["menstrual", "period", "bleeding"])) {
+    return "The menstrual phase is when you bleed, marking day 1 of your cycle. Energy can be lower early on for some people, then gradually improves as bleeding tapers. Do you want tips for training and recovery during your period, or are you trying to understand symptoms?";
+  }
+
+  // Common questions
+  if (isAbout(["pms", "pmdd"])) {
+    return "PMS symptoms often show up in the late luteal phase, when progesterone and estrogen drop before your period. That shift can affect mood, sleep, appetite, and how sensitive you feel to stress. Which symptom is most disruptive for you: mood, fatigue, cravings, or irritability?";
+  }
+
+  if (isAbout(["energy", "most energy", "peak energy", "strongest"])) {
+    return "Many people feel their best energy and training capacity in the late follicular phase and around ovulation, when estrogen is higher. The luteal phase can feel more variable, with a higher need for recovery, especially late luteal. When you say 'most energy', do you mean workouts, focus, mood, or all three?";
+  }
+
+  if (isAbout(["workout", "workouts", "training", "lift", "lifting", "run", "running"])) {
+    return "A simple pattern is: push harder in late follicular and around ovulation, then adjust volume and recovery needs more during luteal. During your period, some prefer lighter intensity early on and build back as energy returns. What kind of training are you doing right now?";
+  }
+
+  if (isAbout(["cycle", "phases", "hormone", "hormones"])) {
+    return "The cycle is commonly described in four phases: menstrual, follicular, ovulation, and luteal. Hormones shift across these phases, which can change energy, mood, appetite, and recovery needs. Do you want a quick overview, or guidance for a specific goal like training or focus?";
+  }
+
+  // Fallback
+  return "I can help explain cycle phases and how they tend to affect energy, mood, and training. What are you trying to understand right now: a specific phase (like luteal), a symptom (like cravings or irritability), or performance (like workouts and focus)?";
+}
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -39,61 +64,29 @@ Deno.serve(async (req) => {
     const { messages } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
-      return new Response(
-        JSON.stringify({ error: "Messages array required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Messages array required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Format messages for the AI
-    const formattedMessages = [
-      { role: "system", content: SYSTEM_PROMPT },
-      ...messages.map((m: { role: string; content: string }) => ({
-        role: m.role === "assistant" ? "assistant" : "user",
-        content: m.content,
-      })),
-    ];
+    const typed = messages as TrialMsg[];
+    const lastUser = [...typed].reverse().find((m) => m.role === "user");
+    const lastUserContent = lastUser?.content?.toString?.() ?? "";
 
-    // Call Lovable AI
-    const response = await fetch("https://api.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: formattedMessages,
-        max_tokens: 300,
-        temperature: 0.7,
-      }),
+    const response = pickResponse(lastUserContent);
+
+    return new Response(JSON.stringify({ response }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI API error:", errorText);
-      throw new Error(`AI API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const aiResponse = data.choices?.[0]?.message?.content || 
-      "I'd love to help you understand your cycle better. Could you tell me more about what you'd like to know?";
-
-    console.log("Trial chat response generated successfully");
-
-    return new Response(
-      JSON.stringify({ response: aiResponse }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
   } catch (error) {
     console.error("Trial chat error:", error);
-    
-    // Fallback response if AI fails
     return new Response(
-      JSON.stringify({ 
-        response: "Great question. I help women understand their menstrual cycle phases and how they affect energy, mood, and performance. Would you like to learn about a specific phase, or are you curious about how cycle awareness can help with something in your life?" 
+      JSON.stringify({
+        response:
+          "I can help explain cycle phases and how they affect energy and symptoms. What would you like to understand: luteal, ovulation, PMS, or training?",
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });
