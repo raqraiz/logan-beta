@@ -4,6 +4,7 @@ interface ChatCycleCircleProps {
   cycleDay: number;
   phase: string;
   cycleLengthDays: number;
+  size?: "sm" | "md";
 }
 
 const PHASE_STYLES: Record<string, { color: string; ringColor: string }> = {
@@ -25,13 +26,48 @@ const PHASE_STYLES: Record<string, { color: string; ringColor: string }> = {
   },
 };
 
-export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays }: ChatCycleCircleProps) {
+export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md" }: ChatCycleCircleProps) {
   const styles = PHASE_STYLES[phase] || PHASE_STYLES.Follicular;
   const progress = (cycleDay / cycleLengthDays) * 100;
   
   const radius = 44;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
+
+  const isSmall = size === "sm";
+
+  if (isSmall) {
+    return (
+      <div className="relative w-10 h-10 flex-shrink-0">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+          <circle
+            cx="50"
+            cy="50"
+            r={radius}
+            fill="none"
+            strokeWidth="4"
+            className="stroke-muted/20"
+          />
+          <circle
+            cx="50"
+            cy="50"
+            r={radius}
+            fill="none"
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            className={styles.ringColor}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className={`text-xs font-bold ${styles.color}`}>
+            {cycleDay}
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-4 p-4 rounded-xl bg-[#1C1E22] border border-border/30">
