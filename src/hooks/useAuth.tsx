@@ -12,6 +12,23 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const ensureProfile = async (user: User) => {
+  const { data: existingProfile } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", user.id)
+    .single();
+
+  if (!existingProfile) {
+    await supabase.from("profiles").insert({
+      id: user.id,
+      email: user.email || "",
+      full_name:
+        user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
+    });
+  }
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -20,39 +37,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let isMounted = true;
 
-    const ensureProfile = async (user: User) => {
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", user.id)
-        .single();
-
-      if (!existingProfile) {
-        await supabase.from("profiles").insert({
-          id: user.id,
-          email: user.email || "",
-          full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
-        });
-      }
-    };
-
-    // Listener for ongoing auth changes (does NOT control loading)
+    // Ongoing auth changes (does NOT control loading)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!isMounted) return;
-
       setSession(session);
       setUser(session?.user ?? null);
-
-      // Defer DB calls; never await inside the callback
-      if (event === "SIGNED_IN" && session?.user) {
-        setTimeout(() => {
-          ensureProfile(session.user).catch(() => {
-            // Intentionally swallow to avoid leaking sensitive details in console
-          });
-        }, 0);
-      }
     });
 
     // Initial load (controls loading)
@@ -61,38 +52,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const url = new URL(window.location.href);
         const code = url.searchParams.get("code");
 
-        // PKCE magic-link flow: exchange code for a session
+        // PKCE magic-link flow: exchange ?code= for a session
         if (code) {
-          await supabase.auth.exchangeCodeForSession(code);
+          try {
+            await supabase.auth.exchangeCodeForSession(code);
+          } catch {
+            // Ignore: code might have been already exchanged on a previous attempt
+          }
+
           url.searchParams.delete("code");
           url.searchParams.delete("type");
-          window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+          window.history.replaceState(
+            {},
+            document.title,
+            url.pathname + url.search + url.hash
+          );
         }
 
+        // Implicit flow: access_token/refresh_token in hash
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const hasHashTokens =
           hashParams.has("access_token") || hashParams.has("refresh_token");
 
-        // Wait briefly for the SDK to hydrate session from URL tokens (hash or exchanged code)
+        // If tokens are present in the URL, give the SDK a moment to hydrate
         const start = Date.now();
         const maxWaitMs = hasHashTokens || code ? 2500 : 0;
 
-        let session: Session | null = null;
+        let currentSession: Session | null = null;
         do {
           const { data } = await supabase.auth.getSession();
-          session = data.session;
-          if (session) break;
+          currentSession = data.session;
+          if (currentSession) break;
           if (!maxWaitMs) break;
           await new Promise((r) => setTimeout(r, 100));
         } while (Date.now() - start < maxWaitMs);
 
         if (!isMounted) return;
 
-        setSession(session);
-        setUser(session?.user ?? null);
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
 
-        if (session?.user) {
-          await ensureProfile(session.user);
+        if (currentSession?.user) {
+          await ensureProfile(currentSession.user);
         }
       } finally {
         if (isMounted) setLoading(false);
@@ -107,8 +108,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
+  // Ensure profile exists when a user appears (after initial load too)
+  useEffect(() => {
+    if (!user) return;
+    ensureProfile(user).catch(() => {
+      // Ignore: profile creation is best-effort and should not block auth
+    });
+  }, [user?.id]);
+
   const signInWithMagicLink = async (email: string) => {
-    const redirectUrl = `${window.location.origin}/chat`;
+    const redirectUrl = `${window.location.origin}/auth/callback?next=/chat`;
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
@@ -125,7 +134,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signInWithMagicLink, signOut }}>
+    <AuthContext.Provider
+      value={{ user, session, loading, signInWithMagicLink, signOut }}
+    >
       {children}
     </AuthContext.Provider>
   );
