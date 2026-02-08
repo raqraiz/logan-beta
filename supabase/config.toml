@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.delete-user]
 verify_jwt = false
+
+[functions.send-scheduled-insights]
+verify_jwt = false
