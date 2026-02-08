@@ -305,7 +305,7 @@ serve(async (req) => {
       // Move to next question
       const nextStep = currentStep + 1;
       const nextQuestion = ONBOARDING_QUESTIONS[nextStep];
-
+      const nextMessage = nextQuestion.message;
       // Build metadata for next message
       const nextMetadata: Record<string, any> = { 
         onboarding_step: nextStep, 
