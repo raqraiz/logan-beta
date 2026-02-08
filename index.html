@@ -21,17 +21,6 @@
 
   <body>
     <div id="root"></div>
-    <script>
-      // Capture password recovery state before Supabase JS cleans the URL hash
-      (function() {
-        try {
-          var hash = window.location.hash;
-          if (hash && hash.indexOf('type=recovery') !== -1) {
-            sessionStorage.setItem('supabase_password_recovery', 'true');
-          }
-        } catch (e) {}
-      })();
-    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
