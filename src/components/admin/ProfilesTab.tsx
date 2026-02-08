@@ -1,22 +1,26 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "@/hooks/use-toast";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from "@/hooks/use-toast";
 import { 
-  Users, RefreshCw, Search, Mail, Phone, Calendar
+  Users, RefreshCw, Search, Mail, Phone, Calendar, ChevronRight, 
+  ChevronLeft, Trash2, Loader2, Activity, Target, Clock
 } from "lucide-react";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow, format, differenceInDays } from "date-fns";
 
 interface Profile {
   id: string;
@@ -32,15 +36,49 @@ interface NotificationPreference {
   user_id: string;
   frequency: string;
   preferred_time: string;
+  preferred_days: string[] | null;
   timezone: string;
   is_enabled: boolean;
 }
 
+interface Participant {
+  id: string;
+  email: string | null;
+  full_name: string;
+  last_period_start: string | null;
+  cycle_length_days: number | null;
+  cycle_regularity: string | null;
+  typical_symptoms: string[] | null;
+  anchor_symptom: string | null;
+  goals: string[] | null;
+  timezone: string | null;
+  is_active: boolean | null;
+  created_at: string;
+}
+
+interface Insight {
+  id: string;
+  participant_id: string;
+  content: string;
+  status: string | null;
+  insight_type: string | null;
+  created_at: string;
+  sent_at: string | null;
+}
+
+interface ProfileWithData extends Profile {
+  notificationPrefs?: NotificationPreference;
+  participant?: Participant;
+  insights?: Insight[];
+  messageCount?: number;
+}
+
 export function ProfilesTab() {
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [notificationPrefs, setNotificationPrefs] = useState<Map<string, NotificationPreference>>(new Map());
+  const [profiles, setProfiles] = useState<ProfileWithData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedProfile, setSelectedProfile] = useState<ProfileWithData | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -60,14 +98,62 @@ export function ProfilesTab() {
 
       if (prefsError) throw prefsError;
 
-      setProfiles(profilesData || []);
-      
-      // Map preferences by user_id
+      // Fetch participants (by email match)
+      const { data: participantsData, error: participantsError } = await supabase
+        .from("participants")
+        .select("*");
+
+      if (participantsError) throw participantsError;
+
+      // Fetch insights
+      const { data: insightsData, error: insightsError } = await supabase
+        .from("insights")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (insightsError) throw insightsError;
+
+      // Fetch message counts
+      const { data: messagesData, error: messagesError } = await supabase
+        .from("chat_messages")
+        .select("user_id");
+
+      if (messagesError) throw messagesError;
+
+      // Build maps
       const prefsMap = new Map<string, NotificationPreference>();
-      prefsData?.forEach(pref => {
-        prefsMap.set(pref.user_id, pref);
+      prefsData?.forEach(pref => prefsMap.set(pref.user_id, pref));
+
+      const participantsByEmail = new Map<string, Participant>();
+      participantsData?.forEach(p => {
+        if (p.email) participantsByEmail.set(p.email.toLowerCase(), p);
       });
-      setNotificationPrefs(prefsMap);
+
+      const insightsByParticipant = new Map<string, Insight[]>();
+      insightsData?.forEach(insight => {
+        const existing = insightsByParticipant.get(insight.participant_id) || [];
+        existing.push(insight);
+        insightsByParticipant.set(insight.participant_id, existing);
+      });
+
+      const messageCountByUser = new Map<string, number>();
+      messagesData?.forEach(msg => {
+        messageCountByUser.set(msg.user_id, (messageCountByUser.get(msg.user_id) || 0) + 1);
+      });
+
+      // Combine data
+      const enrichedProfiles: ProfileWithData[] = (profilesData || []).map(profile => {
+        const participant = participantsByEmail.get(profile.email.toLowerCase());
+        return {
+          ...profile,
+          notificationPrefs: prefsMap.get(profile.id),
+          participant,
+          insights: participant ? insightsByParticipant.get(participant.id) : undefined,
+          messageCount: messageCountByUser.get(profile.id) || 0,
+        };
+      });
+
+      setProfiles(enrichedProfiles);
     } catch (error) {
       console.error("Error:", error);
       toast({ title: "Error loading profiles", variant: "destructive" });
@@ -79,6 +165,45 @@ export function ProfilesTab() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-user", {
+        body: { userId },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast({ title: "User deleted successfully" });
+      setSelectedProfile(null);
+      fetchData();
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast({ 
+        title: "Error deleting user", 
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive" 
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const calculateCycleDay = (lastPeriodStart: string | null, cycleLength: number | null) => {
+    if (!lastPeriodStart) return null;
+    const daysSince = differenceInDays(new Date(), new Date(lastPeriodStart));
+    const length = cycleLength || 28;
+    return (daysSince % length) + 1;
+  };
+
+  const getCyclePhase = (cycleDay: number, cycleLength: number = 28) => {
+    if (cycleDay <= 5) return "Menstrual";
+    if (cycleDay <= 13) return "Follicular";
+    if (cycleDay <= 16) return "Ovulation";
+    return "Luteal";
+  };
 
   const filtered = profiles.filter(p =>
     p.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -94,6 +219,233 @@ export function ProfilesTab() {
     );
   }
 
+  // Detail view
+  if (selectedProfile) {
+    const profile = selectedProfile;
+    const participant = profile.participant;
+    const cycleDay = participant ? calculateCycleDay(participant.last_period_start, participant.cycle_length_days) : null;
+    const phase = cycleDay ? getCyclePhase(cycleDay, participant?.cycle_length_days || 28) : null;
+
+    return (
+      <div className="space-y-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setSelectedProfile(null)}
+          className="gap-2"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          All Profiles
+        </Button>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Profile Info Card */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg">Profile</CardTitle>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" disabled={deleting}>
+                    {deleting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete User
+                      </>
+                    )}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete user?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete <strong>{profile.full_name}</strong> and all their data including chat history and insights. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => handleDeleteUser(profile.id, profile.full_name)}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-lg font-medium">
+                  {profile.avatar_url ? (
+                    <img src={profile.avatar_url} alt={profile.full_name} className="w-12 h-12 rounded-full object-cover" />
+                  ) : (
+                    profile.full_name[0]?.toUpperCase()
+                  )}
+                </div>
+                <div>
+                  <p className="font-semibold text-lg">{profile.full_name}</p>
+                  <p className="text-sm text-muted-foreground">{profile.email}</p>
+                </div>
+              </div>
+              {profile.phone && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Phone className="w-4 h-4 text-muted-foreground" />
+                  <span>{profile.phone}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Calendar className="w-4 h-4" />
+                <span>Joined {format(new Date(profile.created_at), "MMM d, yyyy")}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Activity className="w-4 h-4" />
+                <span>{profile.messageCount} chat messages</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Notification Preferences Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Notifications</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {profile.notificationPrefs ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={profile.notificationPrefs.is_enabled ? "default" : "secondary"}>
+                      {profile.notificationPrefs.is_enabled ? "Enabled" : "Disabled"}
+                    </Badge>
+                  </div>
+                  <p className="text-sm"><strong>Frequency:</strong> {profile.notificationPrefs.frequency}</p>
+                  <p className="text-sm"><strong>Time:</strong> {profile.notificationPrefs.preferred_time}</p>
+                  {profile.notificationPrefs.preferred_days && (
+                    <p className="text-sm"><strong>Days:</strong> {profile.notificationPrefs.preferred_days.join(", ")}</p>
+                  )}
+                  <p className="text-sm"><strong>Timezone:</strong> {profile.notificationPrefs.timezone}</p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Not configured</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Cycle Data Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Cycle Data
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {participant ? (
+                <div className="space-y-3">
+                  {cycleDay && phase && (
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="text-base px-3 py-1">
+                        Day {cycleDay}
+                      </Badge>
+                      <Badge>{phase}</Badge>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Cycle Length</p>
+                      <p className="font-medium">{participant.cycle_length_days || 28} days</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Regularity</p>
+                      <p className="font-medium">{participant.cycle_regularity || "Not set"}</p>
+                    </div>
+                    {participant.last_period_start && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Last Period</p>
+                        <p className="font-medium">{format(new Date(participant.last_period_start), "MMM d, yyyy")}</p>
+                      </div>
+                    )}
+                  </div>
+                  {participant.anchor_symptom && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Anchor Symptom</p>
+                      <Badge variant="secondary">{participant.anchor_symptom}</Badge>
+                    </div>
+                  )}
+                  {participant.typical_symptoms && participant.typical_symptoms.length > 0 && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Typical Symptoms</p>
+                      <div className="flex flex-wrap gap-1">
+                        {participant.typical_symptoms.map((symptom, i) => (
+                          <Badge key={i} variant="outline" className="text-xs">{symptom}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {participant.goals && participant.goals.length > 0 && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Goals</p>
+                      <div className="flex flex-wrap gap-1">
+                        {participant.goals.map((goal, i) => (
+                          <Badge key={i} variant="secondary" className="text-xs">{goal}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No cycle data found (participant not linked)</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Insights Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Target className="w-5 h-5" />
+                Insights ({profile.insights?.length || 0})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {profile.insights && profile.insights.length > 0 ? (
+                <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                  {profile.insights.slice(0, 10).map((insight) => (
+                    <div key={insight.id} className="border-b pb-2 last:border-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge 
+                          variant={
+                            insight.status === "sent" ? "default" : 
+                            insight.status === "approved" ? "secondary" : "outline"
+                          }
+                          className="text-xs"
+                        >
+                          {insight.status || "pending"}
+                        </Badge>
+                        {insight.insight_type && (
+                          <Badge variant="outline" className="text-xs">{insight.insight_type}</Badge>
+                        )}
+                      </div>
+                      <p className="text-sm line-clamp-2">{insight.content}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {format(new Date(insight.created_at), "MMM d, yyyy")}
+                        {insight.sent_at && ` • Sent ${format(new Date(insight.sent_at), "MMM d")}`}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No insights yet</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // List view
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -118,7 +470,7 @@ export function ProfilesTab() {
         </div>
       </div>
 
-      {/* Profiles Table */}
+      {/* Profile Cards */}
       {filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
@@ -127,92 +479,56 @@ export function ProfilesTab() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Notifications</TableHead>
-                  <TableHead>Joined</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((profile) => {
-                  const prefs = notificationPrefs.get(profile.id);
-                  return (
-                    <TableRow key={profile.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
-                            {profile.avatar_url ? (
-                              <img 
-                                src={profile.avatar_url} 
-                                alt={profile.full_name}
-                                className="w-10 h-10 rounded-full object-cover"
-                              />
-                            ) : (
-                              (profile.full_name?.[0] || profile.email?.[0] || "?").toUpperCase()
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-medium">{profile.full_name}</p>
-                            <p className="text-sm text-muted-foreground truncate max-w-[200px]">
-                              ID: {profile.id.slice(0, 8)}...
-                            </p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-sm">
-                            <Mail className="w-3 h-3 text-muted-foreground" />
-                            <span className="truncate max-w-[200px]">{profile.email}</span>
-                          </div>
-                          {profile.phone && (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Phone className="w-3 h-3" />
-                              <span>{profile.phone}</span>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {prefs ? (
-                          <div className="space-y-1">
-                            <Badge variant={prefs.is_enabled ? "default" : "secondary"}>
-                              {prefs.is_enabled ? "Enabled" : "Disabled"}
-                            </Badge>
-                            <p className="text-xs text-muted-foreground">
-                              {prefs.frequency} · {prefs.preferred_time}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {prefs.timezone}
-                            </p>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">Not configured</span>
+        <div className="grid gap-3">
+          {filtered.map((profile) => {
+            const cycleDay = profile.participant 
+              ? calculateCycleDay(profile.participant.last_period_start, profile.participant.cycle_length_days) 
+              : null;
+            const phase = cycleDay ? getCyclePhase(cycleDay, profile.participant?.cycle_length_days || 28) : null;
+            
+            return (
+              <Card
+                key={profile.id}
+                className="cursor-pointer transition-colors hover:bg-muted/50"
+                onClick={() => setSelectedProfile(profile)}
+              >
+                <CardContent className="py-3 px-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
+                      {profile.avatar_url ? (
+                        <img src={profile.avatar_url} alt={profile.full_name} className="w-10 h-10 rounded-full object-cover" />
+                      ) : (
+                        profile.full_name[0]?.toUpperCase()
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium">{profile.full_name}</span>
+                        {cycleDay && phase && (
+                          <>
+                            <Badge variant="outline" className="text-xs">Day {cycleDay}</Badge>
+                            <Badge variant="secondary" className="text-xs">{phase}</Badge>
+                          </>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-sm">
-                            <Calendar className="w-3 h-3 text-muted-foreground" />
-                            <span>{format(new Date(profile.created_at), "MMM d, yyyy")}</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Updated {formatDistanceToNow(new Date(profile.updated_at), { addSuffix: true })}
-                          </p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Mail className="w-3 h-3" />
+                          <span className="truncate max-w-[150px]">{profile.email}</span>
+                        </span>
+                        <span>{profile.messageCount} messages</span>
+                        {profile.insights && profile.insights.length > 0 && (
+                          <span>{profile.insights.length} insights</span>
+                        )}
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       )}
     </div>
   );
