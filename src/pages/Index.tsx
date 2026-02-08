@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
-import { OnboardingForm } from "@/components/OnboardingForm";
 import { Brain, Zap, Target, ArrowRight, TrendingUp, Shield, Calendar } from "lucide-react";
 import { LoganLogo } from "@/components/LoganLogo";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
   return (
@@ -63,7 +63,7 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Right - Onboarding Form */}
+            {/* Right - CTA Card */}
             <div className="lg:pl-8">
               <div className="bg-card rounded-2xl p-6 md:p-8 shadow-card border border-border max-w-md mx-auto">
                 <div className="text-center mb-6">
@@ -72,7 +72,17 @@ const Index = () => {
                     Get early access to intelligent cycle guidance
                   </p>
                 </div>
-                <OnboardingForm />
+                <div className="space-y-4">
+                  <Link to="/auth">
+                    <Button className="w-full" size="lg">
+                      Get Started
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </Link>
+                  <p className="text-xs text-center text-muted-foreground">
+                    Create your account and start your personalized journey
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -194,7 +204,7 @@ const Index = () => {
                 <ul className="space-y-3">
                   {[
                     "4 weeks of intelligent cycle guidance",
-                    "Proactive insights delivered twice weekly",
+                    "Proactive insights delivered through chat",
                     "Learn your unique patterns and timing",
                     "Your feedback shapes the experience",
                     "Natural conversation, not complex tracking",

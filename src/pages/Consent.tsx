@@ -104,8 +104,8 @@ const Consent = () => {
             <section className="space-y-4">
               <h2 className="text-xl font-display font-semibold text-foreground">9. Communication Consent</h2>
               <p className="text-muted-foreground">
-                By joining the pilot, you consent to receive messages via Telegram from @AskLoganBot on the scheduled 
-                days (Saturdays and Tuesdays). You may opt out at any time by contacting us.
+                By joining the pilot, you consent to receive insights and guidance through the Logan chat interface. 
+                You may manage your preferences or delete your account at any time.
               </p>
             </section>
 
@@ -113,7 +113,7 @@ const Consent = () => {
               <h2 className="text-xl font-display font-semibold text-foreground">10. Changes to Terms</h2>
               <p className="text-muted-foreground">
                 We may update these terms during the pilot program. Significant changes will be communicated to you 
-                via your registered contact method. Continued participation constitutes acceptance of updated terms.
+                via the chat interface. Continued participation constitutes acceptance of updated terms.
               </p>
             </section>
 
@@ -122,7 +122,7 @@ const Consent = () => {
                 Last updated: February 2026
               </p>
               <p className="text-sm text-muted-foreground mt-2">
-                For questions about this policy, please contact us through the Logan Telegram bot.
+                For questions about this policy, please contact us through the Logan chat.
               </p>
             </div>
           </div>
