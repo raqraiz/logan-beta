@@ -33,6 +33,13 @@ const passwordSchema = z.object({
 type AuthView = "login" | "signup" | "forgot-password" | "reset-password";
 
 const getInitialView = (): AuthView => {
+  // Check sessionStorage flag set by main.tsx before Supabase cleaned the URL
+  if (sessionStorage.getItem("supabase_password_recovery") === "true") {
+    sessionStorage.removeItem("supabase_password_recovery");
+    return "reset-password";
+  }
+
+  // Fallback: check URL in case it wasn't cleaned yet
   try {
     const url = new URL(window.location.href);
     if (url.searchParams.get("type") === "recovery") return "reset-password";
