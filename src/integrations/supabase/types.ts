@@ -201,45 +201,6 @@ export type Database = {
           },
         ]
       }
-      notification_preferences: {
-        Row: {
-          created_at: string
-          frequency: string
-          id: string
-          is_enabled: boolean
-          last_notification_at: string | null
-          preferred_days: string[] | null
-          preferred_time: string
-          timezone: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          frequency?: string
-          id?: string
-          is_enabled?: boolean
-          last_notification_at?: string | null
-          preferred_days?: string[] | null
-          preferred_time?: string
-          timezone?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          frequency?: string
-          id?: string
-          is_enabled?: boolean
-          last_notification_at?: string | null
-          preferred_days?: string[] | null
-          preferred_time?: string
-          timezone?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       participants: {
         Row: {
           additional_notes: string | null

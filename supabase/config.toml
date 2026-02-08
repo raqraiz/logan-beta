@@ -1,8 +1,5 @@
 project_id = "tpohsmxpcqqgxcgectfs"
 
-[functions.chat-ai]
-verify_jwt = false
-
 [functions.add-admin]
 verify_jwt = false
 
@@ -10,7 +7,4 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.delete-user]
-verify_jwt = false
-
-[functions.send-scheduled-insights]
 verify_jwt = false
