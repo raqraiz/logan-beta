@@ -6,43 +6,105 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Symptom categories for structured selection
+const SYMPTOM_CATEGORIES = {
+  emotional: {
+    label: "EMOTIONAL & COGNITIVE",
+    symptoms: [
+      "Rage spikes",
+      "Anxiety spikes", 
+      "Short fuse",
+      "Sudden dread",
+      "Feeling overwhelmed",
+      "Low stress tolerance",
+      "Irritability",
+      "Brain fog"
+    ]
+  },
+  physical: {
+    label: "PHYSICAL",
+    symptoms: [
+      "Energy crashes",
+      "Wired but tired",
+      "Full body inflammation",
+      "Nausea",
+      "Dizziness",
+      "Ringing in ears",
+      "Muffled hearing",
+      "Migraines",
+      "Deep fatigue",
+      "Smell sensitivity",
+      "Chin or jaw acne breakouts"
+    ]
+  },
+  quirky: {
+    label: "IS IT JUST ME?",
+    symptoms: [
+      "Random shame spiral",
+      "One stinky armpit",
+      "Feeling emotionally allergic to people",
+      "Sudden urge to delete your whole life online"
+    ]
+  }
+};
+
+// All symptoms flattened for validation
+const ALL_SYMPTOMS = [
+  ...SYMPTOM_CATEGORIES.emotional.symptoms,
+  ...SYMPTOM_CATEGORIES.physical.symptoms,
+  ...SYMPTOM_CATEGORIES.quirky.symptoms
+];
+
 // Onboarding question flow
 const ONBOARDING_QUESTIONS = [
   {
     key: "welcome",
     message: "Hey there! 👋 I'm Logan, your personal cycle companion. I'm here to help you understand your patterns and feel more prepared for what's ahead. Let's get to know each other a bit first—what's your name?",
     field: "full_name",
-    parseType: "text"
+    parseType: "text",
+    inputType: "text"
   },
   {
-    key: "last_period",
-    message: "Nice to meet you, {name}! 🌸 To give you the most relevant insights, I need to know where you are in your cycle. When did your last period start? (Just give me an approximate date like 'January 15' or '2 weeks ago')",
-    field: "last_period_start",
-    parseType: "date"
+    key: "age",
+    message: "Nice to meet you, {name}! 🌸 To personalize your experience, how old are you?",
+    field: "age",
+    parseType: "number",
+    inputType: "text"
   },
   {
     key: "cycle_length",
-    message: "Got it! And how long is your typical cycle? Most people are between 24-35 days. If you're not sure, 28 days is a good starting point.",
+    message: "Thanks! And how long is your typical cycle? Most people are between 24-35 days. If you're not sure, 28 days is a good starting point.",
     field: "cycle_length_days",
-    parseType: "number"
+    parseType: "number",
+    inputType: "text"
+  },
+  {
+    key: "last_period",
+    message: "Got it! When did your last period start? You can type a date or pick one from the calendar 📅",
+    field: "last_period_start",
+    parseType: "date",
+    inputType: "date_picker"
   },
   {
     key: "symptoms",
-    message: "Now for the important stuff—what symptoms tend to bother you most? Things like mood swings, cramps, fatigue, anxiety, brain fog, headaches... Just tell me whatever comes to mind!",
+    message: "Now let's understand what troubles you most. Select all the symptoms that are confusing or troubling around your cycle:",
     field: "typical_symptoms",
-    parseType: "symptoms"
+    parseType: "symptoms",
+    inputType: "symptom_picker"
   },
   {
     key: "anchor_symptom",
-    message: "If you had to pick ONE symptom that really disrupts your life or catches you off guard, what would it be? This helps me give you heads-up warnings when it's likely coming.",
+    message: "Which one troubles you the most? This becomes your **Anchor Symptom** – the one I'll especially watch for and help you prepare for.",
     field: "anchor_symptom",
-    parseType: "text"
+    parseType: "anchor",
+    inputType: "anchor_picker"
   },
   {
     key: "complete",
-    message: "Perfect! I've got everything I need to start giving you personalized insights. 🎯 You'll hear from me a couple times a week with predictions and tips based on where you are in your cycle. Feel free to message me anytime with updates or questions!",
+    message: "Perfect! 🎯 I've got everything I need to start giving you personalized insights. You'll hear from me with predictions and tips based on where you are in your cycle. Feel free to message me anytime!",
     field: null,
-    parseType: null
+    parseType: null,
+    inputType: null
   }
 ];
 
@@ -78,7 +140,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { action, userMessage } = body;
+    const { action, userMessage, selectedSymptoms, anchorSymptom, selectedDate } = body;
 
     console.log("Chat onboarding action:", action, "for user:", user.id);
 
@@ -89,7 +151,6 @@ serve(async (req) => {
       .eq("email", user.email)
       .single();
 
-    // If no participant exists, we need to track onboarding via chat metadata
     // Get existing chat messages to determine onboarding state
     const { data: messages } = await supabase
       .from("chat_messages")
@@ -99,7 +160,6 @@ serve(async (req) => {
 
     // Find onboarding state from messages
     const systemMessages = messages?.filter(m => m.message_type === "onboarding") || [];
-    const userMessages = messages?.filter(m => m.role === "user" && m.message_type === "text") || [];
 
     // Action: Initialize onboarding (send first message)
     if (action === "init") {
@@ -119,7 +179,11 @@ serve(async (req) => {
         role: "assistant",
         content: welcomeQ.message,
         message_type: "onboarding",
-        metadata: { onboarding_step: 0, expecting_field: welcomeQ.field }
+        metadata: { 
+          onboarding_step: 0, 
+          expecting_field: welcomeQ.field,
+          input_type: welcomeQ.inputType
+        }
       });
 
       if (insertError) {
@@ -136,13 +200,6 @@ serve(async (req) => {
 
     // Action: Process user response and continue onboarding
     if (action === "respond") {
-      if (!userMessage) {
-        return new Response(
-          JSON.stringify({ error: "No message provided" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
       // Find the last onboarding question asked
       const lastOnboardingMsg = [...(systemMessages || [])].reverse().find(
         m => m.metadata?.onboarding_step !== undefined
@@ -168,19 +225,22 @@ serve(async (req) => {
       }
 
       // Parse the user's response based on expected field type
-      let parsedValue: any = userMessage.trim();
+      let parsedValue: any = userMessage?.trim() || "";
       const parseType = currentQuestion.parseType;
 
       if (parseType === "date") {
-        // Try to parse date from natural language
-        parsedValue = parseNaturalDate(userMessage);
+        // Use selected date if provided, otherwise parse from text
+        parsedValue = selectedDate || parseNaturalDate(userMessage || "");
       } else if (parseType === "number") {
         // Extract number
-        const match = userMessage.match(/\d+/);
-        parsedValue = match ? parseInt(match[0], 10) : 28;
+        const match = (userMessage || "").match(/\d+/);
+        parsedValue = match ? parseInt(match[0], 10) : (currentQuestion.field === "age" ? 30 : 28);
       } else if (parseType === "symptoms") {
-        // Split symptoms into array
-        parsedValue = parseSymptoms(userMessage);
+        // Use selected symptoms array
+        parsedValue = selectedSymptoms || [];
+      } else if (parseType === "anchor") {
+        // Use anchor symptom
+        parsedValue = anchorSymptom || userMessage?.trim() || "";
       }
 
       // Update participant record if we have one
@@ -234,17 +294,33 @@ serve(async (req) => {
         nextMessage = nextMessage.replace("{name}", firstName);
       }
 
+      // Build metadata for next message
+      const nextMetadata: Record<string, any> = { 
+        onboarding_step: nextStep, 
+        expecting_field: nextQuestion.field,
+        input_type: nextQuestion.inputType,
+        onboarding_complete: nextStep === ONBOARDING_QUESTIONS.length - 1
+      };
+
+      // If symptoms step, include the categories
+      if (nextQuestion.inputType === "symptom_picker") {
+        nextMetadata.symptom_categories = SYMPTOM_CATEGORIES;
+      }
+
+      // If anchor step, include the selected symptoms
+      if (nextQuestion.inputType === "anchor_picker") {
+        // Get the symptoms from participant or from the message we just processed
+        const symptomsForAnchor = participant?.typical_symptoms || selectedSymptoms || [];
+        nextMetadata.available_symptoms = symptomsForAnchor;
+      }
+
       // Insert the next question
       const { error: nextError } = await supabase.from("chat_messages").insert({
         user_id: user.id,
         role: "assistant",
         content: nextMessage,
         message_type: nextStep === ONBOARDING_QUESTIONS.length - 1 ? "text" : "onboarding",
-        metadata: { 
-          onboarding_step: nextStep, 
-          expecting_field: nextQuestion.field,
-          onboarding_complete: nextStep === ONBOARDING_QUESTIONS.length - 1
-        }
+        metadata: nextMetadata
       });
 
       if (nextError) {
@@ -335,66 +411,4 @@ function parseNaturalDate(input: string): string {
   const defaultDate = new Date(now);
   defaultDate.setDate(defaultDate.getDate() - 7);
   return defaultDate.toISOString().split("T")[0];
-}
-
-// Helper: Parse symptoms from natural language
-function parseSymptoms(input: string): string[] {
-  const knownSymptoms = [
-    "Rage spikes", "Anxiety spikes", "Short fuse", "Sudden dread",
-    "Feeling overwhelmed", "Brain fog", "Energy crashes", "Wired but tired",
-    "Ringing in ears", "Muffled hearing", "Migraines", "Deep fatigue",
-    "Chin or jaw acne breakouts", "Random shame spiral", "One stinky armpit",
-    "Feeling emotionally allergic to people", "Cramps", "Bloating",
-    "Mood swings", "Headaches", "Back pain", "Breast tenderness",
-    "Food cravings", "Irritability", "Depression", "Insomnia"
-  ];
-
-  const lower = input.toLowerCase();
-  const found: string[] = [];
-
-  // Check for known symptoms
-  for (const symptom of knownSymptoms) {
-    if (lower.includes(symptom.toLowerCase())) {
-      found.push(symptom);
-    }
-  }
-
-  // Also check for partial matches
-  const simpleMatches: Record<string, string> = {
-    "cramp": "Cramps",
-    "bloat": "Bloating",
-    "mood": "Mood swings",
-    "headache": "Headaches",
-    "migraine": "Migraines",
-    "fatigue": "Deep fatigue",
-    "tired": "Deep fatigue",
-    "anxious": "Anxiety spikes",
-    "anxiety": "Anxiety spikes",
-    "brain fog": "Brain fog",
-    "fog": "Brain fog",
-    "irritable": "Irritability",
-    "angry": "Rage spikes",
-    "rage": "Rage spikes",
-    "sad": "Depression",
-    "depressed": "Depression",
-    "overwhelm": "Feeling overwhelmed",
-    "acne": "Chin or jaw acne breakouts",
-    "back pain": "Back pain",
-    "insomnia": "Insomnia",
-    "sleep": "Insomnia",
-    "cravings": "Food cravings"
-  };
-
-  for (const [keyword, symptom] of Object.entries(simpleMatches)) {
-    if (lower.includes(keyword) && !found.includes(symptom)) {
-      found.push(symptom);
-    }
-  }
-
-  // If nothing matched, store the raw input as a custom symptom
-  if (found.length === 0) {
-    return [input.trim()];
-  }
-
-  return found;
 }
