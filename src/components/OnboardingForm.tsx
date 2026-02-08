@@ -58,7 +58,7 @@ const onboardingSchema = z.object({
       const normalized = normalizePhoneNumber(val);
       return /^\+\d{10,15}$/.test(normalized);
     }, "Enter number with country code (e.g., +972501234567)"),
-  email: z.string().email("Please enter a valid email").optional().or(z.literal("")),
+  email: z.string().email("Please enter a valid email"),
   age: z.number().min(13).max(65).optional(),
   cycle_length_days: z.number().min(21).max(45).optional(),
   last_period_start: z.date().optional(),
@@ -235,6 +235,7 @@ export function OnboardingForm() {
       validationResult.error.errors.forEach((err) => {
         if (err.path[0] === "full_name") missingFields.push("Name");
         if (err.path[0] === "whatsapp_number") missingFields.push("Phone Number");
+        if (err.path[0] === "email") missingFields.push("Email");
       });
       
       const fieldList = missingFields.length > 0 
@@ -373,7 +374,7 @@ export function OnboardingForm() {
     await updateTelegramId();
   };
 
-  const canProceedStep1 = watch("full_name") && watch("whatsapp_number");
+  const canProceedStep1 = watch("full_name") && watch("whatsapp_number") && watch("email");
   const canProceedStep4 = anchorSymptom && (anchorSymptom !== "Other" || anchorOther.trim());
 
   // Clear draft and start over
@@ -458,9 +459,7 @@ export function OnboardingForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-sm">
-              Email <span className="text-muted-foreground">(optional)</span>
-            </Label>
+            <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
@@ -468,6 +467,9 @@ export function OnboardingForm() {
               {...register("email")}
               className="h-12"
             />
+            {errors.email && (
+              <p className="text-sm text-destructive">{errors.email.message}</p>
+            )}
           </div>
 
           <Button 
