@@ -59,7 +59,7 @@ const ALL_SYMPTOMS = [
 const ONBOARDING_QUESTIONS = [
   {
     key: "age",
-    message: "Hey {name}. I'm Logan—I help you work with your cycle instead of against it. To give you useful insights on energy, focus, and recovery, I need to learn your patterns. Let's start simple: how old are you?",
+    message: "Hey {name}. I'm Logan. I help you work with your cycle instead of against it. To give you useful insights on energy, focus, and recovery, I need to learn your patterns. Let's start simple: how old are you?",
     field: "age",
     parseType: "number",
     inputType: "text"
@@ -87,14 +87,14 @@ const ONBOARDING_QUESTIONS = [
   },
   {
     key: "anchor_symptom",
-    message: "Which one throws you off the most? This becomes your Anchor Symptom—the thing I'll help you see coming before it arrives.",
+    message: "Which one throws you off the most? This becomes your Anchor Symptom, the thing I'll help you see coming before it arrives.",
     field: "anchor_symptom",
     parseType: "anchor",
     inputType: "anchor_picker"
   },
   {
     key: "complete",
-    message: "You're all set. I'll start learning your patterns and send you insights you can actually use—when to push, when to ease up, and how to plan around what's coming. Welcome aboard.",
+    message: "You're all set. I'll start learning your patterns and send you insights you can actually use: when to push, when to ease up, and how to plan around what's coming. Welcome aboard.",
     field: null,
     parseType: null,
     inputType: null

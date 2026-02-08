@@ -379,10 +379,10 @@ export function InsightsTab({ userId }: InsightsTabProps) {
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      {insightType === "awareness" && "Phase education — what's happening in their body right now"}
-                      {insightType === "pattern" && "Personal pattern — \"We noticed X happens for you during Y\""}
-                      {insightType === "validation" && "Emotional support — normalizing their experience"}
-                      {insightType === "action" && "Specific recommendation — based on their data and patterns"}
+                      {insightType === "awareness" && "Phase education: what's happening in their body right now"}
+                      {insightType === "pattern" && "Personal pattern: \"We noticed X happens for you during Y\""}
+                      {insightType === "validation" && "Emotional support: normalizing their experience"}
+                      {insightType === "action" && "Specific recommendation: based on their data and patterns"}
                     </p>
                   </div>
 

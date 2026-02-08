@@ -27,7 +27,7 @@ export const OnboardingProgress = ({ currentStep, totalSteps }: OnboardingProgre
             Step {Math.min(currentStep + 1, totalSteps)} of {totalSteps}
             {currentStep < totalSteps && (
               <span className="text-muted-foreground font-normal ml-2">
-                — {STEP_LABELS[currentStep] || ""}
+                / {STEP_LABELS[currentStep] || ""}
               </span>
             )}
           </span>

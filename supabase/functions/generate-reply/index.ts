@@ -96,7 +96,7 @@ REPLY GUIDELINES:
 1. Acknowledge their feedback authentically (not just "thanks for sharing")
 2. If they shared something specific, respond to THAT specifically with strategic context
 3. End with a forward-looking insight about what's coming or what to adjust
-4. Be warm but not effusive—like a trusted advisor`;
+4. Be warm but not effusive, like a trusted advisor`;
 
     const conversationContext = recentFeedback?.map(f => {
       let entry = `Original insight: ${f.insights?.content || 'N/A'}`;

@@ -597,7 +597,7 @@ export function ParticipantDetailPanel({
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
-                {insightType === "awareness" && "Phase education — what's happening in their body"}
+                {insightType === "awareness" && "Phase education: what's happening in their body"}
                 {insightType === "pattern" && "Personal pattern observation"}
                 {insightType === "validation" && "Emotional support and normalization"}
                 {insightType === "action" && "Specific recommendation based on data"}
