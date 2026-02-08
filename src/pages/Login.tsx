@@ -4,7 +4,13 @@ import { LoganLogo } from "@/components/LoganLogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,40 +32,52 @@ const passwordSchema = z.object({
 
 type AuthView = "login" | "signup" | "forgot-password" | "reset-password";
 
+const getInitialView = (): AuthView => {
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("type") === "recovery") return "reset-password";
+
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    if (hashParams.get("type") === "recovery") return "reset-password";
+  } catch {
+    // ignore
+  }
+
+  return "login";
+};
+
 const Login = () => {
-  const [view, setView] = useState<AuthView>("login");
+  const [view, setView] = useState<AuthView>(getInitialView);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isCheckingRecovery, setIsCheckingRecovery] = useState(true);
-  
+
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setView("reset-password");
-        setIsCheckingRecovery(false);
-      } else if (event === "USER_UPDATED" && view === "reset-password") {
+        return;
+      }
+
+      if (event === "USER_UPDATED") {
         toast({
-          title: "Password updated!",
+          title: "Password updated",
           description: "You can now sign in with your new password.",
         });
-        supabase.auth.signOut();
         setView("login");
         setPassword("");
       }
-      setIsCheckingRecovery(false);
     });
 
-    // Quick check for recovery session
-    setTimeout(() => setIsCheckingRecovery(false), 500);
-
     return () => subscription.unsubscribe();
-  }, [view]);
+  }, []);
 
   useEffect(() => {
     if (!loading && user && view !== "reset-password") {
@@ -80,23 +98,26 @@ const Login = () => {
             description: validation.error.errors[0].message,
             variant: "destructive",
           });
-          setIsLoading(false);
           return;
         }
 
         const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
           redirectTo: `${window.location.origin}/login`,
         });
-        
+
         if (error) throw error;
-        
+
         toast({
           title: "Check your email",
           description: "We sent you a password reset link.",
         });
+
         setView("login");
         setEmail("");
-      } else if (view === "reset-password") {
+        return;
+      }
+
+      if (view === "reset-password") {
         const validation = passwordSchema.safeParse({ password });
         if (!validation.success) {
           toast({
@@ -104,78 +125,78 @@ const Login = () => {
             description: validation.error.errors[0].message,
             variant: "destructive",
           });
-          setIsLoading(false);
           return;
         }
 
         const { error } = await supabase.auth.updateUser({ password });
-        
         if (error) throw error;
-        
+
         await supabase.auth.signOut();
-        
+
         toast({
-          title: "Password updated!",
-          description: "You can now sign in with your new password.",
+          title: "Password updated",
+          description: "Please sign in with your new password.",
         });
+
         setView("login");
         setPassword("");
-      } else {
-        const validation = authSchema.safeParse({ email, password });
-        if (!validation.success) {
-          toast({
-            title: "Validation error",
-            description: validation.error.errors[0].message,
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
+        return;
+      }
 
-        if (view === "signup" && !fullName.trim()) {
+      const validation = authSchema.safeParse({ email, password });
+      if (!validation.success) {
+        toast({
+          title: "Validation error",
+          description: validation.error.errors[0].message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (view === "signup") {
+        if (!fullName.trim()) {
           toast({ title: "Please enter your name", variant: "destructive" });
-          setIsLoading(false);
           return;
         }
 
-        if (view === "signup") {
-          const { error } = await supabase.auth.signUp({
-            email: email.trim(),
-            password,
-            options: {
-              emailRedirectTo: `${window.location.origin}/chat`,
-              data: { full_name: fullName.trim() },
-            },
-          });
+        const { error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/chat`,
+            data: { full_name: fullName.trim() },
+          },
+        });
 
-          if (error) {
-            if (error.message.includes("already registered")) {
-              toast({
-                title: "Account exists",
-                description: "This email is already registered. Try signing in instead.",
-                variant: "destructive",
-              });
-            } else {
-              throw error;
-            }
-          } else {
+        if (error) {
+          if (error.message.includes("already registered")) {
             toast({
-              title: "Account created!",
-              description: "Please check your email to verify your account.",
+              title: "Account exists",
+              description: "This email is already registered. Try signing in instead.",
+              variant: "destructive",
             });
-            setView("login");
-            setPassword("");
+          } else {
+            throw error;
           }
         } else {
-          const { error } = await supabase.auth.signInWithPassword({
-            email: email.trim(),
-            password,
+          toast({
+            title: "Account created",
+            description: "Please check your email to verify your account.",
           });
-
-          if (error) throw error;
-          toast({ title: "Welcome back!" });
+          setView("login");
+          setPassword("");
         }
+
+        return;
       }
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (error) throw error;
+      toast({ title: "Signed in" });
     } catch (error) {
       console.error("Auth error:", error);
       toast({
@@ -190,49 +211,70 @@ const Login = () => {
 
   const getTitle = () => {
     switch (view) {
-      case "forgot-password": return "Reset Password";
-      case "reset-password": return "Set New Password";
-      case "signup": return "Join Logan";
-      default: return "Welcome Back";
+      case "forgot-password":
+        return "Reset password";
+      case "reset-password":
+        return "Set a new password";
+      case "signup":
+        return "Join Logan";
+      default:
+        return "Welcome back";
     }
   };
 
   const getSubtitle = () => {
     switch (view) {
-      case "forgot-password": return "Enter your email to receive a reset link";
-      case "reset-password": return "Choose a new password for your account";
-      case "signup": return "Get personalized cycle insights delivered to you";
-      default: return "Sign in to continue your conversation";
+      case "forgot-password":
+        return "Enter your email to receive a reset link";
+      case "reset-password":
+        return "Choose a new password for your account";
+      case "signup":
+        return "Get personalized cycle insights delivered to you";
+      default:
+        return "Sign in to continue your conversation";
     }
   };
 
   const getCardTitle = () => {
     switch (view) {
-      case "forgot-password": return "Forgot Password";
-      case "reset-password": return "New Password";
-      case "signup": return "Create Account";
-      default: return "Sign In";
+      case "forgot-password":
+        return "Forgot password";
+      case "reset-password":
+        return "New password";
+      case "signup":
+        return "Create account";
+      default:
+        return "Sign in";
     }
   };
 
   const getButtonText = () => {
     if (isLoading) {
       switch (view) {
-        case "forgot-password": return "Sending...";
-        case "reset-password": return "Updating...";
-        case "signup": return "Creating account...";
-        default: return "Signing in...";
+        case "forgot-password":
+          return "Sending...";
+        case "reset-password":
+          return "Updating...";
+        case "signup":
+          return "Creating...";
+        default:
+          return "Signing in...";
       }
     }
+
     switch (view) {
-      case "forgot-password": return "Send Reset Link";
-      case "reset-password": return "Update Password";
-      case "signup": return "Create Account";
-      default: return "Sign In";
+      case "forgot-password":
+        return "Send reset link";
+      case "reset-password":
+        return "Update password";
+      case "signup":
+        return "Create account";
+      default:
+        return "Sign in";
     }
   };
 
-  if (loading || isCheckingRecovery) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -247,32 +289,29 @@ const Login = () => {
           <div className="flex justify-center mb-4">
             <LoganLogo size="lg" showGlow />
           </div>
-          <h1 className="text-2xl font-display font-bold text-primary">
-            {getTitle()}
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            {getSubtitle()}
-          </p>
+          <h1 className="text-2xl font-display font-bold text-primary">{getTitle()}</h1>
+          <p className="text-muted-foreground mt-2">{getSubtitle()}</p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">{getCardTitle()}</CardTitle>
             <CardDescription>
-              {view === "forgot-password" 
-                ? "We'll send you a link to reset your password"
+              {view === "forgot-password"
+                ? "We'll email you a reset link"
                 : view === "reset-password"
                 ? "Enter your new password below"
-                : view === "signup" 
+                : view === "signup"
                 ? "Enter your details to get started"
                 : "Enter your email and password"}
             </CardDescription>
           </CardHeader>
+
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {view === "signup" && (
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Your Name</Label>
+                  <Label htmlFor="fullName">Your name</Label>
                   <Input
                     id="fullName"
                     type="text"
@@ -283,7 +322,7 @@ const Login = () => {
                   />
                 </div>
               )}
-              
+
               {(view === "login" || view === "signup" || view === "forgot-password") && (
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
@@ -302,7 +341,7 @@ const Login = () => {
               {(view === "login" || view === "signup" || view === "reset-password") && (
                 <div className="space-y-2">
                   <Label htmlFor="password">
-                    {view === "reset-password" ? "New Password" : "Password"}
+                    {view === "reset-password" ? "New password" : "Password"}
                   </Label>
                   <div className="relative">
                     <Input
@@ -312,14 +351,22 @@ const Login = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="h-12 pr-12"
-                      autoComplete={view === "signup" || view === "reset-password" ? "new-password" : "current-password"}
+                      autoComplete={
+                        view === "signup" || view === "reset-password"
+                          ? "new-password"
+                          : "current-password"
+                      }
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      {showPassword ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -340,11 +387,7 @@ const Login = () => {
                 </div>
               )}
 
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full h-12"
-              >
+              <Button type="submit" disabled={isLoading} className="w-full h-12">
                 {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {getButtonText()}
               </Button>
@@ -373,7 +416,9 @@ const Login = () => {
                   }}
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
-                  {view === "login" ? "New here? Create an account" : "Already have an account? Sign in"}
+                  {view === "login"
+                    ? "New here? Create an account"
+                    : "Already have an account? Sign in"}
                 </button>
               )}
             </div>
@@ -395,3 +440,4 @@ const Login = () => {
 };
 
 export default Login;
+
