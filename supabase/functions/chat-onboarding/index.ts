@@ -364,7 +364,7 @@ serve(async (req) => {
             user_id: user.id,
             role: "assistant",
             content: firstInsight,
-            message_type: "insight",
+            message_type: "text",
             metadata: {
               has_cycle_visual: true,
               cycle_day: cycleInfo.cycleDay,
