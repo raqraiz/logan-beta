@@ -73,7 +73,7 @@ const Index = () => {
                   </p>
                 </div>
                 <div className="space-y-4">
-                  <Link to="/auth">
+                  <Link to="/login">
                     <Button className="w-full" size="lg">
                       Get Started
                       <ArrowRight className="w-4 h-4 ml-2" />
