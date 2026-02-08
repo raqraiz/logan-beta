@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { SymptomPicker } from "@/components/chat/SymptomPicker";
 import { AnchorPicker } from "@/components/chat/AnchorPicker";
 import { DatePickerInput } from "@/components/chat/DatePickerInput";
+import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 
 interface SymptomCategory {
   label: string;
@@ -51,6 +52,7 @@ const Chat = () => {
   const [isSending, setIsSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [isOnboarding, setIsOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   
   const { user, loading: authLoading, signOut } = useAuth();
@@ -92,13 +94,21 @@ const Chat = () => {
       setMessages(typedMessages);
       setIsLoading(false);
 
-      // Check if onboarding is in progress
+      // Check if onboarding is in progress and get current step
       const hasOnboardingMessages = typedMessages.some(
         m => m.message_type === "onboarding" || m.metadata?.onboarding_step !== undefined
       );
       const isOnboardingComplete = typedMessages.some(
         m => m.metadata?.onboarding_complete === true
       );
+      
+      // Find the latest onboarding step
+      const latestOnboardingMsg = [...typedMessages].reverse().find(
+        m => m.metadata?.onboarding_step !== undefined
+      );
+      if (latestOnboardingMsg?.metadata?.onboarding_step !== undefined) {
+        setOnboardingStep(latestOnboardingMsg.metadata.onboarding_step);
+      }
       
       setIsOnboarding(hasOnboardingMessages && !isOnboardingComplete);
 
@@ -130,6 +140,11 @@ const Chat = () => {
             // Check if onboarding is complete
             if (newMessage.metadata?.onboarding_complete) {
               setIsOnboarding(false);
+            }
+            
+            // Update onboarding step from new message
+            if (newMessage.metadata?.onboarding_step !== undefined) {
+              setOnboardingStep(newMessage.metadata.onboarding_step);
             }
             
             return [...prev, newMessage];
@@ -307,7 +322,7 @@ const Chat = () => {
             <div>
               <h1 className="font-display font-semibold text-foreground">Logan</h1>
               <p className="text-xs text-muted-foreground">
-                {isOnboarding ? "Getting to know you..." : "Your cycle companion"}
+                {isOnboarding ? "Setting up your profile" : "Your performance partner"}
               </p>
             </div>
           </div>
@@ -317,6 +332,11 @@ const Chat = () => {
           </Button>
         </div>
       </header>
+
+      {/* Onboarding Progress Bar */}
+      {isOnboarding && (
+        <OnboardingProgress currentStep={onboardingStep} totalSteps={5} />
+      )}
 
       {/* Messages */}
       <ScrollArea className="flex-1 px-4">
