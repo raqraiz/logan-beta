@@ -126,12 +126,20 @@ export const TrialChat = () => {
               <p className="text-xs text-muted-foreground">Intelligent cycle guidance</p>
             </div>
           </div>
-          <Link
-            to="/consent"
-            className="text-sm text-muted-foreground hover:text-primary transition-colors"
-          >
-            Privacy
-          </Link>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowAuth(true)}
+              className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+            >
+              Sign in
+            </button>
+            <Link
+              to="/consent"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              Privacy
+            </Link>
+          </div>
         </div>
       </header>
 
