@@ -14,6 +14,12 @@ interface TrialMessage {
   content: string;
 }
 
+const SUGGESTED_QUESTIONS = [
+  "What is the luteal phase?",
+  "When do I have the most energy in my cycle?",
+  "How can cycle awareness help my workouts?",
+];
+
 export const TrialChat = () => {
   const [messages, setMessages] = useState<TrialMessage[]>([
     {
@@ -99,6 +105,15 @@ export const TrialChat = () => {
     inputRef.current?.focus();
   };
 
+  const handleSuggestionClick = (question: string) => {
+    setInputValue(question);
+    // Auto-submit after a brief delay so user sees what was selected
+    setTimeout(() => {
+      const form = document.querySelector('form');
+      form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    }, 100);
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -139,6 +154,21 @@ export const TrialChat = () => {
               </div>
             </div>
           ))}
+
+          {/* Suggested questions - show only at start */}
+          {messages.length === 1 && !isTyping && (
+            <div className="flex flex-wrap gap-2 justify-start pl-2">
+              {SUGGESTED_QUESTIONS.map((question) => (
+                <button
+                  key={question}
+                  onClick={() => handleSuggestionClick(question)}
+                  className="px-4 py-2 text-sm bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-full transition-colors"
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Typing indicator */}
           {isTyping && (
