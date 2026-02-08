@@ -8,16 +8,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { Check, RefreshCw, Mail } from "lucide-react";
+import { Check, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { LoganLogo } from "./LoganLogo";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useNavigate } from "react-router-dom";
 
 const STORAGE_KEY = "logan_onboarding_draft";
 
 const onboardingSchema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters").max(100),
   email: z.string().email("Please enter a valid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 type OnboardingData = z.infer<typeof onboardingSchema>;
@@ -29,11 +31,12 @@ interface SavedDraft {
 }
 
 export function OnboardingForm() {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [consentGiven, setConsentGiven] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
-  const [submittedEmail, setSubmittedEmail] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const { register, handleSubmit, formState: { errors }, watch, setValue, getValues } = useForm<OnboardingData>({
     resolver: zodResolver(onboardingSchema),
@@ -74,9 +77,12 @@ export function OnboardingForm() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
   }, [step, consentGiven, getValues]);
 
-  const canProceedStep1 = watch("full_name") && watch("email");
+  const watchedName = watch("full_name");
+  const watchedEmail = watch("email");
+  const watchedPassword = watch("password");
+  const canProceedStep1 = watchedName && watchedEmail && watchedPassword;
 
-  // Register and send magic link
+  // Register and create account
   const submitForm = async () => {
     const data = getValues();
     const validationResult = onboardingSchema.safeParse(data);
@@ -86,6 +92,7 @@ export function OnboardingForm() {
       validationResult.error.errors.forEach((err) => {
         if (err.path[0] === "full_name") missingFields.push("Name");
         if (err.path[0] === "email") missingFields.push("Email");
+        if (err.path[0] === "password") missingFields.push("Password");
       });
       
       const fieldList = missingFields.length > 0 
@@ -118,7 +125,7 @@ export function OnboardingForm() {
           participantData: {
             full_name: data.full_name,
             email: data.email,
-            whatsapp_number: data.email, // Using email as identifier now
+            whatsapp_number: data.email,
             consent_given: consentGiven,
             consent_given_at: new Date().toISOString(),
             preferred_channel: "web",
@@ -129,27 +136,37 @@ export function OnboardingForm() {
       if (error) throw error;
       if (result.error) throw new Error(result.error);
 
-      // Send magic link email
-      const redirectUrl = `${window.location.origin}/chat`;
-      const { error: authError } = await supabase.auth.signInWithOtp({
+      // Create account with email/password
+      const { error: authError } = await supabase.auth.signUp({
         email: data.email,
+        password: data.password,
         options: {
-          emailRedirectTo: redirectUrl,
+          emailRedirectTo: `${window.location.origin}/chat`,
           data: {
             full_name: data.full_name,
           }
         },
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        if (authError.message.includes("already registered")) {
+          toast({
+            title: "Account exists",
+            description: "This email is already registered. Please sign in instead.",
+            variant: "destructive",
+          });
+          navigate("/login");
+          return;
+        }
+        throw authError;
+      }
 
       localStorage.removeItem(STORAGE_KEY);
-      setSubmittedEmail(data.email);
       setIsComplete(true);
       
       toast({
-        title: "Check your email! ✨",
-        description: "We sent you a magic link to access Logan.",
+        title: "Account created! 🎉",
+        description: "Please check your email to verify your account.",
       });
     } catch (error) {
       console.error("Registration error:", error);
@@ -174,21 +191,17 @@ export function OnboardingForm() {
     return (
       <div className="text-center py-8 animate-fade-in">
         <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
-          <Mail className="w-10 h-10 text-primary" />
+          <Check className="w-10 h-10 text-primary" />
         </div>
-        <h3 className="text-2xl font-display font-semibold mb-3">Check Your Email! 📧</h3>
+        <h3 className="text-2xl font-display font-semibold mb-3">You're All Set! 🎉</h3>
         <p className="text-muted-foreground max-w-sm mx-auto mb-4">
-          We sent a magic link to <strong className="text-foreground">{submittedEmail}</strong>
-        </p>
-        <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-          Click the link in the email to access Logan and start getting personalized insights.
+          Check your email to verify your account, then sign in to start your journey with Logan.
         </p>
         <Button 
-          variant="outline" 
-          className="mt-6"
-          onClick={clearDraft}
+          onClick={() => navigate("/login")}
+          className="mt-4"
         >
-          Use a different email
+          Go to Sign In
         </Button>
       </div>
     );
@@ -208,13 +221,13 @@ export function OnboardingForm() {
         ))}
       </div>
 
-      {/* Step 1 - Name & Email */}
+      {/* Step 1 - Name, Email & Password */}
       {step === 1 && (
         <div className="space-y-5 animate-fade-in">
           <div className="text-center mb-6">
             <LoganLogo size="md" showGlow={false} className="mx-auto mb-3" />
-            <h3 className="text-xl font-display font-semibold">Welcome to Logan</h3>
-            <p className="text-sm text-muted-foreground mt-1">Your personalized cycle companion</p>
+            <h3 className="text-xl font-display font-semibold">Create Your Account</h3>
+            <p className="text-sm text-muted-foreground mt-1">Join the intelligent cycle guidance pilot</p>
           </div>
           
           <div className="space-y-2">
@@ -242,8 +255,31 @@ export function OnboardingForm() {
             {errors.email && (
               <p className="text-sm text-destructive">{errors.email.message}</p>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Create a password"
+                {...register("password")}
+                className="h-12 pr-12"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+            {errors.password && (
+              <p className="text-sm text-destructive">{errors.password.message}</p>
+            )}
             <p className="text-xs text-muted-foreground">
-              We'll send you a magic link to access Logan
+              At least 6 characters
             </p>
           </div>
 
