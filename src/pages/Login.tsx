@@ -33,30 +33,11 @@ const passwordSchema = z.object({
 type AuthView = "login" | "signup" | "forgot-password" | "reset-password";
 
 const getInitialView = (): AuthView => {
-  // Check sessionStorage flag set by index.html before Supabase cleaned the URL
-  const recoveryFlag = sessionStorage.getItem("supabase_password_recovery");
-  console.log("[Login Debug] sessionStorage recovery flag:", recoveryFlag);
-  
-  if (recoveryFlag === "true") {
+  // Check sessionStorage flag set by index.html inline script
+  if (sessionStorage.getItem("supabase_password_recovery") === "true") {
     sessionStorage.removeItem("supabase_password_recovery");
-    console.log("[Login Debug] Returning reset-password view");
     return "reset-password";
   }
-
-  // Fallback: check URL in case it wasn't cleaned yet
-  try {
-    const url = new URL(window.location.href);
-    console.log("[Login Debug] URL search params type:", url.searchParams.get("type"));
-    if (url.searchParams.get("type") === "recovery") return "reset-password";
-
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    console.log("[Login Debug] Hash type:", hashParams.get("type"));
-    if (hashParams.get("type") === "recovery") return "reset-password";
-  } catch {
-    // ignore
-  }
-
-  console.log("[Login Debug] Returning login view");
   return "login";
 };
 
