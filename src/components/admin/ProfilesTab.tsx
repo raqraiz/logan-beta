@@ -498,13 +498,24 @@ export function ProfilesTab() {
               >
                 <CardContent className="py-3 px-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
-                      {profile.avatar_url ? (
-                        <img src={profile.avatar_url} alt={profile.full_name} className="w-10 h-10 rounded-full object-cover" />
-                      ) : (
-                        profile.full_name[0]?.toUpperCase()
-                      )}
-                    </div>
+                    {cycleDay && phase ? (
+                      <div className="shrink-0">
+                        <ChatCycleCircle
+                          cycleDay={cycleDay}
+                          phase={phase}
+                          cycleLengthDays={profile.participant?.cycle_length_days || 28}
+                          size="sm"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-medium shrink-0">
+                        {profile.avatar_url ? (
+                          <img src={profile.avatar_url} alt={profile.full_name} className="w-10 h-10 rounded-full object-cover" />
+                        ) : (
+                          profile.full_name[0]?.toUpperCase()
+                        )}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-medium">{profile.full_name}</span>
