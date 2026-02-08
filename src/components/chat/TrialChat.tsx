@@ -75,8 +75,9 @@ export const TrialChat = () => {
 
       const aiResponse = data?.response || "I'd love to help you understand your cycle better. What would you like to know?";
       
-      // Add signup nudge after first response
-      const responseWithNudge = trialMessageCount >= 1
+      // Add signup nudge only for messages 2-5 (trialMessageCount 1-4)
+      const shouldAddNudge = trialMessageCount >= 1 && trialMessageCount <= 4;
+      const responseWithNudge = shouldAddNudge
         ? `${aiResponse}\n\nTo get personalized insights based on YOUR cycle, create a free account - it only takes a minute.`
         : aiResponse;
 
@@ -94,11 +95,12 @@ export const TrialChat = () => {
       }]);
     }
 
-    setTrialMessageCount(prev => prev + 1);
+    const newCount = trialMessageCount + 1;
+    setTrialMessageCount(newCount);
     setIsTyping(false);
 
-    // After 3 exchanges, show auth prompt
-    if (trialMessageCount >= 2) {
+    // Show auth prompt once after 5 exchanges (only if not already shown)
+    if (newCount >= 5 && !showAuth) {
       setTimeout(() => setShowAuth(true), 500);
     }
 
