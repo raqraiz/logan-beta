@@ -342,6 +342,46 @@ serve(async (req) => {
 
       console.log("Sent question step:", nextStep);
 
+      // If onboarding is complete, send the first insight with cycle circle
+      if (nextStep === ONBOARDING_QUESTIONS.length - 1 && participant) {
+        // Calculate cycle info
+        const cycleInfo = calculateCycleInfo(
+          participant.last_period_start,
+          participant.cycle_length_days
+        );
+
+        if (cycleInfo) {
+          const firstInsight = generateFirstInsight(
+            cycleInfo.phase,
+            cycleInfo.cycleDay,
+            participant.anchor_symptom || anchorSymptom
+          );
+
+          // Wait a moment before sending the insight
+          await new Promise(resolve => setTimeout(resolve, 1500));
+
+          const { error: insightError } = await supabase.from("chat_messages").insert({
+            user_id: user.id,
+            role: "assistant",
+            content: firstInsight,
+            message_type: "insight",
+            metadata: {
+              has_cycle_visual: true,
+              cycle_day: cycleInfo.cycleDay,
+              cycle_phase: cycleInfo.phase,
+              cycle_length_days: participant.cycle_length_days || 28,
+              insight_type: "awareness"
+            }
+          });
+
+          if (insightError) {
+            console.error("Error sending first insight:", insightError);
+          } else {
+            console.log("Sent first insight for phase:", cycleInfo.phase);
+          }
+        }
+      }
+
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -423,4 +463,55 @@ function parseNaturalDate(input: string): string {
   const defaultDate = new Date(now);
   defaultDate.setDate(defaultDate.getDate() - 7);
   return defaultDate.toISOString().split("T")[0];
+}
+
+// Helper: Calculate cycle day and phase from dates
+function calculateCycleInfo(
+  lastPeriodStart: string | null,
+  cycleLengthDays: number | null
+): { cycleDay: number; phase: string } | null {
+  if (!lastPeriodStart || !cycleLengthDays) return null;
+
+  const today = new Date();
+  const periodStart = new Date(lastPeriodStart);
+  const diffTime = today.getTime() - periodStart.getTime();
+  const daysSinceStart = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  // Calculate current day in cycle (1-indexed, wrapping around)
+  const cycleDay = ((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
+
+  // Determine phase using biological model
+  const menstruationEnd = 5;
+  const ovulationDay = cycleLengthDays - 14;
+  const ovulationStart = ovulationDay - 1;
+  const ovulationEnd = ovulationDay + 2;
+
+  let phase: string;
+
+  if (cycleDay <= menstruationEnd) {
+    phase = "Menstruation";
+  } else if (cycleDay < ovulationStart) {
+    phase = "Follicular";
+  } else if (cycleDay <= ovulationEnd) {
+    phase = "Ovulation";
+  } else {
+    phase = "Luteal";
+  }
+
+  return { cycleDay, phase };
+}
+
+// Helper: Generate first insight based on phase
+function generateFirstInsight(phase: string, cycleDay: number, anchorSymptom: string | null): string {
+  const phaseInsights: Record<string, string> = {
+    Menstruation: `Day ${cycleDay}. Your body is shedding and resetting. Energy is typically at its lowest, and inflammation markers tend to peak. ${anchorSymptom ? `Watch for ${anchorSymptom.toLowerCase()} to show up stronger than usual.` : "This is a good window to prioritize rest over performance."}`,
+    
+    Follicular: `Day ${cycleDay}. Estrogen is climbing, which usually means sharper focus, better verbal fluency, and rising energy. ${anchorSymptom ? `Your ${anchorSymptom.toLowerCase()} tends to ease during this phase.` : "Good window for challenging work, social energy, and starting new projects."}`,
+    
+    Ovulation: `Day ${cycleDay}. You're in your fertile window. Estrogen peaks, often bringing peak social energy and confidence. ${anchorSymptom ? `If ${anchorSymptom.toLowerCase()} hits, it may feel amplified.` : "Communication and collaboration tend to flow more easily now."}`,
+    
+    Luteal: `Day ${cycleDay}. Progesterone is dominant now, which can lower stress tolerance and shorten your fuse. ${anchorSymptom ? `This is when ${anchorSymptom.toLowerCase()} typically surfaces for you.` : "Notice if you're more reactive or need more recovery time than usual."}`
+  };
+
+  return phaseInsights[phase] || phaseInsights.Follicular;
 }
