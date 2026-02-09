@@ -642,14 +642,18 @@ const Chat = () => {
                     </div>
                   )}
 
-                  {/* Conversation starters for proactive insights */}
+                  {/* Conversation starters for proactive insights or post-onboarding prompt */}
                   {isLastMessage && 
                    message.role === "assistant" && 
-                   !isOnboarding && 
-                   message.metadata?.conversation_starters && 
-                   message.metadata.conversation_starters.length > 0 && (
+                   !isOnboarding && (
                     <ConversationStarters
-                      starters={message.metadata.conversation_starters}
+                      starters={
+                        message.metadata?.conversation_starters && message.metadata.conversation_starters.length > 0
+                          ? message.metadata.conversation_starters
+                          : message.metadata?.onboarding_complete || message.metadata?.has_cycle_visual
+                            ? ["What can I expect tomorrow?"]
+                            : []
+                      }
                       onSelect={(starter) => {
                         setInputValue(starter);
                         sendAIMessage(starter);
