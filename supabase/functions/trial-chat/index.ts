@@ -52,7 +52,7 @@ function pickResponse(lastUserMessage: string) {
   }
 
   // Fallback
-  return "I can help explain cycle phases and how they tend to affect energy, mood, and training. What are you trying to understand right now: a specific phase (like luteal), a symptom (like cravings or irritability), or performance (like workouts and focus)?";
+  return "Each phase of your cycle shifts how you think, move, and recover. Tell me what you want to optimize: energy, training, focus, or a specific symptom.";
 }
 
 Deno.serve(async (req) => {
@@ -83,8 +83,7 @@ Deno.serve(async (req) => {
     console.error("Trial chat error:", error);
     return new Response(
       JSON.stringify({
-        response:
-          "I can help explain cycle phases and how they affect energy and symptoms. What would you like to understand: luteal, ovulation, PMS, or training?",
+        response: "Something went wrong. Try asking about a specific phase like luteal or follicular.",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
