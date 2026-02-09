@@ -51,13 +51,18 @@ export const NotificationPreferencePicker = ({
   };
 
   const handleSubmit = () => {
-    if (selectedDays.length === 0) {
+    // For daily frequency, use all days; otherwise require at least one selected day
+    const daysToSubmit = frequency === "daily" 
+      ? DAYS_OF_WEEK.map(d => d.value) 
+      : selectedDays;
+    
+    if (frequency !== "daily" && selectedDays.length === 0) {
       return;
     }
     onSubmit({
       frequency,
       preferredTime,
-      preferredDays: selectedDays,
+      preferredDays: daysToSubmit,
     });
   };
 

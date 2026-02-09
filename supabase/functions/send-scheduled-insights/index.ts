@@ -50,8 +50,9 @@ serve(async (req) => {
     const usersToNotify: string[] = [];
 
     for (const pref of preferences || []) {
-      // Check if today is in their preferred days
-      if (!pref.preferred_days?.includes(currentDay)) {
+      // For daily frequency, skip day check; otherwise check if today is in their preferred days
+      const isDaily = pref.frequency === "daily";
+      if (!isDaily && !pref.preferred_days?.includes(currentDay)) {
         continue;
       }
 
