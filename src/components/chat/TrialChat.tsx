@@ -25,15 +25,7 @@ export const TrialChat = () => {
     {
       id: "welcome",
       role: "assistant",
-      content: `Hey, I'm Logan - your intelligent cycle companion. I help you understand and work with your cycle, not against it.
-
-Your cycle has four phases:
-• Menstruation (Days 1-5): Rest and recovery. Honor low energy.
-• Follicular (Days 6-13): Rising energy. Great for new projects.
-• Ovulation (Around Day 14): Peak confidence and communication.
-• Luteal (Days 15-28): Wind down. Prioritize completion over starting.
-
-Ask me anything about how to optimize your energy and performance.`,
+      content: "Hey, I'm Logan. Your cycle shapes your energy, focus, and recovery in ways that are unique to you. I help you work with those patterns instead of against them. What's on your mind?",
     },
   ]);
   const [inputValue, setInputValue] = useState("");
