@@ -380,6 +380,10 @@ const Chat = () => {
     try {
       const emoji = isPositive ? "👍" : "👎";
       
+      // Get the original message to capture context for future insights
+      const originalMessage = messages.find(m => m.id === messageId);
+      const messageMetadata = originalMessage?.metadata || {};
+      
       // Delete any existing reaction for this message first
       await supabase
         .from("chat_messages")
@@ -388,16 +392,32 @@ const Chat = () => {
         .eq("message_type", "reaction")
         .contains("metadata", { reaction_to: messageId });
       
-      // Insert new reaction
+      // Insert new reaction with context for learning
       const { error } = await supabase.from("chat_messages").insert({
         user_id: user.id,
         role: "user",
         content: emoji,
         message_type: "reaction",
-        metadata: { reaction_to: messageId, feedback_type: isPositive ? "positive" : "negative" },
+        metadata: { 
+          reaction_to: messageId, 
+          feedback_type: isPositive ? "positive" : "negative",
+          // Store context for future insight improvement
+          original_cycle_day: messageMetadata.cycle_day,
+          original_cycle_phase: messageMetadata.cycle_phase,
+          original_insight_type: messageMetadata.insight_type,
+          feedback_timestamp: new Date().toISOString(),
+        },
       });
 
       if (error) throw error;
+      
+      // Show thank you message
+      toast({ 
+        title: "Thanks for your feedback!", 
+        description: isPositive 
+          ? "We'll use this to improve future insights." 
+          : "We'll work on making this more helpful.",
+      });
     } catch (error) {
       console.error("Error sending feedback:", error);
       toast({ title: "Failed to send feedback", variant: "destructive" });
