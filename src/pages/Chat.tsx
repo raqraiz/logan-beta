@@ -64,7 +64,7 @@ const Chat = () => {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [feedbackGiven, setFeedbackGiven] = useState<Record<string, boolean>>({});
+  
   const [isOnboarding, setIsOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
@@ -375,10 +375,20 @@ const Chat = () => {
     return inputType === "symptom_picker" || inputType === "anchor_picker" || inputType === "date_picker" || inputType === "notification_picker";
   };
   const sendFeedback = async (messageId: string, isPositive: boolean) => {
-    if (!user || feedbackGiven[messageId]) return;
+    if (!user) return;
 
     try {
       const emoji = isPositive ? "👍" : "👎";
+      
+      // Delete any existing reaction for this message first
+      await supabase
+        .from("chat_messages")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("message_type", "reaction")
+        .contains("metadata", { reaction_to: messageId });
+      
+      // Insert new reaction
       const { error } = await supabase.from("chat_messages").insert({
         user_id: user.id,
         role: "user",
@@ -388,7 +398,6 @@ const Chat = () => {
       });
 
       if (error) throw error;
-      setFeedbackGiven(prev => ({ ...prev, [messageId]: true }));
     } catch (error) {
       console.error("Error sending feedback:", error);
       toast({ title: "Failed to send feedback", variant: "destructive" });
@@ -508,10 +517,23 @@ const Chat = () => {
               <p className="text-muted-foreground">Starting your conversation...</p>
             </div>
           ) : (
-            messages.map((message, index) => {
-              const isLastMessage = index === messages.length - 1;
+            messages
+              .filter(msg => msg.message_type !== "reaction") // Hide reaction messages from feed
+              .map((message, index, filteredMessages) => {
+              const isLastMessage = index === filteredMessages.length - 1;
               const inputType = message.metadata?.input_type;
               const showInteractiveInput = isLastMessage && message.role === "assistant" && isOnboarding && !isSending;
+
+              // Find existing reaction for this message
+              const existingReactionMsg = messages.find(
+                m => m.message_type === "reaction" && 
+                m.metadata?.reaction_to === message.id
+              );
+              const existingReaction = existingReactionMsg?.content === "👍" 
+                ? "positive" as const
+                : existingReactionMsg?.content === "👎" 
+                  ? "negative" as const
+                  : null;
 
               return (
                 <div key={message.id}>
@@ -521,9 +543,7 @@ const Chat = () => {
                     <div
                       className={`relative max-w-[85%] rounded-2xl px-4 py-3 ${
                         message.role === "user"
-                          ? message.message_type === "reaction"
-                            ? "bg-transparent text-3xl"
-                            : "bg-primary text-primary-foreground"
+                          ? "bg-primary text-primary-foreground"
                           : "bg-card border border-border"
                       }`}
                     >
@@ -538,12 +558,7 @@ const Chat = () => {
                         </div>
                       )}
                       
-                      {message.message_type !== "reaction" && (
-                        <p className="whitespace-pre-wrap">{message.content}</p>
-                      )}
-                      {message.message_type === "reaction" && (
-                        <span className="text-3xl">{message.content}</span>
-                      )}
+                      <p className="whitespace-pre-wrap">{message.content}</p>
                       
                       <div className={`flex items-center gap-2 mt-1 ${
                         message.role === "user" ? "justify-end" : "justify-start"
@@ -555,17 +570,11 @@ const Chat = () => {
                         </span>
                         
                         {/* Thumbs up/down feedback for assistant messages */}
-                        {message.role === "assistant" && message.message_type !== "reaction" && !showInteractiveInput && (
+                        {message.role === "assistant" && !showInteractiveInput && (
                           <MessageFeedback
                             messageId={message.id}
                             onFeedback={sendFeedback}
-                            existingReaction={
-                              messages.find(
-                                m => m.message_type === "reaction" && 
-                                m.metadata?.reaction_to === message.id
-                              )?.content
-                            }
-                            disabled={feedbackGiven[message.id]}
+                            existingReaction={existingReaction}
                           />
                         )}
                       </div>
