@@ -5,8 +5,7 @@ import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { MessageSquare, LogOut, RefreshCw, Shield, User } from "lucide-react";
-import { ChatUsersTab } from "@/components/admin/ChatUsersTab";
+import { LogOut, RefreshCw, Shield, User } from "lucide-react";
 import { AdminManagement } from "@/components/admin/AdminManagement";
 import { ProfilesTab } from "@/components/admin/ProfilesTab";
 import { LoganLogo } from "@/components/LoganLogo";
@@ -81,29 +80,21 @@ const Admin = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-display font-bold mb-2 text-foreground">Pilot Dashboard</h1>
           <p className="text-muted-foreground">
-            Manage participants, approve insights, and track feedback
+            Manage participants, view chats, and track insights
           </p>
         </div>
 
-        <Tabs defaultValue="chats" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3 bg-muted border border-border">
-            <TabsTrigger value="chats" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <MessageSquare className="w-4 h-4" />
-              <span className="hidden sm:inline">Chats</span>
-            </TabsTrigger>
+        <Tabs defaultValue="profiles" className="space-y-6">
+          <TabsList className="grid w-full max-w-xs grid-cols-2 bg-muted border border-border">
             <TabsTrigger value="profiles" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <User className="w-4 h-4" />
-              <span className="hidden sm:inline">Profiles</span>
+              <span className="hidden sm:inline">Users</span>
             </TabsTrigger>
             <TabsTrigger value="admins" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Shield className="w-4 h-4" />
               <span className="hidden sm:inline">Admins</span>
             </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="chats">
-            <ChatUsersTab adminUserId={session.user.id} />
-          </TabsContent>
 
           <TabsContent value="profiles">
             <ProfilesTab />
