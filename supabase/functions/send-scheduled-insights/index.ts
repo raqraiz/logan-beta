@@ -157,7 +157,7 @@ async function sendInsightToUser(
     .order("created_at", { ascending: false })
     .limit(5);
 
-  // Generate AI insight
+  // Generate AI insight with conversation starters
   const prompt = buildInsightPrompt(
     profile?.full_name || "there",
     cycleInfo,
@@ -165,7 +165,7 @@ async function sendInsightToUser(
     recentMessages || []
   );
 
-  const insight = await generateAIInsight(lovableApiKey, prompt);
+  const { insight, conversationStarters } = await generateAIInsight(lovableApiKey, prompt);
 
   // Insert the insight as a chat message
   await supabase.from("chat_messages").insert({
@@ -179,7 +179,8 @@ async function sendInsightToUser(
       cycle_phase: cycleInfo.phase,
       cycle_length_days: participant.cycle_length_days || 28,
       insight_type: "proactive",
-      generated_at: new Date().toISOString()
+      generated_at: new Date().toISOString(),
+      conversation_starters: conversationStarters
     }
   });
 }
@@ -245,18 +246,31 @@ User profile:
 Recent conversation context:
 ${recentMessages.map(m => `${m.role}: ${m.content.slice(0, 100)}`).join("\n") || "No recent messages"}
 
-Guidelines:
-1. Keep it SHORT (2-4 sentences max)
+Guidelines for the insight:
+1. Keep it SHORT (2-3 sentences max)
 2. Be specific about what the phase means for their energy, focus, or mood today
 3. If relevant, mention their anchor symptom and whether to watch for it
 4. Include one practical suggestion they can act on today
 5. Avoid generic wellness advice - be tactical and specific
 6. Use a warm but direct tone - you're a coach, not a friend
+7. Do NOT include greetings like "Hi" or "Hey" - get straight to the insight
+8. Do NOT use emojis, exclamation points, or em dashes
 
-Do NOT include greetings like "Hi" or "Hey" - get straight to the insight.`;
+IMPORTANT: Respond in this exact JSON format:
+{
+  "insight": "Your 2-3 sentence insight here",
+  "starters": ["Short reply 1", "Short reply 2", "Short reply 3"]
 }
 
-async function generateAIInsight(apiKey: string, prompt: string): Promise<string> {
+The "starters" should be 3 natural conversation replies the user might want to send back (3-6 words each). Examples:
+- "Actually feeling pretty good today"
+- "Yeah, my energy is low"
+- "What should I eat?"
+- "Tell me more about that"
+- "How can I prepare?"`;
+}
+
+async function generateAIInsight(apiKey: string, prompt: string): Promise<{ insight: string; conversationStarters: string[] }> {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -266,10 +280,10 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<string
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [
-        { role: "system", content: "You are Logan, a cycle-aware performance coach. Be concise, tactical, and helpful." },
+        { role: "system", content: "You are Logan, a cycle-aware performance coach. Be concise, tactical, and helpful. Always respond in valid JSON format." },
         { role: "user", content: prompt }
       ],
-      max_tokens: 200,
+      max_tokens: 300,
       temperature: 0.7,
     }),
   });
@@ -280,5 +294,23 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<string
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content || "Day check-in: How's your energy today?";
+  const content = data.choices?.[0]?.message?.content || "";
+  
+  // Parse JSON response
+  try {
+    // Clean potential markdown code blocks
+    const cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
+    const parsed = JSON.parse(cleanContent);
+    return {
+      insight: parsed.insight || "How are you feeling today?",
+      conversationStarters: parsed.starters || ["I'm doing well", "Not great today", "Tell me more"]
+    };
+  } catch (e) {
+    console.error("Failed to parse AI response as JSON:", content);
+    // Fallback: use the content as insight with default starters
+    return {
+      insight: content || "How are you feeling today?",
+      conversationStarters: ["I'm doing well", "Not great today", "Tell me more"]
+    };
+  }
 }
