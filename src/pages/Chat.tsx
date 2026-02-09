@@ -15,7 +15,7 @@ import { DatePickerInput } from "@/components/chat/DatePickerInput";
 import { NotificationPreferencePicker } from "@/components/chat/NotificationPreferencePicker";
 import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { TrialChat } from "@/components/chat/TrialChat";
 
 interface SymptomCategory {
@@ -466,24 +466,50 @@ const Chat = () => {
           </div>
           <div className="flex items-center gap-3">
             {cycleData && !isOnboarding && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="cursor-pointer">
-                      <ChatCycleCircle
-                        cycleDay={cycleData.cycleDay}
-                        phase={cycleData.phase}
-                        cycleLengthDays={cycleData.cycleLengthDays}
-                        size="sm"
-                      />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-full">
+                    <ChatCycleCircle
+                      cycleDay={cycleData.cycleDay}
+                      phase={cycleData.phase}
+                      cycleLengthDays={cycleData.cycleLengthDays}
+                      size="sm"
+                    />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72" align="end">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-sm">Cycle Overview</h4>
+                      <span className="text-xs text-muted-foreground">
+                        Day {cycleData.cycleDay} of {cycleData.cycleLengthDays}
+                      </span>
                     </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="font-medium">{cycleData.phase} Phase</p>
-                    <p className="text-xs text-muted-foreground">Day {cycleData.cycleDay} of {cycleData.cycleLengthDays}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                    
+                    <ChatCycleCircle
+                      cycleDay={cycleData.cycleDay}
+                      phase={cycleData.phase}
+                      cycleLengthDays={cycleData.cycleLengthDays}
+                      size="md"
+                    />
+                    
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Current Phase</span>
+                        <span className="font-medium">{cycleData.phase}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Cycle Length</span>
+                        <span className="font-medium">{cycleData.cycleLengthDays} days</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Days Remaining</span>
+                        <span className="font-medium">{cycleData.cycleLengthDays - cycleData.cycleDay} days</span>
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             )}
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
