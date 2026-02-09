@@ -74,16 +74,11 @@ export const TrialChat = () => {
       if (error) throw error;
 
       const aiResponse = data?.response || "I'd love to help you understand your cycle better. What would you like to know?";
-      
-      // Add signup nudge after first response
-      const responseWithNudge = trialMessageCount >= 1
-        ? `${aiResponse}\n\nTo get personalized insights based on YOUR cycle, create a free account - it only takes a minute.`
-        : aiResponse;
 
       setMessages(prev => [...prev, {
         id: `assistant-${Date.now()}`,
         role: "assistant",
-        content: responseWithNudge,
+        content: aiResponse,
       }]);
     } catch (error) {
       console.error("Trial chat error:", error);
@@ -220,7 +215,7 @@ export const TrialChat = () => {
                     Ready for personalized insights?
                   </h3>
                   <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-                    Create your free account to get cycle guidance tailored to your unique patterns.
+                    Create an account to get cycle guidance tailored to your unique patterns.
                   </p>
                   <InlineChatAuth />
                 </div>
