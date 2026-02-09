@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
 import { Send, Loader2, LogOut, Smile } from "lucide-react";
-import { format, differenceInDays } from "date-fns";
+import { format } from "date-fns";
 import { SymptomPicker } from "@/components/chat/SymptomPicker";
 import { AnchorPicker } from "@/components/chat/AnchorPicker";
 import { DatePickerInput } from "@/components/chat/DatePickerInput";
@@ -166,59 +166,29 @@ const Chat = () => {
     };
   }, [user]);
 
-  // Fetch cycle data for the header
+  // Extract cycle data from messages metadata
   useEffect(() => {
-    if (!user || isOnboarding) {
+    if (!user || isOnboarding || messages.length === 0) {
       setCycleData(null);
       return;
     }
 
-    const fetchCycleData = async () => {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("email")
-        .eq("id", user.id)
-        .single();
+    // Find the most recent message with cycle metadata
+    const messagesWithCycleData = messages.filter(
+      (msg) => msg.metadata && (msg.metadata as any).cycle_day && (msg.metadata as any).cycle_length_days
+    );
 
-      if (!profile?.email) return;
+    if (messagesWithCycleData.length === 0) return;
 
-      const { data: participant } = await supabase
-        .from("participants")
-        .select("last_period_start, cycle_length_days")
-        .eq("email", profile.email.toLowerCase())
-        .single();
+    const latestCycleMessage = messagesWithCycleData[messagesWithCycleData.length - 1];
+    const metadata = latestCycleMessage.metadata as any;
 
-      if (!participant?.last_period_start || !participant?.cycle_length_days) return;
-
-      const daysSince = differenceInDays(new Date(), new Date(participant.last_period_start));
-      const cycleDay = (daysSince % participant.cycle_length_days) + 1;
-      
-      // Determine phase
-      const menstruationEnd = 5;
-      const ovulationDay = participant.cycle_length_days - 14;
-      const ovulationStart = ovulationDay - 1;
-      const ovulationEnd = ovulationDay + 2;
-
-      let phase: string;
-      if (cycleDay <= menstruationEnd) {
-        phase = "Menstruation";
-      } else if (cycleDay < ovulationStart) {
-        phase = "Follicular";
-      } else if (cycleDay <= ovulationEnd) {
-        phase = "Ovulation";
-      } else {
-        phase = "Luteal";
-      }
-
-      setCycleData({
-        cycleDay,
-        phase,
-        cycleLengthDays: participant.cycle_length_days,
-      });
-    };
-
-    fetchCycleData();
-  }, [user, isOnboarding]);
+    setCycleData({
+      cycleDay: metadata.cycle_day,
+      phase: metadata.cycle_phase || "Unknown",
+      cycleLengthDays: metadata.cycle_length_days,
+    });
+  }, [user, isOnboarding, messages]);
 
   // Auto-scroll to bottom
   useEffect(() => {
