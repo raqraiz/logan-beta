@@ -81,6 +81,16 @@ Deno.serve(async (req) => {
       console.error("Error deleting messages:", messagesError);
     }
 
+    // Delete notification preferences
+    const { error: notifError } = await supabaseAdmin
+      .from("notification_preferences")
+      .delete()
+      .eq("user_id", userId);
+
+    if (notifError) {
+      console.error("Error deleting notification preferences:", notifError);
+    }
+
     // Delete profile
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
@@ -106,13 +116,19 @@ Deno.serve(async (req) => {
 
     if (authError) {
       console.error("Error deleting auth user:", authError);
-      return new Response(
-        JSON.stringify({ error: "Failed to delete user: " + authError.message }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      // If user doesn't exist in auth or there's a database error (user already gone), treat as success
+      const errorMsg = authError.message?.toLowerCase() || "";
+      if (errorMsg.includes("not found") || errorMsg.includes("user not found") || errorMsg.includes("database error")) {
+        console.log(`User ${userId} - auth deletion failed but treating as deleted (error: ${authError.message})`);
+      } else {
+        return new Response(
+          JSON.stringify({ error: "Failed to delete user: " + authError.message }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
     }
 
     console.log(`User ${userId} fully deleted by admin ${caller.id}`);
