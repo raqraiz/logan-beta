@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
-import { Send, Loader2, LogOut, Smile } from "lucide-react";
+import { Send, Loader2, LogOut } from "lucide-react";
 import { format } from "date-fns";
 import { SymptomPicker } from "@/components/chat/SymptomPicker";
 import { AnchorPicker } from "@/components/chat/AnchorPicker";
@@ -17,6 +17,7 @@ import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { TrialChat } from "@/components/chat/TrialChat";
+import { MessageFeedback } from "@/components/chat/MessageFeedback";
 
 interface SymptomCategory {
   label: string;
@@ -52,8 +53,6 @@ interface ChatMessage {
   };
 }
 
-const EMOJI_REACTIONS = ["👍", "❤️", "🤔", "😊", "💪"];
-
 interface CycleData {
   cycleDay: number;
   phase: string;
@@ -65,7 +64,7 @@ const Chat = () => {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+  const [feedbackGiven, setFeedbackGiven] = useState<Record<string, boolean>>({});
   const [isOnboarding, setIsOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
@@ -348,8 +347,11 @@ const Chat = () => {
     }
   };
 
-  const handleSymptomSubmit = (symptoms: string[]) => {
-    sendOnboardingResponse(`Selected symptoms: ${symptoms.join(", ")}`, symptoms);
+  const handleSymptomSubmit = (symptoms: string[], additionalNotes?: string) => {
+    const symptomsWithNotes = additionalNotes 
+      ? `Selected symptoms: ${symptoms.join(", ")}. Additional notes: ${additionalNotes}`
+      : `Selected symptoms: ${symptoms.join(", ")}`;
+    sendOnboardingResponse(symptomsWithNotes, symptoms);
   };
 
   const handleAnchorSubmit = (anchor: string) => {
@@ -372,23 +374,24 @@ const Chat = () => {
     const inputType = lastMessage.metadata?.input_type;
     return inputType === "symptom_picker" || inputType === "anchor_picker" || inputType === "date_picker" || inputType === "notification_picker";
   };
-  const sendReaction = async (messageId: string, emoji: string) => {
-    if (!user) return;
+  const sendFeedback = async (messageId: string, isPositive: boolean) => {
+    if (!user || feedbackGiven[messageId]) return;
 
     try {
+      const emoji = isPositive ? "👍" : "👎";
       const { error } = await supabase.from("chat_messages").insert({
         user_id: user.id,
         role: "user",
         content: emoji,
         message_type: "reaction",
-        metadata: { reaction_to: messageId },
+        metadata: { reaction_to: messageId, feedback_type: isPositive ? "positive" : "negative" },
       });
 
       if (error) throw error;
-      setShowEmojiPicker(null);
+      setFeedbackGiven(prev => ({ ...prev, [messageId]: true }));
     } catch (error) {
-      console.error("Error sending reaction:", error);
-      toast({ title: "Failed to send reaction", variant: "destructive" });
+      console.error("Error sending feedback:", error);
+      toast({ title: "Failed to send feedback", variant: "destructive" });
     }
   };
 
@@ -551,30 +554,19 @@ const Chat = () => {
                           {format(new Date(message.created_at), "h:mm a")}
                         </span>
                         
-                        {/* Emoji reaction button for assistant messages */}
+                        {/* Thumbs up/down feedback for assistant messages */}
                         {message.role === "assistant" && message.message_type !== "reaction" && !showInteractiveInput && (
-                          <div className="relative">
-                            <button
-                              onClick={() => setShowEmojiPicker(showEmojiPicker === message.id ? null : message.id)}
-                              className="text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                              <Smile className="w-4 h-4" />
-                            </button>
-                            
-                            {showEmojiPicker === message.id && (
-                              <div className="absolute bottom-full left-0 mb-2 bg-popover border border-border rounded-lg shadow-lg p-2 flex gap-1 z-20">
-                                {EMOJI_REACTIONS.map((emoji) => (
-                                  <button
-                                    key={emoji}
-                                    onClick={() => sendReaction(message.id, emoji)}
-                                    className="hover:bg-accent rounded p-1 text-lg transition-colors"
-                                  >
-                                    {emoji}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                          <MessageFeedback
+                            messageId={message.id}
+                            onFeedback={sendFeedback}
+                            existingReaction={
+                              messages.find(
+                                m => m.message_type === "reaction" && 
+                                m.metadata?.reaction_to === message.id
+                              )?.content
+                            }
+                            disabled={feedbackGiven[message.id]}
+                          />
                         )}
                       </div>
                     </div>
