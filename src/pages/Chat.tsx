@@ -15,6 +15,7 @@ import { DatePickerInput } from "@/components/chat/DatePickerInput";
 import { NotificationPreferencePicker } from "@/components/chat/NotificationPreferencePicker";
 import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TrialChat } from "@/components/chat/TrialChat";
 
 interface SymptomCategory {
@@ -465,12 +466,24 @@ const Chat = () => {
           </div>
           <div className="flex items-center gap-3">
             {cycleData && !isOnboarding && (
-              <ChatCycleCircle
-                cycleDay={cycleData.cycleDay}
-                phase={cycleData.phase}
-                cycleLengthDays={cycleData.cycleLengthDays}
-                size="sm"
-              />
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="cursor-pointer">
+                      <ChatCycleCircle
+                        cycleDay={cycleData.cycleDay}
+                        phase={cycleData.phase}
+                        cycleLengthDays={cycleData.cycleLengthDays}
+                        size="sm"
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-medium">{cycleData.phase} Phase</p>
+                    <p className="text-xs text-muted-foreground">Day {cycleData.cycleDay} of {cycleData.cycleLengthDays}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
