@@ -18,6 +18,7 @@ import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { TrialChat } from "@/components/chat/TrialChat";
 import { MessageFeedback } from "@/components/chat/MessageFeedback";
+import { ConversationStarters } from "@/components/chat/ConversationStarters";
 
 interface SymptomCategory {
   label: string;
@@ -50,6 +51,7 @@ interface ChatMessage {
     cycle_phase?: string;
     cycle_length_days?: number;
     insight_type?: string;
+    conversation_starters?: string[];
   };
 }
 
@@ -638,6 +640,22 @@ const Chat = () => {
                         isSubmitting={isSending}
                       />
                     </div>
+                  )}
+
+                  {/* Conversation starters for proactive insights */}
+                  {isLastMessage && 
+                   message.role === "assistant" && 
+                   !isOnboarding && 
+                   message.metadata?.conversation_starters && 
+                   message.metadata.conversation_starters.length > 0 && (
+                    <ConversationStarters
+                      starters={message.metadata.conversation_starters}
+                      onSelect={(starter) => {
+                        setInputValue(starter);
+                        sendAIMessage(starter);
+                      }}
+                      disabled={isSending}
+                    />
                   )}
                 </div>
               );
