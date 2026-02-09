@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,10 +18,12 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { 
   Users, RefreshCw, Search, Mail, Phone, Calendar, ChevronRight, 
-  ChevronLeft, Trash2, Loader2, Activity, Target, Clock
+  ChevronLeft, Trash2, Loader2, Activity, Target, Clock, MessageSquare
 } from "lucide-react";
 import { formatDistanceToNow, format, differenceInDays } from "date-fns";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
+import { cn } from "@/lib/utils";
+import { Json } from "@/integrations/supabase/types";
 
 interface Profile {
   id: string;
@@ -67,6 +69,25 @@ interface Insight {
   sent_at: string | null;
 }
 
+interface ChatMessage {
+  id: string;
+  user_id: string;
+  role: string;
+  content: string;
+  message_type: string | null;
+  emoji_reaction: string | null;
+  metadata: Json | null;
+  created_at: string;
+}
+
+interface MessageMetadata {
+  has_cycle_visual?: boolean;
+  cycle_day?: number;
+  cycle_phase?: string;
+  cycle_length_days?: number;
+  [key: string]: unknown;
+}
+
 interface ProfileWithData extends Profile {
   notificationPrefs?: NotificationPreference;
   participant?: Participant;
@@ -80,6 +101,9 @@ export function ProfilesTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProfile, setSelectedProfile] = useState<ProfileWithData | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -191,6 +215,39 @@ export function ProfilesTab() {
       setDeleting(false);
     }
   };
+
+  const fetchChatMessages = async (userId: string) => {
+    setLoadingMessages(true);
+    try {
+      const { data, error } = await supabase
+        .from("chat_messages")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      setChatMessages(data || []);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      toast({ title: "Error loading messages", variant: "destructive" });
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  // Fetch messages when profile is selected
+  useEffect(() => {
+    if (selectedProfile) {
+      fetchChatMessages(selectedProfile.id);
+    } else {
+      setChatMessages([]);
+    }
+  }, [selectedProfile?.id]);
+
+  // Auto-scroll to bottom of messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
 
   const calculateCycleDay = (lastPeriodStart: string | null, cycleLength: number | null) => {
     if (!lastPeriodStart) return null;
@@ -445,6 +502,102 @@ export function ProfilesTab() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Chat History Card - Full Width */}
+        <Card>
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" />
+              Chat History ({chatMessages.length})
+            </CardTitle>
+            <Button variant="outline" size="sm" onClick={() => fetchChatMessages(profile.id)}>
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {loadingMessages ? (
+              <div className="flex items-center justify-center py-8">
+                <RefreshCw className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : chatMessages.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>No messages yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                {chatMessages.map((msg) => {
+                  const isAssistant = msg.role === "assistant" || msg.role === "system";
+                  const metadata = msg.metadata as MessageMetadata | null;
+                  const hasCycleVisual = metadata?.has_cycle_visual;
+                  
+                  return (
+                    <div
+                      key={msg.id}
+                      className={cn(
+                        "max-w-[85%]",
+                        isAssistant ? "ml-auto" : "mr-auto"
+                      )}
+                    >
+                      {/* Role indicator */}
+                      <div className={cn(
+                        "text-xs mb-1 flex items-center gap-2",
+                        isAssistant ? "justify-end text-muted-foreground" : "text-muted-foreground"
+                      )}>
+                        <span>{msg.role === "user" ? "User" : msg.role === "assistant" ? "Logan" : "System"}</span>
+                        {msg.message_type && msg.message_type !== "text" && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            {msg.message_type}
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* Message bubble */}
+                      <div
+                        className={cn(
+                          "rounded-lg p-3",
+                          isAssistant
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
+                        )}
+                      >
+                        {/* Cycle visual if present */}
+                        {hasCycleVisual && metadata?.cycle_day && metadata?.cycle_phase && (
+                          <div className="mb-3">
+                            <ChatCycleCircle
+                              cycleDay={metadata.cycle_day}
+                              phase={metadata.cycle_phase}
+                              cycleLengthDays={metadata.cycle_length_days || 28}
+                            />
+                          </div>
+                        )}
+
+                        {/* Message content */}
+                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+
+                        {/* Emoji reaction */}
+                        {msg.emoji_reaction && (
+                          <div className="mt-2">
+                            <span className="text-xl">{msg.emoji_reaction}</span>
+                          </div>
+                        )}
+
+                        {/* Timestamp */}
+                        <p className={cn(
+                          "text-[10px] mt-2",
+                          isAssistant ? "text-primary-foreground/60" : "text-muted-foreground"
+                        )}>
+                          {format(new Date(msg.created_at), "MMM d, h:mm a")}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     );
   }
