@@ -257,14 +257,14 @@ Do NOT include greetings like "Hi" or "Hey" - get straight to the insight.`;
 }
 
 async function generateAIInsight(apiKey: string, prompt: string): Promise<string> {
-  const response = await fetch("https://api.lovable.dev/v1/chat/completions", {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-3-flash-preview",
       messages: [
         { role: "system", content: "You are Logan, a cycle-aware performance coach. Be concise, tactical, and helpful." },
         { role: "user", content: prompt }
