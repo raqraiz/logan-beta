@@ -38,15 +38,15 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md" 
 
   if (isSmall) {
     return (
-      <div className="relative w-10 h-10 flex-shrink-0">
-        <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+      <div className="relative w-10 h-10 flex-shrink-0 group cursor-pointer transition-transform duration-200 hover:scale-110">
+        <svg className="w-full h-full -rotate-90 transition-all duration-200" viewBox="0 0 100 100">
           <circle
             cx="50"
             cy="50"
             r={radius}
             fill="none"
             strokeWidth="4"
-            className="stroke-muted/20"
+            className="stroke-muted/20 transition-all duration-200 group-hover:stroke-muted/40"
           />
           <circle
             cx="50"
@@ -57,11 +57,11 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md" 
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
-            className={styles.ringColor}
+            className={`${styles.ringColor} transition-all duration-200 group-hover:drop-shadow-[0_0_6px_currentColor]`}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={`text-xs font-bold ${styles.color}`}>
+          <span className={`text-xs font-bold ${styles.color} transition-all duration-200 group-hover:scale-110`}>
             {cycleDay}
           </span>
         </div>
