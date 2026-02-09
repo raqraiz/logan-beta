@@ -651,7 +651,7 @@ const Chat = () => {
                         message.metadata?.conversation_starters && message.metadata.conversation_starters.length > 0
                           ? message.metadata.conversation_starters
                           : message.metadata?.onboarding_complete || message.metadata?.has_cycle_visual
-                            ? ["What can I expect tomorrow?"]
+                            ? ["What can I expect tomorrow?", "How should I plan my week?", "What's my energy like today?"]
                             : []
                       }
                       onSelect={(starter) => {
