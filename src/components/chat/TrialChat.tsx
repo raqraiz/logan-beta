@@ -25,7 +25,7 @@ export const TrialChat = () => {
     {
       id: "welcome",
       role: "assistant",
-      content: "Hey, I'm Logan. Your cycle shapes your energy, focus, and recovery in ways that are unique to you. I help you work with those patterns instead of against them. What's on your mind?",
+      content: "Hey, I'm Logan. Your cycle runs in four phases: Menstruation, Follicular, Ovulation, and Luteal. Each one shifts how you think, move, and recover. I track where you are and help you use it. What do you want to know?",
     },
   ]);
   const [inputValue, setInputValue] = useState("");
