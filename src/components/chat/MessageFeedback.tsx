@@ -5,59 +5,52 @@ import { cn } from "@/lib/utils";
 interface MessageFeedbackProps {
   messageId: string;
   onFeedback: (messageId: string, isPositive: boolean) => void;
-  existingReaction?: string | null;
-  disabled?: boolean;
+  existingReaction?: "positive" | "negative" | null;
 }
 
 export const MessageFeedback = ({ 
   messageId, 
   onFeedback, 
   existingReaction,
-  disabled = false 
 }: MessageFeedbackProps) => {
   const [selected, setSelected] = useState<"up" | "down" | null>(() => {
-    if (existingReaction === "👍") return "up";
-    if (existingReaction === "👎") return "down";
+    if (existingReaction === "positive") return "up";
+    if (existingReaction === "negative") return "down";
     return null;
   });
 
   const handleFeedback = (type: "up" | "down") => {
-    if (disabled || selected === type) return;
+    // Allow changing selection
+    if (selected === type) return;
     setSelected(type);
     onFeedback(messageId, type === "up");
   };
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0.5">
       <button
         onClick={() => handleFeedback("up")}
-        disabled={disabled || selected !== null}
         className={cn(
           "p-1 rounded transition-all",
           selected === "up" 
-            ? "text-green-500" 
-            : selected === null
-              ? "text-muted-foreground/50 hover:text-green-500 hover:bg-green-500/10"
-              : "text-muted-foreground/30 cursor-default"
+            ? "text-primary" 
+            : "text-muted-foreground/40 hover:text-primary/70"
         )}
         aria-label="Helpful"
       >
-        <ThumbsUp className="w-3.5 h-3.5" />
+        <ThumbsUp className={cn("w-3.5 h-3.5", selected === "up" && "fill-current")} />
       </button>
       <button
         onClick={() => handleFeedback("down")}
-        disabled={disabled || selected !== null}
         className={cn(
           "p-1 rounded transition-all",
           selected === "down" 
-            ? "text-red-500" 
-            : selected === null
-              ? "text-muted-foreground/50 hover:text-red-500 hover:bg-red-500/10"
-              : "text-muted-foreground/30 cursor-default"
+            ? "text-destructive" 
+            : "text-muted-foreground/40 hover:text-destructive/70"
         )}
         aria-label="Not helpful"
       >
-        <ThumbsDown className="w-3.5 h-3.5" />
+        <ThumbsDown className={cn("w-3.5 h-3.5", selected === "down" && "fill-current")} />
       </button>
     </div>
   );
