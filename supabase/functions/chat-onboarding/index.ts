@@ -55,53 +55,53 @@ const ALL_SYMPTOMS = [
   ...SYMPTOM_CATEGORIES.quirky.symptoms
 ];
 
-// Onboarding question flow - Strategic, performance-focused voice
+// Onboarding question flow - Strategic, performance-focused voice with educational micro-moments
 const ONBOARDING_QUESTIONS = [
   {
     key: "age",
-    message: "Hey {name}. I'm Logan. I help you work with your cycle instead of against it. To give you useful insights on energy, focus, and recovery, I need to learn your patterns. Let's start simple: how old are you?",
+    message: "Good, you're in. Now I can personalize everything. To calibrate your insights, how old are you?",
     field: "age",
     parseType: "number",
     inputType: "text"
   },
   {
     key: "cycle_length",
-    message: "Got it. How long is your typical cycle in days? Most fall between 24-35. If you're not sure, 28 is a fair starting point.",
+    message: "Your cycle length determines when each hormonal shift happens. Estrogen, progesterone, testosterone: they all rise and fall on a schedule unique to you. Most cycles run 24-35 days. How long is yours? If you're not sure, 28 is a solid starting point.",
     field: "cycle_length_days",
     parseType: "number",
     inputType: "text"
   },
   {
     key: "last_period",
-    message: "When did your last period start? This helps me figure out where you are in your cycle right now.",
+    message: "Day 1 of your period is Day 1 of your cycle. That's when estrogen and progesterone are at their lowest, and your body starts rebuilding from scratch. When did your last period start?",
     field: "last_period_start",
     parseType: "date",
     inputType: "date_picker"
   },
   {
     key: "symptoms",
-    message: "Now the important part. Which of these tend to hit you around your cycle? Select everything that disrupts your energy, mood, or focus.",
+    message: "Here's what most people don't realize: symptoms like brain fog, short fuse, or energy crashes aren't random. They follow your hormonal pattern and show up at predictable points in your cycle. Which of these tend to hit you?",
     field: "typical_symptoms",
     parseType: "symptoms",
     inputType: "symptom_picker"
   },
   {
     key: "anchor_symptom",
-    message: "Which one throws you off the most? This becomes your Anchor Symptom, the thing I'll help you see coming before it arrives.",
+    message: "Your Anchor Symptom is the one that derails your day the most. I'll track when it's likely to surface based on your cycle phase, so you can prepare instead of react. Which one hits hardest?",
     field: "anchor_symptom",
     parseType: "anchor",
     inputType: "anchor_picker"
   },
   {
     key: "notification_preferences",
-    message: "Last thing: when's the best time for me to check in with insights? Pick what works for your schedule.",
+    message: "I'll send you phase-aware check-ins with what to expect and how to plan. Think of it as a heads-up before your hormones shift. When works best?",
     field: "notification_preferences",
     parseType: "notification_preferences",
     inputType: "notification_picker"
   },
   {
     key: "complete",
-    message: "You're all set. I'll start learning your patterns and send you insights you can actually use: when to push, when to ease up, and how to plan around what's coming. Welcome aboard.",
+    message: "You're all set. I now know your cycle length, where you are today, and what to watch for. I'll start sending you insights that connect what you're feeling to what's happening hormonally, so you can plan around it instead of being caught off guard.",
     field: null,
     parseType: null,
     inputType: null
@@ -190,7 +190,7 @@ serve(async (req) => {
 
       // Send welcome message with personalized name
       const welcomeQ = ONBOARDING_QUESTIONS[0];
-      const personalizedMessage = welcomeQ.message.replace("{name}", userName);
+      const personalizedMessage = `${userName !== "there" ? `${userName}, great` : "Great"} to have you. ${welcomeQ.message}`;
       
       const { error: insertError } = await supabase.from("chat_messages").insert({
         user_id: user.id,
