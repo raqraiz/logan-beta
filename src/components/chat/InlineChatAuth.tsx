@@ -114,16 +114,23 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
   return (
     <div className="max-w-md mx-auto px-4 py-8">
       <div className="bg-card/80 backdrop-blur-sm rounded-2xl border border-border p-6 shadow-lg">
-        {/* Welcome message styled as chat bubble */}
-        <div className="mb-6">
+        {/* Value proposition */}
+        <div className="mb-6 space-y-3">
           <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 inline-block max-w-[90%]">
             <p className="text-foreground">
               {isSignUp 
-                ? "Hey! 👋 I'm Logan, your intelligent cycle companion. Let's get you set up so I can start learning your patterns."
-                : "Welcome back! 👋 Sign in to continue our conversation."
+                ? "To give you real guidance, I need to learn your patterns over time. Create an account and I'll remember every conversation, track your feedback, and build a profile around your unique cycle so every insight gets sharper."
+                : "Welcome back. Sign in to pick up where we left off."
               }
             </p>
           </div>
+          {isSignUp && (
+            <div className="flex flex-col gap-1.5 pl-2 text-sm text-muted-foreground">
+              <span className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-primary inline-block" /> Your cycle data stays private and secure</span>
+              <span className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-primary inline-block" /> Insights adapt as I learn your patterns</span>
+              <span className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-primary inline-block" /> Proactive check-ins timed to your phase</span>
+            </div>
+          )}
         </div>
 
         {/* Inline auth form */}
