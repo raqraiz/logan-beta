@@ -55,53 +55,53 @@ const ALL_SYMPTOMS = [
   ...SYMPTOM_CATEGORIES.quirky.symptoms
 ];
 
-// Onboarding question flow - Human, relatable voice with educational micro-moments
+// Onboarding question flow - Human, relatable voice with seamless transitions
 const ONBOARDING_QUESTIONS = [
   {
     key: "age",
-    message: "Good, you're in. Now I can actually start learning your patterns. Quick one to start: how old are you?",
+    message: "Good, you're in. To make this actually useful for you, I need to learn a few things. How old are you?",
     field: "age",
     parseType: "number",
     inputType: "text"
   },
   {
     key: "cycle_length",
-    message: "So your cycle length basically determines when everything shifts for you. It's like having four different operating modes in one month, each one driven by different hormones doing different things. Most cycles are somewhere between 24-35 days. How long is yours? If you have no idea, 28 is a fine starting point.",
+    message: "Got it. And how long is your cycle usually? Anywhere from 24-35 days is normal. If you're not sure, just go with 28.",
     field: "cycle_length_days",
     parseType: "number",
     inputType: "text"
   },
   {
     key: "last_period",
-    message: "Day 1 of your period is Day 1 of everything. It's when your hormones are at their quietest and your body starts building back up from scratch. Kind of like a clean slate every month. When did your last period start?",
+    message: "When did your last period start? That tells me where you are right now in your cycle.",
     field: "last_period_start",
     parseType: "date",
     inputType: "date_picker"
   },
   {
     key: "symptoms",
-    message: "Here's the thing most people don't realize: that brain fog, that random irritability, those days where everything feels harder? None of it is random. It follows your hormonal pattern and shows up at the same point in your cycle almost every month. Which of these tend to hit you?",
+    message: "OK so here's where it gets interesting. A lot of what you deal with around your cycle, the brain fog, the short fuse, the energy crashes, it's not random. It follows a pattern. Which of these tend to hit you?",
     field: "typical_symptoms",
     parseType: "symptoms",
     inputType: "symptom_picker"
   },
   {
     key: "anchor_symptom",
-    message: "Now pick the one that really gets you. The one where you think why am I like this and then get your period two days later and go... oh. That's your Anchor Symptom. I'll help you see it coming before it arrives. Which one hits hardest?",
+    message: "Which one gets you the worst? You know, the one where you think what is wrong with me and then get your period two days later and go... oh. That's your Anchor Symptom. I'll help you see it coming.",
     field: "anchor_symptom",
     parseType: "anchor",
     inputType: "anchor_picker"
   },
   {
     key: "notification_preferences",
-    message: "I'll send you a heads up before things shift so you're not caught off guard. Think of it like a weather forecast for your body. When's the best time to check in?",
+    message: "Last thing. I'll send you a heads up before things shift, kind of like a weather forecast for your body. When's the best time to check in?",
     field: "notification_preferences",
     parseType: "notification_preferences",
     inputType: "notification_picker"
   },
   {
     key: "complete",
-    message: "That's everything I need. I now know your cycle, where you are today, and what to watch for. From here, I'll connect what you're feeling to what's actually happening hormonally, so you can stop wondering what's wrong with you and start planning around it.",
+    message: "That's everything I need. I know your cycle, where you are today, and what to watch for. From here I'll connect what you're feeling to what's actually happening, so you can stop guessing and start planning around it.",
     field: null,
     parseType: null,
     inputType: null
