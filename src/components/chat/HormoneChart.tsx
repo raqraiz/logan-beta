@@ -147,7 +147,11 @@ export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartP
                 y={padTop}
                 width={x2 - x1}
                 height={chartH}
-                fill={isActive ? `${color}08` : "transparent"}
+                fill="transparent"
+                stroke={isActive ? color : "transparent"}
+                strokeWidth={isActive ? "0.3" : "0"}
+                strokeDasharray="2 3"
+                strokeOpacity={0.25}
                 rx={3}
               />
               <text
