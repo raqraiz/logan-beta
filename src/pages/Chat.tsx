@@ -48,6 +48,7 @@ interface ChatMessage {
     symptom_categories?: SymptomCategories;
     available_symptoms?: string[];
     has_cycle_visual?: boolean;
+    visual_type?: "cycle_circle" | "hormone_chart";
     cycle_day?: number;
     cycle_phase?: string;
     cycle_length_days?: number;
@@ -626,14 +627,22 @@ const Chat = () => {
                           : "bg-card border border-border"
                       }`}
                     >
-                      {/* Hormone chart for insight messages */}
+                      {/* Cycle visual for insight messages */}
                       {message.metadata?.has_cycle_visual && message.metadata?.cycle_day && message.metadata?.cycle_phase && (
                         <div className="mb-3">
-                          <HormoneChart
-                            cycleDay={message.metadata.cycle_day}
-                            phase={message.metadata.cycle_phase}
-                            cycleLengthDays={message.metadata.cycle_length_days || 28}
-                          />
+                          {message.metadata.visual_type === "hormone_chart" ? (
+                            <HormoneChart
+                              cycleDay={message.metadata.cycle_day}
+                              phase={message.metadata.cycle_phase}
+                              cycleLengthDays={message.metadata.cycle_length_days || 28}
+                            />
+                          ) : (
+                            <ChatCycleCircle
+                              cycleDay={message.metadata.cycle_day}
+                              phase={message.metadata.cycle_phase}
+                              cycleLengthDays={message.metadata.cycle_length_days || 28}
+                            />
+                          )}
                         </div>
                       )}
                       
