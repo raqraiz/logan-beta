@@ -116,14 +116,14 @@ export const SymptomPicker = ({ categories, onSubmit, isSubmitting }: SymptomPic
       {/* Add custom symptom */}
       <div className="space-y-2">
         <h4 className="text-xs font-semibold text-muted-foreground tracking-wide">
-          Something else?
+          Not on the list?
         </h4>
         <div className="flex gap-2">
           <Input
             value={customSymptom}
             onChange={(e) => setCustomSymptom(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Add your own symptom..."
+            placeholder="Add your own..."
             className="flex-1"
           />
           <Button
@@ -136,17 +136,10 @@ export const SymptomPicker = ({ categories, onSubmit, isSubmitting }: SymptomPic
             <Plus className="w-4 h-4" />
           </Button>
         </div>
-      </div>
-
-      {/* Optional additional notes */}
-      <div className="space-y-2">
-        <h4 className="text-xs font-semibold text-muted-foreground tracking-wide">
-          Anything else you'd like to share? <span className="font-normal">(optional)</span>
-        </h4>
         <Textarea
           value={additionalNotes}
           onChange={(e) => setAdditionalNotes(e.target.value)}
-          placeholder="E.g., symptoms are worse at certain times, triggers you've noticed..."
+          placeholder="Any patterns you've noticed, like timing or triggers (optional)"
           className="resize-none"
           rows={2}
         />
