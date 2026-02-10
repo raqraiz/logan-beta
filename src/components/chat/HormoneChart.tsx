@@ -198,9 +198,9 @@ export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartP
           x2={markerX}
           y2={padTop + chartH}
           stroke={color}
-          strokeWidth="0.35"
-          strokeDasharray="3 2"
-          opacity={0.5}
+          strokeWidth="0.25"
+          strokeDasharray="2 3"
+          opacity={0.35}
         />
 
         {/* Day label */}
@@ -209,9 +209,10 @@ export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartP
           y={padTop - 6}
           textAnchor="middle"
           fill={color}
-          fontSize="10"
-          fontWeight="600"
+          fontSize="9"
+          fontWeight="500"
           fontFamily="inherit"
+          opacity={0.8}
         >
           Day {cycleDay}
         </text>
@@ -220,11 +221,11 @@ export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartP
           y={padTop + chartH + 12}
           textAnchor="middle"
           fill={color}
-          fontSize="8"
+          fontSize="7"
           fontFamily="inherit"
-          opacity={0.6}
+          opacity={0.4}
         >
-          ▲ you are here
+          ▲ you
         </text>
 
         {/* Legend row */}
