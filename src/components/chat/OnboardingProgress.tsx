@@ -21,28 +21,26 @@ export const OnboardingProgress = ({ currentStep, totalSteps }: OnboardingProgre
   const estimatedMinutes = Math.ceil(remainingSteps * 0.5); // ~30 seconds per step
 
   return (
-    <div className="bg-card/80 backdrop-blur-sm border-b border-border/50 px-4 py-3">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-foreground">
-            Step {Math.min(currentStep + 1, totalSteps)} of {totalSteps}
-            {currentStep < totalSteps && (
-              <span className="text-muted-foreground font-normal ml-2">
-                / {STEP_LABELS[currentStep] || ""}
-              </span>
-            )}
-          </span>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Clock className="w-3.5 h-3.5" />
-            <span>
-              {remainingSteps === 0 
-                ? "All done" 
-                : `~${estimatedMinutes} min left`}
+    <div className="w-full">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium text-foreground">
+          Step {Math.min(currentStep + 1, totalSteps)} of {totalSteps}
+          {currentStep < totalSteps && (
+            <span className="text-muted-foreground font-normal ml-2">
+              / {STEP_LABELS[currentStep] || ""}
             </span>
-          </div>
+          )}
+        </span>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Clock className="w-3.5 h-3.5" />
+          <span>
+            {remainingSteps === 0 
+              ? "All done" 
+              : `~${estimatedMinutes} min left`}
+          </span>
         </div>
-        <Progress value={progress} className="h-1.5" />
       </div>
+      <Progress value={progress} className="h-1.5" />
     </div>
   );
 };

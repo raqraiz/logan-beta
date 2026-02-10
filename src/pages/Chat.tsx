@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
-import { Send, Loader2, LogOut } from "lucide-react";
+import { Send, Loader2, LogOut, ChevronLeft } from "lucide-react";
 import { format } from "date-fns";
 import { SymptomPicker } from "@/components/chat/SymptomPicker";
 import { AnchorPicker } from "@/components/chat/AnchorPicker";
@@ -368,6 +368,44 @@ const Chat = () => {
     sendOnboardingResponse("Notification preferences set", undefined, undefined, undefined, prefs);
   };
 
+  const goBackToStep = async (targetStep: number) => {
+    if (!user || isSending) return;
+    setIsSending(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("chat-onboarding", {
+        body: { action: "go_back", targetStep },
+      });
+
+      if (error) {
+        console.error("Go back error:", error);
+        toast({ title: "Couldn't go back", variant: "destructive" });
+      } else {
+        // Refresh messages
+        const { data: freshMessages } = await supabase
+          .from("chat_messages")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: true });
+
+        if (freshMessages) {
+          const typedMessages = freshMessages.map((m) => ({
+            ...m,
+            role: m.role as "user" | "assistant" | "system",
+            metadata: m.metadata as ChatMessage["metadata"],
+          }));
+          setMessages(typedMessages);
+          setOnboardingStep(targetStep);
+          setIsOnboarding(true);
+        }
+      }
+    } catch (error) {
+      console.error("Go back error:", error);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   // Check if we should show an interactive picker instead of text input
   const shouldShowInteractivePicker = () => {
     if (!isOnboarding || messages.length === 0) return false;
@@ -525,7 +563,25 @@ const Chat = () => {
 
       {/* Onboarding Progress Bar */}
       {isOnboarding && (
-        <OnboardingProgress currentStep={onboardingStep} totalSteps={6} />
+        <div className="flex items-center gap-2 bg-card/80 backdrop-blur-sm border-b border-border/50 px-4 py-2">
+          <div className="max-w-3xl mx-auto w-full flex items-center gap-2">
+            {onboardingStep > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => goBackToStep(onboardingStep - 1)}
+                disabled={isSending}
+                className="text-muted-foreground hover:text-foreground gap-1 shrink-0"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Back
+              </Button>
+            )}
+            <div className="flex-1">
+              <OnboardingProgress currentStep={onboardingStep} totalSteps={6} />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Messages */}
