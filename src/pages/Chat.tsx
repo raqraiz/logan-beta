@@ -15,6 +15,7 @@ import { DatePickerInput } from "@/components/chat/DatePickerInput";
 import { NotificationPreferencePicker } from "@/components/chat/NotificationPreferencePicker";
 import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
+import { HormoneChart } from "@/components/chat/HormoneChart";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { TrialChat } from "@/components/chat/TrialChat";
 import { MessageFeedback } from "@/components/chat/MessageFeedback";
@@ -625,10 +626,10 @@ const Chat = () => {
                           : "bg-card border border-border"
                       }`}
                     >
-                      {/* Cycle visual for insight messages */}
+                      {/* Hormone chart for insight messages */}
                       {message.metadata?.has_cycle_visual && message.metadata?.cycle_day && message.metadata?.cycle_phase && (
                         <div className="mb-3">
-                          <ChatCycleCircle
+                          <HormoneChart
                             cycleDay={message.metadata.cycle_day}
                             phase={message.metadata.cycle_phase}
                             cycleLengthDays={message.metadata.cycle_length_days || 28}
