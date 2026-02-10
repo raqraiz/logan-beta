@@ -126,7 +126,7 @@ export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartP
   const markerX = padX + xPos * chartW;
 
   const phases = [
-    { label: "Period", start: 0, end: menEnd },
+    { label: "Menstruation", start: 0, end: menEnd },
     { label: "Follicular", start: menEnd, end: ovStart },
     { label: "Ovulation", start: ovStart, end: ovEnd },
     { label: "Luteal", start: ovEnd, end: cycleLengthDays },
@@ -139,7 +139,7 @@ export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartP
         {phases.map((p, i) => {
           const x1 = padX + (p.start / cycleLengthDays) * chartW;
           const x2 = padX + (p.end / cycleLengthDays) * chartW;
-          const isActive = phase === p.label || (phase === "Menstruation" && p.label === "Period");
+          const isActive = phase === p.label;
           return (
             <g key={i}>
               <rect
