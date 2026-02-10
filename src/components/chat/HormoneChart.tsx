@@ -145,11 +145,10 @@ export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartP
               <rect
                 x={x1}
                 y={padTop}
-                width={x2 - x1}
+                width={isActive ? 1.5 : 0}
                 height={chartH}
-                fill={isActive ? `${color}` : "transparent"}
-                fillOpacity={isActive ? 0.04 : 0}
-                rx={3}
+                fill={color}
+                rx={1}
               />
               <text
                 x={(x1 + x2) / 2}
