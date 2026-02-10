@@ -92,8 +92,8 @@ export const TrialChat = () => {
     setTrialMessageCount(prev => prev + 1);
     setIsTyping(false);
 
-    // After 3 exchanges, show auth prompt
-    if (trialMessageCount >= 2) {
+    // After 1 exchange, show auth prompt
+    if (trialMessageCount >= 0) {
       setTimeout(() => setShowAuth(true), 500);
     }
 
