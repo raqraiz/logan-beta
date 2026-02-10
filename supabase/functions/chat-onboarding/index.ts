@@ -354,6 +354,7 @@ serve(async (req) => {
             message_type: "text",
             metadata: {
               has_cycle_visual: true,
+              visual_type: "cycle_circle",
               cycle_day: cycleInfo.cycleDay,
               cycle_phase: cycleInfo.phase,
               cycle_length_days: cycleLength,
@@ -409,6 +410,7 @@ serve(async (req) => {
         // Include cycle visual if we have the data
         if (cycleInfo) {
           metadata.has_cycle_visual = true;
+          metadata.visual_type = "hormone_chart";
           metadata.cycle_day = cycleInfo.cycleDay;
           metadata.cycle_phase = cycleInfo.phase;
           metadata.cycle_length_days = cycleLength;
@@ -487,6 +489,7 @@ serve(async (req) => {
             message_type: "text",
             metadata: {
               has_cycle_visual: true,
+              visual_type: "hormone_chart",
               cycle_day: cycleInfo.cycleDay,
               cycle_phase: cycleInfo.phase,
               cycle_length_days: participant.cycle_length_days || 28,
