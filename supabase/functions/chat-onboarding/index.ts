@@ -331,6 +331,41 @@ serve(async (req) => {
       const nextStep = currentStep + 1;
       const nextQuestion = ONBOARDING_QUESTIONS[nextStep];
       const nextMessage = nextQuestion.message;
+
+      // If we just completed the date step, insert a cycle circle with educational tidbit
+      if (currentQuestion.key === "last_period") {
+        const cycleLength = participant?.cycle_length_days || 28;
+        const cycleInfo = calculateCycleInfo(parsedValue, cycleLength);
+
+        if (cycleInfo) {
+          const phaseTidbits: Record<string, string> = {
+            Menstruation: `Day ${cycleInfo.cycleDay}. You're in your period right now, which means your hormones are at their lowest. Your body is basically doing a hard reset. That tired, inward feeling? That's not laziness, it's biology clearing the slate for what comes next.`,
+            Follicular: `Day ${cycleInfo.cycleDay}. You're in your follicular phase, which is when estrogen starts climbing and things start to feel easier again. That lift in energy and motivation? It's real, and it builds from here.`,
+            Ovulation: `Day ${cycleInfo.cycleDay}. You're right around ovulation, which is when estrogen peaks and you're running at your sharpest. If you've been feeling more on than usual, that's why.`,
+            Luteal: `Day ${cycleInfo.cycleDay}. You're in your luteal phase. Progesterone is running the show now, which is why everything might feel heavier or more frustrating than it did a week ago. This is the phase most people struggle with and don't realize why.`
+          };
+
+          const tidbit = phaseTidbits[cycleInfo.phase] || phaseTidbits.Follicular;
+
+          await supabase.from("chat_messages").insert({
+            user_id: user.id,
+            role: "assistant",
+            content: tidbit,
+            message_type: "text",
+            metadata: {
+              has_cycle_visual: true,
+              cycle_day: cycleInfo.cycleDay,
+              cycle_phase: cycleInfo.phase,
+              cycle_length_days: cycleLength,
+              insight_type: "onboarding_reveal"
+            }
+          });
+
+          // Brief pause so it feels conversational
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
       // Build metadata for next message
       const nextMetadata: Record<string, any> = { 
         onboarding_step: nextStep, 
