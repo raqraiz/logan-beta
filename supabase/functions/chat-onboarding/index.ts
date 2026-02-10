@@ -511,6 +511,71 @@ serve(async (req) => {
       );
     }
 
+    // Action: Go back to a previous step
+    if (action === "go_back") {
+      const { targetStep } = body;
+      
+      if (targetStep === undefined || targetStep < 0 || targetStep >= ONBOARDING_QUESTIONS.length - 1) {
+        return new Response(
+          JSON.stringify({ error: "Invalid target step" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Find the message that asked the target step question
+      const targetStepMessages = messages?.filter(
+        m => m.metadata?.onboarding_step !== undefined && (m.metadata as any).onboarding_step >= targetStep
+      ) || [];
+
+      if (targetStepMessages.length > 0) {
+        // Get the timestamp of the first message at or after the target step
+        const cutoffTime = targetStepMessages[0].created_at;
+
+        // Delete all messages from that point forward
+        const { error: deleteError } = await supabase
+          .from("chat_messages")
+          .delete()
+          .eq("user_id", user.id)
+          .gte("created_at", cutoffTime);
+
+        if (deleteError) {
+          console.error("Error deleting messages:", deleteError);
+          throw deleteError;
+        }
+      }
+
+      // Re-send the target step question
+      const targetQuestion = ONBOARDING_QUESTIONS[targetStep];
+      const targetMetadata: Record<string, any> = {
+        onboarding_step: targetStep,
+        expecting_field: targetQuestion.field,
+        input_type: targetQuestion.inputType
+      };
+
+      if (targetQuestion.inputType === "symptom_picker") {
+        targetMetadata.symptom_categories = SYMPTOM_CATEGORIES;
+      }
+      if (targetQuestion.inputType === "anchor_picker") {
+        const symptomsForAnchor = participant?.typical_symptoms || [];
+        targetMetadata.available_symptoms = symptomsForAnchor;
+      }
+
+      await supabase.from("chat_messages").insert({
+        user_id: user.id,
+        role: "assistant",
+        content: targetQuestion.message,
+        message_type: "onboarding",
+        metadata: targetMetadata
+      });
+
+      console.log("Went back to step:", targetStep);
+
+      return new Response(
+        JSON.stringify({ success: true, wentBackToStep: targetStep }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: "Invalid action" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
