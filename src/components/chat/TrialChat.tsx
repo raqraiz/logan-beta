@@ -20,6 +20,28 @@ const SUGGESTED_QUESTIONS = [
   "How can cycle awareness help my workouts?",
 ];
 
+const getContextualHeadline = (question: string): string => {
+  const q = question.toLowerCase();
+  if (q.includes("luteal")) return "I can help you plan around your luteal phase";
+  if (q.includes("energy") || q.includes("strongest")) return "I can map your energy to your cycle";
+  if (q.includes("workout") || q.includes("training") || q.includes("lift")) return "I can optimize your training to your cycle";
+  if (q.includes("follicular")) return "I can show you how to use your follicular phase";
+  if (q.includes("ovulat")) return "I can help you leverage your ovulation window";
+  if (q.includes("period") || q.includes("menstrual") || q.includes("bleed")) return "I can help you recover smarter during your period";
+  if (q.includes("pms") || q.includes("pmdd")) return "I can help you get ahead of PMS";
+  if (q.includes("hormone") || q.includes("cycle") || q.includes("phase")) return "I can track your hormonal shifts for you";
+  return "I can personalize this to your cycle";
+};
+
+const getContextualDescription = (question: string): string => {
+  const q = question.toLowerCase();
+  if (q.includes("luteal")) return "Sign up and I'll track your luteal phase timing, predict when symptoms will hit, and help you plan around them.";
+  if (q.includes("energy") || q.includes("strongest")) return "Sign up and I'll pinpoint your high-energy windows and low points based on where you are in your cycle each day.";
+  if (q.includes("workout") || q.includes("training") || q.includes("lift")) return "Sign up and I'll tell you when to push intensity and when to prioritize recovery based on your hormonal shifts.";
+  if (q.includes("pms") || q.includes("pmdd")) return "Sign up and I'll predict when your PMS symptoms are likely to surface so you can prepare instead of react.";
+  return "Create an account and I'll learn your patterns to give you phase-specific guidance on energy, focus, and recovery.";
+};
+
 export const TrialChat = () => {
   const [messages, setMessages] = useState<TrialMessage[]>([
     {
@@ -32,6 +54,7 @@ export const TrialChat = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [trialMessageCount, setTrialMessageCount] = useState(0);
+  const [lastUserQuestion, setLastUserQuestion] = useState("");
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -58,6 +81,7 @@ export const TrialChat = () => {
     };
     
     setMessages(prev => [...prev, newUserMessage]);
+    setLastUserQuestion(userMessage);
     setIsTyping(true);
 
     try {
@@ -212,10 +236,10 @@ export const TrialChat = () => {
                     <div className="absolute inset-0 bg-primary/30 rounded-full blur-xl animate-pulse" />
                   </div>
                   <h3 className="font-display font-semibold text-xl text-foreground mb-3">
-                    Ready for personalized insights?
+                    {getContextualHeadline(lastUserQuestion)}
                   </h3>
                   <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-                    Create an account to get cycle guidance tailored to your unique patterns.
+                    {getContextualDescription(lastUserQuestion)}
                   </p>
                   <InlineChatAuth />
                 </div>
