@@ -59,7 +59,7 @@ const ALL_SYMPTOMS = [
 const ONBOARDING_QUESTIONS = [
   {
     key: "age",
-    message: "Good, you're in. To make this actually useful for you, I need to learn a few things. How old are you?",
+    message: "Alright, to make this actually useful for you I need to learn a few things. Quick one to start: how old are you?",
     field: "age",
     parseType: "number",
     inputType: "text"
