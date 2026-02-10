@@ -366,6 +366,66 @@ serve(async (req) => {
         }
       }
 
+      // If we just completed the symptoms step, validate and make user feel seen
+      if (currentQuestion.key === "symptoms" && selectedSymptoms && selectedSymptoms.length > 0) {
+        const cycleLength = participant?.cycle_length_days || 28;
+        const cycleInfo = calculateCycleInfo(
+          participant?.last_period_start,
+          cycleLength
+        );
+
+        // Build a validation message that reflects their symptoms back
+        const symptomList = selectedSymptoms.slice(0, 3);
+        const hasEmotional = selectedSymptoms.some((s: string) => 
+          SYMPTOM_CATEGORIES.emotional.symptoms.includes(s)
+        );
+        const hasPhysical = selectedSymptoms.some((s: string) => 
+          SYMPTOM_CATEGORIES.physical.symptoms.includes(s)
+        );
+        const hasQuirky = selectedSymptoms.some((s: string) => 
+          SYMPTOM_CATEGORIES.quirky.symptoms.includes(s)
+        );
+
+        let validationMsg = "";
+
+        if (hasEmotional && hasPhysical) {
+          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. So you're getting hit on both sides, mentally and physically. That's really common and it's almost always heaviest in the luteal phase, roughly the last two weeks of your cycle. Most people don't connect those dots, they just think they're having a bad week.`;
+        } else if (hasEmotional) {
+          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These are textbook progesterone symptoms. They usually ramp up in the second half of your cycle when progesterone takes over. You're not imagining it and you're definitely not the only one.`;
+        } else if (hasPhysical) {
+          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Your body is telling you exactly where it struggles most. These tend to follow a pattern tied to your hormonal shifts, especially around the luteal phase and into your period.`;
+        } else {
+          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. I see this a lot. These follow your hormonal pattern more closely than most people realize. Once you start tracking when they hit, the timing stops being a surprise.`;
+        }
+
+        if (hasQuirky) {
+          validationMsg += " And yeah, the weird ones count too. Hormones do strange things.";
+        }
+
+        const metadata: Record<string, any> = {
+          insight_type: "symptom_validation"
+        };
+
+        // Include cycle visual if we have the data
+        if (cycleInfo) {
+          metadata.has_cycle_visual = true;
+          metadata.cycle_day = cycleInfo.cycleDay;
+          metadata.cycle_phase = cycleInfo.phase;
+          metadata.cycle_length_days = cycleLength;
+          metadata.validated_symptoms = selectedSymptoms;
+        }
+
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: validationMsg,
+          message_type: "text",
+          metadata
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 1200));
+      }
+
       // Build metadata for next message
       const nextMetadata: Record<string, any> = { 
         onboarding_step: nextStep, 
