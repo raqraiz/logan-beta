@@ -22,24 +22,24 @@ const SUGGESTED_QUESTIONS = [
 
 const getContextualHeadline = (question: string): string => {
   const q = question.toLowerCase();
-  if (q.includes("luteal")) return "I can help you plan around your luteal phase";
-  if (q.includes("energy") || q.includes("strongest")) return "I can map your energy to your cycle";
-  if (q.includes("workout") || q.includes("training") || q.includes("lift")) return "I can optimize your training to your cycle";
-  if (q.includes("follicular")) return "I can show you how to use your follicular phase";
-  if (q.includes("ovulat")) return "I can help you leverage your ovulation window";
-  if (q.includes("period") || q.includes("menstrual") || q.includes("bleed")) return "I can help you recover smarter during your period";
-  if (q.includes("pms") || q.includes("pmdd")) return "I can help you get ahead of PMS";
-  if (q.includes("hormone") || q.includes("cycle") || q.includes("phase")) return "I can track your hormonal shifts for you";
-  return "I can personalize this to your cycle";
+  if (q.includes("luteal")) return "That luteal chaos? I can help you see it coming";
+  if (q.includes("energy") || q.includes("strongest")) return "Your energy has a pattern. I can show you";
+  if (q.includes("workout") || q.includes("training") || q.includes("lift")) return "Your body wants different things at different times";
+  if (q.includes("follicular")) return "That post-period boost is real. Let me show you how to use it";
+  if (q.includes("ovulat")) return "There's a reason you feel unstoppable some weeks";
+  if (q.includes("period") || q.includes("menstrual") || q.includes("bleed")) return "Your period is actually a reset, not a setback";
+  if (q.includes("pms") || q.includes("pmdd")) return "What if you could see PMS coming days in advance?";
+  if (q.includes("hormone") || q.includes("cycle") || q.includes("phase")) return "Once you see the pattern, everything clicks";
+  return "What if you could stop guessing and start planning?";
 };
 
 const getContextualDescription = (question: string): string => {
   const q = question.toLowerCase();
-  if (q.includes("luteal")) return "Sign up and I'll track your luteal phase timing, predict when symptoms will hit, and help you plan around them.";
-  if (q.includes("energy") || q.includes("strongest")) return "Sign up and I'll pinpoint your high-energy windows and low points based on where you are in your cycle each day.";
-  if (q.includes("workout") || q.includes("training") || q.includes("lift")) return "Sign up and I'll tell you when to push intensity and when to prioritize recovery based on your hormonal shifts.";
-  if (q.includes("pms") || q.includes("pmdd")) return "Sign up and I'll predict when your PMS symptoms are likely to surface so you can prepare instead of react.";
-  return "Create an account and I'll learn your patterns to give you phase-specific guidance on energy, focus, and recovery.";
+  if (q.includes("luteal")) return "Sign up and I'll learn your cycle so I can warn you before the hard days hit. No more getting blindsided.";
+  if (q.includes("energy") || q.includes("strongest")) return "Sign up and I'll track where you are in your cycle each day so you know when to go hard and when to take it easy.";
+  if (q.includes("workout") || q.includes("training") || q.includes("lift")) return "Sign up and I'll help you work with your body instead of wondering why some weeks feel impossible.";
+  if (q.includes("pms") || q.includes("pmdd")) return "Sign up and I'll track your patterns so you can prepare for the rough days instead of being caught off guard.";
+  return "Sign up and I'll learn your unique patterns so I can give you a heads up before things shift.";
 };
 
 export const TrialChat = () => {
@@ -47,7 +47,7 @@ export const TrialChat = () => {
     {
       id: "welcome",
       role: "assistant",
-      content: "Hey, I'm Logan. Your cycle runs in four phases: Menstruation, Follicular, Ovulation, and Luteal. Each one shifts how you think, move, and recover. I track where you are and help you use it. What do you want to know?",
+      content: "Hey, I'm Logan. You know how some weeks you feel like you can take on anything, and then other weeks everything is just... harder? That's not random. Your cycle has four phases and each one changes your energy, your mood, even how you think. I help you see the pattern so you can stop fighting it. What do you want to know?",
     },
   ]);
   const [inputValue, setInputValue] = useState("");

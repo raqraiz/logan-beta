@@ -55,53 +55,53 @@ const ALL_SYMPTOMS = [
   ...SYMPTOM_CATEGORIES.quirky.symptoms
 ];
 
-// Onboarding question flow - Strategic, performance-focused voice with educational micro-moments
+// Onboarding question flow - Human, relatable voice with educational micro-moments
 const ONBOARDING_QUESTIONS = [
   {
     key: "age",
-    message: "Good, you're in. Now I can personalize everything. To calibrate your insights, how old are you?",
+    message: "Good, you're in. Now I can actually start learning your patterns. Quick one to start: how old are you?",
     field: "age",
     parseType: "number",
     inputType: "text"
   },
   {
     key: "cycle_length",
-    message: "Your cycle length determines when each hormonal shift happens. Estrogen, progesterone, testosterone: they all rise and fall on a schedule unique to you. Most cycles run 24-35 days. How long is yours? If you're not sure, 28 is a solid starting point.",
+    message: "So your cycle length basically determines when everything shifts for you. It's like having four different operating modes in one month, each one driven by different hormones doing different things. Most cycles are somewhere between 24-35 days. How long is yours? If you have no idea, 28 is a fine starting point.",
     field: "cycle_length_days",
     parseType: "number",
     inputType: "text"
   },
   {
     key: "last_period",
-    message: "Day 1 of your period is Day 1 of your cycle. That's when estrogen and progesterone are at their lowest, and your body starts rebuilding from scratch. When did your last period start?",
+    message: "Day 1 of your period is Day 1 of everything. It's when your hormones are at their quietest and your body starts building back up from scratch. Kind of like a clean slate every month. When did your last period start?",
     field: "last_period_start",
     parseType: "date",
     inputType: "date_picker"
   },
   {
     key: "symptoms",
-    message: "Here's what most people don't realize: symptoms like brain fog, short fuse, or energy crashes aren't random. They follow your hormonal pattern and show up at predictable points in your cycle. Which of these tend to hit you?",
+    message: "Here's the thing most people don't realize: that brain fog, that random irritability, those days where everything feels harder? None of it is random. It follows your hormonal pattern and shows up at the same point in your cycle almost every month. Which of these tend to hit you?",
     field: "typical_symptoms",
     parseType: "symptoms",
     inputType: "symptom_picker"
   },
   {
     key: "anchor_symptom",
-    message: "Your Anchor Symptom is the one that derails your day the most. I'll track when it's likely to surface based on your cycle phase, so you can prepare instead of react. Which one hits hardest?",
+    message: "Now pick the one that really gets you. The one where you think why am I like this and then get your period two days later and go... oh. That's your Anchor Symptom. I'll help you see it coming before it arrives. Which one hits hardest?",
     field: "anchor_symptom",
     parseType: "anchor",
     inputType: "anchor_picker"
   },
   {
     key: "notification_preferences",
-    message: "I'll send you phase-aware check-ins with what to expect and how to plan. Think of it as a heads-up before your hormones shift. When works best?",
+    message: "I'll send you a heads up before things shift so you're not caught off guard. Think of it like a weather forecast for your body. When's the best time to check in?",
     field: "notification_preferences",
     parseType: "notification_preferences",
     inputType: "notification_picker"
   },
   {
     key: "complete",
-    message: "You're all set. I now know your cycle length, where you are today, and what to watch for. I'll start sending you insights that connect what you're feeling to what's happening hormonally, so you can plan around it instead of being caught off guard.",
+    message: "That's everything I need. I now know your cycle, where you are today, and what to watch for. From here, I'll connect what you're feeling to what's actually happening hormonally, so you can stop wondering what's wrong with you and start planning around it.",
     field: null,
     parseType: null,
     inputType: null
@@ -529,13 +529,13 @@ function calculateCycleInfo(
 // Helper: Generate first insight based on phase
 function generateFirstInsight(phase: string, cycleDay: number, anchorSymptom: string | null): string {
   const phaseInsights: Record<string, string> = {
-    Menstruation: `Day ${cycleDay}. Your body is shedding and resetting. Energy is typically at its lowest, and inflammation markers tend to peak. ${anchorSymptom ? `Watch for ${anchorSymptom.toLowerCase()} to show up stronger than usual.` : "This is a good window to prioritize rest over performance."}`,
+    Menstruation: `Day ${cycleDay}. Your body is in reset mode right now. Energy is usually at its lowest and everything feels like more effort than it should. ${anchorSymptom ? `Keep an eye on ${anchorSymptom.toLowerCase()}, it tends to show up stronger during this window.` : "Go easy on yourself today. This is the part of your cycle where rest actually makes you stronger."}`,
     
-    Follicular: `Day ${cycleDay}. Estrogen is climbing, which usually means sharper focus, better verbal fluency, and rising energy. ${anchorSymptom ? `Your ${anchorSymptom.toLowerCase()} tends to ease during this phase.` : "Good window for challenging work, social energy, and starting new projects."}`,
+    Follicular: `Day ${cycleDay}. You're in the part of your cycle where things start to click again. Estrogen is climbing, which usually means clearer thinking and more energy showing up without you having to force it. ${anchorSymptom ? `Your ${anchorSymptom.toLowerCase()} usually eases up during this phase.` : "This is a good window to take on the things that felt impossible last week."}`,
     
-    Ovulation: `Day ${cycleDay}. You're in your fertile window. Estrogen peaks, often bringing peak social energy and confidence. ${anchorSymptom ? `If ${anchorSymptom.toLowerCase()} hits, it may feel amplified.` : "Communication and collaboration tend to flow more easily now."}`,
+    Ovulation: `Day ${cycleDay}. If you're feeling weirdly confident or social right now, that's not random. Estrogen is peaking and you're probably at your sharpest this month. ${anchorSymptom ? `Watch for ${anchorSymptom.toLowerCase()} though, sometimes it gets amplified when everything else is running high.` : "Use this window. It doesn't last long but it's your superpower phase."}`,
     
-    Luteal: `Day ${cycleDay}. Progesterone is dominant now, which can lower stress tolerance and shorten your fuse. ${anchorSymptom ? `This is when ${anchorSymptom.toLowerCase()} typically surfaces for you.` : "Notice if you're more reactive or need more recovery time than usual."}`
+    Luteal: `Day ${cycleDay}. This is the phase where things get heavier. Progesterone is running the show now, which means your patience is thinner and everything takes more energy. ${anchorSymptom ? `This is usually when ${anchorSymptom.toLowerCase()} shows up for you. Now you know it's coming.` : "If you're feeling more reactive or tired than usual, that's not a character flaw. It's chemistry."}`
   };
 
   return phaseInsights[phase] || phaseInsights.Follicular;

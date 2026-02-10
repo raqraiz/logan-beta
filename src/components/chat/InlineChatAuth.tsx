@@ -119,7 +119,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
           <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 inline-block max-w-[90%]">
             <p className="text-foreground">
               {isSignUp 
-                ? "To give you real guidance, I need to learn your patterns over time. Create an account and I'll remember every conversation, track your feedback, and build a profile around your unique cycle so every insight gets sharper."
+                ? "To actually help you, I need to remember our conversations and learn your patterns over time. Sign up and I'll build a picture of your unique cycle so every insight gets more accurate, not generic advice, real guidance based on you."
                 : "Welcome back. Sign in to pick up where we left off."
               }
             </p>
