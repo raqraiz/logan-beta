@@ -18,7 +18,8 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { 
   Users, RefreshCw, Search, Mail, Phone, Calendar, ChevronRight, 
-  ChevronLeft, Trash2, Loader2, Activity, Target, Clock, MessageSquare
+  ChevronLeft, Trash2, Loader2, Activity, Target, Clock, MessageSquare,
+  Bell, BellOff, CheckCircle2, XCircle
 } from "lucide-react";
 import { formatDistanceToNow, format, differenceInDays } from "date-fns";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
@@ -42,6 +43,7 @@ interface NotificationPreference {
   preferred_days: string[] | null;
   timezone: string;
   is_enabled: boolean;
+  last_notification_at: string | null;
 }
 
 interface Participant {
@@ -263,6 +265,55 @@ export function ProfilesTab() {
     return "Luteal";
   };
 
+  const TIME_WINDOWS: Record<string, { start: number; end: number }> = {
+    morning: { start: 7, end: 10 },
+    afternoon: { start: 12, end: 15 },
+    evening: { start: 19, end: 22 },
+  };
+
+  const getNotificationStatus = (prefs?: NotificationPreference): {
+    status: "sent" | "pending" | "not_scheduled" | "disabled";
+    label: string;
+  } => {
+    if (!prefs) return { status: "not_scheduled", label: "Not configured" };
+    if (!prefs.is_enabled) return { status: "disabled", label: "Disabled" };
+
+    const now = new Date();
+    const israelTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }));
+    const todayStr = israelTime.toLocaleDateString("en-US", { timeZone: "Asia/Jerusalem" });
+    const currentDay = israelTime.toLocaleDateString("en-US", { weekday: "long", timeZone: "Asia/Jerusalem" }).toLowerCase();
+    const currentHour = israelTime.getHours();
+
+    // Check if today is a scheduled day
+    const isDaily = prefs.frequency === "daily";
+    const isScheduledToday = isDaily || (prefs.preferred_days?.includes(currentDay) ?? false);
+
+    if (!isScheduledToday) return { status: "not_scheduled", label: "Not today" };
+
+    // Check if already sent today
+    if (prefs.last_notification_at) {
+      const lastNotifDay = new Date(prefs.last_notification_at).toLocaleDateString("en-US", { timeZone: "Asia/Jerusalem" });
+      if (lastNotifDay === todayStr) {
+        const sentTime = new Date(prefs.last_notification_at);
+        const sentTimeIsrael = new Date(sentTime.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }));
+        return { 
+          status: "sent", 
+          label: `Sent ${format(sentTimeIsrael, "h:mm a")}` 
+        };
+      }
+    }
+
+    // Scheduled but not yet sent
+    const window = TIME_WINDOWS[prefs.preferred_time] || TIME_WINDOWS.evening;
+    if (currentHour < window.start) {
+      return { status: "pending", label: `Pending (${prefs.preferred_time})` };
+    } else if (currentHour >= window.end) {
+      return { status: "pending", label: "Missed window" };
+    } else {
+      return { status: "pending", label: "Due now" };
+    }
+  };
+
   const filtered = profiles.filter(p =>
     p.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -367,11 +418,37 @@ export function ProfilesTab() {
           {/* Notification Preferences Card */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Notifications</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Bell className="w-5 h-5" />
+                Notifications
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {profile.notificationPrefs ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
+                  {/* Today's status */}
+                  {(() => {
+                    const notifStatus = getNotificationStatus(profile.notificationPrefs);
+                    return (
+                      <div className={cn(
+                        "flex items-center gap-2 rounded-lg p-2.5 text-sm font-medium",
+                        notifStatus.status === "sent" && "bg-green-500/10 text-green-700",
+                        notifStatus.status === "pending" && "bg-yellow-500/10 text-yellow-700",
+                        notifStatus.status === "disabled" && "bg-muted text-muted-foreground",
+                        notifStatus.status === "not_scheduled" && "bg-muted text-muted-foreground",
+                      )}>
+                        {notifStatus.status === "sent" ? (
+                          <CheckCircle2 className="w-4 h-4" />
+                        ) : notifStatus.status === "pending" ? (
+                          <Bell className="w-4 h-4" />
+                        ) : (
+                          <BellOff className="w-4 h-4" />
+                        )}
+                        Today: {notifStatus.label}
+                      </div>
+                    );
+                  })()}
+
                   <div className="flex items-center gap-2">
                     <Badge variant={profile.notificationPrefs.is_enabled ? "default" : "secondary"}>
                       {profile.notificationPrefs.is_enabled ? "Enabled" : "Disabled"}
@@ -383,6 +460,11 @@ export function ProfilesTab() {
                     <p className="text-sm"><strong>Days:</strong> {profile.notificationPrefs.preferred_days.join(", ")}</p>
                   )}
                   <p className="text-sm"><strong>Timezone:</strong> {profile.notificationPrefs.timezone}</p>
+                  {profile.notificationPrefs.last_notification_at && (
+                    <p className="text-sm text-muted-foreground">
+                      Last sent: {format(new Date(profile.notificationPrefs.last_notification_at), "MMM d, h:mm a")}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">Not configured</p>
@@ -688,6 +770,29 @@ export function ProfilesTab() {
                         {profile.insights && profile.insights.length > 0 && (
                           <span>{profile.insights.length} insights</span>
                         )}
+                        {(() => {
+                          const notifStatus = getNotificationStatus(profile.notificationPrefs);
+                          return (
+                            <span className="flex items-center gap-1">
+                              {notifStatus.status === "sent" ? (
+                                <CheckCircle2 className="w-3 h-3 text-green-500" />
+                              ) : notifStatus.status === "pending" ? (
+                                <Bell className="w-3 h-3 text-yellow-500" />
+                              ) : notifStatus.status === "disabled" ? (
+                                <BellOff className="w-3 h-3 text-muted-foreground" />
+                              ) : (
+                                <XCircle className="w-3 h-3 text-muted-foreground" />
+                              )}
+                              <span className={cn(
+                                "text-xs",
+                                notifStatus.status === "sent" && "text-green-600",
+                                notifStatus.status === "pending" && "text-yellow-600"
+                              )}>
+                                {notifStatus.label}
+                              </span>
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                     <ChevronRight className="w-5 h-5 text-muted-foreground" />
