@@ -82,11 +82,6 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
           } else {
             throw error;
           }
-        } else {
-          toast({
-            title: "Check your email",
-            description: "We sent you a verification link to complete signup.",
-          });
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
