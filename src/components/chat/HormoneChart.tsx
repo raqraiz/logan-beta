@@ -100,11 +100,11 @@ export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartP
 
   const xPos = (cycleDay - 1) / (cycleLengthDays - 1);
 
-  const w = 340;
-  const h = 130;
-  const padX = 12;
-  const padTop = 18;
-  const padBot = 32;
+  const w = 400;
+  const h = 180;
+  const padX = 14;
+  const padTop = 24;
+  const padBot = 40;
   const chartW = w - padX * 2;
   const chartH = h - padTop - padBot;
 
@@ -134,7 +134,7 @@ export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartP
 
   return (
     <div className="rounded-xl bg-[hsl(var(--logan-graphite))] border border-border/30 p-3 space-y-2">
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ maxHeight: 150 }}>
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full">
         {/* Phase background bands */}
         {phases.map((p, i) => {
           const x1 = padX + (p.start / cycleLengthDays) * chartW;
@@ -152,12 +152,12 @@ export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartP
               />
               <text
                 x={(x1 + x2) / 2}
-                y={h - 8}
+                y={h - 18}
                 textAnchor="middle"
                 className="fill-muted-foreground"
-                fontSize="7"
+                fontSize="10"
                 fontFamily="inherit"
-                opacity={isActive ? 1 : 0.5}
+                opacity={isActive ? 1 : 0.45}
                 fontWeight={isActive ? 600 : 400}
               >
                 {p.label}
@@ -174,7 +174,7 @@ export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartP
           y2={padTop + chartH}
           stroke="hsl(var(--border))"
           strokeWidth="0.5"
-          opacity={0.3}
+          opacity={0.2}
         />
 
         {/* Hormone curves */}
@@ -191,25 +191,25 @@ export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartP
           />
         ))}
 
-        {/* "You are here" marker — very thin line */}
+        {/* "You are here" marker — hairline */}
         <line
           x1={markerX}
           y1={padTop}
           x2={markerX}
           y2={padTop + chartH}
           stroke={color}
-          strokeWidth="0.5"
-          strokeDasharray="2 2"
-          opacity={0.6}
+          strokeWidth="0.35"
+          strokeDasharray="3 2"
+          opacity={0.5}
         />
 
         {/* Day label */}
         <text
           x={markerX}
-          y={padTop - 5}
+          y={padTop - 6}
           textAnchor="middle"
           fill={color}
-          fontSize="7"
+          fontSize="10"
           fontWeight="600"
           fontFamily="inherit"
         >
@@ -217,34 +217,34 @@ export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartP
         </text>
         <text
           x={markerX}
-          y={padTop + chartH + 10}
+          y={padTop + chartH + 12}
           textAnchor="middle"
           fill={color}
-          fontSize="5.5"
+          fontSize="8"
           fontFamily="inherit"
-          opacity={0.7}
+          opacity={0.6}
         >
           ▲ you are here
         </text>
 
         {/* Legend row */}
         {HORMONES.map((hormone, i) => {
-          const lx = padX + i * 78;
+          const lx = padX + i * 95;
           return (
             <g key={hormone.key}>
               <line
                 x1={lx}
-                y1={h - 1}
-                x2={lx + 10}
-                y2={h - 1}
+                y1={h - 4}
+                x2={lx + 12}
+                y2={h - 4}
                 stroke={hormone.color}
                 strokeWidth="1.5"
                 strokeLinecap="round"
               />
               <text
-                x={lx + 14}
-                y={h + 1.5}
-                fontSize="6"
+                x={lx + 16}
+                y={h - 1}
+                fontSize="9"
                 className="fill-muted-foreground"
                 fontFamily="inherit"
               >
