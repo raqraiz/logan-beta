@@ -13,6 +13,7 @@ import { SymptomPicker } from "@/components/chat/SymptomPicker";
 import { AnchorPicker } from "@/components/chat/AnchorPicker";
 import { DatePickerInput } from "@/components/chat/DatePickerInput";
 import { NotificationPreferencePicker } from "@/components/chat/NotificationPreferencePicker";
+import { PhoneInput } from "@/components/chat/PhoneInput";
 import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
 import { HormoneChart } from "@/components/chat/HormoneChart";
@@ -286,7 +287,8 @@ const Chat = () => {
     symptoms?: string[],
     anchor?: string,
     date?: Date,
-    notificationPrefs?: { frequency: string; preferredTime: string; preferredDays: string[] }
+    notificationPrefs?: { frequency: string; preferredTime: string; preferredDays: string[] },
+    phone?: string
   ) => {
     if (!user || isSending) return;
     
@@ -303,7 +305,9 @@ const Chat = () => {
             ? `Last period: ${format(date, "PPP")}`
             : notificationPrefs
               ? `Notifications: ${notificationPrefs.frequency === "daily" ? "Daily" : notificationPrefs.frequency === "twice_weekly" ? "2x/week" : "Weekly"} in the ${notificationPrefs.preferredTime}`
-              : messageContent;
+              : phone
+                ? `Phone: ${phone}`
+                : messageContent;
 
       const { error } = await supabase.from("chat_messages").insert({
         user_id: user.id,
@@ -329,6 +333,9 @@ const Chat = () => {
       }
       if (notificationPrefs) {
         body.notificationPreferences = notificationPrefs;
+      }
+      if (phone) {
+        body.phoneNumber = phone;
       }
 
       const { data, error: onboardingError } = await supabase.functions.invoke("chat-onboarding", {
@@ -368,6 +375,10 @@ const Chat = () => {
 
   const handleNotificationPrefsSubmit = (prefs: { frequency: string; preferredTime: string; preferredDays: string[] }) => {
     sendOnboardingResponse("Notification preferences set", undefined, undefined, undefined, prefs);
+  };
+
+  const handlePhoneSubmit = (phone: string) => {
+    sendOnboardingResponse(`Phone: ${phone}`, undefined, undefined, undefined, undefined, phone);
   };
 
   const goBackToStep = async (targetStep: number) => {
@@ -414,7 +425,7 @@ const Chat = () => {
     const lastMessage = messages[messages.length - 1];
     if (lastMessage.role !== "assistant") return false;
     const inputType = lastMessage.metadata?.input_type;
-    return inputType === "symptom_picker" || inputType === "anchor_picker" || inputType === "date_picker" || inputType === "notification_picker";
+    return inputType === "symptom_picker" || inputType === "anchor_picker" || inputType === "date_picker" || inputType === "notification_picker" || inputType === "phone_input";
   };
   const sendFeedback = async (messageId: string, isPositive: boolean) => {
     if (!user) return;
@@ -580,7 +591,7 @@ const Chat = () => {
               </Button>
             )}
             <div className="flex-1">
-              <OnboardingProgress currentStep={onboardingStep} totalSteps={6} />
+              <OnboardingProgress currentStep={onboardingStep} totalSteps={7} />
             </div>
           </div>
         </div>
@@ -694,6 +705,15 @@ const Chat = () => {
                     <div className="mt-3">
                       <DatePickerInput
                         onSubmit={handleDateSubmit}
+                        isSubmitting={isSending}
+                      />
+                    </div>
+                  )}
+
+                  {showInteractiveInput && inputType === "phone_input" && (
+                    <div className="mt-3">
+                      <PhoneInput
+                        onSubmit={handlePhoneSubmit}
                         isSubmitting={isSending}
                       />
                     </div>

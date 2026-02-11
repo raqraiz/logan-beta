@@ -93,8 +93,15 @@ const ONBOARDING_QUESTIONS = [
     inputType: "anchor_picker"
   },
   {
+    key: "phone_number",
+    message: "One more thing. Drop your phone number so I can text you when something's coming up in your cycle. That way you don't have to remember to check in.",
+    field: "phone_number",
+    parseType: "phone",
+    inputType: "phone_input"
+  },
+  {
     key: "notification_preferences",
-    message: "Last thing. I'll send you a heads up before things shift, kind of like a weather forecast for your body. When's the best time to check in?",
+    message: "Got it. I'll send you a heads up before things shift, kind of like a weather forecast for your body. When's the best time to check in?",
     field: "notification_preferences",
     parseType: "notification_preferences",
     inputType: "notification_picker"
@@ -140,7 +147,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { action, userMessage, selectedSymptoms, anchorSymptom, selectedDate, notificationPreferences } = body;
+    const { action, userMessage, selectedSymptoms, anchorSymptom, selectedDate, notificationPreferences, phoneNumber } = body;
 
     console.log("Chat onboarding action:", action, "for user:", user.id);
 
@@ -262,6 +269,9 @@ serve(async (req) => {
       } else if (parseType === "notification_preferences") {
         // Use notification preferences object
         parsedValue = notificationPreferences || { frequency: "twice_weekly", preferredTime: "evening", preferredDays: ["tuesday", "saturday"] };
+      } else if (parseType === "phone") {
+        // Use phone number
+        parsedValue = phoneNumber || userMessage?.trim() || "";
       }
 
       // Get user's name from profile for participant creation
@@ -291,6 +301,20 @@ serve(async (req) => {
               is_enabled: true
             }, { onConflict: "user_id" });
           console.log("Saved notification preferences for user:", user.id);
+        } else if (currentQuestion.field === "phone_number") {
+          // Store phone in both profiles and participants
+          await supabase
+            .from("profiles")
+            .update({ phone: parsedValue })
+            .eq("id", user.id);
+          
+          if (participant) {
+            await supabase
+              .from("participants")
+              .update({ whatsapp_number: parsedValue })
+              .eq("id", participant.id);
+          }
+          console.log("Saved phone number for user:", user.id);
         } else {
           const updateData: Record<string, any> = {};
           updateData[currentQuestion.field] = parsedValue;
