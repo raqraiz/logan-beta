@@ -22,6 +22,8 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY")!;
+    const twilioAccountSid = Deno.env.get("TWILIO_ACCOUNT_SID")!;
+    const twilioAuthToken = Deno.env.get("TWILIO_AUTH_TOKEN")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     console.log("Starting scheduled insight check...");
@@ -82,7 +84,7 @@ serve(async (req) => {
     // Generate and send insights for each user
     for (const userId of usersToNotify) {
       try {
-        await sendInsightToUser(supabase, lovableApiKey, userId);
+        await sendInsightToUser(supabase, lovableApiKey, userId, twilioAccountSid, twilioAuthToken);
         
         // Update last notification time
         await supabase
@@ -118,7 +120,9 @@ serve(async (req) => {
 async function sendInsightToUser(
   supabase: ReturnType<typeof createClient>,
   lovableApiKey: string,
-  userId: string
+  userId: string,
+  twilioAccountSid: string,
+  twilioAuthToken: string
 ) {
   // Get user's participant data
   const { data: profile } = await supabase
@@ -183,6 +187,18 @@ async function sendInsightToUser(
       conversation_starters: conversationStarters
     }
   });
+
+  // Send SMS if user has a phone number
+  const phoneNumber = profile?.phone || participant.whatsapp_number;
+  if (phoneNumber && phoneNumber !== "web-user" && !phoneNumber.includes("@")) {
+    await sendSMS(
+      twilioAccountSid,
+      twilioAuthToken,
+      phoneNumber,
+      `${insight}\n\nOpen Logan to continue: https://logan-alpha-pilot.lovable.app`
+    );
+    console.log(`SMS sent to ${phoneNumber}`);
+  }
 }
 
 function calculateCycleInfo(
@@ -313,4 +329,36 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{ insi
       conversationStarters: ["I'm doing well", "Not great today", "Tell me more"]
     };
   }
+}
+
+async function sendSMS(
+  accountSid: string,
+  authToken: string,
+  to: string,
+  body: string
+): Promise<void> {
+  // Get Twilio phone numbers - we need to find one or use a messaging service
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+  
+  const params = new URLSearchParams();
+  params.append("To", to);
+  params.append("From", Deno.env.get("TWILIO_PHONE_NUMBER") || "");
+  params.append("Body", body);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Authorization": "Basic " + btoa(`${accountSid}:${authToken}`),
+    },
+    body: params.toString(),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Twilio SMS error: ${response.status} - ${errorText}`);
+  }
+
+  const result = await response.json();
+  console.log("SMS sent, SID:", result.sid);
 }
