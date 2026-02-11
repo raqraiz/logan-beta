@@ -127,7 +127,7 @@ async function sendInsightToUser(
   // Get user's participant data
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, email")
+    .select("full_name, email, phone")
     .eq("id", userId)
     .single();
 
