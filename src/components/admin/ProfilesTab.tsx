@@ -67,6 +67,7 @@ interface Participant {
   goals: string[] | null;
   timezone: string | null;
   is_active: boolean | null;
+  whatsapp_number: string;
   created_at: string;
 }
 
@@ -116,7 +117,11 @@ export function ProfilesTab() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [editOpen, setEditOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ full_name: "", email: "", phone: "" });
+  const [editForm, setEditForm] = useState({
+    full_name: "", email: "", phone: "",
+    cycle_length_days: "28", cycle_regularity: "", last_period_start: "",
+    anchor_symptom: "", typical_symptoms: "", goals: "", timezone: "Asia/Jerusalem",
+  });
   const [saving, setSaving] = useState(false);
 
   const fetchData = async () => {
@@ -251,10 +256,18 @@ export function ProfilesTab() {
 
   const openEditDialog = () => {
     if (!selectedProfile) return;
+    const p = selectedProfile.participant;
     setEditForm({
       full_name: selectedProfile.full_name,
       email: selectedProfile.email,
       phone: selectedProfile.phone || "",
+      cycle_length_days: String(p?.cycle_length_days ?? 28),
+      cycle_regularity: p?.cycle_regularity || "",
+      last_period_start: p?.last_period_start || "",
+      anchor_symptom: p?.anchor_symptom || "",
+      typical_symptoms: p?.typical_symptoms?.join(", ") || "",
+      goals: p?.goals?.join(", ") || "",
+      timezone: p?.timezone || "Asia/Jerusalem",
     });
     setEditOpen(true);
   };
@@ -263,6 +276,7 @@ export function ProfilesTab() {
     if (!selectedProfile) return;
     setSaving(true);
     try {
+      // Update profile table
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -274,24 +288,38 @@ export function ProfilesTab() {
 
       if (error) throw error;
 
-      // Also update participant whatsapp_number if participant exists
-      if (selectedProfile.participant && editForm.phone.trim()) {
-        await supabase
+      // Update participant table if it exists
+      if (selectedProfile.participant) {
+        const symptomsArr = editForm.typical_symptoms.trim()
+          ? editForm.typical_symptoms.split(",").map(s => s.trim()).filter(Boolean)
+          : null;
+        const goalsArr = editForm.goals.trim()
+          ? editForm.goals.split(",").map(s => s.trim()).filter(Boolean)
+          : null;
+
+        const { error: pError } = await supabase
           .from("participants")
-          .update({ whatsapp_number: editForm.phone.trim() })
+          .update({
+            full_name: editForm.full_name.trim(),
+            email: editForm.email.trim(),
+            whatsapp_number: editForm.phone.trim() || selectedProfile.participant.whatsapp_number || "",
+            cycle_length_days: parseInt(editForm.cycle_length_days) || 28,
+            cycle_regularity: editForm.cycle_regularity.trim() || null,
+            last_period_start: editForm.last_period_start || null,
+            anchor_symptom: editForm.anchor_symptom.trim() || null,
+            typical_symptoms: symptomsArr,
+            goals: goalsArr,
+            timezone: editForm.timezone.trim() || "Asia/Jerusalem",
+          })
           .eq("id", selectedProfile.participant.id);
+
+        if (pError) throw pError;
       }
 
       toast({ title: "Profile updated successfully" });
       setEditOpen(false);
       fetchData();
-      // Update selected profile in place
-      setSelectedProfile(prev => prev ? {
-        ...prev,
-        full_name: editForm.full_name.trim(),
-        email: editForm.email.trim(),
-        phone: editForm.phone.trim() || null,
-      } : null);
+      setSelectedProfile(null);
     } catch (error) {
       console.error("Error updating profile:", error);
       toast({ title: "Error updating profile", variant: "destructive" });
@@ -751,40 +779,70 @@ export function ProfilesTab() {
 
         {/* Edit Profile Dialog */}
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
-          <DialogContent>
+          <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle>Edit Profile</DialogTitle>
-              <DialogDescription>Update user profile information</DialogDescription>
+              <DialogTitle>Edit User Data</DialogTitle>
+              <DialogDescription>Update profile and cycle information</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Full Name</Label>
-                <Input
-                  id="edit-name"
-                  value={editForm.full_name}
-                  onChange={(e) => setEditForm(f => ({ ...f, full_name: e.target.value }))}
-                />
+            <div className="space-y-5 py-2">
+              {/* Profile section */}
+              <div>
+                <h4 className="text-sm font-semibold text-muted-foreground mb-3">Profile</h4>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-name">Full Name</Label>
+                    <Input id="edit-name" value={editForm.full_name} onChange={(e) => setEditForm(f => ({ ...f, full_name: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-email">Email</Label>
+                    <Input id="edit-email" type="email" value={editForm.email} onChange={(e) => setEditForm(f => ({ ...f, email: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-phone">Phone Number</Label>
+                    <Input id="edit-phone" type="tel" placeholder="+972..." value={editForm.phone} onChange={(e) => setEditForm(f => ({ ...f, phone: e.target.value }))} />
+                    <p className="text-xs text-muted-foreground">Include country code, e.g. +972501234567</p>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-email">Email</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={editForm.email}
-                  onChange={(e) => setEditForm(f => ({ ...f, email: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-phone">Phone Number</Label>
-                <Input
-                  id="edit-phone"
-                  type="tel"
-                  placeholder="+972..."
-                  value={editForm.phone}
-                  onChange={(e) => setEditForm(f => ({ ...f, phone: e.target.value }))}
-                />
-                <p className="text-xs text-muted-foreground">Include country code, e.g. +972501234567</p>
-              </div>
+
+              {/* Cycle section */}
+              {selectedProfile?.participant && (
+                <div>
+                  <h4 className="text-sm font-semibold text-muted-foreground mb-3">Cycle Data</h4>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="edit-cycle-length">Cycle Length (days)</Label>
+                        <Input id="edit-cycle-length" type="number" min="18" max="45" value={editForm.cycle_length_days} onChange={(e) => setEditForm(f => ({ ...f, cycle_length_days: e.target.value }))} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="edit-regularity">Regularity</Label>
+                        <Input id="edit-regularity" placeholder="e.g. regular, irregular" value={editForm.cycle_regularity} onChange={(e) => setEditForm(f => ({ ...f, cycle_regularity: e.target.value }))} />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-period">Last Period Start</Label>
+                      <Input id="edit-period" type="date" value={editForm.last_period_start} onChange={(e) => setEditForm(f => ({ ...f, last_period_start: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-anchor">Anchor Symptom</Label>
+                      <Input id="edit-anchor" placeholder="e.g. cramps, bloating" value={editForm.anchor_symptom} onChange={(e) => setEditForm(f => ({ ...f, anchor_symptom: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-symptoms">Typical Symptoms</Label>
+                      <Input id="edit-symptoms" placeholder="Comma-separated, e.g. cramps, fatigue" value={editForm.typical_symptoms} onChange={(e) => setEditForm(f => ({ ...f, typical_symptoms: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-goals">Goals</Label>
+                      <Input id="edit-goals" placeholder="Comma-separated, e.g. track cycles, reduce PMS" value={editForm.goals} onChange={(e) => setEditForm(f => ({ ...f, goals: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-tz">Timezone</Label>
+                      <Input id="edit-tz" value={editForm.timezone} onChange={(e) => setEditForm(f => ({ ...f, timezone: e.target.value }))} />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
