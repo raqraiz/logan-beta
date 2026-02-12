@@ -17,6 +17,7 @@ import { PhoneInput } from "@/components/chat/PhoneInput";
 import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
 import { HormoneChart } from "@/components/chat/HormoneChart";
+import { SymptomMap } from "@/components/chat/SymptomMap";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { TrialChat } from "@/components/chat/TrialChat";
 import { MessageFeedback } from "@/components/chat/MessageFeedback";
@@ -49,11 +50,12 @@ interface ChatMessage {
     symptom_categories?: SymptomCategories;
     available_symptoms?: string[];
     has_cycle_visual?: boolean;
-    visual_type?: "cycle_circle" | "hormone_chart";
+    visual_type?: "cycle_circle" | "hormone_chart" | "symptom_map";
     cycle_day?: number;
     cycle_phase?: string;
     cycle_length_days?: number;
     insight_type?: string;
+    validated_symptoms?: string[];
     conversation_starters?: string[];
   };
 }
@@ -647,6 +649,8 @@ const Chat = () => {
                               phase={message.metadata.cycle_phase}
                               cycleLengthDays={message.metadata.cycle_length_days || 28}
                             />
+                          ) : message.metadata.visual_type === "symptom_map" ? (
+                            <SymptomMap symptoms={message.metadata.validated_symptoms as string[] | undefined} />
                           ) : (
                             <ChatCycleCircle
                               cycleDay={message.metadata.cycle_day}
