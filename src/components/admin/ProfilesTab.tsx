@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,11 +16,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { 
   Users, RefreshCw, Search, Mail, Phone, Calendar, ChevronRight, 
   ChevronLeft, Trash2, Loader2, Activity, Target, Clock, MessageSquare,
-  Bell, BellOff, CheckCircle2, XCircle
+  Bell, BellOff, CheckCircle2, XCircle, Pencil
 } from "lucide-react";
 import { formatDistanceToNow, format, differenceInDays } from "date-fns";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
@@ -106,6 +115,9 @@ export function ProfilesTab() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ full_name: "", email: "", phone: "" });
+  const [saving, setSaving] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -237,7 +249,57 @@ export function ProfilesTab() {
     }
   };
 
-  // Fetch messages when profile is selected
+  const openEditDialog = () => {
+    if (!selectedProfile) return;
+    setEditForm({
+      full_name: selectedProfile.full_name,
+      email: selectedProfile.email,
+      phone: selectedProfile.phone || "",
+    });
+    setEditOpen(true);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!selectedProfile) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: editForm.full_name.trim(),
+          email: editForm.email.trim(),
+          phone: editForm.phone.trim() || null,
+        })
+        .eq("id", selectedProfile.id);
+
+      if (error) throw error;
+
+      // Also update participant whatsapp_number if participant exists
+      if (selectedProfile.participant && editForm.phone.trim()) {
+        await supabase
+          .from("participants")
+          .update({ whatsapp_number: editForm.phone.trim() })
+          .eq("id", selectedProfile.participant.id);
+      }
+
+      toast({ title: "Profile updated successfully" });
+      setEditOpen(false);
+      fetchData();
+      // Update selected profile in place
+      setSelectedProfile(prev => prev ? {
+        ...prev,
+        full_name: editForm.full_name.trim(),
+        email: editForm.email.trim(),
+        phone: editForm.phone.trim() || null,
+      } : null);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast({ title: "Error updating profile", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   useEffect(() => {
     if (selectedProfile) {
       fetchChatMessages(selectedProfile.id);
@@ -352,37 +414,43 @@ export function ProfilesTab() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg">Profile</CardTitle>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm" disabled={deleting}>
-                    {deleting ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete User
-                      </>
-                    )}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete user?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete <strong>{profile.full_name}</strong> and all their data including chat history and insights. This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => handleDeleteUser(profile.id, profile.full_name)}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={openEditDialog}>
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm" disabled={deleting}>
+                      {deleting ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </>
+                      )}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete user?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete <strong>{profile.full_name}</strong> and all their data including chat history and insights. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleDeleteUser(profile.id, profile.full_name)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center gap-3">
@@ -680,6 +748,53 @@ export function ProfilesTab() {
             )}
           </CardContent>
         </Card>
+
+        {/* Edit Profile Dialog */}
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Profile</DialogTitle>
+              <DialogDescription>Update user profile information</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Full Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editForm.full_name}
+                  onChange={(e) => setEditForm(f => ({ ...f, full_name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm(f => ({ ...f, email: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">Phone Number</Label>
+                <Input
+                  id="edit-phone"
+                  type="tel"
+                  placeholder="+972..."
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm(f => ({ ...f, phone: e.target.value }))}
+                />
+                <p className="text-xs text-muted-foreground">Include country code, e.g. +972501234567</p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+              <Button onClick={handleSaveProfile} disabled={saving || !editForm.full_name.trim() || !editForm.email.trim()}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
