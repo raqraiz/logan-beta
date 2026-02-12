@@ -434,7 +434,7 @@ serve(async (req) => {
         // Include cycle visual if we have the data
         if (cycleInfo) {
           metadata.has_cycle_visual = true;
-          metadata.visual_type = "hormone_chart";
+          metadata.visual_type = "symptom_map";
           metadata.cycle_day = cycleInfo.cycleDay;
           metadata.cycle_phase = cycleInfo.phase;
           metadata.cycle_length_days = cycleLength;
