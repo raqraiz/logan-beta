@@ -12,5 +12,5 @@ verify_jwt = false
 [functions.delete-user]
 verify_jwt = false
 
-[functions.send-scheduled-insights]
+[functions.generate-insight]
 verify_jwt = false

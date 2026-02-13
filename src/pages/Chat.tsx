@@ -12,8 +12,6 @@ import { format } from "date-fns";
 import { SymptomPicker } from "@/components/chat/SymptomPicker";
 import { AnchorPicker } from "@/components/chat/AnchorPicker";
 import { DatePickerInput } from "@/components/chat/DatePickerInput";
-import { NotificationPreferencePicker } from "@/components/chat/NotificationPreferencePicker";
-import { PhoneInput } from "@/components/chat/PhoneInput";
 import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
 import { HormoneChart } from "@/components/chat/HormoneChart";
@@ -131,6 +129,11 @@ const Chat = () => {
         onboardingInitialized.current = true;
         initializeOnboarding();
       }
+
+      // If onboarding is complete, trigger on-open insight generation
+      if (isOnboardingComplete && typedMessages.length > 0) {
+        generateOnOpenInsight();
+      }
     };
 
     fetchMessages();
@@ -202,6 +205,17 @@ const Chat = () => {
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
+
+  const generateOnOpenInsight = async () => {
+    try {
+      const { error } = await supabase.functions.invoke("generate-insight");
+      if (error) {
+        console.error("Error generating on-open insight:", error);
+      }
+    } catch (error) {
+      console.error("Error generating on-open insight:", error);
+    }
+  };
 
   const initializeOnboarding = async () => {
     try {
@@ -289,8 +303,6 @@ const Chat = () => {
     symptoms?: string[],
     anchor?: string,
     date?: Date,
-    notificationPrefs?: { frequency: string; preferredTime: string; preferredDays: string[] },
-    phone?: string
   ) => {
     if (!user || isSending) return;
     
@@ -305,11 +317,7 @@ const Chat = () => {
           ? `Anchor symptom: ${anchor}`
           : date
             ? `Last period: ${format(date, "PPP")}`
-            : notificationPrefs
-              ? `Notifications: ${notificationPrefs.frequency === "daily" ? "Daily" : notificationPrefs.frequency === "twice_weekly" ? "2x/week" : "Weekly"} in the ${notificationPrefs.preferredTime}`
-              : phone
-                ? `Phone: ${phone}`
-                : messageContent;
+            : messageContent;
 
       const { error } = await supabase.from("chat_messages").insert({
         user_id: user.id,
@@ -332,12 +340,6 @@ const Chat = () => {
       }
       if (date) {
         body.selectedDate = format(date, "yyyy-MM-dd");
-      }
-      if (notificationPrefs) {
-        body.notificationPreferences = notificationPrefs;
-      }
-      if (phone) {
-        body.phoneNumber = phone;
       }
 
       const { data, error: onboardingError } = await supabase.functions.invoke("chat-onboarding", {
@@ -373,14 +375,6 @@ const Chat = () => {
 
   const handleDateSubmit = (date: Date) => {
     sendOnboardingResponse(format(date, "PPP"), undefined, undefined, date);
-  };
-
-  const handleNotificationPrefsSubmit = (prefs: { frequency: string; preferredTime: string; preferredDays: string[] }) => {
-    sendOnboardingResponse("Notification preferences set", undefined, undefined, undefined, prefs);
-  };
-
-  const handlePhoneSubmit = (phone: string) => {
-    sendOnboardingResponse(`Phone: ${phone}`, undefined, undefined, undefined, undefined, phone);
   };
 
   const goBackToStep = async (targetStep: number) => {
@@ -427,7 +421,7 @@ const Chat = () => {
     const lastMessage = messages[messages.length - 1];
     if (lastMessage.role !== "assistant") return false;
     const inputType = lastMessage.metadata?.input_type;
-    return inputType === "symptom_picker" || inputType === "anchor_picker" || inputType === "date_picker" || inputType === "notification_picker" || inputType === "phone_input";
+    return inputType === "symptom_picker" || inputType === "anchor_picker" || inputType === "date_picker";
   };
   const sendFeedback = async (messageId: string, isPositive: boolean) => {
     if (!user) return;
@@ -593,7 +587,7 @@ const Chat = () => {
               </Button>
             )}
             <div className="flex-1">
-              <OnboardingProgress currentStep={onboardingStep} totalSteps={7} />
+              <OnboardingProgress currentStep={onboardingStep} totalSteps={5} />
             </div>
           </div>
         </div>
@@ -714,23 +708,8 @@ const Chat = () => {
                     </div>
                   )}
 
-                  {showInteractiveInput && inputType === "phone_input" && (
-                    <div className="mt-3">
-                      <PhoneInput
-                        onSubmit={handlePhoneSubmit}
-                        isSubmitting={isSending}
-                      />
-                    </div>
-                  )}
 
-                  {showInteractiveInput && inputType === "notification_picker" && (
-                    <div className="mt-3">
-                      <NotificationPreferencePicker
-                        onSubmit={handleNotificationPrefsSubmit}
-                        isSubmitting={isSending}
-                      />
-                    </div>
-                  )}
+
 
                   {/* Conversation starters for proactive insights or post-onboarding prompt */}
                   {isLastMessage && 
