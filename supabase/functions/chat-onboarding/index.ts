@@ -93,20 +93,6 @@ const ONBOARDING_QUESTIONS = [
     inputType: "anchor_picker"
   },
   {
-    key: "phone_number",
-    message: "One more thing. Drop your phone number so I can text you when something's coming up in your cycle. That way you don't have to remember to check in.",
-    field: "phone_number",
-    parseType: "phone",
-    inputType: "phone_input"
-  },
-  {
-    key: "notification_preferences",
-    message: "Got it. I'll send you a heads up before things shift, kind of like a weather forecast for your body. When's the best time to check in?",
-    field: "notification_preferences",
-    parseType: "notification_preferences",
-    inputType: "notification_picker"
-  },
-  {
     key: "complete",
     message: "That's everything I need. I know your cycle, where you are today, and what to watch for. From here I'll connect what you're feeling to what's actually happening, so you can stop guessing and start planning around it.",
     field: null,
@@ -147,7 +133,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { action, userMessage, selectedSymptoms, anchorSymptom, selectedDate, notificationPreferences, phoneNumber } = body;
+    const { action, userMessage, selectedSymptoms, anchorSymptom, selectedDate } = body;
 
     console.log("Chat onboarding action:", action, "for user:", user.id);
 
@@ -266,12 +252,6 @@ serve(async (req) => {
       } else if (parseType === "anchor") {
         // Use anchor symptom
         parsedValue = anchorSymptom || userMessage?.trim() || "";
-      } else if (parseType === "notification_preferences") {
-        // Use notification preferences object
-        parsedValue = notificationPreferences || { frequency: "twice_weekly", preferredTime: "evening", preferredDays: ["tuesday", "saturday"] };
-      } else if (parseType === "phone") {
-        // Use phone number
-        parsedValue = phoneNumber || userMessage?.trim() || "";
       }
 
       // Get user's name from profile for participant creation
@@ -288,44 +268,15 @@ serve(async (req) => {
 
       // Update participant record if we have one
       if (participant && currentQuestion.field) {
-        // Special handling for notification preferences - goes to separate table
-        if (currentQuestion.field === "notification_preferences") {
-          const prefs = parsedValue;
-          await supabase
-            .from("notification_preferences")
-            .upsert({
-              user_id: user.id,
-              frequency: prefs.frequency || "twice_weekly",
-              preferred_time: prefs.preferredTime || "evening",
-              preferred_days: prefs.preferredDays || ["tuesday", "saturday"],
-              is_enabled: true
-            }, { onConflict: "user_id" });
-          console.log("Saved notification preferences for user:", user.id);
-        } else if (currentQuestion.field === "phone_number") {
-          // Store phone in both profiles and participants
-          await supabase
-            .from("profiles")
-            .update({ phone: parsedValue })
-            .eq("id", user.id);
-          
-          if (participant) {
-            await supabase
-              .from("participants")
-              .update({ whatsapp_number: parsedValue })
-              .eq("id", participant.id);
-          }
-          console.log("Saved phone number for user:", user.id);
-        } else {
-          const updateData: Record<string, any> = {};
-          updateData[currentQuestion.field] = parsedValue;
-          
-          await supabase
-            .from("participants")
-            .update(updateData)
-            .eq("id", participant.id);
-          
-          console.log("Updated participant field:", currentQuestion.field, "=", parsedValue);
-        }
+        const updateData: Record<string, any> = {};
+        updateData[currentQuestion.field] = parsedValue;
+        
+        await supabase
+          .from("participants")
+          .update(updateData)
+          .eq("id", participant.id);
+        
+        console.log("Updated participant field:", currentQuestion.field, "=", parsedValue);
       } else if (!participant && currentQuestion.field) {
         // Create participant record on first response (age question)
         const { data: newParticipant, error: createError } = await supabase
