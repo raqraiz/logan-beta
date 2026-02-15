@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
 import { Send, Loader2, LogOut, ChevronLeft } from "lucide-react";
+import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
 import { format } from "date-fns";
 import { SymptomPicker } from "@/components/chat/SymptomPicker";
 import { AnchorPicker } from "@/components/chat/AnchorPicker";
@@ -750,6 +751,11 @@ const Chat = () => {
                 placeholder={isOnboarding ? "Type your answer..." : "Share an update or ask a question..."}
                 className="flex-1 h-12"
                 disabled={isSending}
+              />
+              <VoiceInputButton
+                onTranscript={(text) => setInputValue(prev => prev ? `${prev} ${text}` : text)}
+                disabled={isSending}
+                className="h-12 w-12"
               />
               <Button 
                 type="submit" 

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoganLogo } from "@/components/LoganLogo";
 import { Send, Loader2, Sparkles } from "lucide-react";
+import { VoiceInputButton } from "./VoiceInputButton";
 import { supabase } from "@/integrations/supabase/client";
 import { InlineChatAuth } from "./InlineChatAuth";
 
@@ -266,6 +267,11 @@ export const TrialChat = () => {
                   disabled={isTyping}
                 />
               </div>
+              <VoiceInputButton
+                onTranscript={(text) => setInputValue(prev => prev ? `${prev} ${text}` : text)}
+                disabled={isTyping}
+                className="h-13 w-13 rounded-xl"
+              />
               <Button
                 type="submit"
                 size="icon"
