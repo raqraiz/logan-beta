@@ -37,28 +37,41 @@ export const VoiceInputButton = ({ onTranscript, disabled, className }: VoiceInp
     recognition.lang = "en-US";
     recognitionRef.current = recognition;
 
-    recognition.onstart = () => setIsListening(true);
+    recognition.onstart = () => {
+      console.log("Speech recognition started");
+      setIsListening(true);
+    };
 
     recognition.onresult = (event: any) => {
+      console.log("Speech recognition result:", event.results);
       const transcript = event.results[0][0].transcript;
+      console.log("Transcript:", transcript, "Confidence:", event.results[0][0].confidence);
       if (transcript.trim()) {
         onTranscript(transcript.trim());
       }
     };
 
     recognition.onerror = (event: any) => {
-      console.error("Speech recognition error:", event.error);
+      console.error("Speech recognition error:", event.error, event.message);
       if (event.error === "not-allowed") {
         toast({
           title: "Microphone access denied",
           description: "Please allow microphone access in your browser settings.",
           variant: "destructive",
         });
+      } else if (event.error === "no-speech") {
+        toast({
+          title: "No speech detected",
+          description: "Try speaking louder or closer to your microphone.",
+        });
       }
       setIsListening(false);
     };
 
-    recognition.onend = () => setIsListening(false);
+    recognition.onend = () => {
+      console.log("Speech recognition ended");
+      setIsListening(false);
+    };
 
     recognition.start();
   }, [isListening, onTranscript]);
