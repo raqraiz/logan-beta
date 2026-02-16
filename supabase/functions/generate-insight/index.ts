@@ -223,18 +223,25 @@ Recent conversation context:
 ${recentMessages.map(m => `${m.role}: ${m.content.slice(0, 100)}`).join("\n") || "No recent messages"}
 
 Guidelines for the insight:
-1. Keep it SHORT (2-3 sentences max)
-2. Be specific about what the phase means for their energy, focus, or mood today
-3. If relevant, mention their anchor symptom and whether to watch for it
-4. Include one practical suggestion they can act on today
-5. Avoid generic wellness advice - be tactical and specific
-6. Use a warm but direct tone - you're a coach, not a friend
-7. Do NOT include greetings like "Hi" or "Hey" - get straight to the insight
-8. Do NOT use emojis, exclamation points, or em dashes
+1. Use markdown formatting: **bold** for key points, bullet points for tips
+2. Structure it as:
+   - One short sentence about where they are today (bold the phase name)
+   - 2-3 bullet points: what to expect, one action item, and optionally their anchor symptom
+3. Be specific and tactical, not generic wellness advice
+4. Use a warm but direct tone - you're a coach, not a friend
+5. Do NOT include greetings like "Hi" or "Hey" - get straight to the insight
+6. Do NOT use emojis or exclamation points
+
+Example format:
+"Day 18, deep in **luteal**. Progesterone is peaking.
+
+- **Energy**: expect a dip this afternoon — schedule lighter work after 2pm
+- **Watch for**: your brain fog tends to spike around now
+- **Try this**: 10-minute walk after lunch to reset focus"
 
 IMPORTANT: Respond in this exact JSON format:
 {
-  "insight": "Your 2-3 sentence insight here",
+  "insight": "Your markdown-formatted insight here",
   "starters": ["Short reply 1", "Short reply 2", "Short reply 3"]
 }
 

@@ -8,7 +8,7 @@ import { Send, Loader2, Sparkles } from "lucide-react";
 import { VoiceInputButton } from "./VoiceInputButton";
 import { supabase } from "@/integrations/supabase/client";
 import { InlineChatAuth } from "./InlineChatAuth";
-import { AnnotatedText } from "./CycleGlossary";
+import { MarkdownMessage } from "./MarkdownMessage";
 
 interface TrialMessage {
   id: string;
@@ -190,13 +190,11 @@ export const TrialChat = () => {
                     : "bg-gradient-to-br from-card to-card/80 border border-border/50 shadow-card backdrop-blur-sm"
                 }`}
               >
-                <p className="whitespace-pre-wrap leading-relaxed">
-                  {message.role === "assistant" ? (
-                    <AnnotatedText text={message.content} />
-                  ) : (
-                    message.content
-                  )}
-                </p>
+                {message.role === "assistant" ? (
+                  <MarkdownMessage content={message.content} />
+                ) : (
+                  <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                )}
               </div>
             </div>
           ))}

@@ -17,11 +17,12 @@ import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
 import { HormoneChart } from "@/components/chat/HormoneChart";
 import { SymptomMap } from "@/components/chat/SymptomMap";
+import { PhaseCheatSheet } from "@/components/chat/PhaseCheatSheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { TrialChat } from "@/components/chat/TrialChat";
 import { MessageFeedback } from "@/components/chat/MessageFeedback";
 import { ConversationStarters } from "@/components/chat/ConversationStarters";
-import { AnnotatedText } from "@/components/chat/CycleGlossary";
+import { MarkdownMessage } from "@/components/chat/MarkdownMessage";
 
 interface SymptomCategory {
   label: string;
@@ -657,13 +658,22 @@ const Chat = () => {
                         </div>
                       )}
                       
-                      <p className="whitespace-pre-wrap">
-                        {message.role === "assistant" ? (
-                          <AnnotatedText text={message.content} />
-                        ) : (
-                          message.content
-                        )}
-                      </p>
+                      {message.role === "assistant" ? (
+                        <MarkdownMessage content={message.content} />
+                      ) : (
+                        <p className="whitespace-pre-wrap">{message.content}</p>
+                      )}
+
+                      {/* Phase cheat sheet for proactive insights */}
+                      {message.role === "assistant" && message.metadata?.insight_type === "proactive" && message.metadata?.cycle_day && message.metadata?.cycle_phase && (
+                        <div className="mt-3">
+                          <PhaseCheatSheet
+                            phase={message.metadata.cycle_phase}
+                            cycleDay={message.metadata.cycle_day}
+                            cycleLengthDays={message.metadata.cycle_length_days || 28}
+                          />
+                        </div>
+                      )}
                       
                       <div className={`flex items-center gap-2 mt-1 ${
                         message.role === "user" ? "justify-end" : "justify-start"
