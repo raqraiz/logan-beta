@@ -1,3 +1,5 @@
+import { AnnotatedText } from "./CycleGlossary";
+
 interface HormoneChartProps {
   cycleDay: number;
   phase: string;
@@ -261,7 +263,7 @@ export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartP
         <span className="font-medium" style={{ color }}>
           {phase}
         </span>
-        {" "}— {tip}
+        {" "}— <AnnotatedText text={tip} />
       </p>
     </div>
   );
