@@ -21,6 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { TrialChat } from "@/components/chat/TrialChat";
 import { MessageFeedback } from "@/components/chat/MessageFeedback";
 import { ConversationStarters } from "@/components/chat/ConversationStarters";
+import { AnnotatedText } from "@/components/chat/CycleGlossary";
 
 interface SymptomCategory {
   label: string;
@@ -656,7 +657,13 @@ const Chat = () => {
                         </div>
                       )}
                       
-                      <p className="whitespace-pre-wrap">{message.content}</p>
+                      <p className="whitespace-pre-wrap">
+                        {message.role === "assistant" ? (
+                          <AnnotatedText text={message.content} />
+                        ) : (
+                          message.content
+                        )}
+                      </p>
                       
                       <div className={`flex items-center gap-2 mt-1 ${
                         message.role === "user" ? "justify-end" : "justify-start"
