@@ -667,13 +667,37 @@ function calculateCycleInfo(
 // Helper: Generate first insight based on phase
 function generateFirstInsight(phase: string, cycleDay: number, anchorSymptom: string | null): string {
   const phaseInsights: Record<string, string> = {
-    Menstruation: `Day ${cycleDay}. Your body is in reset mode right now. Energy is usually at its lowest and everything feels like more effort than it should. ${anchorSymptom ? `Keep an eye on ${anchorSymptom.toLowerCase()}, it tends to show up stronger during this window.` : "Go easy on yourself today. This is the part of your cycle where rest actually makes you stronger."}`,
-    
-    Follicular: `Day ${cycleDay}. You're in the part of your cycle where things start to click again. Estrogen is climbing, which usually means clearer thinking and more energy showing up without you having to force it. ${anchorSymptom ? `Your ${anchorSymptom.toLowerCase()} usually eases up during this phase.` : "This is a good window to take on the things that felt impossible last week."}`,
-    
-    Ovulation: `Day ${cycleDay}. If you're feeling weirdly confident or social right now, that's not random. Estrogen is peaking and you're probably at your sharpest this month. ${anchorSymptom ? `Watch for ${anchorSymptom.toLowerCase()} though, sometimes it gets amplified when everything else is running high.` : "Use this window. It doesn't last long but it's your superpower phase."}`,
-    
-    Luteal: `Day ${cycleDay}. This is the phase where things get heavier. Progesterone is running the show now, which means your patience is thinner and everything takes more energy. ${anchorSymptom ? `This is usually when ${anchorSymptom.toLowerCase()} shows up for you. Now you know it's coming.` : "If you're feeling more reactive or tired than usual, that's not a character flaw. It's chemistry."}`
+    Menstruation: `Day ${cycleDay}. Your body is in **reset mode**.
+
+- **Energy**: at its lowest — rest is productive right now
+- **Body**: inflammation peaks, cramps may be stronger
+${anchorSymptom ? `- **Watch for**: ${anchorSymptom.toLowerCase()} tends to show up here` : "- **Try this**: gentle movement over pushing through"}
+
+This isn't a setback. It's your body clearing the slate.`,
+
+    Follicular: `Day ${cycleDay}. You're entering your **build phase**.
+
+- **Energy**: climbing — estrogen is doing the heavy lifting
+- **Brain**: clearer thinking, better problem-solving
+${anchorSymptom ? `- **Good news**: ${anchorSymptom.toLowerCase()} usually eases up now` : "- **Try this**: take on the thing that felt impossible last week"}
+
+This window builds. Use it.`,
+
+    Ovulation: `Day ${cycleDay}. You're at **peak performance**.
+
+- **Energy**: highest of the month — estrogen is peaking
+- **Superpower**: verbal fluency and confidence are at their max
+${anchorSymptom ? `- **Heads up**: ${anchorSymptom.toLowerCase()} can spike when everything runs high` : "- **Try this**: schedule your most important conversation this week now"}
+
+Short window. Make it count.`,
+
+    Luteal: `Day ${cycleDay}. **Progesterone** is running the show now.
+
+- **Energy**: declining — everything takes more effort
+- **Mood**: patience thins, stress tolerance drops
+${anchorSymptom ? `- **Alert**: ${anchorSymptom.toLowerCase()} usually peaks in this window` : "- **Try this**: front-load hard tasks to early this week"}
+
+Not a character flaw. It's chemistry.`
   };
 
   return phaseInsights[phase] || phaseInsights.Follicular;
