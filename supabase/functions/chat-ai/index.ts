@@ -94,6 +94,31 @@ serve(async (req) => {
       }
       const formattedDate = periodStartDate.toISOString().split("T")[0];
 
+      // Record previous cycle length if we have a previous period start
+      let previousCycleLength: number | null = null;
+      if (participant.last_period_start) {
+        const prevStart = new Date(participant.last_period_start);
+        const newStart = new Date(formattedDate);
+        const diffDays = Math.round((newStart.getTime() - prevStart.getTime()) / (1000 * 60 * 60 * 24));
+        // Only record if it's a plausible cycle length (15-60 days)
+        if (diffDays >= 15 && diffDays <= 60) {
+          previousCycleLength = diffDays;
+          const { error: historyError } = await supabase
+            .from("cycle_history")
+            .insert({
+              participant_id: participant.id,
+              cycle_start_date: participant.last_period_start,
+              cycle_end_date: formattedDate,
+              cycle_length_days: diffDays,
+            });
+          if (historyError) {
+            console.error("Error saving cycle history:", historyError);
+          } else {
+            console.log("Recorded cycle length:", diffDays, "days");
+          }
+        }
+      }
+
       // Update participant's last_period_start
       const { error: updateError } = await supabase
         .from("participants")
@@ -104,7 +129,6 @@ serve(async (req) => {
         console.error("Error updating period start:", updateError);
       } else {
         console.log("Updated last_period_start to:", formattedDate);
-        // Refresh participant data
         const { data: refreshed } = await supabase
           .from("participants")
           .select("*")
@@ -113,10 +137,38 @@ serve(async (req) => {
         if (refreshed) participant = refreshed;
       }
 
+      // Fetch cycle history for average calculation
+      const { data: cycleHistoryRows } = await supabase
+        .from("cycle_history")
+        .select("cycle_length_days")
+        .eq("participant_id", participant.id)
+        .order("cycle_start_date", { ascending: false })
+        .limit(12);
+
+      const cycleHistory = cycleHistoryRows || [];
+      const avgCycleLength = cycleHistory.length > 0
+        ? Math.round(cycleHistory.reduce((sum, r) => sum + r.cycle_length_days, 0) / cycleHistory.length)
+        : null;
+
       // Calculate new cycle info
       const newCycleInfo = calculateCycleInfo(formattedDate, participant.cycle_length_days || 28);
 
-      const confirmationMessage = `Noted — logging **Day 1** as ${periodStartDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}. Your cycle is reset.\n\n- **Phase**: ${newCycleInfo.phase}\n- **Energy**: low — prioritize rest and light movement\n- **Watch for**: your anchor symptom (${participant.anchor_symptom || "not set"}) usually eases by day 3-4\n\nTake it easy today.`;
+      // Build confirmation message with cycle history stats
+      let confirmationMessage = `Noted — logging **Day 1** as ${periodStartDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}. Your cycle is reset.\n\n- **Phase**: ${newCycleInfo.phase}\n- **Energy**: low — prioritize rest and light movement\n- **Watch for**: your anchor symptom (${participant.anchor_symptom || "not set"}) usually eases by day 3-4`;
+
+      if (previousCycleLength) {
+        confirmationMessage += `\n\n**This cycle was ${previousCycleLength} days.**`;
+      }
+      if (avgCycleLength && cycleHistory.length >= 2) {
+        confirmationMessage += `\nYour **average cycle length** over ${cycleHistory.length} cycles: **${avgCycleLength} days**.`;
+        const shortest = Math.min(...cycleHistory.map(r => r.cycle_length_days));
+        const longest = Math.max(...cycleHistory.map(r => r.cycle_length_days));
+        if (shortest !== longest) {
+          confirmationMessage += ` (range: ${shortest}–${longest} days)`;
+        }
+      }
+
+      confirmationMessage += `\n\nTake it easy today.`;
 
       // Save the assistant's response
       await supabase.from("chat_messages").insert({
@@ -132,6 +184,9 @@ serve(async (req) => {
           cycle_length_days: participant.cycle_length_days || 28,
           period_update: true,
           new_period_start: formattedDate,
+          previous_cycle_length: previousCycleLength,
+          average_cycle_length: avgCycleLength,
+          cycles_tracked: cycleHistory.length,
         }
       });
 
@@ -141,6 +196,9 @@ serve(async (req) => {
           message: confirmationMessage,
           cycleInfo: newCycleInfo,
           periodUpdated: true,
+          previousCycleLength,
+          averageCycleLength: avgCycleLength,
+          cyclesTracked: cycleHistory.length,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -155,13 +213,32 @@ serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(20);
 
+    // Fetch cycle history for context
+    let cycleHistoryContext = "";
+    if (participant) {
+      const { data: historyRows } = await supabase
+        .from("cycle_history")
+        .select("cycle_length_days, cycle_start_date")
+        .eq("participant_id", participant.id)
+        .order("cycle_start_date", { ascending: false })
+        .limit(12);
+
+      if (historyRows && historyRows.length > 0) {
+        const avg = Math.round(historyRows.reduce((s, r) => s + r.cycle_length_days, 0) / historyRows.length);
+        const shortest = Math.min(...historyRows.map(r => r.cycle_length_days));
+        const longest = Math.max(...historyRows.map(r => r.cycle_length_days));
+        const recent = historyRows.slice(0, 3).map(r => `${r.cycle_length_days}d`).join(", ");
+        cycleHistoryContext = `\n- Cycles tracked: ${historyRows.length}\n- Average cycle length: ${avg} days (range: ${shortest}–${longest})\n- Recent cycles: ${recent}`;
+      }
+    }
+
     // Calculate cycle info
     const cycleInfo = participant?.last_period_start && participant?.cycle_length_days
       ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days)
       : null;
 
     // Build system prompt with user context
-    const systemPrompt = buildSystemPrompt(participant, cycleInfo);
+    const systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext);
 
     // Format conversation history for AI
     const conversationHistory = (recentMessages || [])
@@ -260,7 +337,8 @@ serve(async (req) => {
 // Build personalized system prompt
 function buildSystemPrompt(
   participant: any | null, 
-  cycleInfo: { cycleDay: number; phase: string } | null
+  cycleInfo: { cycleDay: number; phase: string } | null,
+  cycleHistoryContext: string = ""
 ): string {
   const basePrompt = `You are Logan, a strategic, cycle-aware performance advisor for women. Your role is to provide personalized, actionable insights that help users optimize their energy, focus, and recovery based on where they are in their menstrual cycle.
 
@@ -307,9 +385,9 @@ USER CONTEXT:
 - Cycle length: ${participant.cycle_length_days || 28} days
 - Age: ${participant.age || "unknown"}
 - Anchor symptom (most disruptive): ${participant.anchor_symptom || "not specified"}
-- Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}
+- Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}${cycleHistoryContext}
 
-Use this context to make your responses personally relevant. Reference their current phase and how it might affect their request. If they mention their anchor symptom, acknowledge it and provide phase-appropriate guidance.`;
+Use this context to make your responses personally relevant. Reference their current phase and how it might affect their request. If they mention their anchor symptom, acknowledge it and provide phase-appropriate guidance. When users ask about their cycle length or patterns, use the cycle history data to provide specific insights.`;
 
   return basePrompt + userContext;
 }
