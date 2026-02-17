@@ -58,6 +58,9 @@ interface ChatMessage {
     insight_type?: string;
     validated_symptoms?: string[];
     conversation_starters?: string[];
+    period_checkin?: boolean;
+    period_update?: boolean;
+    new_period_start?: string;
   };
 }
 
@@ -288,6 +291,15 @@ const Chat = () => {
         toast({ 
           title: data.error, 
           variant: "destructive" 
+        });
+      }
+
+      // If period was updated, refresh cycle data from the response
+      if (data?.periodUpdated && data?.cycleInfo) {
+        setCycleData({
+          cycleDay: data.cycleInfo.cycleDay,
+          phase: data.cycleInfo.phase,
+          cycleLengthDays: data.cycleInfo.cycleLengthDays || cycleData?.cycleLengthDays || 28,
         });
       }
       

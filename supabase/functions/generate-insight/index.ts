@@ -121,32 +121,62 @@ serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(5);
 
-    // Generate AI insight
-    const prompt = buildInsightPrompt(
-      profile?.full_name || "there",
-      cycleInfo,
-      participant,
-      recentMessages || []
-    );
+    // Check if user is in late luteal (last 3 days of cycle) — ask about period
+    const isLateLuteal = cycleInfo.phase === "Luteal" && cycleInfo.daysUntilNextPhase <= 3;
+    // Also check if user is "overdue" — cycle day > cycle length
+    const isOverdue = cycleInfo.cycleDay > (participant.cycle_length_days || 28);
 
-    const { insight, conversationStarters } = await generateAIInsight(lovableApiKey, prompt);
+    if (isLateLuteal || isOverdue) {
+      const dayLabel = isOverdue
+        ? `Day ${cycleInfo.cycleDay} — that's ${cycleInfo.cycleDay - (participant.cycle_length_days || 28)} days past your expected cycle length`
+        : `Day ${cycleInfo.cycleDay}, wrapping up **luteal**`;
 
-    // Insert the insight as a chat message
-    await supabase.from("chat_messages").insert({
-      user_id: user.id,
-      role: "assistant",
-      content: insight,
-      message_type: "text",
-      metadata: {
-        has_cycle_visual: true,
-        cycle_day: cycleInfo.cycleDay,
-        cycle_phase: cycleInfo.phase,
-        cycle_length_days: participant.cycle_length_days || 28,
-        insight_type: "proactive",
-        generated_at: new Date().toISOString(),
-        conversation_starters: conversationStarters
-      }
-    });
+      const checkinContent = `${dayLabel}. Your period could arrive any time now.\n\nHas it started yet? If so, I'll reset your cycle so everything stays accurate — your insights, your phase, all of it.`;
+
+      await supabase.from("chat_messages").insert({
+        user_id: user.id,
+        role: "assistant",
+        content: checkinContent,
+        message_type: "text",
+        metadata: {
+          has_cycle_visual: true,
+          cycle_day: cycleInfo.cycleDay,
+          cycle_phase: cycleInfo.phase,
+          cycle_length_days: participant.cycle_length_days || 28,
+          insight_type: "proactive",
+          period_checkin: true,
+          generated_at: new Date().toISOString(),
+          conversation_starters: ["Yes, it started today", "Started yesterday", "Not yet"]
+        }
+      });
+    } else {
+      // Generate regular AI insight
+      const prompt = buildInsightPrompt(
+        profile?.full_name || "there",
+        cycleInfo,
+        participant,
+        recentMessages || []
+      );
+
+      const { insight, conversationStarters } = await generateAIInsight(lovableApiKey, prompt);
+
+      // Insert the insight as a chat message
+      await supabase.from("chat_messages").insert({
+        user_id: user.id,
+        role: "assistant",
+        content: insight,
+        message_type: "text",
+        metadata: {
+          has_cycle_visual: true,
+          cycle_day: cycleInfo.cycleDay,
+          cycle_phase: cycleInfo.phase,
+          cycle_length_days: participant.cycle_length_days || 28,
+          insight_type: "proactive",
+          generated_at: new Date().toISOString(),
+          conversation_starters: conversationStarters
+        }
+      });
+    }
 
     return new Response(
       JSON.stringify({ success: true, generated: true }),

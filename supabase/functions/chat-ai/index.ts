@@ -67,11 +67,85 @@ serve(async (req) => {
     console.log("Chat AI request from user:", user.id, "message:", userMessage.substring(0, 50));
 
     // Get participant data for context
-    const { data: participant } = await supabase
+    let { data: participant } = await supabase
       .from("participants")
       .select("*")
       .eq("email", user.email)
       .single();
+
+    // --- Period confirmation detection ---
+    // Check if user is responding to a period check-in
+    const periodConfirmPatterns = [
+      /yes.*(started|period|got it|began|came)/i,
+      /^yes$/i,
+      /started (today|yesterday|this morning|last night)/i,
+      /period (started|came|arrived|began)/i,
+      /it started/i,
+      /got my period/i,
+      /started yesterday/i,
+    ];
+    const isPeriodConfirmation = periodConfirmPatterns.some(p => p.test(userMessage));
+
+    if (isPeriodConfirmation && participant) {
+      // Parse when it started — default to today
+      let periodStartDate = new Date();
+      if (/yesterday/i.test(userMessage)) {
+        periodStartDate.setDate(periodStartDate.getDate() - 1);
+      }
+      const formattedDate = periodStartDate.toISOString().split("T")[0];
+
+      // Update participant's last_period_start
+      const { error: updateError } = await supabase
+        .from("participants")
+        .update({ last_period_start: formattedDate })
+        .eq("id", participant.id);
+
+      if (updateError) {
+        console.error("Error updating period start:", updateError);
+      } else {
+        console.log("Updated last_period_start to:", formattedDate);
+        // Refresh participant data
+        const { data: refreshed } = await supabase
+          .from("participants")
+          .select("*")
+          .eq("id", participant.id)
+          .single();
+        if (refreshed) participant = refreshed;
+      }
+
+      // Calculate new cycle info
+      const newCycleInfo = calculateCycleInfo(formattedDate, participant.cycle_length_days || 28);
+
+      const confirmationMessage = `Noted — logging **Day 1** as ${periodStartDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}. Your cycle is reset.\n\n- **Phase**: ${newCycleInfo.phase}\n- **Energy**: low — prioritize rest and light movement\n- **Watch for**: your anchor symptom (${participant.anchor_symptom || "not set"}) usually eases by day 3-4\n\nTake it easy today.`;
+
+      // Save the assistant's response
+      await supabase.from("chat_messages").insert({
+        user_id: user.id,
+        role: "assistant",
+        content: confirmationMessage,
+        message_type: "text",
+        metadata: {
+          cycle_day: newCycleInfo.cycleDay,
+          cycle_phase: newCycleInfo.phase,
+          has_cycle_visual: true,
+          visual_type: "cycle_circle",
+          cycle_length_days: participant.cycle_length_days || 28,
+          period_update: true,
+          new_period_start: formattedDate,
+        }
+      });
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: confirmationMessage,
+          cycleInfo: newCycleInfo,
+          periodUpdated: true,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    // --- End period confirmation ---
 
     // Get recent chat history (last 20 messages for context)
     const { data: recentMessages } = await supabase
