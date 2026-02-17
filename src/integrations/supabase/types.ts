@@ -47,6 +47,41 @@ export type Database = {
         }
         Relationships: []
       }
+      cycle_history: {
+        Row: {
+          created_at: string
+          cycle_end_date: string
+          cycle_length_days: number
+          cycle_start_date: string
+          id: string
+          participant_id: string
+        }
+        Insert: {
+          created_at?: string
+          cycle_end_date: string
+          cycle_length_days: number
+          cycle_start_date: string
+          id?: string
+          participant_id: string
+        }
+        Update: {
+          created_at?: string
+          cycle_end_date?: string
+          cycle_length_days?: number
+          cycle_start_date?: string
+          id?: string
+          participant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cycle_history_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cycle_updates: {
         Row: {
           category: string | null
