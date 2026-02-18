@@ -89,8 +89,19 @@ serve(async (req) => {
     if (isPeriodConfirmation && participant) {
       // Parse when it started — default to today
       let periodStartDate = new Date();
-      if (/yesterday/i.test(userMessage)) {
+
+      // "X days ago" — e.g. "2 days ago", "3 days ago"
+      const daysAgoMatch = userMessage.match(/(\d+)\s+days?\s+ago/i);
+      if (daysAgoMatch) {
+        periodStartDate.setDate(periodStartDate.getDate() - parseInt(daysAgoMatch[1]));
+      } else if (/yesterday/i.test(userMessage)) {
         periodStartDate.setDate(periodStartDate.getDate() - 1);
+      } else if (/this morning/i.test(userMessage) || /last night/i.test(userMessage) || /today/i.test(userMessage)) {
+        // stays today — no offset
+      }
+      // Also handle "a few days ago" as 2 days
+      if (/a few days ago/i.test(userMessage) && !daysAgoMatch) {
+        periodStartDate.setDate(periodStartDate.getDate() - 2);
       }
       const formattedDate = periodStartDate.toISOString().split("T")[0];
 
