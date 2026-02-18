@@ -3,6 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Mic, MicOff } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
+// Detect iOS — Web Speech API is not supported on any iOS browser
+const isIOS = () => {
+  if (typeof navigator === "undefined") return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+};
+
 interface VoiceInputButtonProps {
   onTranscript: (text: string) => void;
   disabled?: boolean;
@@ -14,6 +21,16 @@ export const VoiceInputButton = ({ onTranscript, disabled, className }: VoiceInp
   const recognitionRef = useRef<any>(null);
 
   const toggleListening = useCallback(() => {
+    // iOS does not support Web Speech API in any browser
+    if (isIOS()) {
+      toast({
+        title: "Voice input not available on iPhone",
+        description: "Voice-to-text isn't supported on iOS. Please type your message instead.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
