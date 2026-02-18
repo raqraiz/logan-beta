@@ -151,7 +151,7 @@ serve(async (req) => {
         : null;
 
       // Calculate new cycle info
-      const newCycleInfo = calculateCycleInfo(formattedDate, participant.cycle_length_days || 28);
+      const newCycleInfo = calculateCycleInfo(formattedDate, participant.cycle_length_days || 28, participant.timezone || "UTC");
 
       // Build confirmation message with cycle history stats
       let confirmationMessage = `Noted — logging **Day 1** as ${periodStartDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}. Your cycle is reset.\n\n- **Phase**: ${newCycleInfo.phase}\n- **Energy**: low — prioritize rest and light movement\n- **Watch for**: your anchor symptom (${participant.anchor_symptom || "not set"}) usually eases by day 3-4`;
@@ -234,7 +234,7 @@ serve(async (req) => {
 
     // Calculate cycle info
     const cycleInfo = participant?.last_period_start && participant?.cycle_length_days
-      ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days)
+      ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
       : null;
 
     // Build system prompt with user context
@@ -393,15 +393,31 @@ Use this context to make your responses personally relevant. Reference their cur
 }
 
 // Calculate cycle day and phase
+// NOTE: Date-only strings (YYYY-MM-DD) are parsed as UTC midnight which can cause
+// off-by-one day errors for users in UTC+ timezones. We parse them as noon UTC
+// to ensure the date is always interpreted as the intended calendar day.
 function calculateCycleInfo(
   lastPeriodStart: string,
-  cycleLengthDays: number
+  cycleLengthDays: number,
+  timezone: string = "UTC"
 ): { cycleDay: number; phase: string } {
-  const today = new Date();
-  const periodStart = new Date(lastPeriodStart);
+  // Parse date-only string safely: treat YYYY-MM-DD as noon UTC to avoid timezone shift
+  let periodStart: Date;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodStart)) {
+    const [year, month, day] = lastPeriodStart.split("-").map(Number);
+    periodStart = new Date(Date.UTC(year, month - 1, day, 12, 0, 0)); // noon UTC
+  } else {
+    periodStart = new Date(lastPeriodStart);
+  }
+
+  // Get today's date in the user's timezone for accurate day calculation
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: timezone }); // YYYY-MM-DD
+  const [ty, tm, td] = todayStr.split("-").map(Number);
+  const today = new Date(Date.UTC(ty, tm - 1, td, 12, 0, 0)); // noon UTC same calendar day
+
   const diffTime = today.getTime() - periodStart.getTime();
-  const daysSinceStart = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  
+  const daysSinceStart = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
   const cycleDay = ((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
 
   const menstruationEnd = 5;
