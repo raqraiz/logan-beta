@@ -27,8 +27,8 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { 
   Users, RefreshCw, Search, Mail, Phone, Calendar, ChevronRight, 
-  ChevronLeft, Trash2, Loader2, Activity, Target, Clock, MessageSquare,
-  Bell, BellOff, CheckCircle2, XCircle, Pencil
+  ChevronLeft, Trash2, Loader2, Activity, Clock, MessageSquare,
+  Pencil
 } from "lucide-react";
 import { formatDistanceToNow, format, differenceInDays } from "date-fns";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
@@ -45,15 +45,6 @@ interface Profile {
   updated_at: string;
 }
 
-interface NotificationPreference {
-  user_id: string;
-  frequency: string;
-  preferred_time: string;
-  preferred_days: string[] | null;
-  timezone: string;
-  is_enabled: boolean;
-  last_notification_at: string | null;
-}
 
 interface Participant {
   id: string;
@@ -71,15 +62,6 @@ interface Participant {
   created_at: string;
 }
 
-interface Insight {
-  id: string;
-  participant_id: string;
-  content: string;
-  status: string | null;
-  insight_type: string | null;
-  created_at: string;
-  sent_at: string | null;
-}
 
 interface ChatMessage {
   id: string;
@@ -101,9 +83,7 @@ interface MessageMetadata {
 }
 
 interface ProfileWithData extends Profile {
-  notificationPrefs?: NotificationPreference;
   participant?: Participant;
-  insights?: Insight[];
   messageCount?: number;
 }
 
@@ -135,27 +115,12 @@ export function ProfilesTab() {
 
       if (profilesError) throw profilesError;
 
-      // Fetch notification preferences
-      const { data: prefsData, error: prefsError } = await supabase
-        .from("notification_preferences")
-        .select("*");
-
-      if (prefsError) throw prefsError;
-
       // Fetch participants (by email match)
       const { data: participantsData, error: participantsError } = await supabase
         .from("participants")
         .select("*");
 
       if (participantsError) throw participantsError;
-
-      // Fetch insights
-      const { data: insightsData, error: insightsError } = await supabase
-        .from("insights")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (insightsError) throw insightsError;
 
       // Fetch message counts
       const { data: messagesData, error: messagesError } = await supabase
@@ -165,19 +130,9 @@ export function ProfilesTab() {
       if (messagesError) throw messagesError;
 
       // Build maps
-      const prefsMap = new Map<string, NotificationPreference>();
-      prefsData?.forEach(pref => prefsMap.set(pref.user_id, pref));
-
       const participantsByEmail = new Map<string, Participant>();
       participantsData?.forEach(p => {
         if (p.email) participantsByEmail.set(p.email.toLowerCase(), p);
-      });
-
-      const insightsByParticipant = new Map<string, Insight[]>();
-      insightsData?.forEach(insight => {
-        const existing = insightsByParticipant.get(insight.participant_id) || [];
-        existing.push(insight);
-        insightsByParticipant.set(insight.participant_id, existing);
       });
 
       const messageCountByUser = new Map<string, number>();
@@ -190,9 +145,7 @@ export function ProfilesTab() {
         const participant = participantsByEmail.get(profile.email.toLowerCase());
         return {
           ...profile,
-          notificationPrefs: prefsMap.get(profile.id),
           participant,
-          insights: participant ? insightsByParticipant.get(participant.id) : undefined,
           messageCount: messageCountByUser.get(profile.id) || 0,
         };
       });
@@ -355,54 +308,6 @@ export function ProfilesTab() {
     return "Luteal";
   };
 
-  const TIME_WINDOWS: Record<string, { start: number; end: number }> = {
-    morning: { start: 7, end: 10 },
-    afternoon: { start: 12, end: 15 },
-    evening: { start: 19, end: 22 },
-  };
-
-  const getNotificationStatus = (prefs?: NotificationPreference): {
-    status: "sent" | "pending" | "not_scheduled" | "disabled";
-    label: string;
-  } => {
-    if (!prefs) return { status: "not_scheduled", label: "Not configured" };
-    if (!prefs.is_enabled) return { status: "disabled", label: "Disabled" };
-
-    const now = new Date();
-    const israelTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }));
-    const todayStr = israelTime.toLocaleDateString("en-US", { timeZone: "Asia/Jerusalem" });
-    const currentDay = israelTime.toLocaleDateString("en-US", { weekday: "long", timeZone: "Asia/Jerusalem" }).toLowerCase();
-    const currentHour = israelTime.getHours();
-
-    // Check if today is a scheduled day
-    const isDaily = prefs.frequency === "daily";
-    const isScheduledToday = isDaily || (prefs.preferred_days?.includes(currentDay) ?? false);
-
-    if (!isScheduledToday) return { status: "not_scheduled", label: "Not today" };
-
-    // Check if already sent today
-    if (prefs.last_notification_at) {
-      const lastNotifDay = new Date(prefs.last_notification_at).toLocaleDateString("en-US", { timeZone: "Asia/Jerusalem" });
-      if (lastNotifDay === todayStr) {
-        const sentTime = new Date(prefs.last_notification_at);
-        const sentTimeIsrael = new Date(sentTime.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }));
-        return { 
-          status: "sent", 
-          label: `Sent ${format(sentTimeIsrael, "h:mm a")}` 
-        };
-      }
-    }
-
-    // Scheduled but not yet sent
-    const window = TIME_WINDOWS[prefs.preferred_time] || TIME_WINDOWS.evening;
-    if (currentHour < window.start) {
-      return { status: "pending", label: `Pending (${prefs.preferred_time})` };
-    } else if (currentHour >= window.end) {
-      return { status: "pending", label: "Missed window" };
-    } else {
-      return { status: "pending", label: "Due now" };
-    }
-  };
 
   const filtered = profiles.filter(p =>
     p.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -464,7 +369,7 @@ export function ProfilesTab() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Delete user?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will permanently delete <strong>{profile.full_name}</strong> and all their data including chat history and insights. This action cannot be undone.
+                        This will permanently delete <strong>{profile.full_name}</strong> and all their data including chat history. This action cannot be undone.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -511,62 +416,6 @@ export function ProfilesTab() {
             </CardContent>
           </Card>
 
-          {/* Notification Preferences Card */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Bell className="w-5 h-5" />
-                Notifications
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {profile.notificationPrefs ? (
-                <div className="space-y-3">
-                  {/* Today's status */}
-                  {(() => {
-                    const notifStatus = getNotificationStatus(profile.notificationPrefs);
-                    return (
-                      <div className={cn(
-                        "flex items-center gap-2 rounded-lg p-2.5 text-sm font-medium",
-                        notifStatus.status === "sent" && "bg-green-500/10 text-green-700",
-                        notifStatus.status === "pending" && "bg-yellow-500/10 text-yellow-700",
-                        notifStatus.status === "disabled" && "bg-muted text-muted-foreground",
-                        notifStatus.status === "not_scheduled" && "bg-muted text-muted-foreground",
-                      )}>
-                        {notifStatus.status === "sent" ? (
-                          <CheckCircle2 className="w-4 h-4" />
-                        ) : notifStatus.status === "pending" ? (
-                          <Bell className="w-4 h-4" />
-                        ) : (
-                          <BellOff className="w-4 h-4" />
-                        )}
-                        Today: {notifStatus.label}
-                      </div>
-                    );
-                  })()}
-
-                  <div className="flex items-center gap-2">
-                    <Badge variant={profile.notificationPrefs.is_enabled ? "default" : "secondary"}>
-                      {profile.notificationPrefs.is_enabled ? "Enabled" : "Disabled"}
-                    </Badge>
-                  </div>
-                  <p className="text-sm"><strong>Frequency:</strong> {profile.notificationPrefs.frequency}</p>
-                  <p className="text-sm"><strong>Time:</strong> {profile.notificationPrefs.preferred_time}</p>
-                  {profile.notificationPrefs.preferred_days && (
-                    <p className="text-sm"><strong>Days:</strong> {profile.notificationPrefs.preferred_days.join(", ")}</p>
-                  )}
-                  <p className="text-sm"><strong>Timezone:</strong> {profile.notificationPrefs.timezone}</p>
-                  {profile.notificationPrefs.last_notification_at && (
-                    <p className="text-sm text-muted-foreground">
-                      Last sent: {format(new Date(profile.notificationPrefs.last_notification_at), "MMM d, h:mm a")}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Not configured</p>
-              )}
-            </CardContent>
-          </Card>
 
           {/* Cycle Data Card */}
           <Card>
@@ -639,46 +488,6 @@ export function ProfilesTab() {
             </CardContent>
           </Card>
 
-          {/* Insights Card */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Target className="w-5 h-5" />
-                Insights ({profile.insights?.length || 0})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {profile.insights && profile.insights.length > 0 ? (
-                <div className="space-y-3 max-h-[300px] overflow-y-auto">
-                  {profile.insights.slice(0, 10).map((insight) => (
-                    <div key={insight.id} className="border-b pb-2 last:border-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge 
-                          variant={
-                            insight.status === "sent" ? "default" : 
-                            insight.status === "approved" ? "secondary" : "outline"
-                          }
-                          className="text-xs"
-                        >
-                          {insight.status || "pending"}
-                        </Badge>
-                        {insight.insight_type && (
-                          <Badge variant="outline" className="text-xs">{insight.insight_type}</Badge>
-                        )}
-                      </div>
-                      <p className="text-sm line-clamp-2">{insight.content}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {format(new Date(insight.created_at), "MMM d, yyyy")}
-                        {insight.sent_at && ` • Sent ${format(new Date(insight.sent_at), "MMM d")}`}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No insights yet</p>
-              )}
-            </CardContent>
-          </Card>
         </div>
 
         {/* Chat History Card - Full Width */}
@@ -940,32 +749,6 @@ export function ProfilesTab() {
                           <span className="truncate max-w-[150px]">{profile.email}</span>
                         </span>
                         <span>{profile.messageCount} messages</span>
-                        {profile.insights && profile.insights.length > 0 && (
-                          <span>{profile.insights.length} insights</span>
-                        )}
-                        {(() => {
-                          const notifStatus = getNotificationStatus(profile.notificationPrefs);
-                          return (
-                            <span className="flex items-center gap-1">
-                              {notifStatus.status === "sent" ? (
-                                <CheckCircle2 className="w-3 h-3 text-green-500" />
-                              ) : notifStatus.status === "pending" ? (
-                                <Bell className="w-3 h-3 text-yellow-500" />
-                              ) : notifStatus.status === "disabled" ? (
-                                <BellOff className="w-3 h-3 text-muted-foreground" />
-                              ) : (
-                                <XCircle className="w-3 h-3 text-muted-foreground" />
-                              )}
-                              <span className={cn(
-                                "text-xs",
-                                notifStatus.status === "sent" && "text-green-600",
-                                notifStatus.status === "pending" && "text-yellow-600"
-                              )}>
-                                {notifStatus.label}
-                              </span>
-                            </span>
-                          );
-                        })()}
                       </div>
                     </div>
                     <ChevronRight className="w-5 h-5 text-muted-foreground" />

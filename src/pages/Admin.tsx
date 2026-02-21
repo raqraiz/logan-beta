@@ -80,7 +80,7 @@ const Admin = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-display font-bold mb-2 text-foreground">Pilot Dashboard</h1>
           <p className="text-muted-foreground">
-            Manage participants, view chats, and track insights
+            Manage participants and view chats
           </p>
         </div>
 
