@@ -85,6 +85,7 @@ const Chat = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const onboardingInitialized = useRef(false);
+  const insightGenerated = useRef(false);
 
   // Fetch messages and initialize onboarding if needed
   useEffect(() => {
@@ -136,8 +137,9 @@ const Chat = () => {
         initializeOnboarding();
       }
 
-      // If onboarding is complete, trigger on-open insight generation
-      if (isOnboardingComplete && typedMessages.length > 0) {
+      // If onboarding is complete, trigger on-open insight generation (once per session)
+      if (isOnboardingComplete && typedMessages.length > 0 && !insightGenerated.current) {
+        insightGenerated.current = true;
         generateOnOpenInsight();
       }
     };
