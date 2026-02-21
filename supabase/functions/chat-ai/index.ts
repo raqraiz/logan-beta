@@ -74,17 +74,42 @@ serve(async (req) => {
       .single();
 
     // --- Period confirmation detection ---
-    // Check if user is responding to a period check-in
+    // First check if the last assistant message was a period check-in
+    const { data: lastAssistantMsg } = await supabase
+      .from("chat_messages")
+      .select("metadata")
+      .eq("user_id", user.id)
+      .eq("role", "assistant")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    
+    const wasPeridCheckin = (lastAssistantMsg?.metadata as any)?.period_checkin === true;
+
+    // Patterns that ONLY match current period reports (not historical references)
+    // Exclude messages containing month names or "last month" which indicate past events
+    const referencesHistoricalDate = /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/i.test(userMessage)
+      || /last (month|cycle|time)/i.test(userMessage)
+      || /\d{4}/.test(userMessage); // contains a year like 2026
+
     const periodConfirmPatterns = [
-      /yes.*(started|period|got it|began|came)/i,
-      /^yes$/i,
+      /^yes,?\s*(it )?(started|period|got it|began|came)/i,
       /started (today|yesterday|this morning|last night)/i,
-      /period (started|came|arrived|began)/i,
-      /it started/i,
-      /got my period/i,
+      /^(got|getting) my period/i,
+      /^it started/i,
+      /period started (today|yesterday|this morning|last night)/i,
       /started yesterday/i,
+      /my period (just )?(started|came|arrived|began)$/i,
     ];
-    const isPeriodConfirmation = periodConfirmPatterns.some(p => p.test(userMessage));
+    
+    // Bare "yes" / "yes it started" only counts if the last message was a period check-in
+    const bareYesPatterns = [/^yes$/i, /^yes,? (it )?(started|has|did)/i, /^not yet$/i];
+    const isBareYes = bareYesPatterns.some(p => p.test(userMessage.trim()));
+    
+    const isPeriodConfirmation = !referencesHistoricalDate && (
+      periodConfirmPatterns.some(p => p.test(userMessage)) ||
+      (isBareYes && wasPeridCheckin)
+    );
 
     if (isPeriodConfirmation && participant) {
       // Parse when it started — default to today
