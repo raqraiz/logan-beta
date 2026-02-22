@@ -17,6 +17,7 @@ interface ChatUserSummary {
   email: string | null;
   full_name: string | null;
   lastActivity: string | null;
+  lastUserMessage: string | null;
   messageCount: number;
   hasUnreadFromUser: boolean;
 }
@@ -53,6 +54,7 @@ export function ChatUsersTab({ adminUserId }: ChatUsersTabProps) {
       const userMap = new Map<string, {
         messages: typeof messages;
         lastActivity: string | null;
+        lastUserMessage: string | null;
         hasUnreadFromUser: boolean;
       }>();
 
@@ -62,10 +64,15 @@ export function ChatUsersTab({ adminUserId }: ChatUsersTabProps) {
           userMap.set(msg.user_id, {
             messages: [msg],
             lastActivity: msg.created_at,
+            lastUserMessage: msg.role === "user" ? msg.created_at : null,
             hasUnreadFromUser: msg.role === "user",
           });
         } else {
           existing.messages.push(msg);
+          // Track last user message time
+          if (msg.role === "user" && (!existing.lastUserMessage || new Date(msg.created_at) > new Date(existing.lastUserMessage))) {
+            existing.lastUserMessage = msg.created_at;
+          }
           // Check if there's a recent user message after last assistant message
           if (msg.role === "user") {
             const lastAssistant = existing.messages.find(m => m.role === "assistant");
@@ -84,20 +91,21 @@ export function ChatUsersTab({ adminUserId }: ChatUsersTabProps) {
           email: profile?.email || null,
           full_name: profile?.full_name || null,
           lastActivity: data.lastActivity,
+          lastUserMessage: data.lastUserMessage,
           messageCount: data.messages.length,
           hasUnreadFromUser: data.hasUnreadFromUser,
         };
       });
 
-      // Sort by last activity
+      // Sort by last user engagement (most recent user message first)
       summaries.sort((a, b) => {
         // Prioritize unread
         if (a.hasUnreadFromUser && !b.hasUnreadFromUser) return -1;
         if (b.hasUnreadFromUser && !a.hasUnreadFromUser) return 1;
-        // Then by last activity
-        if (!a.lastActivity) return 1;
-        if (!b.lastActivity) return -1;
-        return new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime();
+        // Then by last user message (who engaged last)
+        const aTime = a.lastUserMessage ? new Date(a.lastUserMessage).getTime() : 0;
+        const bTime = b.lastUserMessage ? new Date(b.lastUserMessage).getTime() : 0;
+        return bTime - aTime;
       });
 
       setUsers(summaries);
