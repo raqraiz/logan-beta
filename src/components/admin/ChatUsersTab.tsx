@@ -99,10 +99,6 @@ export function ChatUsersTab({ adminUserId }: ChatUsersTabProps) {
 
       // Sort by last user engagement (most recent user message first)
       summaries.sort((a, b) => {
-        // Prioritize unread
-        if (a.hasUnreadFromUser && !b.hasUnreadFromUser) return -1;
-        if (b.hasUnreadFromUser && !a.hasUnreadFromUser) return 1;
-        // Then by last user message (who engaged last)
         const aTime = a.lastUserMessage ? new Date(a.lastUserMessage).getTime() : 0;
         const bTime = b.lastUserMessage ? new Date(b.lastUserMessage).getTime() : 0;
         return bTime - aTime;
