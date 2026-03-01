@@ -85,6 +85,7 @@ interface MessageMetadata {
 interface ProfileWithData extends Profile {
   participant?: Participant;
   messageCount?: number;
+  lastUserMessage?: string | null;
 }
 
 export function ProfilesTab() {
@@ -140,6 +141,20 @@ export function ProfilesTab() {
         messageCountByUser.set(msg.user_id, (messageCountByUser.get(msg.user_id) || 0) + 1);
       });
 
+      // Get last user message timestamps for sorting by engagement
+      const { data: allMessages } = await supabase
+        .from("chat_messages")
+        .select("user_id, created_at, role")
+        .eq("role", "user")
+        .order("created_at", { ascending: false });
+
+      const lastUserMessageByUser = new Map<string, string>();
+      allMessages?.forEach(msg => {
+        if (!lastUserMessageByUser.has(msg.user_id)) {
+          lastUserMessageByUser.set(msg.user_id, msg.created_at);
+        }
+      });
+
       // Combine data
       const enrichedProfiles: ProfileWithData[] = (profilesData || []).map(profile => {
         const participant = participantsByEmail.get(profile.email.toLowerCase());
@@ -147,7 +162,15 @@ export function ProfilesTab() {
           ...profile,
           participant,
           messageCount: messageCountByUser.get(profile.id) || 0,
+          lastUserMessage: lastUserMessageByUser.get(profile.id) || null,
         };
+      });
+
+      // Sort by last user engagement (most recent first)
+      enrichedProfiles.sort((a, b) => {
+        const aTime = a.lastUserMessage ? new Date(a.lastUserMessage).getTime() : 0;
+        const bTime = b.lastUserMessage ? new Date(b.lastUserMessage).getTime() : 0;
+        return bTime - aTime;
       });
 
       setProfiles(enrichedProfiles);
