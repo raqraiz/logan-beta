@@ -5,10 +5,9 @@ import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { LogOut, RefreshCw, Shield, User, MessageSquare } from "lucide-react";
+import { LogOut, RefreshCw, Shield, User } from "lucide-react";
 import { AdminManagement } from "@/components/admin/AdminManagement";
 import { ProfilesTab } from "@/components/admin/ProfilesTab";
-import { ChatUsersTab } from "@/components/admin/ChatUsersTab";
 import { LoganLogo } from "@/components/LoganLogo";
 
 const Admin = () => {
@@ -85,13 +84,9 @@ const Admin = () => {
           </p>
         </div>
 
-        <Tabs defaultValue="chats" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3 bg-muted border border-border">
-            <TabsTrigger value="chats" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <MessageSquare className="w-4 h-4" />
-              <span className="hidden sm:inline">Chats</span>
-            </TabsTrigger>
-            <TabsTrigger value="profiles" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+        <Tabs defaultValue="users" className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2 bg-muted border border-border">
+            <TabsTrigger value="users" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <User className="w-4 h-4" />
               <span className="hidden sm:inline">Users</span>
             </TabsTrigger>
@@ -101,11 +96,7 @@ const Admin = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="chats">
-            {session && <ChatUsersTab adminUserId={session.user.id} />}
-          </TabsContent>
-
-          <TabsContent value="profiles">
+          <TabsContent value="users">
             <ProfilesTab />
           </TabsContent>
 
