@@ -1,4 +1,4 @@
-import { differenceInDays } from "date-fns";
+
 
 interface ChatCycleCircleProps {
   cycleDay: number;
@@ -121,17 +121,31 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md" 
   );
 }
 
-// Helper to calculate cycle info from dates (for edge function use)
+// Helper to calculate cycle info from dates — uses noon UTC to avoid timezone off-by-one
 export function calculateCycleInfo(
   lastPeriodStart: string | null,
-  cycleLengthDays: number | null
+  cycleLengthDays: number | null,
+  timezone: string = "Asia/Jerusalem"
 ): { cycleDay: number; phase: string } | null {
   if (!lastPeriodStart || !cycleLengthDays) return null;
 
-  const today = new Date();
-  const periodStart = new Date(lastPeriodStart);
-  const daysSinceStart = differenceInDays(today, periodStart);
-  
+  // Parse date-only string safely: treat YYYY-MM-DD as noon UTC to avoid timezone shift
+  let periodStart: Date;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodStart)) {
+    const [year, month, day] = lastPeriodStart.split("-").map(Number);
+    periodStart = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  } else {
+    periodStart = new Date(lastPeriodStart);
+  }
+
+  // Get today's date in the user's timezone for accurate day calculation
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: timezone }); // YYYY-MM-DD
+  const [ty, tm, td] = todayStr.split("-").map(Number);
+  const today = new Date(Date.UTC(ty, tm - 1, td, 12, 0, 0));
+
+  const diffTime = today.getTime() - periodStart.getTime();
+  const daysSinceStart = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
   // Calculate current day in cycle (1-indexed, wrapping around)
   const cycleDay = ((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
 

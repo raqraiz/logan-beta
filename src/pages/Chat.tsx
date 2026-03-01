@@ -14,7 +14,7 @@ import { SymptomPicker } from "@/components/chat/SymptomPicker";
 import { AnchorPicker } from "@/components/chat/AnchorPicker";
 import { DatePickerInput } from "@/components/chat/DatePickerInput";
 import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
-import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
+import { ChatCycleCircle, calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
 import { HormoneChart } from "@/components/chat/HormoneChart";
 import { SymptomMap } from "@/components/chat/SymptomMap";
 import { PhaseCheatSheet } from "@/components/chat/PhaseCheatSheet";
@@ -183,28 +183,62 @@ const Chat = () => {
     };
   }, [user]);
 
-  // Extract cycle data from messages metadata
+  // Extract cycle data from messages metadata and recalculate live
   useEffect(() => {
     if (!user || isOnboarding || messages.length === 0) {
       setCycleData(null);
       return;
     }
 
-    // Find the most recent message with cycle metadata
-    const messagesWithCycleData = messages.filter(
-      (msg) => msg.metadata && (msg.metadata as any).cycle_day && (msg.metadata as any).cycle_length_days
-    );
+    // Find the most recent last_period_start from metadata
+    // Check period update messages first, then any message with last_period_start
+    let lastPeriodStart: string | null = null;
+    let cycleLengthDays: number | null = null;
 
-    if (messagesWithCycleData.length === 0) return;
+    // Iterate in reverse to find most recent data
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const metadata = messages[i].metadata as any;
+      if (!metadata) continue;
 
-    const latestCycleMessage = messagesWithCycleData[messagesWithCycleData.length - 1];
-    const metadata = latestCycleMessage.metadata as any;
+      // Period update messages have new_period_start
+      if (metadata.new_period_start && !lastPeriodStart) {
+        lastPeriodStart = metadata.new_period_start;
+      }
+      // Regular messages may have last_period_start
+      if (metadata.last_period_start && !lastPeriodStart) {
+        lastPeriodStart = metadata.last_period_start;
+      }
+      if (metadata.cycle_length_days && !cycleLengthDays) {
+        cycleLengthDays = metadata.cycle_length_days;
+      }
+      if (lastPeriodStart && cycleLengthDays) break;
+    }
 
-    setCycleData({
-      cycleDay: metadata.cycle_day,
-      phase: metadata.cycle_phase || "Unknown",
-      cycleLengthDays: metadata.cycle_length_days,
-    });
+    if (!lastPeriodStart || !cycleLengthDays) {
+      // Fallback: use stale cycle_day from metadata if no period start found
+      const messagesWithCycleData = messages.filter(
+        (msg) => msg.metadata && (msg.metadata as any).cycle_day && (msg.metadata as any).cycle_length_days
+      );
+      if (messagesWithCycleData.length > 0) {
+        const metadata = messagesWithCycleData[messagesWithCycleData.length - 1].metadata as any;
+        setCycleData({
+          cycleDay: metadata.cycle_day,
+          phase: metadata.cycle_phase || "Unknown",
+          cycleLengthDays: metadata.cycle_length_days,
+        });
+      }
+      return;
+    }
+
+    // Recalculate cycle day live using the same logic as the server
+    const liveInfo = calculateCycleInfo(lastPeriodStart, cycleLengthDays);
+    if (liveInfo) {
+      setCycleData({
+        cycleDay: liveInfo.cycleDay,
+        phase: liveInfo.phase,
+        cycleLengthDays,
+      });
+    }
   }, [user, isOnboarding, messages]);
 
   // Auto-scroll to bottom

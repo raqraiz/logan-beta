@@ -344,7 +344,9 @@ serve(async (req) => {
       message_type: "text",
       metadata: cycleInfo ? {
         cycle_day: cycleInfo.cycleDay,
-        cycle_phase: cycleInfo.phase
+        cycle_phase: cycleInfo.phase,
+        cycle_length_days: participant?.cycle_length_days || 28,
+        last_period_start: participant?.last_period_start || null,
       } : {}
     });
 
