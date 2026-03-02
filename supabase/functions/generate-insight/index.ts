@@ -57,7 +57,7 @@ serve(async (req) => {
       );
     }
 
-    // Check if we already sent a proactive insight today
+    // Check if we already sent (or are generating) a proactive insight today
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
@@ -78,6 +78,51 @@ serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Race-condition guard: insert a placeholder row first, then generate.
+    // If another request already inserted a placeholder in the last 30 seconds, skip.
+    const thirtySecondsAgo = new Date(Date.now() - 30_000).toISOString();
+    const { data: recentPlaceholders } = await supabase
+      .from("chat_messages")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("role", "assistant")
+      .gte("created_at", thirtySecondsAgo)
+      .contains("metadata", { insight_type: "proactive" });
+
+    if (recentPlaceholders && recentPlaceholders.length > 0) {
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, reason: "already_generating" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Insert a placeholder to claim the slot
+    const { data: placeholder, error: placeholderError } = await supabase
+      .from("chat_messages")
+      .insert({
+        user_id: user.id,
+        role: "assistant",
+        content: "...",
+        message_type: "text",
+        metadata: {
+          insight_type: "proactive",
+          placeholder: true,
+          generated_at: new Date().toISOString(),
+        }
+      })
+      .select("id")
+      .single();
+
+    if (placeholderError || !placeholder) {
+      console.error("Failed to insert placeholder:", placeholderError);
+      return new Response(
+        JSON.stringify({ error: "Failed to reserve insight slot" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const placeholderId = placeholder.id;
 
     // Get participant data
     const { data: participant } = await supabase
@@ -133,11 +178,8 @@ serve(async (req) => {
 
       const checkinContent = `${dayLabel}. Your period could arrive any time now.\n\nHas it started yet? If so, I'll reset your cycle so everything stays accurate — your insights, your phase, all of it.`;
 
-      await supabase.from("chat_messages").insert({
-        user_id: user.id,
-        role: "assistant",
+      await supabase.from("chat_messages").update({
         content: checkinContent,
-        message_type: "text",
         metadata: {
           has_cycle_visual: true,
           cycle_day: cycleInfo.cycleDay,
@@ -148,7 +190,7 @@ serve(async (req) => {
           generated_at: new Date().toISOString(),
           conversation_starters: ["Yes, it started today", "Started yesterday", "Not yet"]
         }
-      });
+      }).eq("id", placeholderId);
     } else {
       // Generate regular AI insight
       const prompt = buildInsightPrompt(
@@ -160,12 +202,9 @@ serve(async (req) => {
 
       const { insight, conversationStarters } = await generateAIInsight(lovableApiKey, prompt);
 
-      // Insert the insight as a chat message
-      await supabase.from("chat_messages").insert({
-        user_id: user.id,
-        role: "assistant",
+      // Update the placeholder with the real insight
+      await supabase.from("chat_messages").update({
         content: insight,
-        message_type: "text",
         metadata: {
           has_cycle_visual: true,
           cycle_day: cycleInfo.cycleDay,
@@ -175,7 +214,7 @@ serve(async (req) => {
           generated_at: new Date().toISOString(),
           conversation_starters: conversationStarters
         }
-      });
+      }).eq("id", placeholderId);
     }
 
     return new Response(
