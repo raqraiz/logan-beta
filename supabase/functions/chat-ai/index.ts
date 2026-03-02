@@ -103,7 +103,7 @@ serve(async (req) => {
     ];
     
     // Bare "yes" / "yes it started" only counts if the last message was a period check-in
-    const bareYesPatterns = [/^yes$/i, /^yes,? (it )?(started|has|did)/i, /^not yet$/i];
+    const bareYesPatterns = [/^yes$/i, /^yes,? (it )?(started|has|did)/i];
     const isBareYes = bareYesPatterns.some(p => p.test(userMessage.trim()));
     
     const isPeriodConfirmation = !referencesHistoricalDate && (
