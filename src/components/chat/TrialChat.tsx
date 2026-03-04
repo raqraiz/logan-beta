@@ -65,7 +65,7 @@ export const TrialChat = () => {
   const isNearBottomRef = useRef(true);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll with long-message anchoring
+  // Auto-scroll only when messages change (not when auth UI appears)
   useEffect(() => {
     if (!isNearBottomRef.current) return;
 
@@ -83,7 +83,7 @@ export const TrialChat = () => {
     }
 
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, showAuth]);
+  }, [messages]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
