@@ -30,8 +30,8 @@ import {
   ChevronLeft, Trash2, Loader2, Activity, Clock, MessageSquare,
   Pencil
 } from "lucide-react";
-import { formatDistanceToNow, format, differenceInDays } from "date-fns";
-import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
+import { formatDistanceToNow, format } from "date-fns";
+import { ChatCycleCircle, calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
 import { cn } from "@/lib/utils";
 import { Json } from "@/integrations/supabase/types";
 
@@ -317,18 +317,8 @@ export function ProfilesTab() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
-  const calculateCycleDay = (lastPeriodStart: string | null, cycleLength: number | null) => {
-    if (!lastPeriodStart) return null;
-    const daysSince = differenceInDays(new Date(), new Date(lastPeriodStart));
-    const length = cycleLength || 28;
-    return (daysSince % length) + 1;
-  };
-
-  const getCyclePhase = (cycleDay: number, cycleLength: number = 28) => {
-    if (cycleDay <= 5) return "Menstrual";
-    if (cycleDay <= 13) return "Follicular";
-    if (cycleDay <= 16) return "Ovulation";
-    return "Luteal";
+  const getCycleData = (participant: { last_period_start: string | null; cycle_length_days: number | null; timezone?: string | null }) => {
+    return calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "Asia/Jerusalem");
   };
 
 
@@ -350,8 +340,9 @@ export function ProfilesTab() {
   if (selectedProfile) {
     const profile = selectedProfile;
     const participant = profile.participant;
-    const cycleDay = participant ? calculateCycleDay(participant.last_period_start, participant.cycle_length_days) : null;
-    const phase = cycleDay ? getCyclePhase(cycleDay, participant?.cycle_length_days || 28) : null;
+    const cycleData = participant ? getCycleData(participant) : null;
+    const cycleDay = cycleData?.cycleDay ?? null;
+    const phase = cycleData?.phase ?? null;
 
     return (
       <div className="space-y-4">
@@ -725,10 +716,9 @@ export function ProfilesTab() {
       ) : (
         <div className="grid gap-3">
           {filtered.map((profile) => {
-            const cycleDay = profile.participant 
-              ? calculateCycleDay(profile.participant.last_period_start, profile.participant.cycle_length_days) 
-              : null;
-            const phase = cycleDay ? getCyclePhase(cycleDay, profile.participant?.cycle_length_days || 28) : null;
+            const cycleData = profile.participant ? getCycleData(profile.participant) : null;
+            const cycleDay = cycleData?.cycleDay ?? null;
+            const phase = cycleData?.phase ?? null;
             
             return (
               <Card
