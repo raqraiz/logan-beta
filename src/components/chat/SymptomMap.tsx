@@ -5,10 +5,10 @@ interface SymptomMapProps {
 }
 
 const PHASE_CONFIG = [
-  { key: "menstrual", label: "Period", color: "#e74c6f", angle: 0, span: 90 },
-  { key: "follicular", label: "Build-up", color: "#60a5fa", angle: 90, span: 90 },
-  { key: "ovulatory", label: "Peak", color: "#a78bfa", angle: 180, span: 45 },
-  { key: "luteal", label: "Wind-down", color: "#f59e42", angle: 225, span: 135 },
+  { key: "menstrual", label: "Menstruation", color: "#e74c6f", angle: 0, span: 90 },
+  { key: "follicular", label: "Follicular", color: "#60a5fa", angle: 90, span: 90 },
+  { key: "ovulatory", label: "Ovulation", color: "#a78bfa", angle: 180, span: 45 },
+  { key: "luteal", label: "Luteal", color: "#f59e42", angle: 225, span: 135 },
 ];
 
 // Maps symptoms to phases with intensity (0-1)
