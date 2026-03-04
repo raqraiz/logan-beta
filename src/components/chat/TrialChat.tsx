@@ -60,14 +60,29 @@ export const TrialChat = () => {
   const [lastUserQuestion, setLastUserQuestion] = useState("");
   
   const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const lastMessageRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll only when user is already near the bottom
+  // Auto-scroll with long-message anchoring
   useEffect(() => {
-    if (scrollRef.current && isNearBottomRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: "smooth" });
+    if (!isNearBottomRef.current) return;
+
+    const viewport = scrollContainerRef.current?.querySelector(
+      '[data-radix-scroll-area-viewport]'
+    ) as HTMLDivElement | null;
+
+    const lastMessageEl = lastMessageRef.current;
+    if (viewport && lastMessageEl) {
+      const isLongMessage = lastMessageEl.offsetHeight > viewport.clientHeight * 0.8;
+      if (isLongMessage) {
+        lastMessageEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
     }
+
+    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, showAuth]);
 
   const handleSend = async (e: React.FormEvent) => {
@@ -173,17 +188,22 @@ export const TrialChat = () => {
       </header>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 px-4 relative z-10" onScrollCapture={(e) => {
-        const el = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
-        if (el) {
-          const { scrollTop, scrollHeight, clientHeight } = el;
-          isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 150;
-        }
-      }}>
+      <ScrollArea
+        ref={scrollContainerRef}
+        className="flex-1 px-4 relative z-10"
+        onScrollCapture={(e) => {
+          const el = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
+          if (el) {
+            const { scrollTop, scrollHeight, clientHeight } = el;
+            isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 150;
+          }
+        }}
+      >
         <div className="max-w-3xl mx-auto py-8 space-y-6">
           {messages.map((message, index) => (
             <div
               key={message.id}
+              ref={index === messages.length - 1 ? lastMessageRef : null}
               className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
               style={{ animationDelay: `${index * 50}ms` }}
             >
