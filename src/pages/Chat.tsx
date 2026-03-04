@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
+import { LoganFullLogo } from "@/components/LoganFullLogo";
 import { Send, Loader2, LogOut, ChevronLeft } from "lucide-react";
 import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
 import { format } from "date-fns";
@@ -558,9 +559,8 @@ const Chat = () => {
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <LoganLogo size="sm" />
+            <LoganFullLogo size="sm" />
             <div>
-              <h1 className="font-display font-semibold text-foreground">Logan</h1>
               <p className="text-xs text-muted-foreground">
                 {isOnboarding ? "Setting up your profile" : "Your performance partner"}
               </p>

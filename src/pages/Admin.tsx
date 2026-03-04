@@ -8,7 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { LogOut, RefreshCw, Shield, User } from "lucide-react";
 import { AdminManagement } from "@/components/admin/AdminManagement";
 import { ProfilesTab } from "@/components/admin/ProfilesTab";
-import { LoganLogo } from "@/components/LoganLogo";
+import { LoganFullLogo } from "@/components/LoganFullLogo";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -60,8 +60,7 @@ const Admin = () => {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link to="/" className="flex items-center gap-3">
-              <LoganLogo size="sm" showGlow={false} />
-              <span className="font-display font-semibold text-lg text-foreground">Logan</span>
+              <LoganFullLogo size="sm" />
             </Link>
             <span className="text-muted-foreground text-sm">Admin Dashboard</span>
           </div>
