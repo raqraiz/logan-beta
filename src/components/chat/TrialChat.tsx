@@ -149,8 +149,9 @@ export const TrialChat = () => {
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <LoganFullLogo size="sm" />
+              <LoganLogo size="sm" />
             </div>
+            <LoganFullLogo size="sm" />
             <div>
               <p className="text-xs text-muted-foreground">Intelligent cycle guidance</p>
             </div>
