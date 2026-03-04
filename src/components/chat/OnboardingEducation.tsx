@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
+import { Droplets, Sprout, Zap, Moon, Frown, Brain, BatteryLow, Smile, Crosshair, HelpCircle } from "lucide-react";
 
 // ─── Animated Cycle Basics Card ─────────────────────────────────────────
-// Shows an animated ring with 4 phases appearing one by one
 
 const PHASES = [
-  { name: "Period", color: "hsl(355, 78%, 60%)", startAngle: 0, endAngle: 90, description: "Your body resets" },
-  { name: "Build-up", color: "hsl(152, 60%, 52%)", startAngle: 90, endAngle: 180, description: "Energy rises" },
-  { name: "Peak", color: "hsl(40, 90%, 56%)", startAngle: 180, endAngle: 250, description: "You're sharpest" },
-  { name: "Wind-down", color: "hsl(270, 60%, 65%)", startAngle: 250, endAngle: 360, description: "Body slows down" },
+  { name: "Period", color: "hsl(355, 78%, 60%)", startAngle: 0, endAngle: 90, description: "Your body resets", Icon: Droplets },
+  { name: "Build-up", color: "hsl(152, 60%, 52%)", startAngle: 90, endAngle: 180, description: "Energy rises", Icon: Sprout },
+  { name: "Peak", color: "hsl(40, 90%, 56%)", startAngle: 180, endAngle: 250, description: "You're sharpest", Icon: Zap },
+  { name: "Wind-down", color: "hsl(270, 60%, 65%)", startAngle: 250, endAngle: 360, description: "Body slows down", Icon: Moon },
 ];
 
 function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
@@ -44,10 +44,7 @@ export function CycleBasicsCard() {
       <div className="flex items-center gap-4">
         {/* Animated ring */}
         <svg width="120" height="120" viewBox="0 0 120 120" className="flex-shrink-0">
-          {/* Background ring */}
           <circle cx={cx} cy={cy} r={r} fill="none" stroke="hsl(220, 10%, 18%)" strokeWidth="8" />
-          
-          {/* Phase arcs animating in */}
           {PHASES.slice(0, visiblePhases).map((phase, i) => (
             <path
               key={i}
@@ -57,14 +54,9 @@ export function CycleBasicsCard() {
               strokeWidth="8"
               strokeLinecap="round"
               className="transition-all duration-500"
-              style={{
-                opacity: 1,
-                filter: `drop-shadow(0 0 4px ${phase.color}40)`,
-              }}
+              style={{ opacity: 1, filter: `drop-shadow(0 0 4px ${phase.color}40)` }}
             />
           ))}
-          
-          {/* Center text */}
           <text x={cx} y={cy - 4} textAnchor="middle" fill="hsl(210, 20%, 97%)" fontSize="11" fontWeight="600" fontFamily="Space Grotesk, sans-serif">
             ~28
           </text>
@@ -84,7 +76,7 @@ export function CycleBasicsCard() {
                 transform: i < visiblePhases ? "translateX(0)" : "translateX(-8px)",
               }}
             >
-              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: phase.color }} />
+              <phase.Icon size={14} className="flex-shrink-0" style={{ color: phase.color }} />
               <div>
                 <span className="text-xs font-medium text-foreground">{phase.name}</span>
                 <span className="text-[10px] text-muted-foreground ml-1">— {phase.description}</span>
@@ -105,7 +97,6 @@ export function CycleBasicsCard() {
 
 
 // ─── Hormone Basics Card ────────────────────────────────────────────────
-// Simple animated wave showing hormones rising and falling
 
 export function HormoneBasicsCard() {
   const [animate, setAnimate] = useState(false);
@@ -121,34 +112,18 @@ export function HormoneBasicsCard() {
       
       <div className="relative h-16 overflow-hidden rounded-lg bg-muted/30">
         <svg viewBox="0 0 200 60" className="w-full h-full" preserveAspectRatio="none">
-          {/* Estrogen wave */}
           <path
             d="M0,50 C30,50 40,15 70,10 C100,5 110,30 130,35 C150,40 170,45 200,48"
-            fill="none"
-            stroke="hsl(152, 60%, 52%)"
-            strokeWidth="2"
-            strokeLinecap="round"
+            fill="none" stroke="hsl(152, 60%, 52%)" strokeWidth="2" strokeLinecap="round"
             className="transition-all duration-1000"
-            style={{
-              strokeDasharray: 300,
-              strokeDashoffset: animate ? 0 : 300,
-            }}
+            style={{ strokeDasharray: 300, strokeDashoffset: animate ? 0 : 300 }}
           />
-          {/* Progesterone wave */}
           <path
             d="M0,55 C50,55 80,50 100,45 C120,40 130,15 150,10 C170,5 190,40 200,50"
-            fill="none"
-            stroke="hsl(270, 60%, 65%)"
-            strokeWidth="2"
-            strokeLinecap="round"
+            fill="none" stroke="hsl(270, 60%, 65%)" strokeWidth="2" strokeLinecap="round"
             className="transition-all duration-1000 delay-500"
-            style={{
-              strokeDasharray: 300,
-              strokeDashoffset: animate ? 0 : 300,
-            }}
+            style={{ strokeDasharray: 300, strokeDashoffset: animate ? 0 : 300 }}
           />
-          
-          {/* Phase labels at bottom */}
           <text x="20" y="58" fontSize="5" fill="hsl(210, 15%, 55%)" fontFamily="DM Sans">Period</text>
           <text x="65" y="58" fontSize="5" fill="hsl(210, 15%, 55%)" fontFamily="DM Sans">Build-up</text>
           <text x="115" y="58" fontSize="5" fill="hsl(210, 15%, 55%)" fontFamily="DM Sans">Peak</text>
@@ -174,7 +149,13 @@ export function HormoneBasicsCard() {
 
 
 // ─── Symptom Explainer Card ─────────────────────────────────────────────
-// Shows why symptoms follow patterns
+
+const SYMPTOM_ITEMS = [
+  { label: "Mood dips", when: "Usually weeks 3-4", Icon: Frown },
+  { label: "Brain fog", when: "Usually weeks 3-4", Icon: Brain },
+  { label: "Energy crashes", when: "Week 1 & 3-4", Icon: BatteryLow },
+  { label: "Feeling great", when: "Usually weeks 2-3", Icon: Smile },
+];
 
 export function SymptomExplainerCard() {
   return (
@@ -182,13 +163,9 @@ export function SymptomExplainerCard() {
       <p className="text-xs font-semibold text-primary uppercase tracking-wider">Your symptoms aren't random</p>
       
       <div className="grid grid-cols-2 gap-2">
-        {[
-          { label: "Mood dips", when: "Usually weeks 3-4" },
-          { label: "Brain fog", when: "Usually weeks 3-4" },
-          { label: "Energy crashes", when: "Week 1 & 3-4" },
-          { label: "Feeling great", when: "Usually weeks 2-3" },
-        ].map((item, i) => (
-          <div key={i} className="rounded-lg bg-muted/30 p-2.5 space-y-0.5">
+        {SYMPTOM_ITEMS.map((item, i) => (
+          <div key={i} className="rounded-lg bg-muted/30 p-2.5 space-y-1">
+            <item.Icon size={16} className="text-primary" />
             <p className="text-xs font-medium text-foreground">{item.label}</p>
             <p className="text-[10px] text-muted-foreground">{item.when}</p>
           </div>
@@ -213,6 +190,7 @@ export function AnchorExplainerCard() {
         It's the <span className="text-foreground font-medium">one thing</span> that bothers you most each cycle. Logan uses it as your main signal — so you'll get a heads-up before it hits, instead of being blindsided.
       </p>
       <div className="flex items-center gap-2 bg-muted/30 rounded-lg p-2.5">
+        <Crosshair size={16} className="text-primary flex-shrink-0" />
         <p className="text-[11px] text-foreground">Think: the symptom where you later go <span className="italic text-muted-foreground">"oh... that's why"</span></p>
       </div>
     </div>
@@ -254,8 +232,9 @@ export function NotSureButton({ field, onUseDefault, disabled }: NotSureButtonPr
         type="button"
         onClick={() => setExpanded(true)}
         disabled={disabled}
-        className="text-xs text-muted-foreground hover:text-primary transition-colors underline decoration-dotted underline-offset-2 mt-2"
+        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors underline decoration-dotted underline-offset-2 mt-2"
       >
+        <HelpCircle size={12} />
         I'm not sure
       </button>
     );
