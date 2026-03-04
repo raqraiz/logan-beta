@@ -84,6 +84,8 @@ const Chat = () => {
   
   const { user, loading: authLoading, signOut } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
   const inputRef = useRef<HTMLInputElement>(null);
   const onboardingInitialized = useRef(false);
   const insightGenerated = useRef(false);
@@ -242,9 +244,9 @@ const Chat = () => {
     }
   }, [user, isOnboarding, messages]);
 
-  // Auto-scroll to bottom
+  // Auto-scroll only when user is already near the bottom
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && isNearBottomRef.current) {
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
@@ -646,7 +648,13 @@ const Chat = () => {
       )}
 
       {/* Messages */}
-      <ScrollArea className="flex-1 px-4">
+      <ScrollArea className="flex-1 px-4" onScrollCapture={(e) => {
+        const el = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
+        if (el) {
+          const { scrollTop, scrollHeight, clientHeight } = el;
+          isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 150;
+        }
+      }}>
         <div className="max-w-3xl mx-auto py-6 space-y-4">
           {messages.length === 0 && !isLoading ? (
             <div className="text-center py-12">

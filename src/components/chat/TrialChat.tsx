@@ -60,11 +60,12 @@ export const TrialChat = () => {
   const [lastUserQuestion, setLastUserQuestion] = useState("");
   
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll to bottom
+  // Auto-scroll only when user is already near the bottom
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && isNearBottomRef.current) {
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, showAuth]);
@@ -172,7 +173,13 @@ export const TrialChat = () => {
       </header>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 px-4 relative z-10">
+      <ScrollArea className="flex-1 px-4 relative z-10" onScrollCapture={(e) => {
+        const el = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
+        if (el) {
+          const { scrollTop, scrollHeight, clientHeight } = el;
+          isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 150;
+        }
+      }}>
         <div className="max-w-3xl mx-auto py-8 space-y-6">
           {messages.map((message, index) => (
             <div
