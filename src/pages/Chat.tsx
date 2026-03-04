@@ -247,21 +247,12 @@ const Chat = () => {
     }
   }, [user, isOnboarding, messages]);
 
-  // Auto-scroll — only when user is near the bottom and message fits on screen
+  // Auto-scroll — only when the user sends a message (never on assistant replies)
   useEffect(() => {
+    if (messages.length === 0) return;
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.role !== "user") return;
     if (!isNearBottomRef.current) return;
-
-    const viewport = scrollContainerRef.current?.querySelector(
-      '[data-radix-scroll-area-viewport]'
-    ) as HTMLDivElement | null;
-
-    const lastMessageEl = lastMessageRef.current;
-    if (viewport && lastMessageEl) {
-      // Skip auto-scroll entirely for messages taller than 80% of viewport
-      if (lastMessageEl.offsetHeight > viewport.clientHeight * 0.8) {
-        return;
-      }
-    }
 
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
