@@ -1,14 +1,6 @@
 import { useState, useEffect } from "react";
-import { Droplets, Sprout, Zap, Moon, Frown, Brain, BatteryLow, Smile, Crosshair, HelpCircle } from "lucide-react";
 
-// ─── Animated Cycle Basics Card ─────────────────────────────────────────
-
-const PHASES = [
-  { name: "Period", color: "hsl(355, 78%, 60%)", startAngle: 0, endAngle: 90, description: "Your body resets", Icon: Droplets },
-  { name: "Build-up", color: "hsl(152, 60%, 52%)", startAngle: 90, endAngle: 180, description: "Energy rises", Icon: Sprout },
-  { name: "Peak", color: "hsl(40, 90%, 56%)", startAngle: 180, endAngle: 250, description: "You're sharpest", Icon: Zap },
-  { name: "Wind-down", color: "hsl(270, 60%, 65%)", startAngle: 250, endAngle: 360, description: "Body slows down", Icon: Moon },
-];
+// ─── Shared helpers ──────────────────────────────────────────────────────
 
 function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
   const rad = ((angleDeg - 90) * Math.PI) / 180;
@@ -22,8 +14,22 @@ function arcPath(cx: number, cy: number, r: number, startAngle: number, endAngle
   return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 0 ${end.x} ${end.y}`;
 }
 
+// ─── Phase data ──────────────────────────────────────────────────────────
+
+const PHASES = [
+  { name: "Period", color: "hsl(355, 78%, 60%)", startAngle: 0, endAngle: 90, days: "Days 1-7", description: "Your body resets. Hormones are at their lowest." },
+  { name: "Build-up", color: "hsl(152, 60%, 52%)", startAngle: 90, endAngle: 180, days: "Days 7-14", description: "Estrogen rises. Energy and mood climb." },
+  { name: "Peak", color: "hsl(40, 90%, 56%)", startAngle: 180, endAngle: 250, days: "Days 14-17", description: "Hormones peak. You feel sharpest." },
+  { name: "Wind-down", color: "hsl(270, 60%, 65%)", startAngle: 250, endAngle: 360, days: "Days 17-28", description: "Progesterone rises then drops. Things slow down." },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 1. CYCLE BASICS — Annotated ring with day markers + phase detail cards
+// ═══════════════════════════════════════════════════════════════════════════
+
 export function CycleBasicsCard() {
   const [visiblePhases, setVisiblePhases] = useState(0);
+  const [activePhase, setActivePhase] = useState<number | null>(null);
   const [showText, setShowText] = useState(false);
 
   useEffect(() => {
@@ -35,52 +41,99 @@ export function CycleBasicsCard() {
     return () => timers.forEach(clearTimeout);
   }, []);
 
-  const cx = 60, cy = 60, r = 44;
+  const cx = 80, cy = 80, r = 56, tickR = 66;
+
+  // Day tick marks at key positions
+  const dayMarkers = [
+    { day: 1, angle: 0 },
+    { day: 7, angle: 90 },
+    { day: 14, angle: 180 },
+    { day: 17, angle: 225 },
+    { day: 28, angle: 355 },
+  ];
 
   return (
     <div className="rounded-xl bg-card border border-border/50 p-4 space-y-3 animate-fade-in">
       <p className="text-xs font-semibold text-primary uppercase tracking-wider">Your cycle in 30 seconds</p>
-      
-      <div className="flex items-center gap-4">
-        {/* Animated ring */}
-        <svg width="120" height="120" viewBox="0 0 120 120" className="flex-shrink-0">
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="hsl(220, 10%, 18%)" strokeWidth="8" />
+
+      <div className="flex items-start gap-3">
+        {/* Ring diagram */}
+        <svg width="160" height="160" viewBox="0 0 160 160" className="flex-shrink-0">
+          {/* Background ring */}
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke="hsl(220, 10%, 15%)" strokeWidth="10" />
+
+          {/* Phase arcs */}
           {PHASES.slice(0, visiblePhases).map((phase, i) => (
             <path
               key={i}
               d={arcPath(cx, cy, r, phase.startAngle, phase.endAngle)}
               fill="none"
               stroke={phase.color}
-              strokeWidth="8"
-              strokeLinecap="round"
-              className="transition-all duration-500"
-              style={{ opacity: 1, filter: `drop-shadow(0 0 4px ${phase.color}40)` }}
+              strokeWidth={activePhase === i ? "12" : "10"}
+              strokeLinecap="butt"
+              className="transition-all duration-300 cursor-pointer"
+              style={{ filter: `drop-shadow(0 0 ${activePhase === i ? 6 : 3}px ${phase.color}50)` }}
+              onMouseEnter={() => setActivePhase(i)}
+              onMouseLeave={() => setActivePhase(null)}
             />
           ))}
-          <text x={cx} y={cy - 4} textAnchor="middle" fill="hsl(210, 20%, 97%)" fontSize="11" fontWeight="600" fontFamily="Space Grotesk, sans-serif">
+
+          {/* Day tick marks */}
+          {dayMarkers.map(({ day, angle }) => {
+            const outer = polarToCartesian(cx, cy, tickR, angle);
+            const inner = polarToCartesian(cx, cy, r + 6, angle);
+            const label = polarToCartesian(cx, cy, tickR + 7, angle);
+            return (
+              <g key={day}>
+                <line
+                  x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y}
+                  stroke="hsl(210, 15%, 40%)" strokeWidth="1"
+                />
+                <text
+                  x={label.x} y={label.y}
+                  textAnchor="middle" dominantBaseline="central"
+                  fill="hsl(210, 15%, 50%)" fontSize="7" fontFamily="Space Grotesk, sans-serif"
+                >
+                  {day}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Center */}
+          <text x={cx} y={cy - 6} textAnchor="middle" fill="hsl(210, 20%, 97%)" fontSize="14" fontWeight="600" fontFamily="Space Grotesk, sans-serif">
             ~28
           </text>
-          <text x={cx} y={cy + 10} textAnchor="middle" fill="hsl(210, 15%, 55%)" fontSize="8" fontFamily="DM Sans, sans-serif">
-            days
+          <text x={cx} y={cy + 8} textAnchor="middle" fill="hsl(210, 15%, 50%)" fontSize="8" fontFamily="DM Sans, sans-serif">
+            day cycle
           </text>
         </svg>
 
-        {/* Phase labels */}
-        <div className="space-y-1.5 flex-1">
+        {/* Phase legend with descriptions */}
+        <div className="space-y-1 flex-1 pt-1">
           {PHASES.map((phase, i) => (
             <div
               key={i}
-              className="flex items-center gap-2 transition-all duration-300"
+              className="rounded-lg p-2 transition-all duration-300 cursor-pointer"
               style={{
                 opacity: i < visiblePhases ? 1 : 0,
                 transform: i < visiblePhases ? "translateX(0)" : "translateX(-8px)",
+                backgroundColor: activePhase === i ? `${phase.color}15` : "transparent",
+                borderLeft: `2px solid ${activePhase === i ? phase.color : "transparent"}`,
               }}
+              onMouseEnter={() => setActivePhase(i)}
+              onMouseLeave={() => setActivePhase(null)}
             >
-              <phase.Icon size={14} className="flex-shrink-0" style={{ color: phase.color }} />
-              <div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: phase.color }} />
                 <span className="text-xs font-medium text-foreground">{phase.name}</span>
-                <span className="text-[10px] text-muted-foreground ml-1">— {phase.description}</span>
+                <span className="text-[9px] text-muted-foreground ml-auto">{phase.days}</span>
               </div>
+              {activePhase === i && (
+                <p className="text-[10px] text-muted-foreground mt-0.5 ml-3.5 animate-fade-in leading-snug">
+                  {phase.description}
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -88,7 +141,7 @@ export function CycleBasicsCard() {
 
       {showText && (
         <p className="text-xs text-muted-foreground leading-relaxed animate-fade-in">
-          Every month your body goes through these 4 phases. Each one changes how you feel, think, and perform. Logan tracks where you are so you can stop guessing.
+          Tap any phase to learn more. Your cycle repeats roughly every 28 days — Logan tracks where you are so you can stop guessing.
         </p>
       )}
     </div>
@@ -96,9 +149,270 @@ export function CycleBasicsCard() {
 }
 
 
-// ─── Hormone Basics Card ────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// 2. HORMONE TIMELINE — Annotated chart with labeled peaks + crossover
+// ═══════════════════════════════════════════════════════════════════════════
 
 export function HormoneBasicsCard() {
+  const [animate, setAnimate] = useState(false);
+  const [hoveredHormone, setHoveredHormone] = useState<string | null>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setAnimate(true), 300);
+    return () => clearTimeout(t);
+  }, []);
+
+  const W = 280, H = 100;
+  const pad = { top: 12, right: 10, bottom: 22, left: 10 };
+
+  return (
+    <div className="rounded-xl bg-card border border-border/50 p-4 space-y-3 animate-fade-in">
+      <p className="text-xs font-semibold text-primary uppercase tracking-wider">Why you feel different each week</p>
+
+      <div className="relative overflow-hidden rounded-lg bg-muted/10 border border-border/30">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 140 }}>
+          {/* Phase background bands */}
+          {[
+            { x: pad.left, w: 70, color: "hsl(355, 78%, 60%)", label: "Period" },
+            { x: pad.left + 70, w: 70, color: "hsl(152, 60%, 52%)", label: "Build-up" },
+            { x: pad.left + 140, w: 50, color: "hsl(40, 90%, 56%)", label: "Peak" },
+            { x: pad.left + 190, w: 80, color: "hsl(270, 60%, 65%)", label: "Wind-down" },
+          ].map((band, i) => (
+            <g key={i}>
+              <rect
+                x={band.x} y={pad.top} width={band.w} height={H - pad.top - pad.bottom}
+                fill={band.color} opacity="0.06" rx="2"
+              />
+              <text
+                x={band.x + band.w / 2} y={H - 6}
+                textAnchor="middle" fontSize="7" fill="hsl(210, 15%, 45%)"
+                fontFamily="DM Sans, sans-serif"
+              >
+                {band.label}
+              </text>
+            </g>
+          ))}
+
+          {/* Grid lines */}
+          {[0.25, 0.5, 0.75].map(frac => (
+            <line
+              key={frac}
+              x1={pad.left} y1={pad.top + (H - pad.top - pad.bottom) * (1 - frac)}
+              x2={W - pad.right} y2={pad.top + (H - pad.top - pad.bottom) * (1 - frac)}
+              stroke="hsl(210, 10%, 20%)" strokeWidth="0.3" strokeDasharray="3,3"
+            />
+          ))}
+
+          {/* Estrogen curve */}
+          <path
+            d="M10,72 C40,72 55,25 95,18 C135,11 145,45 170,50 C195,55 220,62 270,68"
+            fill="none"
+            stroke="hsl(152, 60%, 52%)"
+            strokeWidth={hoveredHormone === "estrogen" ? "2.5" : "1.8"}
+            strokeLinecap="round"
+            className="transition-all duration-700"
+            style={{
+              strokeDasharray: 400,
+              strokeDashoffset: animate ? 0 : 400,
+              filter: hoveredHormone === "estrogen" ? "drop-shadow(0 0 4px hsl(152, 60%, 52%, 0.5))" : "none",
+            }}
+            onMouseEnter={() => setHoveredHormone("estrogen")}
+            onMouseLeave={() => setHoveredHormone(null)}
+          />
+
+          {/* Estrogen peak label */}
+          {animate && (
+            <g className="animate-fade-in" style={{ animationDelay: "0.8s", animationFillMode: "both" }}>
+              <circle cx="95" cy="18" r="2.5" fill="hsl(152, 60%, 52%)" />
+              <line x1="95" y1="20" x2="95" y2="30" stroke="hsl(152, 60%, 52%)" strokeWidth="0.5" strokeDasharray="1,1" />
+              <text x="95" y="36" textAnchor="middle" fontSize="6" fill="hsl(152, 60%, 65%)" fontFamily="Space Grotesk">
+                estrogen peak
+              </text>
+            </g>
+          )}
+
+          {/* Progesterone curve */}
+          <path
+            d="M10,76 C60,76 100,72 135,62 C160,52 170,22 195,18 C220,14 250,55 270,70"
+            fill="none"
+            stroke="hsl(270, 60%, 65%)"
+            strokeWidth={hoveredHormone === "progesterone" ? "2.5" : "1.8"}
+            strokeLinecap="round"
+            className="transition-all duration-700"
+            style={{
+              strokeDasharray: 400,
+              strokeDashoffset: animate ? 0 : 400,
+              animationDelay: "0.4s",
+              filter: hoveredHormone === "progesterone" ? "drop-shadow(0 0 4px hsl(270, 60%, 65%, 0.5))" : "none",
+            }}
+            onMouseEnter={() => setHoveredHormone("progesterone")}
+            onMouseLeave={() => setHoveredHormone(null)}
+          />
+
+          {/* Progesterone peak label */}
+          {animate && (
+            <g className="animate-fade-in" style={{ animationDelay: "1.4s", animationFillMode: "both" }}>
+              <circle cx="195" cy="18" r="2.5" fill="hsl(270, 60%, 65%)" />
+              <line x1="195" y1="20" x2="195" y2="30" stroke="hsl(270, 60%, 65%)" strokeWidth="0.5" strokeDasharray="1,1" />
+              <text x="195" y="36" textAnchor="middle" fontSize="6" fill="hsl(270, 60%, 75%)" fontFamily="Space Grotesk">
+                progesterone peak
+              </text>
+            </g>
+          )}
+
+          {/* Crossover annotation */}
+          {animate && (
+            <g className="animate-fade-in" style={{ animationDelay: "1.8s", animationFillMode: "both" }}>
+              <line x1="155" y1={pad.top} x2="155" y2={H - pad.bottom} stroke="hsl(210, 15%, 35%)" strokeWidth="0.5" strokeDasharray="2,2" />
+              <text x="155" y={pad.top - 2} textAnchor="middle" fontSize="5.5" fill="hsl(210, 15%, 50%)" fontFamily="DM Sans">
+                crossover
+              </text>
+            </g>
+          )}
+
+          {/* Y-axis label */}
+          <text x="4" y={pad.top + 4} fontSize="5" fill="hsl(210, 15%, 40%)" fontFamily="DM Sans">high</text>
+          <text x="4" y={H - pad.bottom - 2} fontSize="5" fill="hsl(210, 15%, 40%)" fontFamily="DM Sans">low</text>
+        </svg>
+      </div>
+
+      {/* Legend */}
+      <div className="flex gap-4 text-[10px]">
+        <span
+          className="flex items-center gap-1.5 cursor-pointer transition-opacity"
+          style={{ opacity: hoveredHormone === "progesterone" ? 0.4 : 1 }}
+          onMouseEnter={() => setHoveredHormone("estrogen")}
+          onMouseLeave={() => setHoveredHormone(null)}
+        >
+          <span className="w-5 h-[2px] rounded-full bg-phase-follicular inline-block" /> Estrogen — drives energy & mood
+        </span>
+        <span
+          className="flex items-center gap-1.5 cursor-pointer transition-opacity"
+          style={{ opacity: hoveredHormone === "estrogen" ? 0.4 : 1 }}
+          onMouseEnter={() => setHoveredHormone("progesterone")}
+          onMouseLeave={() => setHoveredHormone(null)}
+        >
+          <span className="w-5 h-[2px] rounded-full bg-phase-luteal inline-block" /> Progesterone — calming, then drops
+        </span>
+      </div>
+
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        These two hormones rise and fall every cycle. When they shift, so does your mood, energy, and focus. That's not random — it's biology you can learn to read.
+      </p>
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 3. SYMPTOM HEATMAP — Symptom × week grid with intensity dots
+// ═══════════════════════════════════════════════════════════════════════════
+
+const SYMPTOM_DATA = [
+  { label: "Mood dips",      weeks: [0.2, 0.1, 0.6, 0.9] },
+  { label: "Brain fog",      weeks: [0.3, 0.1, 0.5, 0.8] },
+  { label: "Energy crashes",  weeks: [0.7, 0.2, 0.5, 0.8] },
+  { label: "Feeling great",   weeks: [0.1, 0.8, 0.9, 0.2] },
+];
+
+const WEEK_LABELS = ["Wk 1", "Wk 2", "Wk 3", "Wk 4"];
+
+export function SymptomExplainerCard() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 300);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
+    <div className="rounded-xl bg-card border border-border/50 p-4 space-y-3 animate-fade-in">
+      <p className="text-xs font-semibold text-primary uppercase tracking-wider">Your symptoms aren't random</p>
+
+      {/* Heatmap grid */}
+      <div className="overflow-hidden rounded-lg">
+        {/* Week headers */}
+        <div className="grid grid-cols-[100px_repeat(4,1fr)] gap-0.5 mb-1">
+          <div />
+          {WEEK_LABELS.map(w => (
+            <div key={w} className="text-center text-[9px] text-muted-foreground font-medium py-1">
+              {w}
+            </div>
+          ))}
+        </div>
+
+        {/* Symptom rows */}
+        {SYMPTOM_DATA.map((symptom, si) => (
+          <div
+            key={si}
+            className="grid grid-cols-[100px_repeat(4,1fr)] gap-0.5 transition-all duration-500"
+            style={{
+              opacity: visible ? 1 : 0,
+              transform: visible ? "translateY(0)" : "translateY(6px)",
+              transitionDelay: `${si * 120}ms`,
+            }}
+          >
+            <div className="text-[10px] text-foreground font-medium flex items-center pr-2">
+              {symptom.label}
+            </div>
+            {symptom.weeks.map((intensity, wi) => (
+              <div
+                key={wi}
+                className="flex items-center justify-center py-1.5 rounded transition-all duration-300"
+                style={{
+                  backgroundColor: intensity > 0.6
+                    ? `hsl(355, 78%, 60%, ${intensity * 0.25})`
+                    : intensity > 0.3
+                      ? `hsl(40, 90%, 56%, ${intensity * 0.2})`
+                      : `hsl(152, 60%, 52%, ${intensity * 0.2})`,
+                }}
+              >
+                {/* Intensity bar */}
+                <div
+                  className="h-1.5 rounded-full transition-all duration-700"
+                  style={{
+                    width: visible ? `${intensity * 80}%` : "0%",
+                    backgroundColor: intensity > 0.6
+                      ? "hsl(355, 78%, 60%)"
+                      : intensity > 0.3
+                        ? "hsl(40, 90%, 56%)"
+                        : "hsl(152, 60%, 52%)",
+                    transitionDelay: `${si * 120 + wi * 80}ms`,
+                    opacity: 0.8,
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* Color legend */}
+      <div className="flex items-center gap-3 text-[9px] text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-1.5 rounded-full" style={{ backgroundColor: "hsl(152, 60%, 52%)" }} /> mild
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-1.5 rounded-full" style={{ backgroundColor: "hsl(40, 90%, 56%)" }} /> moderate
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-1.5 rounded-full" style={{ backgroundColor: "hsl(355, 78%, 60%)" }} /> intense
+        </span>
+      </div>
+
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        Most symptoms follow a predictable weekly pattern. Once you spot yours, you can plan around it instead of being caught off guard.
+      </p>
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 4. ANCHOR SYMPTOM — Radar-style target diagram
+// ═══════════════════════════════════════════════════════════════════════════
+
+export function AnchorExplainerCard() {
   const [animate, setAnimate] = useState(false);
 
   useEffect(() => {
@@ -106,99 +420,105 @@ export function HormoneBasicsCard() {
     return () => clearTimeout(t);
   }, []);
 
-  return (
-    <div className="rounded-xl bg-card border border-border/50 p-4 space-y-3 animate-fade-in">
-      <p className="text-xs font-semibold text-primary uppercase tracking-wider">Why you feel different each week</p>
-      
-      <div className="relative h-16 overflow-hidden rounded-lg bg-muted/30">
-        <svg viewBox="0 0 200 60" className="w-full h-full" preserveAspectRatio="none">
-          <path
-            d="M0,50 C30,50 40,15 70,10 C100,5 110,30 130,35 C150,40 170,45 200,48"
-            fill="none" stroke="hsl(152, 60%, 52%)" strokeWidth="2" strokeLinecap="round"
-            className="transition-all duration-1000"
-            style={{ strokeDasharray: 300, strokeDashoffset: animate ? 0 : 300 }}
-          />
-          <path
-            d="M0,55 C50,55 80,50 100,45 C120,40 130,15 150,10 C170,5 190,40 200,50"
-            fill="none" stroke="hsl(270, 60%, 65%)" strokeWidth="2" strokeLinecap="round"
-            className="transition-all duration-1000 delay-500"
-            style={{ strokeDasharray: 300, strokeDashoffset: animate ? 0 : 300 }}
-          />
-          <text x="20" y="58" fontSize="5" fill="hsl(210, 15%, 55%)" fontFamily="DM Sans">Period</text>
-          <text x="65" y="58" fontSize="5" fill="hsl(210, 15%, 55%)" fontFamily="DM Sans">Build-up</text>
-          <text x="115" y="58" fontSize="5" fill="hsl(210, 15%, 55%)" fontFamily="DM Sans">Peak</text>
-          <text x="165" y="58" fontSize="5" fill="hsl(210, 15%, 55%)" fontFamily="DM Sans">Wind-down</text>
-        </svg>
-      </div>
+  const cx = 60, cy = 60;
 
-      <div className="flex gap-3 text-[10px]">
-        <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-phase-follicular" /> Estrogen (energy)
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-phase-luteal" /> Progesterone (calm)
-        </span>
-      </div>
-
-      <p className="text-xs text-muted-foreground leading-relaxed">
-        Two main hormones rise and fall throughout your cycle. When they shift, so does your mood, energy, and focus. That's not random — it's a pattern you can learn.
-      </p>
-    </div>
-  );
-}
-
-
-// ─── Symptom Explainer Card ─────────────────────────────────────────────
-
-const SYMPTOM_ITEMS = [
-  { label: "Mood dips", when: "Usually weeks 3-4", Icon: Frown },
-  { label: "Brain fog", when: "Usually weeks 3-4", Icon: Brain },
-  { label: "Energy crashes", when: "Week 1 & 3-4", Icon: BatteryLow },
-  { label: "Feeling great", when: "Usually weeks 2-3", Icon: Smile },
-];
-
-export function SymptomExplainerCard() {
-  return (
-    <div className="rounded-xl bg-card border border-border/50 p-4 space-y-3 animate-fade-in">
-      <p className="text-xs font-semibold text-primary uppercase tracking-wider">Your symptoms aren't random</p>
-      
-      <div className="grid grid-cols-2 gap-2">
-        {SYMPTOM_ITEMS.map((item, i) => (
-          <div key={i} className="rounded-lg bg-muted/30 p-2.5 space-y-1">
-            <item.Icon size={16} className="text-primary" />
-            <p className="text-xs font-medium text-foreground">{item.label}</p>
-            <p className="text-[10px] text-muted-foreground">{item.when}</p>
-          </div>
-        ))}
-      </div>
-
-      <p className="text-xs text-muted-foreground leading-relaxed">
-        Most symptoms follow a predictable timing. Once you spot your pattern, you can plan around it instead of being caught off guard.
-      </p>
-    </div>
-  );
-}
-
-
-// ─── Anchor Symptom Explainer ───────────────────────────────────────────
-
-export function AnchorExplainerCard() {
   return (
     <div className="rounded-xl bg-card border border-border/50 p-4 space-y-2 animate-fade-in">
       <p className="text-xs font-semibold text-primary uppercase tracking-wider">What's an anchor symptom?</p>
-      <p className="text-xs text-muted-foreground leading-relaxed">
-        It's the <span className="text-foreground font-medium">one thing</span> that bothers you most each cycle. Logan uses it as your main signal — so you'll get a heads-up before it hits, instead of being blindsided.
-      </p>
-      <div className="flex items-center gap-2 bg-muted/30 rounded-lg p-2.5">
-        <Crosshair size={16} className="text-primary flex-shrink-0" />
-        <p className="text-[11px] text-foreground">Think: the symptom where you later go <span className="italic text-muted-foreground">"oh... that's why"</span></p>
+
+      <div className="flex items-start gap-3">
+        {/* Target/radar SVG */}
+        <svg width="120" height="120" viewBox="0 0 120 120" className="flex-shrink-0">
+          {/* Concentric rings */}
+          {[40, 30, 20, 10].map((r, i) => (
+            <circle
+              key={r}
+              cx={cx} cy={cy} r={r}
+              fill="none"
+              stroke="hsl(210, 10%, 22%)"
+              strokeWidth="0.5"
+              className="transition-all duration-500"
+              style={{
+                opacity: animate ? 1 : 0,
+                transitionDelay: `${i * 100}ms`,
+              }}
+            />
+          ))}
+
+          {/* Crosshairs */}
+          <line x1={cx - 44} y1={cy} x2={cx + 44} y2={cy} stroke="hsl(210, 10%, 20%)" strokeWidth="0.4" />
+          <line x1={cx} y1={cy - 44} x2={cx} y2={cy + 44} stroke="hsl(210, 10%, 20%)" strokeWidth="0.4" />
+
+          {/* Outer scattered dots (other symptoms) */}
+          {[
+            { x: 25, y: 30 }, { x: 88, y: 38 }, { x: 35, y: 82 },
+            { x: 80, y: 78 }, { x: 18, y: 55 }, { x: 92, y: 60 },
+          ].map((dot, i) => (
+            <circle
+              key={i}
+              cx={dot.x} cy={dot.y} r="3"
+              fill="hsl(210, 15%, 35%)"
+              className="transition-all duration-500"
+              style={{
+                opacity: animate ? 0.5 : 0,
+                transitionDelay: `${300 + i * 80}ms`,
+              }}
+            />
+          ))}
+
+          {/* Center anchor dot with pulse */}
+          <circle
+            cx={cx} cy={cy} r={animate ? 7 : 0}
+            fill="hsl(var(--primary))"
+            className="transition-all duration-700"
+            style={{
+              transitionDelay: "800ms",
+              filter: "drop-shadow(0 0 6px hsl(var(--primary) / 0.5))",
+            }}
+          />
+          {animate && (
+            <circle
+              cx={cx} cy={cy} r="7"
+              fill="none"
+              stroke="hsl(var(--primary))"
+              strokeWidth="1"
+              className="animate-pulse-soft"
+              style={{ opacity: 0.4 }}
+            />
+          )}
+
+          {/* Labels */}
+          {animate && (
+            <>
+              <text x={cx} y={cy + 20} textAnchor="middle" fontSize="6.5" fill="hsl(var(--primary))" fontWeight="600" fontFamily="Space Grotesk">
+                anchor
+              </text>
+              <text x="16" y="24" fontSize="5.5" fill="hsl(210, 15%, 40%)" fontFamily="DM Sans">other</text>
+              <text x="82" y="90" fontSize="5.5" fill="hsl(210, 15%, 40%)" fontFamily="DM Sans">other</text>
+            </>
+          )}
+        </svg>
+
+        {/* Explanation text */}
+        <div className="flex-1 space-y-2 pt-1">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            It's the <span className="text-foreground font-medium">one thing</span> that bothers you most each cycle. Logan uses it as your main signal — so you'll get a heads-up before it hits, instead of being blindsided.
+          </p>
+          <div className="bg-muted/30 rounded-lg p-2.5">
+            <p className="text-[11px] text-foreground leading-snug">
+              Think: the symptom where you later go <span className="italic text-muted-foreground">"oh... that's why"</span>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
 
-// ─── "I'm Not Sure" Button ──────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// 5. "I'M NOT SURE" BUTTON — with expandable explanation
+// ═══════════════════════════════════════════════════════════════════════════
 
 interface NotSureButtonProps {
   field: "cycle_length" | "last_period";
@@ -232,9 +552,8 @@ export function NotSureButton({ field, onUseDefault, disabled }: NotSureButtonPr
         type="button"
         onClick={() => setExpanded(true)}
         disabled={disabled}
-        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors underline decoration-dotted underline-offset-2 mt-2"
+        className="text-xs text-muted-foreground hover:text-primary transition-colors underline decoration-dotted underline-offset-2 mt-2"
       >
-        <HelpCircle size={12} />
         I'm not sure
       </button>
     );
