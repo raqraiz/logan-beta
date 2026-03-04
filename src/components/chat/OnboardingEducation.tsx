@@ -307,12 +307,14 @@ export function HormoneBasicsCard() {
 // 3. SYMPTOM HEATMAP — Symptom × week grid with intensity dots
 // ═══════════════════════════════════════════════════════════════════════════
 
-const PHASE_SNAPSHOTS = [
-  { name: "Menstruation", color: "#EF4444", feel: "Low energy, need rest", common: ["Cramps", "Fatigue", "Mood dips"] },
-  { name: "Follicular", color: "#10B981", feel: "Energy building up", common: ["Motivation", "Clarity", "Optimism"] },
-  { name: "Ovulation", color: "#F59E0B", feel: "Peak performance", common: ["Confidence", "High energy", "Focus"] },
-  { name: "Luteal", color: "#8B5CF6", feel: "Winding down", common: ["Bloating", "Brain fog", "Cravings"] },
+const PHASE_DURATIONS = [
+  { name: "Menstruation", color: "#EF4444", days: 5, description: "Hormones at their lowest" },
+  { name: "Follicular", color: "#10B981", days: 9, description: "Estrogen rises, energy builds" },
+  { name: "Ovulation", color: "#F59E0B", days: 3, description: "Peak fertility & sharpness" },
+  { name: "Luteal", color: "#8B5CF6", days: 11, description: "Progesterone rises then drops" },
 ];
+
+const TOTAL_DAYS = PHASE_DURATIONS.reduce((sum, p) => sum + p.days, 0);
 
 export function SymptomExplainerCard() {
   const [visible, setVisible] = useState(false);
@@ -324,44 +326,48 @@ export function SymptomExplainerCard() {
 
   return (
     <div className="rounded-xl bg-card border border-border/50 p-4 space-y-3 animate-fade-in">
-      <p className="text-xs font-semibold text-primary uppercase tracking-wider">Your symptoms aren't random</p>
+      <p className="text-xs font-semibold text-primary uppercase tracking-wider">How long each phase lasts</p>
 
-      <div className="space-y-2">
-        {PHASE_SNAPSHOTS.map((phase, i) => (
+      {/* Horizontal stacked bar */}
+      <div className="flex rounded-full overflow-hidden h-5">
+        {PHASE_DURATIONS.map((phase, i) => (
           <div
             key={phase.name}
-            className="flex items-start gap-2.5 rounded-lg p-2.5 transition-all duration-400"
+            className="flex items-center justify-center transition-all duration-700"
             style={{
-              opacity: visible ? 1 : 0,
-              transform: visible ? "translateY(0)" : "translateY(6px)",
-              transitionDelay: `${i * 120}ms`,
-              borderLeft: `3px solid ${phase.color}`,
-              backgroundColor: `${phase.color}08`,
+              width: visible ? `${(phase.days / TOTAL_DAYS) * 100}%` : "0%",
+              backgroundColor: phase.color,
+              transitionDelay: `${i * 150}ms`,
             }}
           >
-            <div className="flex-1 min-w-0">
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-[11px] font-semibold text-foreground">{phase.name}</span>
-                <span className="text-[9px] text-muted-foreground">{phase.feel}</span>
-              </div>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {phase.common.map(tag => (
-                  <span
-                    key={tag}
-                    className="text-[9px] px-1.5 py-0.5 rounded-full font-medium"
-                    style={{ backgroundColor: `${phase.color}18`, color: phase.color }}
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
+            <span className="text-[8px] font-bold text-white drop-shadow-sm">
+              {phase.days}d
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Legend */}
+      <div className="space-y-1.5">
+        {PHASE_DURATIONS.map((phase, i) => (
+          <div
+            key={phase.name}
+            className="flex items-center gap-2 transition-all duration-400"
+            style={{
+              opacity: visible ? 1 : 0,
+              transitionDelay: `${i * 100 + 400}ms`,
+            }}
+          >
+            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: phase.color }} />
+            <span className="text-[11px] font-semibold text-foreground">{phase.name}</span>
+            <span className="text-[10px] text-muted-foreground">~{phase.days} days</span>
+            <span className="text-[9px] text-muted-foreground ml-auto">{phase.description}</span>
           </div>
         ))}
       </div>
 
       <p className="text-xs text-muted-foreground leading-relaxed">
-        Each phase brings predictable changes. Logan helps you see them coming.
+        Based on a ~{TOTAL_DAYS}-day cycle. Your phases may vary — Logan adjusts to your actual pattern.
       </p>
     </div>
   );
