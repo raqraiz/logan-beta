@@ -34,7 +34,8 @@ const SYMPTOM_CATEGORIES = {
       "Migraines",
       "Deep fatigue",
       "Smell sensitivity",
-      "Chin or jaw acne breakouts"
+      "Chin or jaw acne breakouts",
+      "Knee pain"
     ]
   },
   quirky: {
