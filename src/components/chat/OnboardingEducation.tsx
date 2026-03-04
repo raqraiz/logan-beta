@@ -17,10 +17,10 @@ function arcPath(cx: number, cy: number, r: number, startAngle: number, endAngle
 // ─── Phase data ──────────────────────────────────────────────────────────
 
 const PHASES = [
-  { name: "Period", color: "hsl(355, 78%, 60%)", startAngle: 0, endAngle: 90, days: "Days 1-7", description: "Your body resets. Hormones are at their lowest." },
-  { name: "Build-up", color: "hsl(152, 60%, 52%)", startAngle: 90, endAngle: 180, days: "Days 7-14", description: "Estrogen rises. Energy and mood climb." },
-  { name: "Peak", color: "hsl(40, 90%, 56%)", startAngle: 180, endAngle: 250, days: "Days 14-17", description: "Hormones peak. You feel sharpest." },
-  { name: "Wind-down", color: "hsl(270, 60%, 65%)", startAngle: 250, endAngle: 360, days: "Days 17-28", description: "Progesterone rises then drops. Things slow down." },
+  { name: "Period", color: "hsl(355, 78%, 60%)", startAngle: 0, endAngle: 90, description: "Your body resets. Hormones are at their lowest." },
+  { name: "Build-up", color: "hsl(152, 60%, 52%)", startAngle: 90, endAngle: 180, description: "Estrogen rises. Energy and mood climb." },
+  { name: "Peak", color: "hsl(40, 90%, 56%)", startAngle: 180, endAngle: 250, description: "Hormones peak. You feel sharpest." },
+  { name: "Wind-down", color: "hsl(270, 60%, 65%)", startAngle: 250, endAngle: 360, description: "Progesterone rises then drops. Things slow down." },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -127,7 +127,6 @@ export function CycleBasicsCard() {
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: phase.color }} />
                 <span className="text-xs font-medium text-foreground">{phase.name}</span>
-                <span className="text-[9px] text-muted-foreground ml-auto">{phase.days}</span>
               </div>
               {activePhase === i && (
                 <p className="text-[10px] text-muted-foreground mt-0.5 ml-3.5 animate-fade-in leading-snug">
@@ -309,13 +308,13 @@ export function HormoneBasicsCard() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 const SYMPTOM_DATA = [
-  { label: "Mood dips",      weeks: [0.2, 0.1, 0.6, 0.9] },
-  { label: "Brain fog",      weeks: [0.3, 0.1, 0.5, 0.8] },
-  { label: "Energy crashes",  weeks: [0.7, 0.2, 0.5, 0.8] },
-  { label: "Feeling great",   weeks: [0.1, 0.8, 0.9, 0.2] },
+  { label: "Mood dips",      phases: [0.2, 0.1, 0.6, 0.9] },
+  { label: "Brain fog",      phases: [0.3, 0.1, 0.5, 0.8] },
+  { label: "Energy crashes",  phases: [0.7, 0.2, 0.5, 0.8] },
+  { label: "Feeling great",   phases: [0.1, 0.8, 0.9, 0.2] },
 ];
 
-const WEEK_LABELS = ["Wk 1", "Wk 2", "Wk 3", "Wk 4"];
+const PHASE_LABELS = ["Period", "Build-up", "Peak", "Wind-down"];
 
 export function SymptomExplainerCard() {
   const [visible, setVisible] = useState(false);
@@ -334,7 +333,7 @@ export function SymptomExplainerCard() {
         {/* Week headers */}
         <div className="grid grid-cols-[100px_repeat(4,1fr)] gap-0.5 mb-1">
           <div />
-          {WEEK_LABELS.map(w => (
+          {PHASE_LABELS.map(w => (
             <div key={w} className="text-center text-[9px] text-muted-foreground font-medium py-1">
               {w}
             </div>
@@ -355,7 +354,7 @@ export function SymptomExplainerCard() {
             <div className="text-[10px] text-foreground font-medium flex items-center pr-2">
               {symptom.label}
             </div>
-            {symptom.weeks.map((intensity, wi) => (
+            {symptom.phases.map((intensity, wi) => (
               <div
                 key={wi}
                 className="flex items-center justify-center py-1.5 rounded transition-all duration-300"
