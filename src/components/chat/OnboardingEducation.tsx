@@ -17,10 +17,10 @@ function arcPath(cx: number, cy: number, r: number, startAngle: number, endAngle
 // ─── Phase data ──────────────────────────────────────────────────────────
 
 const PHASES = [
-  { name: "Period", color: "hsl(355, 78%, 60%)", startAngle: 0, endAngle: 90, description: "Your body resets. Hormones are at their lowest." },
-  { name: "Build-up", color: "hsl(152, 60%, 52%)", startAngle: 90, endAngle: 180, description: "Estrogen rises. Energy and mood climb." },
-  { name: "Peak", color: "hsl(40, 90%, 56%)", startAngle: 180, endAngle: 250, description: "Hormones peak. You feel sharpest." },
-  { name: "Wind-down", color: "hsl(270, 60%, 65%)", startAngle: 250, endAngle: 360, description: "Progesterone rises then drops. Things slow down." },
+  { name: "Menstruation", color: "hsl(355, 78%, 60%)", startAngle: 0, endAngle: 90, description: "Your body resets. Hormones are at their lowest." },
+  { name: "Follicular", color: "hsl(152, 60%, 52%)", startAngle: 90, endAngle: 180, description: "Estrogen rises. Energy and mood climb." },
+  { name: "Ovulation", color: "hsl(40, 90%, 56%)", startAngle: 180, endAngle: 250, description: "Hormones peak. You feel sharpest." },
+  { name: "Luteal", color: "hsl(270, 60%, 65%)", startAngle: 250, endAngle: 360, description: "Progesterone rises then drops. Things slow down." },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -172,10 +172,10 @@ export function HormoneBasicsCard() {
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 140 }}>
           {/* Phase background bands */}
           {[
-            { x: pad.left, w: 70, color: "hsl(355, 78%, 60%)", label: "Period" },
-            { x: pad.left + 70, w: 70, color: "hsl(152, 60%, 52%)", label: "Build-up" },
-            { x: pad.left + 140, w: 50, color: "hsl(40, 90%, 56%)", label: "Peak" },
-            { x: pad.left + 190, w: 80, color: "hsl(270, 60%, 65%)", label: "Wind-down" },
+            { x: pad.left, w: 70, color: "hsl(355, 78%, 60%)", label: "Menstruation" },
+            { x: pad.left + 70, w: 70, color: "hsl(152, 60%, 52%)", label: "Follicular" },
+            { x: pad.left + 140, w: 50, color: "hsl(40, 90%, 56%)", label: "Ovulation" },
+            { x: pad.left + 190, w: 80, color: "hsl(270, 60%, 65%)", label: "Luteal" },
           ].map((band, i) => (
             <g key={i}>
               <rect
@@ -314,7 +314,7 @@ const SYMPTOM_DATA = [
   { label: "Feeling great",   phases: [0.1, 0.8, 0.9, 0.2] },
 ];
 
-const PHASE_LABELS = ["Period", "Build-up", "Peak", "Wind-down"];
+const PHASE_LABELS = ["Menstruation", "Follicular", "Ovulation", "Luteal"];
 
 export function SymptomExplainerCard() {
   const [visible, setVisible] = useState(false);
