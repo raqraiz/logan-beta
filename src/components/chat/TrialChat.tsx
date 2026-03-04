@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoganLogo } from "@/components/LoganLogo";
 import { LoganFullLogo } from "@/components/LoganFullLogo";
-import { Send, Loader2, Sparkles } from "lucide-react";
+import { Send, Loader2 } from "lucide-react";
 import { VoiceInputButton } from "./VoiceInputButton";
 import { supabase } from "@/integrations/supabase/client";
 import { InlineChatAuth } from "./InlineChatAuth";
@@ -262,8 +262,7 @@ export const TrialChat = () => {
                 
                 <div className="relative z-10">
                   <div className="relative inline-block mb-4">
-                    <Sparkles className="w-10 h-10 text-primary" />
-                    <div className="absolute inset-0 bg-primary/30 rounded-full blur-xl animate-pulse" />
+                    <LoganLogo size="md" />
                   </div>
                   <h3 className="font-display font-semibold text-xl text-foreground mb-3">
                     {getContextualHeadline(lastUserQuestion)}

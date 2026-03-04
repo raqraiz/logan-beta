@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Eye, EyeOff, ArrowRight, Sparkles } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { LoganLogo } from "@/components/LoganLogo";
 import { z } from "zod";
 
 const authSchema = z.object({
@@ -215,7 +216,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
             {isLoading ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : (
-              <Sparkles className="w-4 h-4 mr-2" />
+              <LoganLogo size="sm" className="w-5 h-5 mr-2" />
             )}
             {isLoading
               ? isSignUp ? "Creating account..." : "Signing in..."
