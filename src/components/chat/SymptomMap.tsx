@@ -7,10 +7,10 @@ interface SymptomMapProps {
 }
 
 const PHASES = [
-  { name: "Menstruation", color: "#EF4444", startAngle: 0, span: 64 },
-  { name: "Follicular", color: "#10B981", startAngle: 64, span: 103 },
-  { name: "Ovulation", color: "#F59E0B", startAngle: 167, span: 39 },
-  { name: "Luteal", color: "#8B5CF6", startAngle: 206, span: 154 },
+  { name: "Menstruation", color: "#EF4444" },
+  { name: "Follicular", color: "#10B981" },
+  { name: "Ovulation", color: "#F59E0B" },
+  { name: "Luteal", color: "#8B5CF6" },
 ];
 
 const SYMPTOM_TIMING: Record<string, Record<string, number>> = {
@@ -42,146 +42,74 @@ const DEFAULT_TIMING: Record<string, number> = {
   Menstruation: 0.5, Follicular: 0.2, Ovulation: 0.2, Luteal: 0.7,
 };
 
-function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
-  const rad = ((angleDeg - 90) * Math.PI) / 180;
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-}
-
-function arcPath(cx: number, cy: number, r: number, startAngle: number, endAngle: number) {
-  const start = polarToCartesian(cx, cy, r, startAngle);
-  const end = polarToCartesian(cx, cy, r, endAngle);
-  const large = endAngle - startAngle > 180 ? 1 : 0;
-  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${large} 1 ${end.x} ${end.y}`;
-}
-
 export const SymptomMap = ({ symptoms = [], anchorSymptom, cycleDay, phase }: SymptomMapProps) => {
   const targetSymptom = anchorSymptom || (symptoms.length > 0 ? symptoms[0] : null);
   const timing = targetSymptom ? (SYMPTOM_TIMING[targetSymptom] || DEFAULT_TIMING) : DEFAULT_TIMING;
-  const peakPhase = Object.entries(timing).reduce((a, b) => b[1] > a[1] ? b : a, ["", 0]);
-
-  const cx = 120, cy = 120;
-  const outerR = 100;
-  const minR = 40;
+  const peakEntry = Object.entries(timing).reduce((a, b) => b[1] > a[1] ? b : a, ["", 0]);
+  const peakPhaseName = peakEntry[0];
 
   return (
-    <div className="rounded-xl bg-card border border-border p-3 space-y-2">
-      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium text-center">
-        {targetSymptom ? `When to expect: ${targetSymptom}` : "Symptom timing across your cycle"}
+    <div className="rounded-xl bg-card/80 backdrop-blur-sm border border-border/50 p-4 space-y-3">
+      {/* Header */}
+      <p className="text-[10px] text-primary uppercase tracking-widest font-semibold text-center">
+        {targetSymptom ? `When to expect: ${targetSymptom}` : "Symptom forecast"}
       </p>
 
-      <svg viewBox="0 0 240 240" className="w-full max-w-[240px] mx-auto">
-        {/* Phase arcs — thickness = intensity */}
+      {/* Radial gauge rows */}
+      <div className="space-y-2.5">
         {PHASES.map(p => {
           const intensity = timing[p.name] || 0;
-          const thickness = 8 + intensity * 30; // 8px min, 38px max
-          const r = outerR - thickness / 2;
-          const isCurrentPhase = phase === p.name;
-          const isPeak = p.name === peakPhase[0];
-          const gap = 2;
+          const isPeak = p.name === peakPhaseName;
+          const isCurrent = p.name === phase;
 
           return (
-            <g key={p.name}>
-              {/* Background track */}
-              <path
-                d={arcPath(cx, cy, outerR - 4, p.startAngle + gap, p.startAngle + p.span - gap)}
-                fill="none"
-                stroke={p.color}
-                strokeWidth="3"
-                opacity="0.1"
-                strokeLinecap="round"
-              />
-              {/* Intensity arc */}
-              <path
-                d={arcPath(cx, cy, r, p.startAngle + gap, p.startAngle + p.span - gap)}
-                fill="none"
-                stroke={p.color}
-                strokeWidth={thickness}
-                opacity={0.15 + intensity * 0.55}
-                strokeLinecap="round"
-              />
-              {/* Phase label */}
-              {(() => {
-                const midAngle = p.startAngle + p.span / 2;
-                const labelR = outerR + 10;
-                const pos = polarToCartesian(cx, cy, labelR, midAngle);
-                return (
-                  <text
-                    x={pos.x}
-                    y={pos.y}
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    fontSize="7"
-                    fontWeight={isCurrentPhase ? "700" : "500"}
-                    fill={p.color}
-                    opacity={isCurrentPhase ? 1 : 0.7}
+            <div key={p.name} className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span
+                  className="text-[11px] font-medium"
+                  style={{ color: isCurrent ? p.color : "hsl(210, 15%, 55%)" }}
+                >
+                  {p.name}
+                  {isCurrent && cycleDay ? (
+                    <span className="ml-1 text-[9px] opacity-70">day {cycleDay}</span>
+                  ) : null}
+                </span>
+                {isPeak && (
+                  <span
+                    className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full"
+                    style={{ backgroundColor: `${p.color}20`, color: p.color }}
                   >
-                    {p.name}
-                  </text>
-                );
-              })()}
-              {/* Intensity label for significant phases */}
-              {intensity >= 0.5 && (() => {
-                const midAngle = p.startAngle + p.span / 2;
-                const pos = polarToCartesian(cx, cy, r, midAngle);
-                return (
-                  <text
-                    x={pos.x}
-                    y={pos.y}
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    fontSize="7"
-                    fontWeight="700"
-                    fill="white"
-                  >
-                    {isPeak ? "peak" : "high"}
-                  </text>
-                );
-              })()}
-            </g>
+                    Peak
+                  </span>
+                )}
+              </div>
+              {/* Track */}
+              <div className="relative h-2 rounded-full overflow-hidden" style={{ backgroundColor: "hsl(220, 10%, 14%)" }}>
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full"
+                  style={{
+                    width: `${Math.max(intensity * 100, 4)}%`,
+                    background: isPeak
+                      ? `linear-gradient(90deg, ${p.color}90, ${p.color})`
+                      : p.color,
+                    opacity: 0.25 + intensity * 0.65,
+                    boxShadow: isPeak ? `0 0 12px ${p.color}40` : "none",
+                  }}
+                />
+              </div>
+            </div>
           );
         })}
+      </div>
 
-        {/* Current day marker */}
-        {cycleDay && phase && (() => {
-          const currentPhase = PHASES.find(p => p.name === phase);
-          if (!currentPhase) return null;
-          const phaseProgress = 0.5; // approximate middle of phase
-          const angle = currentPhase.startAngle + currentPhase.span * phaseProgress;
-          const pos = polarToCartesian(cx, cy, minR - 8, angle);
-          return (
-            <g>
-              <circle cx={pos.x} cy={pos.y} r="3" fill={currentPhase.color} />
-              <text
-                x={pos.x}
-                y={pos.y + 10}
-                textAnchor="middle"
-                fontSize="6"
-                fill={currentPhase.color}
-                fontWeight="600"
-              >
-                Day {cycleDay}
-              </text>
-            </g>
-          );
-        })()}
-
-        {/* Center text */}
-        <text x={cx} y={cy - 4} textAnchor="middle" fontSize="9" fontWeight="700" fill="currentColor" className="text-foreground" opacity="0.8">
-          {targetSymptom || "Your cycle"}
-        </text>
-        <text x={cx} y={cy + 8} textAnchor="middle" fontSize="7" fill="currentColor" className="text-muted-foreground" opacity="0.5">
-          forecast
-        </text>
-      </svg>
-
+      {/* Takeaway */}
       {targetSymptom && (
         <p className="text-[10px] text-muted-foreground text-center leading-snug">
-          Thicker arc = stronger effect.{" "}
-          {peakPhase[0] === "Luteal"
-            ? `Peaks in the ~12 days before your period.`
-            : peakPhase[0] === "Menstruation"
+          {peakPhaseName === "Luteal"
+            ? `Typically strongest in the ~12 days before your period.`
+            : peakPhaseName === "Menstruation"
               ? `Usually peaks during your period, then eases.`
-              : `Tends to peak during ${peakPhase[0]}.`}
+              : `Tends to peak during ${peakPhaseName}.`}
         </p>
       )}
     </div>
