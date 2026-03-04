@@ -322,37 +322,57 @@ export function ProfilesTab() {
   };
 
   const handleDownloadUserData = (profile: ProfileWithData, messages: ChatMessage[]) => {
-    const data = {
-      exported_at: new Date().toISOString(),
-      profile: {
-        full_name: profile.full_name,
-        email: profile.email,
-        phone: profile.phone,
-        created_at: profile.created_at,
-      },
-      cycle_data: profile.participant ? {
-        cycle_length_days: profile.participant.cycle_length_days,
-        cycle_regularity: profile.participant.cycle_regularity,
-        last_period_start: profile.participant.last_period_start,
-        anchor_symptom: profile.participant.anchor_symptom,
-        typical_symptoms: profile.participant.typical_symptoms,
-        goals: profile.participant.goals,
-        timezone: profile.participant.timezone,
-      } : null,
-      chat_messages: messages.map(m => ({
-        role: m.role,
-        content: m.content,
-        message_type: m.message_type,
-        emoji_reaction: m.emoji_reaction,
-        created_at: m.created_at,
-      })),
-    };
+    const p = profile.participant;
+    const lines: string[] = [];
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    lines.push(`═══════════════════════════════════════`);
+    lines.push(`  USER REPORT — ${profile.full_name}`);
+    lines.push(`  Exported ${format(new Date(), "MMMM d, yyyy 'at' h:mm a")}`);
+    lines.push(`═══════════════════════════════════════`);
+    lines.push(``);
+
+    // Profile
+    lines.push(`── PROFILE ──`);
+    lines.push(`Name:       ${profile.full_name}`);
+    lines.push(`Email:      ${profile.email}`);
+    if (profile.phone) lines.push(`Phone:      ${profile.phone}`);
+    lines.push(`Joined:     ${format(new Date(profile.created_at), "MMMM d, yyyy")}`);
+    lines.push(``);
+
+    // Cycle data
+    if (p) {
+      lines.push(`── CYCLE DATA ──`);
+      lines.push(`Cycle length:    ${p.cycle_length_days || 28} days`);
+      if (p.cycle_regularity) lines.push(`Regularity:      ${p.cycle_regularity}`);
+      if (p.last_period_start) lines.push(`Last period:     ${format(new Date(p.last_period_start), "MMMM d, yyyy")}`);
+      if (p.anchor_symptom) lines.push(`Anchor symptom:  ${p.anchor_symptom}`);
+      if (p.typical_symptoms?.length) lines.push(`Symptoms:        ${p.typical_symptoms.join(", ")}`);
+      if (p.goals?.length) lines.push(`Goals:           ${p.goals.join(", ")}`);
+      if (p.timezone) lines.push(`Timezone:        ${p.timezone}`);
+      lines.push(``);
+    }
+
+    // Chat history
+    lines.push(`── CHAT HISTORY (${messages.length} messages) ──`);
+    lines.push(``);
+    messages.forEach((m) => {
+      const sender = m.role === "user" ? profile.full_name : m.role === "assistant" ? "Logan" : "System";
+      const time = format(new Date(m.created_at), "MMM d, yyyy h:mm a");
+      lines.push(`[${time}] ${sender}:`);
+      lines.push(`${m.content}`);
+      if (m.emoji_reaction) lines.push(`  Reaction: ${m.emoji_reaction}`);
+      lines.push(``);
+    });
+
+    lines.push(`═══════════════════════════════════════`);
+    lines.push(`  End of report`);
+    lines.push(`═══════════════════════════════════════`);
+
+    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${profile.full_name.replace(/\s+/g, "_")}_data.json`;
+    a.download = `${profile.full_name.replace(/\s+/g, "_")}_report.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
