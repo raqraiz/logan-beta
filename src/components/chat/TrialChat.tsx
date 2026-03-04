@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoganLogo } from "@/components/LoganLogo";
+import { LoganFullLogo } from "@/components/LoganFullLogo";
 import { Send, Loader2, Sparkles } from "lucide-react";
 import { VoiceInputButton } from "./VoiceInputButton";
 import { supabase } from "@/integrations/supabase/client";
@@ -148,11 +149,9 @@ export const TrialChat = () => {
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <LoganLogo size="sm" />
-              <div className="absolute inset-0 bg-primary/20 rounded-full blur-lg animate-pulse" />
+              <LoganFullLogo size="sm" />
             </div>
             <div>
-              <h1 className="font-display font-semibold text-foreground text-lg tracking-tight">Logan</h1>
               <p className="text-xs text-muted-foreground">Intelligent cycle guidance</p>
             </div>
           </div>

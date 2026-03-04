@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
 import { z } from "zod";
-import { LoganLogo } from "@/components/LoganLogo";
+import { LoganFullLogo } from "@/components/LoganFullLogo";
 
 const authSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -222,9 +222,8 @@ const Auth = () => {
           {/* Logo and Header */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
-              <LoganLogo size="lg" showGlow />
+              <LoganFullLogo size="lg" />
             </div>
-            <h1 className="text-2xl font-display font-bold text-primary">Logan</h1>
             <p className="text-muted-foreground mt-2">{getTitle()}</p>
           </div>
 
