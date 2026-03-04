@@ -326,7 +326,10 @@ export function SymptomExplainerCard() {
 
   return (
     <div className="rounded-xl bg-card border border-border/50 p-4 space-y-3 animate-fade-in">
-      <p className="text-xs font-semibold text-primary uppercase tracking-wider">How long each phase lasts</p>
+      <div className="flex items-baseline gap-2">
+        <p className="text-xs font-semibold text-primary uppercase tracking-wider">How long each phase lasts</p>
+        <span className="text-[9px] text-muted-foreground italic">varies per person</span>
+      </div>
 
       {/* Horizontal stacked bar */}
       <div className="flex rounded-full overflow-hidden h-5">
