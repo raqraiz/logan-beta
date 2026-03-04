@@ -71,6 +71,15 @@ Deno.serve(async (req) => {
     // Create admin client to delete user
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Look up user's email to find linked participant
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("email")
+      .eq("id", userId)
+      .single();
+
+    const userEmail = profile?.email;
+
     // Delete chat messages first
     const { error: messagesError } = await supabaseAdmin
       .from("chat_messages")
@@ -89,6 +98,25 @@ Deno.serve(async (req) => {
 
     if (notifError) {
       console.error("Error deleting notification preferences:", notifError);
+    }
+
+    // Delete linked participant and related data (matched by email)
+    if (userEmail) {
+      const { data: participant } = await supabaseAdmin
+        .from("participants")
+        .select("id")
+        .eq("email", userEmail)
+        .single();
+
+      if (participant) {
+        // Delete cycle history, cycle updates, feedback, insights for this participant
+        await supabaseAdmin.from("cycle_history").delete().eq("participant_id", participant.id);
+        await supabaseAdmin.from("cycle_updates").delete().eq("participant_id", participant.id);
+        await supabaseAdmin.from("feedback").delete().eq("participant_id", participant.id);
+        await supabaseAdmin.from("insights").delete().eq("participant_id", participant.id);
+        await supabaseAdmin.from("participants").delete().eq("id", participant.id);
+        console.log(`Deleted participant ${participant.id} for email ${userEmail}`);
+      }
     }
 
     // Delete profile
