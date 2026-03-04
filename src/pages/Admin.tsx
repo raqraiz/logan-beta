@@ -61,7 +61,6 @@ const Admin = () => {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link to="/" className="flex items-center gap-3">
-              <LoganLogo size="sm" showGlow={false} />
               <LoganFullLogo size="sm" />
             </Link>
             <span className="text-muted-foreground text-sm">Admin Dashboard</span>

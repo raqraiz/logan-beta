@@ -147,15 +147,12 @@ export const TrialChat = () => {
       {/* Header */}
       <header className="border-b border-border/30 bg-card/30 backdrop-blur-xl sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <LoganLogo size="sm" />
-            </div>
-            <LoganFullLogo size="sm" />
-            <div>
-              <p className="text-xs text-muted-foreground">Intelligent cycle guidance</p>
-            </div>
-          </div>
+           <div className="flex items-center gap-3">
+             <LoganFullLogo size="sm" />
+             <div>
+               <p className="text-xs text-muted-foreground">Intelligent cycle guidance</p>
+             </div>
+           </div>
           <div className="flex items-center gap-4">
             <button
               onClick={() => setShowAuth(true)}

@@ -222,9 +222,8 @@ const Auth = () => {
         <div className="bg-card rounded-2xl p-8 md:p-10 shadow-card border border-border">
           {/* Logo and Header */}
           <div className="text-center mb-8">
-            <div className="flex flex-col items-center gap-3 mb-4">
-              <LoganLogo size="lg" showGlow />
-              <LoganFullLogo size="md" />
+            <div className="flex justify-center mb-4">
+              <LoganFullLogo size="lg" />
             </div>
             <p className="text-muted-foreground mt-2">{getTitle()}</p>
           </div>
