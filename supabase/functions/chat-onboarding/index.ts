@@ -89,7 +89,7 @@ const ONBOARDING_QUESTIONS = [
   },
   {
     key: "complete",
-    message: "You're all set! 🎉 Logan now knows your cycle, your phase, and what to watch for. From here, everything gets personal.",
+    message: "You're all set! Logan now knows your cycle, your phase, and what to watch for. From here, everything gets personal.",
     field: null,
     parseType: null,
     inputType: null
@@ -171,7 +171,7 @@ serve(async (req) => {
       }
 
       // Welcome message
-      const welcomeMsg = `Hey ${userName}! 👋 I'm Logan — I help you understand how your cycle affects how you feel, think, and perform.\n\nLet me learn a few things about you so I can make this personal. It'll take about 2 minutes.`;
+      const welcomeMsg = `Hey ${userName}! I'm Logan — I help you understand how your cycle affects how you feel, think, and perform.\n\nLet me learn a few things about you so I can make this personal. It'll take about 2 minutes.`;
 
       await supabase.from("chat_messages").insert({
         user_id: user.id,
@@ -390,7 +390,7 @@ serve(async (req) => {
         }
 
         if (hasQuirky) {
-          validationMsg += " And yeah — the weird ones are real too. Hormones do strange things. 😅";
+          validationMsg += " And yeah — the weird ones are real too. Hormones do strange things.";
         }
 
         const metadata: Record<string, any> = { insight_type: "symptom_validation" };
