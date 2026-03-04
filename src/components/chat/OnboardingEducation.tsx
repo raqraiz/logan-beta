@@ -307,16 +307,12 @@ export function HormoneBasicsCard() {
 // 3. SYMPTOM HEATMAP — Symptom × week grid with intensity dots
 // ═══════════════════════════════════════════════════════════════════════════
 
-const SYMPTOM_DATA = [
-  { label: "Energy",    phases: [0.3, 0.8, 0.9, 0.4] },
-  { label: "Mood",      phases: [0.3, 0.7, 0.8, 0.3] },
-  { label: "Cramps",    phases: [0.9, 0.1, 0.1, 0.5] },
-  { label: "Brain fog", phases: [0.4, 0.1, 0.2, 0.8] },
-  { label: "Bloating",  phases: [0.5, 0.1, 0.2, 0.7] },
+const PHASE_SNAPSHOTS = [
+  { name: "Menstruation", color: "#EF4444", feel: "Low energy, need rest", common: ["Cramps", "Fatigue", "Mood dips"] },
+  { name: "Follicular", color: "#10B981", feel: "Energy building up", common: ["Motivation", "Clarity", "Optimism"] },
+  { name: "Ovulation", color: "#F59E0B", feel: "Peak performance", common: ["Confidence", "High energy", "Focus"] },
+  { name: "Luteal", color: "#8B5CF6", feel: "Winding down", common: ["Bloating", "Brain fog", "Cravings"] },
 ];
-
-const PHASE_LABELS = ["Menstruation", "Follicular", "Ovulation", "Luteal"];
-const PHASE_COLORS = ["#EF4444", "#10B981", "#F59E0B", "#8B5CF6"];
 
 export function SymptomExplainerCard() {
   const [visible, setVisible] = useState(false);
@@ -331,46 +327,41 @@ export function SymptomExplainerCard() {
       <p className="text-xs font-semibold text-primary uppercase tracking-wider">Your symptoms aren't random</p>
 
       <div className="space-y-2">
-        {/* Column headers */}
-        <div className="grid grid-cols-[72px_repeat(4,1fr)] gap-1">
-          <div />
-          {PHASE_LABELS.map((label, i) => (
-            <div key={label} className="text-center">
-              <span className="text-[8px] font-medium" style={{ color: PHASE_COLORS[i] }}>{label}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Rows */}
-        {SYMPTOM_DATA.map((symptom, si) => (
+        {PHASE_SNAPSHOTS.map((phase, i) => (
           <div
-            key={si}
-            className="grid grid-cols-[72px_repeat(4,1fr)] gap-1 items-center transition-all duration-400"
+            key={phase.name}
+            className="flex items-start gap-2.5 rounded-lg p-2.5 transition-all duration-400"
             style={{
               opacity: visible ? 1 : 0,
-              transitionDelay: `${si * 80}ms`,
+              transform: visible ? "translateY(0)" : "translateY(6px)",
+              transitionDelay: `${i * 120}ms`,
+              borderLeft: `3px solid ${phase.color}`,
+              backgroundColor: `${phase.color}08`,
             }}
           >
-            <span className="text-[10px] text-foreground font-medium">{symptom.label}</span>
-            {symptom.phases.map((intensity, wi) => (
-              <div key={wi} className="flex justify-center">
-                <div
-                  className="h-2 rounded-full transition-all duration-600"
-                  style={{
-                    width: visible ? `${Math.max(intensity * 100, 8)}%` : "0%",
-                    backgroundColor: PHASE_COLORS[wi],
-                    opacity: 0.25 + intensity * 0.6,
-                    transitionDelay: `${si * 80 + wi * 50}ms`,
-                  }}
-                />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-[11px] font-semibold text-foreground">{phase.name}</span>
+                <span className="text-[9px] text-muted-foreground">{phase.feel}</span>
               </div>
-            ))}
+              <div className="flex flex-wrap gap-1 mt-1">
+                {phase.common.map(tag => (
+                  <span
+                    key={tag}
+                    className="text-[9px] px-1.5 py-0.5 rounded-full font-medium"
+                    style={{ backgroundColor: `${phase.color}18`, color: phase.color }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         ))}
       </div>
 
       <p className="text-xs text-muted-foreground leading-relaxed">
-        Longer bar = stronger effect. Once you see the pattern, you can plan around it.
+        Each phase brings predictable changes. Logan helps you see them coming.
       </p>
     </div>
   );
