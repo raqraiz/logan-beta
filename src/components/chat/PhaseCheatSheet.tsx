@@ -21,10 +21,10 @@ interface PhaseData {
 
 const PHASE_DATA: Record<string, PhaseData> = {
   Menstruation: {
-    color: "text-rose-400",
-    bgColor: "bg-rose-500/10",
-    borderColor: "border-rose-500/20",
-    icon: <Moon className="w-4 h-4 text-rose-400" />,
+    color: "text-phase-menstruation",
+    bgColor: "bg-phase-menstruation/10",
+    borderColor: "border-phase-menstruation/20",
+    icon: <Moon className="w-4 h-4 text-phase-menstruation" />,
     tagline: "Reset & restore",
     energy: "low",
     expect: [
@@ -44,10 +44,10 @@ const PHASE_DATA: Record<string, PhaseData> = {
     ],
   },
   Follicular: {
-    color: "text-emerald-400",
-    bgColor: "bg-emerald-500/10",
-    borderColor: "border-emerald-500/20",
-    icon: <TrendingUp className="w-4 h-4 text-emerald-400" />,
+    color: "text-phase-follicular",
+    bgColor: "bg-phase-follicular/10",
+    borderColor: "border-phase-follicular/20",
+    icon: <TrendingUp className="w-4 h-4 text-phase-follicular" />,
     tagline: "Build & create",
     energy: "high",
     expect: [
@@ -67,10 +67,10 @@ const PHASE_DATA: Record<string, PhaseData> = {
     ],
   },
   Ovulation: {
-    color: "text-amber-400",
-    bgColor: "bg-amber-500/10",
-    borderColor: "border-amber-500/20",
-    icon: <Zap className="w-4 h-4 text-amber-400" />,
+    color: "text-phase-ovulation",
+    bgColor: "bg-phase-ovulation/10",
+    borderColor: "border-phase-ovulation/20",
+    icon: <Zap className="w-4 h-4 text-phase-ovulation" />,
     tagline: "Peak performance",
     energy: "high",
     expect: [
@@ -90,10 +90,10 @@ const PHASE_DATA: Record<string, PhaseData> = {
     ],
   },
   Luteal: {
-    color: "text-violet-400",
-    bgColor: "bg-violet-500/10",
-    borderColor: "border-violet-500/20",
-    icon: <Shield className="w-4 h-4 text-violet-400" />,
+    color: "text-phase-luteal",
+    bgColor: "bg-phase-luteal/10",
+    borderColor: "border-phase-luteal/20",
+    icon: <Shield className="w-4 h-4 text-phase-luteal" />,
     tagline: "Protect & prepare",
     energy: "variable",
     expect: [
@@ -115,26 +115,41 @@ const PHASE_DATA: Record<string, PhaseData> = {
 };
 
 const ENERGY_DISPLAY = {
-  high: { label: "High", color: "text-emerald-400", bars: 3 },
-  medium: { label: "Medium", color: "text-amber-400", bars: 2 },
-  low: { label: "Low", color: "text-rose-400", bars: 1 },
-  variable: { label: "Variable", color: "text-violet-400", bars: 2 },
+  high: { label: "High", color: "text-phase-follicular", bars: 3 },
+  medium: { label: "Medium", color: "text-phase-ovulation", bars: 2 },
+  low: { label: "Low", color: "text-phase-menstruation", bars: 1 },
+  variable: { label: "Variable", color: "text-phase-luteal", bars: 2 },
+};
+
+const ENERGY_BAR_COLORS = {
+  high: "bg-phase-follicular",
+  medium: "bg-phase-ovulation",
+  low: "bg-phase-menstruation",
+  variable: "bg-phase-luteal",
 };
 
 function EnergyBars({ level }: { level: "high" | "medium" | "low" | "variable" }) {
-  const { bars, color } = ENERGY_DISPLAY[level];
+  const { bars } = ENERGY_DISPLAY[level];
+  const barColor = ENERGY_BAR_COLORS[level];
   return (
     <div className="flex gap-0.5 items-end">
       {[1, 2, 3].map((i) => (
         <div
           key={i}
-          className={`w-1 rounded-full ${i <= bars ? color.replace("text-", "bg-") : "bg-muted/30"}`}
+          className={`w-1 rounded-full ${i <= bars ? barColor : "bg-muted/30"}`}
           style={{ height: `${8 + i * 4}px` }}
         />
       ))}
     </div>
   );
 }
+
+const PHASE_DOT_COLORS: Record<string, string> = {
+  Menstruation: "bg-phase-menstruation",
+  Follicular: "bg-phase-follicular",
+  Ovulation: "bg-phase-ovulation",
+  Luteal: "bg-phase-luteal",
+};
 
 export function PhaseCheatSheet({ phase, cycleDay, cycleLengthDays, anchorSymptom }: PhaseCheatSheetProps) {
   const data = PHASE_DATA[phase] || PHASE_DATA.Follicular;
@@ -151,6 +166,8 @@ export function PhaseCheatSheet({ phase, cycleDay, cycleLengthDays, anchorSympto
   else if (phase === "Follicular") daysLeft = Math.max(ovStart - cycleDay, 0);
   else if (phase === "Ovulation") daysLeft = Math.max(ovEnd - cycleDay + 1, 0);
   else daysLeft = Math.max(cycleLengthDays - cycleDay + 1, 0);
+
+  const dotColor = PHASE_DOT_COLORS[phase] || PHASE_DOT_COLORS.Follicular;
 
   return (
     <div className={`rounded-xl border ${data.borderColor} ${data.bgColor} overflow-hidden`}>
@@ -182,7 +199,7 @@ export function PhaseCheatSheet({ phase, cycleDay, cycleLengthDays, anchorSympto
           <ul className="space-y-1">
             {data.expect.map((item, i) => (
               <li key={i} className="text-xs text-muted-foreground flex gap-1.5 items-start">
-                <span className={`mt-1 w-1 h-1 rounded-full shrink-0 ${data.color.replace("text-", "bg-")}`} />
+                <span className={`mt-1 w-1 h-1 rounded-full shrink-0 ${dotColor}`} />
                 {item}
               </li>
             ))}
@@ -197,7 +214,7 @@ export function PhaseCheatSheet({ phase, cycleDay, cycleLengthDays, anchorSympto
           <ul className="space-y-1">
             {data.doThis.map((item, i) => (
               <li key={i} className="text-xs text-muted-foreground flex gap-1.5 items-start">
-                <span className="mt-1 w-1 h-1 rounded-full shrink-0 bg-emerald-400" />
+                <span className="mt-1 w-1 h-1 rounded-full shrink-0 bg-phase-follicular" />
                 {item}
               </li>
             ))}
@@ -212,7 +229,7 @@ export function PhaseCheatSheet({ phase, cycleDay, cycleLengthDays, anchorSympto
           <ul className="space-y-1">
             {data.avoid.map((item, i) => (
               <li key={i} className="text-xs text-muted-foreground flex gap-1.5 items-start">
-                <span className="mt-1 w-1 h-1 rounded-full shrink-0 bg-rose-400/60" />
+                <span className="mt-1 w-1 h-1 rounded-full shrink-0 bg-phase-menstruation/60" />
                 {item}
               </li>
             ))}

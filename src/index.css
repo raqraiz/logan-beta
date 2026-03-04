@@ -52,6 +52,12 @@
     --logan-frost: 210 20% 97%;
     --logan-gold: 42 100% 47%;
     --logan-blue: 168 80% 42%;
+
+    /* Phase colors — single source of truth */
+    --phase-menstruation: 355 78% 60%;
+    --phase-follicular: 152 60% 52%;
+    --phase-ovulation: 40 90% 56%;
+    --phase-luteal: 270 60% 65%;
     
     /* Gradients */
     --gradient-hero: linear-gradient(135deg, hsl(168 80% 42%) 0%, hsl(168 60% 35%) 100%);

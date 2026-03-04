@@ -9,20 +9,20 @@ interface ChatCycleCircleProps {
 
 const PHASE_STYLES: Record<string, { color: string; ringColor: string }> = {
   Menstruation: {
-    color: "text-rose-400",
-    ringColor: "stroke-rose-500",
+    color: "text-phase-menstruation",
+    ringColor: "stroke-phase-menstruation",
   },
   Follicular: {
-    color: "text-emerald-400",
-    ringColor: "stroke-emerald-500",
+    color: "text-phase-follicular",
+    ringColor: "stroke-phase-follicular",
   },
   Ovulation: {
-    color: "text-amber-400",
-    ringColor: "stroke-amber-500",
+    color: "text-phase-ovulation",
+    ringColor: "stroke-phase-ovulation",
   },
   Luteal: {
-    color: "text-violet-400",
-    ringColor: "stroke-violet-500",
+    color: "text-phase-luteal",
+    ringColor: "stroke-phase-luteal",
   },
 };
 

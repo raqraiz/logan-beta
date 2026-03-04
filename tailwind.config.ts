@@ -71,6 +71,12 @@ export default {
           gold: "hsl(var(--logan-gold))",
           blue: "hsl(var(--logan-blue))",
         },
+        phase: {
+          menstruation: "hsl(var(--phase-menstruation))",
+          follicular: "hsl(var(--phase-follicular))",
+          ovulation: "hsl(var(--phase-ovulation))",
+          luteal: "hsl(var(--phase-luteal))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
