@@ -558,14 +558,15 @@ const Chat = () => {
       {/* Header */}
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <LoganFullLogo size="sm" />
-            <div>
-              <p className="text-xs text-muted-foreground">
-                {isOnboarding ? "Setting up your profile" : "Your performance partner"}
-              </p>
-            </div>
-          </div>
+           <div className="flex items-center gap-3">
+             <LoganLogo size="sm" />
+             <div>
+               <LoganFullLogo size="sm" />
+               <p className="text-xs text-muted-foreground">
+                 {isOnboarding ? "Setting up your profile" : "Your performance partner"}
+               </p>
+             </div>
+           </div>
           <div className="flex items-center gap-3">
             {cycleData && !isOnboarding && (
               <Popover>

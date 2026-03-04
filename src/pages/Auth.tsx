@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
 import { z } from "zod";
+import { LoganLogo } from "@/components/LoganLogo";
 import { LoganFullLogo } from "@/components/LoganFullLogo";
 
 const authSchema = z.object({
@@ -221,8 +222,9 @@ const Auth = () => {
         <div className="bg-card rounded-2xl p-8 md:p-10 shadow-card border border-border">
           {/* Logo and Header */}
           <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
-              <LoganFullLogo size="lg" />
+            <div className="flex flex-col items-center gap-3 mb-4">
+              <LoganLogo size="lg" showGlow />
+              <LoganFullLogo size="md" />
             </div>
             <p className="text-muted-foreground mt-2">{getTitle()}</p>
           </div>

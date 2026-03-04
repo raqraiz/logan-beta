@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { LoganLogo } from "@/components/LoganLogo";
+import { LoganFullLogo } from "@/components/LoganFullLogo";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -79,8 +80,9 @@ const AuthCallback = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
-        <div className="flex justify-center mb-6">
+        <div className="flex flex-col items-center gap-3 mb-6">
           <LoganLogo size="lg" showGlow />
+          <LoganFullLogo size="md" />
         </div>
 
         <Card>
