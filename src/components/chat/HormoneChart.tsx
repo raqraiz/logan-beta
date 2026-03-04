@@ -6,11 +6,11 @@ interface HormoneChartProps {
   cycleLengthDays: number;
 }
 
-const PHASE_COLORS: Record<string, string> = {
-  Menstruation: "hsl(355, 79%, 56%)",
-  Follicular: "hsl(152, 60%, 52%)",
-  Ovulation: "hsl(40, 90%, 60%)",
-  Luteal: "hsl(270, 60%, 65%)",
+const PHASE_CSS_VARS: Record<string, string> = {
+  Menstruation: "--phase-menstruation",
+  Follicular: "--phase-follicular",
+  Ovulation: "--phase-ovulation",
+  Luteal: "--phase-luteal",
 };
 
 const PHASE_TIPS: Record<string, string> = {
@@ -92,7 +92,9 @@ function getHormoneValue(hormone: string, dayAt: number, cycleLengthDays: number
 }
 
 export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartProps) {
-  const color = PHASE_COLORS[phase] || PHASE_COLORS.Follicular;
+  const cssVar = PHASE_CSS_VARS[phase] || PHASE_CSS_VARS.Follicular;
+  const color = `hsl(var(${cssVar}))`;
+
   const tip = PHASE_TIPS[phase] || PHASE_TIPS.Follicular;
 
   const menEnd = 5;
