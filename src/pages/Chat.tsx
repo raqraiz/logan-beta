@@ -713,23 +713,30 @@ const Chat = () => {
                           : "bg-card border border-border"
                       }`}
                     >
+                      {/* Message text first */}
+                      {message.role === "assistant" ? (
+                        <MarkdownMessage content={message.content} />
+                      ) : (
+                        <p className="whitespace-pre-wrap">{message.content}</p>
+                      )}
+
                       {/* Education cards */}
                       {message.metadata?.visual_type === "education_cycle_basics" && (
-                        <div className="mb-3"><CycleBasicsCard /></div>
+                        <div className="mt-3"><CycleBasicsCard /></div>
                       )}
                       {message.metadata?.visual_type === "education_hormones" && (
-                        <div className="mb-3"><HormoneBasicsCard /></div>
+                        <div className="mt-3"><HormoneBasicsCard /></div>
                       )}
                       {message.metadata?.visual_type === "education_symptoms" && (
-                        <div className="mb-3"><SymptomExplainerCard /></div>
+                        <div className="mt-3"><SymptomExplainerCard /></div>
                       )}
                       {message.metadata?.visual_type === "education_anchor" && (
-                        <div className="mb-3"><AnchorExplainerCard /></div>
+                        <div className="mt-3"><AnchorExplainerCard /></div>
                       )}
 
                       {/* Cycle visual for insight messages */}
                       {message.metadata?.has_cycle_visual && message.metadata?.cycle_day && message.metadata?.cycle_phase && (
-                        <div className="mb-3">
+                        <div className="mt-3">
                           {message.metadata.visual_type === "hormone_chart" ? (
                             <HormoneChart
                               cycleDay={message.metadata.cycle_day}
@@ -746,12 +753,6 @@ const Chat = () => {
                             />
                           ) : null}
                         </div>
-                      )}
-                      
-                      {message.role === "assistant" ? (
-                        <MarkdownMessage content={message.content} />
-                      ) : (
-                        <p className="whitespace-pre-wrap">{message.content}</p>
                       )}
 
                       {/* Phase cheat sheet for proactive insights */}
