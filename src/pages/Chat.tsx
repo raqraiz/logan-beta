@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
-import { LoganFullLogo } from "@/components/LoganFullLogo";
+
 import { Send, Loader2, LogOut, ChevronLeft } from "lucide-react";
 import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
 import { format } from "date-fns";
@@ -85,6 +85,7 @@ const Chat = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const lastMessageRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
   const inputRef = useRef<HTMLInputElement>(null);
   const onboardingInitialized = useRef(false);
@@ -244,11 +245,24 @@ const Chat = () => {
     }
   }, [user, isOnboarding, messages]);
 
-  // Auto-scroll only when user is already near the bottom
+  // Auto-scroll with long-message anchoring
   useEffect(() => {
-    if (scrollRef.current && isNearBottomRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: "smooth" });
+    if (!isNearBottomRef.current) return;
+
+    const viewport = scrollContainerRef.current?.querySelector(
+      '[data-radix-scroll-area-viewport]'
+    ) as HTMLDivElement | null;
+
+    const lastMessageEl = lastMessageRef.current;
+    if (viewport && lastMessageEl) {
+      const isLongMessage = lastMessageEl.offsetHeight > viewport.clientHeight * 0.8;
+      if (isLongMessage) {
+        lastMessageEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
     }
+
+    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const generateOnOpenInsight = async () => {
@@ -648,13 +662,17 @@ const Chat = () => {
       )}
 
       {/* Messages */}
-      <ScrollArea className="flex-1 px-4" onScrollCapture={(e) => {
-        const el = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
-        if (el) {
-          const { scrollTop, scrollHeight, clientHeight } = el;
-          isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 150;
-        }
-      }}>
+      <ScrollArea
+        ref={scrollContainerRef}
+        className="flex-1 px-4"
+        onScrollCapture={(e) => {
+          const el = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
+          if (el) {
+            const { scrollTop, scrollHeight, clientHeight } = el;
+            isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 150;
+          }
+        }}
+      >
         <div className="max-w-3xl mx-auto py-6 space-y-4">
           {messages.length === 0 && !isLoading ? (
             <div className="text-center py-12">
@@ -683,7 +701,7 @@ const Chat = () => {
                   : null;
 
               return (
-                <div key={message.id}>
+                <div key={message.id} ref={isLastMessage ? lastMessageRef : null}>
                   <div
                     className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                   >
