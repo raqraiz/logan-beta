@@ -59,6 +59,7 @@ interface ChatMessage {
     cycle_length_days?: number;
     insight_type?: string;
     validated_symptoms?: string[];
+    anchor_symptom?: string;
     conversation_starters?: string[];
     period_checkin?: boolean;
     period_update?: boolean;
@@ -735,7 +736,13 @@ const Chat = () => {
                               cycleLengthDays={message.metadata.cycle_length_days || 28}
                             />
                           ) : message.metadata.visual_type === "symptom_map" ? (
-                            <SymptomMap symptoms={message.metadata.validated_symptoms as string[] | undefined} />
+                            <SymptomMap
+                              symptoms={message.metadata.validated_symptoms as string[] | undefined}
+                              anchorSymptom={message.metadata.anchor_symptom as string | undefined}
+                              cycleDay={message.metadata.cycle_day}
+                              cycleLengthDays={message.metadata.cycle_length_days || 28}
+                              phase={message.metadata.cycle_phase}
+                            />
                           ) : message.metadata.visual_type === "cycle_circle" ? (
                             <ChatCycleCircle
                               cycleDay={message.metadata.cycle_day}
