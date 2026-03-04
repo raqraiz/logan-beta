@@ -4,10 +4,10 @@ import { useState, useEffect } from "react";
 // Shows an animated ring with 4 phases appearing one by one
 
 const PHASES = [
-  { name: "Period", color: "hsl(355, 78%, 60%)", startAngle: 0, endAngle: 90, emoji: "🩸", description: "Your body resets" },
-  { name: "Build-up", color: "hsl(152, 60%, 52%)", startAngle: 90, endAngle: 180, emoji: "🌱", description: "Energy rises" },
-  { name: "Peak", color: "hsl(40, 90%, 56%)", startAngle: 180, endAngle: 250, emoji: "⚡", description: "You're sharpest" },
-  { name: "Wind-down", color: "hsl(270, 60%, 65%)", startAngle: 250, endAngle: 360, emoji: "🌙", description: "Body slows down" },
+  { name: "Period", color: "hsl(355, 78%, 60%)", startAngle: 0, endAngle: 90, description: "Your body resets" },
+  { name: "Build-up", color: "hsl(152, 60%, 52%)", startAngle: 90, endAngle: 180, description: "Energy rises" },
+  { name: "Peak", color: "hsl(40, 90%, 56%)", startAngle: 180, endAngle: 250, description: "You're sharpest" },
+  { name: "Wind-down", color: "hsl(270, 60%, 65%)", startAngle: 250, endAngle: 360, description: "Body slows down" },
 ];
 
 function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
@@ -84,7 +84,7 @@ export function CycleBasicsCard() {
                 transform: i < visiblePhases ? "translateX(0)" : "translateX(-8px)",
               }}
             >
-              <span className="text-sm">{phase.emoji}</span>
+              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: phase.color }} />
               <div>
                 <span className="text-xs font-medium text-foreground">{phase.name}</span>
                 <span className="text-[10px] text-muted-foreground ml-1">— {phase.description}</span>
@@ -183,13 +183,12 @@ export function SymptomExplainerCard() {
       
       <div className="grid grid-cols-2 gap-2">
         {[
-          { emoji: "😤", label: "Mood dips", when: "Usually weeks 3-4" },
-          { emoji: "🧠", label: "Brain fog", when: "Usually weeks 3-4" },
-          { emoji: "⚡", label: "Energy crashes", when: "Week 1 & 3-4" },
-          { emoji: "💪", label: "Feeling great", when: "Usually weeks 2-3" },
+          { label: "Mood dips", when: "Usually weeks 3-4" },
+          { label: "Brain fog", when: "Usually weeks 3-4" },
+          { label: "Energy crashes", when: "Week 1 & 3-4" },
+          { label: "Feeling great", when: "Usually weeks 2-3" },
         ].map((item, i) => (
           <div key={i} className="rounded-lg bg-muted/30 p-2.5 space-y-0.5">
-            <span className="text-lg">{item.emoji}</span>
             <p className="text-xs font-medium text-foreground">{item.label}</p>
             <p className="text-[10px] text-muted-foreground">{item.when}</p>
           </div>
@@ -214,7 +213,6 @@ export function AnchorExplainerCard() {
         It's the <span className="text-foreground font-medium">one thing</span> that bothers you most each cycle. Logan uses it as your main signal — so you'll get a heads-up before it hits, instead of being blindsided.
       </p>
       <div className="flex items-center gap-2 bg-muted/30 rounded-lg p-2.5">
-        <span className="text-lg">🎯</span>
         <p className="text-[11px] text-foreground">Think: the symptom where you later go <span className="italic text-muted-foreground">"oh... that's why"</span></p>
       </div>
     </div>
@@ -258,7 +256,7 @@ export function NotSureButton({ field, onUseDefault, disabled }: NotSureButtonPr
         disabled={disabled}
         className="text-xs text-muted-foreground hover:text-primary transition-colors underline decoration-dotted underline-offset-2 mt-2"
       >
-        I'm not sure 🤔
+        I'm not sure
       </button>
     );
   }
