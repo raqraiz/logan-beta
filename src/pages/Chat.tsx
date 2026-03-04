@@ -24,6 +24,7 @@ import { TrialChat } from "@/components/chat/TrialChat";
 import { MessageFeedback } from "@/components/chat/MessageFeedback";
 import { ConversationStarters } from "@/components/chat/ConversationStarters";
 import { MarkdownMessage } from "@/components/chat/MarkdownMessage";
+import { CycleBasicsCard, HormoneBasicsCard, SymptomExplainerCard, AnchorExplainerCard, NotSureButton } from "@/components/chat/OnboardingEducation";
 
 interface SymptomCategory {
   label: string;
@@ -52,7 +53,7 @@ interface ChatMessage {
     symptom_categories?: SymptomCategories;
     available_symptoms?: string[];
     has_cycle_visual?: boolean;
-    visual_type?: "cycle_circle" | "hormone_chart" | "symptom_map";
+    visual_type?: "cycle_circle" | "hormone_chart" | "symptom_map" | "education_cycle_basics" | "education_hormones" | "education_symptoms" | "education_anchor";
     cycle_day?: number;
     cycle_phase?: string;
     cycle_length_days?: number;
@@ -62,6 +63,7 @@ interface ChatMessage {
     period_checkin?: boolean;
     period_update?: boolean;
     new_period_start?: string;
+    show_not_sure?: "cycle_length" | "last_period";
   };
 }
 
@@ -712,6 +714,20 @@ const Chat = () => {
                           : "bg-card border border-border"
                       }`}
                     >
+                      {/* Education cards */}
+                      {message.metadata?.visual_type === "education_cycle_basics" && (
+                        <div className="mb-3"><CycleBasicsCard /></div>
+                      )}
+                      {message.metadata?.visual_type === "education_hormones" && (
+                        <div className="mb-3"><HormoneBasicsCard /></div>
+                      )}
+                      {message.metadata?.visual_type === "education_symptoms" && (
+                        <div className="mb-3"><SymptomExplainerCard /></div>
+                      )}
+                      {message.metadata?.visual_type === "education_anchor" && (
+                        <div className="mb-3"><AnchorExplainerCard /></div>
+                      )}
+
                       {/* Cycle visual for insight messages */}
                       {message.metadata?.has_cycle_visual && message.metadata?.cycle_day && message.metadata?.cycle_phase && (
                         <div className="mb-3">
@@ -723,13 +739,13 @@ const Chat = () => {
                             />
                           ) : message.metadata.visual_type === "symptom_map" ? (
                             <SymptomMap symptoms={message.metadata.validated_symptoms as string[] | undefined} />
-                          ) : (
+                          ) : message.metadata.visual_type === "cycle_circle" ? (
                             <ChatCycleCircle
                               cycleDay={message.metadata.cycle_day}
                               phase={message.metadata.cycle_phase}
                               cycleLengthDays={message.metadata.cycle_length_days || 28}
                             />
-                          )}
+                          ) : null}
                         </div>
                       )}
                       
@@ -801,7 +817,24 @@ const Chat = () => {
                     </div>
                   )}
 
-
+                  {/* "I'm not sure" button for cycle length and last period */}
+                  {showInteractiveInput && message.metadata?.show_not_sure && (
+                    <div className="mt-1 ml-1">
+                      <NotSureButton
+                        field={message.metadata.show_not_sure}
+                        onUseDefault={() => {
+                          if (message.metadata?.show_not_sure === "cycle_length") {
+                            sendOnboardingResponse("28");
+                          } else {
+                            const twoWeeksAgo = new Date();
+                            twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+                            sendOnboardingResponse("About 2 weeks ago", undefined, undefined, twoWeeksAgo);
+                          }
+                        }}
+                        disabled={isSending}
+                      />
+                    </div>
+                  )}
 
 
                   {/* Conversation starters for proactive insights or post-onboarding prompt */}

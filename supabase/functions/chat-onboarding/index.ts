@@ -48,53 +48,48 @@ const SYMPTOM_CATEGORIES = {
   }
 };
 
-// All symptoms flattened for validation
-const ALL_SYMPTOMS = [
-  ...SYMPTOM_CATEGORIES.emotional.symptoms,
-  ...SYMPTOM_CATEGORIES.physical.symptoms,
-  ...SYMPTOM_CATEGORIES.quirky.symptoms
-];
-
-// Onboarding question flow - Human, relatable voice with seamless transitions
+// Onboarding question flow - simplified for beginners
 const ONBOARDING_QUESTIONS = [
   {
     key: "age",
-    message: "Alright, to make this actually useful for you I need to learn a few things. Quick one to start: how old are you?",
+    message: "First things first — how old are you?",
     field: "age",
     parseType: "number",
     inputType: "text"
   },
   {
     key: "cycle_length",
-    message: "Got it. And how long is your cycle usually? Anywhere from 24-35 days is normal. If you're not sure, just go with 28.",
+    message: "How many days is your cycle? (From the start of one period to the start of the next.)\n\nMost people are somewhere between 24 and 35 days. If you're not sure, that's totally fine — tap \"I'm not sure\" below.",
     field: "cycle_length_days",
     parseType: "number",
-    inputType: "text"
+    inputType: "text",
+    showNotSure: true
   },
   {
     key: "last_period",
-    message: "When did your last period start? That tells me where you are right now in your cycle.",
+    message: "When did your last period start? Even a rough guess works — you can update it later.",
     field: "last_period_start",
     parseType: "date",
-    inputType: "date_picker"
+    inputType: "date_picker",
+    showNotSure: true
   },
   {
     key: "symptoms",
-    message: "OK so here's where it gets interesting. A lot of what you deal with around your cycle, the brain fog, the short fuse, the energy crashes, it's not random. It follows a pattern. Which of these tend to hit you?",
+    message: "Now let's talk about what you actually feel. Pick anything that sounds familiar — there are no wrong answers.",
     field: "typical_symptoms",
     parseType: "symptoms",
     inputType: "symptom_picker"
   },
   {
     key: "anchor_symptom",
-    message: "Which one gets you the worst? You know, the one where you think what is wrong with me and then get your period two days later and go... oh. That's your Anchor Symptom. I'll help you see it coming.",
+    message: "Which one bothers you the most? This is the one Logan will watch for — your early warning signal.",
     field: "anchor_symptom",
     parseType: "anchor",
     inputType: "anchor_picker"
   },
   {
     key: "complete",
-    message: "That's everything I need. I know your cycle, where you are today, and what to watch for. From here I'll connect what you're feeling to what's actually happening, so you can stop guessing and start planning around it.",
+    message: "You're all set! 🎉 Logan now knows your cycle, your phase, and what to watch for. From here, everything gets personal.",
     field: null,
     parseType: null,
     inputType: null
@@ -119,7 +114,6 @@ serve(async (req) => {
       );
     }
 
-    // Get user from JWT
     const { data: { user }, error: authError } = await supabase.auth.getUser(
       authHeader.replace("Bearer ", "")
     );
@@ -151,12 +145,10 @@ serve(async (req) => {
       .eq("user_id", user.id)
       .order("created_at", { ascending: true });
 
-    // Find onboarding state from messages
     const systemMessages = messages?.filter(m => m.message_type === "onboarding") || [];
 
     // Action: Initialize onboarding (send first message)
     if (action === "init") {
-      // Check if already started onboarding
       if (messages && messages.length > 0) {
         console.log("User already has messages, skipping init");
         return new Response(
@@ -165,10 +157,7 @@ serve(async (req) => {
         );
       }
 
-      // Get user's name from profile or participant record
       let userName = "there";
-      
-      // Try to get name from profiles table
       const { data: profile } = await supabase
         .from("profiles")
         .select("full_name")
@@ -181,14 +170,42 @@ serve(async (req) => {
         userName = participant.full_name.split(" ")[0];
       }
 
-      // Send welcome message with personalized name
-      const welcomeQ = ONBOARDING_QUESTIONS[0];
-      const personalizedMessage = `${userName !== "there" ? `${userName}, great` : "Great"} to have you. ${welcomeQ.message}`;
-      
-      const { error: insertError } = await supabase.from("chat_messages").insert({
+      // Welcome message
+      const welcomeMsg = `Hey ${userName}! 👋 I'm Logan — I help you understand how your cycle affects how you feel, think, and perform.\n\nLet me learn a few things about you so I can make this personal. It'll take about 2 minutes.`;
+
+      await supabase.from("chat_messages").insert({
         user_id: user.id,
         role: "assistant",
-        content: personalizedMessage,
+        content: welcomeMsg,
+        message_type: "onboarding",
+        metadata: { 
+          onboarding_step: -1,
+          insight_type: "welcome"
+        }
+      });
+
+      // Brief pause, then send the cycle basics education card
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      await supabase.from("chat_messages").insert({
+        user_id: user.id,
+        role: "assistant",
+        content: "Here's the big picture of how your cycle works:",
+        message_type: "text",
+        metadata: { 
+          visual_type: "education_cycle_basics",
+          insight_type: "education"
+        }
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Now send the first question
+      const welcomeQ = ONBOARDING_QUESTIONS[0];
+      await supabase.from("chat_messages").insert({
+        user_id: user.id,
+        role: "assistant",
+        content: welcomeQ.message,
         message_type: "onboarding",
         metadata: { 
           onboarding_step: 0, 
@@ -197,12 +214,7 @@ serve(async (req) => {
         }
       });
 
-      if (insertError) {
-        console.error("Insert error:", insertError);
-        throw insertError;
-      }
-
-      console.log("Sent welcome message to:", userName);
+      console.log("Sent welcome + education + first question to:", userName);
       return new Response(
         JSON.stringify({ success: true }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -211,7 +223,6 @@ serve(async (req) => {
 
     // Action: Process user response and continue onboarding
     if (action === "respond") {
-      // Find the last onboarding question asked
       const lastOnboardingMsg = [...(systemMessages || [])].reverse().find(
         m => m.metadata?.onboarding_step !== undefined
       );
@@ -227,7 +238,6 @@ serve(async (req) => {
       const currentStep = lastOnboardingMsg.metadata.onboarding_step as number;
       const currentQuestion = ONBOARDING_QUESTIONS[currentStep];
       
-      // Check if onboarding is complete
       if (currentStep >= ONBOARDING_QUESTIONS.length - 1) {
         return new Response(
           JSON.stringify({ success: true, onboardingComplete: true }),
@@ -235,50 +245,37 @@ serve(async (req) => {
         );
       }
 
-      // Parse the user's response based on expected field type
+      // Parse the user's response
       let parsedValue: any = userMessage?.trim() || "";
       const parseType = currentQuestion.parseType;
 
       if (parseType === "date") {
-        // Use selected date if provided, otherwise parse from text
         parsedValue = selectedDate || parseNaturalDate(userMessage || "");
       } else if (parseType === "number") {
-        // Extract number
         const match = (userMessage || "").match(/\d+/);
         parsedValue = match ? parseInt(match[0], 10) : (currentQuestion.field === "age" ? 30 : 28);
       } else if (parseType === "symptoms") {
-        // Use selected symptoms array
         parsedValue = selectedSymptoms || [];
       } else if (parseType === "anchor") {
-        // Use anchor symptom
         parsedValue = anchorSymptom || userMessage?.trim() || "";
       }
 
-      // Get user's name from profile for participant creation
+      // Get user's name
       let userName = "";
       const { data: profile } = await supabase
         .from("profiles")
         .select("full_name")
         .eq("id", user.id)
         .single();
-      
-      if (profile?.full_name) {
-        userName = profile.full_name;
-      }
+      if (profile?.full_name) userName = profile.full_name;
 
-      // Update participant record if we have one
+      // Update participant record
       if (participant && currentQuestion.field) {
         const updateData: Record<string, any> = {};
         updateData[currentQuestion.field] = parsedValue;
-        
-        await supabase
-          .from("participants")
-          .update(updateData)
-          .eq("id", participant.id);
-        
+        await supabase.from("participants").update(updateData).eq("id", participant.id);
         console.log("Updated participant field:", currentQuestion.field, "=", parsedValue);
       } else if (!participant && currentQuestion.field) {
-        // Create participant record on first response (age question)
         const { data: newParticipant, error: createError } = await supabase
           .from("participants")
           .insert({
@@ -302,22 +299,37 @@ serve(async (req) => {
         }
       }
 
-      // Move to next question
       const nextStep = currentStep + 1;
       const nextQuestion = ONBOARDING_QUESTIONS[nextStep];
-      const nextMessage = nextQuestion.message;
 
-      // If we just completed the date step, insert a cycle circle with educational tidbit
+      // ─── Educational moments between steps ───────────────────────
+
+      // After AGE → show hormone basics before asking cycle length
+      if (currentQuestion.key === "age") {
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: "Your body has two main hormones that rise and fall each month — they're behind most of what you feel:",
+          message_type: "text",
+          metadata: {
+            visual_type: "education_hormones",
+            insight_type: "education"
+          }
+        });
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      // After LAST PERIOD → show cycle circle + educational context
       if (currentQuestion.key === "last_period") {
         const cycleLength = participant?.cycle_length_days || 28;
         const cycleInfo = calculateCycleInfo(parsedValue, cycleLength);
 
         if (cycleInfo) {
           const phaseTidbits: Record<string, string> = {
-            Menstruation: `Day ${cycleInfo.cycleDay}. You're in your period right now, which means your hormones are at their lowest. Your body is basically doing a hard reset. That tired, inward feeling? That's not laziness, it's biology clearing the slate for what comes next.`,
-            Follicular: `Day ${cycleInfo.cycleDay}. You're in your follicular phase, which is when estrogen starts climbing and things start to feel easier again. That lift in energy and motivation? It's real, and it builds from here.`,
-            Ovulation: `Day ${cycleInfo.cycleDay}. You're right around ovulation, which is when estrogen peaks and you're running at your sharpest. If you've been feeling more on than usual, that's why.`,
-            Luteal: `Day ${cycleInfo.cycleDay}. You're in your luteal phase. Progesterone is running the show now, which is why everything might feel heavier or more frustrating than it did a week ago. This is the phase most people struggle with and don't realize why.`
+            Menstruation: `You're on **day ${cycleInfo.cycleDay}** — that's your period. Your hormones are at their lowest right now, which is why you might feel tired or low energy. That's completely normal.`,
+            Follicular: `You're on **day ${cycleInfo.cycleDay}** — the build-up phase. Your energy is climbing and your brain is getting sharper. This is when most people start feeling "like themselves" again.`,
+            Ovulation: `You're on **day ${cycleInfo.cycleDay}** — your peak! Energy and confidence are at their highest right now. This is a short window, so make the most of it.`,
+            Luteal: `You're on **day ${cycleInfo.cycleDay}** — the wind-down phase. Things might feel heavier or more frustrating than last week. That's your hormones shifting, not you.`
           };
 
           const tidbit = phaseTidbits[cycleInfo.phase] || phaseTidbits.Follicular;
@@ -337,52 +349,51 @@ serve(async (req) => {
             }
           });
 
-          // Brief pause so it feels conversational
           await new Promise(resolve => setTimeout(resolve, 1000));
+
+          // Show symptom explainer card before the symptom question
+          await supabase.from("chat_messages").insert({
+            user_id: user.id,
+            role: "assistant",
+            content: "Most of what you feel follows a pattern tied to your cycle. Here's what that looks like:",
+            message_type: "text",
+            metadata: {
+              visual_type: "education_symptoms",
+              insight_type: "education"
+            }
+          });
+
+          await new Promise(resolve => setTimeout(resolve, 800));
         }
       }
 
-      // If we just completed the symptoms step, validate and make user feel seen
+      // After SYMPTOMS → validate and show symptom map
       if (currentQuestion.key === "symptoms" && selectedSymptoms && selectedSymptoms.length > 0) {
         const cycleLength = participant?.cycle_length_days || 28;
-        const cycleInfo = calculateCycleInfo(
-          participant?.last_period_start,
-          cycleLength
-        );
+        const cycleInfo = calculateCycleInfo(participant?.last_period_start, cycleLength);
 
-        // Build a validation message that reflects their symptoms back
         const symptomList = selectedSymptoms.slice(0, 3);
-        const hasEmotional = selectedSymptoms.some((s: string) => 
-          SYMPTOM_CATEGORIES.emotional.symptoms.includes(s)
-        );
-        const hasPhysical = selectedSymptoms.some((s: string) => 
-          SYMPTOM_CATEGORIES.physical.symptoms.includes(s)
-        );
-        const hasQuirky = selectedSymptoms.some((s: string) => 
-          SYMPTOM_CATEGORIES.quirky.symptoms.includes(s)
-        );
+        const hasEmotional = selectedSymptoms.some((s: string) => SYMPTOM_CATEGORIES.emotional.symptoms.includes(s));
+        const hasPhysical = selectedSymptoms.some((s: string) => SYMPTOM_CATEGORIES.physical.symptoms.includes(s));
+        const hasQuirky = selectedSymptoms.some((s: string) => SYMPTOM_CATEGORIES.quirky.symptoms.includes(s));
 
         let validationMsg = "";
 
         if (hasEmotional && hasPhysical) {
-          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. So you're getting hit on both sides, mentally and physically. That's really common and it's almost always heaviest in the luteal phase, roughly the last two weeks of your cycle. Most people don't connect those dots, they just think they're having a bad week.`;
+          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. You're getting hit on both sides — mind and body. That's really common, and it usually gets worse in the last 2 weeks of your cycle. Most people don't connect those dots.`;
         } else if (hasEmotional) {
-          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These are textbook progesterone symptoms. They usually ramp up in the second half of your cycle when progesterone takes over. You're not imagining it and you're definitely not the only one.`;
+          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These are linked to a hormone called progesterone — it ramps up in the second half of your cycle. You're not imagining it.`;
         } else if (hasPhysical) {
-          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Your body is telling you exactly where it struggles most. These tend to follow a pattern tied to your hormonal shifts, especially around the luteal phase and into your period.`;
+          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Your body is telling you where it struggles most. These tend to follow your hormonal shifts — especially in the last 2 weeks before your period.`;
         } else {
-          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. I see this a lot. These follow your hormonal pattern more closely than most people realize. Once you start tracking when they hit, the timing stops being a surprise.`;
+          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These follow your hormonal pattern more closely than you might think. Once you start noticing when they hit, it stops being a surprise.`;
         }
 
         if (hasQuirky) {
-          validationMsg += " And yeah, the weird ones count too. Hormones do strange things.";
+          validationMsg += " And yeah — the weird ones are real too. Hormones do strange things. 😅";
         }
 
-        const metadata: Record<string, any> = {
-          insight_type: "symptom_validation"
-        };
-
-        // Include cycle visual if we have the data
+        const metadata: Record<string, any> = { insight_type: "symptom_validation" };
         if (cycleInfo) {
           metadata.has_cycle_visual = true;
           metadata.visual_type = "symptom_map";
@@ -400,7 +411,21 @@ serve(async (req) => {
           metadata
         });
 
-        await new Promise(resolve => setTimeout(resolve, 1200));
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Show anchor explainer before the anchor question
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: "Now let's pick your anchor symptom:",
+          message_type: "text",
+          metadata: {
+            visual_type: "education_anchor",
+            insight_type: "education"
+          }
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 800));
       }
 
       // Build metadata for next message
@@ -411,23 +436,21 @@ serve(async (req) => {
         onboarding_complete: nextStep === ONBOARDING_QUESTIONS.length - 1
       };
 
-      // If symptoms step, include the categories
       if (nextQuestion.inputType === "symptom_picker") {
         nextMetadata.symptom_categories = SYMPTOM_CATEGORIES;
       }
-
-      // If anchor step, include the selected symptoms
       if (nextQuestion.inputType === "anchor_picker") {
-        // Get the symptoms from participant or from the message we just processed
         const symptomsForAnchor = participant?.typical_symptoms || selectedSymptoms || [];
         nextMetadata.available_symptoms = symptomsForAnchor;
       }
+      if ((nextQuestion as any).showNotSure) {
+        nextMetadata.show_not_sure = (nextQuestion as any).key === "cycle_length" ? "cycle_length" : "last_period";
+      }
 
-      // Insert the next question
       const { error: nextError } = await supabase.from("chat_messages").insert({
         user_id: user.id,
         role: "assistant",
-        content: nextMessage,
+        content: nextQuestion.message,
         message_type: nextStep === ONBOARDING_QUESTIONS.length - 1 ? "text" : "onboarding",
         metadata: nextMetadata
       });
@@ -439,13 +462,9 @@ serve(async (req) => {
 
       console.log("Sent question step:", nextStep);
 
-      // If onboarding is complete, send the first insight with cycle circle
+      // If onboarding is complete, send the first insight
       if (nextStep === ONBOARDING_QUESTIONS.length - 1 && participant) {
-        // Calculate cycle info
-        const cycleInfo = calculateCycleInfo(
-          participant.last_period_start,
-          participant.cycle_length_days
-        );
+        const cycleInfo = calculateCycleInfo(participant.last_period_start, participant.cycle_length_days);
 
         if (cycleInfo) {
           const firstInsight = generateFirstInsight(
@@ -454,7 +473,6 @@ serve(async (req) => {
             participant.anchor_symptom || anchorSymptom
           );
 
-          // Wait a moment before sending the insight
           await new Promise(resolve => setTimeout(resolve, 1500));
 
           const { error: insightError } = await supabase.from("chat_messages").insert({
@@ -474,17 +492,12 @@ serve(async (req) => {
 
           if (insightError) {
             console.error("Error sending first insight:", insightError);
-          } else {
-            console.log("Sent first insight for phase:", cycleInfo.phase);
           }
         }
       }
 
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          onboardingComplete: nextStep === ONBOARDING_QUESTIONS.length - 1 
-        }),
+        JSON.stringify({ success: true, onboardingComplete: nextStep === ONBOARDING_QUESTIONS.length - 1 }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -500,16 +513,12 @@ serve(async (req) => {
         );
       }
 
-      // Find the message that asked the target step question
       const targetStepMessages = messages?.filter(
         m => m.metadata?.onboarding_step !== undefined && (m.metadata as any).onboarding_step >= targetStep
       ) || [];
 
       if (targetStepMessages.length > 0) {
-        // Get the timestamp of the first message at or after the target step
         const cutoffTime = targetStepMessages[0].created_at;
-
-        // Delete all messages from that point forward
         const { error: deleteError } = await supabase
           .from("chat_messages")
           .delete()
@@ -522,7 +531,6 @@ serve(async (req) => {
         }
       }
 
-      // Re-send the target step question
       const targetQuestion = ONBOARDING_QUESTIONS[targetStep];
       const targetMetadata: Record<string, any> = {
         onboarding_step: targetStep,
@@ -536,6 +544,9 @@ serve(async (req) => {
       if (targetQuestion.inputType === "anchor_picker") {
         const symptomsForAnchor = participant?.typical_symptoms || [];
         targetMetadata.available_symptoms = symptomsForAnchor;
+      }
+      if ((targetQuestion as any).showNotSure) {
+        targetMetadata.show_not_sure = (targetQuestion as any).key === "cycle_length" ? "cycle_length" : "last_period";
       }
 
       await supabase.from("chat_messages").insert({
@@ -573,7 +584,12 @@ function parseNaturalDate(input: string): string {
   const now = new Date();
   const lower = input.toLowerCase();
 
-  // Check for "X days/weeks ago"
+  if (lower.includes("approximate") || lower.includes("not sure") || lower.includes("2 weeks")) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - 14);
+    return date.toISOString().split("T")[0];
+  }
+
   const agoMatch = lower.match(/(\d+)\s*(day|week)s?\s*ago/);
   if (agoMatch) {
     const num = parseInt(agoMatch[1], 10);
@@ -587,19 +603,16 @@ function parseNaturalDate(input: string): string {
     return date.toISOString().split("T")[0];
   }
 
-  // Check for "yesterday"
   if (lower.includes("yesterday")) {
     const date = new Date(now);
     date.setDate(date.getDate() - 1);
     return date.toISOString().split("T")[0];
   }
 
-  // Check for "today"
   if (lower.includes("today")) {
     return now.toISOString().split("T")[0];
   }
 
-  // Try to parse month + day like "January 15" or "Jan 15"
   const months: Record<string, number> = {
     jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2,
     apr: 3, april: 3, may: 4, jun: 5, june: 5, jul: 6, july: 6,
@@ -613,7 +626,6 @@ function parseNaturalDate(input: string): string {
       if (dayMatch) {
         const day = parseInt(dayMatch[0], 10);
         const date = new Date(now.getFullYear(), monthIndex, day);
-        // If date is in the future, assume last year
         if (date > now) {
           date.setFullYear(date.getFullYear() - 1);
         }
@@ -622,13 +634,12 @@ function parseNaturalDate(input: string): string {
     }
   }
 
-  // Default to a week ago if we can't parse
   const defaultDate = new Date(now);
   defaultDate.setDate(defaultDate.getDate() - 7);
   return defaultDate.toISOString().split("T")[0];
 }
 
-// Helper: Calculate cycle day and phase from dates
+// Helper: Calculate cycle day and phase
 function calculateCycleInfo(
   lastPeriodStart: string | null,
   cycleLengthDays: number | null
@@ -640,10 +651,8 @@ function calculateCycleInfo(
   const diffTime = today.getTime() - periodStart.getTime();
   const daysSinceStart = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   
-  // Calculate current day in cycle (1-indexed, wrapping around)
   const cycleDay = ((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
 
-  // Determine phase using biological model
   const menstruationEnd = 5;
   const ovulationDay = cycleLengthDays - 14;
   const ovulationStart = ovulationDay - 1;
@@ -664,40 +673,16 @@ function calculateCycleInfo(
   return { cycleDay, phase };
 }
 
-// Helper: Generate first insight based on phase
+// Helper: Generate first insight
 function generateFirstInsight(phase: string, cycleDay: number, anchorSymptom: string | null): string {
   const phaseInsights: Record<string, string> = {
-    Menstruation: `Day ${cycleDay}. Your body is in **reset mode**.
+    Menstruation: `Here's your first personal insight 👇\n\n**Day ${cycleDay} — Period phase**\n\n- **Energy**: Low — your body is resetting\n- **What to expect**: Rest feels more productive than pushing through\n${anchorSymptom ? `- **Your anchor (${anchorSymptom.toLowerCase()})**: tends to show up here` : "- **Tip**: Gentle movement over intensity"}\n\nThis isn't a setback — it's your body clearing the slate for what comes next.`,
 
-- **Energy**: at its lowest — rest is productive right now
-- **Body**: inflammation peaks, cramps may be stronger
-${anchorSymptom ? `- **Watch for**: ${anchorSymptom.toLowerCase()} tends to show up here` : "- **Try this**: gentle movement over pushing through"}
+    Follicular: `Here's your first personal insight 👇\n\n**Day ${cycleDay} — Build-up phase**\n\n- **Energy**: Rising — estrogen is doing the work\n- **Brain**: Clearer thinking, better focus\n${anchorSymptom ? `- **Your anchor (${anchorSymptom.toLowerCase()})**: usually eases up now` : "- **Tip**: Great time to tackle something that felt hard last week"}\n\nThis energy builds. Use it.`,
 
-This isn't a setback. It's your body clearing the slate.`,
+    Ovulation: `Here's your first personal insight 👇\n\n**Day ${cycleDay} — Peak phase**\n\n- **Energy**: Highest of the month\n- **Superpower**: Confidence and communication peak here\n${anchorSymptom ? `- **Your anchor (${anchorSymptom.toLowerCase()})**: can spike when everything runs high` : "- **Tip**: Schedule important conversations now"}\n\nShort window. Make it count.`,
 
-    Follicular: `Day ${cycleDay}. You're entering your **build phase**.
-
-- **Energy**: climbing — estrogen is doing the heavy lifting
-- **Brain**: clearer thinking, better problem-solving
-${anchorSymptom ? `- **Good news**: ${anchorSymptom.toLowerCase()} usually eases up now` : "- **Try this**: take on the thing that felt impossible last week"}
-
-This window builds. Use it.`,
-
-    Ovulation: `Day ${cycleDay}. You're at **peak performance**.
-
-- **Energy**: highest of the month — estrogen is peaking
-- **Superpower**: verbal fluency and confidence are at their max
-${anchorSymptom ? `- **Heads up**: ${anchorSymptom.toLowerCase()} can spike when everything runs high` : "- **Try this**: schedule your most important conversation this week now"}
-
-Short window. Make it count.`,
-
-    Luteal: `Day ${cycleDay}. **Progesterone** is running the show now.
-
-- **Energy**: declining — everything takes more effort
-- **Mood**: patience thins, stress tolerance drops
-${anchorSymptom ? `- **Alert**: ${anchorSymptom.toLowerCase()} usually peaks in this window` : "- **Try this**: front-load hard tasks to early this week"}
-
-Not a character flaw. It's chemistry.`
+    Luteal: `Here's your first personal insight 👇\n\n**Day ${cycleDay} — Wind-down phase**\n\n- **Energy**: Dropping — everything takes more effort\n- **Mood**: Patience thins, stress tolerance drops\n${anchorSymptom ? `- **Your anchor (${anchorSymptom.toLowerCase()})**: usually peaks in this window` : "- **Tip**: Front-load hard tasks to early this week"}\n\nNot a character flaw. It's chemistry.`
   };
 
   return phaseInsights[phase] || phaseInsights.Follicular;
