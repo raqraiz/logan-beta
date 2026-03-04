@@ -129,7 +129,7 @@ export function CycleBasicsCard() {
                 <span className="text-xs font-medium text-foreground">{phase.name}</span>
               </div>
               {activePhase === i && (
-                <p className="text-[10px] text-muted-foreground mt-0.5 ml-3.5 animate-fade-in leading-snug">
+                <p className="text-[10px] text-foreground mt-0.5 ml-3.5 animate-fade-in leading-snug">
                   {phase.description}
                 </p>
               )}
