@@ -28,7 +28,7 @@ import { toast } from "@/hooks/use-toast";
 import { 
   Users, RefreshCw, Search, Mail, Phone, Calendar, ChevronRight, 
   ChevronLeft, Trash2, Loader2, Activity, Clock, MessageSquare,
-  Pencil
+  Pencil, Download
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { ChatCycleCircle, calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
@@ -321,6 +321,42 @@ export function ProfilesTab() {
     return calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "Asia/Jerusalem");
   };
 
+  const handleDownloadUserData = (profile: ProfileWithData, messages: ChatMessage[]) => {
+    const data = {
+      exported_at: new Date().toISOString(),
+      profile: {
+        full_name: profile.full_name,
+        email: profile.email,
+        phone: profile.phone,
+        created_at: profile.created_at,
+      },
+      cycle_data: profile.participant ? {
+        cycle_length_days: profile.participant.cycle_length_days,
+        cycle_regularity: profile.participant.cycle_regularity,
+        last_period_start: profile.participant.last_period_start,
+        anchor_symptom: profile.participant.anchor_symptom,
+        typical_symptoms: profile.participant.typical_symptoms,
+        goals: profile.participant.goals,
+        timezone: profile.participant.timezone,
+      } : null,
+      chat_messages: messages.map(m => ({
+        role: m.role,
+        content: m.content,
+        message_type: m.message_type,
+        emoji_reaction: m.emoji_reaction,
+        created_at: m.created_at,
+      })),
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${profile.full_name.replace(/\s+/g, "_")}_data.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
 
   const filtered = profiles.filter(p =>
     p.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -362,6 +398,10 @@ export function ProfilesTab() {
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg">Profile</CardTitle>
               <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => handleDownloadUserData(profile, chatMessages)}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </Button>
                 <Button variant="outline" size="sm" onClick={openEditDialog}>
                   <Pencil className="w-4 h-4 mr-2" />
                   Edit
