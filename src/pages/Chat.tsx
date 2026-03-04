@@ -780,8 +780,7 @@ const Chat = () => {
 
                   {/* Interactive inputs for onboarding */}
                   {showInteractiveInput && inputType === "symptom_picker" && message.metadata?.symptom_categories && (
-                    <div className="mt-3 space-y-3">
-                      <SymptomExplainerCard />
+                    <div className="mt-3">
                       <SymptomPicker
                         categories={message.metadata.symptom_categories}
                         onSubmit={handleSymptomSubmit}
