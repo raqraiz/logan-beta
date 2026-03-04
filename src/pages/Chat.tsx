@@ -247,7 +247,7 @@ const Chat = () => {
     }
   }, [user, isOnboarding, messages]);
 
-  // Auto-scroll with long-message anchoring
+  // Auto-scroll — only when user is near the bottom and message fits on screen
   useEffect(() => {
     if (!isNearBottomRef.current) return;
 
@@ -257,9 +257,8 @@ const Chat = () => {
 
     const lastMessageEl = lastMessageRef.current;
     if (viewport && lastMessageEl) {
-      const isLongMessage = lastMessageEl.offsetHeight > viewport.clientHeight * 0.8;
-      if (isLongMessage) {
-        lastMessageEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Skip auto-scroll entirely for messages taller than 80% of viewport
+      if (lastMessageEl.offsetHeight > viewport.clientHeight * 0.8) {
         return;
       }
     }
