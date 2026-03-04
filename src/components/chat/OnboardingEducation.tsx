@@ -308,99 +308,125 @@ export function HormoneBasicsCard() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 const SYMPTOM_DATA = [
-  { label: "Mood dips",      phases: [0.2, 0.1, 0.6, 0.9] },
-  { label: "Brain fog",      phases: [0.3, 0.1, 0.5, 0.8] },
+  { label: "Mood dips",       phases: [0.2, 0.1, 0.6, 0.9] },
+  { label: "Brain fog",       phases: [0.3, 0.1, 0.5, 0.8] },
   { label: "Energy crashes",  phases: [0.7, 0.2, 0.5, 0.8] },
+  { label: "Cramps",          phases: [0.9, 0.1, 0.2, 0.5] },
+  { label: "Bloating",        phases: [0.4, 0.1, 0.3, 0.8] },
   { label: "Feeling great",   phases: [0.1, 0.8, 0.9, 0.2] },
 ];
 
 const PHASE_LABELS = ["Menstruation", "Follicular", "Ovulation", "Luteal"];
+const PHASE_COLORS = ["#EF4444", "#10B981", "#F59E0B", "#8B5CF6"];
 
 export function SymptomExplainerCard() {
   const [visible, setVisible] = useState(false);
+  const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 300);
     return () => clearTimeout(t);
   }, []);
 
+  const intensityLabel = (v: number) => v >= 0.7 ? "Strong" : v >= 0.4 ? "Moderate" : "Mild";
+
   return (
     <div className="rounded-xl bg-card border border-border/50 p-4 space-y-3 animate-fade-in">
       <p className="text-xs font-semibold text-primary uppercase tracking-wider">Your symptoms aren't random</p>
 
-      {/* Heatmap grid */}
-      <div className="overflow-hidden rounded-lg">
-        {/* Week headers */}
-        <div className="grid grid-cols-[100px_repeat(4,1fr)] gap-0.5 mb-1">
-          <div />
-          {PHASE_LABELS.map(w => (
-            <div key={w} className="text-center text-[9px] text-muted-foreground font-medium py-1">
-              {w}
-            </div>
-          ))}
-        </div>
-
-        {/* Symptom rows */}
-        {SYMPTOM_DATA.map((symptom, si) => (
-          <div
-            key={si}
-            className="grid grid-cols-[100px_repeat(4,1fr)] gap-0.5 transition-all duration-500"
-            style={{
-              opacity: visible ? 1 : 0,
-              transform: visible ? "translateY(0)" : "translateY(6px)",
-              transitionDelay: `${si * 120}ms`,
-            }}
-          >
-            <div className="text-[10px] text-foreground font-medium flex items-center pr-2">
-              {symptom.label}
-            </div>
-            {symptom.phases.map((intensity, wi) => (
-              <div
-                key={wi}
-                className="flex items-center justify-center py-1.5 rounded transition-all duration-300"
-                style={{
-                  backgroundColor: intensity > 0.6
-                    ? `hsl(355, 78%, 60%, ${intensity * 0.25})`
-                    : intensity > 0.3
-                      ? `hsl(40, 90%, 56%, ${intensity * 0.2})`
-                      : `hsl(152, 60%, 52%, ${intensity * 0.2})`,
-                }}
-              >
-                {/* Intensity bar */}
-                <div
-                  className="h-1.5 rounded-full transition-all duration-700"
-                  style={{
-                    width: visible ? `${intensity * 80}%` : "0%",
-                    backgroundColor: intensity > 0.6
-                      ? "hsl(355, 78%, 60%)"
-                      : intensity > 0.3
-                        ? "hsl(40, 90%, 56%)"
-                        : "hsl(152, 60%, 52%)",
-                    transitionDelay: `${si * 120 + wi * 80}ms`,
-                    opacity: 0.8,
-                  }}
-                />
-              </div>
-            ))}
+      {/* Phase-colored column headers */}
+      <div className="grid grid-cols-[90px_repeat(4,1fr)] gap-1">
+        <div />
+        {PHASE_LABELS.map((label, i) => (
+          <div key={label} className="text-center py-1.5 rounded-t-md" style={{ backgroundColor: `${PHASE_COLORS[i]}15` }}>
+            <span className="text-[8px] font-semibold uppercase tracking-wider" style={{ color: PHASE_COLORS[i] }}>
+              {label}
+            </span>
           </div>
         ))}
       </div>
 
-      {/* Color legend */}
-      <div className="flex items-center gap-3 text-[9px] text-muted-foreground">
-        <span className="flex items-center gap-1">
-          <span className="w-3 h-1.5 rounded-full" style={{ backgroundColor: "hsl(152, 60%, 52%)" }} /> mild
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-3 h-1.5 rounded-full" style={{ backgroundColor: "hsl(40, 90%, 56%)" }} /> moderate
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-3 h-1.5 rounded-full" style={{ backgroundColor: "hsl(355, 78%, 60%)" }} /> intense
-        </span>
+      {/* Heatmap rows */}
+      {SYMPTOM_DATA.map((symptom, si) => (
+        <div
+          key={si}
+          className="grid grid-cols-[90px_repeat(4,1fr)] gap-1 transition-all duration-500"
+          style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0)" : "translateY(8px)",
+            transitionDelay: `${si * 100}ms`,
+          }}
+        >
+          <div className="text-[10px] text-foreground font-medium flex items-center pr-1 truncate">
+            {symptom.label}
+          </div>
+          {symptom.phases.map((intensity, wi) => {
+            const isHovered = hoveredCell?.row === si && hoveredCell?.col === wi;
+            const color = PHASE_COLORS[wi];
+            return (
+              <div
+                key={wi}
+                className="relative flex flex-col items-center justify-center py-2 rounded-md transition-all duration-300 cursor-default"
+                style={{
+                  backgroundColor: `${color}${Math.round(intensity * 30).toString(16).padStart(2, '0')}`,
+                  transform: isHovered ? "scale(1.08)" : "scale(1)",
+                  boxShadow: isHovered ? `0 0 12px ${color}40` : "none",
+                }}
+                onMouseEnter={() => setHoveredCell({ row: si, col: wi })}
+                onMouseLeave={() => setHoveredCell(null)}
+              >
+                {/* Filled circle indicator */}
+                <div
+                  className="rounded-full transition-all duration-700"
+                  style={{
+                    width: visible ? `${8 + intensity * 16}px` : "0px",
+                    height: visible ? `${8 + intensity * 16}px` : "0px",
+                    backgroundColor: color,
+                    opacity: 0.2 + intensity * 0.6,
+                    transitionDelay: `${si * 100 + wi * 60}ms`,
+                  }}
+                />
+                {/* Intensity bar underneath */}
+                <div
+                  className="h-1 rounded-full mt-1 transition-all duration-700"
+                  style={{
+                    width: visible ? `${intensity * 85}%` : "0%",
+                    backgroundColor: color,
+                    opacity: 0.7,
+                    transitionDelay: `${si * 100 + wi * 60 + 200}ms`,
+                  }}
+                />
+                {/* Hover tooltip */}
+                {isHovered && (
+                  <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded bg-popover border border-border shadow-lg z-10 whitespace-nowrap animate-fade-in">
+                    <span className="text-[9px] font-medium text-foreground">{intensityLabel(intensity)}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+
+      {/* Legend */}
+      <div className="flex items-center justify-center gap-4 text-[9px] text-muted-foreground pt-1">
+        {[
+          { size: 8, label: "Mild" },
+          { size: 16, label: "Moderate" },
+          { size: 24, label: "Strong" },
+        ].map(({ size, label }) => (
+          <span key={label} className="flex items-center gap-1.5">
+            <span
+              className="rounded-full inline-block"
+              style={{ width: size, height: size, backgroundColor: "hsl(var(--foreground))", opacity: 0.25 }}
+            />
+            {label}
+          </span>
+        ))}
       </div>
 
       <p className="text-xs text-muted-foreground leading-relaxed">
-        Most symptoms follow a predictable weekly pattern. Once you spot yours, you can plan around it instead of being caught off guard.
+        Most symptoms follow a predictable pattern across your cycle. Once you spot yours, you can plan around them instead of being caught off guard.
       </p>
     </div>
   );
