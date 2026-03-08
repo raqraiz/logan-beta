@@ -947,6 +947,7 @@ const Chat = () => {
         cycleDay={cycleData.cycleDay}
         phase={cycleData.phase}
         cycleLengthDays={cycleData.cycleLengthDays}
+        lastPeriodStart={cycleData.lastPeriodStart || ""}
         onClose={() => setShowForecast(false)}
       />
     )}
