@@ -57,6 +57,7 @@ export const TrialChat = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [trialMessageCount, setTrialMessageCount] = useState(0);
+  const [lastUserQuestion, setLastUserQuestion] = useState("");
   const [showScrollButton, setShowScrollButton] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
