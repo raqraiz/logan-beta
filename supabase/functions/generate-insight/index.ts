@@ -345,13 +345,15 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{ insi
     const cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
     const parsed = JSON.parse(cleanContent);
     return {
-      insight: parsed.insight || "How are you feeling today?",
+      insight: parsed.intro || "How are you feeling today?",
+      question: parsed.question || "",
       conversationStarters: parsed.starters || ["I'm doing well", "Not great today", "Tell me more"]
     };
   } catch (e) {
     console.error("Failed to parse AI response as JSON:", content);
     return {
       insight: content || "How are you feeling today?",
+      question: "",
       conversationStarters: ["I'm doing well", "Not great today", "Tell me more"]
     };
   }
