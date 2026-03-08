@@ -223,7 +223,7 @@ export const TrialChat = () => {
             const { scrollTop, scrollHeight, clientHeight } = el;
             const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
             isNearBottomRef.current = distanceFromBottom < 150;
-            setShowScrollButton(distanceFromBottom > 120);
+            setShowScrollButton(distanceFromBottom > 40);
           }
         }}
       >

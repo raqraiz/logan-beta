@@ -922,17 +922,19 @@ const Chat = () => {
 
       {/* Scroll to bottom button */}
       {showScrollButton && (
-        <div className="fixed right-4 md:right-8 bottom-24 z-50">
-          <button
+        <div className={`fixed right-4 md:right-8 ${shouldShowInteractivePicker() ? "bottom-6" : "bottom-24"} z-[60]`}>
+          <Button
+            type="button"
+            size="icon"
             onClick={() => {
-              scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+              scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
               setShowScrollButton(false);
             }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all text-xs font-medium animate-in fade-in slide-in-from-bottom-2 duration-200"
+            aria-label="Jump to latest message"
+            className="h-12 w-12 rounded-full shadow-card animate-in fade-in slide-in-from-bottom-2 duration-200"
           >
-            <ArrowDown className="w-3.5 h-3.5" />
-            Jump to latest
-          </button>
+            <ArrowDown className="w-5 h-5" />
+          </Button>
         </div>
       )}
 
