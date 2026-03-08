@@ -694,7 +694,9 @@ const Chat = () => {
           const el = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
           if (el) {
             const { scrollTop, scrollHeight, clientHeight } = el;
-            isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 150;
+            const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+            isNearBottomRef.current = distanceFromBottom < 150;
+            setShowScrollButton(distanceFromBottom > 400);
           }
         }}
       >
