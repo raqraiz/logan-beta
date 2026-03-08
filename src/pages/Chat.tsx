@@ -249,6 +249,7 @@ const Chat = () => {
         cycleDay: liveInfo.cycleDay,
         phase: liveInfo.phase,
         cycleLengthDays,
+        lastPeriodStart,
       });
     }
   }, [user, isOnboarding, messages]);
