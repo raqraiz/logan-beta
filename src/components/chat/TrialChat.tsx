@@ -163,6 +163,12 @@ export const TrialChat = () => {
     inputRef.current?.focus();
   };
 
+  const handleScrollToBottom = () => {
+    scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    isNearBottomRef.current = true;
+    setShowScrollButton(false);
+  };
+
   const handleSuggestionClick = (question: string) => {
     setInputValue(question);
     // Auto-submit after a brief delay so user sees what was selected
