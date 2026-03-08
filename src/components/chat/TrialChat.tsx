@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoganLogo } from "@/components/LoganLogo";
 import { LoganFullLogo } from "@/components/LoganFullLogo";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, ArrowDown } from "lucide-react";
 import { VoiceInputButton } from "./VoiceInputButton";
 import { supabase } from "@/integrations/supabase/client";
 import { InlineChatAuth } from "./InlineChatAuth";
@@ -58,6 +58,7 @@ export const TrialChat = () => {
   const [showAuth, setShowAuth] = useState(false);
   const [trialMessageCount, setTrialMessageCount] = useState(0);
   const [lastUserQuestion, setLastUserQuestion] = useState("");
+  const [showScrollButton, setShowScrollButton] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -84,6 +85,25 @@ export const TrialChat = () => {
 
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    const viewport = scrollContainerRef.current?.querySelector(
+      '[data-radix-scroll-area-viewport]'
+    ) as HTMLDivElement | null;
+
+    if (!viewport) return;
+
+    const updateScrollState = () => {
+      const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      isNearBottomRef.current = distanceFromBottom < 150;
+      setShowScrollButton(distanceFromBottom > 120);
+    };
+
+    updateScrollState();
+    viewport.addEventListener("scroll", updateScrollState, { passive: true });
+
+    return () => viewport.removeEventListener("scroll", updateScrollState);
+  }, [messages.length, showAuth]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,6 +163,12 @@ export const TrialChat = () => {
     inputRef.current?.focus();
   };
 
+  const handleScrollToBottom = () => {
+    scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    isNearBottomRef.current = true;
+    setShowScrollButton(false);
+  };
+
   const handleSuggestionClick = (question: string) => {
     setInputValue(question);
     // Auto-submit after a brief delay so user sees what was selected
@@ -195,7 +221,9 @@ export const TrialChat = () => {
           const el = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
           if (el) {
             const { scrollTop, scrollHeight, clientHeight } = el;
-            isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 150;
+            const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+            isNearBottomRef.current = distanceFromBottom < 150;
+            setShowScrollButton(distanceFromBottom > 120);
           }
         }}
       >
@@ -279,6 +307,20 @@ export const TrialChat = () => {
           <div ref={scrollRef} />
         </div>
       </ScrollArea>
+
+      {showScrollButton && (
+        <div className={`fixed right-4 md:right-8 ${showAuth ? "bottom-6" : "bottom-24"} z-50 animate-in fade-in slide-in-from-bottom-2`}>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleScrollToBottom}
+            className="rounded-full shadow-card"
+          >
+            <ArrowDown className="h-4 w-4" />
+            Jump to latest
+          </Button>
+        </div>
+      )}
 
       {/* Input - hide when showing auth */}
       {!showAuth && (
