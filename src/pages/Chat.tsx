@@ -26,6 +26,7 @@ import { ConversationStarters } from "@/components/chat/ConversationStarters";
 import { MarkdownMessage } from "@/components/chat/MarkdownMessage";
 import { CycleBasicsCard, HormoneBasicsCard, SymptomExplainerCard, AnchorExplainerCard, NotSureButton } from "@/components/chat/OnboardingEducation";
 import { CalendarSubscribe } from "@/components/chat/CalendarSubscribe";
+import { CycleForecast } from "@/components/chat/CycleForecast";
 
 interface SymptomCategory {
   label: string;
@@ -86,6 +87,7 @@ const Chat = () => {
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
+  const [showForecast, setShowForecast] = useState(false);
   
   const { user, loading: authLoading, signOut } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -578,6 +580,7 @@ const Chat = () => {
   }
 
   return (
+    <>
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
@@ -634,6 +637,15 @@ const Chat = () => {
                         <span className="font-medium">{cycleData.cycleLengthDays - cycleData.cycleDay} days</span>
                       </div>
                     </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setShowForecast(true)}
+                    >
+                      View Full Forecast
+                    </Button>
                   </div>
                 </PopoverContent>
               </Popover>
@@ -926,6 +938,17 @@ const Chat = () => {
         </div>
       )}
     </div>
+
+    {/* Cycle Forecast overlay */}
+    {showForecast && cycleData && (
+      <CycleForecast
+        cycleDay={cycleData.cycleDay}
+        phase={cycleData.phase}
+        cycleLengthDays={cycleData.cycleLengthDays}
+        onClose={() => setShowForecast(false)}
+      />
+    )}
+    </>
   );
 };
 
