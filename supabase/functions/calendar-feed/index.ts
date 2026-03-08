@@ -146,7 +146,7 @@ serve(async (req) => {
 
         if (eventEnd < startRange || eventStart > endRange) continue;
 
-        const uid = `logan-${formatDateICS(eventStart)}-${phase.emoji}@logan-app`;
+        const uid = `logan-${formatDateICS(eventStart)}-${phase.startDay}@logan-app`;
         events.push(
           `BEGIN:VEVENT\r\n` +
           `DTSTART;VALUE=DATE:${formatDateICS(eventStart)}\r\n` +
