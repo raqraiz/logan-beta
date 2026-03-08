@@ -75,6 +75,7 @@ interface CycleData {
   cycleDay: number;
   phase: string;
   cycleLengthDays: number;
+  lastPeriodStart?: string;
 }
 
 const Chat = () => {
@@ -248,6 +249,7 @@ const Chat = () => {
         cycleDay: liveInfo.cycleDay,
         phase: liveInfo.phase,
         cycleLengthDays,
+        lastPeriodStart,
       });
     }
   }, [user, isOnboarding, messages]);
@@ -940,11 +942,12 @@ const Chat = () => {
     </div>
 
     {/* Cycle Forecast overlay */}
-    {showForecast && cycleData && (
+    {showForecast && cycleData && cycleData.lastPeriodStart && (
       <CycleForecast
         cycleDay={cycleData.cycleDay}
         phase={cycleData.phase}
         cycleLengthDays={cycleData.cycleLengthDays}
+        lastPeriodStart={cycleData.lastPeriodStart || ""}
         onClose={() => setShowForecast(false)}
       />
     )}
