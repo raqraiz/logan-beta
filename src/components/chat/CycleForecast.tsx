@@ -133,14 +133,17 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   // Map a calendar date to cycle day (wrapping across cycles)
   function getCycleDayForDate(date: Date): number {
     const diff = differenceInCalendarDays(date, periodStart);
+    if (!Number.isFinite(diff)) return cycleDay;
+
     const mod = ((diff % cycleLengthDays) + cycleLengthDays) % cycleLengthDays;
     return mod === 0 ? cycleLengthDays : mod;
   }
 
   // Selected day info
   const selectedCycleDay = selectedDate ? getCycleDayForDate(selectedDate) : null;
-  const selectedPhase = selectedCycleDay ? getPhaseForDay(selectedCycleDay, cycleLengthDays) : null;
-  const selectedMetrics = selectedCycleDay ? getDayMetrics(selectedCycleDay, cycleLengthDays) : null;
+  const hasValidSelectedCycleDay = selectedCycleDay !== null && Number.isFinite(selectedCycleDay);
+  const selectedPhase = hasValidSelectedCycleDay ? getPhaseForDay(selectedCycleDay, cycleLengthDays) : null;
+  const selectedMetrics = hasValidSelectedCycleDay ? getDayMetrics(selectedCycleDay, cycleLengthDays) : null;
   const selectedColors = selectedPhase ? PHASE_COLORS[selectedPhase] : null;
   const selectedTips = selectedPhase ? PHASE_TIPS[selectedPhase] : null;
 
