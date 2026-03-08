@@ -110,7 +110,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   }, [lastPeriodStart]);
 
   const [currentMonth, setCurrentMonth] = useState(today);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(today);
 
   // Build calendar grid
   const monthStart = startOfMonth(currentMonth);
