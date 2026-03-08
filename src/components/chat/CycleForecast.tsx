@@ -137,9 +137,9 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   const PHASES = ["Menstruation", "Follicular", "Ovulation", "Luteal"] as const;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden items-center">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 w-full max-w-lg">
         <button onClick={onClose} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ChevronLeft className="w-4 h-4" />
           Back
@@ -148,7 +148,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
         <div className="w-12" />
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto w-full max-w-lg">
         {/* Title + Legend */}
         <div className="px-4 pt-4 pb-2">
           <div className="flex items-center gap-2 mb-1">
