@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Zap, Shield, Moon, TrendingUp, TrendingDown, AlertTriangle, Heart, ChevronLeft, ChevronRight, X, Calendar } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, differenceInCalendarDays, addDays } from "date-fns";
 
