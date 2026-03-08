@@ -100,6 +100,8 @@ const Chat = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const onboardingInitialized = useRef(false);
   const insightGenerated = useRef(false);
+  const SCROLL_NEAR_BOTTOM_PX = 80;
+  const SCROLL_BUTTON_SHOW_PX = 48;
 
   // Fetch messages and initialize onboarding if needed
   useEffect(() => {
@@ -290,8 +292,8 @@ const Chat = () => {
         ? viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight
         : document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
 
-      isNearBottomRef.current = distanceFromBottom < 150;
-      setShowScrollButton(distanceFromBottom > 5);
+      isNearBottomRef.current = distanceFromBottom < SCROLL_NEAR_BOTTOM_PX;
+      setShowScrollButton(distanceFromBottom > SCROLL_BUTTON_SHOW_PX);
     };
 
     updateScrollState();
@@ -302,7 +304,7 @@ const Chat = () => {
       viewport?.removeEventListener("scroll", updateScrollState);
       window.removeEventListener("scroll", updateScrollState);
     };
-  }, [messages.length]);
+  }, [messages.length, SCROLL_BUTTON_SHOW_PX, SCROLL_NEAR_BOTTOM_PX]);
 
   const generateOnOpenInsight = async () => {
     try {
@@ -720,8 +722,8 @@ const Chat = () => {
           if (el) {
             const { scrollTop, scrollHeight, clientHeight } = el;
             const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-            isNearBottomRef.current = distanceFromBottom < 150;
-            setShowScrollButton(distanceFromBottom > 5);
+            isNearBottomRef.current = distanceFromBottom < SCROLL_NEAR_BOTTOM_PX;
+            setShowScrollButton(distanceFromBottom > SCROLL_BUTTON_SHOW_PX);
           }
         }}
       >
@@ -935,7 +937,16 @@ const Chat = () => {
             type="button"
             size="icon"
             onClick={() => {
-              scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+              const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
+              const hasViewportScroll = !!viewport && viewport.scrollHeight > viewport.clientHeight + 1;
+
+              if (hasViewportScroll && viewport) {
+                viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+              } else {
+                window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
+              }
+
+              isNearBottomRef.current = true;
               setShowScrollButton(false);
             }}
             aria-label="Jump to latest message"
