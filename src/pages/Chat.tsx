@@ -942,7 +942,7 @@ const Chat = () => {
     </div>
 
     {/* Cycle Forecast overlay */}
-    {showForecast && cycleData && (
+    {showForecast && cycleData && cycleData.lastPeriodStart && (
       <CycleForecast
         cycleDay={cycleData.cycleDay}
         phase={cycleData.phase}
