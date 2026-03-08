@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.generate-insight]
 verify_jwt = false
+
+[functions.calendar-feed]
+verify_jwt = false

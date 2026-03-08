@@ -25,6 +25,7 @@ import { MessageFeedback } from "@/components/chat/MessageFeedback";
 import { ConversationStarters } from "@/components/chat/ConversationStarters";
 import { MarkdownMessage } from "@/components/chat/MarkdownMessage";
 import { CycleBasicsCard, HormoneBasicsCard, SymptomExplainerCard, AnchorExplainerCard, NotSureButton } from "@/components/chat/OnboardingEducation";
+import { CalendarSubscribe } from "@/components/chat/CalendarSubscribe";
 
 interface SymptomCategory {
   label: string;
@@ -623,6 +624,7 @@ const Chat = () => {
                 </PopoverContent>
               </Popover>
             )}
+            <CalendarSubscribe />
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
               Sign out
