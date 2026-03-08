@@ -937,7 +937,19 @@ const Chat = () => {
         </div>
       )}
     </div>
+
+    {/* Cycle Forecast overlay */}
+    {showForecast && cycleData && (
+      <CycleForecast
+        cycleDay={cycleData.cycleDay}
+        phase={cycleData.phase}
+        cycleLengthDays={cycleData.cycleLengthDays}
+        onClose={() => setShowForecast(false)}
+      />
+    )}
+    </>
   );
+};
 };
 
 export default Chat;
