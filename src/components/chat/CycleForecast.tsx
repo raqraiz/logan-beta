@@ -148,7 +148,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
         <div className="w-12" />
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto w-full max-w-lg">
         {/* Title + Legend */}
         <div className="px-4 pt-4 pb-2">
           <div className="flex items-center gap-2 mb-1">
