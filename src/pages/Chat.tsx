@@ -585,7 +585,7 @@ const Chat = () => {
 
   return (
     <>
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col relative">
       {/* Header */}
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -905,7 +905,7 @@ const Chat = () => {
 
       {/* Scroll to bottom button */}
       {showScrollButton && (
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-28 z-10">
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-28 z-30">
           <button
             onClick={() => {
               scrollRef.current?.scrollIntoView({ behavior: "smooth" });
