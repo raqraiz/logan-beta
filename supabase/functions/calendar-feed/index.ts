@@ -177,7 +177,7 @@ serve(async (req) => {
     return new Response(ics, {
       headers: {
         "Content-Type": "text/calendar; charset=utf-8",
-        "Content-Disposition": 'attachment; filename="logan-cycle.ics"',
+        "Cache-Control": "no-cache, no-store, must-revalidate",
         ...corsHeaders,
       },
     });
