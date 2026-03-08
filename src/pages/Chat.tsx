@@ -903,6 +903,22 @@ const Chat = () => {
         </div>
       </ScrollArea>
 
+      {/* Scroll to bottom button */}
+      {showScrollButton && (
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-28 z-10">
+          <button
+            onClick={() => {
+              scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+              setShowScrollButton(false);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all text-xs font-medium animate-in fade-in slide-in-from-bottom-2 duration-200"
+          >
+            <ArrowDown className="w-3.5 h-3.5" />
+            New messages
+          </button>
+        </div>
+      )}
+
       {/* Input - hide when showing interactive pickers */}
       {!shouldShowInteractivePicker() && (
         <div className="border-t border-border/50 bg-card/50 backdrop-blur-sm sticky bottom-0">
