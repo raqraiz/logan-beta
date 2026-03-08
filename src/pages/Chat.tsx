@@ -933,16 +933,15 @@ const Chat = () => {
         <div className={`fixed right-4 md:right-8 ${shouldShowInteractivePicker() ? "bottom-8" : "bottom-28"} z-[60]`}>
           <Button
             type="button"
-            size="sm"
+            size="icon"
             onClick={() => {
               scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
               setShowScrollButton(false);
             }}
             aria-label="Jump to latest message"
-            className="h-12 rounded-full gap-2 px-4 shadow-card animate-in fade-in slide-in-from-bottom-2 duration-200"
+            className="h-12 w-12 rounded-full shadow-card animate-in fade-in slide-in-from-bottom-2 duration-200"
           >
             <ArrowDown className="w-5 h-5" />
-            Latest
           </Button>
         </div>
       )}
