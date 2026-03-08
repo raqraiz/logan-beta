@@ -279,6 +279,23 @@ const Chat = () => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Track scroll position reliably for "jump to bottom" visibility
+  useEffect(() => {
+    const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
+    if (!viewport) return;
+
+    const updateScrollState = () => {
+      const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      isNearBottomRef.current = distanceFromBottom < 150;
+      setShowScrollButton(distanceFromBottom > 180);
+    };
+
+    updateScrollState();
+    viewport.addEventListener("scroll", updateScrollState, { passive: true });
+
+    return () => viewport.removeEventListener("scroll", updateScrollState);
+  }, [messages.length]);
+
   const generateOnOpenInsight = async () => {
     try {
       const { error } = await supabase.functions.invoke("generate-insight");
@@ -696,7 +713,7 @@ const Chat = () => {
             const { scrollTop, scrollHeight, clientHeight } = el;
             const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
             isNearBottomRef.current = distanceFromBottom < 150;
-            setShowScrollButton(distanceFromBottom > 400);
+            setShowScrollButton(distanceFromBottom > 180);
           }
         }}
       >
@@ -905,16 +922,16 @@ const Chat = () => {
 
       {/* Scroll to bottom button */}
       {showScrollButton && (
-        <div className="fixed left-1/2 -translate-x-1/2 bottom-28 z-30">
+        <div className="fixed right-4 md:right-8 bottom-24 z-50">
           <button
             onClick={() => {
               scrollRef.current?.scrollIntoView({ behavior: "smooth" });
               setShowScrollButton(false);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all text-xs font-medium animate-in fade-in slide-in-from-bottom-2 duration-200"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all text-xs font-medium animate-in fade-in slide-in-from-bottom-2 duration-200"
           >
             <ArrowDown className="w-3.5 h-3.5" />
-            New messages
+            Jump to latest
           </button>
         </div>
       )}
