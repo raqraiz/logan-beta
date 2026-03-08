@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { Zap, Shield, Moon, TrendingUp, TrendingDown, AlertTriangle, Heart, ChevronLeft, ChevronRight, X, Calendar } from "lucide-react";
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, differenceInCalendarDays, addDays } from "date-fns";
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, differenceInCalendarDays, parseISO, isValid } from "date-fns";
 
 interface CycleForecastProps {
   cycleDay: number;
@@ -105,9 +105,9 @@ function EnergyBar({ value, color }: { value: number; color: string }) {
 export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStart, anchorSymptom, onClose }: CycleForecastProps) {
   const today = useMemo(() => new Date(), []);
   const periodStart = useMemo(() => {
-    const [y, m, d] = lastPeriodStart.split("-").map(Number);
-    return new Date(y, m - 1, d);
-  }, [lastPeriodStart]);
+    const parsed = parseISO(lastPeriodStart);
+    return isValid(parsed) ? parsed : today;
+  }, [lastPeriodStart, today]);
 
   const [currentMonth, setCurrentMonth] = useState(today);
   const [selectedDate, setSelectedDate] = useState<Date | null>(today);
@@ -133,14 +133,17 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   // Map a calendar date to cycle day (wrapping across cycles)
   function getCycleDayForDate(date: Date): number {
     const diff = differenceInCalendarDays(date, periodStart);
+    if (!Number.isFinite(diff)) return cycleDay;
+
     const mod = ((diff % cycleLengthDays) + cycleLengthDays) % cycleLengthDays;
     return mod === 0 ? cycleLengthDays : mod;
   }
 
   // Selected day info
   const selectedCycleDay = selectedDate ? getCycleDayForDate(selectedDate) : null;
-  const selectedPhase = selectedCycleDay ? getPhaseForDay(selectedCycleDay, cycleLengthDays) : null;
-  const selectedMetrics = selectedCycleDay ? getDayMetrics(selectedCycleDay, cycleLengthDays) : null;
+  const hasValidSelectedCycleDay = selectedCycleDay !== null && Number.isFinite(selectedCycleDay);
+  const selectedPhase = hasValidSelectedCycleDay ? getPhaseForDay(selectedCycleDay, cycleLengthDays) : null;
+  const selectedMetrics = hasValidSelectedCycleDay ? getDayMetrics(selectedCycleDay, cycleLengthDays) : null;
   const selectedColors = selectedPhase ? PHASE_COLORS[selectedPhase] : null;
   const selectedTips = selectedPhase ? PHASE_TIPS[selectedPhase] : null;
 
@@ -232,7 +235,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
 
           {/* RIGHT: Insights */}
           <div ref={insightsRef} className="md:flex-1 md:min-w-0 md:sticky md:top-0 md:self-start">
-            {selectedDate && selectedPhase && selectedMetrics && selectedColors && selectedTips && selectedCycleDay ? (
+            {selectedDate && selectedPhase && selectedMetrics && selectedColors && selectedTips && hasValidSelectedCycleDay ? (
               <div className="px-4 md:px-0 py-4 animate-in slide-in-from-bottom-4 md:slide-in-from-right-4 duration-200">
                 {/* Date + phase + cycle day summary */}
                 <div className={`rounded-xl border border-border/30 ${selectedColors.bg} overflow-hidden mb-3`}>
