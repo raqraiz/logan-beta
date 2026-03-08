@@ -636,6 +636,15 @@ const Chat = () => {
                         <span className="font-medium">{cycleData.cycleLengthDays - cycleData.cycleDay} days</span>
                       </div>
                     </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setShowForecast(true)}
+                    >
+                      View Full Forecast
+                    </Button>
                   </div>
                 </PopoverContent>
               </Popover>
