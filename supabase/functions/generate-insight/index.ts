@@ -201,7 +201,7 @@ serve(async (req) => {
         recentMessages || []
       );
 
-      const { insight, conversationStarters } = await generateAIInsight(lovableApiKey, prompt);
+      const { insight, question, conversationStarters } = await generateAIInsight(lovableApiKey, prompt);
 
       // Update the placeholder with the real insight
       await supabase.from("chat_messages").update({
@@ -214,6 +214,7 @@ serve(async (req) => {
           cycle_length_days: participant.cycle_length_days || 28,
           insight_type: "proactive",
           generated_at: new Date().toISOString(),
+          engagement_question: question,
           conversation_starters: conversationStarters
         }
       }).eq("id", placeholderId);
@@ -279,7 +280,7 @@ function buildInsightPrompt(
   const anchorSymptom = participant.anchor_symptom;
   const symptoms = participant.typical_symptoms || [];
 
-  return `You are Logan, a strategic, performance-focused cycle awareness coach. Write a very brief proactive check-in for ${userName.split(" ")[0]}.
+  return `You are Logan, a strategic, performance-focused cycle awareness coach. Write a proactive check-in for ${userName.split(" ")[0]}.
 
 Current cycle state:
 - Day ${cycleInfo.cycleDay}, Phase: ${cycleInfo.phase}
@@ -293,28 +294,29 @@ Recent conversation context:
 ${recentMessages.map(m => `${m.role}: ${m.content.slice(0, 100)}`).join("\n") || "No recent messages"}
 
 Rules — follow these exactly:
-1. Maximum 3 sentences total. No more.
-2. First sentence: where they are today (bold the phase name)
-3. Second sentence: one specific, tactical tip or prediction relevant to their anchor symptom or phase
-4. Third sentence: a "psychic" question — predict a specific sensation or experience they're likely having right now based on their exact cycle position, and ask about it
-5. No emojis, no exclamation points, no em dashes
-6. No greetings like "Hi" or "Hey"
-7. No bullet points or lists — just 3 flowing sentences
-8. Use **bold** sparingly for the phase name only
+1. The "intro" should be exactly 2 sentences:
+   - First sentence: where they are today (bold the phase name)
+   - Second sentence: one specific, tactical tip or prediction relevant to their anchor symptom or phase
+2. The "question" should be 1 sentence: a "psychic" question — predict a specific sensation or experience they're likely having right now based on their exact cycle position, and ask about it
+3. No emojis, no exclamation points, no em dashes
+4. No greetings like "Hi" or "Hey"
+5. No bullet points or lists — just flowing sentences
+6. Use **bold** sparingly for the phase name only
 
-Example:
-"Day 18, deep in **luteal**. Progesterone is climbing so your focus window is shrinking — front-load your hardest task before noon. Are you noticing that afternoon brain fog creeping in earlier than usual?"
+Example intro: "Day 18, deep in **luteal**. Progesterone is climbing so your focus window is shrinking — front-load your hardest task before noon."
+Example question: "Are you noticing that afternoon brain fog creeping in earlier than usual?"
 
 IMPORTANT: Respond in this exact JSON format:
 {
-  "insight": "Your 3-sentence insight here",
+  "intro": "Your 2-sentence intro here",
+  "question": "Your psychic question here",
   "starters": ["Short reply 1", "Short reply 2", "Short reply 3"]
 }
 
-The "starters" should be 3 natural conversation replies the user might want to send back (3-6 words each).`;
+The "starters" should be 3 natural conversation replies the user might want to send back (3-6 words each). They should be relevant responses to the question you asked.`;
 }
 
-async function generateAIInsight(apiKey: string, prompt: string): Promise<{ insight: string; conversationStarters: string[] }> {
+async function generateAIInsight(apiKey: string, prompt: string): Promise<{ insight: string; question: string; conversationStarters: string[] }> {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -344,13 +346,15 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{ insi
     const cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
     const parsed = JSON.parse(cleanContent);
     return {
-      insight: parsed.insight || "How are you feeling today?",
+      insight: parsed.intro || "How are you feeling today?",
+      question: parsed.question || "",
       conversationStarters: parsed.starters || ["I'm doing well", "Not great today", "Tell me more"]
     };
   } catch (e) {
     console.error("Failed to parse AI response as JSON:", content);
     return {
       insight: content || "How are you feeling today?",
+      question: "",
       conversationStarters: ["I'm doing well", "Not great today", "Tell me more"]
     };
   }

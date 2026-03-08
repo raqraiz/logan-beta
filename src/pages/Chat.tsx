@@ -62,6 +62,7 @@ interface ChatMessage {
     validated_symptoms?: string[];
     anchor_symptom?: string;
     conversation_starters?: string[];
+    engagement_question?: string;
     period_checkin?: boolean;
     period_update?: boolean;
     new_period_start?: string;
@@ -747,7 +748,7 @@ const Chat = () => {
                         </div>
                       )}
 
-                      {/* Message text */}
+                      {/* Message text (intro for proactive insights) */}
                       {message.role === "assistant" ? (
                         <MarkdownMessage content={message.content} />
                       ) : (
@@ -768,7 +769,7 @@ const Chat = () => {
                         <div className="mt-3"><AnchorExplainerCard /></div>
                       )}
 
-                      {/* Phase cheat sheet for proactive insights */}
+                      {/* Phase cheat sheet for proactive insights — between intro and question */}
                       {message.role === "assistant" && message.metadata?.insight_type === "proactive" && message.metadata?.cycle_day && message.metadata?.cycle_phase && (
                         <div className="mt-3">
                           <PhaseCheatSheet
@@ -776,6 +777,13 @@ const Chat = () => {
                             cycleDay={message.metadata.cycle_day}
                             cycleLengthDays={message.metadata.cycle_length_days || 28}
                           />
+                        </div>
+                      )}
+
+                      {/* Engagement question after the cheat sheet */}
+                      {message.metadata?.engagement_question && (
+                        <div className="mt-3">
+                          <MarkdownMessage content={message.metadata.engagement_question as string} />
                         </div>
                       )}
                       
