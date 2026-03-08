@@ -90,6 +90,7 @@ const Chat = () => {
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
   const [showForecast, setShowForecast] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
   
   const { user, loading: authLoading, signOut } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
