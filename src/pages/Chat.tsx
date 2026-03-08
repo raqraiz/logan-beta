@@ -944,7 +944,6 @@ const Chat = () => {
             <ArrowDown className="w-5 h-5" />
             Latest
           </Button>
-          </Button>
         </div>
       )}
 
