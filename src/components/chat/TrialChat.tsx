@@ -96,7 +96,7 @@ export const TrialChat = () => {
     const updateScrollState = () => {
       const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
       isNearBottomRef.current = distanceFromBottom < 150;
-      setShowScrollButton(distanceFromBottom > 120);
+      setShowScrollButton(distanceFromBottom > 40);
     };
 
     updateScrollState();
@@ -223,7 +223,7 @@ export const TrialChat = () => {
             const { scrollTop, scrollHeight, clientHeight } = el;
             const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
             isNearBottomRef.current = distanceFromBottom < 150;
-            setShowScrollButton(distanceFromBottom > 120);
+            setShowScrollButton(distanceFromBottom > 40);
           }
         }}
       >
