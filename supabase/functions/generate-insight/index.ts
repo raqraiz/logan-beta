@@ -315,7 +315,7 @@ IMPORTANT: Respond in this exact JSON format:
 The "starters" should be 3 natural conversation replies the user might want to send back (3-6 words each). They should be relevant responses to the question you asked.`;
 }
 
-async function generateAIInsight(apiKey: string, prompt: string): Promise<{ insight: string; conversationStarters: string[] }> {
+async function generateAIInsight(apiKey: string, prompt: string): Promise<{ insight: string; question: string; conversationStarters: string[] }> {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
