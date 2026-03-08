@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Zap, Shield, Moon, TrendingUp, TrendingDown, AlertTriangle, Heart, ChevronLeft, ChevronRight, X, Calendar } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, differenceInCalendarDays, addDays } from "date-fns";
 
@@ -111,6 +111,17 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
 
   const [currentMonth, setCurrentMonth] = useState(today);
   const [selectedDate, setSelectedDate] = useState<Date | null>(today);
+  const insightsRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to insights on mobile when a day is selected
+  useEffect(() => {
+    if (selectedDate && insightsRef.current) {
+      const isMobile = window.innerWidth < 768;
+      if (isMobile) {
+        insightsRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  }, [selectedDate]);
 
   // Build calendar grid
   const monthStart = startOfMonth(currentMonth);
@@ -220,7 +231,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
           </div>
 
           {/* RIGHT: Insights */}
-          <div className="md:flex-1 md:min-w-0 md:sticky md:top-0 md:self-start">
+          <div ref={insightsRef} className="md:flex-1 md:min-w-0 md:sticky md:top-0 md:self-start">
             {selectedDate && selectedPhase && selectedMetrics && selectedColors && selectedTips && selectedCycleDay ? (
               <div className="px-4 md:px-0 py-4 animate-in slide-in-from-bottom-4 md:slide-in-from-right-4 duration-200">
                 {/* Date + phase + cycle day summary */}
