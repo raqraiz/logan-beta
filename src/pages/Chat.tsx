@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
 
-import { Send, Loader2, LogOut, ChevronLeft } from "lucide-react";
+import { Send, Loader2, LogOut, ChevronLeft, ArrowDown } from "lucide-react";
 import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
 import { format } from "date-fns";
 import { SymptomPicker } from "@/components/chat/SymptomPicker";
@@ -90,6 +90,7 @@ const Chat = () => {
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
   const [showForecast, setShowForecast] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
   
   const { user, loading: authLoading, signOut } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -693,7 +694,9 @@ const Chat = () => {
           const el = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
           if (el) {
             const { scrollTop, scrollHeight, clientHeight } = el;
-            isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 150;
+            const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+            isNearBottomRef.current = distanceFromBottom < 150;
+            setShowScrollButton(distanceFromBottom > 400);
           }
         }}
       >
@@ -899,6 +902,22 @@ const Chat = () => {
           <div ref={scrollRef} />
         </div>
       </ScrollArea>
+
+      {/* Scroll to bottom button */}
+      {showScrollButton && (
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-28 z-10">
+          <button
+            onClick={() => {
+              scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+              setShowScrollButton(false);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all text-xs font-medium animate-in fade-in slide-in-from-bottom-2 duration-200"
+          >
+            <ArrowDown className="w-3.5 h-3.5" />
+            New messages
+          </button>
+        </div>
+      )}
 
       {/* Input - hide when showing interactive pickers */}
       {!shouldShowInteractivePicker() && (
