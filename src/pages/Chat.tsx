@@ -905,7 +905,7 @@ const Chat = () => {
 
       {/* Scroll to bottom button */}
       {showScrollButton && (
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-28 z-10">
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-28 z-30">
           <button
             onClick={() => {
               scrollRef.current?.scrollIntoView({ behavior: "smooth" });
