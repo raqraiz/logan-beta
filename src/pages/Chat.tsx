@@ -89,6 +89,7 @@ const Chat = () => {
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
   const [showForecast, setShowForecast] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
   
   const { user, loading: authLoading, signOut } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -598,7 +599,7 @@ const Chat = () => {
            </div>
           <div className="flex items-center gap-3">
             {cycleData && !isOnboarding && (
-              <Popover open={showForecast ? false : undefined}>
+              <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                 <PopoverTrigger asChild>
                   <button className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-full">
                     <ChatCycleCircle
@@ -644,7 +645,7 @@ const Chat = () => {
                       variant="outline"
                       size="sm"
                       className="w-full"
-                      onClick={() => setShowForecast(true)}
+                      onClick={() => { setPopoverOpen(false); setShowForecast(true); }}
                     >
                       View Full Forecast
                     </Button>
