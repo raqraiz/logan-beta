@@ -182,6 +182,7 @@ serve(async (req) => {
         content: checkinContent,
         metadata: {
           has_cycle_visual: true,
+          visual_type: "cycle_circle",
           cycle_day: cycleInfo.cycleDay,
           cycle_phase: cycleInfo.phase,
           cycle_length_days: participant.cycle_length_days || 28,
@@ -207,6 +208,7 @@ serve(async (req) => {
         content: insight,
         metadata: {
           has_cycle_visual: true,
+          visual_type: "cycle_circle",
           cycle_day: cycleInfo.cycleDay,
           cycle_phase: cycleInfo.phase,
           cycle_length_days: participant.cycle_length_days || 28,
