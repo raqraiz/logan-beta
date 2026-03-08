@@ -125,8 +125,9 @@ export const CalendarSubscribe = () => {
             </div>
 
             <div className="text-xs text-muted-foreground space-y-1">
-              <p><strong>Google Calendar:</strong> Settings → Add calendar → From URL → paste the link</p>
+              <p><strong>Google Calendar:</strong> Left sidebar → "+" next to "Other calendars" → From URL → paste the link</p>
               <p><strong>Apple Calendar:</strong> File → New Calendar Subscription → paste the link</p>
+              <p><strong>Outlook:</strong> Add calendar → Subscribe from web → paste the link</p>
               <p>Your calendar will auto-refresh every ~6 hours with updated cycle data.</p>
             </div>
           </div>
