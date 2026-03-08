@@ -284,11 +284,11 @@ const Chat = () => {
     const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
 
     const updateScrollState = () => {
-      const viewportDistanceFromBottom = viewport
+      const hasViewportScroll = !!viewport && viewport.scrollHeight > viewport.clientHeight + 1;
+
+      const distanceFromBottom = hasViewportScroll
         ? viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight
-        : 0;
-      const pageDistanceFromBottom = document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
-      const distanceFromBottom = Math.max(viewportDistanceFromBottom, pageDistanceFromBottom);
+        : document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
 
       isNearBottomRef.current = distanceFromBottom < 150;
       setShowScrollButton(distanceFromBottom > 5);
