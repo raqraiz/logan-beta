@@ -483,17 +483,11 @@ serve(async (req) => {
             message_type: "text",
             metadata: {
               has_cycle_visual: true,
-              visual_type: "cycle_circle",
+              visual_type: "hormone_chart",
               cycle_day: cycleInfo.cycleDay,
               cycle_phase: cycleInfo.phase,
               cycle_length_days: participant.cycle_length_days || 28,
-              last_period_start: participant.last_period_start,
-              insight_type: "awareness",
-              conversation_starters: [
-                "What can I expect tomorrow?",
-                "How should I plan my week?",
-                "What's my energy like today?"
-              ]
+              insight_type: "awareness"
             }
           });
 
