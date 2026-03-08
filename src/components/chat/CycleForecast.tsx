@@ -325,6 +325,13 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
               </div>
             )}
           </div>
+
+          {/* Disclaimer */}
+          <div className="px-4 md:px-0 pb-4 md:col-span-2">
+            <p className="text-[10px] text-muted-foreground/50 text-center italic">
+              This forecast is an estimate based on your current cycle length and may change with natural cycle fluctuations.
+            </p>
+          </div>
         </div>
       </div>
     </div>
