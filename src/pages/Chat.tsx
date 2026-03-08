@@ -623,6 +623,7 @@ const Chat = () => {
                 </PopoverContent>
               </Popover>
             )}
+            <CalendarSubscribe />
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
               Sign out
