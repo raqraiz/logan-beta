@@ -287,7 +287,7 @@ const Chat = () => {
     const updateScrollState = () => {
       const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
       isNearBottomRef.current = distanceFromBottom < 150;
-      setShowScrollButton(distanceFromBottom > 180);
+      setShowScrollButton(distanceFromBottom > 40);
     };
 
     updateScrollState();
