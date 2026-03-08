@@ -922,16 +922,16 @@ const Chat = () => {
 
       {/* Scroll to bottom button */}
       {showScrollButton && (
-        <div className="fixed left-1/2 -translate-x-1/2 bottom-28 z-30">
+        <div className="fixed right-4 md:right-8 bottom-24 z-50">
           <button
             onClick={() => {
               scrollRef.current?.scrollIntoView({ behavior: "smooth" });
               setShowScrollButton(false);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all text-xs font-medium animate-in fade-in slide-in-from-bottom-2 duration-200"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all text-xs font-medium animate-in fade-in slide-in-from-bottom-2 duration-200"
           >
             <ArrowDown className="w-3.5 h-3.5" />
-            New messages
+            Jump to latest
           </button>
         </div>
       )}
