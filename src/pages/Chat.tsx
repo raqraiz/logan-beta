@@ -249,9 +249,22 @@ const Chat = () => {
     }
   }, [user, isOnboarding, messages]);
 
-  // Auto-scroll — only when the user sends a message (never on assistant replies)
+  // Scroll to bottom on initial load
+  const hasScrolledToBottom = useRef(false);
+  useEffect(() => {
+    if (messages.length > 0 && !hasScrolledToBottom.current) {
+      hasScrolledToBottom.current = true;
+      // Use setTimeout to ensure DOM is rendered
+      setTimeout(() => {
+        scrollRef.current?.scrollIntoView({ behavior: "instant" });
+      }, 50);
+    }
+  }, [messages]);
+
+  // Auto-scroll on new user messages (if near bottom)
   useEffect(() => {
     if (messages.length === 0) return;
+    if (!hasScrolledToBottom.current) return; // skip until initial scroll done
     const lastMsg = messages[messages.length - 1];
     if (lastMsg.role !== "user") return;
     if (!isNearBottomRef.current) return;
