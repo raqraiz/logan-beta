@@ -292,8 +292,8 @@ const Chat = () => {
         ? viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight
         : document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
 
-      isNearBottomRef.current = distanceFromBottom < 150;
-      setShowScrollButton(distanceFromBottom > 5);
+      isNearBottomRef.current = distanceFromBottom < SCROLL_NEAR_BOTTOM_PX;
+      setShowScrollButton(distanceFromBottom > SCROLL_BUTTON_SHOW_PX);
     };
 
     updateScrollState();
@@ -304,7 +304,7 @@ const Chat = () => {
       viewport?.removeEventListener("scroll", updateScrollState);
       window.removeEventListener("scroll", updateScrollState);
     };
-  }, [messages.length]);
+  }, [messages.length, SCROLL_BUTTON_SHOW_PX, SCROLL_NEAR_BOTTOM_PX]);
 
   const generateOnOpenInsight = async () => {
     try {
