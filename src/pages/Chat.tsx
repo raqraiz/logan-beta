@@ -937,7 +937,16 @@ const Chat = () => {
             type="button"
             size="icon"
             onClick={() => {
-              scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+              const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
+              const hasViewportScroll = !!viewport && viewport.scrollHeight > viewport.clientHeight + 1;
+
+              if (hasViewportScroll && viewport) {
+                viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+              } else {
+                window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
+              }
+
+              isNearBottomRef.current = true;
               setShowScrollButton(false);
             }}
             aria-label="Jump to latest message"
