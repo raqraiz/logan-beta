@@ -713,7 +713,7 @@ const Chat = () => {
             const { scrollTop, scrollHeight, clientHeight } = el;
             const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
             isNearBottomRef.current = distanceFromBottom < 150;
-            setShowScrollButton(distanceFromBottom > 180);
+            setShowScrollButton(distanceFromBottom > 40);
           }
         }}
       >
