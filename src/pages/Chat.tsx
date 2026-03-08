@@ -645,7 +645,7 @@ const Chat = () => {
                       variant="outline"
                       size="sm"
                       className="w-full"
-                      onClick={() => setShowForecast(true)}
+                      onClick={() => { setPopoverOpen(false); setShowForecast(true); }}
                     >
                       View Full Forecast
                     </Button>
