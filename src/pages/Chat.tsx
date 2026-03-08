@@ -282,18 +282,26 @@ const Chat = () => {
   // Track scroll position reliably for "jump to bottom" visibility
   useEffect(() => {
     const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
-    if (!viewport) return;
 
     const updateScrollState = () => {
-      const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      const viewportDistanceFromBottom = viewport
+        ? viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight
+        : 0;
+      const pageDistanceFromBottom = document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
+      const distanceFromBottom = Math.max(viewportDistanceFromBottom, pageDistanceFromBottom);
+
       isNearBottomRef.current = distanceFromBottom < 150;
       setShowScrollButton(distanceFromBottom > 5);
     };
 
     updateScrollState();
-    viewport.addEventListener("scroll", updateScrollState, { passive: true });
+    viewport?.addEventListener("scroll", updateScrollState, { passive: true });
+    window.addEventListener("scroll", updateScrollState, { passive: true });
 
-    return () => viewport.removeEventListener("scroll", updateScrollState);
+    return () => {
+      viewport?.removeEventListener("scroll", updateScrollState);
+      window.removeEventListener("scroll", updateScrollState);
+    };
   }, [messages.length]);
 
   const generateOnOpenInsight = async () => {
@@ -706,7 +714,7 @@ const Chat = () => {
       {/* Messages */}
       <ScrollArea
         ref={scrollContainerRef}
-        className="flex-1 px-4"
+        className="flex-1 min-h-0 px-4"
         onScrollCapture={(e) => {
           const el = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
           if (el) {
@@ -922,18 +930,19 @@ const Chat = () => {
 
       {/* Scroll to bottom button */}
       {showScrollButton && (
-        <div className={`fixed right-4 md:right-8 ${shouldShowInteractivePicker() ? "bottom-6" : "bottom-24"} z-[60]`}>
+        <div className={`fixed right-4 md:right-8 ${shouldShowInteractivePicker() ? "bottom-8" : "bottom-28"} z-[60]`}>
           <Button
             type="button"
-            size="icon"
+            size="sm"
             onClick={() => {
               scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
               setShowScrollButton(false);
             }}
             aria-label="Jump to latest message"
-            className="h-12 w-12 rounded-full shadow-card animate-in fade-in slide-in-from-bottom-2 duration-200"
+            className="h-12 rounded-full gap-2 px-4 shadow-card animate-in fade-in slide-in-from-bottom-2 duration-200"
           >
             <ArrowDown className="w-5 h-5" />
+            Latest
           </Button>
         </div>
       )}
