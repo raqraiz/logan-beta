@@ -599,7 +599,7 @@ const Chat = () => {
            </div>
           <div className="flex items-center gap-3">
             {cycleData && !isOnboarding && (
-              <Popover open={showForecast ? false : undefined}>
+              <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                 <PopoverTrigger asChild>
                   <button className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-full">
                     <ChatCycleCircle
