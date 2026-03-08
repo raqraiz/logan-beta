@@ -105,9 +105,9 @@ function EnergyBar({ value, color }: { value: number; color: string }) {
 export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStart, anchorSymptom, onClose }: CycleForecastProps) {
   const today = useMemo(() => new Date(), []);
   const periodStart = useMemo(() => {
-    const [y, m, d] = lastPeriodStart.split("-").map(Number);
-    return new Date(y, m - 1, d);
-  }, [lastPeriodStart]);
+    const parsed = parseISO(lastPeriodStart);
+    return isValid(parsed) ? parsed : today;
+  }, [lastPeriodStart, today]);
 
   const [currentMonth, setCurrentMonth] = useState(today);
   const [selectedDate, setSelectedDate] = useState<Date | null>(today);
