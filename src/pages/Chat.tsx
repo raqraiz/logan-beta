@@ -62,6 +62,7 @@ interface ChatMessage {
     validated_symptoms?: string[];
     anchor_symptom?: string;
     conversation_starters?: string[];
+    engagement_question?: string;
     period_checkin?: boolean;
     period_update?: boolean;
     new_period_start?: string;
