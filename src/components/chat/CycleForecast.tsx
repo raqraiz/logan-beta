@@ -110,7 +110,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   }, [lastPeriodStart]);
 
   const [currentMonth, setCurrentMonth] = useState(today);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(today);
 
   // Build calendar grid
   const monthStart = startOfMonth(currentMonth);
@@ -220,7 +220,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
           </div>
 
           {/* RIGHT: Insights */}
-          <div className="md:flex-1 md:min-w-0">
+          <div className="md:flex-1 md:min-w-0 md:sticky md:top-0 md:self-start">
             {selectedDate && selectedPhase && selectedMetrics && selectedColors && selectedTips && selectedCycleDay ? (
               <div className="px-4 md:px-0 py-4 animate-in slide-in-from-bottom-4 md:slide-in-from-right-4 duration-200">
                 {/* Date + phase + cycle day summary */}
