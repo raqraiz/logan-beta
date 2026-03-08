@@ -279,6 +279,23 @@ const Chat = () => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Track scroll position reliably for "jump to bottom" visibility
+  useEffect(() => {
+    const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
+    if (!viewport) return;
+
+    const updateScrollState = () => {
+      const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      isNearBottomRef.current = distanceFromBottom < 150;
+      setShowScrollButton(distanceFromBottom > 180);
+    };
+
+    updateScrollState();
+    viewport.addEventListener("scroll", updateScrollState, { passive: true });
+
+    return () => viewport.removeEventListener("scroll", updateScrollState);
+  }, [messages.length]);
+
   const generateOnOpenInsight = async () => {
     try {
       const { error } = await supabase.functions.invoke("generate-insight");
