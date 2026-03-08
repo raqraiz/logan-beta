@@ -201,7 +201,7 @@ serve(async (req) => {
         recentMessages || []
       );
 
-      const { insight, conversationStarters } = await generateAIInsight(lovableApiKey, prompt);
+      const { insight, question, conversationStarters } = await generateAIInsight(lovableApiKey, prompt);
 
       // Update the placeholder with the real insight
       await supabase.from("chat_messages").update({
@@ -214,6 +214,7 @@ serve(async (req) => {
           cycle_length_days: participant.cycle_length_days || 28,
           insight_type: "proactive",
           generated_at: new Date().toISOString(),
+          engagement_question: question,
           conversation_starters: conversationStarters
         }
       }).eq("id", placeholderId);
