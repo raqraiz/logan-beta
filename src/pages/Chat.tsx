@@ -100,6 +100,8 @@ const Chat = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const onboardingInitialized = useRef(false);
   const insightGenerated = useRef(false);
+  const SCROLL_NEAR_BOTTOM_PX = 80;
+  const SCROLL_BUTTON_SHOW_PX = 48;
 
   // Fetch messages and initialize onboarding if needed
   useEffect(() => {
