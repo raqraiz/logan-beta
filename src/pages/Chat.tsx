@@ -282,18 +282,26 @@ const Chat = () => {
   // Track scroll position reliably for "jump to bottom" visibility
   useEffect(() => {
     const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
-    if (!viewport) return;
 
     const updateScrollState = () => {
-      const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      const viewportDistanceFromBottom = viewport
+        ? viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight
+        : 0;
+      const pageDistanceFromBottom = document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
+      const distanceFromBottom = Math.max(viewportDistanceFromBottom, pageDistanceFromBottom);
+
       isNearBottomRef.current = distanceFromBottom < 150;
       setShowScrollButton(distanceFromBottom > 5);
     };
 
     updateScrollState();
-    viewport.addEventListener("scroll", updateScrollState, { passive: true });
+    viewport?.addEventListener("scroll", updateScrollState, { passive: true });
+    window.addEventListener("scroll", updateScrollState, { passive: true });
 
-    return () => viewport.removeEventListener("scroll", updateScrollState);
+    return () => {
+      viewport?.removeEventListener("scroll", updateScrollState);
+      window.removeEventListener("scroll", updateScrollState);
+    };
   }, [messages.length]);
 
   const generateOnOpenInsight = async () => {
