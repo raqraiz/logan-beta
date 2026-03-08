@@ -75,6 +75,7 @@ interface CycleData {
   cycleDay: number;
   phase: string;
   cycleLengthDays: number;
+  lastPeriodStart?: string;
 }
 
 const Chat = () => {
