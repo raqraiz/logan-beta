@@ -308,6 +308,20 @@ export const TrialChat = () => {
         </div>
       </ScrollArea>
 
+      {showScrollButton && (
+        <div className={`fixed right-4 md:right-8 ${showAuth ? "bottom-6" : "bottom-24"} z-50 animate-in fade-in slide-in-from-bottom-2`}>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleScrollToBottom}
+            className="rounded-full shadow-card"
+          >
+            <ArrowDown className="h-4 w-4" />
+            Jump to latest
+          </Button>
+        </div>
+      )}
+
       {/* Input - hide when showing auth */}
       {!showAuth && (
         <div className="border-t border-border/30 bg-card/30 backdrop-blur-xl sticky bottom-0 relative z-10">
