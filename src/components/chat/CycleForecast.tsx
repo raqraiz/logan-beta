@@ -1,16 +1,16 @@
-import { useState } from "react";
-import { Zap, Brain, Shield, Moon, TrendingUp, TrendingDown, AlertTriangle, Heart, ChevronLeft, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState, useMemo } from "react";
+import { Zap, Shield, Moon, TrendingUp, TrendingDown, AlertTriangle, Heart, ChevronLeft, ChevronRight, X, Calendar } from "lucide-react";
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, differenceInCalendarDays, addDays } from "date-fns";
 
 interface CycleForecastProps {
   cycleDay: number;
   phase: string;
   cycleLengthDays: number;
+  lastPeriodStart: string;
   anchorSymptom?: string | null;
   onClose: () => void;
 }
 
-// Phase boundaries
 function getPhaseForDay(day: number, cycleLength: number): string {
   const menEnd = 5;
   const ovDay = cycleLength - 14;
@@ -22,33 +22,23 @@ function getPhaseForDay(day: number, cycleLength: number): string {
   return "Luteal";
 }
 
-const PHASE_COLORS: Record<string, { bg: string; text: string; ring: string; dot: string; bgSolid: string }> = {
-  Menstruation: { bg: "bg-phase-menstruation/15", text: "text-phase-menstruation", ring: "ring-phase-menstruation", dot: "bg-phase-menstruation", bgSolid: "bg-phase-menstruation" },
-  Follicular: { bg: "bg-phase-follicular/15", text: "text-phase-follicular", ring: "ring-phase-follicular", dot: "bg-phase-follicular", bgSolid: "bg-phase-follicular" },
-  Ovulation: { bg: "bg-phase-ovulation/15", text: "text-phase-ovulation", ring: "ring-phase-ovulation", dot: "bg-phase-ovulation", bgSolid: "bg-phase-ovulation" },
-  Luteal: { bg: "bg-phase-luteal/15", text: "text-phase-luteal", ring: "ring-phase-luteal", dot: "bg-phase-luteal", bgSolid: "bg-phase-luteal" },
+const PHASE_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
+  Menstruation: { bg: "bg-phase-menstruation/20", text: "text-phase-menstruation", dot: "bg-phase-menstruation" },
+  Follicular:   { bg: "bg-phase-follicular/20",   text: "text-phase-follicular",   dot: "bg-phase-follicular" },
+  Ovulation:    { bg: "bg-phase-ovulation/20",     text: "text-phase-ovulation",     dot: "bg-phase-ovulation" },
+  Luteal:       { bg: "bg-phase-luteal/20",         text: "text-phase-luteal",         dot: "bg-phase-luteal" },
 };
 
-const PHASE_ICONS: Record<string, React.ReactNode> = {
-  Menstruation: <Moon className="w-4 h-4" />,
-  Follicular: <TrendingUp className="w-4 h-4" />,
-  Ovulation: <Zap className="w-4 h-4" />,
-  Luteal: <Shield className="w-4 h-4" />,
+const PHASE_SOLID: Record<string, string> = {
+  Menstruation: "bg-phase-menstruation",
+  Follicular:   "bg-phase-follicular",
+  Ovulation:    "bg-phase-ovulation",
+  Luteal:       "bg-phase-luteal",
 };
 
-interface DayData {
-  day: number;
-  phase: string;
-  energy: number; // 0-1
-  focus: number;  // 0-1
-  symptomRisk: number; // 0-1
-}
-
-function getDayData(day: number, cycleLength: number, anchorSymptom?: string | null): DayData {
-  const phase = getPhaseForDay(day, cycleLength);
+function getDayMetrics(day: number, cycleLength: number) {
   const ovDay = cycleLength - 14;
-  
-  // Energy curve: peaks around ovulation, lowest during menstruation
+
   let energy = 0.5;
   if (day <= 2) energy = 0.2;
   else if (day <= 5) energy = 0.3 + (day - 2) * 0.05;
@@ -56,7 +46,6 @@ function getDayData(day: number, cycleLength: number, anchorSymptom?: string | n
   else if (day <= ovDay + 2) energy = 0.9;
   else energy = Math.max(0.3, 0.85 - (day - ovDay - 2) / (cycleLength - ovDay - 2) * 0.55);
 
-  // Focus curve: similar to energy but peaks slightly earlier
   let focus = 0.5;
   if (day <= 2) focus = 0.3;
   else if (day <= 5) focus = 0.35 + (day - 2) * 0.05;
@@ -64,19 +53,22 @@ function getDayData(day: number, cycleLength: number, anchorSymptom?: string | n
   else if (day <= ovDay + 2) focus = 0.85;
   else focus = Math.max(0.25, 0.8 - (day - ovDay - 2) / (cycleLength - ovDay - 2) * 0.55);
 
-  // Symptom risk: highest in late luteal and early menstruation
   let symptomRisk = 0.2;
   if (day <= 3) symptomRisk = 0.7 - (day - 1) * 0.15;
   else if (day <= 5) symptomRisk = 0.3;
   else if (day < ovDay - 1) symptomRisk = 0.15;
   else if (day <= ovDay + 2) symptomRisk = 0.2;
   else {
-    const daysIntolLuteal = day - (ovDay + 2);
+    const daysIntoLuteal = day - (ovDay + 2);
     const lutealLength = cycleLength - (ovDay + 2);
-    symptomRisk = 0.2 + (daysIntolLuteal / lutealLength) * 0.7;
+    symptomRisk = 0.2 + (daysIntoLuteal / lutealLength) * 0.7;
   }
 
-  return { day, phase, energy: Math.min(1, Math.max(0, energy)), focus: Math.min(1, Math.max(0, focus)), symptomRisk: Math.min(1, Math.max(0, symptomRisk)) };
+  return {
+    energy: Math.min(1, Math.max(0, energy)),
+    focus: Math.min(1, Math.max(0, focus)),
+    symptomRisk: Math.min(1, Math.max(0, symptomRisk)),
+  };
 }
 
 const PHASE_TIPS: Record<string, { expect: string[]; doThis: string[]; skip: string[] }> = {
@@ -105,39 +97,44 @@ const PHASE_TIPS: Record<string, { expect: string[]; doThis: string[]; skip: str
 function EnergyBar({ value, color }: { value: number; color: string }) {
   return (
     <div className="w-full h-1.5 rounded-full bg-muted/30 overflow-hidden">
-      <div
-        className={`h-full rounded-full ${color} transition-all duration-300`}
-        style={{ width: `${value * 100}%` }}
-      />
+      <div className={`h-full rounded-full ${color} transition-all duration-300`} style={{ width: `${value * 100}%` }} />
     </div>
   );
 }
 
-export function CycleForecast({ cycleDay, phase, cycleLengthDays, anchorSymptom, onClose }: CycleForecastProps) {
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStart, anchorSymptom, onClose }: CycleForecastProps) {
+  const today = useMemo(() => new Date(), []);
+  const periodStart = useMemo(() => {
+    const [y, m, d] = lastPeriodStart.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }, [lastPeriodStart]);
 
-  const allDays: DayData[] = [];
-  for (let d = 1; d <= cycleLengthDays; d++) {
-    allDays.push(getDayData(d, cycleLengthDays, anchorSymptom));
+  const [currentMonth, setCurrentMonth] = useState(today);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+  // Build calendar grid
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const calStart = startOfWeek(monthStart);
+  const calEnd = endOfWeek(monthEnd);
+  const calendarDays = eachDayOfInterval({ start: calStart, end: calEnd });
+
+  // Map a calendar date to cycle day (wrapping across cycles)
+  function getCycleDayForDate(date: Date): number {
+    const diff = differenceInCalendarDays(date, periodStart);
+    const mod = ((diff % cycleLengthDays) + cycleLengthDays) % cycleLengthDays;
+    return mod === 0 ? cycleLengthDays : mod;
   }
 
-  const selectedDayData = selectedDay ? getDayData(selectedDay, cycleLengthDays, anchorSymptom) : null;
-  const selectedPhase = selectedDayData?.phase || phase;
-  const selectedColors = PHASE_COLORS[selectedPhase] || PHASE_COLORS.Follicular;
-  const selectedTips = PHASE_TIPS[selectedPhase] || PHASE_TIPS.Follicular;
+  // Selected day info
+  const selectedCycleDay = selectedDate ? getCycleDayForDate(selectedDate) : null;
+  const selectedPhase = selectedCycleDay ? getPhaseForDay(selectedCycleDay, cycleLengthDays) : null;
+  const selectedMetrics = selectedCycleDay ? getDayMetrics(selectedCycleDay, cycleLengthDays) : null;
+  const selectedColors = selectedPhase ? PHASE_COLORS[selectedPhase] : null;
+  const selectedTips = selectedPhase ? PHASE_TIPS[selectedPhase] : null;
 
-  // Group days by phase for the legend
-  const phases: { name: string; start: number; end: number }[] = [];
-  let currentPhase = allDays[0].phase;
-  let phaseStart = 1;
-  for (let i = 1; i < allDays.length; i++) {
-    if (allDays[i].phase !== currentPhase) {
-      phases.push({ name: currentPhase, start: phaseStart, end: i });
-      currentPhase = allDays[i].phase;
-      phaseStart = i + 1;
-    }
-  }
-  phases.push({ name: currentPhase, start: phaseStart, end: cycleLengthDays });
+  const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+  const PHASES = ["Menstruation", "Follicular", "Ovulation", "Luteal"] as const;
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
@@ -148,115 +145,123 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, anchorSymptom,
           Back
         </button>
         <h2 className="font-display font-semibold text-sm">Cycle Forecast</h2>
-        <div className="w-12" /> {/* Spacer */}
+        <div className="w-12" />
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {/* Phase legend */}
+        {/* Title + Legend */}
         <div className="px-4 pt-4 pb-2">
-          <div className="flex gap-1 rounded-xl overflow-hidden">
-            {phases.map((p) => {
-              const colors = PHASE_COLORS[p.name];
-              const width = ((p.end - p.start + 1) / cycleLengthDays) * 100;
-              return (
-                <div
-                  key={p.name}
-                  className={`${colors.bgSolid} py-1.5 flex items-center justify-center gap-1 transition-opacity`}
-                  style={{ width: `${width}%`, opacity: selectedDay && getPhaseForDay(selectedDay, cycleLengthDays) !== p.name ? 0.3 : 1 }}
-                >
-                  <span className="text-[9px] font-medium text-white/90 truncate px-1">
-                    {p.name === "Menstruation" ? "🩸" : p.name === "Follicular" ? "🌱" : p.name === "Ovulation" ? "🌕" : "🍂"}
-                  </span>
-                </div>
-              );
-            })}
+          <div className="flex items-center gap-2 mb-1">
+            <Calendar className="w-5 h-5 text-primary" />
+            <h3 className="font-display font-semibold text-base text-foreground">Cycle Forecast</h3>
           </div>
+          <p className="text-xs text-muted-foreground mb-3">Tap any date to see insights for that day</p>
+
+          {/* Phase legend */}
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3">
+            {PHASES.map((p) => (
+              <div key={p} className="flex items-center gap-1.5">
+                <span className={`w-2.5 h-2.5 rounded-full ${PHASE_SOLID[p]}`} />
+                <span className="text-xs text-muted-foreground">{p}</span>
+              </div>
+            ))}
+          </div>
+          <div className="border-b border-border/30" />
         </div>
 
-        {/* Day grid */}
-        <div className="px-4 py-3">
-          <p className="text-xs text-muted-foreground mb-2">Tap any day for details</p>
+        {/* Month navigation */}
+        <div className="px-4 py-2 flex items-center justify-between">
+          <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-1.5 rounded-md border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-colors">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="font-display font-semibold text-sm text-foreground">{format(currentMonth, "MMMM yyyy")}</span>
+          <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-1.5 rounded-md border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-colors">
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Weekday headers */}
+        <div className="px-4">
+          <div className="grid grid-cols-7 gap-1.5 mb-1">
+            {WEEKDAYS.map((d) => (
+              <div key={d} className="text-center text-[11px] font-medium text-muted-foreground py-1">{d}</div>
+            ))}
+          </div>
+
+          {/* Calendar grid */}
           <div className="grid grid-cols-7 gap-1.5">
-            {allDays.map((d) => {
-              const colors = PHASE_COLORS[d.phase];
-              const isToday = d.day === cycleDay;
-              const isSelected = d.day === selectedDay;
-              const isPast = d.day < cycleDay;
+            {calendarDays.map((date) => {
+              const inMonth = isSameMonth(date, currentMonth);
+              const isToday = isSameDay(date, today);
+              const isSelected = selectedDate && isSameDay(date, selectedDate);
+              const cd = getCycleDayForDate(date);
+              const ph = getPhaseForDay(cd, cycleLengthDays);
+              const colors = PHASE_COLORS[ph];
+
               return (
                 <button
-                  key={d.day}
-                  onClick={() => setSelectedDay(isSelected ? null : d.day)}
+                  key={date.toISOString()}
+                  onClick={() => setSelectedDate(isSelected ? null : date)}
                   className={`
-                    relative aspect-square rounded-lg flex flex-col items-center justify-center text-xs transition-all duration-200
-                    ${isSelected ? `${colors.bg} ring-2 ${colors.ring} scale-110` : colors.bg}
-                    ${isToday && !isSelected ? "ring-2 ring-primary" : ""}
-                    ${isPast && !isToday && !isSelected ? "opacity-50" : ""}
+                    aspect-square rounded-lg flex items-center justify-center text-sm font-medium transition-all duration-150
+                    ${!inMonth ? "opacity-30" : ""}
+                    ${isSelected ? `ring-2 ring-primary scale-110 ${colors.bg}` : ""}
+                    ${isToday && !isSelected ? "ring-2 ring-primary/60 bg-primary/10" : ""}
+                    ${!isSelected && !isToday && inMonth ? colors.bg : ""}
                     hover:scale-105 active:scale-95
                   `}
                 >
-                  <span className={`font-bold ${isToday ? "text-primary" : colors.text}`}>
-                    {d.day}
-                  </span>
-                  {/* Tiny energy indicator */}
-                  <div className="flex gap-px mt-0.5">
-                    {[1, 2, 3].map((bar) => (
-                      <div
-                        key={bar}
-                        className={`w-0.5 h-0.5 rounded-full ${bar <= Math.ceil(d.energy * 3) ? colors.dot : "bg-muted/30"}`}
-                      />
-                    ))}
-                  </div>
-                  {isToday && (
-                    <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />
-                  )}
+                  <span className={isToday ? "text-primary font-bold" : colors.text}>{format(date, "d")}</span>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Selected day detail */}
-        {selectedDayData && (
-          <div className="px-4 pb-4 animate-in slide-in-from-bottom-4 duration-200">
-            <div className={`rounded-xl border ${selectedColors.bg} border-border/30 overflow-hidden`}>
-              {/* Day header */}
-              <div className="px-4 py-3 flex items-center justify-between border-b border-border/20">
-                <div className="flex items-center gap-2">
-                  <span className={selectedColors.text}>{PHASE_ICONS[selectedPhase]}</span>
-                  <div>
-                    <h4 className={`text-sm font-semibold ${selectedColors.text}`}>
-                      Day {selectedDayData.day} — {selectedPhase}
-                    </h4>
-                    <p className="text-[10px] text-muted-foreground">
-                      {selectedDayData.day === cycleDay ? "Today" : selectedDayData.day < cycleDay ? `${cycleDay - selectedDayData.day} days ago` : `In ${selectedDayData.day - cycleDay} days`}
-                    </p>
-                  </div>
+        {/* Selected day detail card */}
+        {selectedDate && selectedPhase && selectedMetrics && selectedColors && selectedTips && selectedCycleDay && (
+          <div className="px-4 py-4 animate-in slide-in-from-bottom-4 duration-200">
+            {/* Date + phase + cycle day summary */}
+            <div className={`rounded-xl border border-border/30 ${selectedColors.bg} overflow-hidden mb-3`}>
+              <div className="px-4 py-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">{format(selectedDate, "EEEE, MMM d")}</p>
+                  <p className={`text-lg font-display font-bold ${selectedColors.text}`}>{selectedPhase}</p>
                 </div>
-                <button onClick={() => setSelectedDay(null)} className="text-muted-foreground hover:text-foreground">
-                  <X className="w-4 h-4" />
-                </button>
+                <div className="text-right">
+                  <p className={`text-2xl font-display font-bold ${selectedColors.text}`}>{selectedCycleDay}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Day</p>
+                </div>
               </div>
+            </div>
 
-              {/* Metrics */}
-              <div className="px-4 py-3 space-y-2 border-b border-border/20">
+            {/* Metrics */}
+            <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden mb-3">
+              <div className="px-4 py-3 flex items-center gap-2 border-b border-border/20">
+                <Zap className="w-4 h-4 text-primary" />
+                <h4 className="text-sm font-semibold text-foreground">Day {selectedCycleDay} Insights</h4>
+              </div>
+              <div className="px-4 py-3 space-y-2.5">
                 <div className="flex items-center gap-3">
                   <span className="text-[10px] text-muted-foreground uppercase tracking-wider w-16">Energy</span>
-                  <EnergyBar value={selectedDayData.energy} color="bg-phase-follicular" />
-                  <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(selectedDayData.energy * 100)}%</span>
+                  <EnergyBar value={selectedMetrics.energy} color="bg-phase-follicular" />
+                  <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(selectedMetrics.energy * 100)}%</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-[10px] text-muted-foreground uppercase tracking-wider w-16">Focus</span>
-                  <EnergyBar value={selectedDayData.focus} color="bg-phase-ovulation" />
-                  <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(selectedDayData.focus * 100)}%</span>
+                  <EnergyBar value={selectedMetrics.focus} color="bg-phase-ovulation" />
+                  <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(selectedMetrics.focus * 100)}%</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-[10px] text-muted-foreground uppercase tracking-wider w-16">Symptom</span>
-                  <EnergyBar value={selectedDayData.symptomRisk} color="bg-phase-menstruation" />
-                  <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(selectedDayData.symptomRisk * 100)}%</span>
+                  <EnergyBar value={selectedMetrics.symptomRisk} color="bg-phase-menstruation" />
+                  <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(selectedMetrics.symptomRisk * 100)}%</span>
                 </div>
               </div>
+            </div>
 
-              {/* Cheat sheet */}
+            {/* Cheat sheet */}
+            <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
               <div className="grid grid-cols-3 divide-x divide-border/15">
                 <div className="px-3 py-2.5">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
@@ -299,8 +304,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, anchorSymptom,
                 </div>
               </div>
 
-              {/* Anchor symptom callout */}
-              {anchorSymptom && selectedDayData.symptomRisk > 0.5 && (
+              {anchorSymptom && selectedMetrics.symptomRisk > 0.5 && (
                 <div className="px-3 py-2 border-t border-border/15 flex items-center gap-2">
                   <Heart className="w-3 h-3 text-phase-menstruation shrink-0" />
                   <p className="text-[11px] text-muted-foreground">
@@ -312,9 +316,9 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, anchorSymptom,
           </div>
         )}
 
-        {/* No day selected prompt */}
-        {!selectedDayData && (
-          <div className="px-4 pb-4">
+        {/* No selection prompt */}
+        {!selectedDate && (
+          <div className="px-4 py-4">
             <div className="rounded-xl border border-border/30 bg-card/50 p-6 text-center">
               <p className="text-sm text-muted-foreground">Tap any day above to see your forecast</p>
               <p className="text-xs text-muted-foreground/60 mt-1">Energy, focus, symptom risk, and what to do</p>
