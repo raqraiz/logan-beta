@@ -315,6 +315,18 @@ const Chat = () => {
     };
   }, [messages.length, SCROLL_BUTTON_SHOW_PX, SCROLL_NEAR_BOTTOM_PX]);
 
+  const fetchCredits = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("get-credits");
+      if (!error && data && !data.error) {
+        setCreditBalance({ free: data.free, paid: data.paid, total: data.total, hoursUntilReset: data.hoursUntilReset });
+        setOutOfCredits(data.total <= 0);
+      }
+    } catch (e) {
+      console.error("Error fetching credits:", e);
+    }
+  };
+
   const generateOnOpenInsight = async () => {
     try {
       const { error } = await supabase.functions.invoke("generate-insight");
