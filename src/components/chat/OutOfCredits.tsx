@@ -10,6 +10,9 @@ interface OutOfCreditsProps {
   onCreditsUpdated: () => void;
 }
 
+// Set to true when ready to accept payments
+const PAYMENTS_ENABLED = false;
+
 const PLANS = [
   { key: "monthly_250", label: "250/mo", price: "$19/mo", section: "plans" },
   { key: "monthly_600", label: "600/mo", price: "$29/mo", section: "plans" },
@@ -82,49 +85,53 @@ export const OutOfCredits = ({ hoursUntilReset, onCreditsUpdated }: OutOfCredits
         </p>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-muted-foreground">Monthly plans</p>
-        {PLANS.map((pack) => (
-          <Button
-            key={pack.key}
-            variant="outline"
-            size="sm"
-            className="w-full justify-between"
-            onClick={() => handlePurchase(pack.key)}
-            disabled={!!isPurchasing}
-          >
-            <span className="flex items-center gap-1.5">
-              <Plus className="w-3.5 h-3.5" />
-              {pack.label}
-            </span>
-            <span className="text-muted-foreground">
-              {isPurchasing === pack.key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : pack.price}
-            </span>
-          </Button>
-        ))}
-      </div>
+      {PAYMENTS_ENABLED && (
+        <>
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Monthly plans</p>
+            {PLANS.map((pack) => (
+              <Button
+                key={pack.key}
+                variant="outline"
+                size="sm"
+                className="w-full justify-between"
+                onClick={() => handlePurchase(pack.key)}
+                disabled={!!isPurchasing}
+              >
+                <span className="flex items-center gap-1.5">
+                  <Plus className="w-3.5 h-3.5" />
+                  {pack.label}
+                </span>
+                <span className="text-muted-foreground">
+                  {isPurchasing === pack.key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : pack.price}
+                </span>
+              </Button>
+            ))}
+          </div>
 
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-muted-foreground">Boosters</p>
-        {BOOSTERS.map((pack) => (
-          <Button
-            key={pack.key}
-            variant="outline"
-            size="sm"
-            className="w-full justify-between"
-            onClick={() => handlePurchase(pack.key)}
-            disabled={!!isPurchasing}
-          >
-            <span className="flex items-center gap-1.5">
-              <Plus className="w-3.5 h-3.5" />
-              {pack.label}
-            </span>
-            <span className="text-muted-foreground">
-              {isPurchasing === pack.key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : pack.price}
-            </span>
-          </Button>
-        ))}
-      </div>
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Boosters</p>
+            {BOOSTERS.map((pack) => (
+              <Button
+                key={pack.key}
+                variant="outline"
+                size="sm"
+                className="w-full justify-between"
+                onClick={() => handlePurchase(pack.key)}
+                disabled={!!isPurchasing}
+              >
+                <span className="flex items-center gap-1.5">
+                  <Plus className="w-3.5 h-3.5" />
+                  {pack.label}
+                </span>
+                <span className="text-muted-foreground">
+                  {isPurchasing === pack.key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : pack.price}
+                </span>
+              </Button>
+            ))}
+          </div>
+        </>
+      )}
 
       <div className="border-t border-border pt-3">
         <p className="text-xs text-muted-foreground mb-2 flex items-center justify-center gap-1">
