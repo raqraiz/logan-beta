@@ -8,10 +8,11 @@ const corsHeaders = {
 };
 
 // Credit pack and subscription price IDs
-const PRICES = {
-  pack_25: "price_1T9AcVGhXycJLrINu4DyVfQj",
-  pack_100: "price_1T9AeLGhXycJLrINcJy7nBKe",
-  monthly_100: "price_1T9Af3GhXycJLrINuIrnXq43",
+const PRICES: Record<string, { priceId: string; credits: number; isSubscription: boolean }> = {
+  monthly_250: { priceId: "price_1T9BCaGhXycJLrIN0gWfjvTd", credits: 250, isSubscription: true },
+  monthly_600: { priceId: "price_1T9BCxGhXycJLrIN1LLYDEZd", credits: 600, isSubscription: true },
+  booster_50: { priceId: "price_1T9BDIGhXycJLrINRif07PLy", credits: 50, isSubscription: false },
+  booster_150: { priceId: "price_1T9BFRGhXycJLrINRSaJgpJU", credits: 150, isSubscription: false },
 };
 
 serve(async (req) => {
