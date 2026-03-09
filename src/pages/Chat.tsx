@@ -714,9 +714,7 @@ const Chat = () => {
                 </PopoverContent>
               </Popover>
             )}
-            {!isOnboarding && creditBalance && (
-              <CreditBalance credits={creditBalance} onCreditsUpdated={fetchCredits} />
-            )}
+            {/* Credit balance hidden — free access during alpha */}
             <CalendarSubscribe />
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
@@ -993,18 +991,10 @@ const Chat = () => {
         </div>
       )}
 
-      {/* Out of credits gate */}
-      {outOfCredits && !isOnboarding && (
-        <div className="border-t border-border/50 bg-card/50 backdrop-blur-sm sticky bottom-0 py-6 px-4">
-          <OutOfCredits
-            hoursUntilReset={creditBalance?.hoursUntilReset}
-            onCreditsUpdated={() => { fetchCredits(); setOutOfCredits(false); }}
-          />
-        </div>
-      )}
+      {/* Out of credits gate — disabled during alpha */}
 
       {/* Input - hide when showing interactive pickers or out of credits */}
-      {!shouldShowInteractivePicker() && !outOfCredits && (
+      {!shouldShowInteractivePicker() && (
         <div className="border-t border-border/50 bg-card/50 backdrop-blur-sm sticky bottom-0">
           <form onSubmit={sendMessage} className="max-w-3xl mx-auto px-4 py-4">
             <div className="flex gap-3">
