@@ -8,10 +8,11 @@ const corsHeaders = {
 };
 
 // Credit pack and subscription price IDs
-const PRICES = {
-  pack_25: "price_1T9AcVGhXycJLrINu4DyVfQj",
-  pack_100: "price_1T9AeLGhXycJLrINcJy7nBKe",
-  monthly_100: "price_1T9Af3GhXycJLrINuIrnXq43",
+const PRICES: Record<string, { priceId: string; credits: number; isSubscription: boolean }> = {
+  monthly_250: { priceId: "price_1T9BCaGhXycJLrIN0gWfjvTd", credits: 250, isSubscription: true },
+  monthly_600: { priceId: "price_1T9BCxGhXycJLrIN1LLYDEZd", credits: 600, isSubscription: true },
+  booster_50: { priceId: "price_1T9BDIGhXycJLrINRif07PLy", credits: 50, isSubscription: false },
+  booster_150: { priceId: "price_1T9BFRGhXycJLrINRSaJgpJU", credits: 150, isSubscription: false },
 };
 
 serve(async (req) => {
@@ -32,10 +33,8 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated");
 
     const { priceKey } = await req.json();
-    const priceId = PRICES[priceKey as keyof typeof PRICES];
-    if (!priceId) throw new Error("Invalid price key");
-
-    const isSubscription = priceKey === "monthly_100";
+    const price = PRICES[priceKey];
+    if (!price) throw new Error("Invalid price key");
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
@@ -51,14 +50,14 @@ serve(async (req) => {
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
       client_reference_id: user.id,
-      line_items: [{ price: priceId, quantity: 1 }],
-      mode: isSubscription ? "subscription" : "payment",
-      success_url: `${req.headers.get("origin")}/chat?purchase=success&credits=${priceKey === "pack_25" ? 25 : 100}`,
+      line_items: [{ price: price.priceId, quantity: 1 }],
+      mode: price.isSubscription ? "subscription" : "payment",
+      success_url: `${req.headers.get("origin")}/chat?purchase=success&credits=${price.credits}`,
       cancel_url: `${req.headers.get("origin")}/chat`,
       metadata: {
         user_id: user.id,
-        credits: priceKey === "pack_25" ? "25" : "100",
-        type: isSubscription ? "subscription" : "one_time",
+        credits: String(price.credits),
+        type: price.isSubscription ? "subscription" : "one_time",
       },
     });
 
