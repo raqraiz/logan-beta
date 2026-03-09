@@ -1,0 +1,1 @@
+UPDATE user_credits SET paid_credits = 6 WHERE user_id = '8cafc4c9-b836-4804-98c7-01c62bba3893';
