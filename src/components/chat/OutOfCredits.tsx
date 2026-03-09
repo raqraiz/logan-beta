@@ -10,6 +10,9 @@ interface OutOfCreditsProps {
   onCreditsUpdated: () => void;
 }
 
+// Set to true when ready to accept payments
+const PAYMENTS_ENABLED = false;
+
 const PLANS = [
   { key: "monthly_250", label: "250/mo", price: "$19/mo", section: "plans" },
   { key: "monthly_600", label: "600/mo", price: "$29/mo", section: "plans" },
