@@ -162,6 +162,11 @@ const Chat = () => {
         insightGenerated.current = true;
         generateOnOpenInsight();
       }
+
+      // Fetch credits if onboarding complete
+      if (isOnboardingComplete) {
+        fetchCredits();
+      }
     };
 
     fetchMessages();
