@@ -714,9 +714,7 @@ const Chat = () => {
                 </PopoverContent>
               </Popover>
             )}
-            {!isOnboarding && creditBalance && (
-              <CreditBalance credits={creditBalance} onCreditsUpdated={fetchCredits} />
-            )}
+            {/* Credit balance hidden — free access during alpha */}
             <CalendarSubscribe />
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
