@@ -33,8 +33,8 @@ export const CreditBalance = ({ credits, onCreditsUpdated }: CreditBalanceProps)
       });
       if (error) throw error;
       if (data?.url) {
-        const w = window.open(data.url, "_blank");
-        if (!w) window.location.href = data.url;
+        const target = window.top || window;
+        target.location.href = data.url;
       }
     } catch (error) {
       toast({ title: "Failed to start checkout", variant: "destructive" });
