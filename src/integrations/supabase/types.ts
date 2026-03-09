@@ -68,6 +68,33 @@ export type Database = {
         }
         Relationships: []
       }
+      credit_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       cycle_history: {
         Row: {
           created_at: string
@@ -392,6 +419,98 @@ export type Database = {
           id?: string
           phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      promo_codes: {
+        Row: {
+          code: string
+          created_at: string
+          credits_per_use: number
+          id: string
+          is_active: boolean
+          max_uses: number
+          uses_remaining: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          credits_per_use?: number
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          uses_remaining?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          credits_per_use?: number
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          uses_remaining?: number
+        }
+        Relationships: []
+      }
+      promo_redemptions: {
+        Row: {
+          created_at: string
+          id: string
+          promo_code_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          promo_code_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          promo_code_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_redemptions_promo_code_id_fkey"
+            columns: ["promo_code_id"]
+            isOneToOne: false
+            referencedRelation: "promo_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_credits: {
+        Row: {
+          bonus_credits_awarded: boolean
+          created_at: string
+          free_credits: number
+          free_credits_reset_at: string
+          id: string
+          paid_credits: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bonus_credits_awarded?: boolean
+          created_at?: string
+          free_credits?: number
+          free_credits_reset_at?: string
+          id?: string
+          paid_credits?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bonus_credits_awarded?: boolean
+          created_at?: string
+          free_credits?: number
+          free_credits_reset_at?: string
+          id?: string
+          paid_credits?: number
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
