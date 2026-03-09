@@ -430,23 +430,8 @@ serve(async (req) => {
       console.error("Error saving assistant message:", insertError);
     }
 
-    // Get updated credit balance to return to frontend
+    // Get updated credit balance to return to frontend (disabled during alpha)
     let creditBalance = null;
-    if (isOnboardingComplete) {
-      const { data: updatedCredits } = await supabase
-        .from("user_credits")
-        .select("free_credits, paid_credits, bonus_credits_awarded")
-        .eq("user_id", user.id)
-        .single();
-      if (updatedCredits) {
-        creditBalance = {
-          free: updatedCredits.free_credits,
-          paid: updatedCredits.paid_credits,
-          total: updatedCredits.free_credits + updatedCredits.paid_credits,
-          bonusAwarded: updatedCredits.bonus_credits_awarded,
-        };
-      }
-    }
 
     return new Response(
       JSON.stringify({ 
