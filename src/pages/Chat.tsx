@@ -991,15 +991,7 @@ const Chat = () => {
         </div>
       )}
 
-      {/* Out of credits gate */}
-      {outOfCredits && !isOnboarding && (
-        <div className="border-t border-border/50 bg-card/50 backdrop-blur-sm sticky bottom-0 py-6 px-4">
-          <OutOfCredits
-            hoursUntilReset={creditBalance?.hoursUntilReset}
-            onCreditsUpdated={() => { fetchCredits(); setOutOfCredits(false); }}
-          />
-        </div>
-      )}
+      {/* Out of credits gate — disabled during alpha */}
 
       {/* Input - hide when showing interactive pickers or out of credits */}
       {!shouldShowInteractivePicker() && !outOfCredits && (
