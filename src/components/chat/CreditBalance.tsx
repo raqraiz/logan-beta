@@ -11,10 +11,13 @@ interface CreditBalanceProps {
   onCreditsUpdated: () => void;
 }
 
-const CREDIT_PACKS = [
-  { key: "pack_25", label: "25 credits", price: "$5", credits: 25 },
-  { key: "pack_100", label: "100 credits", price: "$15", credits: 100 },
-  { key: "monthly_100", label: "100 credits/mo", price: "$25/mo", credits: 100, subscription: true },
+const PLANS = [
+  { key: "monthly_250", label: "250 credits/mo", price: "$19/mo" },
+  { key: "monthly_600", label: "600 credits/mo", price: "$29/mo" },
+];
+const BOOSTERS = [
+  { key: "booster_50", label: "50 credits", price: "$4" },
+  { key: "booster_150", label: "150 credits", price: "$10" },
 ];
 
 export const CreditBalance = ({ credits, onCreditsUpdated }: CreditBalanceProps) => {
