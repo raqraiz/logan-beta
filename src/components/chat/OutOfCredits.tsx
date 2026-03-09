@@ -10,10 +10,13 @@ interface OutOfCreditsProps {
   onCreditsUpdated: () => void;
 }
 
-const CREDIT_PACKS = [
-  { key: "pack_25", label: "25 credits", price: "$5" },
-  { key: "pack_100", label: "100 credits", price: "$15" },
-  { key: "monthly_100", label: "100/mo", price: "$25/mo" },
+const PLANS = [
+  { key: "monthly_250", label: "250/mo", price: "$19/mo", section: "plans" },
+  { key: "monthly_600", label: "600/mo", price: "$29/mo", section: "plans" },
+];
+const BOOSTERS = [
+  { key: "booster_50", label: "50 credits", price: "$4", section: "boosters" },
+  { key: "booster_150", label: "150 credits", price: "$10", section: "boosters" },
 ];
 
 export const OutOfCredits = ({ hoursUntilReset, onCreditsUpdated }: OutOfCreditsProps) => {
