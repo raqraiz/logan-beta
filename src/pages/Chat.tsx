@@ -714,6 +714,9 @@ const Chat = () => {
                 </PopoverContent>
               </Popover>
             )}
+            {!isOnboarding && creditBalance && (
+              <CreditBalance credits={creditBalance} onCreditsUpdated={fetchCredits} />
+            )}
             <CalendarSubscribe />
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
