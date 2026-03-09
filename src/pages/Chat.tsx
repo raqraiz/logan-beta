@@ -993,8 +993,18 @@ const Chat = () => {
         </div>
       )}
 
-      {/* Input - hide when showing interactive pickers */}
-      {!shouldShowInteractivePicker() && (
+      {/* Out of credits gate */}
+      {outOfCredits && !isOnboarding && (
+        <div className="border-t border-border/50 bg-card/50 backdrop-blur-sm sticky bottom-0 py-6 px-4">
+          <OutOfCredits
+            hoursUntilReset={creditBalance?.hoursUntilReset}
+            onCreditsUpdated={() => { fetchCredits(); setOutOfCredits(false); }}
+          />
+        </div>
+      )}
+
+      {/* Input - hide when showing interactive pickers or out of credits */}
+      {!shouldShowInteractivePicker() && !outOfCredits && (
         <div className="border-t border-border/50 bg-card/50 backdrop-blur-sm sticky bottom-0">
           <form onSubmit={sendMessage} className="max-w-3xl mx-auto px-4 py-4">
             <div className="flex gap-3">
