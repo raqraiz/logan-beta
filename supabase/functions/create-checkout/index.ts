@@ -33,10 +33,8 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated");
 
     const { priceKey } = await req.json();
-    const priceId = PRICES[priceKey as keyof typeof PRICES];
-    if (!priceId) throw new Error("Invalid price key");
-
-    const isSubscription = priceKey === "monthly_100";
+    const price = PRICES[priceKey];
+    if (!price) throw new Error("Invalid price key");
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
@@ -52,14 +50,14 @@ serve(async (req) => {
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
       client_reference_id: user.id,
-      line_items: [{ price: priceId, quantity: 1 }],
-      mode: isSubscription ? "subscription" : "payment",
-      success_url: `${req.headers.get("origin")}/chat?purchase=success&credits=${priceKey === "pack_25" ? 25 : 100}`,
+      line_items: [{ price: price.priceId, quantity: 1 }],
+      mode: price.isSubscription ? "subscription" : "payment",
+      success_url: `${req.headers.get("origin")}/chat?purchase=success&credits=${price.credits}`,
       cancel_url: `${req.headers.get("origin")}/chat`,
       metadata: {
         user_id: user.id,
-        credits: priceKey === "pack_25" ? "25" : "100",
-        type: isSubscription ? "subscription" : "one_time",
+        credits: String(price.credits),
+        type: price.isSubscription ? "subscription" : "one_time",
       },
     });
 
