@@ -27,6 +27,8 @@ import { MarkdownMessage } from "@/components/chat/MarkdownMessage";
 import { CycleBasicsCard, HormoneBasicsCard, SymptomExplainerCard, AnchorExplainerCard, NotSureButton } from "@/components/chat/OnboardingEducation";
 import { CalendarSubscribe } from "@/components/chat/CalendarSubscribe";
 import { CycleForecast } from "@/components/chat/CycleForecast";
+import { CreditBalance } from "@/components/chat/CreditBalance";
+import { OutOfCredits } from "@/components/chat/OutOfCredits";
 
 interface SymptomCategory {
   label: string;
