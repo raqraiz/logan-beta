@@ -33,14 +33,10 @@ serve(async (req) => {
       );
     }
 
-    // Create client with the user's auth token to validate it
     const supabaseUserClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: { Authorization: authHeader }
-      }
+      global: { headers: { Authorization: authHeader } }
     });
 
-    // Validate the user's JWT
     const { data: { user }, error: authError } = await supabaseUserClient.auth.getUser();
 
     if (authError || !user) {
@@ -51,7 +47,6 @@ serve(async (req) => {
       );
     }
 
-    // Use service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
@@ -66,6 +61,124 @@ serve(async (req) => {
 
     console.log("Chat AI request from user:", user.id, "message:", userMessage.substring(0, 50));
 
+    // --- Credit check ---
+    // Check if onboarding is complete
+    const { data: onboardingCheck } = await supabase
+      .from("chat_messages")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("role", "assistant")
+      .contains("metadata", { onboarding_complete: true })
+      .limit(1);
+
+    const isOnboardingComplete = onboardingCheck && onboardingCheck.length > 0;
+
+    if (isOnboardingComplete) {
+      // Get or create user credits
+      let { data: credits } = await supabase
+        .from("user_credits")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!credits) {
+        const { data: newCredits, error: createError } = await supabase
+          .from("user_credits")
+          .insert({ user_id: user.id, free_credits: 5, paid_credits: 0, free_credits_reset_at: new Date().toISOString() })
+          .select()
+          .single();
+        if (createError) {
+          console.error("Error creating credits:", createError);
+          return new Response(
+            JSON.stringify({ error: "Failed to initialize credits" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        credits = newCredits;
+      }
+
+      // Check if free credits should be reset (24h)
+      const resetAt = new Date(credits.free_credits_reset_at);
+      const now = new Date();
+      const hoursSinceReset = (now.getTime() - resetAt.getTime()) / (1000 * 60 * 60);
+      if (hoursSinceReset >= 24) {
+        await supabase
+          .from("user_credits")
+          .update({ free_credits: 5, free_credits_reset_at: now.toISOString() })
+          .eq("user_id", user.id);
+        credits.free_credits = 5;
+        credits.free_credits_reset_at = now.toISOString();
+      }
+
+      const totalCredits = credits.free_credits + credits.paid_credits;
+      if (totalCredits <= 0) {
+        return new Response(
+          JSON.stringify({ error: "no_credits", message: "You're out of credits. Purchase more to continue chatting." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Deduct 1 credit (free first, then paid)
+      if (credits.free_credits > 0) {
+        await supabase
+          .from("user_credits")
+          .update({ free_credits: credits.free_credits - 1 })
+          .eq("user_id", user.id);
+      } else {
+        await supabase
+          .from("user_credits")
+          .update({ paid_credits: credits.paid_credits - 1 })
+          .eq("user_id", user.id);
+      }
+
+      // Log transaction
+      await supabase.from("credit_transactions").insert({
+        user_id: user.id,
+        amount: -1,
+        type: "chat",
+        description: "AI chat message",
+      });
+
+      // Check if user just used their 5th credit ever — award bonus
+      if (!credits.bonus_credits_awarded) {
+        const { count } = await supabase
+          .from("credit_transactions")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("type", "chat");
+
+        if (count && count >= 5) {
+          await supabase
+            .from("user_credits")
+            .update({ paid_credits: (credits.paid_credits || 0) + 10 - (credits.free_credits > 0 ? 0 : 1), bonus_credits_awarded: true })
+            .eq("user_id", user.id);
+
+          // Actually, simpler: just add 10 to paid_credits
+          // Re-fetch to get current state after deduction
+          const { data: current } = await supabase
+            .from("user_credits")
+            .select("paid_credits")
+            .eq("user_id", user.id)
+            .single();
+          
+          if (current) {
+            await supabase
+              .from("user_credits")
+              .update({ paid_credits: current.paid_credits + 10, bonus_credits_awarded: true })
+              .eq("user_id", user.id);
+          }
+
+          await supabase.from("credit_transactions").insert({
+            user_id: user.id,
+            amount: 10,
+            type: "bonus",
+            description: "Complimentary credits — thanks for chatting with Logan!",
+          });
+        }
+      }
+    }
+    // --- End credit check ---
+
     // Get participant data for context
     let { data: participant } = await supabase
       .from("participants")
@@ -74,7 +187,6 @@ serve(async (req) => {
       .single();
 
     // --- Period confirmation detection ---
-    // First check if the last assistant message was a period check-in
     const { data: lastAssistantMsg } = await supabase
       .from("chat_messages")
       .select("metadata")
@@ -86,11 +198,9 @@ serve(async (req) => {
     
     const wasPeridCheckin = (lastAssistantMsg?.metadata as any)?.period_checkin === true;
 
-    // Patterns that ONLY match current period reports (not historical references)
-    // Exclude messages containing month names or "last month" which indicate past events
     const referencesHistoricalDate = /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/i.test(userMessage)
       || /last (month|cycle|time)/i.test(userMessage)
-      || /\d{4}/.test(userMessage); // contains a year like 2026
+      || /\d{4}/.test(userMessage);
 
     const periodConfirmPatterns = [
       /^yes,?\s*(it )?(started|period|got it|began|came)/i,
@@ -102,7 +212,6 @@ serve(async (req) => {
       /my period (just )?(started|came|arrived|began)$/i,
     ];
     
-    // Bare "yes" / "yes it started" only counts if the last message was a period check-in
     const bareYesPatterns = [/^yes$/i, /^yes,? (it )?(started|has|did)/i];
     const isBareYes = bareYesPatterns.some(p => p.test(userMessage.trim()));
     
@@ -112,34 +221,29 @@ serve(async (req) => {
     );
 
     if (isPeriodConfirmation && participant) {
-      // Parse when it started — default to today
       let periodStartDate = new Date();
 
-      // "X days ago" — e.g. "2 days ago", "3 days ago"
       const daysAgoMatch = userMessage.match(/(\d+)\s+days?\s+ago/i);
       if (daysAgoMatch) {
         periodStartDate.setDate(periodStartDate.getDate() - parseInt(daysAgoMatch[1]));
       } else if (/yesterday/i.test(userMessage)) {
         periodStartDate.setDate(periodStartDate.getDate() - 1);
       } else if (/this morning/i.test(userMessage) || /last night/i.test(userMessage) || /today/i.test(userMessage)) {
-        // stays today — no offset
+        // stays today
       }
-      // Also handle "a few days ago" as 2 days
       if (/a few days ago/i.test(userMessage) && !daysAgoMatch) {
         periodStartDate.setDate(periodStartDate.getDate() - 2);
       }
       const formattedDate = periodStartDate.toISOString().split("T")[0];
 
-      // Record previous cycle length if we have a previous period start
       let previousCycleLength: number | null = null;
       if (participant.last_period_start) {
         const prevStart = new Date(participant.last_period_start);
         const newStart = new Date(formattedDate);
         const diffDays = Math.round((newStart.getTime() - prevStart.getTime()) / (1000 * 60 * 60 * 24));
-        // Only record if it's a plausible cycle length (15-60 days)
         if (diffDays >= 15 && diffDays <= 60) {
           previousCycleLength = diffDays;
-          const { error: historyError } = await supabase
+          await supabase
             .from("cycle_history")
             .insert({
               participant_id: participant.id,
@@ -147,24 +251,15 @@ serve(async (req) => {
               cycle_end_date: formattedDate,
               cycle_length_days: diffDays,
             });
-          if (historyError) {
-            console.error("Error saving cycle history:", historyError);
-          } else {
-            console.log("Recorded cycle length:", diffDays, "days");
-          }
         }
       }
 
-      // Update participant's last_period_start
       const { error: updateError } = await supabase
         .from("participants")
         .update({ last_period_start: formattedDate })
         .eq("id", participant.id);
 
-      if (updateError) {
-        console.error("Error updating period start:", updateError);
-      } else {
-        console.log("Updated last_period_start to:", formattedDate);
+      if (!updateError) {
         const { data: refreshed } = await supabase
           .from("participants")
           .select("*")
@@ -173,7 +268,6 @@ serve(async (req) => {
         if (refreshed) participant = refreshed;
       }
 
-      // Fetch cycle history for average calculation
       const { data: cycleHistoryRows } = await supabase
         .from("cycle_history")
         .select("cycle_length_days")
@@ -186,10 +280,8 @@ serve(async (req) => {
         ? Math.round(cycleHistory.reduce((sum, r) => sum + r.cycle_length_days, 0) / cycleHistory.length)
         : null;
 
-      // Calculate new cycle info
       const newCycleInfo = calculateCycleInfo(formattedDate, participant.cycle_length_days || 28, participant.timezone || "UTC");
 
-      // Build confirmation message with cycle history stats
       let confirmationMessage = `Noted — logging **Day 1** as ${periodStartDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}. Your cycle is reset.\n\n- **Phase**: ${newCycleInfo.phase}\n- **Energy**: low — prioritize rest and light movement\n- **Watch for**: your anchor symptom (${participant.anchor_symptom || "not set"}) usually eases by day 3-4`;
 
       if (previousCycleLength) {
@@ -206,7 +298,6 @@ serve(async (req) => {
 
       confirmationMessage += `\n\nTake it easy today.`;
 
-      // Save the assistant's response
       await supabase.from("chat_messages").insert({
         user_id: user.id,
         role: "assistant",
@@ -241,7 +332,7 @@ serve(async (req) => {
     }
     // --- End period confirmation ---
 
-    // Get recent chat history (last 20 messages for context)
+    // Get recent chat history
     const { data: recentMessages } = await supabase
       .from("chat_messages")
       .select("role, content, created_at")
@@ -268,15 +359,12 @@ serve(async (req) => {
       }
     }
 
-    // Calculate cycle info
     const cycleInfo = participant?.last_period_start && participant?.cycle_length_days
       ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
       : null;
 
-    // Build system prompt with user context
     const systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext);
 
-    // Format conversation history for AI
     const conversationHistory = (recentMessages || [])
       .reverse()
       .filter(m => m.role === "user" || m.role === "assistant")
@@ -285,12 +373,8 @@ serve(async (req) => {
         content: m.content
       }));
 
-    // Add current message
     conversationHistory.push({ role: "user", content: userMessage });
 
-    console.log("Calling Lovable AI with", conversationHistory.length, "messages");
-
-    // Call Lovable AI
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -334,9 +418,6 @@ serve(async (req) => {
     const aiData = await aiResponse.json();
     const assistantMessage = aiData.choices?.[0]?.message?.content || "I'm not sure how to respond to that. Could you try rephrasing?";
 
-    console.log("AI response generated, length:", assistantMessage.length);
-
-    // Save the assistant's response to the database
     const { error: insertError } = await supabase.from("chat_messages").insert({
       user_id: user.id,
       role: "assistant",
@@ -354,11 +435,30 @@ serve(async (req) => {
       console.error("Error saving assistant message:", insertError);
     }
 
+    // Get updated credit balance to return to frontend
+    let creditBalance = null;
+    if (isOnboardingComplete) {
+      const { data: updatedCredits } = await supabase
+        .from("user_credits")
+        .select("free_credits, paid_credits, bonus_credits_awarded")
+        .eq("user_id", user.id)
+        .single();
+      if (updatedCredits) {
+        creditBalance = {
+          free: updatedCredits.free_credits,
+          paid: updatedCredits.paid_credits,
+          total: updatedCredits.free_credits + updatedCredits.paid_credits,
+          bonusAwarded: updatedCredits.bonus_credits_awarded,
+        };
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: assistantMessage,
-        cycleInfo: cycleInfo
+        cycleInfo: cycleInfo,
+        creditBalance,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
@@ -372,7 +472,6 @@ serve(async (req) => {
   }
 });
 
-// Build personalized system prompt
 function buildSystemPrompt(
   participant: any | null, 
   cycleInfo: { cycleDay: number; phase: string } | null,
@@ -430,28 +529,22 @@ Use this context to make your responses personally relevant. Reference their cur
   return basePrompt + userContext;
 }
 
-// Calculate cycle day and phase
-// NOTE: Date-only strings (YYYY-MM-DD) are parsed as UTC midnight which can cause
-// off-by-one day errors for users in UTC+ timezones. We parse them as noon UTC
-// to ensure the date is always interpreted as the intended calendar day.
 function calculateCycleInfo(
   lastPeriodStart: string,
   cycleLengthDays: number,
   timezone: string = "UTC"
 ): { cycleDay: number; phase: string } {
-  // Parse date-only string safely: treat YYYY-MM-DD as noon UTC to avoid timezone shift
   let periodStart: Date;
   if (/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodStart)) {
     const [year, month, day] = lastPeriodStart.split("-").map(Number);
-    periodStart = new Date(Date.UTC(year, month - 1, day, 12, 0, 0)); // noon UTC
+    periodStart = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
   } else {
     periodStart = new Date(lastPeriodStart);
   }
 
-  // Get today's date in the user's timezone for accurate day calculation
-  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: timezone }); // YYYY-MM-DD
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: timezone });
   const [ty, tm, td] = todayStr.split("-").map(Number);
-  const today = new Date(Date.UTC(ty, tm - 1, td, 12, 0, 0)); // noon UTC same calendar day
+  const today = new Date(Date.UTC(ty, tm - 1, td, 12, 0, 0));
 
   const diffTime = today.getTime() - periodStart.getTime();
   const daysSinceStart = Math.round(diffTime / (1000 * 60 * 60 * 24));
