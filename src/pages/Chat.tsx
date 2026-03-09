@@ -401,12 +401,24 @@ const Chat = () => {
           description: "Please try again in a moment.",
           variant: "destructive" 
         });
+      } else if (data?.error === "no_credits") {
+        setOutOfCredits(true);
+        fetchCredits();
       } else if (data?.error) {
-        // Handle rate limiting and other errors
         toast({ 
           title: data.error, 
           variant: "destructive" 
         });
+      }
+
+      // Update credit balance from response
+      if (data?.creditBalance) {
+        setCreditBalance({
+          free: data.creditBalance.free,
+          paid: data.creditBalance.paid,
+          total: data.creditBalance.total,
+        });
+        setOutOfCredits(data.creditBalance.total <= 0);
       }
 
       // If period was updated, refresh cycle data from the response
