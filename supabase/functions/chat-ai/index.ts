@@ -148,13 +148,7 @@ serve(async (req) => {
           .eq("type", "chat");
 
         if (count && count >= 5) {
-          await supabase
-            .from("user_credits")
-            .update({ paid_credits: (credits.paid_credits || 0) + 10 - (credits.free_credits > 0 ? 0 : 1), bonus_credits_awarded: true })
-            .eq("user_id", user.id);
-
-          // Actually, simpler: just add 10 to paid_credits
-          // Re-fetch to get current state after deduction
+          // Re-fetch current state after deduction, then add 10 bonus
           const { data: current } = await supabase
             .from("user_credits")
             .select("paid_credits")
