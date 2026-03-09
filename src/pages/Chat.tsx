@@ -27,6 +27,8 @@ import { MarkdownMessage } from "@/components/chat/MarkdownMessage";
 import { CycleBasicsCard, HormoneBasicsCard, SymptomExplainerCard, AnchorExplainerCard, NotSureButton } from "@/components/chat/OnboardingEducation";
 import { CalendarSubscribe } from "@/components/chat/CalendarSubscribe";
 import { CycleForecast } from "@/components/chat/CycleForecast";
+import { CreditBalance } from "@/components/chat/CreditBalance";
+import { OutOfCredits } from "@/components/chat/OutOfCredits";
 
 interface SymptomCategory {
   label: string;
@@ -91,6 +93,8 @@ const Chat = () => {
   const [showForecast, setShowForecast] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [creditBalance, setCreditBalance] = useState<{ free: number; paid: number; total: number; hoursUntilReset?: number } | null>(null);
+  const [outOfCredits, setOutOfCredits] = useState(false);
   
   const { user, loading: authLoading, signOut } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -157,6 +161,11 @@ const Chat = () => {
       if (isOnboardingComplete && typedMessages.length > 0 && !insightGenerated.current) {
         insightGenerated.current = true;
         generateOnOpenInsight();
+      }
+
+      // Fetch credits if onboarding complete
+      if (isOnboardingComplete) {
+        fetchCredits();
       }
     };
 
@@ -306,6 +315,18 @@ const Chat = () => {
     };
   }, [messages.length, SCROLL_BUTTON_SHOW_PX, SCROLL_NEAR_BOTTOM_PX]);
 
+  const fetchCredits = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("get-credits");
+      if (!error && data && !data.error) {
+        setCreditBalance({ free: data.free, paid: data.paid, total: data.total, hoursUntilReset: data.hoursUntilReset });
+        setOutOfCredits(data.total <= 0);
+      }
+    } catch (e) {
+      console.error("Error fetching credits:", e);
+    }
+  };
+
   const generateOnOpenInsight = async () => {
     try {
       const { error } = await supabase.functions.invoke("generate-insight");
@@ -380,12 +401,24 @@ const Chat = () => {
           description: "Please try again in a moment.",
           variant: "destructive" 
         });
+      } else if (data?.error === "no_credits") {
+        setOutOfCredits(true);
+        fetchCredits();
       } else if (data?.error) {
-        // Handle rate limiting and other errors
         toast({ 
           title: data.error, 
           variant: "destructive" 
         });
+      }
+
+      // Update credit balance from response
+      if (data?.creditBalance) {
+        setCreditBalance({
+          free: data.creditBalance.free,
+          paid: data.creditBalance.paid,
+          total: data.creditBalance.total,
+        });
+        setOutOfCredits(data.creditBalance.total <= 0);
       }
 
       // If period was updated, refresh cycle data from the response
@@ -681,6 +714,9 @@ const Chat = () => {
                 </PopoverContent>
               </Popover>
             )}
+            {!isOnboarding && creditBalance && (
+              <CreditBalance credits={creditBalance} onCreditsUpdated={fetchCredits} />
+            )}
             <CalendarSubscribe />
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
@@ -957,8 +993,18 @@ const Chat = () => {
         </div>
       )}
 
-      {/* Input - hide when showing interactive pickers */}
-      {!shouldShowInteractivePicker() && (
+      {/* Out of credits gate */}
+      {outOfCredits && !isOnboarding && (
+        <div className="border-t border-border/50 bg-card/50 backdrop-blur-sm sticky bottom-0 py-6 px-4">
+          <OutOfCredits
+            hoursUntilReset={creditBalance?.hoursUntilReset}
+            onCreditsUpdated={() => { fetchCredits(); setOutOfCredits(false); }}
+          />
+        </div>
+      )}
+
+      {/* Input - hide when showing interactive pickers or out of credits */}
+      {!shouldShowInteractivePicker() && !outOfCredits && (
         <div className="border-t border-border/50 bg-card/50 backdrop-blur-sm sticky bottom-0">
           <form onSubmit={sendMessage} className="max-w-3xl mx-auto px-4 py-4">
             <div className="flex gap-3">
