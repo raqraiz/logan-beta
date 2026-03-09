@@ -34,9 +34,11 @@ export const OutOfCredits = ({ hoursUntilReset, onCreditsUpdated }: OutOfCredits
       if (data?.url) {
         const a = document.createElement("a");
         a.href = data.url;
-        a.target = "_top";
-        a.rel = "noopener";
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
       }
     } catch {
       toast({ title: "Failed to start checkout", variant: "destructive" });
