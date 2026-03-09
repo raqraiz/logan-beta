@@ -52,8 +52,8 @@ serve(async (req) => {
       client_reference_id: user.id,
       line_items: [{ price: price.priceId, quantity: 1 }],
       mode: price.isSubscription ? "subscription" : "payment",
-      success_url: `${req.headers.get("origin")}/chat?purchase=success&credits=${price.credits}`,
-      cancel_url: `${req.headers.get("origin")}/chat`,
+      success_url: `https://asklogan.ai/chat?purchase=success&credits=${price.credits}`,
+      cancel_url: `https://asklogan.ai/chat`,
       metadata: {
         user_id: user.id,
         credits: String(price.credits),
