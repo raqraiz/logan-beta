@@ -61,8 +61,10 @@ serve(async (req) => {
 
     console.log("Chat AI request from user:", user.id, "message:", userMessage.substring(0, 50));
 
-    // --- Credit check ---
-    // Check if onboarding is complete
+    // --- Credit check (DISABLED — free access during alpha) ---
+    const CREDITS_ENABLED = false;
+    
+    // Check if onboarding is complete (still needed for other logic)
     const { data: onboardingCheck } = await supabase
       .from("chat_messages")
       .select("id")
@@ -73,7 +75,7 @@ serve(async (req) => {
 
     const isOnboardingComplete = onboardingCheck && onboardingCheck.length > 0;
 
-    if (isOnboardingComplete) {
+    if (CREDITS_ENABLED && isOnboardingComplete) {
       // Get or create user credits
       let { data: credits } = await supabase
         .from("user_credits")
@@ -135,8 +137,8 @@ serve(async (req) => {
       await supabase.from("credit_transactions").insert({
         user_id: user.id,
         amount: -1,
-        type: "chat",
-        description: "AI chat message",
+        type: "usage",
+        description: "Chat message",
       });
 
       // Check if user just used their 5th credit ever — award bonus
@@ -145,16 +147,15 @@ serve(async (req) => {
           .from("credit_transactions")
           .select("id", { count: "exact", head: true })
           .eq("user_id", user.id)
-          .eq("type", "chat");
+          .eq("type", "usage");
 
         if (count && count >= 5) {
-          // Re-fetch current state after deduction, then add 10 bonus
           const { data: current } = await supabase
             .from("user_credits")
             .select("paid_credits")
             .eq("user_id", user.id)
             .single();
-          
+
           if (current) {
             await supabase
               .from("user_credits")
