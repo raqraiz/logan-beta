@@ -1002,7 +1002,7 @@ const Chat = () => {
                 ref={inputRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                placeholder={isOnboarding ? "Type your answer..." : "Message Logan..."}
+                placeholder={isOnboarding ? "Type your answer..." : "Ask Logan..."}
                 className="flex-1 h-12"
                 disabled={isSending}
               />
