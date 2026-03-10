@@ -1027,7 +1027,7 @@ const Chat = () => {
             <p className="text-xs text-muted-foreground text-center mt-2">
               {isOnboarding 
                 ? "Answer Logan's questions to personalize your experience"
-                : "Logan learns from your updates to personalize your insights"
+                : "Logan is not a medical professional. This is not medical advice."
               }
             </p>
           </form>
