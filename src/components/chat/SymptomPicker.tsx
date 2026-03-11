@@ -89,7 +89,7 @@ export const SymptomPicker = ({ categories, onSubmit, isSubmitting }: SymptomPic
       <div className="flex justify-end pt-2">
         <Button
           onClick={handleSubmit}
-          disabled={selected.length === 0 || isSubmitting}
+          disabled={(selected.length === 0 && customSymptom.trim().length === 0) || isSubmitting}
           className="gap-2"
         >
           Continue
