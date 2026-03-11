@@ -34,7 +34,7 @@ export const SymptomPicker = ({ categories, onSubmit, isSubmitting }: SymptomPic
   };
 
   const handleSubmit = () => {
-    if (selected.length > 0) {
+    if (selected.length > 0 || customSymptom.trim().length > 0) {
       const notes = customSymptom.trim() || undefined;
       onSubmit([...selected], notes);
     }
