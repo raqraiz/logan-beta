@@ -201,11 +201,22 @@ serve(async (req) => {
         recentMessages || []
       );
 
-      const { insight, question, conversationStarters } = await generateAIInsight(lovableApiKey, prompt);
+      const { insight, question, conversationStarters, doThis, skipThis, anchorAlert } = await generateAIInsight(lovableApiKey, prompt);
+
+      // Build the full content with actionable structure
+      let fullContent = insight;
+      if (doThis || skipThis) {
+        fullContent += "\n\n";
+        if (doThis) fullContent += `**Do this today**: ${doThis}\n`;
+        if (skipThis) fullContent += `**Skip this today**: ${skipThis}`;
+      }
+      if (anchorAlert) {
+        fullContent += `\n\n${anchorAlert}`;
+      }
 
       // Update the placeholder with the real insight
       await supabase.from("chat_messages").update({
-        content: insight,
+        content: fullContent,
         metadata: {
           has_cycle_visual: true,
           visual_type: "cycle_circle",
@@ -215,7 +226,10 @@ serve(async (req) => {
           insight_type: "proactive",
           generated_at: new Date().toISOString(),
           engagement_question: question,
-          conversation_starters: conversationStarters
+          conversation_starters: conversationStarters,
+          do_this: doThis,
+          skip_this: skipThis,
+          anchor_alert: anchorAlert,
         }
       }).eq("id", placeholderId);
     }
@@ -279,44 +293,72 @@ function buildInsightPrompt(
 ): string {
   const anchorSymptom = participant.anchor_symptom;
   const symptoms = participant.typical_symptoms || [];
+  const firstName = userName.split(" ")[0];
 
-  return `You are Logan, a strategic, performance-focused cycle awareness coach. Write a proactive check-in for ${userName.split(" ")[0]}.
+  // Phase-specific tactical context for the AI
+  const phaseContext: Record<string, string> = {
+    Menstruation: `Energy is at its lowest. The body is shedding and resetting. Rest is productive right now, not lazy. Pain and fatigue are common. Focus and willpower are limited.`,
+    Follicular: `Estrogen is rising. Energy, confidence, and cognitive sharpness are building. This is the best window for starting new things, hard workouts, creative work, and social plans.`,
+    Ovulation: `Estrogen peaks, testosterone surges briefly. This is peak energy, communication skills, and confidence. But it's short — 2-3 days. Good for presentations, dates, tough conversations.`,
+    Luteal: `Progesterone dominates. Energy drops, especially after day 3-4 of luteal. Stress tolerance shrinks. Cravings, irritability, and the anchor symptom typically surface. The body wants routine, not novelty.`,
+  };
 
-Current cycle state:
-- Day ${cycleInfo.cycleDay}, Phase: ${cycleInfo.phase}
+  return `You are Logan, a tactical cycle-awareness coach. Write a daily check-in for ${firstName}.
+
+CYCLE STATE:
+- Day ${cycleInfo.cycleDay} of ${participant.cycle_length_days || 28}, Phase: ${cycleInfo.phase}
 - Days until next phase: ${cycleInfo.daysUntilNextPhase}
+- Phase biology: ${phaseContext[cycleInfo.phase] || ""}
 
-User profile:
-- Anchor symptom: ${anchorSymptom || "not specified"}
-- Common symptoms: ${symptoms.join(", ") || "not specified"}
+USER PROFILE:
+- Anchor symptom (the one that hits hardest): ${anchorSymptom || "not specified"}
+- Other symptoms: ${symptoms.join(", ") || "not specified"}
 
-Recent conversation context:
+RECENT CONTEXT:
 ${recentMessages.map(m => `${m.role}: ${m.content.slice(0, 100)}`).join("\n") || "No recent messages"}
 
-Rules — follow these exactly:
-1. The "intro" should be exactly 2 sentences:
-   - First sentence: where they are today (bold the phase name)
-   - Second sentence: one specific, tactical tip or prediction relevant to their anchor symptom or phase
-2. The "question" should be 1 sentence: a "psychic" question — predict a specific sensation or experience they're likely having right now based on their exact cycle position, and ask about it
-3. No emojis, no exclamation points, no em dashes
-4. No greetings like "Hi" or "Hey"
-5. No bullet points or lists — just flowing sentences
-6. Use **bold** sparingly for the phase name only
+YOUR TASK — generate a JSON object with these fields:
 
-Example intro: "Day 18, deep in **luteal**. Progesterone is climbing so your focus window is shrinking — front-load your hardest task before noon."
-Example question: "Are you noticing that afternoon brain fog creeping in earlier than usual?"
+1. "intro": Exactly 2 sentences.
+   - Sentence 1: Where they are today (bold the phase). Be specific about what's happening biologically.
+   - Sentence 2: ONE concrete, time-specific action they should take TODAY. Not generic advice. Tell them WHEN and WHAT.
+   
+2. "do_this": ONE specific action for today. Be precise — include timing (morning/afternoon/evening), duration, or a specific behavior. Examples: "Do your hardest thinking before 11am", "Eat protein within an hour of waking", "Move your workout to before 2pm".
 
-IMPORTANT: Respond in this exact JSON format:
+3. "skip_this": ONE specific thing to avoid or deprioritize today. Be direct. Examples: "Skip the evening HIIT class", "Don't schedule the hard conversation today", "Postpone grocery shopping if you can".
+
+4. "anchor_alert": If their anchor symptom (${anchorSymptom || "unknown"}) is likely to show up in this phase, write ONE sentence predicting when it might hit and what to do about it. If it's not relevant to this phase, write null.
+
+5. "question": A "psychic" question — predict something specific they're probably experiencing RIGHT NOW and ask about it. Be eerily accurate based on their cycle day.
+
+6. "starters": 3 short replies (3-6 words) the user might send back.
+
+RULES:
+- No emojis, no exclamation points
+- No greetings
+- Use **bold** only for the phase name
+- Be specific, not generic. "Drink water" is generic. "Have a salty snack before 3pm to prevent the afternoon crash" is specific.
+- Reference their actual symptoms when relevant
+
+RESPOND IN THIS EXACT JSON FORMAT:
 {
-  "intro": "Your 2-sentence intro here",
-  "question": "Your psychic question here",
-  "starters": ["Short reply 1", "Short reply 2", "Short reply 3"]
+  "intro": "...",
+  "do_this": "...",
+  "skip_this": "...",
+  "anchor_alert": "..." or null,
+  "question": "...",
+  "starters": ["...", "...", "..."]
+}`;
 }
 
-The "starters" should be 3 natural conversation replies the user might want to send back (3-6 words each). They should be relevant responses to the question you asked.`;
-}
-
-async function generateAIInsight(apiKey: string, prompt: string): Promise<{ insight: string; question: string; conversationStarters: string[] }> {
+async function generateAIInsight(apiKey: string, prompt: string): Promise<{
+  insight: string;
+  question: string;
+  conversationStarters: string[];
+  doThis: string;
+  skipThis: string;
+  anchorAlert: string | null;
+}> {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -326,10 +368,10 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{ insi
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [
-        { role: "system", content: "You are Logan, a cycle-aware performance coach. Be concise, tactical, and helpful. Always respond in valid JSON format." },
+        { role: "system", content: "You are Logan, a cycle-aware performance coach. Be concise, tactical, and specific. Always respond in valid JSON format." },
         { role: "user", content: prompt }
       ],
-      max_tokens: 300,
+      max_tokens: 500,
       temperature: 0.7,
     }),
   });
@@ -348,14 +390,20 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{ insi
     return {
       insight: parsed.intro || "How are you feeling today?",
       question: parsed.question || "",
-      conversationStarters: parsed.starters || ["I'm doing well", "Not great today", "Tell me more"]
+      conversationStarters: parsed.starters || ["I'm doing well", "Not great today", "Tell me more"],
+      doThis: parsed.do_this || "",
+      skipThis: parsed.skip_this || "",
+      anchorAlert: parsed.anchor_alert || null,
     };
   } catch (e) {
     console.error("Failed to parse AI response as JSON:", content);
     return {
       insight: content || "How are you feeling today?",
       question: "",
-      conversationStarters: ["I'm doing well", "Not great today", "Tell me more"]
+      conversationStarters: ["I'm doing well", "Not great today", "Tell me more"],
+      doThis: "",
+      skipThis: "",
+      anchorAlert: null,
     };
   }
 }
