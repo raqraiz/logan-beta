@@ -80,11 +80,15 @@ interface CycleData {
   lastPeriodStart?: string;
 }
 
+const MESSAGES_PER_PAGE = 100;
+
 const Chat = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [hasOlderMessages, setHasOlderMessages] = useState(false);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   
   const [isOnboarding, setIsOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
@@ -112,11 +116,21 @@ const Chat = () => {
     if (!user) return;
 
     const fetchMessages = async () => {
+      // First get total count
+      const { count } = await supabase
+        .from("chat_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+
+      const totalCount = count || 0;
+      const offset = Math.max(0, totalCount - MESSAGES_PER_PAGE);
+
       const { data, error } = await supabase
         .from("chat_messages")
         .select("*")
         .eq("user_id", user.id)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: true })
+        .range(offset, offset + MESSAGES_PER_PAGE - 1);
 
       if (error) {
         console.error("Error fetching messages:", error);
@@ -131,6 +145,7 @@ const Chat = () => {
         metadata: m.metadata as ChatMessage["metadata"],
       }));
       setMessages(typedMessages);
+      setHasOlderMessages(offset > 0);
       setIsLoading(false);
 
       // Check if onboarding is in progress and get current step
@@ -314,6 +329,57 @@ const Chat = () => {
       window.removeEventListener("scroll", updateScrollState);
     };
   }, [messages.length, SCROLL_BUTTON_SHOW_PX, SCROLL_NEAR_BOTTOM_PX]);
+
+  const loadOlderMessages = async () => {
+    if (!user || isLoadingOlder || !hasOlderMessages || messages.length === 0) return;
+    
+    setIsLoadingOlder(true);
+    const oldestMessage = messages[0];
+    
+    const { data, error } = await supabase
+      .from("chat_messages")
+      .select("*")
+      .eq("user_id", user.id)
+      .lt("created_at", oldestMessage.created_at)
+      .order("created_at", { ascending: false })
+      .limit(MESSAGES_PER_PAGE);
+
+    if (error) {
+      console.error("Error loading older messages:", error);
+      setIsLoadingOlder(false);
+      return;
+    }
+
+    const olderMessages = (data || []).reverse().map((m) => ({
+      ...m,
+      role: m.role as "user" | "assistant" | "system",
+      metadata: m.metadata as ChatMessage["metadata"],
+    }));
+
+    if (olderMessages.length < MESSAGES_PER_PAGE) {
+      setHasOlderMessages(false);
+    }
+
+    if (olderMessages.length > 0) {
+      // Preserve scroll position by measuring before and after
+      const viewport = scrollContainerRef.current?.querySelector(
+        '[data-radix-scroll-area-viewport]'
+      ) as HTMLDivElement | null;
+      const prevScrollHeight = viewport?.scrollHeight || 0;
+
+      setMessages(prev => [...olderMessages, ...prev]);
+
+      // After React renders, restore scroll position
+      requestAnimationFrame(() => {
+        if (viewport) {
+          const newScrollHeight = viewport.scrollHeight;
+          viewport.scrollTop = newScrollHeight - prevScrollHeight;
+        }
+      });
+    }
+
+    setIsLoadingOlder(false);
+  };
 
   const fetchCredits = async () => {
     try {
@@ -762,6 +828,26 @@ const Chat = () => {
         }}
       >
         <div className="max-w-3xl mx-auto py-6 space-y-4">
+          {/* Load older messages button */}
+          {hasOlderMessages && (
+            <div className="flex justify-center py-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={loadOlderMessages}
+                disabled={isLoadingOlder}
+                className="text-xs text-muted-foreground hover:text-foreground gap-2"
+              >
+                {isLoadingOlder ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <ChevronLeft className="w-3 h-3 rotate-90" />
+                )}
+                {isLoadingOlder ? "Loading..." : "Load older messages"}
+              </Button>
+            </div>
+          )}
+
           {messages.length === 0 && !isLoading ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
