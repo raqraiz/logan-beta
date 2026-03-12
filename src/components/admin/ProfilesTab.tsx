@@ -185,9 +185,11 @@ export function ProfilesTab() {
         return {
           ...profile,
           participant,
+          const stats = calculateSessionStats(userMessages);
           messageCount: messageCountByUser.get(profile.id) || 0,
           lastUserMessage: lastUserMessageByUser.get(profile.id) || null,
-          avgMessagesPerSession: calculateAvgMessagesPerSession(userMessages),
+          avgMessagesPerSession: stats.avgPerSession,
+          avgSessionsPerWeek: stats.avgPerWeek,
         };
       });
 
