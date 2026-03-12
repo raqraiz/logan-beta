@@ -324,9 +324,10 @@ ${recentMessages.map(m => `${m.role}: ${m.content.slice(0, 80)}`).join("\n") || 
 
 Generate a JSON object:
 
-1. "intro": 2 short sentences. Max 30 words total.
+1. "intro": 2-3 short sentences. Max 40 words total.
    - Sentence 1: Ground them in their day and phase (bold the phase name).
    - Sentence 2: Name something specific they're probably noticing or feeling today, tied to their anchor symptom ("${anchorSymptom}"). Don't tell them what to do about it. Just name it like you already know.
+   - Sentence 3 (optional, only in Luteal or Menstruation): A single, specific food mention that connects to their anchor symptom. Frame it as something their body might be drawn to, not as a prescription. Example: "Your body might be reaching for something warm and rich in omega-3s today." Never list foods or give a meal plan.
 
 2. "question": One short question (under 12 words). Predict a hyper-specific sensation, thought, or moment they're having right now. The kind of question that makes them stop and think "wait, yes." Anchor it to "${anchorSymptom}" when this phase makes it relevant.
 
