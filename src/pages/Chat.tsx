@@ -330,6 +330,57 @@ const Chat = () => {
     };
   }, [messages.length, SCROLL_BUTTON_SHOW_PX, SCROLL_NEAR_BOTTOM_PX]);
 
+  const loadOlderMessages = async () => {
+    if (!user || isLoadingOlder || !hasOlderMessages || messages.length === 0) return;
+    
+    setIsLoadingOlder(true);
+    const oldestMessage = messages[0];
+    
+    const { data, error } = await supabase
+      .from("chat_messages")
+      .select("*")
+      .eq("user_id", user.id)
+      .lt("created_at", oldestMessage.created_at)
+      .order("created_at", { ascending: false })
+      .limit(MESSAGES_PER_PAGE);
+
+    if (error) {
+      console.error("Error loading older messages:", error);
+      setIsLoadingOlder(false);
+      return;
+    }
+
+    const olderMessages = (data || []).reverse().map((m) => ({
+      ...m,
+      role: m.role as "user" | "assistant" | "system",
+      metadata: m.metadata as ChatMessage["metadata"],
+    }));
+
+    if (olderMessages.length < MESSAGES_PER_PAGE) {
+      setHasOlderMessages(false);
+    }
+
+    if (olderMessages.length > 0) {
+      // Preserve scroll position by measuring before and after
+      const viewport = scrollContainerRef.current?.querySelector(
+        '[data-radix-scroll-area-viewport]'
+      ) as HTMLDivElement | null;
+      const prevScrollHeight = viewport?.scrollHeight || 0;
+
+      setMessages(prev => [...olderMessages, ...prev]);
+
+      // After React renders, restore scroll position
+      requestAnimationFrame(() => {
+        if (viewport) {
+          const newScrollHeight = viewport.scrollHeight;
+          viewport.scrollTop = newScrollHeight - prevScrollHeight;
+        }
+      });
+    }
+
+    setIsLoadingOlder(false);
+  };
+
   const fetchCredits = async () => {
     try {
       const { data, error } = await supabase.functions.invoke("get-credits");
