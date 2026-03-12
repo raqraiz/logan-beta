@@ -520,6 +520,12 @@ export function ProfilesTab() {
                   <span>{profile.avgMessagesPerSession} avg messages per session</span>
                 </div>
               )}
+              {profile.avgSessionsPerWeek != null && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="w-4 h-4" />
+                  <span>{profile.avgSessionsPerWeek} avg sessions per week</span>
+                </div>
+              )}
             </CardContent>
           </Card>
 
