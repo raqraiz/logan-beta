@@ -150,8 +150,12 @@ export function ProfilesTab() {
       });
 
       const messageCountByUser = new Map<string, number>();
+      const messagesByUser = new Map<string, { created_at: string }[]>();
       messagesData?.forEach(msg => {
         messageCountByUser.set(msg.user_id, (messageCountByUser.get(msg.user_id) || 0) + 1);
+        const list = messagesByUser.get(msg.user_id) || [];
+        list.push({ created_at: msg.created_at });
+        messagesByUser.set(msg.user_id, list);
       });
 
       // Get last user message timestamps for sorting by engagement
