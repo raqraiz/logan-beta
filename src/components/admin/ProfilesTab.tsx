@@ -136,10 +136,10 @@ export function ProfilesTab() {
 
       if (participantsError) throw participantsError;
 
-      // Fetch message counts
+      // Fetch message data (user_id and created_at for session calculation)
       const { data: messagesData, error: messagesError } = await supabase
         .from("chat_messages")
-        .select("user_id");
+        .select("user_id, created_at");
 
       if (messagesError) throw messagesError;
 
