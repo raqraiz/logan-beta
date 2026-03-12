@@ -512,6 +512,7 @@ export function ProfilesTab() {
                   <span>{profile.avgMessagesPerSession} avg messages per session</span>
                 </div>
               )}
+            </CardContent>
           </Card>
 
 
