@@ -86,6 +86,19 @@ interface ProfileWithData extends Profile {
   participant?: Participant;
   messageCount?: number;
   lastUserMessage?: string | null;
+  avgMessagesPerSession?: number | null;
+}
+
+function calculateAvgMessagesPerSession(messages: { created_at: string }[]): number | null {
+  if (messages.length === 0) return null;
+  const sorted = [...messages].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  const SESSION_GAP_MS = 30 * 60 * 1000; // 30 minutes
+  let sessionCount = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    const gap = new Date(sorted[i].created_at).getTime() - new Date(sorted[i - 1].created_at).getTime();
+    if (gap > SESSION_GAP_MS) sessionCount++;
+  }
+  return Math.round((sorted.length / sessionCount) * 10) / 10;
 }
 
 export function ProfilesTab() {
