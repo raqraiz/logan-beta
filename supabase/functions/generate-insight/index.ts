@@ -279,18 +279,35 @@ function buildInsightPrompt(
   const firstName = userName.split(" ")[0];
   const cycleLengthDays = participant.cycle_length_days || 28;
 
-  // Anchor-specific phase context
+  // Anchor-specific phase context with food connection
   let anchorContext = "";
   if (anchorSymptom) {
-    if (cycleInfo.phase === "Luteal") {
-      anchorContext = `Their anchor symptom "${anchorSymptom}" is likely active or building right now.`;
-    } else if (cycleInfo.phase === "Follicular") {
-      anchorContext = `Their anchor symptom "${anchorSymptom}" is likely quiet. This is the window before it returns.`;
-    } else if (cycleInfo.phase === "Ovulation") {
-      anchorContext = `Their anchor symptom "${anchorSymptom}" may start surfacing soon as they approach luteal.`;
-    } else {
-      anchorContext = `Their anchor symptom "${anchorSymptom}" may be present or easing as the cycle resets.`;
-    }
+    const foodMap: Record<string, Record<string, string>> = {
+      "Luteal": {
+        "muffled hearing": "Inner ear inflammation tends to peak now. Omega-3s (salmon, sardines) and turmeric can quiet it.",
+        "Anxiety spikes": "GABA drops as progesterone shifts. Magnesium-rich foods (dark chocolate, pumpkin seeds) support the nervous system.",
+        "Migraines": "Estrogen withdrawal can trigger vascular headaches. Ginger, magnesium, and anti-inflammatory fats help.",
+        "Rage spikes": "Serotonin dips in late luteal. Complex carbs (sweet potato, oats) support serotonin production.",
+        "Brain fog": "Progesterone is sedating. Protein-rich meals and healthy fats keep blood sugar steady.",
+        "Energy crashes": "Blood sugar instability peaks now. Protein + fat at every meal prevents the crashes.",
+        "Deep fatigue": "Iron stores may be depleting pre-period. Red meat, lentils, or leafy greens with vitamin C.",
+        "Chin or jaw acne breakouts": "Androgens spike in luteal. Anti-inflammatory foods and cutting dairy can help.",
+        "_default": `"${anchorSymptom}" is likely active or building. Anti-inflammatory foods (fatty fish, leafy greens, berries) can take the edge off.`,
+      },
+      "Follicular": {
+        "_default": `"${anchorSymptom}" is likely quiet right now. Good window to eat lighter — fresh vegetables, fermented foods, lean protein.`,
+      },
+      "Ovulation": {
+        "_default": `"${anchorSymptom}" may start surfacing soon. Loading up on anti-inflammatory foods now can soften the landing into luteal.`,
+      },
+      "Menstruation": {
+        "_default": `"${anchorSymptom}" may be present or easing. Warm, iron-rich, anti-inflammatory meals support recovery.`,
+      },
+    };
+
+    const phaseMap = foodMap[cycleInfo.phase] || foodMap["Follicular"];
+    const foodNote = phaseMap[anchorSymptom] || phaseMap["_default"] || "";
+    anchorContext = `Their anchor symptom: ${foodNote}`;
   }
 
   return `You are Logan. You know ${firstName}'s cycle so well you can name what she's feeling before she does. You're not giving advice or instructions. You're the person who just gets it.
