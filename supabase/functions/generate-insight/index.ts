@@ -79,8 +79,7 @@ serve(async (req) => {
       );
     }
 
-    // Race-condition guard: insert a placeholder row first, then generate.
-    // If another request already inserted a placeholder in the last 30 seconds, skip.
+    // Race-condition guard
     const thirtySecondsAgo = new Date(Date.now() - 30_000).toISOString();
     const { data: recentPlaceholders } = await supabase
       .from("chat_messages")
@@ -166,9 +165,8 @@ serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(5);
 
-    // Check if user is in late luteal (last 3 days of cycle) — ask about period
+    // Check if user is in late luteal — ask about period
     const isLateLuteal = cycleInfo.phase === "Luteal" && cycleInfo.daysUntilNextPhase <= 3;
-    // Also check if user is "overdue" — cycle day > cycle length
     const isOverdue = cycleInfo.cycleDay > (participant.cycle_length_days || 28);
 
     if (isLateLuteal || isOverdue) {
@@ -193,7 +191,7 @@ serve(async (req) => {
         }
       }).eq("id", placeholderId);
     } else {
-      // Generate regular AI insight
+      // Generate AI insight
       const prompt = buildInsightPrompt(
         profile?.full_name || "there",
         cycleInfo,
@@ -201,22 +199,10 @@ serve(async (req) => {
         recentMessages || []
       );
 
-      const { insight, question, conversationStarters, doThis, skipThis, anchorAlert } = await generateAIInsight(lovableApiKey, prompt);
+      const { insight, question, conversationStarters } = await generateAIInsight(lovableApiKey, prompt);
 
-      // Build the full content with actionable structure
-      let fullContent = insight;
-      if (doThis || skipThis) {
-        fullContent += "\n\n";
-        if (doThis) fullContent += `**Do this today**: ${doThis}\n`;
-        if (skipThis) fullContent += `**Skip this today**: ${skipThis}`;
-      }
-      if (anchorAlert) {
-        fullContent += `\n\n${anchorAlert}`;
-      }
-
-      // Update the placeholder with the real insight
       await supabase.from("chat_messages").update({
-        content: fullContent,
+        content: insight,
         metadata: {
           has_cycle_visual: true,
           visual_type: "cycle_circle",
@@ -227,9 +213,6 @@ serve(async (req) => {
           generated_at: new Date().toISOString(),
           engagement_question: question,
           conversation_starters: conversationStarters,
-          do_this: doThis,
-          skip_this: skipThis,
-          anchor_alert: anchorAlert,
         }
       }).eq("id", placeholderId);
     }
@@ -294,58 +277,54 @@ function buildInsightPrompt(
   const anchorSymptom = participant.anchor_symptom;
   const symptoms = participant.typical_symptoms || [];
   const firstName = userName.split(" ")[0];
+  const cycleLengthDays = participant.cycle_length_days || 28;
 
-  // Phase-specific tactical context for the AI
-  const phaseContext: Record<string, string> = {
-    Menstruation: `Energy is at its lowest. The body is shedding and resetting. Rest is productive right now, not lazy. Pain and fatigue are common. Focus and willpower are limited.`,
-    Follicular: `Estrogen is rising. Energy, confidence, and cognitive sharpness are building. This is the best window for starting new things, hard workouts, creative work, and social plans.`,
-    Ovulation: `Estrogen peaks, testosterone surges briefly. This is peak energy, communication skills, and confidence. But it's short — 2-3 days. Good for presentations, dates, tough conversations.`,
-    Luteal: `Progesterone dominates. Energy drops, especially after day 3-4 of luteal. Stress tolerance shrinks. Cravings, irritability, and the anchor symptom typically surface. The body wants routine, not novelty.`,
-  };
+  // Anchor-specific phase context
+  let anchorContext = "";
+  if (anchorSymptom) {
+    if (cycleInfo.phase === "Luteal") {
+      anchorContext = `Their anchor symptom "${anchorSymptom}" is likely active or building right now.`;
+    } else if (cycleInfo.phase === "Follicular") {
+      anchorContext = `Their anchor symptom "${anchorSymptom}" is likely quiet. This is the window before it returns.`;
+    } else if (cycleInfo.phase === "Ovulation") {
+      anchorContext = `Their anchor symptom "${anchorSymptom}" may start surfacing soon as they approach luteal.`;
+    } else {
+      anchorContext = `Their anchor symptom "${anchorSymptom}" may be present or easing as the cycle resets.`;
+    }
+  }
 
-  return `You are Logan, a tactical cycle-awareness coach. Write a daily check-in for ${firstName}.
+  return `You are Logan. You know ${firstName}'s cycle so well you can name what she's feeling before she does. You're not giving advice or instructions. You're the person who just gets it.
 
-CYCLE STATE:
-- Day ${cycleInfo.cycleDay} of ${participant.cycle_length_days || 28}, Phase: ${cycleInfo.phase}
-- Days until next phase: ${cycleInfo.daysUntilNextPhase}
-- Phase biology: ${phaseContext[cycleInfo.phase] || ""}
+CONTEXT:
+- Day ${cycleInfo.cycleDay} of ${cycleLengthDays}, **${cycleInfo.phase}**
+- ${cycleInfo.daysUntilNextPhase} days until next phase
+- Anchor symptom: ${anchorSymptom || "not set"}
+- Other symptoms: ${symptoms.join(", ") || "none"}
+${anchorContext ? `- ${anchorContext}` : ""}
 
-USER PROFILE:
-- Anchor symptom (the one that hits hardest): ${anchorSymptom || "not specified"}
-- Other symptoms: ${symptoms.join(", ") || "not specified"}
+RECENT CONVERSATION:
+${recentMessages.map(m => `${m.role}: ${m.content.slice(0, 80)}`).join("\n") || "None"}
 
-RECENT CONTEXT:
-${recentMessages.map(m => `${m.role}: ${m.content.slice(0, 100)}`).join("\n") || "No recent messages"}
+Generate a JSON object:
 
-YOUR TASK — generate a JSON object with these fields:
+1. "intro": 2 short sentences. Max 30 words total.
+   - Sentence 1: Ground them in their day and phase (bold the phase name).
+   - Sentence 2: Name something specific they're probably noticing or feeling today, tied to their anchor symptom ("${anchorSymptom}"). Don't tell them what to do about it. Just name it like you already know.
 
-1. "intro": Exactly 2 sentences.
-   - Sentence 1: Where they are today (bold the phase). Be specific about what's happening biologically.
-   - Sentence 2: ONE concrete, time-specific action they should take TODAY. Not generic advice. Tell them WHEN and WHAT.
-   
-2. "do_this": ONE specific action for today. Be precise — include timing (morning/afternoon/evening), duration, or a specific behavior. Examples: "Do your hardest thinking before 11am", "Eat protein within an hour of waking", "Move your workout to before 2pm".
+2. "question": One short question (under 12 words). Predict a hyper-specific sensation, thought, or moment they're having right now. The kind of question that makes them stop and think "wait, yes." Anchor it to "${anchorSymptom}" when this phase makes it relevant.
 
-3. "skip_this": ONE specific thing to avoid or deprioritize today. Be direct. Examples: "Skip the evening HIIT class", "Don't schedule the hard conversation today", "Postpone grocery shopping if you can".
+3. "starters": 3 replies (2-4 words each). One confirms ("Yeah exactly"), one pushes back ("Not today actually"), one opens up ("Tell me more").
 
-4. "anchor_alert": If their anchor symptom (${anchorSymptom || "unknown"}) is likely to show up in this phase, write ONE sentence predicting when it might hit and what to do about it. If it's not relevant to this phase, write null.
+VOICE:
+- You're a friend who just knows, not a coach giving a plan
+- Never say "you should", "try to", "consider", "make sure"
+- No emojis, no exclamation points, no greetings
+- Bold only the phase name
+- Less is more. If it feels like a paragraph, it's too long.
 
-5. "question": A "psychic" question — predict something specific they're probably experiencing RIGHT NOW and ask about it. Be eerily accurate based on their cycle day.
-
-6. "starters": 3 short replies (3-6 words) the user might send back.
-
-RULES:
-- No emojis, no exclamation points
-- No greetings
-- Use **bold** only for the phase name
-- Be specific, not generic. "Drink water" is generic. "Have a salty snack before 3pm to prevent the afternoon crash" is specific.
-- Reference their actual symptoms when relevant
-
-RESPOND IN THIS EXACT JSON FORMAT:
+RESPOND ONLY WITH VALID JSON:
 {
   "intro": "...",
-  "do_this": "...",
-  "skip_this": "...",
-  "anchor_alert": "..." or null,
   "question": "...",
   "starters": ["...", "...", "..."]
 }`;
@@ -355,9 +334,6 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{
   insight: string;
   question: string;
   conversationStarters: string[];
-  doThis: string;
-  skipThis: string;
-  anchorAlert: string | null;
 }> {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -368,11 +344,11 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [
-        { role: "system", content: "You are Logan, a cycle-aware performance coach. Be concise, tactical, and specific. Always respond in valid JSON format." },
+        { role: "system", content: "You are Logan. You predict what women feel before they notice it themselves, based on their cycle. You're not clinical. You're the friend who just knows. Always respond in valid JSON." },
         { role: "user", content: prompt }
       ],
-      max_tokens: 500,
-      temperature: 0.7,
+      max_tokens: 250,
+      temperature: 0.8,
     }),
   });
 
@@ -390,20 +366,14 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{
     return {
       insight: parsed.intro || "How are you feeling today?",
       question: parsed.question || "",
-      conversationStarters: parsed.starters || ["I'm doing well", "Not great today", "Tell me more"],
-      doThis: parsed.do_this || "",
-      skipThis: parsed.skip_this || "",
-      anchorAlert: parsed.anchor_alert || null,
+      conversationStarters: parsed.starters || ["Yeah exactly", "Not today", "Tell me more"],
     };
   } catch (e) {
     console.error("Failed to parse AI response as JSON:", content);
     return {
       insight: content || "How are you feeling today?",
       question: "",
-      conversationStarters: ["I'm doing well", "Not great today", "Tell me more"],
-      doThis: "",
-      skipThis: "",
-      anchorAlert: null,
+      conversationStarters: ["Yeah exactly", "Not today", "Tell me more"],
     };
   }
 }
