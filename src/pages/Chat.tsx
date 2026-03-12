@@ -828,6 +828,26 @@ const Chat = () => {
         }}
       >
         <div className="max-w-3xl mx-auto py-6 space-y-4">
+          {/* Load older messages button */}
+          {hasOlderMessages && (
+            <div className="flex justify-center py-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={loadOlderMessages}
+                disabled={isLoadingOlder}
+                className="text-xs text-muted-foreground hover:text-foreground gap-2"
+              >
+                {isLoadingOlder ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <ChevronLeft className="w-3 h-3 rotate-90" />
+                )}
+                {isLoadingOlder ? "Loading..." : "Load older messages"}
+              </Button>
+            </div>
+          )}
+
           {messages.length === 0 && !isLoading ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
