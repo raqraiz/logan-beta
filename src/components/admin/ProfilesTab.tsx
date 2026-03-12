@@ -855,12 +855,18 @@ export function ProfilesTab() {
                           </>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
                         <span className="flex items-center gap-1">
                           <Mail className="w-3 h-3" />
                           <span className="truncate max-w-[150px]">{profile.email}</span>
                         </span>
                         <span>{profile.messageCount} messages</span>
+                        {profile.lastUserMessage && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {format(new Date(profile.lastUserMessage), "MMM d, yyyy")}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <ChevronRight className="w-5 h-5 text-muted-foreground" />
