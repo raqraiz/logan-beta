@@ -201,11 +201,22 @@ serve(async (req) => {
         recentMessages || []
       );
 
-      const { insight, question, conversationStarters } = await generateAIInsight(lovableApiKey, prompt);
+      const { insight, question, conversationStarters, doThis, skipThis, anchorAlert } = await generateAIInsight(lovableApiKey, prompt);
+
+      // Build the full content with actionable structure
+      let fullContent = insight;
+      if (doThis || skipThis) {
+        fullContent += "\n\n";
+        if (doThis) fullContent += `**Do this today**: ${doThis}\n`;
+        if (skipThis) fullContent += `**Skip this today**: ${skipThis}`;
+      }
+      if (anchorAlert) {
+        fullContent += `\n\n${anchorAlert}`;
+      }
 
       // Update the placeholder with the real insight
       await supabase.from("chat_messages").update({
-        content: insight,
+        content: fullContent,
         metadata: {
           has_cycle_visual: true,
           visual_type: "cycle_circle",
@@ -215,7 +226,10 @@ serve(async (req) => {
           insight_type: "proactive",
           generated_at: new Date().toISOString(),
           engagement_question: question,
-          conversation_starters: conversationStarters
+          conversation_starters: conversationStarters,
+          do_this: doThis,
+          skip_this: skipThis,
+          anchor_alert: anchorAlert,
         }
       }).eq("id", placeholderId);
     }
