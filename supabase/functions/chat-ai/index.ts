@@ -359,12 +359,29 @@ serve(async (req) => {
 
     const systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext);
 
-    const conversationHistory = (recentMessages || [])
+    // Smart truncation: keep first 10 (onboarding/profile context) + last 50 (recent conversation)
+    const allMessages = (recentMessages || [])
       .filter(m => m.role === "user" || m.role === "assistant")
       .map(m => ({
         role: m.role as "user" | "assistant",
         content: m.content
       }));
+
+    let conversationHistory: { role: "user" | "assistant"; content: string }[];
+    const FIRST_N = 10;
+    const LAST_N = 50;
+
+    if (allMessages.length <= FIRST_N + LAST_N) {
+      conversationHistory = allMessages;
+    } else {
+      const first = allMessages.slice(0, FIRST_N);
+      const last = allMessages.slice(-LAST_N);
+      conversationHistory = [
+        ...first,
+        { role: "assistant" as const, content: "[Earlier conversation omitted for brevity]" },
+        ...last,
+      ];
+    }
 
     conversationHistory.push({ role: "user", content: userMessage });
 
