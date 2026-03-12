@@ -86,6 +86,19 @@ interface ProfileWithData extends Profile {
   participant?: Participant;
   messageCount?: number;
   lastUserMessage?: string | null;
+  avgMessagesPerSession?: number | null;
+}
+
+function calculateAvgMessagesPerSession(messages: { created_at: string }[]): number | null {
+  if (messages.length === 0) return null;
+  const sorted = [...messages].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  const SESSION_GAP_MS = 30 * 60 * 1000; // 30 minutes
+  let sessionCount = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    const gap = new Date(sorted[i].created_at).getTime() - new Date(sorted[i - 1].created_at).getTime();
+    if (gap > SESSION_GAP_MS) sessionCount++;
+  }
+  return Math.round((sorted.length / sessionCount) * 10) / 10;
 }
 
 export function ProfilesTab() {
@@ -123,10 +136,10 @@ export function ProfilesTab() {
 
       if (participantsError) throw participantsError;
 
-      // Fetch message counts
+      // Fetch message data (user_id and created_at for session calculation)
       const { data: messagesData, error: messagesError } = await supabase
         .from("chat_messages")
-        .select("user_id");
+        .select("user_id, created_at");
 
       if (messagesError) throw messagesError;
 
@@ -137,8 +150,12 @@ export function ProfilesTab() {
       });
 
       const messageCountByUser = new Map<string, number>();
+      const messagesByUser = new Map<string, { created_at: string }[]>();
       messagesData?.forEach(msg => {
         messageCountByUser.set(msg.user_id, (messageCountByUser.get(msg.user_id) || 0) + 1);
+        const list = messagesByUser.get(msg.user_id) || [];
+        list.push({ created_at: msg.created_at });
+        messagesByUser.set(msg.user_id, list);
       });
 
       // Get last user message timestamps for sorting by engagement
@@ -158,11 +175,13 @@ export function ProfilesTab() {
       // Combine data
       const enrichedProfiles: ProfileWithData[] = (profilesData || []).map(profile => {
         const participant = participantsByEmail.get(profile.email.toLowerCase());
+        const userMessages = messagesByUser.get(profile.id) || [];
         return {
           ...profile,
           participant,
           messageCount: messageCountByUser.get(profile.id) || 0,
           lastUserMessage: lastUserMessageByUser.get(profile.id) || null,
+          avgMessagesPerSession: calculateAvgMessagesPerSession(userMessages),
         };
       });
 
@@ -487,6 +506,12 @@ export function ProfilesTab() {
                 <Activity className="w-4 h-4" />
                 <span>{profile.messageCount} chat messages</span>
               </div>
+              {profile.avgMessagesPerSession != null && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MessageSquare className="w-4 h-4" />
+                  <span>{profile.avgMessagesPerSession} avg messages per session</span>
+                </div>
+              )}
             </CardContent>
           </Card>
 
