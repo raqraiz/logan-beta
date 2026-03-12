@@ -87,18 +87,24 @@ interface ProfileWithData extends Profile {
   messageCount?: number;
   lastUserMessage?: string | null;
   avgMessagesPerSession?: number | null;
+  avgSessionsPerWeek?: number | null;
 }
 
-function calculateAvgMessagesPerSession(messages: { created_at: string }[]): number | null {
-  if (messages.length === 0) return null;
+function calculateSessionStats(messages: { created_at: string }[]): { avgPerSession: number | null; avgPerWeek: number | null } {
+  if (messages.length === 0) return { avgPerSession: null, avgPerWeek: null };
   const sorted = [...messages].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-  const SESSION_GAP_MS = 30 * 60 * 1000; // 30 minutes
+  const SESSION_GAP_MS = 30 * 60 * 1000;
   let sessionCount = 1;
   for (let i = 1; i < sorted.length; i++) {
     const gap = new Date(sorted[i].created_at).getTime() - new Date(sorted[i - 1].created_at).getTime();
     if (gap > SESSION_GAP_MS) sessionCount++;
   }
-  return Math.round((sorted.length / sessionCount) * 10) / 10;
+  const avgPerSession = Math.round((sorted.length / sessionCount) * 10) / 10;
+  const firstMsg = new Date(sorted[0].created_at).getTime();
+  const lastMsg = new Date(sorted[sorted.length - 1].created_at).getTime();
+  const weeks = Math.max((lastMsg - firstMsg) / (7 * 24 * 60 * 60 * 1000), 1);
+  const avgPerWeek = Math.round((sessionCount / weeks) * 10) / 10;
+  return { avgPerSession, avgPerWeek };
 }
 
 export function ProfilesTab() {
