@@ -360,7 +360,6 @@ serve(async (req) => {
     const systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext);
 
     const conversationHistory = (recentMessages || [])
-      .reverse()
       .filter(m => m.role === "user" || m.role === "assistant")
       .map(m => ({
         role: m.role as "user" | "assistant",
