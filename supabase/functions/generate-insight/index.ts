@@ -337,7 +337,14 @@ RESPOND IN THIS EXACT JSON FORMAT:
 }`;
 }
 
-async function generateAIInsight(apiKey: string, prompt: string): Promise<{ insight: string; question: string; conversationStarters: string[] }> {
+async function generateAIInsight(apiKey: string, prompt: string): Promise<{
+  insight: string;
+  question: string;
+  conversationStarters: string[];
+  doThis: string;
+  skipThis: string;
+  anchorAlert: string | null;
+}> {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -347,10 +354,10 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{ insi
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [
-        { role: "system", content: "You are Logan, a cycle-aware performance coach. Be concise, tactical, and helpful. Always respond in valid JSON format." },
+        { role: "system", content: "You are Logan, a cycle-aware performance coach. Be concise, tactical, and specific. Always respond in valid JSON format." },
         { role: "user", content: prompt }
       ],
-      max_tokens: 300,
+      max_tokens: 500,
       temperature: 0.7,
     }),
   });
@@ -369,14 +376,20 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{ insi
     return {
       insight: parsed.intro || "How are you feeling today?",
       question: parsed.question || "",
-      conversationStarters: parsed.starters || ["I'm doing well", "Not great today", "Tell me more"]
+      conversationStarters: parsed.starters || ["I'm doing well", "Not great today", "Tell me more"],
+      doThis: parsed.do_this || "",
+      skipThis: parsed.skip_this || "",
+      anchorAlert: parsed.anchor_alert || null,
     };
   } catch (e) {
     console.error("Failed to parse AI response as JSON:", content);
     return {
       insight: content || "How are you feeling today?",
       question: "",
-      conversationStarters: ["I'm doing well", "Not great today", "Tell me more"]
+      conversationStarters: ["I'm doing well", "Not great today", "Tell me more"],
+      doThis: "",
+      skipThis: "",
+      anchorAlert: null,
     };
   }
 }
