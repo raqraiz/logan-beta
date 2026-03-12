@@ -175,11 +175,13 @@ export function ProfilesTab() {
       // Combine data
       const enrichedProfiles: ProfileWithData[] = (profilesData || []).map(profile => {
         const participant = participantsByEmail.get(profile.email.toLowerCase());
+        const userMessages = messagesByUser.get(profile.id) || [];
         return {
           ...profile,
           participant,
           messageCount: messageCountByUser.get(profile.id) || 0,
           lastUserMessage: lastUserMessageByUser.get(profile.id) || null,
+          avgMessagesPerSession: calculateAvgMessagesPerSession(userMessages),
         };
       });
 
