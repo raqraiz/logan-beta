@@ -506,7 +506,12 @@ export function ProfilesTab() {
                 <Activity className="w-4 h-4" />
                 <span>{profile.messageCount} chat messages</span>
               </div>
-            </CardContent>
+              {profile.avgMessagesPerSession != null && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MessageSquare className="w-4 h-4" />
+                  <span>{profile.avgMessagesPerSession} avg messages per session</span>
+                </div>
+              )}
           </Card>
 
 
