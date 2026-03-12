@@ -182,10 +182,10 @@ export function ProfilesTab() {
       const enrichedProfiles: ProfileWithData[] = (profilesData || []).map(profile => {
         const participant = participantsByEmail.get(profile.email.toLowerCase());
         const userMessages = messagesByUser.get(profile.id) || [];
+        const stats = calculateSessionStats(userMessages);
         return {
           ...profile,
           participant,
-          const stats = calculateSessionStats(userMessages);
           messageCount: messageCountByUser.get(profile.id) || 0,
           lastUserMessage: lastUserMessageByUser.get(profile.id) || null,
           avgMessagesPerSession: stats.avgPerSession,
