@@ -116,11 +116,21 @@ const Chat = () => {
     if (!user) return;
 
     const fetchMessages = async () => {
+      // First get total count
+      const { count } = await supabase
+        .from("chat_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+
+      const totalCount = count || 0;
+      const offset = Math.max(0, totalCount - MESSAGES_PER_PAGE);
+
       const { data, error } = await supabase
         .from("chat_messages")
         .select("*")
         .eq("user_id", user.id)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: true })
+        .range(offset, offset + MESSAGES_PER_PAGE - 1);
 
       if (error) {
         console.error("Error fetching messages:", error);
@@ -135,6 +145,7 @@ const Chat = () => {
         metadata: m.metadata as ChatMessage["metadata"],
       }));
       setMessages(typedMessages);
+      setHasOlderMessages(offset > 0);
       setIsLoading(false);
 
       // Check if onboarding is in progress and get current step
