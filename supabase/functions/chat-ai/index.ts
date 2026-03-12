@@ -327,13 +327,12 @@ serve(async (req) => {
     }
     // --- End period confirmation ---
 
-    // Get recent chat history
+    // Get full chat history
     const { data: recentMessages } = await supabase
       .from("chat_messages")
       .select("role, content, created_at")
       .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(20);
+      .order("created_at", { ascending: true });
 
     // Fetch cycle history for context
     let cycleHistoryContext = "";
@@ -361,7 +360,6 @@ serve(async (req) => {
     const systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext);
 
     const conversationHistory = (recentMessages || [])
-      .reverse()
       .filter(m => m.role === "user" || m.role === "assistant")
       .map(m => ({
         role: m.role as "user" | "assistant",
