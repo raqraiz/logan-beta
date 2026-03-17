@@ -125,13 +125,15 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
         <div className="mb-6 space-y-3">
           <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 inline-block max-w-[90%]">
             <p className="text-foreground">
-              {isSignUp 
-                ? "To actually help you, I need to remember our conversations and learn your patterns over time. Sign up and I'll build a picture of your unique cycle so every insight gets more accurate, not generic advice, real guidance based on you."
-                : "Welcome back. Sign in to pick up where we left off."
+              {isForgotPassword
+                ? "No worries — enter your email and I'll send you a link to reset your password."
+                : isSignUp 
+                  ? "To actually help you, I need to remember our conversations and learn your patterns over time. Sign up and I'll build a picture of your unique cycle so every insight gets more accurate, not generic advice, real guidance based on you."
+                  : "Welcome back. Sign in to pick up where we left off."
               }
             </p>
           </div>
-          {isSignUp && (
+          {isSignUp && !isForgotPassword && (
             <div className="flex flex-col gap-1.5 pl-2 text-sm text-muted-foreground">
               <span className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-primary inline-block" /> Your cycle data stays private and secure</span>
               <span className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-primary inline-block" /> Insights adapt as I learn your patterns</span>
