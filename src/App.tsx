@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import Consent from "./pages/Consent";
 import AuthCallback from "./pages/AuthCallback";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
