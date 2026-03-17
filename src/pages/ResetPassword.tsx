@@ -26,7 +26,20 @@ const ResetPassword = () => {
       }
     });
 
-    // Check hash for recovery token
+    // Handle PKCE flow: exchange code from URL for session
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (error) {
+          toast({ title: "Invalid or expired link", description: "Please request a new password reset.", variant: "destructive" });
+          navigate("/");
+        }
+        // PASSWORD_RECOVERY event will fire from onAuthStateChange
+      });
+    }
+
+    // Also check hash for implicit flow
     const hash = window.location.hash;
     if (hash.includes("type=recovery")) {
       setIsReady(true);
