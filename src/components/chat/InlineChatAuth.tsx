@@ -15,18 +15,23 @@ const authSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
+type AuthView = "signup" | "signin" | "forgot-password";
+
 interface InlineChatAuthProps {
   onAuthSuccess?: () => void;
 }
 
 export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
-  const [isSignUp, setIsSignUp] = useState(true);
+  const [view, setView] = useState<AuthView>("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
+
+  const isSignUp = view === "signup";
+  const isForgotPassword = view === "forgot-password";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
