@@ -7,58 +7,82 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { LoganLogo } from "@/components/LoganLogo";
+import { useAuth } from "@/hooks/useAuth";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
+  const { session, loading: authLoading } = useAuth();
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isReady, setIsReady] = useState(false);
+  const [status, setStatus] = useState<"loading" | "ready" | "invalid">("loading");
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session?.user)) {
-        setIsReady(true);
+    let isMounted = true;
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (!isMounted) return;
+
+      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && nextSession?.user)) {
+        setStatus("ready");
       }
+
       if (event === "USER_UPDATED") {
-        toast({ title: "Password updated! 🎉", description: "You can now sign in with your new password." });
+        toast({
+          title: "Password updated! 🎉",
+          description: "You can now sign in with your new password.",
+        });
         navigate("/");
       }
     });
 
     const initializeRecovery = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get("code");
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get("code");
       const hash = window.location.hash;
+      const hasRecoveryHash =
+        hash.includes("type=recovery") ||
+        hash.includes("access_token=") ||
+        hash.includes("refresh_token=");
 
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
+
         if (error) {
-          toast({ title: "Invalid or expired link", description: "Please request a new password reset.", variant: "destructive" });
-          navigate("/");
+          if (isMounted) setStatus("invalid");
           return;
         }
-      }
 
-      if (hash.includes("type=recovery") || hash.includes("access_token=")) {
-        setIsReady(true);
+        if (isMounted) setStatus("ready");
         return;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
+      if (hasRecoveryHash) {
+        if (isMounted) setStatus("ready");
+        return;
+      }
+
+      if (authLoading) {
+        return;
+      }
+
       if (session?.user) {
-        setIsReady(true);
+        if (isMounted) setStatus("ready");
         return;
       }
 
-      toast({ title: "Invalid or expired link", description: "Please request a new password reset.", variant: "destructive" });
-      navigate("/");
+      if (isMounted) setStatus("invalid");
     };
 
     void initializeRecovery();
 
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [authLoading, navigate, session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,10 +105,27 @@ const ResetPassword = () => {
     }
   };
 
-  if (!isReady) {
+  if (status === "loading") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (status === "invalid") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          <div className="bg-card/80 backdrop-blur-sm rounded-2xl border border-border p-6 shadow-lg text-center space-y-4">
+            <LoganLogo size="md" className="mx-auto" />
+            <div className="space-y-2">
+              <h1 className="text-xl font-semibold text-foreground">This reset link is invalid</h1>
+              <p className="text-sm text-muted-foreground">Please request a new password reset email and use the latest link.</p>
+            </div>
+            <Button className="w-full" onClick={() => navigate("/")}>Back to sign in</Button>
+          </div>
+        </div>
       </div>
     );
   }
