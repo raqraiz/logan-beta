@@ -144,7 +144,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
 
         {/* Inline auth form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {isSignUp && (
+          {isSignUp && !isForgotPassword && (
             <div className="space-y-2">
               <Label htmlFor="fullName" className="text-muted-foreground text-sm">
                 What should I call you?
@@ -175,32 +175,47 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-muted-foreground text-sm">
-              Password
-            </Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-12 bg-background pr-12"
-                autoComplete={isSignUp ? "new-password" : "current-password"}
-              />
+          {!isForgotPassword && (
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-muted-foreground text-sm">
+                Password
+              </Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-12 bg-background pr-12"
+                  autoComplete={isSignUp ? "new-password" : "current-password"}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Forgot password link on sign-in view */}
+          {view === "signin" && (
+            <div className="text-right">
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => { setView("forgot-password"); setPassword(""); }}
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
               >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                Forgot password?
               </button>
             </div>
-          </div>
+          )}
 
           {/* Consent checkbox for signup */}
-          {isSignUp && (
+          {isSignUp && !isForgotPassword && (
             <div className="flex items-start gap-3 py-2">
               <Checkbox
                 id="consent"
@@ -225,33 +240,43 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
             </div>
           )}
 
-          <Button type="submit" disabled={isLoading || (isSignUp && !consentGiven)} className="w-full h-12">
+          <Button type="submit" disabled={isLoading || (isSignUp && !isForgotPassword && !consentGiven)} className="w-full h-12">
             {isLoading ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
+            ) : !isForgotPassword ? (
               <LoganLogo size="sm" className="w-5 h-5 mr-2" />
-            )}
+            ) : null}
             {isLoading
-              ? isSignUp ? "Creating account..." : "Signing in..."
-              : isSignUp ? "Start my journey" : "Continue chatting"
+              ? isForgotPassword ? "Sending..." : isSignUp ? "Creating account..." : "Signing in..."
+              : isForgotPassword ? "Send reset link" : isSignUp ? "Start my journey" : "Continue chatting"
             }
-            {!isLoading && <ArrowRight className="w-4 h-4 ml-2" />}
+            {!isLoading && !isForgotPassword && <ArrowRight className="w-4 h-4 ml-2" />}
           </Button>
         </form>
 
-        <div className="mt-4 text-center">
-          <button
-            type="button"
-            onClick={() => {
-              setIsSignUp(!isSignUp);
-              setPassword("");
-            }}
-            className="text-sm text-muted-foreground hover:text-primary transition-colors"
-          >
-            {isSignUp
-              ? "Already have an account? Sign in"
-              : "New here? Create an account"}
-          </button>
+        <div className="mt-4 text-center space-y-2">
+          {isForgotPassword ? (
+            <button
+              type="button"
+              onClick={() => { setView("signin"); setPassword(""); }}
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              ← Back to sign in
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setView(isSignUp ? "signin" : "signup");
+                setPassword("");
+              }}
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              {isSignUp
+                ? "Already have an account? Sign in"
+                : "New here? Create an account"}
+            </button>
+          )}
         </div>
 
       </div>
