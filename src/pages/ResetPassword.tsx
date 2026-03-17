@@ -22,10 +22,10 @@ const ResetPassword = () => {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event) => {
       if (!isMounted) return;
 
-      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && nextSession?.user)) {
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
         setStatus("ready");
       }
 
@@ -38,45 +38,17 @@ const ResetPassword = () => {
       }
     });
 
-    const initializeRecovery = async () => {
-      const url = new URL(window.location.href);
-      const code = url.searchParams.get("code");
-      const hash = window.location.hash;
-      const hasRecoveryHash =
-        hash.includes("type=recovery") ||
-        hash.includes("access_token=") ||
-        hash.includes("refresh_token=");
+    const hash = window.location.hash;
+    const hasRecoveryHash =
+      hash.includes("type=recovery") ||
+      hash.includes("access_token=") ||
+      hash.includes("refresh_token=");
 
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-        if (error) {
-          if (isMounted) setStatus("invalid");
-          return;
-        }
-
-        if (isMounted) setStatus("ready");
-        return;
-      }
-
-      if (hasRecoveryHash) {
-        if (isMounted) setStatus("ready");
-        return;
-      }
-
-      if (authLoading) {
-        return;
-      }
-
-      if (session?.user) {
-        if (isMounted) setStatus("ready");
-        return;
-      }
-
-      if (isMounted) setStatus("invalid");
-    };
-
-    void initializeRecovery();
+    if (session?.user || hasRecoveryHash) {
+      setStatus("ready");
+    } else if (!authLoading) {
+      setStatus("invalid");
+    }
 
     return () => {
       isMounted = false;

@@ -44,7 +44,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
       setIsLoading(true);
       try {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
+          redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
         });
         if (error) throw error;
         toast({ title: "Check your email 📧", description: "We've sent you a password reset link." });
