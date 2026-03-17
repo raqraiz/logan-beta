@@ -15,12 +15,14 @@ const authSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
+type AuthView = "signup" | "signin" | "forgot-password";
+
 interface InlineChatAuthProps {
   onAuthSuccess?: () => void;
 }
 
 export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
-  const [isSignUp, setIsSignUp] = useState(true);
+  const [view, setView] = useState<AuthView>("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -28,16 +30,37 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
 
+  const isSignUp = view === "signup";
+  const isForgotPassword = view === "forgot-password";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (isForgotPassword) {
+      if (!z.string().email().safeParse(email).success) {
+        toast({ title: "Please enter a valid email", variant: "destructive" });
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        toast({ title: "Check your email 📧", description: "We've sent you a password reset link." });
+        setView("signin");
+        setEmail("");
+      } catch (error) {
+        toast({ title: "Something went wrong", description: error instanceof Error ? error.message : "Please try again", variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
     const validation = authSchema.safeParse({ email, password });
     if (!validation.success) {
-      toast({
-        title: "Validation error",
-        description: validation.error.errors[0].message,
-        variant: "destructive",
-      });
+      toast({ title: "Validation error", description: validation.error.errors[0].message, variant: "destructive" });
       return;
     }
 
@@ -47,11 +70,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
     }
 
     if (isSignUp && !consentGiven) {
-      toast({ 
-        title: "Consent required", 
-        description: "Please review and accept the terms to continue.",
-        variant: "destructive" 
-      });
+      toast({ title: "Consent required", description: "Please review and accept the terms to continue.", variant: "destructive" });
       return;
     }
 
@@ -74,12 +93,8 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
 
         if (error) {
           if (error.message.includes("already registered")) {
-            toast({
-              title: "Account exists",
-              description: "This email is already registered. Try signing in instead.",
-              variant: "destructive",
-            });
-            setIsSignUp(false);
+            toast({ title: "Account exists", description: "This email is already registered. Try signing in instead.", variant: "destructive" });
+            setView("signin");
           } else {
             throw error;
           }
@@ -97,11 +112,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
       }
     } catch (error) {
       console.error("Auth error:", error);
-      toast({
-        title: "Something went wrong",
-        description: error instanceof Error ? error.message : "Please try again",
-        variant: "destructive",
-      });
+      toast({ title: "Something went wrong", description: error instanceof Error ? error.message : "Please try again", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -114,13 +125,15 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
         <div className="mb-6 space-y-3">
           <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 inline-block max-w-[90%]">
             <p className="text-foreground">
-              {isSignUp 
-                ? "To actually help you, I need to remember our conversations and learn your patterns over time. Sign up and I'll build a picture of your unique cycle so every insight gets more accurate, not generic advice, real guidance based on you."
-                : "Welcome back. Sign in to pick up where we left off."
+              {isForgotPassword
+                ? "No worries — enter your email and I'll send you a link to reset your password."
+                : isSignUp 
+                  ? "To actually help you, I need to remember our conversations and learn your patterns over time. Sign up and I'll build a picture of your unique cycle so every insight gets more accurate, not generic advice, real guidance based on you."
+                  : "Welcome back. Sign in to pick up where we left off."
               }
             </p>
           </div>
-          {isSignUp && (
+          {isSignUp && !isForgotPassword && (
             <div className="flex flex-col gap-1.5 pl-2 text-sm text-muted-foreground">
               <span className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-primary inline-block" /> Your cycle data stays private and secure</span>
               <span className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-primary inline-block" /> Insights adapt as I learn your patterns</span>
@@ -131,7 +144,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
 
         {/* Inline auth form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {isSignUp && (
+          {isSignUp && !isForgotPassword && (
             <div className="space-y-2">
               <Label htmlFor="fullName" className="text-muted-foreground text-sm">
                 What should I call you?
@@ -162,32 +175,47 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-muted-foreground text-sm">
-              Password
-            </Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-12 bg-background pr-12"
-                autoComplete={isSignUp ? "new-password" : "current-password"}
-              />
+          {!isForgotPassword && (
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-muted-foreground text-sm">
+                Password
+              </Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-12 bg-background pr-12"
+                  autoComplete={isSignUp ? "new-password" : "current-password"}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Forgot password link on sign-in view */}
+          {view === "signin" && (
+            <div className="text-right">
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => { setView("forgot-password"); setPassword(""); }}
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
               >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                Forgot password?
               </button>
             </div>
-          </div>
+          )}
 
           {/* Consent checkbox for signup */}
-          {isSignUp && (
+          {isSignUp && !isForgotPassword && (
             <div className="flex items-start gap-3 py-2">
               <Checkbox
                 id="consent"
@@ -212,33 +240,43 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
             </div>
           )}
 
-          <Button type="submit" disabled={isLoading || (isSignUp && !consentGiven)} className="w-full h-12">
+          <Button type="submit" disabled={isLoading || (isSignUp && !isForgotPassword && !consentGiven)} className="w-full h-12">
             {isLoading ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
+            ) : !isForgotPassword ? (
               <LoganLogo size="sm" className="w-5 h-5 mr-2" />
-            )}
+            ) : null}
             {isLoading
-              ? isSignUp ? "Creating account..." : "Signing in..."
-              : isSignUp ? "Start my journey" : "Continue chatting"
+              ? isForgotPassword ? "Sending..." : isSignUp ? "Creating account..." : "Signing in..."
+              : isForgotPassword ? "Send reset link" : isSignUp ? "Start my journey" : "Continue chatting"
             }
-            {!isLoading && <ArrowRight className="w-4 h-4 ml-2" />}
+            {!isLoading && !isForgotPassword && <ArrowRight className="w-4 h-4 ml-2" />}
           </Button>
         </form>
 
-        <div className="mt-4 text-center">
-          <button
-            type="button"
-            onClick={() => {
-              setIsSignUp(!isSignUp);
-              setPassword("");
-            }}
-            className="text-sm text-muted-foreground hover:text-primary transition-colors"
-          >
-            {isSignUp
-              ? "Already have an account? Sign in"
-              : "New here? Create an account"}
-          </button>
+        <div className="mt-4 text-center space-y-2">
+          {isForgotPassword ? (
+            <button
+              type="button"
+              onClick={() => { setView("signin"); setPassword(""); }}
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              ← Back to sign in
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setView(isSignUp ? "signin" : "signup");
+                setPassword("");
+              }}
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              {isSignUp
+                ? "Already have an account? Sign in"
+                : "New here? Create an account"}
+            </button>
+          )}
         </div>
 
       </div>

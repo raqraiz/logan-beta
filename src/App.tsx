@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import Consent from "./pages/Consent";
 import AuthCallback from "./pages/AuthCallback";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,8 +26,8 @@ const App = () => (
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/logan-admin-access" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />
-            <Route path="/admin" element={<Admin />} />
             <Route path="/consent" element={<Consent />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
