@@ -36,13 +36,31 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (isForgotPassword) {
+      if (!z.string().email().safeParse(email).success) {
+        toast({ title: "Please enter a valid email", variant: "destructive" });
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        toast({ title: "Check your email 📧", description: "We've sent you a password reset link." });
+        setView("signin");
+        setEmail("");
+      } catch (error) {
+        toast({ title: "Something went wrong", description: error instanceof Error ? error.message : "Please try again", variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
     const validation = authSchema.safeParse({ email, password });
     if (!validation.success) {
-      toast({
-        title: "Validation error",
-        description: validation.error.errors[0].message,
-        variant: "destructive",
-      });
+      toast({ title: "Validation error", description: validation.error.errors[0].message, variant: "destructive" });
       return;
     }
 
@@ -52,11 +70,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
     }
 
     if (isSignUp && !consentGiven) {
-      toast({ 
-        title: "Consent required", 
-        description: "Please review and accept the terms to continue.",
-        variant: "destructive" 
-      });
+      toast({ title: "Consent required", description: "Please review and accept the terms to continue.", variant: "destructive" });
       return;
     }
 
@@ -79,12 +93,8 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
 
         if (error) {
           if (error.message.includes("already registered")) {
-            toast({
-              title: "Account exists",
-              description: "This email is already registered. Try signing in instead.",
-              variant: "destructive",
-            });
-            setIsSignUp(false);
+            toast({ title: "Account exists", description: "This email is already registered. Try signing in instead.", variant: "destructive" });
+            setView("signin");
           } else {
             throw error;
           }
@@ -102,11 +112,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
       }
     } catch (error) {
       console.error("Auth error:", error);
-      toast({
-        title: "Something went wrong",
-        description: error instanceof Error ? error.message : "Please try again",
-        variant: "destructive",
-      });
+      toast({ title: "Something went wrong", description: error instanceof Error ? error.message : "Please try again", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
