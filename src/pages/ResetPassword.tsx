@@ -16,8 +16,8 @@ const ResetPassword = () => {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session?.user)) {
         setIsReady(true);
       }
       if (event === "USER_UPDATED") {
@@ -26,24 +26,36 @@ const ResetPassword = () => {
       }
     });
 
-    // Handle PKCE flow: exchange code from URL for session
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
-    if (code) {
-      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+    const initializeRecovery = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+      const hash = window.location.hash;
+
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
           toast({ title: "Invalid or expired link", description: "Please request a new password reset.", variant: "destructive" });
           navigate("/");
+          return;
         }
-        // PASSWORD_RECOVERY event will fire from onAuthStateChange
-      });
-    }
+      }
 
-    // Also check hash for implicit flow
-    const hash = window.location.hash;
-    if (hash.includes("type=recovery")) {
-      setIsReady(true);
-    }
+      if (hash.includes("type=recovery") || hash.includes("access_token=")) {
+        setIsReady(true);
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setIsReady(true);
+        return;
+      }
+
+      toast({ title: "Invalid or expired link", description: "Please request a new password reset.", variant: "destructive" });
+      navigate("/");
+    };
+
+    void initializeRecovery();
 
     return () => subscription.unsubscribe();
   }, [navigate]);
