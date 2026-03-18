@@ -19,6 +19,7 @@ const ResetPassword = () => {
 
   useEffect(() => {
     let isMounted = true;
+    let invalidTimeout: number | null = null;
 
     const {
       data: { subscription },
@@ -47,11 +48,18 @@ const ResetPassword = () => {
     if (session?.user || hasRecoveryHash) {
       setStatus("ready");
     } else if (!authLoading) {
-      setStatus("invalid");
+      invalidTimeout = window.setTimeout(() => {
+        if (isMounted) {
+          setStatus("invalid");
+        }
+      }, 1500);
     }
 
     return () => {
       isMounted = false;
+      if (invalidTimeout) {
+        window.clearTimeout(invalidTimeout);
+      }
       subscription.unsubscribe();
     };
   }, [authLoading, navigate, session]);

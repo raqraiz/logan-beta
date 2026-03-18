@@ -21,16 +21,23 @@ const AuthCallback = () => {
     return next && next.startsWith("/") ? next : "/";
   }, [searchParams]);
 
+  const shouldAlwaysContinue = nextPath === "/reset-password";
+
   useEffect(() => {
     if (loading) return;
-    // AuthProvider has finished — if session exists, redirect
+
     if (session) {
       navigate(nextPath, { replace: true });
-    } else {
-      // No session after auth finished — go to home
-      navigate("/", { replace: true });
+      return;
     }
-  }, [loading, session, navigate, nextPath]);
+
+    if (shouldAlwaysContinue) {
+      navigate(nextPath, { replace: true });
+      return;
+    }
+
+    navigate("/", { replace: true });
+  }, [loading, session, navigate, nextPath, shouldAlwaysContinue]);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
