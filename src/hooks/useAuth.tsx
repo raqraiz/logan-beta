@@ -51,11 +51,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const url = new URL(window.location.href);
         const code = url.searchParams.get("code");
+        let exchangedSession: Session | null = null;
 
-        // PKCE magic-link flow: exchange ?code= for a session
+        // PKCE auth flow: exchange ?code= for a session and keep the returned session
         if (code) {
           try {
-            await supabase.auth.exchangeCodeForSession(code);
+            const { data } = await supabase.auth.exchangeCodeForSession(code);
+            exchangedSession = data.session;
           } catch {
             // Ignore: code might have been already exchanged on a previous attempt
           }
@@ -76,16 +78,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         // If tokens are present in the URL, give the SDK a moment to hydrate
         const start = Date.now();
-        const maxWaitMs = hasHashTokens || code ? 2500 : 0;
+        const maxWaitMs = hasHashTokens || code ? 5000 : 0;
 
-        let currentSession: Session | null = null;
-        do {
+        let currentSession: Session | null = exchangedSession;
+        while (!currentSession) {
           const { data } = await supabase.auth.getSession();
           currentSession = data.session;
-          if (currentSession) break;
-          if (!maxWaitMs) break;
+          if (currentSession || !maxWaitMs || Date.now() - start >= maxWaitMs) {
+            break;
+          }
           await new Promise((r) => setTimeout(r, 100));
-        } while (Date.now() - start < maxWaitMs);
+        }
 
         if (!isMounted) return;
 
