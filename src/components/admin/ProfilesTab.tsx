@@ -82,6 +82,13 @@ interface MessageMetadata {
   [key: string]: unknown;
 }
 
+interface UserFeedback {
+  id: string;
+  category: string;
+  message: string;
+  created_at: string;
+}
+
 interface ProfileWithData extends Profile {
   participant?: Participant;
   messageCount?: number;
