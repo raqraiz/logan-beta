@@ -28,7 +28,7 @@ import { toast } from "@/hooks/use-toast";
 import { 
   Users, RefreshCw, Search, Mail, Phone, Calendar, ChevronRight, 
   ChevronLeft, Trash2, Loader2, Activity, Clock, MessageSquare,
-  Pencil, Download
+  Pencil, Download, MessageCircle
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { ChatCycleCircle, calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
@@ -82,6 +82,13 @@ interface MessageMetadata {
   [key: string]: unknown;
 }
 
+interface UserFeedback {
+  id: string;
+  category: string;
+  message: string;
+  created_at: string;
+}
+
 interface ProfileWithData extends Profile {
   participant?: Participant;
   messageCount?: number;
@@ -117,6 +124,8 @@ export function ProfilesTab() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [userFeedback, setUserFeedback] = useState<UserFeedback[]>([]);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [editForm, setEditForm] = useState({
     full_name: "", email: "", phone: "",
     cycle_length_days: "28", cycle_regularity: "", last_period_start: "",
@@ -334,10 +343,30 @@ export function ProfilesTab() {
   useEffect(() => {
     if (selectedProfile) {
       fetchChatMessages(selectedProfile.id);
+      fetchUserFeedback(selectedProfile.id);
     } else {
       setChatMessages([]);
+      setUserFeedback([]);
     }
   }, [selectedProfile?.id]);
+
+  const fetchUserFeedback = async (userId: string) => {
+    setLoadingFeedback(true);
+    try {
+      const { data, error } = await supabase
+        .from("user_feedback")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setUserFeedback((data as unknown as UserFeedback[]) || []);
+    } catch (error) {
+      console.error("Error fetching feedback:", error);
+    } finally {
+      setLoadingFeedback(false);
+    }
+  };
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -602,6 +631,43 @@ export function ProfilesTab() {
           </Card>
 
         </div>
+
+        {/* User Feedback Card */}
+        {userFeedback.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <MessageCircle className="w-5 h-5" />
+                User Feedback ({userFeedback.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                {userFeedback.map((fb) => {
+                  const categoryLabels: Record<string, string> = {
+                    bug: "🐛 Bug",
+                    feature: "💡 Feature",
+                    general: "💬 General",
+                    content: "📝 Content",
+                  };
+                  return (
+                    <div key={fb.id} className="rounded-lg border p-3 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="secondary" className="text-xs">
+                          {categoryLabels[fb.category] || fb.category}
+                        </Badge>
+                        <span className="text-[10px] text-muted-foreground">
+                          {format(new Date(fb.created_at), "MMM d, yyyy h:mm a")}
+                        </span>
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap">{fb.message}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Chat History Card - Full Width */}
         <Card>
