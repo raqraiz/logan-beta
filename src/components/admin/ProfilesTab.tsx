@@ -632,6 +632,43 @@ export function ProfilesTab() {
 
         </div>
 
+        {/* User Feedback Card */}
+        {userFeedback.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <MessageCircle className="w-5 h-5" />
+                User Feedback ({userFeedback.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                {userFeedback.map((fb) => {
+                  const categoryLabels: Record<string, string> = {
+                    bug: "🐛 Bug",
+                    feature: "💡 Feature",
+                    general: "💬 General",
+                    content: "📝 Content",
+                  };
+                  return (
+                    <div key={fb.id} className="rounded-lg border p-3 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="secondary" className="text-xs">
+                          {categoryLabels[fb.category] || fb.category}
+                        </Badge>
+                        <span className="text-[10px] text-muted-foreground">
+                          {format(new Date(fb.created_at), "MMM d, yyyy h:mm a")}
+                        </span>
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap">{fb.message}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Chat History Card - Full Width */}
         <Card>
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
