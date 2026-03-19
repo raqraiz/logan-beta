@@ -1137,6 +1137,7 @@ const Chat = () => {
         onClose={() => setShowForecast(false)}
       />
     )}
+    <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </>
   );
 };
