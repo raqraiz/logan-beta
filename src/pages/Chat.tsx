@@ -100,6 +100,7 @@ const Chat = () => {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [creditBalance, setCreditBalance] = useState<{ free: number; paid: number; total: number; hoursUntilReset?: number } | null>(null);
   const [outOfCredits, setOutOfCredits] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   
   const { user, loading: authLoading, signOut } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
