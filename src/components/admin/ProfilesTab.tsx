@@ -28,7 +28,7 @@ import { toast } from "@/hooks/use-toast";
 import { 
   Users, RefreshCw, Search, Mail, Phone, Calendar, ChevronRight, 
   ChevronLeft, Trash2, Loader2, Activity, Clock, MessageSquare,
-  Pencil, Download
+  Pencil, Download, MessageCircle
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { ChatCycleCircle, calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
