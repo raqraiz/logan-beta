@@ -124,6 +124,8 @@ export function ProfilesTab() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [userFeedback, setUserFeedback] = useState<UserFeedback[]>([]);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [editForm, setEditForm] = useState({
     full_name: "", email: "", phone: "",
     cycle_length_days: "28", cycle_regularity: "", last_period_start: "",
