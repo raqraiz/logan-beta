@@ -8,7 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
 
-import { Send, Loader2, LogOut, ChevronLeft, ArrowDown } from "lucide-react";
+import { Send, Loader2, LogOut, ChevronLeft, ArrowDown, MessageSquarePlus } from "lucide-react";
+import { FeedbackModal } from "@/components/chat/FeedbackModal";
 import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
 import { format } from "date-fns";
 import { SymptomPicker } from "@/components/chat/SymptomPicker";
@@ -99,6 +100,7 @@ const Chat = () => {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [creditBalance, setCreditBalance] = useState<{ free: number; paid: number; total: number; hoursUntilReset?: number } | null>(null);
   const [outOfCredits, setOutOfCredits] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   
   const { user, loading: authLoading, signOut } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -782,6 +784,10 @@ const Chat = () => {
             )}
             {/* Credit balance hidden — free access during alpha */}
             <CalendarSubscribe />
+            <Button variant="ghost" size="sm" onClick={() => setFeedbackOpen(true)} title="Send feedback">
+              <MessageSquarePlus className="w-4 h-4 mr-2" />
+              Feedback
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
               Sign out
@@ -1131,6 +1137,7 @@ const Chat = () => {
         onClose={() => setShowForecast(false)}
       />
     )}
+    <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </>
   );
 };
