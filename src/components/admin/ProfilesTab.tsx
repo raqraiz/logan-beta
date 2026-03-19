@@ -343,10 +343,30 @@ export function ProfilesTab() {
   useEffect(() => {
     if (selectedProfile) {
       fetchChatMessages(selectedProfile.id);
+      fetchUserFeedback(selectedProfile.id);
     } else {
       setChatMessages([]);
+      setUserFeedback([]);
     }
   }, [selectedProfile?.id]);
+
+  const fetchUserFeedback = async (userId: string) => {
+    setLoadingFeedback(true);
+    try {
+      const { data, error } = await supabase
+        .from("user_feedback")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setUserFeedback((data as unknown as UserFeedback[]) || []);
+    } catch (error) {
+      console.error("Error fetching feedback:", error);
+    } finally {
+      setLoadingFeedback(false);
+    }
+  };
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
