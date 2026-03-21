@@ -34,7 +34,7 @@ interface CommunityMessage {
 
 const Community = () => {
   const { user, loading: authLoading } = useAuth();
-  const [channel, setChannel] = useState<Channel>("general");
+  const [channel, setChannel] = useState<Channel>("feedback");
   const [messages, setMessages] = useState<CommunityMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
