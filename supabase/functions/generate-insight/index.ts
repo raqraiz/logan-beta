@@ -199,7 +199,7 @@ serve(async (req) => {
         recentMessages || []
       );
 
-      const { insight, question, conversationStarters } = await generateAIInsight(lovableApiKey, prompt);
+      const { insight, question, conversationStarters, cheatSheet } = await generateAIInsight(lovableApiKey, prompt);
 
       await supabase.from("chat_messages").update({
         content: insight,
@@ -213,6 +213,7 @@ serve(async (req) => {
           generated_at: new Date().toISOString(),
           engagement_question: question,
           conversation_starters: conversationStarters,
+          cheat_sheet: cheatSheet,
         }
       }).eq("id", placeholderId);
     }
