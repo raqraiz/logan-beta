@@ -166,27 +166,29 @@ const Community = () => {
         </div>
       </header>
 
-      {/* Channel tabs */}
-      <div className="border-b border-border px-4 py-2 flex gap-2 overflow-x-auto scrollbar-none">
-        {CHANNELS.map((ch) => {
-          const Icon = ch.icon;
-          const isActive = channel === ch.id;
-          return (
-            <button
-              key={ch.id}
-              onClick={() => setChannel(ch.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {ch.label}
-            </button>
-          );
-        })}
-      </div>
+      {/* Channel tabs - hidden while single channel */}
+      {CHANNELS.length > 1 && (
+        <div className="border-b border-border px-4 py-2 flex gap-2 overflow-x-auto scrollbar-none">
+          {CHANNELS.map((ch) => {
+            const Icon = ch.icon;
+            const isActive = channel === ch.id;
+            return (
+              <button
+                key={ch.id}
+                onClick={() => setChannel(ch.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {ch.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Messages */}
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
