@@ -789,6 +789,12 @@ const Chat = () => {
             )}
             {/* Credit balance hidden — free access during alpha */}
             <CalendarSubscribe />
+            <Link to="/community">
+              <Button variant="ghost" size="sm" title="Community">
+                <Users className="w-4 h-4 mr-2" />
+                Community
+              </Button>
+            </Link>
             <Button variant="ghost" size="sm" onClick={() => setFeedbackOpen(true)} title="Send feedback">
               <MessageSquarePlus className="w-4 h-4 mr-2" />
               Feedback
