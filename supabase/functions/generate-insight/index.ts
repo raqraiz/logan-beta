@@ -334,6 +334,12 @@ Generate a JSON object:
 
 3. "starters": 3 replies (2-4 words each). One confirms ("Yeah exactly"), one pushes back ("Not today actually"), one opens up ("Tell me more").
 
+4. "cheat_sheet": Personalized energy/focus/emotions for THIS user in THIS phase. Each has "level" (high/medium/low/variable) and "note" (max 12 words, specific to this person's symptoms and situation).
+   - "energy": How their energy feels given their anchor symptom and current phase. Not generic.
+   - "focus": How mental clarity shifts. Reference their specific symptoms if relevant.
+   - "emotions": How emotional state shifts. Reference anchor symptom's emotional impact.
+   Notes must feel personal. Example for muffled hearing in Menstruation: { "level": "low", "note": "Ear pressure drains your battery faster than usual" }
+
 VOICE:
 - You're a friend who just knows, not a coach giving a plan
 - Never say "you should", "try to", "consider", "make sure"
@@ -345,7 +351,12 @@ RESPOND ONLY WITH VALID JSON:
 {
   "intro": "...",
   "question": "...",
-  "starters": ["...", "...", "..."]
+  "starters": ["...", "...", "..."],
+  "cheat_sheet": {
+    "energy": { "level": "...", "note": "..." },
+    "focus": { "level": "...", "note": "..." },
+    "emotions": { "level": "...", "note": "..." }
+  }
 }`;
 }
 
