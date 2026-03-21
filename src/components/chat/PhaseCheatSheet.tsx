@@ -1,31 +1,36 @@
-import { Zap, Shield, Moon, TrendingUp, Battery, Heart } from "lucide-react";
+import { Zap, Shield, Moon, TrendingUp, Heart } from "lucide-react";
+
+interface DimensionData {
+  level: Level;
+  note: string;
+}
 
 interface PhaseCheatSheetProps {
   phase: string;
   cycleDay: number;
   cycleLengthDays: number;
   anchorSymptom?: string | null;
+  personalizedData?: {
+    energy?: DimensionData;
+    focus?: DimensionData;
+    emotions?: DimensionData;
+  } | null;
 }
 
 type Level = "high" | "medium" | "low" | "variable";
 
-interface DimensionInfo {
-  level: Level;
-  note: string;
-}
-
-interface PhaseData {
+interface PhaseDefaults {
   color: string;
   bgColor: string;
   borderColor: string;
   icon: React.ReactNode;
   tagline: string;
-  energy: DimensionInfo;
-  focus: DimensionInfo;
-  emotions: DimensionInfo;
+  energy: DimensionData;
+  focus: DimensionData;
+  emotions: DimensionData;
 }
 
-const PHASE_DATA: Record<string, PhaseData> = {
+const PHASE_DEFAULTS: Record<string, PhaseDefaults> = {
   Menstruation: {
     color: "text-phase-menstruation",
     bgColor: "bg-phase-menstruation/10",
@@ -103,8 +108,13 @@ const DIMENSION_LABELS: Record<string, { icon: string; label: string }> = {
   emotions: { icon: "💭", label: "Emotions" },
 };
 
-export function PhaseCheatSheet({ phase, cycleDay, cycleLengthDays, anchorSymptom }: PhaseCheatSheetProps) {
-  const data = PHASE_DATA[phase] || PHASE_DATA.Follicular;
+function validateLevel(level: string | undefined): Level {
+  if (level === "high" || level === "medium" || level === "low" || level === "variable") return level;
+  return "medium";
+}
+
+export function PhaseCheatSheet({ phase, cycleDay, cycleLengthDays, anchorSymptom, personalizedData }: PhaseCheatSheetProps) {
+  const defaults = PHASE_DEFAULTS[phase] || PHASE_DEFAULTS.Follicular;
 
   const menEnd = 5;
   const ovDay = cycleLengthDays - 14;
@@ -119,15 +129,24 @@ export function PhaseCheatSheet({ phase, cycleDay, cycleLengthDays, anchorSympto
 
   const dimensions = ["energy", "focus", "emotions"] as const;
 
+  // Merge: AI-personalized data takes priority, fall back to static defaults
+  const getDimension = (dim: "energy" | "focus" | "emotions"): DimensionData => {
+    const personalized = personalizedData?.[dim];
+    if (personalized?.note && personalized?.level) {
+      return { level: validateLevel(personalized.level), note: personalized.note };
+    }
+    return defaults[dim];
+  };
+
   return (
-    <div className={`rounded-xl border ${data.borderColor} ${data.bgColor} overflow-hidden`}>
+    <div className={`rounded-xl border ${defaults.borderColor} ${defaults.bgColor} overflow-hidden`}>
       {/* Header */}
       <div className="px-4 py-3 flex items-center justify-between border-b border-border/20">
         <div className="flex items-center gap-2">
-          {data.icon}
+          {defaults.icon}
           <div>
-            <h4 className={`text-sm font-semibold ${data.color}`}>{phase}</h4>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{data.tagline}</p>
+            <h4 className={`text-sm font-semibold ${defaults.color}`}>{phase}</h4>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{defaults.tagline}</p>
           </div>
         </div>
         <span className="text-xs text-muted-foreground">{daysLeft}d left</span>
@@ -136,7 +155,7 @@ export function PhaseCheatSheet({ phase, cycleDay, cycleLengthDays, anchorSympto
       {/* Dimensions */}
       <div className="divide-y divide-border/15">
         {dimensions.map((dim) => {
-          const info = data[dim];
+          const info = getDimension(dim);
           const meta = DIMENSION_LABELS[dim];
           return (
             <div key={dim} className="px-4 py-2.5 flex items-start gap-3">

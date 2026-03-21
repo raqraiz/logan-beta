@@ -199,7 +199,7 @@ serve(async (req) => {
         recentMessages || []
       );
 
-      const { insight, question, conversationStarters } = await generateAIInsight(lovableApiKey, prompt);
+      const { insight, question, conversationStarters, cheatSheet } = await generateAIInsight(lovableApiKey, prompt);
 
       await supabase.from("chat_messages").update({
         content: insight,
@@ -213,6 +213,7 @@ serve(async (req) => {
           generated_at: new Date().toISOString(),
           engagement_question: question,
           conversation_starters: conversationStarters,
+          cheat_sheet: cheatSheet,
         }
       }).eq("id", placeholderId);
     }
@@ -333,6 +334,12 @@ Generate a JSON object:
 
 3. "starters": 3 replies (2-4 words each). One confirms ("Yeah exactly"), one pushes back ("Not today actually"), one opens up ("Tell me more").
 
+4. "cheat_sheet": Personalized energy/focus/emotions for THIS user in THIS phase. Each has "level" (high/medium/low/variable) and "note" (max 12 words, specific to this person's symptoms and situation).
+   - "energy": How their energy feels given their anchor symptom and current phase. Not generic.
+   - "focus": How mental clarity shifts. Reference their specific symptoms if relevant.
+   - "emotions": How emotional state shifts. Reference anchor symptom's emotional impact.
+   Notes must feel personal. Example for muffled hearing in Menstruation: { "level": "low", "note": "Ear pressure drains your battery faster than usual" }
+
 VOICE:
 - You're a friend who just knows, not a coach giving a plan
 - Never say "you should", "try to", "consider", "make sure"
@@ -344,7 +351,12 @@ RESPOND ONLY WITH VALID JSON:
 {
   "intro": "...",
   "question": "...",
-  "starters": ["...", "...", "..."]
+  "starters": ["...", "...", "..."],
+  "cheat_sheet": {
+    "energy": { "level": "...", "note": "..." },
+    "focus": { "level": "...", "note": "..." },
+    "emotions": { "level": "...", "note": "..." }
+  }
 }`;
 }
 
@@ -352,6 +364,7 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{
   insight: string;
   question: string;
   conversationStarters: string[];
+  cheatSheet: { energy: { level: string; note: string }; focus: { level: string; note: string }; emotions: { level: string; note: string } } | null;
 }> {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -365,7 +378,7 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{
         { role: "system", content: "You are Logan. You predict what women feel before they notice it themselves, based on their cycle. You're not clinical. You're the friend who just knows. Always respond in valid JSON." },
         { role: "user", content: prompt }
       ],
-      max_tokens: 250,
+      max_tokens: 400,
       temperature: 0.8,
     }),
   });
@@ -385,6 +398,7 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{
       insight: parsed.intro || "How are you feeling today?",
       question: parsed.question || "",
       conversationStarters: parsed.starters || ["Yeah exactly", "Not today", "Tell me more"],
+      cheatSheet: parsed.cheat_sheet || null,
     };
   } catch (e) {
     console.error("Failed to parse AI response as JSON:", content);
@@ -392,6 +406,7 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{
       insight: content || "How are you feeling today?",
       question: "",
       conversationStarters: ["Yeah exactly", "Not today", "Tell me more"],
+      cheatSheet: null,
     };
   }
 }
