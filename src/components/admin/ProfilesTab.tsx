@@ -152,11 +152,22 @@ export function ProfilesTab() {
       if (participantsError) throw participantsError;
 
       // Fetch message data (user_id and created_at for session calculation)
-      const { data: messagesData, error: messagesError } = await supabase
-        .from("chat_messages")
-        .select("user_id, created_at");
-
-      if (messagesError) throw messagesError;
+      // Fetch all messages (override default 1000-row limit)
+      let allMessagesData: { user_id: string; created_at: string }[] = [];
+      let msgFrom = 0;
+      const MSG_PAGE = 5000;
+      while (true) {
+        const { data: batch, error: batchErr } = await supabase
+          .from("chat_messages")
+          .select("user_id, created_at")
+          .range(msgFrom, msgFrom + MSG_PAGE - 1);
+        if (batchErr) throw batchErr;
+        if (!batch || batch.length === 0) break;
+        allMessagesData = allMessagesData.concat(batch);
+        if (batch.length < MSG_PAGE) break;
+        msgFrom += MSG_PAGE;
+      }
+      const messagesData = allMessagesData;
 
       // Build maps
       const participantsByEmail = new Map<string, Participant>();
