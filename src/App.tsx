@@ -11,6 +11,7 @@ import Consent from "./pages/Consent";
 import AuthCallback from "./pages/AuthCallback";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import Community from "./pages/Community";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +24,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Chat />} />
+            <Route path="/community" element={<Community />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/logan-admin-access" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />

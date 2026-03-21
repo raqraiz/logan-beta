@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
 
-import { Send, Loader2, LogOut, ChevronLeft, ArrowDown, MessageSquarePlus } from "lucide-react";
+import { Send, Loader2, LogOut, ChevronLeft, ArrowDown, MessageSquarePlus, Users } from "lucide-react";
 import { FeedbackModal } from "@/components/chat/FeedbackModal";
 import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
 import { format } from "date-fns";
@@ -789,6 +789,12 @@ const Chat = () => {
             )}
             {/* Credit balance hidden — free access during alpha */}
             <CalendarSubscribe />
+            <Link to="/community">
+              <Button variant="ghost" size="sm" title="Community">
+                <Users className="w-4 h-4 mr-2" />
+                Community
+              </Button>
+            </Link>
             <Button variant="ghost" size="sm" onClick={() => setFeedbackOpen(true)} title="Send feedback">
               <MessageSquarePlus className="w-4 h-4 mr-2" />
               Feedback
