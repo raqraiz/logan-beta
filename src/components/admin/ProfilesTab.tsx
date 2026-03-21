@@ -151,65 +151,52 @@ export function ProfilesTab() {
 
       if (participantsError) throw participantsError;
 
-      // Fetch message data (user_id and created_at for session calculation)
-      // Fetch all messages (override default 1000-row limit)
-      let allMessagesData: { user_id: string; created_at: string }[] = [];
-      let msgFrom = 0;
-      const MSG_PAGE = 5000;
-      while (true) {
-        const { data: batch, error: batchErr } = await supabase
-          .from("chat_messages")
-          .select("user_id, created_at")
-          .range(msgFrom, msgFrom + MSG_PAGE - 1);
-        if (batchErr) throw batchErr;
-        if (!batch || batch.length === 0) break;
-        allMessagesData = allMessagesData.concat(batch);
-        if (batch.length < MSG_PAGE) break;
-        msgFrom += MSG_PAGE;
-      }
-      const messagesData = allMessagesData;
-
-      // Build maps
+      // Build participant map
       const participantsByEmail = new Map<string, Participant>();
-      participantsData?.forEach(p => {
+      participantsData?.forEach((p) => {
         if (p.email) participantsByEmail.set(p.email.toLowerCase(), p);
       });
 
-      const messageCountByUser = new Map<string, number>();
-      const messagesByUser = new Map<string, { created_at: string }[]>();
-      messagesData?.forEach(msg => {
-        messageCountByUser.set(msg.user_id, (messageCountByUser.get(msg.user_id) || 0) + 1);
-        const list = messagesByUser.get(msg.user_id) || [];
-        list.push({ created_at: msg.created_at });
-        messagesByUser.set(msg.user_id, list);
-      });
+      // Fetch exact chat stats per profile to avoid aggregate mismatches in admin UI
+      const profileStatsEntries = await Promise.all(
+        (profilesData || []).map(async (profile) => {
+          const { data: userMessages, error: userMessagesError } = await supabase
+            .from("chat_messages")
+            .select("created_at, role")
+            .eq("user_id", profile.id)
+            .order("created_at", { ascending: true });
 
-      // Get last user message timestamps for sorting by engagement
-      const { data: allMessages } = await supabase
-        .from("chat_messages")
-        .select("user_id, created_at, role")
-        .eq("role", "user")
-        .order("created_at", { ascending: false });
+          if (userMessagesError) throw userMessagesError;
 
-      const lastUserMessageByUser = new Map<string, string>();
-      allMessages?.forEach(msg => {
-        if (!lastUserMessageByUser.has(msg.user_id)) {
-          lastUserMessageByUser.set(msg.user_id, msg.created_at);
-        }
-      });
+          const messages = userMessages || [];
+          const stats = calculateSessionStats(messages);
+          const lastUserMessage = [...messages].reverse().find((msg) => msg.role === "user")?.created_at || null;
+
+          return [
+            profile.id,
+            {
+              messageCount: messages.length,
+              lastUserMessage,
+              avgMessagesPerSession: stats.avgPerSession,
+              avgSessionsPerWeek: stats.avgPerWeek,
+            },
+          ] as const;
+        })
+      );
+
+      const profileStatsById = new Map(profileStatsEntries);
 
       // Combine data
-      const enrichedProfiles: ProfileWithData[] = (profilesData || []).map(profile => {
+      const enrichedProfiles: ProfileWithData[] = (profilesData || []).map((profile) => {
         const participant = participantsByEmail.get(profile.email.toLowerCase());
-        const userMessages = messagesByUser.get(profile.id) || [];
-        const stats = calculateSessionStats(userMessages);
+        const stats = profileStatsById.get(profile.id);
         return {
           ...profile,
           participant,
-          messageCount: messageCountByUser.get(profile.id) || 0,
-          lastUserMessage: lastUserMessageByUser.get(profile.id) || null,
-          avgMessagesPerSession: stats.avgPerSession,
-          avgSessionsPerWeek: stats.avgPerWeek,
+          messageCount: stats?.messageCount || 0,
+          lastUserMessage: stats?.lastUserMessage || null,
+          avgMessagesPerSession: stats?.avgMessagesPerSession ?? null,
+          avgSessionsPerWeek: stats?.avgSessionsPerWeek ?? null,
         };
       });
 
