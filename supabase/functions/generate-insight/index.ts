@@ -352,6 +352,7 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{
   insight: string;
   question: string;
   conversationStarters: string[];
+  cheatSheet: { energy: { level: string; note: string }; focus: { level: string; note: string }; emotions: { level: string; note: string } } | null;
 }> {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -365,7 +366,7 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{
         { role: "system", content: "You are Logan. You predict what women feel before they notice it themselves, based on their cycle. You're not clinical. You're the friend who just knows. Always respond in valid JSON." },
         { role: "user", content: prompt }
       ],
-      max_tokens: 250,
+      max_tokens: 400,
       temperature: 0.8,
     }),
   });
@@ -385,6 +386,7 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{
       insight: parsed.intro || "How are you feeling today?",
       question: parsed.question || "",
       conversationStarters: parsed.starters || ["Yeah exactly", "Not today", "Tell me more"],
+      cheatSheet: parsed.cheat_sheet || null,
     };
   } catch (e) {
     console.error("Failed to parse AI response as JSON:", content);
@@ -392,6 +394,7 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{
       insight: content || "How are you feeling today?",
       question: "",
       conversationStarters: ["Yeah exactly", "Not today", "Tell me more"],
+      cheatSheet: null,
     };
   }
 }
