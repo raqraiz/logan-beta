@@ -68,6 +68,39 @@ export type Database = {
         }
         Relationships: []
       }
+      community_messages: {
+        Row: {
+          channel: string
+          content: string
+          created_at: string
+          display_name: string
+          id: string
+          is_anonymous: boolean
+          is_pinned: boolean
+          user_id: string
+        }
+        Insert: {
+          channel?: string
+          content: string
+          created_at?: string
+          display_name: string
+          id?: string
+          is_anonymous?: boolean
+          is_pinned?: boolean
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          content?: string
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_anonymous?: boolean
+          is_pinned?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       credit_transactions: {
         Row: {
           amount: number
