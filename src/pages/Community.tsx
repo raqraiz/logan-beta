@@ -16,10 +16,7 @@ import { format } from "date-fns";
 import { InlineChatAuth } from "@/components/chat/InlineChatAuth";
 
 const CHANNELS = [
-  { id: "general", label: "General", icon: MessageCircle, description: "Open discussion" },
-  { id: "questions", label: "Questions", icon: HelpCircle, description: "Ask the community" },
-  { id: "tips", label: "Tips & Tricks", icon: Lightbulb, description: "Share what works for you" },
-  { id: "feedback", label: "Feedback", icon: Megaphone, description: "Help us improve Logan" },
+  { id: "feedback", label: "Feedback", icon: Megaphone, description: "Share feedback, ideas & questions with the Logan community" },
 ] as const;
 
 type Channel = typeof CHANNELS[number]["id"];
