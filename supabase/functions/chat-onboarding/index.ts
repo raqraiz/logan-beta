@@ -76,14 +76,14 @@ const ONBOARDING_QUESTIONS = [
   },
   {
     key: "symptoms",
-    message: "Now let's talk about what you actually feel. Pick anything that sounds familiar — there are no wrong answers.",
+    message: "Now let's talk about what you feel across your whole cycle — not just right now. Pick anything that sounds familiar.",
     field: "typical_symptoms",
     parseType: "symptoms",
     inputType: "symptom_picker"
   },
   {
     key: "anchor_symptom",
-    message: "Which one bothers you the most? This is the one Logan will watch for — your early warning signal.",
+    message: "Across your entire cycle, which one disrupts your life the most? This becomes your anchor — the signal Logan watches for every month.",
     field: "anchor_symptom",
     parseType: "anchor",
     inputType: "anchor_picker"
