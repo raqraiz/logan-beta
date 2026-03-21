@@ -76,14 +76,14 @@ const ONBOARDING_QUESTIONS = [
   },
   {
     key: "symptoms",
-    message: "Now let's talk about what you actually feel. Pick anything that sounds familiar — there are no wrong answers.",
+    message: "Now let's talk about what you feel across your whole cycle — not just right now. Pick anything that sounds familiar.",
     field: "typical_symptoms",
     parseType: "symptoms",
     inputType: "symptom_picker"
   },
   {
     key: "anchor_symptom",
-    message: "Which one bothers you the most? This is the one Logan will watch for — your early warning signal.",
+    message: "Across your entire cycle, which one disrupts your life the most? This becomes your anchor — the signal Logan watches for every month.",
     field: "anchor_symptom",
     parseType: "anchor",
     inputType: "anchor_picker"
@@ -381,11 +381,11 @@ serve(async (req) => {
         let validationMsg = "";
 
         if (hasEmotional && hasPhysical) {
-          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. You're getting hit on both sides — mind and body. That's really common, and it usually gets worse in the last 2 weeks of your cycle. Most people don't connect those dots.`;
+          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. You're getting hit on both sides — mind and body. These shift in intensity across your cycle. That's what I'm here to help you track.`;
         } else if (hasEmotional) {
-          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These are linked to a hormone called progesterone — it ramps up in the second half of your cycle. You're not imagining it.`;
+          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These are linked to a hormone called progesterone — it rises and falls across your cycle. You're not imagining it.`;
         } else if (hasPhysical) {
-          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Your body is telling you where it struggles most. These tend to follow your hormonal shifts — especially in the last 2 weeks before your period.`;
+          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Your body is telling you where it struggles most. These tend to follow your hormonal shifts across your cycle.`;
         } else {
           validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These follow your hormonal pattern more closely than you might think. Once you start noticing when they hit, it stops being a surprise.`;
         }
