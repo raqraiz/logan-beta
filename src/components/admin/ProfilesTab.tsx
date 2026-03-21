@@ -552,20 +552,29 @@ export function ProfilesTab() {
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Activity className="w-4 h-4" />
-                <span>{profile.messageCount} chat messages</span>
+                <span>{chatMessages.length || profile.messageCount} chat messages</span>
               </div>
-              {profile.avgMessagesPerSession != null && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MessageSquare className="w-4 h-4" />
-                  <span>{profile.avgMessagesPerSession} avg messages per session</span>
-                </div>
-              )}
-              {profile.avgSessionsPerWeek != null && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Calendar className="w-4 h-4" />
-                  <span>{profile.avgSessionsPerWeek} avg sessions per week</span>
-                </div>
-              )}
+              {(() => {
+                const freshStats = chatMessages.length > 0 ? calculateSessionStats(chatMessages) : null;
+                const avgPerSession = freshStats?.avgPerSession ?? profile.avgMessagesPerSession;
+                const avgPerWeek = freshStats?.avgPerWeek ?? profile.avgSessionsPerWeek;
+                return (
+                  <>
+                    {avgPerSession != null && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <MessageSquare className="w-4 h-4" />
+                        <span>{avgPerSession} avg messages per session</span>
+                      </div>
+                    )}
+                    {avgPerWeek != null && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="w-4 h-4" />
+                        <span>{avgPerWeek} avg sessions per week</span>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </CardContent>
           </Card>
 
