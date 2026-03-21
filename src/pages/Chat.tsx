@@ -71,6 +71,11 @@ interface ChatMessage {
     period_update?: boolean;
     new_period_start?: string;
     show_not_sure?: "cycle_length" | "last_period";
+    cheat_sheet?: {
+      energy?: { level: string; note: string };
+      focus?: { level: string; note: string };
+      emotions?: { level: string; note: string };
+    } | null;
   };
 }
 
