@@ -552,7 +552,7 @@ export function ProfilesTab() {
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Activity className="w-4 h-4" />
-                <span>{profile.messageCount} chat messages</span>
+                <span>{chatMessages.length || profile.messageCount} chat messages</span>
               </div>
               {profile.avgMessagesPerSession != null && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
