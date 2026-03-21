@@ -381,11 +381,11 @@ serve(async (req) => {
         let validationMsg = "";
 
         if (hasEmotional && hasPhysical) {
-          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. You're getting hit on both sides — mind and body. That's really common, and it usually gets worse in the last 2 weeks of your cycle. Most people don't connect those dots.`;
+          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. You're getting hit on both sides — mind and body. These shift in intensity across your cycle. That's what I'm here to help you track.`;
         } else if (hasEmotional) {
-          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These are linked to a hormone called progesterone — it ramps up in the second half of your cycle. You're not imagining it.`;
+          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These are linked to a hormone called progesterone — it rises and falls across your cycle. You're not imagining it.`;
         } else if (hasPhysical) {
-          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Your body is telling you where it struggles most. These tend to follow your hormonal shifts — especially in the last 2 weeks before your period.`;
+          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Your body is telling you where it struggles most. These tend to follow your hormonal shifts across your cycle.`;
         } else {
           validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These follow your hormonal pattern more closely than you might think. Once you start noticing when they hit, it stops being a surprise.`;
         }
