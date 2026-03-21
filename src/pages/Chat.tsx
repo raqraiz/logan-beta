@@ -952,7 +952,7 @@ const Chat = () => {
                             phase={message.metadata.cycle_phase}
                             cycleDay={message.metadata.cycle_day}
                             cycleLengthDays={message.metadata.cycle_length_days || 28}
-                            personalizedData={message.metadata.cheat_sheet || null}
+                            personalizedData={message.metadata.cheat_sheet as any || null}
                           />
                         </div>
                       )}
