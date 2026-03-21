@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { LoganLogo } from "@/components/LoganLogo";
 import { useAuth } from "@/hooks/useAuth";
+import type { EmailOtpType } from "@supabase/supabase-js";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -19,7 +20,6 @@ const ResetPassword = () => {
 
   useEffect(() => {
     let isMounted = true;
-    let invalidTimeout: number | null = null;
 
     const {
       data: { subscription },
@@ -39,27 +39,84 @@ const ResetPassword = () => {
       }
     });
 
-    const hash = window.location.hash;
-    const hasRecoveryHash =
-      hash.includes("type=recovery") ||
-      hash.includes("access_token=") ||
-      hash.includes("refresh_token=");
+    const initializeRecovery = async () => {
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get("code");
+      const tokenHash = url.searchParams.get("token_hash");
+      const authType = url.searchParams.get("type");
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const hasRecoveryTokens =
+        hashParams.has("access_token") ||
+        hashParams.has("refresh_token") ||
+        hashParams.get("type") === "recovery";
 
-    if (session?.user || hasRecoveryHash) {
-      setStatus("ready");
-    } else if (!authLoading) {
-      invalidTimeout = window.setTimeout(() => {
+      try {
+        if (session?.user) {
+          if (isMounted) setStatus("ready");
+          return;
+        }
+
+        if (code) {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) throw error;
+
+          url.searchParams.delete("code");
+          url.searchParams.delete("type");
+          window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+
+          if (data.session && isMounted) {
+            setStatus("ready");
+            return;
+          }
+        }
+
+        if (tokenHash && authType) {
+          const { data, error } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: authType as EmailOtpType,
+          });
+          if (error) throw error;
+
+          url.searchParams.delete("token_hash");
+          url.searchParams.delete("type");
+          window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+
+          if (data.session && isMounted) {
+            setStatus("ready");
+            return;
+          }
+        }
+
+        const shouldWaitForSession = hasRecoveryTokens || Boolean(code) || Boolean(tokenHash);
+        const deadline = Date.now() + (shouldWaitForSession ? 8000 : authLoading ? 2000 : 0);
+
+        while (Date.now() < deadline) {
+          const {
+            data: { session: currentSession },
+          } = await supabase.auth.getSession();
+
+          if (currentSession?.user) {
+            if (isMounted) setStatus("ready");
+            return;
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+
         if (isMounted) {
           setStatus("invalid");
         }
-      }, 1500);
-    }
+      } catch {
+        if (isMounted) {
+          setStatus("invalid");
+        }
+      }
+    };
+
+    initializeRecovery();
 
     return () => {
       isMounted = false;
-      if (invalidTimeout) {
-        window.clearTimeout(invalidTimeout);
-      }
       subscription.unsubscribe();
     };
   }, [authLoading, navigate, session]);
