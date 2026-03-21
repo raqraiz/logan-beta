@@ -795,10 +795,7 @@ const Chat = () => {
                 Community
               </Button>
             </Link>
-            <Button variant="ghost" size="sm" onClick={() => setFeedbackOpen(true)} title="Send feedback">
-              <MessageSquarePlus className="w-4 h-4 mr-2" />
-              Feedback
-            </Button>
+            
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
               Sign out
