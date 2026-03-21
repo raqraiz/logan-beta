@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
-import { User, Session } from "@supabase/supabase-js";
+import { User, Session, type EmailOtpType } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AuthContextType {
@@ -51,6 +51,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const url = new URL(window.location.href);
         const code = url.searchParams.get("code");
+        const tokenHash = url.searchParams.get("token_hash");
+        const authType = url.searchParams.get("type");
         let exchangedSession: Session | null = null;
 
         // PKCE auth flow: exchange ?code= for a session and keep the returned session
@@ -69,6 +71,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             document.title,
             url.pathname + url.search + url.hash
           );
+        } else if (tokenHash && authType) {
+          try {
+            const { data } = await supabase.auth.verifyOtp({
+              token_hash: tokenHash,
+              type: authType as EmailOtpType,
+            });
+            exchangedSession = data.session;
+          } catch {
+            // Ignore: token may already be verified or expired
+          }
+
+          url.searchParams.delete("token_hash");
+          url.searchParams.delete("type");
+          window.history.replaceState(
+            {},
+            document.title,
+            url.pathname + url.search + url.hash
+          );
         }
 
         // Implicit flow: access_token/refresh_token in hash
@@ -78,7 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         // If tokens are present in the URL, give the SDK a moment to hydrate
         const start = Date.now();
-        const maxWaitMs = hasHashTokens || code ? 5000 : 0;
+        const maxWaitMs = hasHashTokens || code || Boolean(tokenHash) ? 5000 : 0;
 
         let currentSession: Session | null = exchangedSession;
         while (!currentSession) {
