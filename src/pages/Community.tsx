@@ -16,10 +16,7 @@ import { format } from "date-fns";
 import { InlineChatAuth } from "@/components/chat/InlineChatAuth";
 
 const CHANNELS = [
-  { id: "general", label: "General", icon: MessageCircle, description: "Open discussion" },
-  { id: "questions", label: "Questions", icon: HelpCircle, description: "Ask the community" },
-  { id: "tips", label: "Tips & Tricks", icon: Lightbulb, description: "Share what works for you" },
-  { id: "feedback", label: "Feedback", icon: Megaphone, description: "Help us improve Logan" },
+  { id: "feedback", label: "Feedback", icon: Megaphone, description: "Share feedback, ideas & questions with the Logan community" },
 ] as const;
 
 type Channel = typeof CHANNELS[number]["id"];
@@ -37,7 +34,7 @@ interface CommunityMessage {
 
 const Community = () => {
   const { user, loading: authLoading } = useAuth();
-  const [channel, setChannel] = useState<Channel>("general");
+  const [channel, setChannel] = useState<Channel>("feedback");
   const [messages, setMessages] = useState<CommunityMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
@@ -169,27 +166,29 @@ const Community = () => {
         </div>
       </header>
 
-      {/* Channel tabs */}
-      <div className="border-b border-border px-4 py-2 flex gap-2 overflow-x-auto scrollbar-none">
-        {CHANNELS.map((ch) => {
-          const Icon = ch.icon;
-          const isActive = channel === ch.id;
-          return (
-            <button
-              key={ch.id}
-              onClick={() => setChannel(ch.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {ch.label}
-            </button>
-          );
-        })}
-      </div>
+      {/* Channel tabs - hidden while single channel */}
+      {CHANNELS.length > 1 && (
+        <div className="border-b border-border px-4 py-2 flex gap-2 overflow-x-auto scrollbar-none">
+          {CHANNELS.map((ch) => {
+            const Icon = ch.icon;
+            const isActive = channel === ch.id;
+            return (
+              <button
+                key={ch.id}
+                onClick={() => setChannel(ch.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {ch.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Messages */}
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
