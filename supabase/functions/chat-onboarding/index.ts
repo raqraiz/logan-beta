@@ -274,6 +274,8 @@ serve(async (req) => {
         parsedValue = selectedSymptoms || [];
       } else if (parseType === "anchor") {
         parsedValue = anchorSymptom || userMessage?.trim() || "";
+      } else if (parseType === "topics") {
+        parsedValue = body.selectedTopics || [];
       }
 
       // Get user's name
