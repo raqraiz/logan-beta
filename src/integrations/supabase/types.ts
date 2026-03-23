@@ -591,7 +591,39 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      community_messages_public: {
+        Row: {
+          channel: string | null
+          content: string | null
+          created_at: string | null
+          display_name: string | null
+          id: string | null
+          is_anonymous: boolean | null
+          is_pinned: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          channel?: string | null
+          content?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string | null
+          is_anonymous?: boolean | null
+          is_pinned?: boolean | null
+          user_id?: never
+        }
+        Update: {
+          channel?: string | null
+          content?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string | null
+          is_anonymous?: boolean | null
+          is_pinned?: boolean | null
+          user_id?: never
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
