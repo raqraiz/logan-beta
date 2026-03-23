@@ -66,7 +66,7 @@ const Community = () => {
     const fetchMessages = async () => {
       setLoading(true);
       const { data, error } = await supabase
-        .from("community_messages")
+        .from("community_messages_public")
         .select("*")
         .eq("channel", channel)
         .order("is_pinned", { ascending: false })
