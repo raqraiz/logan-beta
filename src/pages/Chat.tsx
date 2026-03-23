@@ -1211,10 +1211,10 @@ const Chat = () => {
                 )}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground text-center mt-2">
+            <p className="text-xs text-muted-foreground/60 text-center mt-2">
               {isOnboarding 
                 ? "Answer Logan's questions to personalize your experience"
-                : "Ask me anything — diet tips, workout ideas, sleep advice, or how you're feeling. I'm not a doctor, but I'm your cycle-smart friend."
+                : "Logan is not a medical professional. Always consult your doctor for medical advice."
               }
             </p>
           </form>
