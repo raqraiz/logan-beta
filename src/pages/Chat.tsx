@@ -165,6 +165,10 @@ const Chat = () => {
       const isOnboardingComplete = typedMessages.some(
         m => m.metadata?.onboarding_complete === true
       );
+      // If user has many messages but no onboarding messages in current page,
+      // onboarding is long finished (pagination hides the old completion message)
+      const inferredComplete = !hasOnboardingMessages && typedMessages.length > 0;
+      const effectivelyComplete = isOnboardingComplete || inferredComplete;
       
       // Find the latest onboarding step
       const latestOnboardingMsg = [...typedMessages].reverse().find(
@@ -183,18 +187,18 @@ const Chat = () => {
       }
 
       // If onboarding is complete, trigger on-open insight generation (once per session)
-      if (isOnboardingComplete && typedMessages.length > 0 && !insightGenerated.current) {
+      if (effectivelyComplete && typedMessages.length > 0 && !insightGenerated.current) {
         insightGenerated.current = true;
         generateOnOpenInsight();
       }
 
       // Fetch credits if onboarding complete
-      if (isOnboardingComplete) {
+      if (effectivelyComplete) {
         fetchCredits();
       }
 
       // Check if existing user needs topic preferences prompt
-      if (isOnboardingComplete && !showTopicPrompt && !topicPromptChecked.current) {
+      if (effectivelyComplete && !showTopicPrompt && !topicPromptChecked.current) {
         checkTopicPreferences();
       }
     };
