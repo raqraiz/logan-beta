@@ -192,6 +192,12 @@ const Chat = () => {
       if (isOnboardingComplete) {
         fetchCredits();
       }
+
+      // Check if existing user needs topic preferences prompt
+      if (isOnboardingComplete && !topicPromptChecked.current) {
+        topicPromptChecked.current = true;
+        checkTopicPreferences();
+      }
     };
 
     fetchMessages();
