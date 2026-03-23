@@ -1120,6 +1120,36 @@ const Chat = () => {
               );
             })
           )}
+          {/* Topic preferences prompt for existing users */}
+          {showTopicPrompt && !isOnboarding && (
+            <div className="max-w-3xl mx-auto px-4 py-3">
+              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2">
+                <p className="text-sm font-medium text-foreground">New feature: Focus Areas</p>
+                <p className="text-xs text-muted-foreground">Pick the topics you want Logan to focus on — diet, exercise, sleep, and more. This helps tailor your daily insights.</p>
+                <TopicPicker
+                  onSubmit={async (topics) => {
+                    if (!user) return;
+                    try {
+                      setIsSending(true);
+                      const { error } = await supabase
+                        .from("participants")
+                        .update({ goals: topics })
+                        .eq("email", user.email);
+                      if (error) throw error;
+                      setShowTopicPrompt(false);
+                      toast({ title: "Focus areas saved!", description: "Your insights will now be tailored to these topics." });
+                    } catch (e) {
+                      console.error("Error saving topics:", e);
+                      toast({ title: "Failed to save", variant: "destructive" });
+                    } finally {
+                      setIsSending(false);
+                    }
+                  }}
+                  isSubmitting={isSending}
+                />
+              </div>
+            </div>
+          )}
           <div ref={scrollRef} />
         </div>
       </ScrollArea>
