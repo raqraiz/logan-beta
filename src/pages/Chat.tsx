@@ -428,6 +428,8 @@ const Chat = () => {
       });
       if (!error && data?.needsTopics) {
         setShowTopicPrompt(true);
+        // Auto-scroll so the prompt is visible
+        setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
       }
     } catch (e) {
       console.error("Error checking topic preferences:", e);
