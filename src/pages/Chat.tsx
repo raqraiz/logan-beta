@@ -1128,7 +1128,7 @@ const Chat = () => {
             <p className="text-xs text-muted-foreground text-center mt-2">
               {isOnboarding 
                 ? "Answer Logan's questions to personalize your experience"
-                : "I'm your cycle-smart friend, not a doctor. Always check with a pro for medical decisions."
+                : "Ask me anything — diet tips, workout ideas, sleep advice, or how you're feeling. I'm not a doctor, but I'm your cycle-smart friend."
               }
             </p>
           </form>

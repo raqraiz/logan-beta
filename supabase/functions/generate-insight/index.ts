@@ -277,6 +277,7 @@ function buildInsightPrompt(
 ): string {
   const anchorSymptom = participant.anchor_symptom;
   const symptoms = participant.typical_symptoms || [];
+  const topics = participant.goals || [];
   const firstName = userName.split(" ")[0];
   const cycleLengthDays = participant.cycle_length_days || 28;
 
@@ -311,6 +312,11 @@ function buildInsightPrompt(
     anchorContext = `Their anchor symptom: ${foodNote}`;
   }
 
+  // Topic preferences context
+  const topicContext = topics.length > 0
+    ? `- Interest areas: ${topics.join(", ")}. Weave relevant tips from these areas into the intro when naturally fitting.`
+    : "";
+
   return `You are Logan. You know ${firstName}'s cycle so well you can name what she's feeling before she does. You're not giving advice or instructions. You're the person who just gets it.
 
 CONTEXT:
@@ -319,6 +325,7 @@ CONTEXT:
 - Anchor symptom: ${anchorSymptom || "not set"}
 - Other symptoms: ${symptoms.join(", ") || "none"}
 ${anchorContext ? `- ${anchorContext}` : ""}
+${topicContext}
 
 RECENT CONVERSATION:
 ${recentMessages.map(m => `${m.role}: ${m.content.slice(0, 80)}`).join("\n") || "None"}
