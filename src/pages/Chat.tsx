@@ -1044,6 +1044,15 @@ const Chat = () => {
                     </div>
                   )}
 
+                  {showInteractiveInput && inputType === "topic_picker" && (
+                    <div className="mt-3">
+                      <TopicPicker
+                        onSubmit={handleTopicSubmit}
+                        isSubmitting={isSending}
+                      />
+                    </div>
+                  )}
+
                   {/* "I'm not sure" button for cycle length and last period */}
                   {showInteractiveInput && message.metadata?.show_not_sure && (
                     <div className="mt-1 ml-1">
