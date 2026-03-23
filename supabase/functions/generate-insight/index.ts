@@ -278,6 +278,7 @@ function buildInsightPrompt(
   const anchorSymptom = participant.anchor_symptom;
   const symptoms = participant.typical_symptoms || [];
   const topics = participant.goals || [];
+  const age = participant.age || null;
   const firstName = userName.split(" ")[0];
   const cycleLengthDays = participant.cycle_length_days || 28;
 
