@@ -194,8 +194,7 @@ const Chat = () => {
       }
 
       // Check if existing user needs topic preferences prompt
-      if (isOnboardingComplete && !topicPromptChecked.current) {
-        topicPromptChecked.current = true;
+      if (isOnboardingComplete && !showTopicPrompt && !topicPromptChecked.current) {
         checkTopicPreferences();
       }
     };
@@ -426,12 +425,20 @@ const Chat = () => {
       const { data, error } = await supabase.functions.invoke("chat-onboarding", {
         body: { action: "check_topics" },
       });
-      if (!error && data?.needsTopics) {
+
+      if (error) {
+        topicPromptChecked.current = false;
+        throw error;
+      }
+
+      topicPromptChecked.current = true;
+
+      if (data?.needsTopics) {
         setShowTopicPrompt(true);
-        // Auto-scroll so the prompt is visible
         setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
       }
     } catch (e) {
+      topicPromptChecked.current = false;
       console.error("Error checking topic preferences:", e);
     }
   };
