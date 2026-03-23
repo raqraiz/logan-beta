@@ -423,12 +423,10 @@ const Chat = () => {
   const checkTopicPreferences = async () => {
     if (!user) return;
     try {
-      const { data: participant } = await supabase
-        .from("participants")
-        .select("goals")
-        .eq("email", user.email)
-        .single();
-      if (participant && (!participant.goals || participant.goals.length === 0)) {
+      const { data, error } = await supabase.functions.invoke("chat-onboarding", {
+        body: { action: "check_topics" },
+      });
+      if (!error && data?.needsTopics) {
         setShowTopicPrompt(true);
       }
     } catch (e) {
