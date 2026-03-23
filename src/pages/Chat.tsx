@@ -194,8 +194,7 @@ const Chat = () => {
       }
 
       // Check if existing user needs topic preferences prompt
-      if (isOnboardingComplete && !topicPromptChecked.current) {
-        topicPromptChecked.current = true;
+      if (isOnboardingComplete && !showTopicPrompt && !topicPromptChecked.current) {
         checkTopicPreferences();
       }
     };
