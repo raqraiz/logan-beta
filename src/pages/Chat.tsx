@@ -26,6 +26,7 @@ import { MessageFeedback } from "@/components/chat/MessageFeedback";
 import { ConversationStarters } from "@/components/chat/ConversationStarters";
 import { MarkdownMessage } from "@/components/chat/MarkdownMessage";
 import { CycleBasicsCard, HormoneBasicsCard, SymptomExplainerCard, AnchorExplainerCard, NotSureButton } from "@/components/chat/OnboardingEducation";
+import { TopicPicker } from "@/components/chat/TopicPicker";
 import { CalendarSubscribe } from "@/components/chat/CalendarSubscribe";
 import { CycleForecast } from "@/components/chat/CycleForecast";
 import { CreditBalance } from "@/components/chat/CreditBalance";
