@@ -622,12 +622,18 @@ export function ProfilesTab() {
                   )}
                   {participant.goals && participant.goals.length > 0 && (
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Goals</p>
+                      <p className="text-sm text-muted-foreground mb-1">Focus Areas</p>
                       <div className="flex flex-wrap gap-1">
                         {participant.goals.map((goal, i) => (
                           <Badge key={i} variant="secondary" className="text-xs">{goal}</Badge>
                         ))}
                       </div>
+                    </div>
+                  )}
+                  {(!participant.goals || participant.goals.length === 0) && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Focus Areas</p>
+                      <p className="text-xs text-muted-foreground italic">Not set yet</p>
                     </div>
                   )}
                 </div>
