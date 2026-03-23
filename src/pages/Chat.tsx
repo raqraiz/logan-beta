@@ -107,6 +107,7 @@ const Chat = () => {
   const [creditBalance, setCreditBalance] = useState<{ free: number; paid: number; total: number; hoursUntilReset?: number } | null>(null);
   const [outOfCredits, setOutOfCredits] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [showTopicPrompt, setShowTopicPrompt] = useState(false);
   
   const { user, loading: authLoading, signOut } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -116,6 +117,7 @@ const Chat = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const onboardingInitialized = useRef(false);
   const insightGenerated = useRef(false);
+  const topicPromptChecked = useRef(false);
   const SCROLL_NEAR_BOTTOM_PX = 80;
   const SCROLL_BUTTON_SHOW_PX = 48;
 
