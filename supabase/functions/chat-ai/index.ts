@@ -525,15 +525,28 @@ CORE KNOWLEDGE:
     return basePrompt + "\n\nNote: User hasn't completed onboarding yet. Provide general guidance and encourage them to share their cycle details for personalized insights.";
   }
 
+  const age = participant.age || null;
+  const topics = participant.goals?.length ? participant.goals.join(", ") : null;
+
+  let lengthGuidance = "";
+  if (age && age <= 16) {
+    lengthGuidance = "\n\nRESPONSE LENGTH: This user is young. Keep responses SHORT — 2-3 sentences max per reply. Use simple, relatable language. Skip jargon.";
+  } else if (age && age <= 22) {
+    lengthGuidance = "\n\nRESPONSE LENGTH: Keep responses concise — 3-4 sentences. Be direct and casual.";
+  } else if (age && age >= 35) {
+    lengthGuidance = "\n\nRESPONSE LENGTH: This user can handle detail. Moderate length is fine — up to 5-6 sentences when the topic warrants it.";
+  }
+
   const userContext = `
 
 USER CONTEXT:
 - Current cycle day: ${cycleInfo.cycleDay}
 - Current phase: ${cycleInfo.phase}
 - Cycle length: ${participant.cycle_length_days || 28} days
-- Age: ${participant.age || "unknown"}
+- Age: ${age || "unknown"}
 - Anchor symptom (most disruptive): ${participant.anchor_symptom || "not specified"}
-- Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}${cycleHistoryContext}
+- Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}
+${topics ? `- Focus areas: ${topics}. Weave relevant tips from these areas into responses when naturally fitting.` : ""}${cycleHistoryContext}${lengthGuidance}
 
 Use this context to make your responses personally relevant. Reference their current phase and how it might affect their request. If they mention their anchor symptom, acknowledge it and provide phase-appropriate guidance. When users ask about their cycle length or patterns, use the cycle history data to provide specific insights.`;
 
