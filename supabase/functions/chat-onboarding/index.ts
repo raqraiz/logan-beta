@@ -97,8 +97,15 @@ const ONBOARDING_QUESTIONS = [
     inputType: "anchor_picker"
   },
   {
+    key: "topics",
+    message: "Last one — what areas do you want Logan to focus on? Pick as many as you like.",
+    field: "goals",
+    parseType: "topics",
+    inputType: "topic_picker"
+  },
+  {
     key: "complete",
-    message: "You're all set! Logan now knows your cycle, your phase, and what to watch for. From here, everything gets personal.",
+    message: "You're all set! Logan now knows your cycle, your phase, and what matters to you. From here, everything gets personal.",
     field: null,
     parseType: null,
     inputType: null
@@ -267,6 +274,8 @@ serve(async (req) => {
         parsedValue = selectedSymptoms || [];
       } else if (parseType === "anchor") {
         parsedValue = anchorSymptom || userMessage?.trim() || "";
+      } else if (parseType === "topics") {
+        parsedValue = body.selectedTopics || [];
       }
 
       // Get user's name

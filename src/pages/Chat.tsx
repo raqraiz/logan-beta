@@ -26,6 +26,7 @@ import { MessageFeedback } from "@/components/chat/MessageFeedback";
 import { ConversationStarters } from "@/components/chat/ConversationStarters";
 import { MarkdownMessage } from "@/components/chat/MarkdownMessage";
 import { CycleBasicsCard, HormoneBasicsCard, SymptomExplainerCard, AnchorExplainerCard, NotSureButton } from "@/components/chat/OnboardingEducation";
+import { TopicPicker } from "@/components/chat/TopicPicker";
 import { CalendarSubscribe } from "@/components/chat/CalendarSubscribe";
 import { CycleForecast } from "@/components/chat/CycleForecast";
 import { CreditBalance } from "@/components/chat/CreditBalance";
@@ -592,6 +593,31 @@ const Chat = () => {
     sendOnboardingResponse(format(date, "PPP"), undefined, undefined, date);
   };
 
+  const handleTopicSubmit = (topics: string[]) => {
+    const body: Record<string, any> = { action: "respond", userMessage: `Topics: ${topics.join(", ")}`, selectedTopics: topics };
+    sendOnboardingResponseWithBody(`Focus areas: ${topics.join(", ")}`, body);
+  };
+
+  const sendOnboardingResponseWithBody = async (displayContent: string, body: Record<string, any>) => {
+    if (!user || isSending) return;
+    setInputValue("");
+    setIsSending(true);
+    try {
+      await supabase.from("chat_messages").insert({
+        user_id: user.id, role: "user", content: displayContent, message_type: "text",
+      });
+      const { data, error: onboardingError } = await supabase.functions.invoke("chat-onboarding", { body });
+      if (onboardingError) console.error("Onboarding error:", onboardingError);
+      else if (data?.onboardingComplete) setIsOnboarding(false);
+      inputRef.current?.focus();
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast({ title: "Failed to send message", variant: "destructive" });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const goBackToStep = async (targetStep: number) => {
     if (!user || isSending) return;
     setIsSending(true);
@@ -636,7 +662,7 @@ const Chat = () => {
     const lastMessage = messages[messages.length - 1];
     if (lastMessage.role !== "assistant") return false;
     const inputType = lastMessage.metadata?.input_type;
-    return inputType === "symptom_picker" || inputType === "anchor_picker" || inputType === "date_picker";
+    return inputType === "symptom_picker" || inputType === "anchor_picker" || inputType === "date_picker" || inputType === "topic_picker";
   };
   const sendFeedback = async (messageId: string, isPositive: boolean) => {
     if (!user) return;
@@ -1018,6 +1044,15 @@ const Chat = () => {
                     </div>
                   )}
 
+                  {showInteractiveInput && inputType === "topic_picker" && (
+                    <div className="mt-3">
+                      <TopicPicker
+                        onSubmit={handleTopicSubmit}
+                        isSubmitting={isSending}
+                      />
+                    </div>
+                  )}
+
                   {/* "I'm not sure" button for cycle length and last period */}
                   {showInteractiveInput && message.metadata?.show_not_sure && (
                     <div className="mt-1 ml-1">
@@ -1128,7 +1163,7 @@ const Chat = () => {
             <p className="text-xs text-muted-foreground text-center mt-2">
               {isOnboarding 
                 ? "Answer Logan's questions to personalize your experience"
-                : "I'm your cycle-smart friend, not a doctor. Always check with a pro for medical decisions."
+                : "Ask me anything — diet tips, workout ideas, sleep advice, or how you're feeling. I'm not a doctor, but I'm your cycle-smart friend."
               }
             </p>
           </form>
