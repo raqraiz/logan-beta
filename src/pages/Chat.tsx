@@ -1131,10 +1131,9 @@ const Chat = () => {
                     if (!user) return;
                     try {
                       setIsSending(true);
-                      const { error } = await supabase
-                        .from("participants")
-                        .update({ goals: topics })
-                        .eq("email", user.email);
+                      const { error } = await supabase.functions.invoke("chat-onboarding", {
+                        body: { action: "set_topics", selectedTopics: topics },
+                      });
                       if (error) throw error;
                       setShowTopicPrompt(false);
                       toast({ title: "Focus areas saved!", description: "Your insights will now be tailored to these topics." });

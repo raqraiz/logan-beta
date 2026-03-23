@@ -163,6 +163,18 @@ serve(async (req) => {
 
     const systemMessages = messages?.filter(m => m.message_type === "onboarding") || [];
 
+    // Action: Set topic preferences for existing users
+    if (action === "set_topics") {
+      const topics = body.selectedTopics || [];
+      if (participant) {
+        await supabase.from("participants").update({ goals: topics }).eq("id", participant.id);
+      }
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Action: Initialize onboarding (send first message)
     if (action === "init") {
       if (messages && messages.length > 0) {
