@@ -163,6 +163,15 @@ serve(async (req) => {
 
     const systemMessages = messages?.filter(m => m.message_type === "onboarding") || [];
 
+    // Action: Check if user needs topic preferences
+    if (action === "check_topics") {
+      const needsTopics = participant && (!participant.goals || participant.goals.length === 0);
+      return new Response(
+        JSON.stringify({ success: true, needsTopics: !!needsTopics }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Action: Set topic preferences for existing users
     if (action === "set_topics") {
       const topics = body.selectedTopics || [];
