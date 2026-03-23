@@ -107,6 +107,7 @@ const Chat = () => {
   const [creditBalance, setCreditBalance] = useState<{ free: number; paid: number; total: number; hoursUntilReset?: number } | null>(null);
   const [outOfCredits, setOutOfCredits] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [showTopicPrompt, setShowTopicPrompt] = useState(false);
   
   const { user, loading: authLoading, signOut } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -116,6 +117,7 @@ const Chat = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const onboardingInitialized = useRef(false);
   const insightGenerated = useRef(false);
+  const topicPromptChecked = useRef(false);
   const SCROLL_NEAR_BOTTOM_PX = 80;
   const SCROLL_BUTTON_SHOW_PX = 48;
 
@@ -189,6 +191,12 @@ const Chat = () => {
       // Fetch credits if onboarding complete
       if (isOnboardingComplete) {
         fetchCredits();
+      }
+
+      // Check if existing user needs topic preferences prompt
+      if (isOnboardingComplete && !topicPromptChecked.current) {
+        topicPromptChecked.current = true;
+        checkTopicPreferences();
       }
     };
 
@@ -409,6 +417,20 @@ const Chat = () => {
       }
     } catch (error) {
       console.error("Error generating on-open insight:", error);
+    }
+  };
+
+  const checkTopicPreferences = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("chat-onboarding", {
+        body: { action: "check_topics" },
+      });
+      if (!error && data?.needsTopics) {
+        setShowTopicPrompt(true);
+      }
+    } catch (e) {
+      console.error("Error checking topic preferences:", e);
     }
   };
 
@@ -1095,6 +1117,35 @@ const Chat = () => {
                 </div>
               );
             })
+          )}
+          {/* Topic preferences prompt for existing users */}
+          {showTopicPrompt && !isOnboarding && (
+            <div className="max-w-3xl mx-auto px-4 py-3">
+              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2">
+                <p className="text-sm font-medium text-foreground">New feature: Focus Areas</p>
+                <p className="text-xs text-muted-foreground">Pick the topics you want Logan to focus on — diet, exercise, sleep, and more. This helps tailor your daily insights.</p>
+                <TopicPicker
+                  onSubmit={async (topics) => {
+                    if (!user) return;
+                    try {
+                      setIsSending(true);
+                      const { error } = await supabase.functions.invoke("chat-onboarding", {
+                        body: { action: "set_topics", selectedTopics: topics },
+                      });
+                      if (error) throw error;
+                      setShowTopicPrompt(false);
+                      toast({ title: "Focus areas saved!", description: "Your insights will now be tailored to these topics." });
+                    } catch (e) {
+                      console.error("Error saving topics:", e);
+                      toast({ title: "Failed to save", variant: "destructive" });
+                    } finally {
+                      setIsSending(false);
+                    }
+                  }}
+                  isSubmitting={isSending}
+                />
+              </div>
+            </div>
           )}
           <div ref={scrollRef} />
         </div>

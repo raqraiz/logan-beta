@@ -622,12 +622,18 @@ export function ProfilesTab() {
                   )}
                   {participant.goals && participant.goals.length > 0 && (
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Goals</p>
+                      <p className="text-sm text-muted-foreground mb-1">Focus Areas</p>
                       <div className="flex flex-wrap gap-1">
                         {participant.goals.map((goal, i) => (
                           <Badge key={i} variant="secondary" className="text-xs">{goal}</Badge>
                         ))}
                       </div>
+                    </div>
+                  )}
+                  {(!participant.goals || participant.goals.length === 0) && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Focus Areas</p>
+                      <p className="text-xs text-muted-foreground italic">Not set yet</p>
                     </div>
                   )}
                 </div>
@@ -828,8 +834,8 @@ export function ProfilesTab() {
                       <Input id="edit-symptoms" placeholder="Comma-separated, e.g. cramps, fatigue" value={editForm.typical_symptoms} onChange={(e) => setEditForm(f => ({ ...f, typical_symptoms: e.target.value }))} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="edit-goals">Goals</Label>
-                      <Input id="edit-goals" placeholder="Comma-separated, e.g. track cycles, reduce PMS" value={editForm.goals} onChange={(e) => setEditForm(f => ({ ...f, goals: e.target.value }))} />
+                      <Label htmlFor="edit-goals">Focus Areas</Label>
+                      <Input id="edit-goals" placeholder="Comma-separated, e.g. diet, exercise, sleep, mood, energy, skin" value={editForm.goals} onChange={(e) => setEditForm(f => ({ ...f, goals: e.target.value }))} />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="edit-tz">Timezone</Label>
