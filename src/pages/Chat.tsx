@@ -593,6 +593,31 @@ const Chat = () => {
     sendOnboardingResponse(format(date, "PPP"), undefined, undefined, date);
   };
 
+  const handleTopicSubmit = (topics: string[]) => {
+    const body: Record<string, any> = { action: "respond", userMessage: `Topics: ${topics.join(", ")}`, selectedTopics: topics };
+    sendOnboardingResponseWithBody(`Focus areas: ${topics.join(", ")}`, body);
+  };
+
+  const sendOnboardingResponseWithBody = async (displayContent: string, body: Record<string, any>) => {
+    if (!user || isSending) return;
+    setInputValue("");
+    setIsSending(true);
+    try {
+      await supabase.from("chat_messages").insert({
+        user_id: user.id, role: "user", content: displayContent, message_type: "text",
+      });
+      const { data, error: onboardingError } = await supabase.functions.invoke("chat-onboarding", { body });
+      if (onboardingError) console.error("Onboarding error:", onboardingError);
+      else if (data?.onboardingComplete) setIsOnboarding(false);
+      inputRef.current?.focus();
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast({ title: "Failed to send message", variant: "destructive" });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const goBackToStep = async (targetStep: number) => {
     if (!user || isSending) return;
     setIsSending(true);
