@@ -1131,35 +1131,6 @@ const Chat = () => {
               );
             })
           )}
-          {/* Topic preferences prompt for existing users */}
-          {showTopicPrompt && !isOnboarding && (
-            <div className="max-w-3xl mx-auto px-4 py-3">
-              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2">
-                <p className="text-sm font-medium text-foreground">New feature: Focus Areas</p>
-                <p className="text-xs text-muted-foreground">Pick the topics you want Logan to focus on — diet, exercise, sleep, and more. This helps tailor your daily insights.</p>
-                <TopicPicker
-                  onSubmit={async (topics) => {
-                    if (!user) return;
-                    try {
-                      setIsSending(true);
-                      const { error } = await supabase.functions.invoke("chat-onboarding", {
-                        body: { action: "set_topics", selectedTopics: topics },
-                      });
-                      if (error) throw error;
-                      setShowTopicPrompt(false);
-                      toast({ title: "Focus areas saved!", description: "Your insights will now be tailored to these topics." });
-                    } catch (e) {
-                      console.error("Error saving topics:", e);
-                      toast({ title: "Failed to save", variant: "destructive" });
-                    } finally {
-                      setIsSending(false);
-                    }
-                  }}
-                  isSubmitting={isSending}
-                />
-              </div>
-            </div>
-          )}
           <div ref={scrollRef} />
         </div>
       </ScrollArea>
@@ -1196,6 +1167,34 @@ const Chat = () => {
       {/* Input - hide when showing interactive pickers or out of credits */}
       {!shouldShowInteractivePicker() && (
         <div className="border-t border-border/50 bg-card/50 backdrop-blur-sm sticky bottom-0">
+          <div className="max-w-3xl mx-auto px-4 pt-4">
+            {showTopicPrompt && !isOnboarding && (
+              <div className="mb-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2">
+                <p className="text-sm font-medium text-foreground">Choose your Focus Areas</p>
+                <p className="text-xs text-muted-foreground">Pick the topics you want Logan to focus on — diet, exercise, sleep, and more.</p>
+                <TopicPicker
+                  onSubmit={async (topics) => {
+                    if (!user) return;
+                    try {
+                      setIsSending(true);
+                      const { error } = await supabase.functions.invoke("chat-onboarding", {
+                        body: { action: "set_topics", selectedTopics: topics },
+                      });
+                      if (error) throw error;
+                      setShowTopicPrompt(false);
+                      toast({ title: "Focus areas saved!", description: "Your insights will now be tailored to these topics." });
+                    } catch (e) {
+                      console.error("Error saving topics:", e);
+                      toast({ title: "Failed to save", variant: "destructive" });
+                    } finally {
+                      setIsSending(false);
+                    }
+                  }}
+                  isSubmitting={isSending}
+                />
+              </div>
+            )}
+          </div>
           <form onSubmit={sendMessage} className="max-w-3xl mx-auto px-4 py-4">
             <div className="flex gap-3">
               <Input
