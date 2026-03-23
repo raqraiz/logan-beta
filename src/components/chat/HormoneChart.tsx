@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { AnnotatedText } from "./CycleGlossary";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface HormoneChartProps {
   cycleDay: number;
@@ -91,27 +93,21 @@ function getHormoneValue(hormone: string, dayAt: number, cycleLengthDays: number
   }
 }
 
-export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartProps) {
+function HormoneChartSVG({ cycleDay, phase, cycleLengthDays, w, h }: HormoneChartProps & { w: number; h: number }) {
   const cssVar = PHASE_CSS_VARS[phase] || PHASE_CSS_VARS.Follicular;
   const color = `hsl(var(${cssVar}))`;
-
-  const tip = PHASE_TIPS[phase] || PHASE_TIPS.Follicular;
 
   const menEnd = 5;
   const ovDay = cycleLengthDays - 14;
   const ovStart = ovDay - 1;
   const ovEnd = ovDay + 2;
-
   const xPos = (cycleDay - 1) / (cycleLengthDays - 1);
 
-  const w = 400;
-  const h = 180;
   const padX = 14;
   const padTop = 24;
   const padBot = 40;
   const chartW = w - padX * 2;
   const chartH = h - padTop - padBot;
-
   const numPoints = 80;
 
   const hormonePaths = HORMONES.map(({ key }) => {
@@ -137,136 +133,86 @@ export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartP
   ];
 
   return (
-    <div className="rounded-xl bg-[hsl(var(--logan-graphite))] border border-border/30 p-3 space-y-2">
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full">
-        {/* Phase background bands */}
-        {phases.map((p, i) => {
-          const x1 = padX + (p.start / cycleLengthDays) * chartW;
-          const x2 = padX + (p.end / cycleLengthDays) * chartW;
-          const isActive = phase === p.label;
-          return (
-            <g key={i}>
-              <rect
-                x={x1}
-                y={padTop}
-                width={isActive ? 1.5 : 0}
-                height={chartH}
-                fill={color}
-                rx={1}
-              />
-              <text
-                x={(x1 + x2) / 2}
-                y={h - 18}
-                textAnchor="middle"
-                className="fill-muted-foreground"
-                fontSize="10"
-                fontFamily="inherit"
-                opacity={isActive ? 1 : 0.45}
-                fontWeight={isActive ? 600 : 400}
-              >
-                {p.label}
-              </text>
-            </g>
-          );
-        })}
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full">
+      {phases.map((p, i) => {
+        const x1 = padX + (p.start / cycleLengthDays) * chartW;
+        const x2 = padX + (p.end / cycleLengthDays) * chartW;
+        const isActive = phase === p.label;
+        return (
+          <g key={i}>
+            <rect x={x1} y={padTop} width={isActive ? 1.5 : 0} height={chartH} fill={color} rx={1} />
+            <text x={(x1 + x2) / 2} y={h - 18} textAnchor="middle" className="fill-muted-foreground"
+              fontSize="10" fontFamily="inherit" opacity={isActive ? 1 : 0.45} fontWeight={isActive ? 600 : 400}>
+              {p.label}
+            </text>
+          </g>
+        );
+      })}
+      <line x1={padX} y1={padTop + chartH} x2={padX + chartW} y2={padTop + chartH}
+        stroke="hsl(var(--border))" strokeWidth="0.5" opacity={0.2} />
+      {HORMONES.map((hormone, i) => (
+        <path key={hormone.key} d={hormonePaths[i]} fill="none" stroke={hormone.color}
+          strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity={0.85} />
+      ))}
+      <line x1={markerX} y1={padTop} x2={markerX} y2={padTop + chartH}
+        stroke={color} strokeWidth="0.25" strokeDasharray="2 3" opacity={0.35} />
+      <text x={markerX} y={padTop - 6} textAnchor="middle" fill={color}
+        fontSize="9" fontWeight="500" fontFamily="inherit" opacity={0.8}>Day {cycleDay}</text>
+      <text x={markerX} y={padTop + chartH + 12} textAnchor="middle" fill={color}
+        fontSize="7" fontFamily="inherit" opacity={0.4}>▲ you</text>
+      {HORMONES.map((hormone, i) => {
+        const lx = padX + i * 95;
+        return (
+          <g key={hormone.key}>
+            <line x1={lx} y1={h - 4} x2={lx + 12} y2={h - 4} stroke={hormone.color} strokeWidth="1.5" strokeLinecap="round" />
+            <text x={lx + 16} y={h - 1} fontSize="9" className="fill-muted-foreground" fontFamily="inherit">{hormone.label}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
 
-        {/* Baseline */}
-        <line
-          x1={padX}
-          y1={padTop + chartH}
-          x2={padX + chartW}
-          y2={padTop + chartH}
-          stroke="hsl(var(--border))"
-          strokeWidth="0.5"
-          opacity={0.2}
-        />
+export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartProps) {
+  const [expanded, setExpanded] = useState(false);
+  const cssVar = PHASE_CSS_VARS[phase] || PHASE_CSS_VARS.Follicular;
+  const color = `hsl(var(${cssVar}))`;
+  const tip = PHASE_TIPS[phase] || PHASE_TIPS.Follicular;
 
-        {/* Hormone curves */}
-        {HORMONES.map((hormone, i) => (
-          <path
-            key={hormone.key}
-            d={hormonePaths[i]}
-            fill="none"
-            stroke={hormone.color}
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            opacity={0.85}
-          />
-        ))}
+  return (
+    <>
+      <div
+        onClick={() => setExpanded(true)}
+        className="rounded-xl bg-[hsl(var(--logan-graphite))] border border-border/30 p-3 sm:p-3 p-4 space-y-2 cursor-pointer active:scale-[0.98] transition-transform"
+      >
+        <HormoneChartSVG cycleDay={cycleDay} phase={phase} cycleLengthDays={cycleLengthDays} w={400} h={180} />
+        <p className="text-xs sm:text-xs text-sm text-muted-foreground leading-relaxed px-1">
+          <span className="font-medium" style={{ color }}>{phase}</span>
+          {" "}— <AnnotatedText text={tip} />
+        </p>
+        <p className="text-[10px] text-muted-foreground/50 text-center">Tap to expand</p>
+      </div>
 
-        {/* "You are here" marker — hairline */}
-        <line
-          x1={markerX}
-          y1={padTop}
-          x2={markerX}
-          y2={padTop + chartH}
-          stroke={color}
-          strokeWidth="0.25"
-          strokeDasharray="2 3"
-          opacity={0.35}
-        />
-
-        {/* Day label */}
-        <text
-          x={markerX}
-          y={padTop - 6}
-          textAnchor="middle"
-          fill={color}
-          fontSize="9"
-          fontWeight="500"
-          fontFamily="inherit"
-          opacity={0.8}
-        >
-          Day {cycleDay}
-        </text>
-        <text
-          x={markerX}
-          y={padTop + chartH + 12}
-          textAnchor="middle"
-          fill={color}
-          fontSize="7"
-          fontFamily="inherit"
-          opacity={0.4}
-        >
-          ▲ you
-        </text>
-
-        {/* Legend row */}
-        {HORMONES.map((hormone, i) => {
-          const lx = padX + i * 95;
-          return (
-            <g key={hormone.key}>
-              <line
-                x1={lx}
-                y1={h - 4}
-                x2={lx + 12}
-                y2={h - 4}
-                stroke={hormone.color}
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-              <text
-                x={lx + 16}
-                y={h - 1}
-                fontSize="9"
-                className="fill-muted-foreground"
-                fontFamily="inherit"
-              >
-                {hormone.label}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-
-      {/* Bite-size tip */}
-      <p className="text-xs text-muted-foreground leading-relaxed px-1">
-        <span className="font-medium" style={{ color }}>
-          {phase}
-        </span>
-        {" "}— <AnnotatedText text={tip} />
-      </p>
-    </div>
+      <Dialog open={expanded} onOpenChange={setExpanded}>
+        <DialogContent className="max-w-lg bg-[hsl(var(--logan-graphite))] border-border/30 p-4">
+          <div className="space-y-3">
+            <HormoneChartSVG cycleDay={cycleDay} phase={phase} cycleLengthDays={cycleLengthDays} w={500} h={260} />
+            <p className="text-sm text-muted-foreground leading-relaxed px-1">
+              <span className="font-medium" style={{ color }}>{phase}</span>
+              {" "}— <AnnotatedText text={tip} />
+            </p>
+            {/* Hormone descriptions */}
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              {HORMONES.map((h) => (
+                <div key={h.key} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-white/5">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: h.color }} />
+                  <span className="text-xs text-muted-foreground">{h.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
