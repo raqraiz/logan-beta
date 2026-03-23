@@ -18,7 +18,9 @@ const SYMPTOM_CATEGORIES = {
       "Feeling overwhelmed",
       "Low stress tolerance",
       "Irritability",
-      "Brain fog"
+      "Brain fog",
+      "Mood swings",
+      "Insomnia or poor sleep"
     ]
   },
   physical: {
@@ -27,14 +29,20 @@ const SYMPTOM_CATEGORIES = {
       "Energy crashes",
       "Wired but tired",
       "Full body inflammation",
+      "Bloating",
+      "Breast tenderness",
+      "Acne breakouts",
+      "Cramps",
       "Nausea",
       "Dizziness",
       "Ringing in ears",
       "Muffled hearing",
       "Migraines",
       "Deep fatigue",
+      "Back pain",
+      "Digestive issues",
+      "Cravings",
       "Smell sensitivity",
-      "Chin or jaw acne breakouts",
       "Knee pain"
     ]
   },
