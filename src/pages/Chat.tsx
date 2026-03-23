@@ -420,7 +420,22 @@ const Chat = () => {
     }
   };
 
-  const initializeOnboarding = async () => {
+  const checkTopicPreferences = async () => {
+    if (!user) return;
+    try {
+      const { data: participant } = await supabase
+        .from("participants")
+        .select("goals")
+        .eq("email", user.email)
+        .single();
+      if (participant && (!participant.goals || participant.goals.length === 0)) {
+        setShowTopicPrompt(true);
+      }
+    } catch (e) {
+      console.error("Error checking topic preferences:", e);
+    }
+  };
+
     try {
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.access_token) return;
