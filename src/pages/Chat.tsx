@@ -436,6 +436,7 @@ const Chat = () => {
     }
   };
 
+  const initializeOnboarding = async () => {
     try {
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.access_token) return;
