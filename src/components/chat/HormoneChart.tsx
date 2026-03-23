@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { AnnotatedText } from "./CycleGlossary";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface HormoneChartProps {
   cycleDay: number;
