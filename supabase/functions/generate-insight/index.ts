@@ -323,10 +323,13 @@ function buildInsightPrompt(
 CONTEXT:
 - Day ${cycleInfo.cycleDay} of ${cycleLengthDays}, **${cycleInfo.phase}**
 - ${cycleInfo.daysUntilNextPhase} days until next phase
+- Age: ${age || "unknown"}
 - Anchor symptom: ${anchorSymptom || "not set"}
 - Other symptoms: ${symptoms.join(", ") || "none"}
 ${anchorContext ? `- ${anchorContext}` : ""}
 ${topicContext}
+${age && age <= 16 ? "- TONE: User is young. Use simple, relatable language. Keep intro under 25 words. Make the question feel like a text from a friend." : ""}
+${age && age >= 17 && age <= 22 ? "- TONE: Keep it casual and brief. Max 35 words for intro." : ""}
 
 RECENT CONVERSATION:
 ${recentMessages.map(m => `${m.role}: ${m.content.slice(0, 80)}`).join("\n") || "None"}
