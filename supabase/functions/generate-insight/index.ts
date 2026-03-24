@@ -336,6 +336,7 @@ CONTEXT:
 - Age: ${age || "unknown"}
 - Anchor symptom: ${anchorSymptom || "not set"}
 - Other symptoms: ${symptoms.join(", ") || "none"}
+- PHASE STRENGTHS: ${strengthContext}
 ${anchorContext ? `- ${anchorContext}` : ""}
 ${topicContext}
 ${age && age <= 16 ? "- TONE: User is young. Use simple, relatable language. Keep intro under 25 words. Make the question feel like a text from a friend." : ""}
@@ -344,22 +345,27 @@ ${age && age >= 17 && age <= 22 ? "- TONE: Keep it casual and brief. Max 35 word
 RECENT CONVERSATION:
 ${recentMessages.map(m => `${m.role}: ${m.content.slice(0, 80)}`).join("\n") || "None"}
 
+IMPORTANT TONE RULE:
+- Every phase has superpowers. LEAD with what's going well — the strengths, the high-performing qualities of this phase.
+- During Follicular and Ovulation: emphasize peak energy, creativity, confidence, and capability. Anchor symptom context is secondary or absent.
+- During Luteal and Menstruation: acknowledge strengths first (detail-oriented thinking, intuition, reflection), then gently reference anchor symptom context if relevant.
+- Never frame any phase as purely negative. Even challenging phases have powerful qualities.
+
 Generate a JSON object:
 
 1. "intro": 2-3 short sentences. Max 40 words total.
-   - Sentence 1: Ground them in their day and phase (bold the phase name).
-   - Sentence 2: Name something specific they're probably noticing or feeling today, tied to their anchor symptom ("${anchorSymptom}"). Don't tell them what to do about it. Just name it like you already know.
-   - Sentence 3 (optional, only in Luteal or Menstruation): A single, specific food mention that connects to their anchor symptom. Frame it as something their body might be drawn to, not as a prescription. Example: "Your body might be reaching for something warm and rich in omega-3s today." Never list foods or give a meal plan.
+   - Sentence 1: Ground them in their day and phase (bold the phase name). Lead with what this phase is great for.
+   - Sentence 2: Name a strength or high-performing quality they're likely feeling today. During Follicular/Ovulation, lean into peak performance. During Luteal/Menstruation, acknowledge the quieter superpowers.
+   - Sentence 3 (optional, only in Luteal or Menstruation): A single, specific food mention that connects to their anchor symptom. Frame it as something their body might be drawn to, not as a prescription.
 
-2. "question": One short question (under 12 words). Predict a hyper-specific sensation, thought, or moment they're having right now. The kind of question that makes them stop and think "wait, yes." Anchor it to "${anchorSymptom}" when this phase makes it relevant.
+2. "question": One short question (under 12 words). During Follicular/Ovulation: ask about a strength or creative/energetic moment. During Luteal/Menstruation: ask about a strength OR a hyper-specific sensation tied to "${anchorSymptom}". The kind of question that makes them stop and think "wait, yes."
 
 3. "starters": 3 replies (2-4 words each). One confirms ("Yeah exactly"), one pushes back ("Not today actually"), one opens up ("Tell me more").
 
-4. "cheat_sheet": Personalized energy/focus/emotions for THIS user in THIS phase. Each has "level" (high/medium/low/variable) and "note" (max 12 words). Notes must be INQUIRY-BASED — ask the user how they're feeling, don't tell them. Frame each note as a gentle question or check-in that invites them to reflect. Never declare what they're experiencing.
-   - "energy": Ask how their energy is today given their phase and anchor symptom.
+4. "cheat_sheet": Personalized energy/focus/emotions for THIS user in THIS phase. Each has "level" (high/medium/low/variable) and "note" (max 12 words). Notes must be INQUIRY-BASED — ask the user how they're feeling, don't tell them. Frame each note as a gentle question or check-in that invites them to reflect. Never declare what they're experiencing. During high-performing phases, levels should reflect the strengths (e.g., energy: high, focus: high).
+   - "energy": Ask how their energy is today given their phase.
    - "focus": Ask about their mental clarity or creative state.
    - "emotions": Ask what their emotional landscape feels like right now.
-    Example for muffled hearing in Menstruation: { "level": "low", "note": "How's the ear pressure affecting your energy today?" }
 
 VOICE:
 - You're a friend who just knows, not a coach giving a plan
