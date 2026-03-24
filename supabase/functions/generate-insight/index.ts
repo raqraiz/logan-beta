@@ -282,6 +282,16 @@ function buildInsightPrompt(
   const firstName = userName.split(" ")[0];
   const cycleLengthDays = participant.cycle_length_days || 28;
 
+  // Phase strengths — what's going well
+  const phaseStrengths: Record<string, string> = {
+    "Menstruation": "Deep intuition and reflection. The body is resetting — a powerful time for clarity on what matters most.",
+    "Follicular": "Rising energy, sharpened focus, creativity surging. This is a peak performance window — confidence, mental clarity, and motivation are naturally high.",
+    "Ovulation": "Communication skills peak, social energy is magnetic, verbal fluency and confidence are at their highest.",
+    "Luteal": "Detail-oriented thinking, nesting instincts, strong ability to finish and refine projects. Early luteal still carries good energy.",
+  };
+
+  const strengthContext = phaseStrengths[cycleInfo.phase] || "";
+
   // Anchor-specific phase context with food connection
   let anchorContext = "";
   if (anchorSymptom) {
