@@ -293,8 +293,9 @@ function buildInsightPrompt(
   const strengthContext = phaseStrengths[cycleInfo.phase] || "";
 
   // Anchor-specific phase context with food connection
+  // During Follicular & Ovulation: SUPPRESS symptom context — these are peak phases
   let anchorContext = "";
-  if (anchorSymptom) {
+  if (anchorSymptom && (cycleInfo.phase === "Luteal" || cycleInfo.phase === "Menstruation")) {
     const foodMap: Record<string, Record<string, string>> = {
       "Luteal": {
         "muffled hearing": "Inner ear inflammation tends to peak now. Omega-3s (salmon, sardines) and turmeric can quiet it.",
@@ -307,18 +308,12 @@ function buildInsightPrompt(
         "Chin or jaw acne breakouts": "Androgens spike in luteal. Anti-inflammatory foods and cutting dairy can help.",
         "_default": `"${anchorSymptom}" is likely active or building. Anti-inflammatory foods (fatty fish, leafy greens, berries) can take the edge off.`,
       },
-      "Follicular": {
-        "_default": `"${anchorSymptom}" is likely quiet right now. Good window to eat lighter — fresh vegetables, fermented foods, lean protein.`,
-      },
-      "Ovulation": {
-        "_default": `"${anchorSymptom}" may start surfacing soon. Loading up on anti-inflammatory foods now can soften the landing into luteal.`,
-      },
       "Menstruation": {
         "_default": `"${anchorSymptom}" may be present or easing. Warm, iron-rich, anti-inflammatory meals support recovery.`,
       },
     };
 
-    const phaseMap = foodMap[cycleInfo.phase] || foodMap["Follicular"];
+    const phaseMap = foodMap[cycleInfo.phase] || {};
     const foodNote = phaseMap[anchorSymptom] || phaseMap["_default"] || "";
     anchorContext = `Their anchor symptom: ${foodNote}`;
   }
