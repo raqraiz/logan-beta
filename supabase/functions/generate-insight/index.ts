@@ -345,11 +345,11 @@ Generate a JSON object:
 
 3. "starters": 3 replies (2-4 words each). One confirms ("Yeah exactly"), one pushes back ("Not today actually"), one opens up ("Tell me more").
 
-4. "cheat_sheet": Personalized energy/focus/emotions for THIS user in THIS phase. Each has "level" (high/medium/low/variable) and "note" (max 12 words, specific to this person's symptoms and situation).
-   - "energy": How their energy feels given their anchor symptom and current phase. Not generic.
-   - "focus": How mental clarity shifts. Reference their specific symptoms if relevant.
-   - "emotions": How emotional state shifts. Reference anchor symptom's emotional impact.
-   Notes must feel personal. Example for muffled hearing in Menstruation: { "level": "low", "note": "Ear pressure drains your battery faster than usual" }
+4. "cheat_sheet": Personalized energy/focus/emotions for THIS user in THIS phase. Each has "level" (high/medium/low/variable) and "note" (max 12 words). Notes must be INQUIRY-BASED — ask the user how they're feeling, don't tell them. Frame each note as a gentle question or check-in that invites them to reflect. Never declare what they're experiencing.
+   - "energy": Ask how their energy is today given their phase and anchor symptom.
+   - "focus": Ask about their mental clarity or creative state.
+   - "emotions": Ask what their emotional landscape feels like right now.
+    Example for muffled hearing in Menstruation: { "level": "low", "note": "How's the ear pressure affecting your energy today?" }
 
 VOICE:
 - You're a friend who just knows, not a coach giving a plan
