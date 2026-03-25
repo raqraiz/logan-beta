@@ -378,7 +378,8 @@ RESPOND ONLY WITH VALID JSON:
   "cheat_sheet": {
     "energy": { "level": "...", "note": "..." },
     "focus": { "level": "...", "note": "..." },
-    "emotions": { "level": "...", "note": "..." }
+    "emotions": { "level": "...", "note": "..." },
+    "nutrition": { "level": "...", "note": "..." }
   }
 }`;
 }
