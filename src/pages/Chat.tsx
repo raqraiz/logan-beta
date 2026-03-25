@@ -507,7 +507,7 @@ const Chat = () => {
     }
   };
 
-
+  const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!inputValue.trim() || !user || isSending) return;
