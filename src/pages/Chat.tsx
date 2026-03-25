@@ -973,7 +973,7 @@ const Chat = () => {
             </div>
           ) : (
             messages
-              .filter(msg => msg.message_type !== "reaction") // Hide reaction messages from feed
+              .filter(msg => msg.message_type !== "reaction" && msg.message_type !== "checkin")
               .map((message, index, filteredMessages) => {
               const isLastMessage = index === filteredMessages.length - 1;
               const inputType = message.metadata?.input_type;
