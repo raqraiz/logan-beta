@@ -1,4 +1,5 @@
-import { Zap, Shield, Moon, TrendingUp, Heart } from "lucide-react";
+import { useState } from "react";
+import { Zap, Shield, Moon, TrendingUp, Heart, ChevronDown } from "lucide-react";
 
 interface DimensionData {
   level: Level;
@@ -16,6 +17,8 @@ interface PhaseCheatSheetProps {
     emotions?: DimensionData;
     nutrition?: DimensionData;
   } | null;
+  onDimensionResponse?: (dimension: string, response: string) => void;
+  savedResponses?: Record<string, string>;
 }
 
 type Level = "high" | "medium" | "low" | "variable";
@@ -115,13 +118,22 @@ const DIMENSION_LABELS: Record<string, { icon: string; label: string }> = {
   nutrition: { icon: "🍽️", label: "Nutrition" },
 };
 
+const DIMENSION_RESPONSES: Record<string, string[]> = {
+  energy: ["Running on empty", "Getting by", "Feeling strong", "On fire"],
+  focus: ["Total fog", "In and out", "Pretty sharp", "Locked in"],
+  emotions: ["Heavy", "A bit off", "Steady", "Really good"],
+  nutrition: ["No appetite", "Craving everything", "Eating well", "Need comfort food"],
+};
+
 function validateLevel(level: string | undefined): Level {
   if (level === "high" || level === "medium" || level === "low" || level === "variable") return level;
   return "medium";
 }
 
-export function PhaseCheatSheet({ phase, cycleDay, cycleLengthDays, anchorSymptom, personalizedData }: PhaseCheatSheetProps) {
+export function PhaseCheatSheet({ phase, cycleDay, cycleLengthDays, anchorSymptom, personalizedData, onDimensionResponse, savedResponses }: PhaseCheatSheetProps) {
   const defaults = PHASE_DEFAULTS[phase] || PHASE_DEFAULTS.Follicular;
+  const [expandedDim, setExpandedDim] = useState<string | null>(null);
+  const [localResponses, setLocalResponses] = useState<Record<string, string>>(savedResponses || {});
 
   const menEnd = 5;
   const ovDay = cycleLengthDays - 14;
@@ -136,13 +148,18 @@ export function PhaseCheatSheet({ phase, cycleDay, cycleLengthDays, anchorSympto
 
   const dimensions = ["energy", "focus", "emotions", "nutrition"] as const;
 
-  // Merge: AI-personalized data takes priority, fall back to static defaults
   const getDimension = (dim: "energy" | "focus" | "emotions" | "nutrition"): DimensionData => {
     const personalized = personalizedData?.[dim];
     if (personalized?.note && personalized?.level) {
       return { level: validateLevel(personalized.level), note: personalized.note };
     }
     return defaults[dim];
+  };
+
+  const handleResponse = (dim: string, response: string) => {
+    setLocalResponses((prev) => ({ ...prev, [dim]: response }));
+    setExpandedDim(null);
+    onDimensionResponse?.(dim, response);
   };
 
   return (
@@ -164,21 +181,52 @@ export function PhaseCheatSheet({ phase, cycleDay, cycleLengthDays, anchorSympto
         {dimensions.map((dim) => {
           const info = getDimension(dim);
           const meta = DIMENSION_LABELS[dim];
+          const responses = DIMENSION_RESPONSES[dim];
+          const isExpanded = expandedDim === dim;
+          const answered = localResponses[dim];
+
           return (
-            <div key={dim} className="px-4 py-2.5 flex items-start gap-3">
-              <div className="flex items-center gap-1.5 w-20 shrink-0 pt-0.5">
-                <span className="text-xs">{meta.icon}</span>
-                <span className={`text-xs font-medium ${LEVEL_TEXT[info.level]}`}>{meta.label}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <LevelDots level={info.level} />
-                  <span className={`text-[10px] uppercase tracking-wider ${LEVEL_TEXT[info.level]}`}>
-                    {info.level}
-                  </span>
+            <div key={dim} className="px-4 py-2.5">
+              <div
+                className="flex items-start gap-3 cursor-pointer"
+                onClick={() => !answered && setExpandedDim(isExpanded ? null : dim)}
+              >
+                <div className="flex items-center gap-1.5 w-20 shrink-0 pt-0.5">
+                  <span className="text-xs">{meta.icon}</span>
+                  <span className={`text-xs font-medium ${LEVEL_TEXT[info.level]}`}>{meta.label}</span>
                 </div>
-                <p className="text-xs text-muted-foreground leading-snug">{info.note}</p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <LevelDots level={info.level} />
+                    <span className={`text-[10px] uppercase tracking-wider ${LEVEL_TEXT[info.level]}`}>
+                      {info.level}
+                    </span>
+                  </div>
+                  {answered ? (
+                    <p className="text-xs text-foreground font-medium leading-snug">{answered}</p>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <p className="text-xs text-muted-foreground leading-snug flex-1">{info.note}</p>
+                      <ChevronDown className={`w-3 h-3 text-muted-foreground/50 shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {/* Quick response options */}
+              {isExpanded && !answered && (
+                <div className="flex flex-wrap gap-1.5 mt-2 ml-[calc(20px+0.75rem)]">
+                  {responses.map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => handleResponse(dim, r)}
+                      className="text-[11px] px-2.5 py-1 rounded-full border border-border/30 bg-background/50 text-foreground hover:bg-primary/10 hover:border-primary/30 transition-colors"
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
