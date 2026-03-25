@@ -284,7 +284,8 @@ function buildInsightPrompt(
   userName: string,
   cycleInfo: { cycleDay: number; phase: string; daysUntilNextPhase: number },
   participant: Record<string, any>,
-  recentMessages: { content: string; role: string }[]
+  recentMessages: { content: string; role: string }[],
+  checkinMessages: { content: string; metadata: any; created_at: string }[]
 ): string {
   const anchorSymptom = participant.anchor_symptom;
   const symptoms = participant.typical_symptoms || [];
