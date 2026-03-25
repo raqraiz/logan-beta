@@ -206,7 +206,8 @@ serve(async (req) => {
         profile?.full_name || "there",
         cycleInfo,
         participant,
-        recentMessages || []
+        recentMessages || [],
+        checkinMessages || []
       );
 
       const { insight, question, conversationStarters, cheatSheet } = await generateAIInsight(lovableApiKey, prompt);
