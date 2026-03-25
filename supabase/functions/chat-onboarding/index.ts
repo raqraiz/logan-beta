@@ -308,11 +308,13 @@ serve(async (req) => {
         .single();
       if (profile?.full_name) userName = profile.full_name;
 
-      // Update participant record
+      // Update participant record and refresh local object
       if (participant && currentQuestion.field) {
         const updateData: Record<string, any> = {};
         updateData[currentQuestion.field] = parsedValue;
         await supabase.from("participants").update(updateData).eq("id", participant.id);
+        // Keep local participant object in sync so downstream logic sees the update
+        (participant as any)[currentQuestion.field] = parsedValue;
         console.log("Updated participant field:", currentQuestion.field, "=", parsedValue);
       } else if (!participant && currentQuestion.field) {
         const { data: newParticipant, error: createError } = await supabase
