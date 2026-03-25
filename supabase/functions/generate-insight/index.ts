@@ -162,8 +162,18 @@ serve(async (req) => {
       .from("chat_messages")
       .select("content, role")
       .eq("user_id", user.id)
+      .neq("message_type", "checkin")
       .order("created_at", { ascending: false })
       .limit(5);
+
+    // Get recent check-in responses for personalization
+    const { data: checkinMessages } = await supabase
+      .from("chat_messages")
+      .select("content, metadata, created_at")
+      .eq("user_id", user.id)
+      .eq("message_type", "checkin")
+      .order("created_at", { ascending: false })
+      .limit(12);
 
     // Check if user is in late luteal — ask about period
     const isLateLuteal = cycleInfo.phase === "Luteal" && cycleInfo.daysUntilNextPhase <= 3;
@@ -196,7 +206,8 @@ serve(async (req) => {
         profile?.full_name || "there",
         cycleInfo,
         participant,
-        recentMessages || []
+        recentMessages || [],
+        checkinMessages || []
       );
 
       const { insight, question, conversationStarters, cheatSheet } = await generateAIInsight(lovableApiKey, prompt);
@@ -273,7 +284,8 @@ function buildInsightPrompt(
   userName: string,
   cycleInfo: { cycleDay: number; phase: string; daysUntilNextPhase: number },
   participant: Record<string, any>,
-  recentMessages: { content: string; role: string }[]
+  recentMessages: { content: string; role: string }[],
+  checkinMessages: { content: string; metadata: any; created_at: string }[]
 ): string {
   const anchorSymptom = participant.anchor_symptom;
   const symptoms = participant.typical_symptoms || [];
@@ -339,6 +351,12 @@ ${age && age >= 17 && age <= 22 ? "- TONE: Keep it casual and brief. Max 35 word
 
 RECENT CONVERSATION:
 ${recentMessages.map(m => `${m.role}: ${m.content.slice(0, 80)}`).join("\n") || "None"}
+
+RECENT SELF-REPORTED CHECK-INS (use to personalize — if they reported low energy yesterday, acknowledge it):
+${checkinMessages.length > 0 ? checkinMessages.map(m => {
+  const meta = m.metadata || {};
+  return `- ${meta.dimension}: "${meta.response}" (${meta.phase}, day ${meta.cycle_day})`;
+}).join("\n") : "None yet"}
 
 IMPORTANT TONE RULE:
 - Every phase has superpowers. LEAD with what's going well — the strengths, the high-performing qualities of this phase.

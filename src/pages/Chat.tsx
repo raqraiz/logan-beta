@@ -76,7 +76,9 @@ interface ChatMessage {
       energy?: { level: string; note: string };
       focus?: { level: string; note: string };
       emotions?: { level: string; note: string };
+      nutrition?: { level: string; note: string };
     } | null;
+    cheat_sheet_responses?: Record<string, string>;
   };
 }
 
@@ -463,6 +465,45 @@ const Chat = () => {
       }
     } catch (error) {
       console.error("Error initializing onboarding:", error);
+    }
+  };
+
+  const handleCheatSheetResponse = async (messageId: string, dimension: string, response: string) => {
+    if (!user) return;
+    
+    // Update local message state with the response
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === messageId) {
+        const existingResponses = (msg.metadata?.cheat_sheet_responses as Record<string, string>) || {};
+        return {
+          ...msg,
+          metadata: {
+            ...msg.metadata,
+            cheat_sheet_responses: { ...existingResponses, [dimension]: response },
+          },
+        };
+      }
+      return msg;
+    }));
+
+    // Store as a silent user message with metadata for personalization
+    try {
+      await supabase.from("chat_messages").insert({
+        user_id: user.id,
+        role: "user",
+        content: `[check-in] ${dimension}: ${response}`,
+        message_type: "checkin",
+        metadata: {
+          checkin_type: "cheat_sheet",
+          dimension,
+          response,
+          phase: messages.find(m => m.id === messageId)?.metadata?.cycle_phase,
+          cycle_day: messages.find(m => m.id === messageId)?.metadata?.cycle_day,
+          parent_insight_id: messageId,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to store cheat sheet response:", err);
     }
   };
 
@@ -932,7 +973,7 @@ const Chat = () => {
             </div>
           ) : (
             messages
-              .filter(msg => msg.message_type !== "reaction") // Hide reaction messages from feed
+              .filter(msg => msg.message_type !== "reaction" && msg.message_type !== "checkin")
               .map((message, index, filteredMessages) => {
               const isLastMessage = index === filteredMessages.length - 1;
               const inputType = message.metadata?.input_type;
@@ -1017,6 +1058,8 @@ const Chat = () => {
                             cycleDay={message.metadata.cycle_day}
                             cycleLengthDays={message.metadata.cycle_length_days || 28}
                             personalizedData={message.metadata.cheat_sheet as any || null}
+                            onDimensionResponse={(dim, response) => handleCheatSheetResponse(message.id, dim, response)}
+                            savedResponses={(message.metadata?.cheat_sheet_responses as Record<string, string>) || undefined}
                           />
                         </div>
                       )}
