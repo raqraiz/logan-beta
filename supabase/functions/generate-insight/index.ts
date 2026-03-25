@@ -352,6 +352,12 @@ ${age && age >= 17 && age <= 22 ? "- TONE: Keep it casual and brief. Max 35 word
 RECENT CONVERSATION:
 ${recentMessages.map(m => `${m.role}: ${m.content.slice(0, 80)}`).join("\n") || "None"}
 
+RECENT SELF-REPORTED CHECK-INS (use to personalize — if they reported low energy yesterday, acknowledge it):
+${checkinMessages.length > 0 ? checkinMessages.map(m => {
+  const meta = m.metadata || {};
+  return `- ${meta.dimension}: "${meta.response}" (${meta.phase}, day ${meta.cycle_day})`;
+}).join("\n") : "None yet"}
+
 IMPORTANT TONE RULE:
 - Every phase has superpowers. LEAD with what's going well — the strengths, the high-performing qualities of this phase.
 - During Follicular and Ovulation: emphasize peak energy, creativity, confidence, and capability. Anchor symptom context is secondary or absent.
