@@ -76,7 +76,9 @@ interface ChatMessage {
       energy?: { level: string; note: string };
       focus?: { level: string; note: string };
       emotions?: { level: string; note: string };
+      nutrition?: { level: string; note: string };
     } | null;
+    cheat_sheet_responses?: Record<string, string>;
   };
 }
 
