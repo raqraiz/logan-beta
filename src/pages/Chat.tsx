@@ -468,7 +468,46 @@ const Chat = () => {
     }
   };
 
-  const sendMessage = async (e: React.FormEvent) => {
+  const handleCheatSheetResponse = async (messageId: string, dimension: string, response: string) => {
+    if (!user) return;
+    
+    // Update local message state with the response
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === messageId) {
+        const existingResponses = (msg.metadata?.cheat_sheet_responses as Record<string, string>) || {};
+        return {
+          ...msg,
+          metadata: {
+            ...msg.metadata,
+            cheat_sheet_responses: { ...existingResponses, [dimension]: response },
+          },
+        };
+      }
+      return msg;
+    }));
+
+    // Store as a silent user message with metadata for personalization
+    try {
+      await supabase.from("chat_messages").insert({
+        user_id: user.id,
+        role: "user",
+        content: `[check-in] ${dimension}: ${response}`,
+        message_type: "checkin",
+        metadata: {
+          checkin_type: "cheat_sheet",
+          dimension,
+          response,
+          phase: messages.find(m => m.id === messageId)?.metadata?.cycle_phase,
+          cycle_day: messages.find(m => m.id === messageId)?.metadata?.cycle_day,
+          parent_insight_id: messageId,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to store cheat sheet response:", err);
+    }
+  };
+
+
     e.preventDefault();
     
     if (!inputValue.trim() || !user || isSending) return;
