@@ -162,8 +162,18 @@ serve(async (req) => {
       .from("chat_messages")
       .select("content, role")
       .eq("user_id", user.id)
+      .neq("message_type", "checkin")
       .order("created_at", { ascending: false })
       .limit(5);
+
+    // Get recent check-in responses for personalization
+    const { data: checkinMessages } = await supabase
+      .from("chat_messages")
+      .select("content, metadata, created_at")
+      .eq("user_id", user.id)
+      .eq("message_type", "checkin")
+      .order("created_at", { ascending: false })
+      .limit(12);
 
     // Check if user is in late luteal — ask about period
     const isLateLuteal = cycleInfo.phase === "Luteal" && cycleInfo.daysUntilNextPhase <= 3;
