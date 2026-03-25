@@ -1058,6 +1058,8 @@ const Chat = () => {
                             cycleDay={message.metadata.cycle_day}
                             cycleLengthDays={message.metadata.cycle_length_days || 28}
                             personalizedData={message.metadata.cheat_sheet as any || null}
+                            onDimensionResponse={(dim, response) => handleCheatSheetResponse(message.id, dim, response)}
+                            savedResponses={(message.metadata?.cheat_sheet_responses as Record<string, string>) || undefined}
                           />
                         </div>
                       )}
