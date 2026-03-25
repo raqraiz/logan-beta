@@ -14,6 +14,7 @@ interface PhaseCheatSheetProps {
     energy?: DimensionData;
     focus?: DimensionData;
     emotions?: DimensionData;
+    nutrition?: DimensionData;
   } | null;
 }
 
@@ -28,6 +29,7 @@ interface PhaseDefaults {
   energy: DimensionData;
   focus: DimensionData;
   emotions: DimensionData;
+  nutrition: DimensionData;
 }
 
 const PHASE_DEFAULTS: Record<string, PhaseDefaults> = {
@@ -40,6 +42,7 @@ const PHASE_DEFAULTS: Record<string, PhaseDefaults> = {
     energy: { level: "low", note: "How's your body holding up today?" },
     focus: { level: "medium", note: "Noticing any mental clarity or fog?" },
     emotions: { level: "variable", note: "What's your mood like right now?" },
+    nutrition: { level: "high", note: "Craving anything warm or iron-rich?" },
   },
   Follicular: {
     color: "text-phase-follicular",
@@ -50,6 +53,7 @@ const PHASE_DEFAULTS: Record<string, PhaseDefaults> = {
     energy: { level: "high", note: "Feeling any momentum building?" },
     focus: { level: "high", note: "How's your creative flow today?" },
     emotions: { level: "high", note: "Noticing a shift in your outlook?" },
+    nutrition: { level: "medium", note: "Drawn to lighter, fresh foods?" },
   },
   Ovulation: {
     color: "text-phase-ovulation",
@@ -60,6 +64,7 @@ const PHASE_DEFAULTS: Record<string, PhaseDefaults> = {
     energy: { level: "high", note: "How's your energy feeling today?" },
     focus: { level: "high", note: "Words coming easily or not so much?" },
     emotions: { level: "high", note: "Feeling social or more inward?" },
+    nutrition: { level: "medium", note: "Body fueling well on its own?" },
   },
   Luteal: {
     color: "text-phase-luteal",
@@ -70,6 +75,7 @@ const PHASE_DEFAULTS: Record<string, PhaseDefaults> = {
     energy: { level: "variable", note: "How's your energy shifting?" },
     focus: { level: "low", note: "Big picture or detail mode today?" },
     emotions: { level: "variable", note: "Anything feeling heavier than usual?" },
+    nutrition: { level: "high", note: "Noticing stronger cravings kicking in?" },
   },
 };
 
@@ -106,6 +112,7 @@ const DIMENSION_LABELS: Record<string, { icon: string; label: string }> = {
   energy: { icon: "⚡", label: "Energy" },
   focus: { icon: "🎯", label: "Focus" },
   emotions: { icon: "💭", label: "Emotions" },
+  nutrition: { icon: "🍽️", label: "Nutrition" },
 };
 
 function validateLevel(level: string | undefined): Level {
@@ -127,10 +134,10 @@ export function PhaseCheatSheet({ phase, cycleDay, cycleLengthDays, anchorSympto
   else if (phase === "Ovulation") daysLeft = Math.max(ovEnd - cycleDay + 1, 0);
   else daysLeft = Math.max(cycleLengthDays - cycleDay + 1, 0);
 
-  const dimensions = ["energy", "focus", "emotions"] as const;
+  const dimensions = ["energy", "focus", "emotions", "nutrition"] as const;
 
   // Merge: AI-personalized data takes priority, fall back to static defaults
-  const getDimension = (dim: "energy" | "focus" | "emotions"): DimensionData => {
+  const getDimension = (dim: "energy" | "focus" | "emotions" | "nutrition"): DimensionData => {
     const personalized = personalizedData?.[dim];
     if (personalized?.note && personalized?.level) {
       return { level: validateLevel(personalized.level), note: personalized.note };

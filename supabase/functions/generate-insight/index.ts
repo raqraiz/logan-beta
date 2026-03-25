@@ -357,10 +357,11 @@ Generate a JSON object:
 
 3. "starters": 3 replies (2-4 words each). One confirms ("Yeah exactly"), one pushes back ("Not today actually"), one opens up ("Tell me more").
 
-4. "cheat_sheet": Personalized energy/focus/emotions for THIS user in THIS phase. Each has "level" (high/medium/low/variable) and "note" (max 12 words). Notes must be INQUIRY-BASED — ask the user how they're feeling, don't tell them. Frame each note as a gentle question or check-in that invites them to reflect. Never declare what they're experiencing. During high-performing phases, levels should reflect the strengths (e.g., energy: high, focus: high).
+4. "cheat_sheet": Personalized energy/focus/emotions/nutrition for THIS user in THIS phase. Each has "level" (high/medium/low/variable) and "note" (max 12 words). Notes must be INQUIRY-BASED — ask the user how they're feeling, don't tell them. Frame each note as a gentle question or check-in that invites them to reflect. Never declare what they're experiencing. During high-performing phases, levels should reflect the strengths (e.g., energy: high, focus: high).
    - "energy": Ask how their energy is today given their phase.
    - "focus": Ask about their mental clarity or creative state.
    - "emotions": Ask what their emotional landscape feels like right now.
+   - "nutrition": Ask about cravings or what their body wants to eat. During Luteal/Menstruation, "level" should be "high" (cravings are strongest). During Follicular/Ovulation, "level" should be "medium". Tie the note to their anchor symptom when relevant (e.g., "Craving magnesium-rich foods like dark chocolate?").
 
 VOICE:
 - You're a friend who just knows, not a coach giving a plan
@@ -377,7 +378,8 @@ RESPOND ONLY WITH VALID JSON:
   "cheat_sheet": {
     "energy": { "level": "...", "note": "..." },
     "focus": { "level": "...", "note": "..." },
-    "emotions": { "level": "...", "note": "..." }
+    "emotions": { "level": "...", "note": "..." },
+    "nutrition": { "level": "...", "note": "..." }
   }
 }`;
 }
@@ -386,7 +388,7 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{
   insight: string;
   question: string;
   conversationStarters: string[];
-  cheatSheet: { energy: { level: string; note: string }; focus: { level: string; note: string }; emotions: { level: string; note: string } } | null;
+  cheatSheet: { energy: { level: string; note: string }; focus: { level: string; note: string }; emotions: { level: string; note: string }; nutrition: { level: string; note: string } } | null;
 }> {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
