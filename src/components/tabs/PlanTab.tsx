@@ -336,24 +336,22 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
   const toggle = (section: string) =>
     setExpandedSection((prev) => (prev === section ? null : section));
 
-  // Phase countdown calculation
-  const nextPhaseDayForecast = forecast.find((f) => !f.isToday && f.phase !== currentPhase);
-  const daysUntilNext = nextPhaseDayForecast
-    ? forecast.indexOf(nextPhaseDayForecast)
-    : (() => {
-        const menEnd = 5;
-        const ovDay = cycleLength - 14;
-        const ovStart = ovDay - 1;
-        const ovEnd = ovDay + 2;
-        let nextDay = cycleLength + 1;
-        if (currentPhase === "Menstruation") nextDay = menEnd + 1;
-        else if (currentPhase === "Follicular") nextDay = ovStart;
-        else if (currentPhase === "Ovulation") nextDay = ovEnd + 1;
-        else nextDay = cycleLength + 1;
-        return Math.max(1, nextDay - currentDay);
-      })();
+  // Phase countdown calculation — use same boundary math as CycleForecast
+  const daysUntilNext = useMemo(() => {
+    const menEnd = 5;
+    const ovDay = cycleLength - 14;
+    const ovStart = ovDay - 1;
+    const ovEnd = ovDay + 2;
+    let nextPhaseStartDay: number;
+    if (currentPhase === "Menstruation") nextPhaseStartDay = menEnd + 1;
+    else if (currentPhase === "Follicular") nextPhaseStartDay = ovStart;
+    else if (currentPhase === "Ovulation") nextPhaseStartDay = ovEnd + 1;
+    else nextPhaseStartDay = cycleLength + 1; // wraps to next Menstruation
+    return Math.max(1, nextPhaseStartDay - currentDay);
+  }, [currentPhase, currentDay, cycleLength]);
+
   const PHASE_ORDER = ["Menstruation", "Follicular", "Ovulation", "Luteal"];
-  const nextPhase = nextPhaseDayForecast?.phase || PHASE_ORDER[(PHASE_ORDER.indexOf(currentPhase) + 1) % 4];
+  const nextPhase = PHASE_ORDER[(PHASE_ORDER.indexOf(currentPhase) + 1) % 4];
   const anchorInsight = anchorSymptom && ANCHOR_INSIGHTS[currentPhase]?.[anchorSymptom];
 
   return (
