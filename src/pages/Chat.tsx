@@ -842,7 +842,7 @@ const Chat = () => {
            </div>
           <div className="flex items-center gap-3">
             {/* Credit balance hidden — free access during alpha */}
-            <CalendarSubscribe />
+            {/* CalendarSubscribe hidden for now */}
             
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
