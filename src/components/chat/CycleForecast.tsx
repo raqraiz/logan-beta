@@ -334,15 +334,6 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {/* Disclaimer - prominent at top */}
-        <div className="max-w-4xl mx-auto px-4 md:px-6 pt-3 pb-1">
-          <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
-            <AlertTriangle className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-            <p className="text-xs text-muted-foreground">
-              This forecast is an estimate based on your cycle length and may vary with natural fluctuations. It is not medical advice.
-            </p>
-          </div>
-        </div>
         <div className="max-w-4xl mx-auto md:flex md:gap-6 md:px-6 md:py-4">
           {/* LEFT: Calendar */}
           <div className="md:w-[340px] md:shrink-0">
@@ -361,6 +352,13 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                     <span className="text-xs text-muted-foreground">{p}</span>
                   </div>
                 ))}
+              </div>
+              {/* Disclaimer */}
+              <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 mb-3">
+                <AlertTriangle className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  This forecast is an estimate based on your cycle length and may vary with natural fluctuations. It is not medical advice.
+                </p>
               </div>
               <div className="border-b border-border/30" />
             </div>
