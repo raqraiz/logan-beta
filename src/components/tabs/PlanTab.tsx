@@ -325,17 +325,6 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
   const nutrition = NUTRITION_GUIDANCE[currentPhase] || NUTRITION_GUIDANCE.Follicular;
   const moodGuide = MOOD_GUIDANCE[currentPhase] || MOOD_GUIDANCE.Follicular;
 
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  const toggle = (section: string) =>
-    setExpandedSection((prev) => (prev === section ? null : section));
-
   // Phase countdown calculation — use same boundary math as CycleForecast
   const daysUntilNext = useMemo(() => {
     const menEnd = 5;
@@ -346,13 +335,24 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
     if (currentPhase === "Menstruation") nextPhaseStartDay = menEnd + 1;
     else if (currentPhase === "Follicular") nextPhaseStartDay = ovStart;
     else if (currentPhase === "Ovulation") nextPhaseStartDay = ovEnd + 1;
-    else nextPhaseStartDay = cycleLength + 1; // wraps to next Menstruation
+    else nextPhaseStartDay = cycleLength + 1;
     return Math.max(1, nextPhaseStartDay - currentDay);
   }, [currentPhase, currentDay, cycleLength]);
 
   const PHASE_ORDER = ["Menstruation", "Follicular", "Ovulation", "Luteal"];
   const nextPhase = PHASE_ORDER[(PHASE_ORDER.indexOf(currentPhase) + 1) % 4];
   const anchorInsight = anchorSymptom && ANCHOR_INSIGHTS[currentPhase]?.[anchorSymptom];
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const toggle = (section: string) =>
+    setExpandedSection((prev) => (prev === section ? null : section));
 
   return (
     <div className="flex-1 overflow-y-auto pb-20">
