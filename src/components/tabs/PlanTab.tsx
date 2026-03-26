@@ -1,7 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, Brain, Heart, Utensils, TrendingUp, Loader2 } from "lucide-react";
+import {
+  Dumbbell, Brain, Heart, Utensils, TrendingUp, Loader2,
+  AlertTriangle, Zap, Sun, CloudRain, Battery, BatteryLow,
+  BatteryMedium, BatteryFull, ChevronRight, Flame
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { format, addDays } from "date-fns";
 
 interface CycleData {
   cycleDay: number;
@@ -22,6 +27,163 @@ interface CheckinEntry {
   created_at: string;
 }
 
+// ── Phase calculation (mirrors server logic) ──
+function getPhaseForDay(day: number, cycleLength: number): string {
+  const menEnd = 5;
+  const ovDay = cycleLength - 14;
+  const ovStart = ovDay - 1;
+  const ovEnd = ovDay + 2;
+  if (day <= menEnd) return "Menstruation";
+  if (day < ovStart) return "Follicular";
+  if (day <= ovEnd) return "Ovulation";
+  return "Luteal";
+}
+
+function getDayMetrics(day: number, cycleLength: number) {
+  const ovDay = cycleLength - 14;
+  let energy = 0.5;
+  if (day <= 2) energy = 0.2;
+  else if (day <= 5) energy = 0.3 + (day - 2) * 0.05;
+  else if (day < ovDay - 1) energy = 0.5 + (day - 5) / (ovDay - 6) * 0.4;
+  else if (day <= ovDay + 2) energy = 0.9;
+  else energy = Math.max(0.3, 0.85 - (day - ovDay - 2) / (cycleLength - ovDay - 2) * 0.55);
+
+  let mood = 0.5;
+  if (day <= 2) mood = 0.3;
+  else if (day <= 5) mood = 0.4;
+  else if (day < ovDay - 1) mood = 0.5 + (day - 5) / (ovDay - 6) * 0.4;
+  else if (day <= ovDay + 2) mood = 0.85;
+  else {
+    const daysIntoLuteal = day - (ovDay + 2);
+    const lutealLength = cycleLength - (ovDay + 2);
+    mood = Math.max(0.2, 0.8 - (daysIntoLuteal / lutealLength) * 0.6);
+  }
+
+  return {
+    energy: Math.min(1, Math.max(0, energy)),
+    mood: Math.min(1, Math.max(0, mood)),
+  };
+}
+
+// ── Phase colors ──
+const PHASE_COLOR: Record<string, string> = {
+  Menstruation: "text-phase-menstruation",
+  Follicular: "text-phase-follicular",
+  Ovulation: "text-phase-ovulation",
+  Luteal: "text-phase-luteal",
+};
+const PHASE_BG: Record<string, string> = {
+  Menstruation: "bg-phase-menstruation",
+  Follicular: "bg-phase-follicular",
+  Ovulation: "bg-phase-ovulation",
+  Luteal: "bg-phase-luteal",
+};
+const PHASE_BG_FAINT: Record<string, string> = {
+  Menstruation: "bg-phase-menstruation/15",
+  Follicular: "bg-phase-follicular/15",
+  Ovulation: "bg-phase-ovulation/15",
+  Luteal: "bg-phase-luteal/15",
+};
+
+// ── Workout guidance by phase ──
+const WORKOUT_GUIDANCE: Record<string, { intensity: string; suggestion: string; examples: string[] }> = {
+  Menstruation: {
+    intensity: "Low",
+    suggestion: "Honor your body. Light movement helps cramps; skip anything that drains you.",
+    examples: ["Gentle yoga", "20-min walk", "Stretching / foam roll"],
+  },
+  Follicular: {
+    intensity: "Moderate → High",
+    suggestion: "Energy is climbing — ramp up gradually. Try new things, challenge yourself.",
+    examples: ["Strength training", "Dance / spin class", "Longer runs"],
+  },
+  Ovulation: {
+    intensity: "Peak",
+    suggestion: "Your strongest window. Go for PRs, compete, push your limits.",
+    examples: ["HIIT / CrossFit", "Heavy lifts", "Competitive sports"],
+  },
+  Luteal: {
+    intensity: "High → Low",
+    suggestion: "Front-load intensity early. As energy drops, shift to recovery.",
+    examples: ["Moderate strength (early)", "Swimming / Pilates (mid)", "Walks / rest (late)"],
+  },
+};
+
+// ── Nutrition guidance by phase ──
+const NUTRITION_GUIDANCE: Record<string, { focus: string; foods: string[]; avoid: string }> = {
+  Menstruation: {
+    focus: "Replenish iron & reduce inflammation",
+    foods: ["Red meat / lentils + Vitamin C", "Warm soups & stews", "Dark chocolate (magnesium)"],
+    avoid: "Excess caffeine & processed sugar — they worsen cramps",
+  },
+  Follicular: {
+    focus: "Support estrogen metabolism",
+    foods: ["Cruciferous veggies (broccoli, kale)", "Fermented foods (kimchi, yogurt)", "Lean protein & seeds"],
+    avoid: "Skipping meals — your metabolism needs consistent fuel",
+  },
+  Ovulation: {
+    focus: "Clear excess estrogen, stay hydrated",
+    foods: ["Fiber-rich veggies & whole grains", "Berries & antioxidant-rich fruit", "Light, fresh meals"],
+    avoid: "Heavy, greasy food — it can amplify bloating",
+  },
+  Luteal: {
+    focus: "Boost serotonin & manage cravings",
+    foods: ["Complex carbs (sweet potato, oats)", "Magnesium-rich foods (nuts, seeds)", "Dark leafy greens"],
+    avoid: "Ignoring cravings completely — lean into them smartly",
+  },
+};
+
+// ── Mood guidance by phase ──
+const MOOD_GUIDANCE: Record<string, { outlook: string; headsUp: string; selfCare: string }> = {
+  Menstruation: {
+    outlook: "Introspective & lower patience",
+    headsUp: "You may feel more irritable or tearful — this is hormonal, not personal.",
+    selfCare: "Protect your calendar. Say no. Ask for help with kids, chores, decisions.",
+  },
+  Follicular: {
+    outlook: "Rising optimism & confidence",
+    headsUp: "Great mood window. You'll feel more patient, creative, and resilient.",
+    selfCare: "Channel this energy into things that matter — relationships, projects, connection.",
+  },
+  Ovulation: {
+    outlook: "Peak social & verbal confidence",
+    headsUp: "You'll feel like your best self. Enjoy it — but don't overcommit.",
+    selfCare: "Have the hard conversation. Present the idea. Be visible.",
+  },
+  Luteal: {
+    outlook: "Declining patience & rising sensitivity",
+    headsUp: "The days before your period are when you're most likely to snap. It's not a character flaw.",
+    selfCare: "Give yourself grace. Tell your partner. Reduce obligations. Prioritize sleep.",
+  },
+};
+
+// ── 7-day forecast item ──
+interface DayForecast {
+  date: Date;
+  cycleDay: number;
+  phase: string;
+  energy: number;
+  mood: number;
+  isToday: boolean;
+}
+
+function EnergyDots({ value, color }: { value: number; color: string }) {
+  const dots = Math.round(value * 5);
+  return (
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div
+          key={i}
+          className={cn(
+            "w-1.5 h-1.5 rounded-full transition-colors",
+            i <= dots ? color : "bg-muted/30"
+          )}
+        />
+      ))}
+    </div>
+  );
+}
+
 const DIMENSION_CONFIG: Record<string, { icon: React.ComponentType<{ className?: string }>; label: string; color: string }> = {
   energy: { icon: TrendingUp, label: "Energy", color: "text-phase-follicular" },
   focus: { icon: Brain, label: "Focus", color: "text-phase-ovulation" },
@@ -29,32 +191,10 @@ const DIMENSION_CONFIG: Record<string, { icon: React.ComponentType<{ className?:
   nutrition: { icon: Utensils, label: "Nutrition", color: "text-phase-luteal" },
 };
 
-const PHASE_TIPS: Record<string, { exercise: string; energy: string; mood: string }> = {
-  Menstruation: {
-    exercise: "Light movement — walks, yoga, stretching. Skip intense workouts.",
-    energy: "Lower energy is normal. Protect your schedule and rest more.",
-    mood: "You may feel withdrawn or emotional. Honor the need for quiet.",
-  },
-  Follicular: {
-    exercise: "Ramp up intensity — try new workouts, lift heavier, push harder.",
-    energy: "Rising energy and motivation. Great time to start projects.",
-    mood: "Optimism and creativity peak. Use it for problem-solving.",
-  },
-  Ovulation: {
-    exercise: "Peak performance window — go for PRs, HIIT, competitive sports.",
-    energy: "Highest energy of the cycle. Don't waste it on admin.",
-    mood: "Social confidence peaks. Schedule important conversations.",
-  },
-  Luteal: {
-    exercise: "Front-load hard sessions early, then taper to moderate/low.",
-    energy: "Declining steadily — increase rest, magnesium, complex carbs.",
-    mood: "Lower stress tolerance. Avoid big decisions in late luteal.",
-  },
-};
-
 export function PlanTab({ userId, cycleData }: PlanTabProps) {
   const [checkins, setCheckins] = useState<CheckinEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCheckins = async () => {
@@ -83,20 +223,78 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
       }
       setLoading(false);
     };
-
     fetchCheckins();
   }, [userId]);
 
   const currentPhase = cycleData?.phase || "Follicular";
-  const tips = PHASE_TIPS[currentPhase] || PHASE_TIPS.Follicular;
+  const currentDay = cycleData?.cycleDay || 1;
+  const cycleLength = cycleData?.cycleLengthDays || 28;
 
-  // Get latest check-in per dimension
+  // Build 7-day forecast
+  const forecast: DayForecast[] = useMemo(() => {
+    const today = new Date();
+    return Array.from({ length: 7 }, (_, i) => {
+      const day = ((currentDay - 1 + i) % cycleLength) + 1;
+      const phase = getPhaseForDay(day, cycleLength);
+      const metrics = getDayMetrics(day, cycleLength);
+      return {
+        date: addDays(today, i),
+        cycleDay: day,
+        phase,
+        energy: metrics.energy,
+        mood: metrics.mood,
+        isToday: i === 0,
+      };
+    });
+  }, [currentDay, cycleLength]);
+
+  // Detect upcoming "heads-up" alerts
+  const alerts = useMemo(() => {
+    const items: { day: string; message: string; type: "warning" | "boost" }[] = [];
+    for (const f of forecast) {
+      if (f.isToday) continue;
+      // Mood dip alert (late luteal)
+      if (f.mood < 0.35) {
+        items.push({
+          day: format(f.date, "EEE"),
+          message: `Day ${f.cycleDay} — patience may be lower. Plan lighter and ask for help.`,
+          type: "warning",
+        });
+        break; // one alert is enough
+      }
+      // Energy boost
+      if (f.energy > 0.8 && forecast[0].energy < 0.6) {
+        items.push({
+          day: format(f.date, "EEE"),
+          message: `Day ${f.cycleDay} — energy surge coming. Schedule your hardest workout here.`,
+          type: "boost",
+        });
+        break;
+      }
+    }
+
+    // Phase transition alert
+    const nextPhaseDay = forecast.find((f) => !f.isToday && f.phase !== currentPhase);
+    if (nextPhaseDay) {
+      items.push({
+        day: format(nextPhaseDay.date, "EEE"),
+        message: `${nextPhaseDay.phase} phase starts — your rhythm will shift.`,
+        type: nextPhaseDay.phase === "Luteal" || nextPhaseDay.phase === "Menstruation" ? "warning" : "boost",
+      });
+    }
+
+    return items;
+  }, [forecast, currentPhase]);
+
+  // Latest check-ins per dimension
   const latestByDimension: Record<string, CheckinEntry> = {};
   for (const c of checkins) {
-    if (!latestByDimension[c.dimension]) {
-      latestByDimension[c.dimension] = c;
-    }
+    if (!latestByDimension[c.dimension]) latestByDimension[c.dimension] = c;
   }
+
+  const workout = WORKOUT_GUIDANCE[currentPhase] || WORKOUT_GUIDANCE.Follicular;
+  const nutrition = NUTRITION_GUIDANCE[currentPhase] || NUTRITION_GUIDANCE.Follicular;
+  const moodGuide = MOOD_GUIDANCE[currentPhase] || MOOD_GUIDANCE.Follicular;
 
   if (loading) {
     return (
@@ -106,90 +304,220 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
     );
   }
 
+  const toggle = (section: string) =>
+    setExpandedSection((prev) => (prev === section ? null : section));
+
   return (
     <div className="flex-1 overflow-y-auto pb-20">
-      <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
-        {/* Header */}
+      <div className="max-w-lg mx-auto px-4 py-5 space-y-4">
+
+        {/* ── Header ── */}
         <div>
-          <h2 className="font-display font-semibold text-lg text-foreground">Your Plan</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Phase-aware guidance for{" "}
-            <span className={cn(
-              "font-medium",
-              currentPhase === "Menstruation" && "text-phase-menstruation",
-              currentPhase === "Follicular" && "text-phase-follicular",
-              currentPhase === "Ovulation" && "text-phase-ovulation",
-              currentPhase === "Luteal" && "text-phase-luteal",
-            )}>
-              {currentPhase}
-            </span>
-            {cycleData && <span> · Day {cycleData.cycleDay}</span>}
+          <h2 className="font-display font-semibold text-lg text-foreground">Your Week</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            <span className={cn("font-medium", PHASE_COLOR[currentPhase])}>{currentPhase}</span>
+            {cycleData && <> · Day {currentDay} of {cycleLength}</>}
           </p>
         </div>
 
-        {/* Exercise card */}
+        {/* ── Heads-up alerts ── */}
+        {alerts.length > 0 && (
+          <div className="space-y-2">
+            {alerts.map((alert, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "flex items-start gap-2.5 rounded-xl px-3.5 py-3 border",
+                  alert.type === "warning"
+                    ? "border-phase-menstruation/20 bg-phase-menstruation/5"
+                    : "border-phase-follicular/20 bg-phase-follicular/5"
+                )}
+              >
+                {alert.type === "warning" ? (
+                  <AlertTriangle className="w-4 h-4 text-phase-menstruation shrink-0 mt-0.5" />
+                ) : (
+                  <Zap className="w-4 h-4 text-phase-follicular shrink-0 mt-0.5" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-semibold text-foreground">{alert.day}</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">{alert.message}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── 7-day strip ── */}
         <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-border/20">
-            <Dumbbell className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Exercise</h3>
+          <div className="px-4 py-2.5 border-b border-border/20 flex items-center justify-between">
+            <span className="text-xs font-semibold text-foreground">Next 7 Days</span>
+            <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1"><Zap className="w-3 h-3" /> Energy</span>
+              <span className="flex items-center gap-1"><Heart className="w-3 h-3" /> Mood</span>
+            </div>
           </div>
-          <div className="px-4 py-3">
-            <p className="text-sm text-muted-foreground">{tips.exercise}</p>
+          <div className="grid grid-cols-7 divide-x divide-border/10">
+            {forecast.map((f) => (
+              <div
+                key={f.cycleDay}
+                className={cn(
+                  "flex flex-col items-center py-3 gap-1.5 transition-colors",
+                  f.isToday && "bg-primary/5"
+                )}
+              >
+                <span className={cn(
+                  "text-[10px] font-medium",
+                  f.isToday ? "text-primary" : "text-muted-foreground"
+                )}>
+                  {f.isToday ? "Today" : format(f.date, "EEE")}
+                </span>
+                <span className={cn(
+                  "text-sm font-bold",
+                  PHASE_COLOR[f.phase]
+                )}>
+                  {f.cycleDay}
+                </span>
+                <div className={cn("w-1.5 h-1.5 rounded-full", PHASE_BG[f.phase])} />
+                <div className="flex flex-col items-center gap-1 mt-1">
+                  <EnergyDots value={f.energy} color="bg-phase-follicular" />
+                  <EnergyDots value={f.mood} color="bg-phase-menstruation" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Energy & Mood cards */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-xl border border-border/30 bg-card/50 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="w-4 h-4 text-phase-follicular" />
-              <h3 className="text-sm font-semibold text-foreground">Energy</h3>
+        {/* ── Mood card (most requested) ── */}
+        <button
+          onClick={() => toggle("mood")}
+          className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70"
+        >
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", PHASE_BG_FAINT[currentPhase])}>
+              <Heart className={cn("w-5 h-5", PHASE_COLOR[currentPhase])} />
             </div>
-            <p className="text-xs text-muted-foreground">{tips.energy}</p>
-          </div>
-          <div className="rounded-xl border border-border/30 bg-card/50 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Heart className="w-4 h-4 text-phase-menstruation" />
-              <h3 className="text-sm font-semibold text-foreground">Mood</h3>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">Mood & Patience</p>
+              <p className="text-xs text-muted-foreground truncate">{moodGuide.outlook}</p>
             </div>
-            <p className="text-xs text-muted-foreground">{tips.mood}</p>
+            <ChevronRight className={cn(
+              "w-4 h-4 text-muted-foreground transition-transform",
+              expandedSection === "mood" && "rotate-90"
+            )} />
           </div>
-        </div>
+          {expandedSection === "mood" && (
+            <div className="px-4 pb-4 space-y-3 border-t border-border/15 pt-3" onClick={(e) => e.stopPropagation()}>
+              <div className="rounded-lg bg-phase-menstruation/5 border border-phase-menstruation/15 px-3 py-2.5">
+                <p className="text-xs font-medium text-phase-menstruation mb-1">⚡ Heads up</p>
+                <p className="text-xs text-muted-foreground">{moodGuide.headsUp}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">What to do</p>
+                <p className="text-xs text-muted-foreground">{moodGuide.selfCare}</p>
+              </div>
+            </div>
+          )}
+        </button>
 
-        {/* Recent check-ins */}
+        {/* ── Exercise card ── */}
+        <button
+          onClick={() => toggle("exercise")}
+          className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70"
+        >
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Dumbbell className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">Workout</p>
+              <p className="text-xs text-muted-foreground truncate">Intensity: {workout.intensity}</p>
+            </div>
+            <ChevronRight className={cn(
+              "w-4 h-4 text-muted-foreground transition-transform",
+              expandedSection === "exercise" && "rotate-90"
+            )} />
+          </div>
+          {expandedSection === "exercise" && (
+            <div className="px-4 pb-4 space-y-3 border-t border-border/15 pt-3" onClick={(e) => e.stopPropagation()}>
+              <p className="text-xs text-muted-foreground">{workout.suggestion}</p>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Try this week</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {workout.examples.map((ex) => (
+                    <span key={ex} className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/15">
+                      {ex}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </button>
+
+        {/* ── Nutrition card ── */}
+        <button
+          onClick={() => toggle("nutrition")}
+          className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70"
+        >
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <div className="w-9 h-9 rounded-lg bg-phase-luteal/10 flex items-center justify-center">
+              <Utensils className="w-5 h-5 text-phase-luteal" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">Nutrition</p>
+              <p className="text-xs text-muted-foreground truncate">{nutrition.focus}</p>
+            </div>
+            <ChevronRight className={cn(
+              "w-4 h-4 text-muted-foreground transition-transform",
+              expandedSection === "nutrition" && "rotate-90"
+            )} />
+          </div>
+          {expandedSection === "nutrition" && (
+            <div className="px-4 pb-4 space-y-3 border-t border-border/15 pt-3" onClick={(e) => e.stopPropagation()}>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Prioritize</p>
+                <ul className="space-y-1">
+                  {nutrition.foods.map((food) => (
+                    <li key={food} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                      <span className="mt-1 w-1.5 h-1.5 rounded-full bg-phase-luteal shrink-0" />
+                      {food}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-lg bg-phase-luteal/5 border border-phase-luteal/15 px-3 py-2">
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium text-phase-luteal">Note:</span> {nutrition.avoid}
+                </p>
+              </div>
+            </div>
+          )}
+        </button>
+
+        {/* ── Recent check-ins ── */}
         {Object.keys(latestByDimension).length > 0 && (
           <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-border/20">
-              <Brain className="w-4 h-4 text-primary" />
-              <h3 className="text-sm font-semibold text-foreground">Your Recent Check-ins</h3>
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20">
+              <Brain className="w-3.5 h-3.5 text-primary" />
+              <span className="text-xs font-semibold text-foreground">Your Check-ins</span>
             </div>
-            <div className="divide-y divide-border/15">
+            <div className="divide-y divide-border/10">
               {Object.entries(latestByDimension).map(([dim, entry]) => {
                 const config = DIMENSION_CONFIG[dim];
                 if (!config) return null;
                 const Icon = config.icon;
                 return (
-                  <div key={dim} className="flex items-center gap-3 px-4 py-3">
-                    <Icon className={cn("w-4 h-4", config.color)} />
+                  <div key={dim} className="flex items-center gap-3 px-4 py-2.5">
+                    <Icon className={cn("w-3.5 h-3.5", config.color)} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">{config.label}</p>
-                      <p className="text-xs text-muted-foreground truncate">{entry.response}</p>
+                      <p className="text-xs font-medium text-foreground">{config.label}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{entry.response}</p>
                     </div>
-                    <span className="text-[10px] text-muted-foreground/60 shrink-0">
-                      Day {entry.cycle_day} · {entry.phase}
-                    </span>
+                    <span className="text-[10px] text-muted-foreground/50 shrink-0">Day {entry.cycle_day}</span>
                   </div>
                 );
               })}
             </div>
-          </div>
-        )}
-
-        {Object.keys(latestByDimension).length === 0 && (
-          <div className="rounded-xl border border-border/30 bg-card/50 p-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              Your check-in history will appear here. Respond to the daily cheat sheet questions in your chat to start tracking patterns.
-            </p>
           </div>
         )}
       </div>
