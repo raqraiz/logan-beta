@@ -1,8 +1,5 @@
 
 
-import { useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-
 interface ChatCycleCircleProps {
   cycleDay: number;
   phase: string;
