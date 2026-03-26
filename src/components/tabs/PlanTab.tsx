@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Dumbbell, Brain, Heart, Utensils, TrendingUp, Loader2,
   AlertTriangle, Zap, Sun, CloudRain, Battery, BatteryLow,
-  BatteryMedium, BatteryFull, ChevronRight, Flame
+  BatteryMedium, BatteryFull, ChevronRight, Flame, Clock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
@@ -191,23 +191,84 @@ const DIMENSION_CONFIG: Record<string, { icon: React.ComponentType<{ className?:
   nutrition: { icon: Utensils, label: "Nutrition", color: "text-phase-luteal" },
 };
 
+// Anchor symptom insight per phase
+const ANCHOR_INSIGHTS: Record<string, Record<string, string>> = {
+  Menstruation: {
+    Bloating: "Bloating tends to ease as your period progresses — stay hydrated and reduce sodium.",
+    Cramps: "Cramps are typically strongest now. Gentle heat and magnesium can help.",
+    Fatigue: "Your energy is at its lowest — honor rest and skip intense workouts.",
+    Headaches: "Hormonal headaches may peak. Stay hydrated and consider magnesium.",
+    "Mood swings": "Emotions may still feel raw. Give yourself permission to slow down.",
+    Acne: "Breakouts from last phase may linger. Gentle skincare — don't over-treat.",
+    Cravings: "Cravings may ease as hormones stabilize. Warm, nourishing foods help.",
+    "Brain fog": "Mental clarity is low — keep tasks simple and avoid big decisions.",
+    Anxiety: "Anxiety often softens during your period as progesterone drops fully.",
+    Insomnia: "Sleep may actually improve now. Lean into earlier bedtimes.",
+  },
+  Follicular: {
+    Bloating: "Bloating should be minimal — your body is in its lightest phase.",
+    Cramps: "Cramps are behind you. Energy is building — enjoy the relief.",
+    Fatigue: "Energy is climbing steadily. This is your window to tackle big tasks.",
+    Headaches: "Headaches are less likely now as estrogen rises smoothly.",
+    "Mood swings": "Mood is stabilizing and optimism is building. Ride this wave.",
+    Acne: "Skin is clearing up as estrogen rises. Great time for active skincare.",
+    Cravings: "Cravings are typically low. Your appetite is balanced and manageable.",
+    "Brain fog": "Mental sharpness is returning — schedule your most demanding work here.",
+    Anxiety: "Anxiety tends to be low. Use this calm window for planning ahead.",
+    Insomnia: "Sleep quality is generally good. Maintain your routine.",
+  },
+  Ovulation: {
+    Bloating: "Some mid-cycle bloating is normal from the hormonal surge.",
+    Cramps: "Mild ovulation cramps (mittelschmerz) are normal and brief.",
+    Fatigue: "You're at peak energy — make the most of it before the shift.",
+    Headaches: "The estrogen peak can trigger headaches in some. Stay hydrated.",
+    "Mood swings": "You're feeling your best socially. Have important conversations now.",
+    Acne: "Skin is at its best. Testosterone peaks may cause minor oiliness.",
+    Cravings: "Appetite is moderate. You may not feel as hungry — that's normal.",
+    "Brain fog": "Peak mental clarity. Your brain is firing on all cylinders.",
+    Anxiety: "Confidence is high but the post-ovulation drop can feel sudden.",
+    Insomnia: "Sleep may feel lighter around ovulation — it's a temporary hormonal effect.",
+  },
+  Luteal: {
+    Bloating: "Bloating is likely building as progesterone rises. Reduce salt and stay active.",
+    Cramps: "Pre-menstrual cramping may start. Magnesium and gentle movement help.",
+    Fatigue: "Energy is declining — front-load demanding tasks early in this phase.",
+    Headaches: "Headache risk increases as estrogen drops. Track triggers like caffeine.",
+    "Mood swings": "Patience thins as progesterone peaks then drops. Warn your inner circle.",
+    Acne: "Hormonal breakouts are most likely now. Stick to your routine, don't panic-treat.",
+    Cravings: "Cravings are peaking — lean into complex carbs and dark chocolate.",
+    "Brain fog": "Focus may feel scattered. Break tasks into smaller chunks.",
+    Anxiety: "Anxiety tends to spike in the late luteal phase. Breathwork and boundaries help.",
+    Insomnia: "Sleep disruption is common. Avoid screens late and try magnesium before bed.",
+  },
+};
+
 export function PlanTab({ userId, cycleData }: PlanTabProps) {
   const [checkins, setCheckins] = useState<CheckinEntry[]>([]);
+  const [anchorSymptom, setAnchorSymptom] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchCheckins = async () => {
-      const { data, error } = await supabase
-        .from("chat_messages")
-        .select("metadata, created_at")
-        .eq("user_id", userId)
-        .eq("message_type", "checkin")
-        .order("created_at", { ascending: false })
-        .limit(50);
+    const fetchData = async () => {
+      // Fetch checkins and anchor symptom in parallel
+      const [checkinsRes, participantRes] = await Promise.all([
+        supabase
+          .from("chat_messages")
+          .select("metadata, created_at")
+          .eq("user_id", userId)
+          .eq("message_type", "checkin")
+          .order("created_at", { ascending: false })
+          .limit(50),
+        supabase
+          .from("participants")
+          .select("anchor_symptom")
+          .eq("email", (await supabase.auth.getUser()).data.user?.email || "")
+          .maybeSingle(),
+      ]);
 
-      if (!error && data) {
-        const entries: CheckinEntry[] = data
+      if (!checkinsRes.error && checkinsRes.data) {
+        const entries: CheckinEntry[] = checkinsRes.data
           .filter((d) => d.metadata && typeof d.metadata === "object")
           .map((d) => {
             const m = d.metadata as Record<string, any>;
@@ -221,9 +282,14 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
           });
         setCheckins(entries);
       }
+
+      if (!participantRes.error && participantRes.data) {
+        setAnchorSymptom(participantRes.data.anchor_symptom);
+      }
+
       setLoading(false);
     };
-    fetchCheckins();
+    fetchData();
   }, [userId]);
 
   const currentPhase = cycleData?.phase || "Follicular";
@@ -320,6 +386,57 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
           </p>
         </div>
 
+        {/* ── Phase countdown + anchor insight ── */}
+        {(() => {
+          const nextPhaseDay = forecast.find((f) => !f.isToday && f.phase !== currentPhase);
+          const daysUntilNext = nextPhaseDay
+            ? forecast.indexOf(nextPhaseDay)
+            : (() => {
+                const menEnd = 5;
+                const ovDay = cycleLength - 14;
+                const ovStart = ovDay - 1;
+                const ovEnd = ovDay + 2;
+                let nextDay = cycleLength + 1;
+                if (currentPhase === "Menstruation") nextDay = menEnd + 1;
+                else if (currentPhase === "Follicular") nextDay = ovStart;
+                else if (currentPhase === "Ovulation") nextDay = ovEnd + 1;
+                else nextDay = cycleLength + 1;
+                return Math.max(1, nextDay - currentDay);
+              })();
+          const PHASE_ORDER = ["Menstruation", "Follicular", "Ovulation", "Luteal"];
+          const nextPhase = nextPhaseDay?.phase || PHASE_ORDER[(PHASE_ORDER.indexOf(currentPhase) + 1) % 4];
+          const anchorInsight = anchorSymptom && ANCHOR_INSIGHTS[currentPhase]?.[anchorSymptom];
+
+          return (
+            <div className={cn(
+              "rounded-xl border overflow-hidden",
+              PHASE_BG_FAINT[currentPhase]
+            )} style={{ borderColor: `hsl(var(--phase-${currentPhase.toLowerCase()}) / 0.2)` }}>
+              <div className="flex items-center gap-3 px-4 py-3">
+                <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", PHASE_BG_FAINT[nextPhase])}>
+                  <Clock className={cn("w-5 h-5", PHASE_COLOR[nextPhase])} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground">
+                    {daysUntilNext} day{daysUntilNext !== 1 ? "s" : ""} until {nextPhase}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Currently in {currentPhase} · Day {currentDay}
+                  </p>
+                </div>
+              </div>
+              {anchorInsight && (
+                <div className="px-4 pb-3 border-t border-border/15 pt-2.5">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                    {anchorSymptom} outlook
+                  </p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{anchorInsight}</p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* ── Heads-up alerts ── */}
         {alerts.length > 0 && (
           <div className="space-y-2">
@@ -387,7 +504,7 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
           </div>
         </div>
 
-        {/* ── Mood card (most requested) ── */}
+        {/* ── Mood card ── */}
         <button
           onClick={() => toggle("mood")}
           className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70"
