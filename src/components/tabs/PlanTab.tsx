@@ -386,6 +386,57 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
           </p>
         </div>
 
+        {/* ── Phase countdown + anchor insight ── */}
+        {(() => {
+          const nextPhaseDay = forecast.find((f) => !f.isToday && f.phase !== currentPhase);
+          const daysUntilNext = nextPhaseDay
+            ? forecast.indexOf(nextPhaseDay)
+            : (() => {
+                const menEnd = 5;
+                const ovDay = cycleLength - 14;
+                const ovStart = ovDay - 1;
+                const ovEnd = ovDay + 2;
+                let nextDay = cycleLength + 1;
+                if (currentPhase === "Menstruation") nextDay = menEnd + 1;
+                else if (currentPhase === "Follicular") nextDay = ovStart;
+                else if (currentPhase === "Ovulation") nextDay = ovEnd + 1;
+                else nextDay = cycleLength + 1;
+                return Math.max(1, nextDay - currentDay);
+              })();
+          const PHASE_ORDER = ["Menstruation", "Follicular", "Ovulation", "Luteal"];
+          const nextPhase = nextPhaseDay?.phase || PHASE_ORDER[(PHASE_ORDER.indexOf(currentPhase) + 1) % 4];
+          const anchorInsight = anchorSymptom && ANCHOR_INSIGHTS[currentPhase]?.[anchorSymptom];
+
+          return (
+            <div className={cn(
+              "rounded-xl border overflow-hidden",
+              PHASE_BG_FAINT[currentPhase]
+            )} style={{ borderColor: `hsl(var(--phase-${currentPhase.toLowerCase()}) / 0.2)` }}>
+              <div className="flex items-center gap-3 px-4 py-3">
+                <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", PHASE_BG_FAINT[nextPhase])}>
+                  <Clock className={cn("w-5 h-5", PHASE_COLOR[nextPhase])} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground">
+                    {daysUntilNext} day{daysUntilNext !== 1 ? "s" : ""} until {nextPhase}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Currently in {currentPhase} · Day {currentDay}
+                  </p>
+                </div>
+              </div>
+              {anchorInsight && (
+                <div className="px-4 pb-3 border-t border-border/15 pt-2.5">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                    {anchorSymptom} outlook
+                  </p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{anchorInsight}</p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* ── Heads-up alerts ── */}
         {alerts.length > 0 && (
           <div className="space-y-2">
@@ -453,7 +504,7 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
           </div>
         </div>
 
-        {/* ── Mood card (most requested) ── */}
+        {/* ── Mood card ── */}
         <button
           onClick={() => toggle("mood")}
           className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70"
@@ -586,64 +637,7 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
             </div>
           </div>
         )}
-        {/* ── Phase countdown + anchor insight ── */}
-        {(() => {
-          // Calculate days until next phase
-          const nextPhaseDay = forecast.find((f) => !f.isToday && f.phase !== currentPhase);
-          const daysUntilNext = nextPhaseDay
-            ? forecast.indexOf(nextPhaseDay)
-            : (() => {
-                // Calculate from cycle math if not in 7-day window
-                const menEnd = 5;
-                const ovDay = cycleLength - 14;
-                const ovStart = ovDay - 1;
-                const ovEnd = ovDay + 2;
-                let nextDay = cycleLength + 1;
-                if (currentPhase === "Menstruation") nextDay = menEnd + 1;
-                else if (currentPhase === "Follicular") nextDay = ovStart;
-                else if (currentPhase === "Ovulation") nextDay = ovEnd + 1;
-                else nextDay = cycleLength + 1; // next Menstruation
-                return Math.max(1, nextDay - currentDay);
-              })();
-          const PHASE_ORDER = ["Menstruation", "Follicular", "Ovulation", "Luteal"];
-          const nextPhase = nextPhaseDay?.phase || PHASE_ORDER[(PHASE_ORDER.indexOf(currentPhase) + 1) % 4];
-          const anchorInsight = anchorSymptom && ANCHOR_INSIGHTS[currentPhase]?.[anchorSymptom];
-
-          return (
-            <div className={cn(
-              "rounded-xl border overflow-hidden",
-              `border-${currentPhase === "Menstruation" ? "phase-menstruation" : currentPhase === "Follicular" ? "phase-follicular" : currentPhase === "Ovulation" ? "phase-ovulation" : "phase-luteal"}/20`,
-              PHASE_BG_FAINT[currentPhase]
-            )}>
-              {/* Countdown */}
-              <div className="flex items-center gap-3 px-4 py-3">
-                <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", PHASE_BG_FAINT[nextPhase])}>
-                  <Clock className={cn("w-5 h-5", PHASE_COLOR[nextPhase])} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-foreground">
-                    {daysUntilNext} day{daysUntilNext !== 1 ? "s" : ""} until {nextPhase}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Currently in {currentPhase} · Day {currentDay}
-                  </p>
-                </div>
-              </div>
-
-              {/* Anchor symptom insight */}
-              {anchorInsight && (
-                <div className="px-4 pb-3 border-t border-border/15 pt-2.5">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-                    {anchorSymptom} outlook
-                  </p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{anchorInsight}</p>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
-        </div>
-        </div>
-      );
-    }
+      </div>
+    </div>
+  );
+}
