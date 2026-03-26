@@ -799,6 +799,18 @@ const Chat = () => {
     // Stay on the same page, UI will update to show auth form
   };
 
+  // During onboarding, force the Ask tab
+  const effectiveTab = isOnboarding ? "ask" : activeTab;
+
+  // When switching to Ask tab, scroll to the start of the last message
+  useEffect(() => {
+    if (effectiveTab === "ask" && lastMessageRef.current) {
+      requestAnimationFrame(() => {
+        lastMessageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }, [effectiveTab]);
+
   // Show loading only while checking auth status
   if (authLoading) {
     return (
@@ -821,18 +833,6 @@ const Chat = () => {
       </div>
     );
   }
-
-  // During onboarding, force the Ask tab
-  const effectiveTab = isOnboarding ? "ask" : activeTab;
-
-  // When switching to Ask tab, scroll to the start of the last message
-  useEffect(() => {
-    if (effectiveTab === "ask" && lastMessageRef.current) {
-      requestAnimationFrame(() => {
-        lastMessageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    }
-  }, [effectiveTab]);
 
   return (
     <>
