@@ -30,27 +30,30 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50">
       <div className="relative border-t border-border/50 bg-card/95 backdrop-blur-md">
-        <div className="max-w-md mx-auto flex items-center justify-around h-16 px-6">
+        <div className="max-w-md mx-auto flex items-end justify-around h-16 px-6 pb-2">
           {/* Home tab */}
           <button
             onClick={() => onTabChange("home")}
             className={cn(
-              "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors",
+              "flex flex-col items-center justify-end gap-0.5 flex-1 transition-colors",
               activeTab === "home" ? "text-primary" : "text-muted-foreground"
             )}
           >
             <Home className="w-5 h-5" />
-            <span className={cn("text-[10px] font-medium", activeTab === "home" && "font-semibold")}>Home</span>
+            <span className={cn("text-xs font-medium", activeTab === "home" && "font-semibold")}>Home</span>
           </button>
 
-          {/* Ask tab — inline with others, cycle ring raised above */}
+          {/* Ask tab — cycle ring raised above, label aligned with others */}
           <button
             onClick={() => onTabChange("ask")}
-            className="flex flex-col items-center justify-center flex-1 h-full relative"
+            className={cn(
+              "flex flex-col items-center justify-end flex-1 transition-colors",
+              activeTab === "ask" ? "text-primary" : "text-muted-foreground"
+            )}
           >
             {/* Raised circle with ring */}
             <div className={cn(
-              "relative w-12 h-12 -mt-8 rounded-full bg-card flex items-center justify-center transition-all duration-200",
+              "relative w-12 h-12 rounded-full bg-card flex items-center justify-center transition-all duration-200 -mt-6",
               activeTab === "ask" ? "scale-105" : ""
             )}>
               <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 48 48">
@@ -76,25 +79,20 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
                   />
                 )}
               </svg>
-              <span className={cn(
-                "text-xs font-bold relative z-10 transition-colors",
-                activeTab === "ask" ? "text-primary" : "text-muted-foreground"
-              )}>
-                Ask
-              </span>
             </div>
+            <span className={cn("text-xs font-medium", activeTab === "ask" && "font-semibold")}>Ask</span>
           </button>
 
           {/* Plan tab */}
           <button
             onClick={() => onTabChange("plan")}
             className={cn(
-              "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors",
+              "flex flex-col items-center justify-end gap-0.5 flex-1 transition-colors",
               activeTab === "plan" ? "text-primary" : "text-muted-foreground"
             )}
           >
             <Target className="w-5 h-5" />
-            <span className={cn("text-[10px] font-medium", activeTab === "plan" && "font-semibold")}>Plan</span>
+            <span className={cn("text-xs font-medium", activeTab === "plan" && "font-semibold")}>Plan</span>
           </button>
         </div>
       </div>
