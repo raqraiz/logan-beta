@@ -27,19 +27,16 @@ export function HomeTab({ cycleData }: HomeTabProps) {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto pb-16">
-      {/* Cycle circle hero */}
-      <div className="flex flex-col items-center pt-8 pb-6 px-4">
-        <ChatCycleCircle
-          cycleDay={cycleData.cycleDay}
-          phase={cycleData.phase}
-          cycleLengthDays={cycleData.cycleLengthDays}
-          size="md"
-        />
-        <p className="text-sm text-muted-foreground mt-3">
-          Day {cycleData.cycleDay} of {cycleData.cycleLengthDays}
-        </p>
-      </div>
+    <div className="flex-1 flex flex-col items-center justify-center pb-16">
+      <ChatCycleCircle
+        cycleDay={cycleData.cycleDay}
+        phase={cycleData.phase}
+        cycleLengthDays={cycleData.cycleLengthDays}
+        size="md"
+      />
+      <p className="text-sm text-muted-foreground mt-3">
+        Day {cycleData.cycleDay} of {cycleData.cycleLengthDays}
+      </p>
     </div>
   );
 }
