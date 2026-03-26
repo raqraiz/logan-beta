@@ -1197,7 +1197,7 @@ const Chat = () => {
 
       {/* Scroll to bottom button */}
       {showScrollButton && (
-        <div className={`fixed right-4 md:right-8 ${shouldShowInteractivePicker() ? "bottom-8" : "bottom-28"} z-[60]`}>
+        <div className={`fixed right-4 md:right-8 ${shouldShowInteractivePicker() ? "bottom-20" : isOnboarding ? "bottom-28" : "bottom-40"} z-[60]`}>
           <Button
             type="button"
             size="icon"
@@ -1226,7 +1226,7 @@ const Chat = () => {
 
       {/* Input - hide when showing interactive pickers or out of credits */}
       {!shouldShowInteractivePicker() && (
-        <div className="border-t border-border/50 bg-card/50 backdrop-blur-sm sticky bottom-0">
+        <div className={`border-t border-border/50 bg-card/50 backdrop-blur-sm sticky bottom-0 ${!isOnboarding ? "pb-14" : ""}`}>
           <div className="max-w-3xl mx-auto px-4 pt-4">
             {showTopicPrompt && !isOnboarding && (
               <div className="mb-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2">
