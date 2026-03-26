@@ -841,69 +841,8 @@ const Chat = () => {
              </div>
            </div>
           <div className="flex items-center gap-3">
-            {cycleData && !isOnboarding && (
-              <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <button className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-full">
-                    <ChatCycleCircle
-                      cycleDay={cycleData.cycleDay}
-                      phase={cycleData.phase}
-                      cycleLengthDays={cycleData.cycleLengthDays}
-                      size="sm"
-                    />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-72" align="end">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-semibold text-sm">Cycle Overview</h4>
-                      <span className="text-xs text-muted-foreground">
-                        Day {cycleData.cycleDay} of {cycleData.cycleLengthDays}
-                      </span>
-                    </div>
-                    
-                    <ChatCycleCircle
-                      cycleDay={cycleData.cycleDay}
-                      phase={cycleData.phase}
-                      cycleLengthDays={cycleData.cycleLengthDays}
-                      size="md"
-                    />
-                    
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Current Phase</span>
-                        <span className="font-medium">{cycleData.phase}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Cycle Length</span>
-                        <span className="font-medium">{cycleData.cycleLengthDays} days</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Days Remaining</span>
-                        <span className="font-medium">{cycleData.cycleLengthDays - cycleData.cycleDay} days</span>
-                      </div>
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => { setPopoverOpen(false); setShowForecast(true); }}
-                    >
-                      View Full Forecast
-                    </Button>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            )}
             {/* Credit balance hidden — free access during alpha */}
             <CalendarSubscribe />
-            <Link to="/community">
-              <Button variant="ghost" size="sm" title="Community">
-                <Users className="w-4 h-4 mr-2" />
-                Community
-              </Button>
-            </Link>
             
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
