@@ -37,8 +37,8 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
   const styles = PHASE_STYLES[phase] || PHASE_STYLES.Follicular;
   const progress = (cycleDay / cycleLengthDays) * 100;
   const radius = 42;
-  const trackWidth = 6;
-  const arcWidth = 6;
+  const trackWidth = 3;
+  const arcWidth = 3;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
