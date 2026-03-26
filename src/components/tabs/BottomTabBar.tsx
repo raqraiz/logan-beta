@@ -29,9 +29,8 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50">
-      {/* Background bar */}
       <div className="relative border-t border-border/50 bg-card/95 backdrop-blur-md">
-        <div className="max-w-md mx-auto flex items-end justify-around h-14 px-6">
+        <div className="max-w-md mx-auto flex items-center justify-around h-16 px-6">
           {/* Home tab */}
           <button
             onClick={() => onTabChange("home")}
@@ -44,8 +43,47 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
             <span className={cn("text-[10px] font-medium", activeTab === "home" && "font-semibold")}>Home</span>
           </button>
 
-          {/* Spacer for the raised button */}
-          <div className="flex-1" />
+          {/* Ask tab — inline with others, cycle ring raised above */}
+          <button
+            onClick={() => onTabChange("ask")}
+            className="flex flex-col items-center justify-center flex-1 h-full relative"
+          >
+            {/* Raised circle with ring */}
+            <div className={cn(
+              "relative w-12 h-12 -mt-8 rounded-full bg-card flex items-center justify-center transition-all duration-200",
+              activeTab === "ask" ? "scale-105" : ""
+            )}>
+              <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 48 48">
+                <circle
+                  cx="24" cy="24" r="22"
+                  fill="none"
+                  strokeWidth="1.5"
+                  stroke="hsl(var(--border) / 0.3)"
+                />
+                {hasCycle && (
+                  <circle
+                    cx="24" cy="24" r="22"
+                    fill="none"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
+                    stroke={phaseColor}
+                    style={{
+                      filter: `drop-shadow(0 0 3px ${phaseColor}80)`,
+                      transition: "stroke-dashoffset 0.6s ease",
+                    }}
+                  />
+                )}
+              </svg>
+              <span className={cn(
+                "text-xs font-bold relative z-10 transition-colors",
+                activeTab === "ask" ? "text-primary" : "text-muted-foreground"
+              )}>
+                Ask
+              </span>
+            </div>
+          </button>
 
           {/* Plan tab */}
           <button
@@ -60,50 +98,6 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
           </button>
         </div>
       </div>
-
-      {/* Centered raised Ask button with cycle ring */}
-      <button
-        onClick={() => onTabChange("ask")}
-        className={cn(
-          "absolute left-1/2 -translate-x-1/2 -top-5 flex items-center justify-center",
-          "w-14 h-14 rounded-full",
-          "bg-card transition-all duration-200",
-          activeTab === "ask" ? "scale-105" : "hover:scale-105"
-        )}
-      >
-        {/* SVG cycle ring */}
-        <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 56 56">
-          {/* Track */}
-          <circle
-            cx="28" cy="28" r={radius}
-            fill="none"
-            strokeWidth={strokeWidth}
-            stroke="hsl(var(--border) / 0.3)"
-          />
-          {/* Progress arc */}
-          {hasCycle && (
-            <circle
-              cx="28" cy="28" r={radius}
-              fill="none"
-              strokeWidth={strokeWidth}
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              stroke={phaseColor}
-              style={{
-                filter: `drop-shadow(0 0 3px ${phaseColor}80)`,
-                transition: "stroke-dashoffset 0.6s ease",
-              }}
-            />
-          )}
-        </svg>
-        <span className={cn(
-          "text-sm font-bold transition-colors relative z-10",
-          activeTab === "ask" ? "text-primary" : "text-muted-foreground"
-        )}>
-          Ask
-        </span>
-      </button>
     </nav>
   );
 }
