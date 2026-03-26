@@ -21,8 +21,8 @@ interface BottomTabBarProps {
 export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays, phase }: BottomTabBarProps) {
   const hasCycle = cycleDay != null && cycleLengthDays != null && phase != null;
   const progress = hasCycle ? (cycleDay! / cycleLengthDays!) * 100 : 0;
-  const radius = 26;
-  const strokeWidth = 2;
+  const radius = 22;
+  const strokeWidth = 1.5;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
   const phaseColor = phase ? (PHASE_HEX[phase] || PHASE_HEX.Follicular) : PHASE_HEX.Follicular;
