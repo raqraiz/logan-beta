@@ -9,6 +9,7 @@ interface CycleForecastProps {
   lastPeriodStart: string;
   anchorSymptom?: string | null;
   onClose: () => void;
+  embedded?: boolean;
 }
 
 function getPhaseForDay(day: number, cycleLength: number): string {
