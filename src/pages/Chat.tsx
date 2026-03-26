@@ -113,6 +113,7 @@ const Chat = () => {
   const [outOfCredits, setOutOfCredits] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [showTopicPrompt, setShowTopicPrompt] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabId>("ask");
   
   const { user, loading: authLoading, signOut } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
