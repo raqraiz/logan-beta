@@ -40,7 +40,7 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
             )}
           >
             <Home className="w-5 h-5" />
-            <span className={cn("text-xs font-medium", activeTab === "home" && "font-semibold")}>Home</span>
+            <span className={cn("text-sm font-medium", activeTab === "home" && "font-semibold")}>Home</span>
           </button>
 
           {/* Ask tab — cycle ring raised above, label aligned with others */}
@@ -53,7 +53,7 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
           >
             {/* Raised circle with ring — Ask text inside, positioned at bottom to align with Home/Plan */}
             <div className={cn(
-              "relative w-12 h-12 rounded-full bg-card flex items-end justify-center pb-1.5 transition-all duration-200 -mt-6",
+              "relative w-12 h-12 rounded-full bg-card flex items-center justify-center transition-all duration-200 -mt-6",
               activeTab === "ask" ? "scale-105" : ""
             )}>
               <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 48 48">
@@ -80,8 +80,8 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
                 )}
               </svg>
               <span className={cn(
-                "text-xs font-medium relative z-10 transition-colors",
-                activeTab === "ask" ? "text-primary font-semibold" : "text-muted-foreground"
+                "text-sm font-bold relative z-10 transition-colors",
+                activeTab === "ask" ? "text-primary" : "text-muted-foreground"
               )}>Ask</span>
             </div>
           </button>
@@ -95,7 +95,7 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
             )}
           >
             <Target className="w-5 h-5" />
-            <span className={cn("text-xs font-medium", activeTab === "plan" && "font-semibold")}>Plan</span>
+            <span className={cn("text-sm font-medium", activeTab === "plan" && "font-semibold")}>Plan</span>
           </button>
         </div>
       </div>
