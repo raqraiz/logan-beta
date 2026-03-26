@@ -40,7 +40,7 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
             )}
           >
             <Home className="w-5 h-5" />
-            <span className={cn("text-xs font-medium", activeTab === "home" && "font-semibold")}>Home</span>
+            <span className={cn("text-sm font-medium", activeTab === "home" && "font-semibold")}>Home</span>
           </button>
 
           {/* Ask tab — cycle ring raised above, label aligned with others */}
