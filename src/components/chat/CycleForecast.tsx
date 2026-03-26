@@ -114,15 +114,6 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   const [selectedDate, setSelectedDate] = useState<Date | null>(today);
   const insightsRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to insights on mobile when a day is selected
-  useEffect(() => {
-    if (selectedDate && insightsRef.current) {
-      const isMobile = window.innerWidth < 768;
-      if (isMobile) {
-        insightsRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    }
-  }, [selectedDate]);
 
   // Build calendar grid
   const monthStart = startOfMonth(currentMonth);
