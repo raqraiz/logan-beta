@@ -51,9 +51,9 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
               activeTab === "ask" ? "text-primary" : "text-muted-foreground"
             )}
           >
-            {/* Raised circle with ring */}
+            {/* Raised circle with ring — Ask text inside, positioned at bottom to align with Home/Plan */}
             <div className={cn(
-              "relative w-12 h-12 rounded-full bg-card flex items-center justify-center transition-all duration-200 -mt-6",
+              "relative w-12 h-12 rounded-full bg-card flex items-end justify-center pb-1.5 transition-all duration-200 -mt-6",
               activeTab === "ask" ? "scale-105" : ""
             )}>
               <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 48 48">
@@ -79,8 +79,11 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
                   />
                 )}
               </svg>
+              <span className={cn(
+                "text-xs font-medium relative z-10 transition-colors",
+                activeTab === "ask" ? "text-primary font-semibold" : "text-muted-foreground"
+              )}>Ask</span>
             </div>
-            <span className={cn("text-xs font-medium", activeTab === "ask" && "font-semibold")}>Ask</span>
           </button>
 
           {/* Plan tab */}
