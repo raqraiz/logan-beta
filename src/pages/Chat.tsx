@@ -1296,7 +1296,13 @@ const Chat = () => {
 
       {/* Bottom tab bar — hide during onboarding */}
       {!isOnboarding && (
-        <BottomTabBar activeTab={effectiveTab} onTabChange={setActiveTab} />
+        <BottomTabBar
+          activeTab={effectiveTab}
+          onTabChange={setActiveTab}
+          cycleDay={cycleData?.cycleDay}
+          cycleLengthDays={cycleData?.cycleLengthDays}
+          phase={cycleData?.phase}
+        />
       )}
     </div>
 
