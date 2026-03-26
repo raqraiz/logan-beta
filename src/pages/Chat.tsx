@@ -822,6 +822,9 @@ const Chat = () => {
     );
   }
 
+  // During onboarding, force the Ask tab
+  const effectiveTab = isOnboarding ? "ask" : activeTab;
+
   return (
     <>
     <div className="min-h-screen bg-background flex flex-col relative">
