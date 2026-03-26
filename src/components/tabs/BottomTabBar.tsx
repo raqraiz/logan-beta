@@ -3,12 +3,30 @@ import { cn } from "@/lib/utils";
 
 export type TabId = "home" | "ask" | "plan";
 
+const PHASE_HEX: Record<string, string> = {
+  Menstruation: "#E05262",
+  Follicular: "#3DBF8A",
+  Ovulation: "#E8A830",
+  Luteal: "#9B6DD7",
+};
+
 interface BottomTabBarProps {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
+  cycleDay?: number;
+  cycleLengthDays?: number;
+  phase?: string;
 }
 
-export function BottomTabBar({ activeTab, onTabChange }: BottomTabBarProps) {
+export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays, phase }: BottomTabBarProps) {
+  const hasCycle = cycleDay != null && cycleLengthDays != null && phase != null;
+  const progress = hasCycle ? (cycleDay! / cycleLengthDays!) * 100 : 0;
+  const radius = 24;
+  const strokeWidth = 3;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
+  const phaseColor = phase ? (PHASE_HEX[phase] || PHASE_HEX.Follicular) : PHASE_HEX.Follicular;
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50">
       {/* Background bar */}
@@ -43,21 +61,44 @@ export function BottomTabBar({ activeTab, onTabChange }: BottomTabBarProps) {
         </div>
       </div>
 
-      {/* Centered raised Ask button */}
+      {/* Centered raised Ask button with cycle ring */}
       <button
         onClick={() => onTabChange("ask")}
         className={cn(
           "absolute left-1/2 -translate-x-1/2 -top-5 flex items-center justify-center",
           "w-14 h-14 rounded-full",
-          "bg-card border-2 transition-all duration-200",
-          "shadow-[0_0_20px_hsl(var(--primary)/0.15)]",
-          activeTab === "ask"
-            ? "border-primary shadow-[0_0_30px_hsl(var(--primary)/0.3)] scale-105"
-            : "border-border/50 hover:border-primary/50"
+          "bg-card transition-all duration-200",
+          activeTab === "ask" ? "scale-105" : "hover:scale-105"
         )}
       >
+        {/* SVG cycle ring */}
+        <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 56 56">
+          {/* Track */}
+          <circle
+            cx="28" cy="28" r={radius}
+            fill="none"
+            strokeWidth={strokeWidth}
+            stroke="hsl(var(--border) / 0.3)"
+          />
+          {/* Progress arc */}
+          {hasCycle && (
+            <circle
+              cx="28" cy="28" r={radius}
+              fill="none"
+              strokeWidth={strokeWidth}
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              stroke={phaseColor}
+              style={{
+                filter: `drop-shadow(0 0 3px ${phaseColor}80)`,
+                transition: "stroke-dashoffset 0.6s ease",
+              }}
+            />
+          )}
+        </svg>
         <span className={cn(
-          "text-sm font-bold transition-colors",
+          "text-sm font-bold transition-colors relative z-10",
           activeTab === "ask" ? "text-primary" : "text-muted-foreground"
         )}>
           Ask
