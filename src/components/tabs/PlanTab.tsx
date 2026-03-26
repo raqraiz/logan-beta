@@ -356,7 +356,7 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
 
   return (
     <div className="flex-1 overflow-y-auto pb-20">
-      <div className="max-w-lg mx-auto px-4 py-5 space-y-4">
+      <div className="max-w-lg md:max-w-4xl mx-auto px-4 py-5 space-y-4">
 
         {/* ── Header ── */}
         <div>
