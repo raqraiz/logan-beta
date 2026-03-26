@@ -95,7 +95,7 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
             )}
           >
             <Target className="w-5 h-5" />
-            <span className={cn("text-xs font-medium", activeTab === "plan" && "font-semibold")}>Plan</span>
+            <span className={cn("text-sm font-medium", activeTab === "plan" && "font-semibold")}>Plan</span>
           </button>
         </div>
       </div>
