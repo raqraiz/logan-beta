@@ -1292,6 +1292,12 @@ const Chat = () => {
           </form>
         </div>
       )}
+      </>)}
+
+      {/* Bottom tab bar — hide during onboarding */}
+      {!isOnboarding && (
+        <BottomTabBar activeTab={effectiveTab} onTabChange={setActiveTab} />
+      )}
     </div>
 
     {/* Cycle Forecast overlay */}
