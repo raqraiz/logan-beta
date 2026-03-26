@@ -31,6 +31,9 @@ import { CalendarSubscribe } from "@/components/chat/CalendarSubscribe";
 import { CycleForecast } from "@/components/chat/CycleForecast";
 import { CreditBalance } from "@/components/chat/CreditBalance";
 import { OutOfCredits } from "@/components/chat/OutOfCredits";
+import { BottomTabBar, type TabId } from "@/components/tabs/BottomTabBar";
+import { HomeTab } from "@/components/tabs/HomeTab";
+import { PlanTab } from "@/components/tabs/PlanTab";
 
 interface SymptomCategory {
   label: string;
@@ -110,6 +113,7 @@ const Chat = () => {
   const [outOfCredits, setOutOfCredits] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [showTopicPrompt, setShowTopicPrompt] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabId>("ask");
   
   const { user, loading: authLoading, signOut } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -818,6 +822,9 @@ const Chat = () => {
     );
   }
 
+  // During onboarding, force the Ask tab
+  const effectiveTab = isOnboarding ? "ask" : activeTab;
+
   return (
     <>
     <div className="min-h-screen bg-background flex flex-col relative">
@@ -906,6 +913,16 @@ const Chat = () => {
         </div>
       </header>
 
+      {/* Tab content */}
+      {effectiveTab === "home" && (
+        <HomeTab cycleData={cycleData} />
+      )}
+
+      {effectiveTab === "plan" && user && (
+        <PlanTab userId={user.id} cycleData={cycleData} />
+      )}
+
+      {effectiveTab === "ask" && (<>
       {/* Onboarding Progress Bar */}
       {isOnboarding && (
         <div className="sticky top-0 z-20 flex items-center gap-2 bg-card/80 backdrop-blur-sm border-b border-border/50 px-4 py-2">
@@ -1180,7 +1197,7 @@ const Chat = () => {
 
       {/* Scroll to bottom button */}
       {showScrollButton && (
-        <div className={`fixed right-4 md:right-8 ${shouldShowInteractivePicker() ? "bottom-8" : "bottom-28"} z-[60]`}>
+        <div className={`fixed right-4 md:right-8 ${shouldShowInteractivePicker() ? "bottom-20" : isOnboarding ? "bottom-28" : "bottom-40"} z-[60]`}>
           <Button
             type="button"
             size="icon"
@@ -1209,7 +1226,7 @@ const Chat = () => {
 
       {/* Input - hide when showing interactive pickers or out of credits */}
       {!shouldShowInteractivePicker() && (
-        <div className="border-t border-border/50 bg-card/50 backdrop-blur-sm sticky bottom-0">
+        <div className={`border-t border-border/50 bg-card/50 backdrop-blur-sm sticky bottom-0 ${!isOnboarding ? "pb-14" : ""}`}>
           <div className="max-w-3xl mx-auto px-4 pt-4">
             {showTopicPrompt && !isOnboarding && (
               <div className="mb-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2">
@@ -1274,6 +1291,12 @@ const Chat = () => {
             </p>
           </form>
         </div>
+      )}
+      </>)}
+
+      {/* Bottom tab bar — hide during onboarding */}
+      {!isOnboarding && (
+        <BottomTabBar activeTab={effectiveTab} onTabChange={setActiveTab} />
       )}
     </div>
 
