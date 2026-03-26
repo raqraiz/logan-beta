@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Dumbbell, Brain, Heart, Utensils, TrendingUp, Loader2,
   AlertTriangle, Zap, Sun, CloudRain, Battery, BatteryLow,
-  BatteryMedium, BatteryFull, ChevronRight, Flame
+  BatteryMedium, BatteryFull, ChevronRight, Flame, Clock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
