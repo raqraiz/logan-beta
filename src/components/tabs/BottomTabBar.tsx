@@ -45,29 +45,35 @@ export function BottomTabBar({ activeTab, onTabChange }: BottomTabBarProps) {
       </div>
 
       {/* Centered raised Ask button — overlaps the bar */}
-      <button
-        onClick={() => onTabChange("ask")}
-        className={cn(
-          "absolute left-1/2 -translate-x-1/2 -top-5 flex items-center justify-center",
-          "w-16 h-16 rounded-full",
-          "bg-card border-2 transition-all duration-200",
-          "shadow-[0_0_20px_hsl(var(--primary)/0.15)]",
-          activeTab === "ask"
-            ? "border-primary shadow-[0_0_30px_hsl(var(--primary)/0.3)] scale-105"
-            : "border-border/50 hover:border-primary/50"
-        )}
-      >
-        <div className={cn(
-          "w-11 h-11 rounded-full overflow-hidden transition-all duration-200",
-          activeTab === "ask" && "shadow-[0_0_12px_hsl(var(--primary)/0.4)]"
-        )}>
-          <img
-            src={loganIcon}
-            alt="Ask Logan"
-            className="w-full h-full object-cover"
-          />
-        </div>
-      </button>
+      <div className="absolute left-1/2 -translate-x-1/2 -top-5 flex flex-col items-center">
+        <button
+          onClick={() => onTabChange("ask")}
+          className={cn(
+            "flex items-center justify-center",
+            "w-14 h-14 rounded-full",
+            "bg-card border-2 transition-all duration-200",
+            "shadow-[0_0_20px_hsl(var(--primary)/0.15)]",
+            activeTab === "ask"
+              ? "border-primary shadow-[0_0_30px_hsl(var(--primary)/0.3)] scale-105"
+              : "border-border/50 hover:border-primary/50"
+          )}
+        >
+          <div className={cn(
+            "w-10 h-10 rounded-full overflow-hidden transition-all duration-200",
+            activeTab === "ask" && "shadow-[0_0_12px_hsl(var(--primary)/0.4)]"
+          )}>
+            <img
+              src={loganIcon}
+              alt="Ask Logan"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </button>
+        <span className={cn(
+          "text-[10px] font-medium mt-0.5 transition-colors",
+          activeTab === "ask" ? "text-primary font-semibold" : "text-muted-foreground"
+        )}>Ask</span>
+      </div>
     </nav>
   );
 }
