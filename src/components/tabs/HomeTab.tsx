@@ -1,5 +1,4 @@
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
-import { CycleForecast } from "@/components/chat/CycleForecast";
 import { LoganLogo } from "@/components/LoganLogo";
 
 interface CycleData {
@@ -14,7 +13,7 @@ interface HomeTabProps {
   anchorSymptom?: string | null;
 }
 
-export function HomeTab({ cycleData, anchorSymptom }: HomeTabProps) {
+export function HomeTab({ cycleData }: HomeTabProps) {
   if (!cycleData) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 text-center">
@@ -41,25 +40,6 @@ export function HomeTab({ cycleData, anchorSymptom }: HomeTabProps) {
           Day {cycleData.cycleDay} of {cycleData.cycleLengthDays}
         </p>
       </div>
-
-      {/* Full forecast inline */}
-      {cycleData.lastPeriodStart ? (
-        <CycleForecast
-          cycleDay={cycleData.cycleDay}
-          phase={cycleData.phase}
-          cycleLengthDays={cycleData.cycleLengthDays}
-          lastPeriodStart={cycleData.lastPeriodStart}
-          anchorSymptom={anchorSymptom}
-          onClose={() => {}}
-          embedded
-        />
-      ) : (
-        <div className="px-6 py-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            Log your period start date to see a full cycle forecast.
-          </p>
-        </div>
-      )}
     </div>
   );
 }

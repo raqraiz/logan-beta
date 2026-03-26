@@ -1245,16 +1245,7 @@ const Chat = () => {
       )}
     </div>
 
-    {/* Cycle Forecast overlay */}
-    {showForecast && cycleData && cycleData.lastPeriodStart && (
-      <CycleForecast
-        cycleDay={cycleData.cycleDay}
-        phase={cycleData.phase}
-        cycleLengthDays={cycleData.cycleLengthDays}
-        lastPeriodStart={cycleData.lastPeriodStart || ""}
-        onClose={() => setShowForecast(false)}
-      />
-    )}
+    {/* Forecast overlay removed — forecast now lives in Plan tab */}
     <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </>
   );

@@ -2,16 +2,17 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dumbbell, Brain, Heart, Utensils, TrendingUp, Loader2,
-  AlertTriangle, Zap, Sun, CloudRain, Battery, BatteryLow,
-  BatteryMedium, BatteryFull, ChevronRight, Flame, Clock
+  AlertTriangle, Zap, ChevronRight, Clock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
+import { CycleForecast } from "@/components/chat/CycleForecast";
 
 interface CycleData {
   cycleDay: number;
   phase: string;
   cycleLengthDays: number;
+  lastPeriodStart?: string;
 }
 
 interface PlanTabProps {
@@ -71,12 +72,6 @@ const PHASE_COLOR: Record<string, string> = {
   Follicular: "text-phase-follicular",
   Ovulation: "text-phase-ovulation",
   Luteal: "text-phase-luteal",
-};
-const PHASE_BG: Record<string, string> = {
-  Menstruation: "bg-phase-menstruation",
-  Follicular: "bg-phase-follicular",
-  Ovulation: "bg-phase-ovulation",
-  Luteal: "bg-phase-luteal",
 };
 const PHASE_BG_FAINT: Record<string, string> = {
   Menstruation: "bg-phase-menstruation/15",
@@ -157,7 +152,6 @@ const MOOD_GUIDANCE: Record<string, { outlook: string; headsUp: string; selfCare
   },
 };
 
-// ── 7-day forecast item ──
 interface DayForecast {
   date: Date;
   cycleDay: number;
@@ -165,23 +159,6 @@ interface DayForecast {
   energy: number;
   mood: number;
   isToday: boolean;
-}
-
-function EnergyDots({ value, color }: { value: number; color: string }) {
-  const dots = Math.round(value * 5);
-  return (
-    <div className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <div
-          key={i}
-          className={cn(
-            "w-1.5 h-1.5 rounded-full transition-colors",
-            i <= dots ? color : "bg-muted/30"
-          )}
-        />
-      ))}
-    </div>
-  );
 }
 
 const DIMENSION_CONFIG: Record<string, { icon: React.ComponentType<{ className?: string }>; label: string; color: string }> = {
@@ -251,7 +228,6 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
 
   useEffect(() => {
     const fetchData = async () => {
-      // Fetch checkins and anchor symptom in parallel
       const [checkinsRes, participantRes] = await Promise.all([
         supabase
           .from("chat_messages")
@@ -296,7 +272,7 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
   const currentDay = cycleData?.cycleDay || 1;
   const cycleLength = cycleData?.cycleLengthDays || 28;
 
-  // Build 7-day forecast
+  // Build 7-day forecast (kept for alerts calculation)
   const forecast: DayForecast[] = useMemo(() => {
     const today = new Date();
     return Array.from({ length: 7 }, (_, i) => {
@@ -314,21 +290,19 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
     });
   }, [currentDay, cycleLength]);
 
-  // Detect upcoming "heads-up" alerts
+  // Detect upcoming "heads-up" alerts (no phase transition alert)
   const alerts = useMemo(() => {
     const items: { day: string; message: string; type: "warning" | "boost" }[] = [];
     for (const f of forecast) {
       if (f.isToday) continue;
-      // Mood dip alert (late luteal)
       if (f.mood < 0.35) {
         items.push({
           day: format(f.date, "EEE"),
           message: `Day ${f.cycleDay} — patience may be lower. Plan lighter and ask for help.`,
           type: "warning",
         });
-        break; // one alert is enough
+        break;
       }
-      // Energy boost
       if (f.energy > 0.8 && forecast[0].energy < 0.6) {
         items.push({
           day: format(f.date, "EEE"),
@@ -338,19 +312,8 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
         break;
       }
     }
-
-    // Phase transition alert
-    const nextPhaseDay = forecast.find((f) => !f.isToday && f.phase !== currentPhase);
-    if (nextPhaseDay) {
-      items.push({
-        day: format(nextPhaseDay.date, "EEE"),
-        message: `${nextPhaseDay.phase} phase starts — your rhythm will shift.`,
-        type: nextPhaseDay.phase === "Luteal" || nextPhaseDay.phase === "Menstruation" ? "warning" : "boost",
-      });
-    }
-
     return items;
-  }, [forecast, currentPhase]);
+  }, [forecast]);
 
   // Latest check-ins per dimension
   const latestByDimension: Record<string, CheckinEntry> = {};
@@ -373,6 +336,26 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
   const toggle = (section: string) =>
     setExpandedSection((prev) => (prev === section ? null : section));
 
+  // Phase countdown calculation
+  const nextPhaseDayForecast = forecast.find((f) => !f.isToday && f.phase !== currentPhase);
+  const daysUntilNext = nextPhaseDayForecast
+    ? forecast.indexOf(nextPhaseDayForecast)
+    : (() => {
+        const menEnd = 5;
+        const ovDay = cycleLength - 14;
+        const ovStart = ovDay - 1;
+        const ovEnd = ovDay + 2;
+        let nextDay = cycleLength + 1;
+        if (currentPhase === "Menstruation") nextDay = menEnd + 1;
+        else if (currentPhase === "Follicular") nextDay = ovStart;
+        else if (currentPhase === "Ovulation") nextDay = ovEnd + 1;
+        else nextDay = cycleLength + 1;
+        return Math.max(1, nextDay - currentDay);
+      })();
+  const PHASE_ORDER = ["Menstruation", "Follicular", "Ovulation", "Luteal"];
+  const nextPhase = nextPhaseDayForecast?.phase || PHASE_ORDER[(PHASE_ORDER.indexOf(currentPhase) + 1) % 4];
+  const anchorInsight = anchorSymptom && ANCHOR_INSIGHTS[currentPhase]?.[anchorSymptom];
+
   return (
     <div className="flex-1 overflow-y-auto pb-20">
       <div className="max-w-lg mx-auto px-4 py-5 space-y-4">
@@ -385,57 +368,6 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
             {cycleData && <> · Day {currentDay} of {cycleLength}</>}
           </p>
         </div>
-
-        {/* ── Phase countdown + anchor insight ── */}
-        {(() => {
-          const nextPhaseDay = forecast.find((f) => !f.isToday && f.phase !== currentPhase);
-          const daysUntilNext = nextPhaseDay
-            ? forecast.indexOf(nextPhaseDay)
-            : (() => {
-                const menEnd = 5;
-                const ovDay = cycleLength - 14;
-                const ovStart = ovDay - 1;
-                const ovEnd = ovDay + 2;
-                let nextDay = cycleLength + 1;
-                if (currentPhase === "Menstruation") nextDay = menEnd + 1;
-                else if (currentPhase === "Follicular") nextDay = ovStart;
-                else if (currentPhase === "Ovulation") nextDay = ovEnd + 1;
-                else nextDay = cycleLength + 1;
-                return Math.max(1, nextDay - currentDay);
-              })();
-          const PHASE_ORDER = ["Menstruation", "Follicular", "Ovulation", "Luteal"];
-          const nextPhase = nextPhaseDay?.phase || PHASE_ORDER[(PHASE_ORDER.indexOf(currentPhase) + 1) % 4];
-          const anchorInsight = anchorSymptom && ANCHOR_INSIGHTS[currentPhase]?.[anchorSymptom];
-
-          return (
-            <div className={cn(
-              "rounded-xl border overflow-hidden",
-              PHASE_BG_FAINT[currentPhase]
-            )} style={{ borderColor: `hsl(var(--phase-${currentPhase.toLowerCase()}) / 0.2)` }}>
-              <div className="flex items-center gap-3 px-4 py-3">
-                <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", PHASE_BG_FAINT[nextPhase])}>
-                  <Clock className={cn("w-5 h-5", PHASE_COLOR[nextPhase])} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-foreground">
-                    {daysUntilNext} day{daysUntilNext !== 1 ? "s" : ""} until {nextPhase}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Currently in {currentPhase} · Day {currentDay}
-                  </p>
-                </div>
-              </div>
-              {anchorInsight && (
-                <div className="px-4 pb-3 border-t border-border/15 pt-2.5">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-                    {anchorSymptom} outlook
-                  </p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{anchorInsight}</p>
-                </div>
-              )}
-            </div>
-          );
-        })()}
 
         {/* ── Heads-up alerts ── */}
         {alerts.length > 0 && (
@@ -463,46 +395,6 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
             ))}
           </div>
         )}
-
-        {/* ── 7-day strip ── */}
-        <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-border/20 flex items-center justify-between">
-            <span className="text-xs font-semibold text-foreground">Next 7 Days</span>
-            <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-1"><Zap className="w-3 h-3" /> Energy</span>
-              <span className="flex items-center gap-1"><Heart className="w-3 h-3" /> Mood</span>
-            </div>
-          </div>
-          <div className="grid grid-cols-7 divide-x divide-border/10">
-            {forecast.map((f) => (
-              <div
-                key={f.cycleDay}
-                className={cn(
-                  "flex flex-col items-center py-3 gap-1.5 transition-colors",
-                  f.isToday && "bg-primary/5"
-                )}
-              >
-                <span className={cn(
-                  "text-[10px] font-medium",
-                  f.isToday ? "text-primary" : "text-muted-foreground"
-                )}>
-                  {f.isToday ? "Today" : format(f.date, "EEE")}
-                </span>
-                <span className={cn(
-                  "text-sm font-bold",
-                  PHASE_COLOR[f.phase]
-                )}>
-                  {f.cycleDay}
-                </span>
-                <div className={cn("w-1.5 h-1.5 rounded-full", PHASE_BG[f.phase])} />
-                <div className="flex flex-col items-center gap-1 mt-1">
-                  <EnergyDots value={f.energy} color="bg-phase-follicular" />
-                  <EnergyDots value={f.mood} color="bg-phase-menstruation" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
 
         {/* ── Mood card ── */}
         <button
@@ -610,6 +502,47 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
             </div>
           )}
         </button>
+
+        {/* ── Phase countdown + anchor insight ── */}
+        <div className={cn(
+          "rounded-xl border overflow-hidden",
+          PHASE_BG_FAINT[currentPhase]
+        )} style={{ borderColor: `hsl(var(--phase-${currentPhase.toLowerCase()}) / 0.2)` }}>
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", PHASE_BG_FAINT[nextPhase])}>
+              <Clock className={cn("w-5 h-5", PHASE_COLOR[nextPhase])} />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-foreground">
+                {daysUntilNext} day{daysUntilNext !== 1 ? "s" : ""} until {nextPhase}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Currently in {currentPhase} · Day {currentDay}
+              </p>
+            </div>
+          </div>
+          {anchorInsight && (
+            <div className="px-4 pb-3 border-t border-border/15 pt-2.5">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                {anchorSymptom} outlook
+              </p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{anchorInsight}</p>
+            </div>
+          )}
+        </div>
+
+        {/* ── Cycle Forecast ── */}
+        {cycleData?.lastPeriodStart && (
+          <CycleForecast
+            cycleDay={currentDay}
+            phase={currentPhase}
+            cycleLengthDays={cycleLength}
+            lastPeriodStart={cycleData.lastPeriodStart}
+            anchorSymptom={anchorSymptom}
+            onClose={() => {}}
+            embedded
+          />
+        )}
 
         {/* ── Recent check-ins ── */}
         {Object.keys(latestByDimension).length > 0 && (
