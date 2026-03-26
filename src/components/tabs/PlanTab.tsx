@@ -356,7 +356,7 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
 
   return (
     <div className="flex-1 overflow-y-auto pb-20">
-      <div className="max-w-lg mx-auto px-4 py-5 space-y-4">
+      <div className="max-w-lg md:max-w-4xl mx-auto px-4 py-5 space-y-4">
 
         {/* ── Header ── */}
         <div>
@@ -394,116 +394,119 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
           </div>
         )}
 
-        {/* ── Mood card ── */}
-        <button
-          onClick={() => toggle("mood")}
-          className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70"
-        >
-          <div className="flex items-center gap-3 px-4 py-3.5">
-            <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", PHASE_BG_FAINT[currentPhase])}>
-              <Heart className={cn("w-5 h-5", PHASE_COLOR[currentPhase])} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground">Mood & Patience</p>
-              <p className="text-xs text-muted-foreground truncate">{moodGuide.outlook}</p>
-            </div>
-            <ChevronRight className={cn(
-              "w-4 h-4 text-muted-foreground transition-transform",
-              expandedSection === "mood" && "rotate-90"
-            )} />
-          </div>
-          {expandedSection === "mood" && (
-            <div className="px-4 pb-4 space-y-3 border-t border-border/15 pt-3" onClick={(e) => e.stopPropagation()}>
-              <div className="rounded-lg bg-phase-menstruation/5 border border-phase-menstruation/15 px-3 py-2.5">
-                <p className="text-xs font-medium text-phase-menstruation mb-1">⚡ Heads up</p>
-                <p className="text-xs text-muted-foreground">{moodGuide.headsUp}</p>
+        {/* ── Guidance cards grid ── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* ── Mood card ── */}
+          <button
+            onClick={() => toggle("mood")}
+            className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70"
+          >
+            <div className="flex items-center gap-3 px-4 py-3.5">
+              <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", PHASE_BG_FAINT[currentPhase])}>
+                <Heart className={cn("w-5 h-5", PHASE_COLOR[currentPhase])} />
               </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">What to do</p>
-                <p className="text-xs text-muted-foreground">{moodGuide.selfCare}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground">Mood & Patience</p>
+                <p className="text-xs text-muted-foreground truncate">{moodGuide.outlook}</p>
               </div>
+              <ChevronRight className={cn(
+                "w-4 h-4 text-muted-foreground transition-transform",
+                expandedSection === "mood" && "rotate-90"
+              )} />
             </div>
-          )}
-        </button>
-
-        {/* ── Exercise card ── */}
-        <button
-          onClick={() => toggle("exercise")}
-          className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70"
-        >
-          <div className="flex items-center gap-3 px-4 py-3.5">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Dumbbell className="w-5 h-5 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground">Workout</p>
-              <p className="text-xs text-muted-foreground truncate">Intensity: {workout.intensity}</p>
-            </div>
-            <ChevronRight className={cn(
-              "w-4 h-4 text-muted-foreground transition-transform",
-              expandedSection === "exercise" && "rotate-90"
-            )} />
-          </div>
-          {expandedSection === "exercise" && (
-            <div className="px-4 pb-4 space-y-3 border-t border-border/15 pt-3" onClick={(e) => e.stopPropagation()}>
-              <p className="text-xs text-muted-foreground">{workout.suggestion}</p>
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Try this week</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {workout.examples.map((ex) => (
-                    <span key={ex} className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/15">
-                      {ex}
-                    </span>
-                  ))}
+            {expandedSection === "mood" && (
+              <div className="px-4 pb-4 space-y-3 border-t border-border/15 pt-3" onClick={(e) => e.stopPropagation()}>
+                <div className="rounded-lg bg-phase-menstruation/5 border border-phase-menstruation/15 px-3 py-2.5">
+                  <p className="text-xs font-medium text-phase-menstruation mb-1">⚡ Heads up</p>
+                  <p className="text-xs text-muted-foreground">{moodGuide.headsUp}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">What to do</p>
+                  <p className="text-xs text-muted-foreground">{moodGuide.selfCare}</p>
                 </div>
               </div>
-            </div>
-          )}
-        </button>
+            )}
+          </button>
 
-        {/* ── Nutrition card ── */}
-        <button
-          onClick={() => toggle("nutrition")}
-          className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70"
-        >
-          <div className="flex items-center gap-3 px-4 py-3.5">
-            <div className="w-9 h-9 rounded-lg bg-phase-luteal/10 flex items-center justify-center">
-              <Utensils className="w-5 h-5 text-phase-luteal" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground">Nutrition</p>
-              <p className="text-xs text-muted-foreground truncate">{nutrition.focus}</p>
-            </div>
-            <ChevronRight className={cn(
-              "w-4 h-4 text-muted-foreground transition-transform",
-              expandedSection === "nutrition" && "rotate-90"
-            )} />
-          </div>
-          {expandedSection === "nutrition" && (
-            <div className="px-4 pb-4 space-y-3 border-t border-border/15 pt-3" onClick={(e) => e.stopPropagation()}>
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Prioritize</p>
-                <ul className="space-y-1">
-                  {nutrition.foods.map((food) => (
-                    <li key={food} className="text-xs text-muted-foreground flex items-start gap-1.5">
-                      <span className="mt-1 w-1.5 h-1.5 rounded-full bg-phase-luteal shrink-0" />
-                      {food}
-                    </li>
-                  ))}
-                </ul>
+          {/* ── Exercise card ── */}
+          <button
+            onClick={() => toggle("exercise")}
+            className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70"
+          >
+            <div className="flex items-center gap-3 px-4 py-3.5">
+              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Dumbbell className="w-5 h-5 text-primary" />
               </div>
-              <div className="rounded-lg bg-phase-luteal/5 border border-phase-luteal/15 px-3 py-2">
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-medium text-phase-luteal">Note:</span> {nutrition.avoid}
-                </p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground">Workout</p>
+                <p className="text-xs text-muted-foreground truncate">Intensity: {workout.intensity}</p>
               </div>
+              <ChevronRight className={cn(
+                "w-4 h-4 text-muted-foreground transition-transform",
+                expandedSection === "exercise" && "rotate-90"
+              )} />
             </div>
-          )}
-        </button>
+            {expandedSection === "exercise" && (
+              <div className="px-4 pb-4 space-y-3 border-t border-border/15 pt-3" onClick={(e) => e.stopPropagation()}>
+                <p className="text-xs text-muted-foreground">{workout.suggestion}</p>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Try this week</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {workout.examples.map((ex) => (
+                      <span key={ex} className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/15">
+                        {ex}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </button>
+
+          {/* ── Nutrition card ── */}
+          <button
+            onClick={() => toggle("nutrition")}
+            className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70"
+          >
+            <div className="flex items-center gap-3 px-4 py-3.5">
+              <div className="w-9 h-9 rounded-lg bg-phase-luteal/10 flex items-center justify-center">
+                <Utensils className="w-5 h-5 text-phase-luteal" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground">Nutrition</p>
+                <p className="text-xs text-muted-foreground truncate">{nutrition.focus}</p>
+              </div>
+              <ChevronRight className={cn(
+                "w-4 h-4 text-muted-foreground transition-transform",
+                expandedSection === "nutrition" && "rotate-90"
+              )} />
+            </div>
+            {expandedSection === "nutrition" && (
+              <div className="px-4 pb-4 space-y-3 border-t border-border/15 pt-3" onClick={(e) => e.stopPropagation()}>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Prioritize</p>
+                  <ul className="space-y-1">
+                    {nutrition.foods.map((food) => (
+                      <li key={food} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                        <span className="mt-1 w-1.5 h-1.5 rounded-full bg-phase-luteal shrink-0" />
+                        {food}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="rounded-lg bg-phase-luteal/5 border border-phase-luteal/15 px-3 py-2">
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-medium text-phase-luteal">Note:</span> {nutrition.avoid}
+                  </p>
+                </div>
+              </div>
+            )}
+          </button>
+        </div>
 
         {/* ── Phase countdown + anchor insight ── */}
         <div className={cn(
-          "rounded-xl border overflow-hidden",
+          "rounded-xl border overflow-hidden max-w-lg",
           PHASE_BG_FAINT[currentPhase]
         )} style={{ borderColor: `hsl(var(--phase-${currentPhase.toLowerCase()}) / 0.2)` }}>
           <div className="flex items-center gap-3 px-4 py-3">
@@ -544,7 +547,7 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
 
         {/* ── Recent check-ins ── */}
         {Object.keys(latestByDimension).length > 0 && (
-          <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
+          <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden max-w-lg">
             <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20">
               <Brain className="w-3.5 h-3.5 text-primary" />
               <span className="text-xs font-semibold text-foreground">Your Check-ins</span>
