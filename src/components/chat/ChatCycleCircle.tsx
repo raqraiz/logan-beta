@@ -10,45 +10,82 @@ interface ChatCycleCircleProps {
   size?: "sm" | "md";
 }
 
-const PHASE_STYLES: Record<string, { color: string; ringColor: string }> = {
+const PHASE_STYLES: Record<string, { color: string; ringColor: string; hex: string }> = {
   Menstruation: {
     color: "text-phase-menstruation",
     ringColor: "stroke-phase-menstruation",
+    hex: "#E05262",
   },
   Follicular: {
     color: "text-phase-follicular",
     ringColor: "stroke-phase-follicular",
+    hex: "#3DBF8A",
   },
   Ovulation: {
     color: "text-phase-ovulation",
     ringColor: "stroke-phase-ovulation",
+    hex: "#E8A830",
   },
   Luteal: {
     color: "text-phase-luteal",
     ringColor: "stroke-phase-luteal",
+    hex: "#9B6DD7",
   },
 };
 
-function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, labelSize }: {
+function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, labelSize, showPhase = false }: {
   cycleDay: number; phase: string; cycleLengthDays: number;
-  ringSize: string; fontSize: string; labelSize: string;
+  ringSize: string; fontSize: string; labelSize: string; showPhase?: boolean;
 }) {
   const styles = PHASE_STYLES[phase] || PHASE_STYLES.Follicular;
   const progress = (cycleDay / cycleLengthDays) * 100;
-  const radius = 44;
+  const radius = 42;
+  const trackWidth = 6;
+  const arcWidth = 6;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
     <div className={`relative ${ringSize} flex-shrink-0`}>
-      <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="3" className="stroke-muted/20" />
-        <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="3" strokeLinecap="round"
-          strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} className={styles.ringColor} />
+      {/* Outer glow shadow */}
+      <div
+        className="absolute inset-0 rounded-full opacity-20 blur-xl"
+        style={{ backgroundColor: styles.hex }}
+      />
+      {/* Inner disc with subtle depth */}
+      <div className="absolute inset-[6px] rounded-full bg-[hsl(220,10%,8%)] shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)]" />
+      {/* SVG ring */}
+      <svg className="w-full h-full -rotate-90 relative z-10" viewBox="0 0 100 100">
+        {/* Track */}
+        <circle
+          cx="50" cy="50" r={radius}
+          fill="none"
+          strokeWidth={trackWidth}
+          stroke="hsl(220 10% 16%)"
+        />
+        {/* Progress arc */}
+        <circle
+          cx="50" cy="50" r={radius}
+          fill="none"
+          strokeWidth={arcWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          stroke={styles.hex}
+          style={{
+            filter: `drop-shadow(0 0 4px ${styles.hex}80)`,
+            transition: "stroke-dashoffset 0.6s ease",
+          }}
+        />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
+      {/* Center text */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
         <span className={`${fontSize} font-bold ${styles.color}`}>{cycleDay}</span>
-        <span className={`${labelSize} text-muted-foreground uppercase tracking-wide`}>Day</span>
+        {showPhase ? (
+          <span className={`${labelSize} font-medium ${styles.color} opacity-80`}>{phase}</span>
+        ) : (
+          <span className={`${labelSize} text-muted-foreground uppercase tracking-wide`}>Day</span>
+        )}
       </div>
     </div>
   );
@@ -58,7 +95,7 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md" 
   const [expanded, setExpanded] = useState(false);
   const styles = PHASE_STYLES[phase] || PHASE_STYLES.Follicular;
   const progress = (cycleDay / cycleLengthDays) * 100;
-  const radius = 44;
+  const radius = 42;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
@@ -67,15 +104,18 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md" 
   if (isSmall) {
     return (
       <div className="relative w-10 h-10 flex-shrink-0 group cursor-pointer transition-transform duration-200 hover:scale-110">
-        <svg className="w-full h-full -rotate-90 transition-all duration-200" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="4"
-            className="stroke-muted/20 transition-all duration-200 group-hover:stroke-muted/40" />
-          <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="4" strokeLinecap="round"
+        <div className="absolute inset-[3px] rounded-full bg-[hsl(220,10%,8%)]" />
+        <svg className="w-full h-full -rotate-90 relative z-10" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="5" stroke="hsl(220 10% 16%)" />
+          <circle
+            cx="50" cy="50" r={radius} fill="none" strokeWidth="5" strokeLinecap="round"
             strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
-            className={`${styles.ringColor} transition-all duration-200 group-hover:drop-shadow-[0_0_6px_currentColor]`} />
+            stroke={styles.hex}
+            style={{ filter: `drop-shadow(0 0 3px ${styles.hex}80)` }}
+          />
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={`text-xs font-bold ${styles.color} transition-all duration-200 group-hover:scale-110`}>{cycleDay}</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
+          <span className={`text-xs font-bold ${styles.color}`}>{cycleDay}</span>
         </div>
       </div>
     );
@@ -95,13 +135,13 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md" 
 
   return (
     <>
-      {/* Tappable card — larger on mobile */}
+      {/* Tappable card */}
       <div
         onClick={() => setExpanded(true)}
-        className="flex items-center gap-4 p-4 rounded-xl bg-[#1C1E22] border border-border/30 cursor-pointer active:scale-[0.98] transition-transform"
+        className="flex items-center gap-4 p-4 rounded-xl bg-[hsl(220,10%,8%)] border border-border/30 cursor-pointer active:scale-[0.98] transition-transform"
       >
         <CycleRing cycleDay={cycleDay} phase={phase} cycleLengthDays={cycleLengthDays}
-          ringSize="w-28 h-28 sm:w-24 sm:h-24" fontSize="text-3xl sm:text-2xl" labelSize="text-[11px] sm:text-[10px]" />
+          ringSize="w-28 h-28 sm:w-24 sm:h-24" fontSize="text-3xl sm:text-2xl" labelSize="text-[11px] sm:text-[10px]" showPhase />
         <div className="flex flex-col">
           <span className={`text-xl sm:text-lg font-semibold ${styles.color}`}>{phase}</span>
           <span className="text-xs text-muted-foreground">Current phase</span>
@@ -111,10 +151,10 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md" 
 
       {/* Expanded dialog */}
       <Dialog open={expanded} onOpenChange={setExpanded}>
-        <DialogContent className="max-w-sm bg-[#1C1E22] border-border/30 p-6">
+        <DialogContent className="max-w-sm bg-[hsl(220,10%,8%)] border-border/30 p-6">
           <div className="flex flex-col items-center gap-5">
             <CycleRing cycleDay={cycleDay} phase={phase} cycleLengthDays={cycleLengthDays}
-              ringSize="w-44 h-44" fontSize="text-5xl" labelSize="text-sm" />
+              ringSize="w-44 h-44" fontSize="text-5xl" labelSize="text-sm" showPhase />
             <div className="text-center">
               <h3 className={`text-2xl font-bold ${styles.color}`}>{phase}</h3>
               <p className="text-sm text-muted-foreground mt-1">Day {cycleDay} of {cycleLengthDays}</p>
