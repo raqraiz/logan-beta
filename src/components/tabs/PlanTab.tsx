@@ -129,15 +129,16 @@ const NUTRITION_GUIDANCE: Record<string, { focus: string; foods: string[]; avoid
 };
 
 // ── Mood guidance by phase ──
-const MOOD_GUIDANCE: Record<string, { outlook: string; headsUp: string; selfCare: string; relationships: { partner: string; kids: string; strategy: string } }> = {
+const MOOD_GUIDANCE: Record<string, { outlook: string; headsUp: string; selfCare: string; relationships: { people: string; withPartner: string; withKids: string; strategy: string } }> = {
   Menstruation: {
     outlook: "Introspective & lower patience",
-    headsUp: "If you're shorter-tempered today, it's not you — it's day " + "1–5 biology. Knowing this is how you take back control.",
+    headsUp: "If you're shorter-tempered today, it's not you — it's day 1–5 biology. Knowing this is how you take back control.",
     selfCare: "You're allowed to do less. Protect your energy — say no, delegate, rest without guilt.",
     relationships: {
-      partner: "You may snap or withdraw — and then feel guilty about it. Name it early: 'I'm in my low phase.' That one sentence replaces a fight.",
-      kids: "Your fuse is shortest right now, especially with teens. Keep interactions brief. Save the big talks for next week — you'll handle them better then.",
-      strategy: "Tell your house: 'The next few days I need more patience from everyone — including myself.' Knowing this day was coming is your superpower.",
+      people: "You may snap or withdraw — and then feel guilty about it. Name it early: 'I'm in my low phase.' That one sentence prevents a lot of damage.",
+      withPartner: "Let your partner know you need space — it's not about them. One heads-up saves a fight.",
+      withKids: "Your fuse is shortest right now, especially with teens. Keep interactions brief. Save big talks for next week.",
+      strategy: "Tell the people around you: 'I need more patience from everyone for a few days — including myself.' Knowing this was coming is your superpower.",
     },
   },
   Follicular: {
@@ -145,8 +146,9 @@ const MOOD_GUIDANCE: Record<string, { outlook: string; headsUp: string; selfCare
     headsUp: "This is your rebound. Patience is returning, guilt is fading, and you'll wonder why last week felt so hard.",
     selfCare: "Don't waste this window. The clarity and calm you feel right now? It's real — use it for what matters.",
     relationships: {
-      partner: "You have emotional bandwidth again. If there's tension to repair from your harder days, now is when you can do it without it escalating.",
-      kids: "Your patience is back. This is the window for quality time, tough conversations, or just being the parent you want to be.",
+      people: "You have emotional bandwidth again. If there's tension to repair from your harder days, now is when you can do it without it escalating.",
+      withPartner: "Reconnection window — you have capacity for deeper conversations and quality time.",
+      withKids: "Your patience is back. Great time for tough conversations or quality time together.",
       strategy: "Use these good days to remind yourself: the hard days aren't who you are — they're a phase. Literally.",
     },
   },
@@ -155,18 +157,20 @@ const MOOD_GUIDANCE: Record<string, { outlook: string; headsUp: string; selfCare
     headsUp: "You're at your most articulate and emotionally generous. Enjoy it — but know the shift is coming.",
     selfCare: "This is your strongest self. Have the hard conversation. Show up fully. Don't overcommit for future-you.",
     relationships: {
-      partner: "Best window for real connection — date night, honest conversations, or just being present without the irritability filter.",
-      kids: "You'll handle teen drama and kid chaos with more grace right now. Lean in — these moments build the relationship bank.",
-      strategy: "Bookmark this feeling. When the luteal phase hits, remembering 'I was fine three days ago' helps you give yourself grace.",
+      people: "Best window for real connection — honest conversations, showing up fully, being present without the irritability filter.",
+      withPartner: "If something needs to be said, this is the window. Date night, real talk — you'll handle it with grace.",
+      withKids: "You'll handle drama and chaos with more patience right now. Lean in — these moments build the relationship bank.",
+      strategy: "Bookmark this feeling. When the hard phase hits, remembering 'I was fine three days ago' helps you give yourself grace.",
     },
   },
   Luteal: {
     outlook: "Declining patience & rising sensitivity",
-    headsUp: "These are the days you're most likely to snap — at your husband, your teens, yourself. It's not a character flaw. It's progesterone dropping.",
+    headsUp: "These are the days you're most likely to snap — at the people closest to you, and at yourself. It's not a character flaw. It's progesterone dropping.",
     selfCare: "This is where guilt lives. Replace 'what's wrong with me' with 'this is my hardest phase and I know it's coming.'",
     relationships: {
-      partner: "Everything feels bigger — a comment, a look, a chore not done. Tell your partner before you're in it: 'My hard days start around day X.'",
-      kids: "Teen attitudes + your thinnest patience = the moment you say something you regret. Lower the bar. Walk away. It's not weakness — it's strategy.",
+      people: "Everything feels bigger — a comment, a look, an unmet expectation. Remind yourself: this is a known biological window, not a personality problem.",
+      withPartner: "Tell your partner before you're in it: 'My hard days start around day X.' It removes the guesswork and the guilt.",
+      withKids: "Their attitudes + your thinnest patience = the moment you say something you regret. Lower the bar. Walk away. It's not weakness — it's strategy.",
       strategy: "The fact that you can predict this is the whole point. You're not 'being moody' — you're in a known biological window. Grace over guilt.",
     },
   },
