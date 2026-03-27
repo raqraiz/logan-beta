@@ -451,17 +451,26 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
 
                 {/* Relational insights */}
                 <div className="space-y-2 pt-1">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">At home</p>
-                  <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5 space-y-2">
-                    <div>
-                      <p className="text-[10px] font-semibold text-primary/80 mb-0.5">💑 Partner</p>
-                      <p className="text-xs text-muted-foreground">{moodGuide.relationships.partner}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-semibold text-primary/80 mb-0.5">👨‍👩‍👧‍👦 Kids & Teens</p>
-                      <p className="text-xs text-muted-foreground">{moodGuide.relationships.kids}</p>
-                    </div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Your relationships</p>
+                  <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5">
+                    <p className="text-xs text-muted-foreground">{moodGuide.relationships.people}</p>
                   </div>
+                  <details className="group">
+                    <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors list-none flex items-center gap-1">
+                      <ChevronRight className="w-3 h-3 transition-transform group-open:rotate-90" />
+                      If you have a partner or kids
+                    </summary>
+                    <div className="mt-2 space-y-2">
+                      <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5">
+                        <p className="text-[10px] font-semibold text-primary/80 mb-0.5">💑 With a partner</p>
+                        <p className="text-xs text-muted-foreground">{moodGuide.relationships.withPartner}</p>
+                      </div>
+                      <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5">
+                        <p className="text-[10px] font-semibold text-primary/80 mb-0.5">👨‍👩‍👧‍👦 With kids / teens</p>
+                        <p className="text-xs text-muted-foreground">{moodGuide.relationships.withKids}</p>
+                      </div>
+                    </div>
+                  </details>
                   <div className="rounded-lg bg-phase-follicular/5 border border-phase-follicular/15 px-3 py-2.5">
                     <p className="text-xs font-medium text-phase-follicular mb-1">💡 Try this</p>
                     <p className="text-xs text-muted-foreground">{moodGuide.relationships.strategy}</p>
