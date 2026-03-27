@@ -200,11 +200,13 @@ serve(async (req) => {
     const periodConfirmPatterns = [
       /^yes,?\s*(it )?(started|period|got it|began|came)/i,
       /started (today|yesterday|this morning|last night)/i,
-      /^(got|getting) my period/i,
+      /^(i )?(got|getting) my period/i,
       /^it started/i,
       /period started (today|yesterday|this morning|last night)/i,
       /started yesterday/i,
-      /my period (just )?(started|came|arrived|began)$/i,
+      /my period (just )?(started|came|arrived|began)/i,
+      /^(i )?(just )?(got|started|had) (my |the )?period/i,
+      /got it yesterday/i,
     ];
     
     const bareYesPatterns = [/^yes$/i, /^yes,? (it )?(started|has|did)/i];
