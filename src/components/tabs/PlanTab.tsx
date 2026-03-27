@@ -129,26 +129,46 @@ const NUTRITION_GUIDANCE: Record<string, { focus: string; foods: string[]; avoid
 };
 
 // ── Mood guidance by phase ──
-const MOOD_GUIDANCE: Record<string, { outlook: string; headsUp: string; selfCare: string }> = {
+const MOOD_GUIDANCE: Record<string, { outlook: string; headsUp: string; selfCare: string; relationships: { partner: string; kids: string; strategy: string } }> = {
   Menstruation: {
     outlook: "Introspective & lower patience",
     headsUp: "You may feel more irritable or tearful — this is hormonal, not personal.",
     selfCare: "Protect your calendar. Say no. Ask for help with kids, chores, decisions.",
+    relationships: {
+      partner: "You may withdraw or snap more easily. Let your partner know you need space — it's not about them.",
+      kids: "Patience with teens will be thinnest. Keep interactions short and save big discipline talks for later.",
+      strategy: "Pre-tell your household: 'I'm lower energy for a few days — I need extra help and less friction.'",
+    },
   },
   Follicular: {
     outlook: "Rising optimism & confidence",
     headsUp: "Great mood window. You'll feel more patient, creative, and resilient.",
     selfCare: "Channel this energy into things that matter — relationships, projects, connection.",
+    relationships: {
+      partner: "Reconnection window. You'll have more capacity for deeper conversations and quality time.",
+      kids: "Your patience is replenished — great time for tougher parenting moments or activities together.",
+      strategy: "Use this window to repair any tension from last week. Your emotional bandwidth is at its widest.",
+    },
   },
   Ovulation: {
     outlook: "Peak social & verbal confidence",
     headsUp: "You'll feel like your best self. Enjoy it — but don't overcommit.",
     selfCare: "Have the hard conversation. Present the idea. Be visible.",
+    relationships: {
+      partner: "You're at peak communication — if something needs to be said, this is the window.",
+      kids: "Great energy for engaging with teens. Family outings, hard talks, or just being present all feel easier.",
+      strategy: "Schedule the family meeting or date night here. You'll handle curveballs with grace.",
+    },
   },
   Luteal: {
     outlook: "Declining patience & rising sensitivity",
     headsUp: "The days before your period are when you're most likely to snap. It's not a character flaw.",
     selfCare: "Give yourself grace. Tell your partner. Reduce obligations. Prioritize sleep.",
+    relationships: {
+      partner: "You may read into things or feel unsupported. Flag this phase to your partner so they don't take it personally.",
+      kids: "Teen drama + luteal irritability = combustion risk. Lower your expectations and pick your battles carefully.",
+      strategy: "Agree on a code word with your partner for 'I'm in my hard phase.' It removes the guesswork and the guilt.",
+    },
   },
 };
 
