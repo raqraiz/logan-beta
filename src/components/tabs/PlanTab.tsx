@@ -444,6 +444,25 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">What to do</p>
                   <p className="text-xs text-muted-foreground">{moodGuide.selfCare}</p>
                 </div>
+
+                {/* Relational insights */}
+                <div className="space-y-2 pt-1">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">At home</p>
+                  <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5 space-y-2">
+                    <div>
+                      <p className="text-[10px] font-semibold text-primary/80 mb-0.5">💑 Partner</p>
+                      <p className="text-xs text-muted-foreground">{moodGuide.relationships.partner}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold text-primary/80 mb-0.5">👨‍👩‍👧‍👦 Kids & Teens</p>
+                      <p className="text-xs text-muted-foreground">{moodGuide.relationships.kids}</p>
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-phase-follicular/5 border border-phase-follicular/15 px-3 py-2.5">
+                    <p className="text-xs font-medium text-phase-follicular mb-1">💡 Try this</p>
+                    <p className="text-xs text-muted-foreground">{moodGuide.relationships.strategy}</p>
+                  </div>
+                </div>
               </div>
             )}
           </button>
