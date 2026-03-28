@@ -1,5 +1,6 @@
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
 import { LoganLogo } from "@/components/LoganLogo";
+import { format } from "date-fns";
 
 interface CycleData {
   cycleDay: number;
@@ -35,6 +36,9 @@ export function HomeTab({ cycleData }: HomeTabProps) {
         size="md"
       />
       <p className="text-sm text-muted-foreground mt-3">
+        {format(new Date(), "EEEE, MMMM d")}
+      </p>
+      <p className="text-xs text-muted-foreground mt-1">
         Day {cycleData.cycleDay} of {cycleData.cycleLengthDays}
       </p>
     </div>
