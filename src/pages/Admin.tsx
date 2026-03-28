@@ -85,8 +85,12 @@ const Admin = () => {
           </p>
         </div>
 
-        <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2 bg-muted border border-border">
+        <Tabs defaultValue="engagement" className="space-y-6">
+          <TabsList className="grid w-full max-w-lg grid-cols-3 bg-muted border border-border">
+            <TabsTrigger value="engagement" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <BarChart3 className="w-4 h-4" />
+              <span className="hidden sm:inline">Engagement</span>
+            </TabsTrigger>
             <TabsTrigger value="users" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <User className="w-4 h-4" />
               <span className="hidden sm:inline">Users</span>
@@ -96,6 +100,10 @@ const Admin = () => {
               <span className="hidden sm:inline">Admins</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="engagement">
+            <EngagementTab />
+          </TabsContent>
 
           <TabsContent value="users">
             <ProfilesTab />
