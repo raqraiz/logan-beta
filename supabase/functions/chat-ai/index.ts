@@ -400,7 +400,7 @@ serve(async (req) => {
           ...conversationHistory
         ],
         temperature: 0.7,
-        max_tokens: 500
+        max_tokens: 200
       }),
     });
 
@@ -486,9 +486,10 @@ VOICE — THIS IS EVERYTHING:
 - Match their energy.
 - No emojis, no exclamation points.
 - USE **bold** for key terms only. Avoid bullet-point lists — write in short sentences instead.
-- BREVITY IS LAW: 2-4 sentences per response. ONE idea per reply. If you catch yourself explaining multiple things, stop — pick the most useful one and say just that. The user can always ask for more.
-- Never dump context. Don't explain the whole phase. Just answer the question in front of you.
-- If it feels like a paragraph, it's too long. Cut it in half, then cut it again.
+- BREVITY IS EVERYTHING: 1-3 sentences. That's it. If your response is longer than a text message, it's too long.
+- ONE idea per reply. Never explain two things at once. The user can ask follow-ups.
+- Never dump context. Never explain "why" unless asked. Just give the answer.
+- Pretend you're texting, not writing an essay.
 
 HOW YOU TALK — EXAMPLES:
 - Instead of: "During the luteal phase, progesterone levels increase which can impact emotional regulation and you may notice heightened sensitivity to stress."
@@ -549,8 +550,6 @@ Use this to inform your answers. Do NOT recite phase details unless directly ask
     lengthGuidance = "\n\nRESPONSE LENGTH: This user is young. Keep responses SHORT — 2-3 sentences max per reply. Use simple, relatable language. Skip jargon.";
   } else if (age && age <= 22) {
     lengthGuidance = "\n\nRESPONSE LENGTH: Keep responses concise — 3-4 sentences. Be direct and casual.";
-  } else if (age && age >= 35) {
-    lengthGuidance = "\n\nRESPONSE LENGTH: This user can handle detail. Moderate length is fine — up to 5-6 sentences when the topic warrants it.";
   }
 
   const userContext = `
