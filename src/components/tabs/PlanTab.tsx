@@ -131,24 +131,24 @@ const NUTRITION_GUIDANCE: Record<string, { focus: string; foods: string[]; avoid
 // ── Mood guidance by phase ──
 const MOOD_GUIDANCE: Record<string, { outlook: string; headsUp: string; selfCare: string; relationships: { people: string; withPartner: string; withKids: string; strategy: string } }> = {
   Menstruation: {
-    outlook: "Introspective & lower patience",
+    outlook: "Introspective & lower energy",
     headsUp: "If you're shorter-tempered today, it's not you — it's day 1–5 biology. Knowing this is how you take back control.",
     selfCare: "You're allowed to do less. Protect your energy — say no, delegate, rest without guilt.",
     relationships: {
       people: "You may snap or withdraw — and then feel guilty about it. Name it early: 'I'm in my low phase.' That one sentence prevents a lot of damage.",
       withPartner: "Let your partner know you need space — it's not about them. One heads-up saves a fight.",
       withKids: "Your fuse is shortest right now, especially with teens. Keep interactions brief. Save big talks for next week.",
-      strategy: "Tell the people around you: 'I need more patience from everyone for a few days — including myself.' Knowing this was coming is your superpower.",
+      strategy: "Tell the people around you: 'I need more grace from everyone for a few days — including myself.' Knowing this was coming is your superpower.",
     },
   },
   Follicular: {
     outlook: "Rising optimism & confidence",
-    headsUp: "This is your rebound. Patience is returning, guilt is fading, and you'll wonder why last week felt so hard.",
+    headsUp: "This is your rebound. Energy is returning, guilt is fading, and you'll wonder why last week felt so hard.",
     selfCare: "Don't waste this window. The clarity and calm you feel right now? It's real — use it for what matters.",
     relationships: {
       people: "You have emotional bandwidth again. If there's tension to repair from your harder days, now is when you can do it without it escalating.",
       withPartner: "Reconnection window — you have capacity for deeper conversations and quality time.",
-      withKids: "Your patience is back. Great time for tough conversations or quality time together.",
+      withKids: "Your energy is back. Great time for tough conversations or quality time together.",
       strategy: "Use these good days to remind yourself: the hard days aren't who you are — they're a phase. Literally.",
     },
   },
@@ -159,18 +159,18 @@ const MOOD_GUIDANCE: Record<string, { outlook: string; headsUp: string; selfCare
     relationships: {
       people: "Best window for real connection — honest conversations, showing up fully, being present without the irritability filter.",
       withPartner: "If something needs to be said, this is the window. Date night, real talk — you'll handle it with grace.",
-      withKids: "You'll handle drama and chaos with more patience right now. Lean in — these moments build the relationship bank.",
+      withKids: "You'll handle drama and chaos with more energy right now. Lean in — these moments build the relationship bank.",
       strategy: "Bookmark this feeling. When the hard phase hits, remembering 'I was fine three days ago' helps you give yourself grace.",
     },
   },
   Luteal: {
-    outlook: "Declining patience & rising sensitivity",
+    outlook: "Declining energy & rising sensitivity",
     headsUp: "These are the days you're most likely to snap — at the people closest to you, and at yourself. It's not a character flaw. It's progesterone dropping.",
     selfCare: "This is where guilt lives. Replace 'what's wrong with me' with 'this is my hardest phase and I know it's coming.'",
     relationships: {
       people: "Everything feels bigger — a comment, a look, an unmet expectation. Remind yourself: this is a known biological window, not a personality problem.",
       withPartner: "Tell your partner before you're in it: 'My hard days start around day X.' It removes the guesswork and the guilt.",
-      withKids: "Their attitudes + your thinnest patience = the moment you say something you regret. Lower the bar. Walk away. It's not weakness — it's strategy.",
+      withKids: "Their attitudes + your lowest energy = the moment you say something you regret. Lower the bar. Walk away. It's not weakness — it's strategy.",
       strategy: "The fact that you can predict this is the whole point. You're not 'being moody' — you're in a known biological window. Grace over guilt.",
     },
   },
@@ -235,7 +235,7 @@ const ANCHOR_INSIGHTS: Record<string, Record<string, string>> = {
     Cramps: "Pre-menstrual cramping may start. Magnesium and gentle movement help.",
     Fatigue: "Energy is declining — front-load demanding tasks early in this phase.",
     Headaches: "Headache risk increases as estrogen drops. Track triggers like caffeine.",
-    "Mood swings": "Patience thins as progesterone peaks then drops. Warn your inner circle.",
+    "Mood swings": "Energy dips as progesterone peaks then drops. Warn your inner circle.",
     Acne: "Hormonal breakouts are most likely now. Stick to your routine, don't panic-treat.",
     Cravings: "Cravings are peaking — lean into complex carbs and dark chocolate.",
     "Brain fog": "Focus may feel scattered. Break tasks into smaller chunks.",
@@ -322,7 +322,7 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
       if (f.mood < 0.35) {
         items.push({
           day: format(f.date, "EEE"),
-          message: `Day ${f.cycleDay} — patience may be lower. Plan lighter and ask for help.`,
+          message: `Day ${f.cycleDay} — energy may be lower. Plan lighter and ask for help.`,
           type: "warning",
         });
         break;
@@ -430,7 +430,7 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
                 <Heart className={cn("w-5 h-5", PHASE_COLOR[currentPhase])} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground">Mood & Patience</p>
+                <p className="text-sm font-semibold text-foreground">Mood & Energy</p>
                 <p className="text-xs text-muted-foreground truncate">{moodGuide.outlook}</p>
               </div>
               <ChevronRight className={cn(
