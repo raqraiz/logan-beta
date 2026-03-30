@@ -81,26 +81,33 @@ const PHASE_BG_FAINT: Record<string, string> = {
 };
 
 // ── Workout guidance by phase ──
-const WORKOUT_GUIDANCE: Record<string, { intensity: string; suggestion: string; examples: string[] }> = {
+const WORKOUT_GUIDANCE: Record<string, { intensity: string; suggestion: string; examples: string[]; riskFlag?: string; trainingNote: string }> = {
   Menstruation: {
-    intensity: "Low",
-    suggestion: "Honor your body. Light movement helps cramps; skip anything that drains you.",
+    intensity: "Low — Recovery",
+    suggestion: "Your body is recovering. Light movement helps cramps and mood, but this is not the time to load heavy or chase PRs.",
     examples: ["Gentle yoga", "20-min walk", "Stretching / foam roll"],
+    riskFlag: "⚠️ Injury risk is higher — joints are looser due to hormonal shifts. Avoid max lifts and explosive movements.",
+    trainingNote: "Deload or active recovery. Keep volume low. This rest sets up your next training block.",
   },
   Follicular: {
-    intensity: "Moderate → High",
-    suggestion: "Energy is climbing — ramp up gradually. Try new things, challenge yourself.",
-    examples: ["Strength training", "Dance / spin class", "Longer runs"],
+    intensity: "Moderate → High — Build Phase",
+    suggestion: "Energy and strength are climbing. Your body responds well to progressive overload right now — ramp up gradually.",
+    examples: ["Strength training", "Tempo runs", "Skill work / new movements"],
+    trainingNote: "Best window to increase volume and intensity. Your muscles recover faster and adapt better during this phase.",
   },
   Ovulation: {
-    intensity: "Peak",
-    suggestion: "Your strongest window. Go for PRs, compete, push your limits.",
-    examples: ["HIIT / CrossFit", "Heavy lifts", "Competitive sports"],
+    intensity: "Peak — Performance Window",
+    suggestion: "You're at your strongest and most explosive. Go for PRs, test maxes, compete. This is your green light.",
+    examples: ["HIIT / CrossFit", "Heavy lifts / PRs", "Race day / competition"],
+    riskFlag: "⚠️ ACL & ligament injury risk peaks around ovulation due to estrogen surge. Warm up thoroughly and focus on knee/ankle stability.",
+    trainingNote: "Peak power output. Schedule your hardest sessions and competitions here. You can handle more than usual.",
   },
   Luteal: {
-    intensity: "High → Low",
-    suggestion: "Front-load intensity early. As energy drops, shift to recovery.",
-    examples: ["Moderate strength (early)", "Swimming / Pilates (mid)", "Walks / rest (late)"],
+    intensity: "High → Low — Taper & Protect",
+    suggestion: "Front-load harder sessions in early luteal. As energy drops, shift to maintenance and recovery — don't fight it.",
+    examples: ["Moderate strength (early)", "Swimming / steady-state (mid)", "Walks / mobility (late)"],
+    riskFlag: "⚠️ Reaction time slows and perceived effort increases. You're not weaker — it just feels harder. Adjust expectations.",
+    trainingNote: "Reduce volume in the back half. Your body is retaining more water and core temp is higher — hydrate extra and don't panic about feeling 'off.'",
   },
 };
 
