@@ -519,7 +519,7 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground">Workout</p>
-                <p className="text-xs text-muted-foreground truncate">Intensity: {workout.intensity}</p>
+                <p className="text-xs text-muted-foreground truncate">{workout.readiness}</p>
               </div>
               <ChevronRight className={cn(
                 "w-4 h-4 text-muted-foreground transition-transform",
@@ -528,10 +528,31 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
             </div>
             {expandedSection === "exercise" && (
               <div className="px-4 pb-4 space-y-3 border-t border-border/15 pt-3" onClick={(e) => e.stopPropagation()}>
+
+                {/* Load capacity meter */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Load capacity</p>
+                    <span className="text-xs font-semibold text-foreground">{workout.loadCapacity}%</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all",
+                        workout.loadCapacity >= 80 ? "bg-phase-ovulation"
+                          : workout.loadCapacity >= 50 ? "bg-phase-follicular"
+                          : "bg-phase-menstruation"
+                      )}
+                      style={{ width: `${workout.loadCapacity}%` }}
+                    />
+                  </div>
+                </div>
+
                 <p className="text-xs text-muted-foreground">{workout.suggestion}</p>
 
                 {workout.riskFlag && (
                   <div className="rounded-lg bg-phase-menstruation/5 border border-phase-menstruation/15 px-3 py-2.5">
+                    <p className="text-[10px] font-semibold text-phase-menstruation mb-0.5">Risk window</p>
                     <p className="text-xs text-muted-foreground">{workout.riskFlag}</p>
                   </div>
                 )}
@@ -548,7 +569,12 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
                 </div>
 
                 <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5">
-                  <p className="text-[10px] font-semibold text-primary/80 mb-0.5">🏋️ Training intel</p>
+                  <p className="text-[10px] font-semibold text-primary/80 mb-0.5">Athletic decision</p>
+                  <p className="text-xs text-muted-foreground">{workout.athleticDecision}</p>
+                </div>
+
+                <div className="rounded-lg bg-muted/30 border border-border/15 px-3 py-2.5">
+                  <p className="text-[10px] font-semibold text-muted-foreground mb-0.5">Training intel</p>
                   <p className="text-xs text-muted-foreground">{workout.trainingNote}</p>
                 </div>
               </div>
