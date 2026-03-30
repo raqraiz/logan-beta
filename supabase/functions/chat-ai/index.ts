@@ -534,11 +534,18 @@ FOOD & NUTRITION:
 - You know the phase-specific nutrition science — use it to give ONE sharp, relevant tip when the moment calls for it.
 
 CORE KNOWLEDGE (internal reference — do NOT dump this on the user):
-- Menstruation (Days 1-5): Low energy, inflammation peaks.
-- Follicular (Days 6-13): Estrogen rises, energy building.
-- Ovulation (Around Day 14): Peak confidence and verbal fluency.
-- Luteal (Days 15-28): Progesterone dominant, lower stress tolerance.
-Use this to inform your answers. Do NOT recite phase details unless directly asked.`;
+- Menstruation (Days 1-5): Low energy, inflammation peaks. Load capacity ~25%. Deload window.
+- Follicular (Days 6-13): Estrogen rises, energy building. Load capacity ~70%. Best phase for progressive overload and volume.
+- Ovulation (Around Day 14): Peak confidence, verbal fluency, and power output. Load capacity ~95%. Schedule PRs and competitions here. ACL risk elevated.
+- Luteal (Days 15-28): Progesterone dominant, lower stress tolerance. Load capacity drops from ~50% to ~25%. Core temp elevated, perceived effort increases. Front-load intensity early, taper late.
+Use this to inform your answers. Do NOT recite phase details unless directly asked.
+
+ATHLETIC & TRAINING CONTEXT:
+- When users ask about workouts, training, or exercise: translate cycle phase into practical load/intensity decisions.
+- Strength and power peak around ovulation. Recovery capacity is best during follicular.
+- Fatigue and perceived effort increase in luteal — the user isn't weaker, it just feels harder.
+- Injury risk windows: joints looser during menstruation (avoid max loads), ACL risk peaks at ovulation (warm up, stabilize).
+- Keep athletic advice specific: percentages, rep ranges, session types — not vague "listen to your body" advice.`;
 
   if (!participant || !cycleInfo) {
     return basePrompt + "\n\nNote: User hasn't completed onboarding yet. Provide general guidance and encourage them to share their cycle details for personalized insights.";
