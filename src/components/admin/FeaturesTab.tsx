@@ -139,7 +139,9 @@ export const FeaturesTab = () => {
       setFeatures([
         makeFeature("Chat", <MessageSquare className="w-5 h-5" />, chatUsers, chatMsgs.length),
         makeFeature("Home Tab", <Home className="w-5 h-5" />, homeUsers, homeEvents.length),
+        makeFeature("Plan Tab", <ClipboardList className="w-5 h-5" />, planUsers, planEvents.length),
         makeFeature("Cycle Forecast", <Eye className="w-5 h-5" />, forecastUsers, forecastEvents.length),
+        makeFeature("Phase Cheat Sheet", <BookOpen className="w-5 h-5" />, cheatSheetUsers, cheatSheetEvents.length),
         makeFeature("Community", <Users2 className="w-5 h-5" />, communityUsers, communityMsgs.length),
         makeFeature("Calendar Sync", <Calendar className="w-5 h-5" />, calendarUsers, calendarTokens.length),
         makeFeature("Feedback", <ThumbsUp className="w-5 h-5" />, feedbackUsers, feedbackRows.length),
