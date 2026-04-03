@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, MessageSquare, Users2, Calendar, ThumbsUp, Ticket, TrendingUp, Home, Eye, CheckCircle, BookOpen, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ interface FeatureStats {
   adoptionRate: number;
   avgPerUser: number;
   comingSoon?: boolean;
+  userNames?: string[];
 }
 
 interface WeeklyAdoption {
@@ -135,6 +137,10 @@ export const FeaturesTab = () => {
         totalActions: actions,
         adoptionRate: totalUsers > 0 ? Math.round((users.size / totalUsers) * 100) : 0,
         avgPerUser: users.size > 0 ? Math.round((actions / users.size) * 10) / 10 : 0,
+        userNames: Array.from(users).map((uid) => {
+          const p = profileMap.get(uid);
+          return p?.full_name || p?.email || "Unknown";
+        }),
       });
 
       setFeatures([
@@ -283,47 +289,61 @@ export const FeaturesTab = () => {
       {/* Feature Usage Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {features.map((f) => (
-          <Card key={f.name} className={f.comingSoon ? "opacity-50" : ""}>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="text-primary">{f.icon}</div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-foreground">{f.name}</p>
-                    {f.comingSoon && (
-                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 text-muted-foreground border-muted-foreground/30">
-                        Coming Soon
-                      </Badge>
-                    )}
+          <HoverCard key={f.name} openDelay={200}>
+            <HoverCardTrigger asChild>
+              <Card className={`cursor-default ${f.comingSoon ? "opacity-50" : ""}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="text-primary">{f.icon}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-foreground">{f.name}</p>
+                        {f.comingSoon && (
+                          <Badge variant="outline" className="text-[9px] px-1.5 py-0 text-muted-foreground border-muted-foreground/30">
+                            Coming Soon
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                        {f.comingSoon ? "Not yet launched" : `${f.adoptionRate}% adoption`}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                    {f.comingSoon ? "Not yet launched" : `${f.adoptionRate}% adoption`}
-                  </p>
+                  {f.comingSoon ? (
+                    <p className="text-xs text-muted-foreground text-center py-3">Tracking will begin once this feature is live</p>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div>
+                          <p className="text-lg font-bold text-foreground">{f.totalUsers}</p>
+                          <p className="text-[10px] text-muted-foreground">Users</p>
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-foreground">{f.totalActions}</p>
+                          <p className="text-[10px] text-muted-foreground">Actions</p>
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-foreground">{f.avgPerUser}</p>
+                          <p className="text-[10px] text-muted-foreground">Avg/User</p>
+                        </div>
+                      </div>
+                      <Progress value={f.adoptionRate} className="h-1.5 mt-3" />
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </HoverCardTrigger>
+            {!f.comingSoon && f.userNames && f.userNames.length > 0 && (
+              <HoverCardContent className="w-56 p-3" side="bottom" align="start">
+                <p className="text-xs font-semibold text-foreground mb-2">Users ({f.userNames.length})</p>
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {f.userNames.map((name, i) => (
+                    <p key={i} className="text-xs text-muted-foreground truncate">{name}</p>
+                  ))}
                 </div>
-              </div>
-              {f.comingSoon ? (
-                <p className="text-xs text-muted-foreground text-center py-3">Tracking will begin once this feature is live</p>
-              ) : (
-                <>
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div>
-                      <p className="text-lg font-bold text-foreground">{f.totalUsers}</p>
-                      <p className="text-[10px] text-muted-foreground">Users</p>
-                    </div>
-                    <div>
-                      <p className="text-lg font-bold text-foreground">{f.totalActions}</p>
-                      <p className="text-[10px] text-muted-foreground">Actions</p>
-                    </div>
-                    <div>
-                      <p className="text-lg font-bold text-foreground">{f.avgPerUser}</p>
-                      <p className="text-[10px] text-muted-foreground">Avg/User</p>
-                    </div>
-                  </div>
-                  <Progress value={f.adoptionRate} className="h-1.5 mt-3" />
-                </>
-              )}
-            </CardContent>
-          </Card>
+              </HoverCardContent>
+            )}
+          </HoverCard>
         ))}
       </div>
 
