@@ -107,6 +107,8 @@ export const FeaturesTab = () => {
 
       const homeEvents = allEvents.filter((e) => e.feature_name === "home_tab");
       const forecastEvents = allEvents.filter((e) => e.feature_name === "cycle_forecast");
+      const planEvents = allEvents.filter((e) => e.feature_name === "plan_tab");
+      const cheatSheetEvents = allEvents.filter((e) => e.feature_name === "phase_cheat_sheet");
 
       // Unique users per feature
       const uniqueUsers = (rows: { user_id: string }[]) => new Set(rows.map((r) => r.user_id));
@@ -117,6 +119,8 @@ export const FeaturesTab = () => {
       const promoUsers = uniqueUsers(promoRows);
       const homeUsers = uniqueUsers(homeEvents);
       const forecastUsers = uniqueUsers(forecastEvents);
+      const planUsers = uniqueUsers(planEvents);
+      const cheatSheetUsers = uniqueUsers(cheatSheetEvents);
 
       const makeFeature = (
         name: string,
