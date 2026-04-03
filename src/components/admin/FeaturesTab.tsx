@@ -183,6 +183,8 @@ export const FeaturesTab = () => {
       const calendarFirst = firstUse(calendarTokens);
       const homeFirst = firstUse(homeEvents);
       const forecastFirst = firstUse(forecastEvents);
+      const planFirst = firstUse(planEvents);
+      const cheatSheetFirst = firstUse(cheatSheetEvents);
 
       const cumulative = (firstMap: Map<string, Date>, weekEnd: Date) => {
         let count = 0;
