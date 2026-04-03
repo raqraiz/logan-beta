@@ -69,7 +69,7 @@ const Admin = () => {
     );
   }
 
-  if (!session) {
+  if (!session || !isAdmin) {
     return null;
   }
 
