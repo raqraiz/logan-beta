@@ -22,6 +22,7 @@ interface FeatureStats {
   adoptionRate: number;
   avgPerUser: number;
   comingSoon?: boolean;
+  userNames?: string[];
 }
 
 interface WeeklyAdoption {
