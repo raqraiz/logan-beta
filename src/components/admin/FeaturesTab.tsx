@@ -202,6 +202,8 @@ export const FeaturesTab = () => {
             calendar: cumulative(calendarFirst, weekEnd),
             home: cumulative(homeFirst, weekEnd),
             forecast: cumulative(forecastFirst, weekEnd),
+            plan: cumulative(planFirst, weekEnd),
+            cheatSheet: cumulative(cheatSheetFirst, weekEnd),
           };
         })
       );
