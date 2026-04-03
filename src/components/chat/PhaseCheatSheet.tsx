@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTrackFeature } from "@/hooks/useTrackFeature";
 import { Zap, Shield, Moon, TrendingUp, Heart, ChevronDown } from "lucide-react";
 
 interface DimensionData {
@@ -131,6 +132,7 @@ function validateLevel(level: string | undefined): Level {
 }
 
 export function PhaseCheatSheet({ phase, cycleDay, cycleLengthDays, anchorSymptom, personalizedData, onDimensionResponse, savedResponses }: PhaseCheatSheetProps) {
+  useTrackFeature("phase_cheat_sheet");
   const defaults = PHASE_DEFAULTS[phase] || PHASE_DEFAULTS.Follicular;
   const [expandedDim, setExpandedDim] = useState<string | null>(null);
   const [localResponses, setLocalResponses] = useState<Record<string, string>>(savedResponses || {});

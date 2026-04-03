@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, MessageSquare, Users2, Calendar, ThumbsUp, Ticket, TrendingUp, Home, Eye, CheckCircle } from "lucide-react";
+import { RefreshCw, MessageSquare, Users2, Calendar, ThumbsUp, Ticket, TrendingUp, Home, Eye, CheckCircle, BookOpen, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, subDays, eachWeekOfInterval } from "date-fns";
 import {
@@ -30,6 +30,8 @@ interface WeeklyAdoption {
   calendar: number;
   home: number;
   forecast: number;
+  plan: number;
+  cheatSheet: number;
 }
 
 interface TopUser {
@@ -44,6 +46,8 @@ const chartConfig = {
   calendar: { label: "Calendar", color: "hsl(200, 70%, 50%)" },
   home: { label: "Home", color: "hsl(30, 80%, 55%)" },
   forecast: { label: "Forecast", color: "hsl(142, 60%, 45%)" },
+  plan: { label: "Plan", color: "hsl(340, 65%, 50%)" },
+  cheatSheet: { label: "Cheat Sheet", color: "hsl(50, 70%, 45%)" },
 } satisfies ChartConfig;
 
 type TableName = "chat_messages" | "community_messages" | "calendar_tokens" | "user_feedback" | "promo_redemptions";
@@ -103,6 +107,8 @@ export const FeaturesTab = () => {
 
       const homeEvents = allEvents.filter((e) => e.feature_name === "home_tab");
       const forecastEvents = allEvents.filter((e) => e.feature_name === "cycle_forecast");
+      const planEvents = allEvents.filter((e) => e.feature_name === "plan_tab");
+      const cheatSheetEvents = allEvents.filter((e) => e.feature_name === "phase_cheat_sheet");
 
       // Unique users per feature
       const uniqueUsers = (rows: { user_id: string }[]) => new Set(rows.map((r) => r.user_id));
@@ -113,6 +119,8 @@ export const FeaturesTab = () => {
       const promoUsers = uniqueUsers(promoRows);
       const homeUsers = uniqueUsers(homeEvents);
       const forecastUsers = uniqueUsers(forecastEvents);
+      const planUsers = uniqueUsers(planEvents);
+      const cheatSheetUsers = uniqueUsers(cheatSheetEvents);
 
       const makeFeature = (
         name: string,
@@ -131,7 +139,9 @@ export const FeaturesTab = () => {
       setFeatures([
         makeFeature("Chat", <MessageSquare className="w-5 h-5" />, chatUsers, chatMsgs.length),
         makeFeature("Home Tab", <Home className="w-5 h-5" />, homeUsers, homeEvents.length),
+        makeFeature("Plan Tab", <ClipboardList className="w-5 h-5" />, planUsers, planEvents.length),
         makeFeature("Cycle Forecast", <Eye className="w-5 h-5" />, forecastUsers, forecastEvents.length),
+        makeFeature("Phase Cheat Sheet", <BookOpen className="w-5 h-5" />, cheatSheetUsers, cheatSheetEvents.length),
         makeFeature("Community", <Users2 className="w-5 h-5" />, communityUsers, communityMsgs.length),
         makeFeature("Calendar Sync", <Calendar className="w-5 h-5" />, calendarUsers, calendarTokens.length),
         makeFeature("Feedback", <ThumbsUp className="w-5 h-5" />, feedbackUsers, feedbackRows.length),
@@ -173,6 +183,8 @@ export const FeaturesTab = () => {
       const calendarFirst = firstUse(calendarTokens);
       const homeFirst = firstUse(homeEvents);
       const forecastFirst = firstUse(forecastEvents);
+      const planFirst = firstUse(planEvents);
+      const cheatSheetFirst = firstUse(cheatSheetEvents);
 
       const cumulative = (firstMap: Map<string, Date>, weekEnd: Date) => {
         let count = 0;
@@ -190,6 +202,8 @@ export const FeaturesTab = () => {
             calendar: cumulative(calendarFirst, weekEnd),
             home: cumulative(homeFirst, weekEnd),
             forecast: cumulative(forecastFirst, weekEnd),
+            plan: cumulative(planFirst, weekEnd),
+            cheatSheet: cumulative(cheatSheetFirst, weekEnd),
           };
         })
       );
@@ -319,6 +333,8 @@ export const FeaturesTab = () => {
               <Area type="monotone" dataKey="forecast" fill="var(--color-forecast)" stroke="var(--color-forecast)" fillOpacity={0.2} />
               <Area type="monotone" dataKey="community" fill="var(--color-community)" stroke="var(--color-community)" fillOpacity={0.2} />
               <Area type="monotone" dataKey="calendar" fill="var(--color-calendar)" stroke="var(--color-calendar)" fillOpacity={0.2} />
+              <Area type="monotone" dataKey="plan" fill="var(--color-plan)" stroke="var(--color-plan)" fillOpacity={0.2} />
+              <Area type="monotone" dataKey="cheatSheet" fill="var(--color-cheatSheet)" stroke="var(--color-cheatSheet)" fillOpacity={0.2} />
             </AreaChart>
           </ChartContainer>
         </CardContent>

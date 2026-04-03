@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTrackFeature } from "@/hooks/useTrackFeature";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dumbbell, Brain, Heart, Utensils, TrendingUp, Loader2,
@@ -273,6 +274,7 @@ const ANCHOR_INSIGHTS: Record<string, Record<string, string>> = {
 };
 
 export function PlanTab({ userId, cycleData }: PlanTabProps) {
+  useTrackFeature("plan_tab");
   const [checkins, setCheckins] = useState<CheckinEntry[]>([]);
   const [anchorSymptom, setAnchorSymptom] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
