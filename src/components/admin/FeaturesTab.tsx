@@ -136,6 +136,10 @@ export const FeaturesTab = () => {
         totalActions: actions,
         adoptionRate: totalUsers > 0 ? Math.round((users.size / totalUsers) * 100) : 0,
         avgPerUser: users.size > 0 ? Math.round((actions / users.size) * 10) / 10 : 0,
+        userNames: Array.from(users).map((uid) => {
+          const p = profileMap.get(uid);
+          return p?.full_name || p?.email || "Unknown";
+        }),
       });
 
       setFeatures([
