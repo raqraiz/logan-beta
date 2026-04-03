@@ -1,6 +1,7 @@
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
 import { LoganLogo } from "@/components/LoganLogo";
 import { format } from "date-fns";
+import { useTrackFeature } from "@/hooks/useTrackFeature";
 
 interface CycleData {
   cycleDay: number;
