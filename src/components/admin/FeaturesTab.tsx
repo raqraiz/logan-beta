@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, MessageSquare, Users2, Calendar, ThumbsUp, Ticket, TrendingUp, Home, Eye, CheckCircle, BookOpen, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
