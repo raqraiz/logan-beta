@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTrackFeature } from "@/hooks/useTrackFeature";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dumbbell, Brain, Heart, Utensils, TrendingUp, Loader2,

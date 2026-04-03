@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTrackFeature } from "@/hooks/useTrackFeature";
 import { Zap, Shield, Moon, TrendingUp, Heart, ChevronDown } from "lucide-react";
 
 interface DimensionData {
