@@ -333,6 +333,8 @@ export const FeaturesTab = () => {
               <Area type="monotone" dataKey="forecast" fill="var(--color-forecast)" stroke="var(--color-forecast)" fillOpacity={0.2} />
               <Area type="monotone" dataKey="community" fill="var(--color-community)" stroke="var(--color-community)" fillOpacity={0.2} />
               <Area type="monotone" dataKey="calendar" fill="var(--color-calendar)" stroke="var(--color-calendar)" fillOpacity={0.2} />
+              <Area type="monotone" dataKey="plan" fill="var(--color-plan)" stroke="var(--color-plan)" fillOpacity={0.2} />
+              <Area type="monotone" dataKey="cheatSheet" fill="var(--color-cheatSheet)" stroke="var(--color-cheatSheet)" fillOpacity={0.2} />
             </AreaChart>
           </ChartContainer>
         </CardContent>
