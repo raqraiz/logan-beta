@@ -63,12 +63,12 @@ export const FeaturesTab = () => {
       const profileMap = new Map(profiles.map((p) => [p.id, p]));
 
       // Paginated fetch helper
-      const fetchAllRows = async (table: string, columns: string, filters?: { col: string; val: string }[]) => {
+      const fetchAllRows = async (table: "chat_messages" | "community_messages" | "calendar_tokens" | "user_feedback" | "promo_redemptions", columns: string, filters?: { col: string; val: string }[]) => {
         let all: any[] = [];
         let from = 0;
         const pageSize = 1000;
         while (true) {
-          let q = (supabase.from(table) as any).select(columns).order("created_at", { ascending: true }).range(from, from + pageSize - 1);
+          let q = supabase.from(table).select(columns).order("created_at", { ascending: true }).range(from, from + pageSize - 1) as any;
           if (filters) filters.forEach((f) => (q = q.eq(f.col, f.val)));
           const { data } = await q;
           if (!data || data.length === 0) break;
