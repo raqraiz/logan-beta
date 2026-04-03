@@ -143,10 +143,10 @@ export const FeaturesTab = () => {
         makeFeature("Plan Tab", <ClipboardList className="w-5 h-5" />, planUsers, planEvents.length),
         makeFeature("Cycle Forecast", <Eye className="w-5 h-5" />, forecastUsers, forecastEvents.length),
         makeFeature("Phase Cheat Sheet", <BookOpen className="w-5 h-5" />, cheatSheetUsers, cheatSheetEvents.length),
-        makeFeature("Community", <Users2 className="w-5 h-5" />, communityUsers, communityMsgs.length),
-        makeFeature("Calendar Sync", <Calendar className="w-5 h-5" />, calendarUsers, calendarTokens.length),
-        makeFeature("Feedback", <ThumbsUp className="w-5 h-5" />, feedbackUsers, feedbackRows.length),
-        makeFeature("Promo Codes", <Ticket className="w-5 h-5" />, promoUsers, promoRows.length),
+        { name: "Community", icon: <Users2 className="w-5 h-5" />, totalUsers: 0, totalActions: 0, adoptionRate: 0, avgPerUser: 0, comingSoon: true },
+        { name: "Calendar Sync", icon: <Calendar className="w-5 h-5" />, totalUsers: 0, totalActions: 0, adoptionRate: 0, avgPerUser: 0, comingSoon: true },
+        { name: "Feedback", icon: <ThumbsUp className="w-5 h-5" />, totalUsers: 0, totalActions: 0, adoptionRate: 0, avgPerUser: 0, comingSoon: true },
+        { name: "Promo Codes", icon: <Ticket className="w-5 h-5" />, totalUsers: 0, totalActions: 0, adoptionRate: 0, avgPerUser: 0, comingSoon: true },
       ]);
 
       // Onboarding completion: check for onboarding_complete in chat_messages metadata
