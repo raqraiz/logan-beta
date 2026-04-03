@@ -16,6 +16,7 @@ interface HomeTabProps {
 }
 
 export function HomeTab({ cycleData }: HomeTabProps) {
+  useTrackFeature("home_tab");
   if (!cycleData) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 text-center">
