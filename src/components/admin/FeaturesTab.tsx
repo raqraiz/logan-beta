@@ -21,6 +21,7 @@ interface FeatureStats {
   totalActions: number;
   adoptionRate: number;
   avgPerUser: number;
+  comingSoon?: boolean;
 }
 
 interface WeeklyAdoption {
@@ -142,10 +143,10 @@ export const FeaturesTab = () => {
         makeFeature("Plan Tab", <ClipboardList className="w-5 h-5" />, planUsers, planEvents.length),
         makeFeature("Cycle Forecast", <Eye className="w-5 h-5" />, forecastUsers, forecastEvents.length),
         makeFeature("Phase Cheat Sheet", <BookOpen className="w-5 h-5" />, cheatSheetUsers, cheatSheetEvents.length),
-        makeFeature("Community", <Users2 className="w-5 h-5" />, communityUsers, communityMsgs.length),
-        makeFeature("Calendar Sync", <Calendar className="w-5 h-5" />, calendarUsers, calendarTokens.length),
-        makeFeature("Feedback", <ThumbsUp className="w-5 h-5" />, feedbackUsers, feedbackRows.length),
-        makeFeature("Promo Codes", <Ticket className="w-5 h-5" />, promoUsers, promoRows.length),
+        { name: "Community", icon: <Users2 className="w-5 h-5" />, totalUsers: 0, totalActions: 0, adoptionRate: 0, avgPerUser: 0, comingSoon: true },
+        { name: "Calendar Sync", icon: <Calendar className="w-5 h-5" />, totalUsers: 0, totalActions: 0, adoptionRate: 0, avgPerUser: 0, comingSoon: true },
+        { name: "Feedback", icon: <ThumbsUp className="w-5 h-5" />, totalUsers: 0, totalActions: 0, adoptionRate: 0, avgPerUser: 0, comingSoon: true },
+        { name: "Promo Codes", icon: <Ticket className="w-5 h-5" />, totalUsers: 0, totalActions: 0, adoptionRate: 0, avgPerUser: 0, comingSoon: true },
       ]);
 
       // Onboarding completion: check for onboarding_complete in chat_messages metadata
@@ -282,32 +283,45 @@ export const FeaturesTab = () => {
       {/* Feature Usage Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {features.map((f) => (
-          <Card key={f.name}>
+          <Card key={f.name} className={f.comingSoon ? "opacity-50" : ""}>
             <CardContent className="p-4">
               <div className="flex items-center gap-3 mb-3">
                 <div className="text-primary">{f.icon}</div>
-                <div>
-                  <p className="font-semibold text-foreground">{f.name}</p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-foreground">{f.name}</p>
+                    {f.comingSoon && (
+                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 text-muted-foreground border-muted-foreground/30">
+                        Coming Soon
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                    {f.adoptionRate}% adoption
+                    {f.comingSoon ? "Not yet launched" : `${f.adoptionRate}% adoption`}
                   </p>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div>
-                  <p className="text-lg font-bold text-foreground">{f.totalUsers}</p>
-                  <p className="text-[10px] text-muted-foreground">Users</p>
-                </div>
-                <div>
-                  <p className="text-lg font-bold text-foreground">{f.totalActions}</p>
-                  <p className="text-[10px] text-muted-foreground">Actions</p>
-                </div>
-                <div>
-                  <p className="text-lg font-bold text-foreground">{f.avgPerUser}</p>
-                  <p className="text-[10px] text-muted-foreground">Avg/User</p>
-                </div>
-              </div>
-              <Progress value={f.adoptionRate} className="h-1.5 mt-3" />
+              {f.comingSoon ? (
+                <p className="text-xs text-muted-foreground text-center py-3">Tracking will begin once this feature is live</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-lg font-bold text-foreground">{f.totalUsers}</p>
+                      <p className="text-[10px] text-muted-foreground">Users</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-foreground">{f.totalActions}</p>
+                      <p className="text-[10px] text-muted-foreground">Actions</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-foreground">{f.avgPerUser}</p>
+                      <p className="text-[10px] text-muted-foreground">Avg/User</p>
+                    </div>
+                  </div>
+                  <Progress value={f.adoptionRate} className="h-1.5 mt-3" />
+                </>
+              )}
             </CardContent>
           </Card>
         ))}
