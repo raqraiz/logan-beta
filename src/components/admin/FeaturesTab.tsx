@@ -46,6 +46,8 @@ const chartConfig = {
   calendar: { label: "Calendar", color: "hsl(200, 70%, 50%)" },
   home: { label: "Home", color: "hsl(30, 80%, 55%)" },
   forecast: { label: "Forecast", color: "hsl(142, 60%, 45%)" },
+  plan: { label: "Plan", color: "hsl(340, 65%, 50%)" },
+  cheatSheet: { label: "Cheat Sheet", color: "hsl(50, 70%, 45%)" },
 } satisfies ChartConfig;
 
 type TableName = "chat_messages" | "community_messages" | "calendar_tokens" | "user_feedback" | "promo_redemptions";
