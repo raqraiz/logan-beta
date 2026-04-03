@@ -1116,7 +1116,7 @@ const Chat = () => {
                   )}
 
 
-                  {/* Conversation starters for proactive insights or post-onboarding prompt */}
+                  {/* Conversation starters — show on the last assistant message post-onboarding */}
                   {isLastMessage && 
                    message.role === "assistant" && 
                    !isOnboarding && (
@@ -1126,7 +1126,7 @@ const Chat = () => {
                           ? message.metadata.conversation_starters
                           : message.metadata?.onboarding_complete || message.metadata?.has_cycle_visual
                             ? ["What can I expect tomorrow?", "How should I plan my week?", "What's my energy like today?"]
-                            : []
+                            : ["How am I doing this week?", "What should I watch for?", "Tell me about this phase"]
                       }
                       onSelect={(starter) => {
                         setInputValue(starter);
