@@ -30,6 +30,8 @@ interface WeeklyAdoption {
   calendar: number;
   home: number;
   forecast: number;
+  plan: number;
+  cheatSheet: number;
 }
 
 interface TopUser {
