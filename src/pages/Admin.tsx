@@ -5,10 +5,11 @@ import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { LogOut, RefreshCw, Shield, User, BarChart3 } from "lucide-react";
+import { LogOut, RefreshCw, Shield, User, BarChart3, Layers } from "lucide-react";
 import { AdminManagement } from "@/components/admin/AdminManagement";
 import { ProfilesTab } from "@/components/admin/ProfilesTab";
 import { EngagementTab } from "@/components/admin/EngagementTab";
+import { FeaturesTab } from "@/components/admin/FeaturesTab";
 import { LoganLogo } from "@/components/LoganLogo";
 import { LoganFullLogo } from "@/components/LoganFullLogo";
 
@@ -104,10 +105,14 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="engagement" className="space-y-6">
-          <TabsList className="grid w-full max-w-lg grid-cols-3 bg-muted border border-border">
+          <TabsList className="grid w-full max-w-2xl grid-cols-4 bg-muted border border-border">
             <TabsTrigger value="engagement" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Engagement</span>
+            </TabsTrigger>
+            <TabsTrigger value="features" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Layers className="w-4 h-4" />
+              <span className="hidden sm:inline">Features</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <User className="w-4 h-4" />
@@ -121,6 +126,10 @@ const Admin = () => {
 
           <TabsContent value="engagement">
             <EngagementTab />
+          </TabsContent>
+
+          <TabsContent value="features">
+            <FeaturesTab />
           </TabsContent>
 
           <TabsContent value="users">
