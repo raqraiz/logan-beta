@@ -325,9 +325,6 @@ export const FeaturesTab = () => {
             </CardContent>
           </Card>
         ))}
-            </CardContent>
-          </Card>
-        ))}
       </div>
 
       {/* Adoption Over Time */}
