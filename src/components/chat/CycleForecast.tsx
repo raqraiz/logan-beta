@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { useTrackFeature } from "@/hooks/useTrackFeature";
 import { Zap, Shield, Moon, TrendingUp, TrendingDown, AlertTriangle, Heart, ChevronLeft, ChevronRight, X, Calendar } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, differenceInCalendarDays, parseISO, isValid } from "date-fns";
 
@@ -104,6 +105,7 @@ function EnergyBar({ value, color }: { value: number; color: string }) {
 }
 
 export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStart, anchorSymptom, onClose, embedded = false }: CycleForecastProps) {
+  useTrackFeature("cycle_forecast");
   const today = useMemo(() => new Date(), []);
   const periodStart = useMemo(() => {
     const parsed = parseISO(lastPeriodStart);
