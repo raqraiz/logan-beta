@@ -1116,25 +1116,33 @@ const Chat = () => {
                   )}
 
 
-                  {/* Conversation starters — show on the last assistant message post-onboarding */}
+                  {/* Conversation starters — rotate sets so each message gets fresh prompts */}
                   {isLastMessage && 
                    message.role === "assistant" && 
-                   !isOnboarding && (
-                    <ConversationStarters
-                      starters={
-                        message.metadata?.conversation_starters && message.metadata.conversation_starters.length > 0
-                          ? message.metadata.conversation_starters
-                          : message.metadata?.onboarding_complete || message.metadata?.has_cycle_visual
-                            ? ["What can I expect tomorrow?", "How should I plan my week?", "What's my energy like today?"]
-                            : ["How am I doing this week?", "What should I watch for?", "Tell me about this phase"]
-                      }
-                      onSelect={(starter) => {
-                        setInputValue(starter);
-                        sendAIMessage(starter);
-                      }}
-                      disabled={isSending}
-                    />
-                  )}
+                   !isOnboarding && (() => {
+                    const starterSets = [
+                      ["What can I expect tomorrow?", "How should I plan my week?", "What's my energy like today?"],
+                      ["What phase am I in right now?", "Any workout tips for today?", "How's my mood likely to shift?"],
+                      ["What should I eat this week?", "When's my next energy peak?", "How can I sleep better tonight?"],
+                      ["What's coming up in my cycle?", "How do I make the most of today?", "Why do I feel this way?"],
+                    ];
+                    const assistantCount = messages.filter(m => m.role === "assistant" && !m.metadata?.onboarding_step).length;
+                    const setIndex = (assistantCount - 1) % starterSets.length;
+                    const starters =
+                      message.metadata?.conversation_starters && message.metadata.conversation_starters.length > 0
+                        ? message.metadata.conversation_starters
+                        : starterSets[setIndex];
+                    return (
+                      <ConversationStarters
+                        starters={starters}
+                        onSelect={(starter) => {
+                          setInputValue(starter);
+                          sendAIMessage(starter);
+                        }}
+                        disabled={isSending}
+                      />
+                    );
+                  })()}
                 </div>
               );
             })
