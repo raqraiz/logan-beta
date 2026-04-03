@@ -16,26 +16,44 @@ const Admin = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
-      setLoading(false);
+      if (!session) setLoading(false);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setLoading(false);
+      if (!session) setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (!loading && !session) {
-      navigate("/auth");
+    if (!session) {
+      if (!loading) navigate("/auth");
+      return;
     }
-  }, [session, loading, navigate]);
+    const checkAdmin = async () => {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .eq("role", "admin")
+        .single();
+      if (!data) {
+        navigate("/");
+        toast({ title: "Access denied", description: "Admin access required.", variant: "destructive" });
+      } else {
+        setIsAdmin(true);
+      }
+      setLoading(false);
+    };
+    checkAdmin();
+  }, [session, navigate]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
