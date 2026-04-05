@@ -331,6 +331,159 @@ serve(async (req) => {
     }
     // --- End period confirmation ---
 
+    // --- Cycle edit detection (cycle length or period date changes via chat) ---
+    if (participant) {
+      // Detect cycle length change: "change my cycle length to 30", "my cycle is 32 days", "set cycle to 26 days"
+      const cycleLengthMatch = userMessage.match(
+        /(?:change|set|update|make|switch)\s+(?:my\s+)?cycle\s*(?:length)?\s*(?:to|=)\s*(\d{2,})/i
+      ) || userMessage.match(
+        /(?:my\s+)?cycle\s*(?:length)?\s*(?:is|should be|is actually)\s*(\d{2,})\s*days?/i
+      ) || userMessage.match(
+        /cycle\s*(?:length)?\s*(?:to)\s*(\d{2,})\s*days?/i
+      );
+
+      // Detect period date change: "my period started on March 15", "change my period date to April 2"
+      const periodDateMatch = userMessage.match(
+        /(?:period|last period|period date)\s+(?:started|began|was|start)\s+(?:on\s+)?(?:the\s+)?(\w+\s+\d{1,2}(?:,?\s*\d{4})?)/i
+      ) || userMessage.match(
+        /(?:change|set|update)\s+(?:my\s+)?(?:period|period date|last period)\s+(?:to|date to)\s+(\w+\s+\d{1,2}(?:,?\s*\d{4})?)/i
+      );
+
+      if (cycleLengthMatch) {
+        const newLength = parseInt(cycleLengthMatch[1]);
+        if (newLength >= 18 && newLength <= 45) {
+          const { error: updateErr } = await supabase
+            .from("participants")
+            .update({ cycle_length_days: newLength })
+            .eq("id", participant.id);
+
+          if (!updateErr) {
+            const { data: refreshed } = await supabase
+              .from("participants")
+              .select("*")
+              .eq("id", participant.id)
+              .single();
+            if (refreshed) participant = refreshed;
+
+            const updatedCycleInfo = calculateCycleInfo(
+              participant.last_period_start || new Date().toISOString().split("T")[0],
+              newLength,
+              participant.timezone || "UTC"
+            );
+
+            const msg = `Done — cycle length updated to **${newLength} days**. That puts you on **Day ${updatedCycleInfo.cycleDay}** in your **${updatedCycleInfo.phase}** phase now.`;
+
+            await supabase.from("chat_messages").insert({
+              user_id: user.id,
+              role: "assistant",
+              content: msg,
+              message_type: "text",
+              metadata: {
+                cycle_day: updatedCycleInfo.cycleDay,
+                cycle_phase: updatedCycleInfo.phase,
+                has_cycle_visual: true,
+                visual_type: "cycle_circle",
+                cycle_length_days: newLength,
+                last_period_start: participant.last_period_start,
+                timezone: participant.timezone || "UTC",
+                cycle_length_update: true,
+              }
+            });
+
+            return new Response(
+              JSON.stringify({
+                success: true,
+                message: msg,
+                cycleInfo: updatedCycleInfo,
+                cycleLengthUpdated: true,
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+      }
+
+      if (periodDateMatch) {
+        const dateStr = periodDateMatch[1];
+        const parsed = new Date(dateStr);
+        if (!isNaN(parsed.getTime()) && parsed <= new Date()) {
+          const formattedDate = parsed.toISOString().split("T")[0];
+
+          // Archive previous cycle if applicable
+          let previousCycleLength: number | null = null;
+          if (participant.last_period_start) {
+            const prevStart = new Date(participant.last_period_start);
+            const diffDays = Math.round((parsed.getTime() - prevStart.getTime()) / (1000 * 60 * 60 * 24));
+            if (diffDays >= 15 && diffDays <= 60) {
+              previousCycleLength = diffDays;
+              await supabase.from("cycle_history").insert({
+                participant_id: participant.id,
+                cycle_start_date: participant.last_period_start,
+                cycle_end_date: formattedDate,
+                cycle_length_days: diffDays,
+              });
+            }
+          }
+
+          const { error: updateErr } = await supabase
+            .from("participants")
+            .update({ last_period_start: formattedDate })
+            .eq("id", participant.id);
+
+          if (!updateErr) {
+            const { data: refreshed } = await supabase
+              .from("participants")
+              .select("*")
+              .eq("id", participant.id)
+              .single();
+            if (refreshed) participant = refreshed;
+
+            const updatedCycleInfo = calculateCycleInfo(
+              formattedDate,
+              participant.cycle_length_days || 28,
+              participant.timezone || "UTC"
+            );
+
+            let msg = `Done — updated your last period start to **${parsed.toLocaleDateString("en-US", { month: "short", day: "numeric" })}**. You're on **Day ${updatedCycleInfo.cycleDay}** in your **${updatedCycleInfo.phase}** phase.`;
+            if (previousCycleLength) {
+              msg += ` That last cycle was **${previousCycleLength} days**.`;
+            }
+
+            await supabase.from("chat_messages").insert({
+              user_id: user.id,
+              role: "assistant",
+              content: msg,
+              message_type: "text",
+              metadata: {
+                cycle_day: updatedCycleInfo.cycleDay,
+                cycle_phase: updatedCycleInfo.phase,
+                has_cycle_visual: true,
+                visual_type: "cycle_circle",
+                cycle_length_days: participant.cycle_length_days || 28,
+                last_period_start: formattedDate,
+                timezone: participant.timezone || "UTC",
+                period_update: true,
+                new_period_start: formattedDate,
+                previous_cycle_length: previousCycleLength,
+              }
+            });
+
+            return new Response(
+              JSON.stringify({
+                success: true,
+                message: msg,
+                cycleInfo: updatedCycleInfo,
+                periodUpdated: true,
+                previousCycleLength,
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+      }
+    }
+    // --- End cycle edit detection ---
+
     // Get full chat history
     const { data: recentMessages } = await supabase
       .from("chat_messages")
@@ -552,7 +705,8 @@ ATHLETIC & TRAINING CONTEXT:
 - Keep athletic advice specific: percentages, rep ranges, session types — not vague "listen to your body" advice.
 
 CYCLE DATA EDITS:
-- If a user asks how to change, edit, or update their period date, cycle length, or cycle data — tell them to head to the Home tab where there's an "Update period date" option right under the cycle circle. Keep it brief and friendly.`;
+- If a user TELLS you to change their cycle length or period date (e.g. "change my cycle to 30 days", "my period started on March 15"), the system handles it automatically — just confirm it's done.
+- If a user asks HOW to change their cycle data themselves (e.g. "how do I update my cycle length?", "where can I edit my period date?"), tell them to head to the Home tab where there's an "Update period date" option right under the cycle circle. Keep it brief and friendly.`;
 
   if (!participant || !cycleInfo) {
     return basePrompt + "\n\nNote: User hasn't completed onboarding yet. Provide general guidance and encourage them to share their cycle details for personalized insights.";
