@@ -533,8 +533,29 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
           </div>
         </div>
 
+        {/* ── How not to mess up today — Partner/Parent edition ── */}
+        <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
+          <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border/20">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Users className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">How not to mess up today <span className="text-muted-foreground font-normal">— for him</span></p>
+              <p className="text-[11px] text-muted-foreground">Share this with your partner</p>
+            </div>
+          </div>
+          <div className="px-4 py-3 space-y-2">
+            {(DONT_MESS_UP_PARTNER[currentPhase] || DONT_MESS_UP_PARTNER.Follicular).map((tip, i) => (
+              <div key={i} className="flex items-start gap-2.5">
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary/50 shrink-0" />
+                <p className="text-xs text-muted-foreground leading-relaxed">{tip}</p>
+              </div>
+            ))}
+          </div>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+
           {/* ── Mood card ── */}
           <button
             onClick={() => toggle("mood")}
