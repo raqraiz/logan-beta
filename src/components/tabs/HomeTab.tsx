@@ -75,35 +75,22 @@ export function HomeTab({ cycleData, onPeriodUpdate }: HomeTabProps) {
         Day {cycleData.cycleDay} of {cycleData.cycleLengthDays}
       </p>
 
-      {/* Accuracy check prompt */}
+      {/* Subtle accuracy check */}
       {!dismissed && (
-        <div className="mt-6 mx-6 max-w-sm w-full rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-4 text-center">
-          <p className="text-sm font-medium text-foreground">
-            Does this look right?
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Day {cycleData.cycleDay}, {cycleData.phase} phase
-          </p>
-          <div className="flex items-center justify-center gap-3 mt-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDismissed(true)}
-              className="gap-1.5"
-            >
-              <Check className="w-3.5 h-3.5" />
-              Yes, it's right
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => setShowDatePicker(true)}
-              className="gap-1.5"
-            >
-              <CalendarIcon className="w-3.5 h-3.5" />
-              Update it
-            </Button>
-          </div>
+        <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground/70">
+          <span>Not accurate?</span>
+          <button
+            onClick={() => setShowDatePicker(true)}
+            className="underline underline-offset-2 hover:text-foreground transition-colors"
+          >
+            Update period date
+          </button>
+          <button
+            onClick={() => setDismissed(true)}
+            className="ml-1 hover:text-foreground transition-colors"
+          >
+            <X className="w-3 h-3" />
+          </button>
         </div>
       )}
 
