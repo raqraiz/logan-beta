@@ -879,7 +879,13 @@ const Chat = () => {
 
       {/* Tab content */}
       {effectiveTab === "home" && (
-        <HomeTab cycleData={cycleData} />
+        <HomeTab
+          cycleData={cycleData}
+          onPeriodUpdate={async (date: Date) => {
+            const formatted = format(date, "MMMM d, yyyy");
+            await sendAIMessage(`My last period started on ${formatted}. Please update my cycle.`);
+          }}
+        />
       )}
 
       {effectiveTab === "plan" && user && (
