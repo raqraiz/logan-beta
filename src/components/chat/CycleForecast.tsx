@@ -73,27 +73,35 @@ function getDayMetrics(day: number, cycleLength: number) {
   };
 }
 
-const PHASE_TIPS: Record<string, { expect: string[]; doThis: string[]; skip: string[] }> = {
-  Menstruation: {
-    expect: ["Lower energy, especially days 1-2", "Cramps, fatigue, or brain fog", "Craving comfort and quiet"],
-    doThis: ["Light movement: walks, stretching", "Protect your calendar", "Iron-rich foods, warm meals"],
-    skip: ["New high-stakes projects", "Intense HIIT or heavy lifting", "Over-scheduling"],
-  },
-  Follicular: {
-    expect: ["Rising energy and optimism", "Sharper thinking and creativity", "Better stress tolerance"],
-    doThis: ["Start new projects", "Push harder in workouts", "Brainstorm and problem-solve"],
-    skip: ["Playing it safe", "Ignoring the energy window", "Assuming every week feels this good"],
-  },
-  Ovulation: {
-    expect: ["Peak confidence and verbal fluency", "Peak physical performance", "Stronger social drive"],
-    doThis: ["Presentations, negotiations", "PR attempts in the gym", "Important conversations"],
-    skip: ["Admin tasks during peak hours", "Ignoring mid-cycle dip after", "Over-committing"],
-  },
-  Luteal: {
-    expect: ["Declining energy after mid-phase", "Lower patience and stress tolerance", "Cravings, bloating, mood shifts"],
-    doThis: ["Front-load hard tasks early", "Increase magnesium and complex carbs", "More recovery and downtime"],
-    skip: ["Big decisions in late luteal", "Ignoring early warning signs", "Pushing through fatigue"],
-  },
+const PHASE_TIPS: Record<string, string[]> = {
+  Menstruation: [
+    "Don't schedule anything you can cancel tomorrow — you'll want to.",
+    "Skip the intense workout. A walk counts. Your body is recovering.",
+    "Eat warm, iron-rich food. Now is not the time for a salad cleanse.",
+    "If someone irritates you, wait 24 hours before responding.",
+    "Go to bed 30 minutes earlier than you think you need to.",
+  ],
+  Follicular: [
+    "Don't waste this energy on busywork — tackle the hard thing first.",
+    "Say yes to the social plan. You actually have the bandwidth right now.",
+    "Start the project you've been putting off. Motivation is real today.",
+    "Eat enough protein — your muscles recover faster this week.",
+    "Don't overcommit for next week. Luteal-you will not have this energy.",
+  ],
+  Ovulation: [
+    "Have the hard conversation today — you'll handle it with grace.",
+    "Push for the PR or the big presentation. You're at peak performance.",
+    "Don't make long-term commitments based on how invincible you feel.",
+    "Stay hydrated — the estrogen surge can cause subtle dehydration.",
+    "Warm up properly. Ligament injury risk is quietly elevated right now.",
+  ],
+  Luteal: [
+    "Lower the bar on purpose. 'Good enough' is the goal today.",
+    "Don't send the emotional text. Write it, sleep on it, revisit tomorrow.",
+    "Eat the carbs. Your brain needs serotonin and fighting cravings backfires.",
+    "Cancel the optional plans without guilt. Protect your energy.",
+    "When you feel like everything is falling apart — it's progesterone, not reality.",
+  ],
 };
 
 function EnergyBar({ value, color }: { value: number; color: string }) {
@@ -258,46 +266,18 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                   </div>
                 </div>
                 <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
-                  <div className="grid grid-cols-1 md:grid-cols-3 md:divide-x divide-border/15">
-                    <div className="px-3 py-2.5 border-b md:border-b-0 border-border/15">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3" /> Expect
-                      </p>
-                      <ul className="space-y-1">
-                        {selectedTips.expect.map((item, i) => (
-                          <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
-                            <span className={`mt-1 w-1 h-1 rounded-full shrink-0 ${selectedColors.dot}`} />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="px-3 py-2.5 border-b md:border-b-0 border-border/15">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3" /> Do this
-                      </p>
-                      <ul className="space-y-1">
-                        {selectedTips.doThis.map((item, i) => (
-                          <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
-                            <span className="mt-1 w-1 h-1 rounded-full shrink-0 bg-phase-follicular" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="px-3 py-2.5">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
-                        <TrendingDown className="w-3 h-3" /> Skip
-                      </p>
-                      <ul className="space-y-1">
-                        {selectedTips.skip.map((item, i) => (
-                          <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
-                            <span className="mt-1 w-1 h-1 rounded-full shrink-0 bg-phase-menstruation/60" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                  <div className="px-3 py-2.5">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
+                      <Shield className="w-3 h-3" /> How not to mess up today
+                    </p>
+                    <ul className="space-y-1.5">
+                      {(selectedTips || []).map((tip, i) => (
+                        <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
+                          <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${selectedColors.dot}`} />
+                          {tip}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                   {anchorSymptom && selectedMetrics.symptomRisk > 0.5 && (
                     <div className="px-3 py-2 border-t border-border/15 flex items-center gap-2">
@@ -458,46 +438,18 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
 
                 {/* Cheat sheet */}
                 <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
-                  <div className="grid grid-cols-1 md:grid-cols-3 md:divide-x divide-border/15">
-                    <div className="px-3 py-2.5 border-b md:border-b-0 border-border/15">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3" /> Expect
-                      </p>
-                      <ul className="space-y-1">
-                        {selectedTips.expect.map((item, i) => (
-                          <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
-                            <span className={`mt-1 w-1 h-1 rounded-full shrink-0 ${selectedColors.dot}`} />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="px-3 py-2.5 border-b md:border-b-0 border-border/15">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3" /> Do this
-                      </p>
-                      <ul className="space-y-1">
-                        {selectedTips.doThis.map((item, i) => (
-                          <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
-                            <span className="mt-1 w-1 h-1 rounded-full shrink-0 bg-phase-follicular" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="px-3 py-2.5">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
-                        <TrendingDown className="w-3 h-3" /> Skip
-                      </p>
-                      <ul className="space-y-1">
-                        {selectedTips.skip.map((item, i) => (
-                          <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
-                            <span className="mt-1 w-1 h-1 rounded-full shrink-0 bg-phase-menstruation/60" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                  <div className="px-3 py-2.5">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
+                      <Shield className="w-3 h-3" /> How not to mess up today
+                    </p>
+                    <ul className="space-y-1.5">
+                      {(selectedTips || []).map((tip, i) => (
+                        <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
+                          <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${selectedColors.dot}`} />
+                          {tip}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
 
                   {anchorSymptom && selectedMetrics.symptomRisk > 0.5 && (
