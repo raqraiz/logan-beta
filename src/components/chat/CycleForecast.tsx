@@ -438,46 +438,18 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
 
                 {/* Cheat sheet */}
                 <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
-                  <div className="grid grid-cols-1 md:grid-cols-3 md:divide-x divide-border/15">
-                    <div className="px-3 py-2.5 border-b md:border-b-0 border-border/15">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3" /> Expect
-                      </p>
-                      <ul className="space-y-1">
-                        {selectedTips.expect.map((item, i) => (
-                          <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
-                            <span className={`mt-1 w-1 h-1 rounded-full shrink-0 ${selectedColors.dot}`} />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="px-3 py-2.5 border-b md:border-b-0 border-border/15">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3" /> Do this
-                      </p>
-                      <ul className="space-y-1">
-                        {selectedTips.doThis.map((item, i) => (
-                          <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
-                            <span className="mt-1 w-1 h-1 rounded-full shrink-0 bg-phase-follicular" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="px-3 py-2.5">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
-                        <TrendingDown className="w-3 h-3" /> Skip
-                      </p>
-                      <ul className="space-y-1">
-                        {selectedTips.skip.map((item, i) => (
-                          <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
-                            <span className="mt-1 w-1 h-1 rounded-full shrink-0 bg-phase-menstruation/60" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                  <div className="px-3 py-2.5">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
+                      <Shield className="w-3 h-3" /> How not to mess up today
+                    </p>
+                    <ul className="space-y-1.5">
+                      {(selectedTips || []).map((tip, i) => (
+                        <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
+                          <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${selectedColors.dot}`} />
+                          {tip}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
 
                   {anchorSymptom && selectedMetrics.symptomRisk > 0.5 && (
