@@ -179,6 +179,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   const selectedMetrics = hasValidSelectedCycleDay ? getDayMetrics(selectedCycleDay, cycleLengthDays) : null;
   const selectedColors = selectedPhase ? PHASE_COLORS[selectedPhase] : null;
   const selectedTips = selectedPhase ? PHASE_TIPS[selectedPhase] : null;
+  const selectedPartnerTips = selectedPhase ? PARTNER_TIPS[selectedPhase] : null;
 
   const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
   const PHASES = ["Menstruation", "Follicular", "Ovulation", "Luteal"] as const;
