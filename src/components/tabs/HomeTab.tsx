@@ -3,7 +3,7 @@ import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
 import { LoganLogo } from "@/components/LoganLogo";
 import { format } from "date-fns";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
-import { CalendarIcon, X } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -40,7 +40,6 @@ export function HomeTab({ cycleData, onPeriodUpdate }: HomeTabProps) {
     try {
       await onPeriodUpdate(selectedDate);
       setShowDatePicker(false);
-      setDismissed(true);
       setSelectedDate(undefined);
     } finally {
       setIsSubmitting(false);
@@ -75,23 +74,15 @@ export function HomeTab({ cycleData, onPeriodUpdate }: HomeTabProps) {
       </p>
 
       {/* Subtle accuracy check */}
-      {!dismissed && (
-        <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground/70">
-          <span>Not accurate?</span>
-          <button
-            onClick={() => setShowDatePicker(true)}
-            className="underline underline-offset-2 hover:text-foreground transition-colors"
-          >
-            Update period date
-          </button>
-          <button
-            onClick={() => setDismissed(true)}
-            className="ml-1 hover:text-foreground transition-colors"
-          >
-            <X className="w-3 h-3" />
-          </button>
-        </div>
-      )}
+      <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground/70">
+        <span>Not accurate?</span>
+        <button
+          onClick={() => setShowDatePicker(true)}
+          className="underline underline-offset-2 hover:text-foreground transition-colors"
+        >
+          Update period date
+        </button>
+      </div>
 
       {/* Date picker dialog */}
       <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
