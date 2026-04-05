@@ -189,6 +189,38 @@ const DONT_MESS_UP: Record<string, string[]> = {
   ],
 };
 
+// ── Partner/parent "How not to mess up today" tips ──
+const DONT_MESS_UP_PARTNER: Record<string, string[]> = {
+  Menstruation: [
+    "Don't ask 'what's wrong?' — just bring her tea and a blanket.",
+    "Take one thing off her plate without being asked. Dishes, kids, dinner — pick one.",
+    "She's not being dramatic. Her pain is real and her patience is gone. Don't test it.",
+    "Don't suggest she 'just take a painkiller and push through.' Read the room.",
+    "If she snaps at you, don't take it personally. She'll feel guilty about it later without your help.",
+  ],
+  Follicular: [
+    "She's got energy again — match it. Plan something fun together.",
+    "This is your window to bring up the thing you've been sitting on. She can handle it now.",
+    "Don't coast just because she's in a good mood. Show up — she notices.",
+    "Support the new idea or project she's excited about. Her confidence is climbing.",
+    "If you've been meaning to apologize for something, now's the time. She's receptive.",
+  ],
+  Ovulation: [
+    "She's at her sharpest and most social. Don't be boring — step up.",
+    "Plan the date night. She's feeling herself and wants to connect.",
+    "If you disagree on something, bring it up now — she'll debate fairly, not emotionally.",
+    "Don't be intimidated by her confidence. Hype her up, not down.",
+    "Pay attention. She's giving you her best self right now — notice it and say something.",
+  ],
+  Luteal: [
+    "She's not picking fights — her brain is literally wired to notice threats right now.",
+    "Don't say 'is it that time of the month?' Ever. Just don't.",
+    "Bring her comfort food without commentary. No diet advice. No jokes.",
+    "Handle bedtime or the morning routine without being asked. She's running on fumes.",
+    "When she says 'I'm fine' — she's not. Sit with her. You don't have to fix it.",
+  ],
+};
+
 // ── Mood guidance by phase ──
 const MOOD_GUIDANCE: Record<string, { outlook: string; headsUp: string; selfCare: string; relationships: { people: string; withPartner: string; withKids: string; strategy: string } }> = {
   Menstruation: {
