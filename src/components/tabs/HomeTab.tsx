@@ -33,7 +33,6 @@ export function HomeTab({ cycleData, onPeriodUpdate }: HomeTabProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
 
   const handleConfirmUpdate = async () => {
     if (!selectedDate || !onPeriodUpdate) return;
