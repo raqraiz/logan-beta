@@ -498,7 +498,6 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                       ))}
                     </ul>
                   </div>
-
                   {anchorSymptom && selectedMetrics.symptomRisk > 0.5 && (
                     <div className="px-3 py-2 border-t border-border/15 flex items-center gap-2">
                       <Heart className="w-3 h-3 text-phase-menstruation shrink-0" />
@@ -507,6 +506,21 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                       </p>
                     </div>
                   )}
+                </div>
+                <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
+                  <div className="px-3 py-2.5">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
+                      <Users className="w-3 h-3" /> For him — how not to mess up today
+                    </p>
+                    <ul className="space-y-1.5">
+                      {(selectedPartnerTips || []).map((tip, i) => (
+                        <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
+                          <span className="mt-1 w-1.5 h-1.5 rounded-full shrink-0 bg-primary/50" />
+                          {tip}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               </div>
             ) : (
