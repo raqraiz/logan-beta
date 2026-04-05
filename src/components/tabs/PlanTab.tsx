@@ -3,7 +3,7 @@ import { useTrackFeature } from "@/hooks/useTrackFeature";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dumbbell, Brain, Heart, Utensils, TrendingUp, Loader2,
-  AlertTriangle, Zap, ChevronRight, Clock, ShieldAlert
+  AlertTriangle, Zap, ChevronRight, Clock, ShieldAlert, Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
@@ -186,6 +186,38 @@ const DONT_MESS_UP: Record<string, string[]> = {
     "Eat the carbs. Your brain needs serotonin and fighting cravings backfires.",
     "Cancel the optional plans without guilt. Protect your energy.",
     "When you feel like everything is falling apart — it's progesterone, not reality.",
+  ],
+};
+
+// ── Partner/parent "How not to mess up today" tips ──
+const DONT_MESS_UP_PARTNER: Record<string, string[]> = {
+  Menstruation: [
+    "Don't ask 'what's wrong?' — just bring her tea and a blanket.",
+    "Take one thing off her plate without being asked. Dishes, kids, dinner — pick one.",
+    "She's not being dramatic. Her pain is real and her patience is gone. Don't test it.",
+    "Don't suggest she 'just take a painkiller and push through.' Read the room.",
+    "If she snaps at you, don't take it personally. She'll feel guilty about it later without your help.",
+  ],
+  Follicular: [
+    "She's got energy again — match it. Plan something fun together.",
+    "This is your window to bring up the thing you've been sitting on. She can handle it now.",
+    "Don't coast just because she's in a good mood. Show up — she notices.",
+    "Support the new idea or project she's excited about. Her confidence is climbing.",
+    "If you've been meaning to apologize for something, now's the time. She's receptive.",
+  ],
+  Ovulation: [
+    "She's at her sharpest and most social. Don't be boring — step up.",
+    "Plan the date night. She's feeling herself and wants to connect.",
+    "If you disagree on something, bring it up now — she'll debate fairly, not emotionally.",
+    "Don't be intimidated by her confidence. Hype her up, not down.",
+    "Pay attention. She's giving you her best self right now — notice it and say something.",
+  ],
+  Luteal: [
+    "She's not picking fights — her brain is literally wired to notice threats right now.",
+    "Don't say 'is it that time of the month?' Ever. Just don't.",
+    "Bring her comfort food without commentary. No diet advice. No jokes.",
+    "Handle bedtime or the morning routine without being asked. She's running on fumes.",
+    "When she says 'I'm fine' — she's not. Sit with her. You don't have to fix it.",
   ],
 };
 
@@ -501,8 +533,30 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
           </div>
         </div>
 
+        {/* ── How not to mess up today — Partner/Parent edition ── */}
+        <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
+          <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border/20">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Users className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">How not to mess up today <span className="text-muted-foreground font-normal">— for him</span></p>
+              <p className="text-[11px] text-muted-foreground">Share this with your partner</p>
+            </div>
+          </div>
+          <div className="px-4 py-3 space-y-2">
+            {(DONT_MESS_UP_PARTNER[currentPhase] || DONT_MESS_UP_PARTNER.Follicular).map((tip, i) => (
+              <div key={i} className="flex items-start gap-2.5">
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary/50 shrink-0" />
+                <p className="text-xs text-muted-foreground leading-relaxed">{tip}</p>
+              </div>
+            ))}
+          </div>
+        </div>
 
+        {/* ── Guidance cards grid ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
           {/* ── Mood card ── */}
           <button
             onClick={() => toggle("mood")}
