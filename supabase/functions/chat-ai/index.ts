@@ -306,6 +306,8 @@ serve(async (req) => {
           has_cycle_visual: true,
           visual_type: "cycle_circle",
           cycle_length_days: participant.cycle_length_days || 28,
+          last_period_start: formattedDate,
+          timezone: participant.timezone || "UTC",
           period_update: true,
           new_period_start: formattedDate,
           previous_cycle_length: previousCycleLength,
