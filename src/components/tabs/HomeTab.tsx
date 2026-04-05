@@ -3,7 +3,7 @@ import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
 import { LoganLogo } from "@/components/LoganLogo";
 import { format } from "date-fns";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
-import { CalendarIcon, X } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
