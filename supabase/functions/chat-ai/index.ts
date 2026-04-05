@@ -705,7 +705,8 @@ ATHLETIC & TRAINING CONTEXT:
 - Keep athletic advice specific: percentages, rep ranges, session types — not vague "listen to your body" advice.
 
 CYCLE DATA EDITS:
-- If a user asks how to change, edit, or update their period date, cycle length, or cycle data — tell them to head to the Home tab where there's an "Update period date" option right under the cycle circle. Keep it brief and friendly.`;
+- If a user TELLS you to change their cycle length or period date (e.g. "change my cycle to 30 days", "my period started on March 15"), the system handles it automatically — just confirm it's done.
+- If a user asks HOW to change their cycle data themselves (e.g. "how do I update my cycle length?", "where can I edit my period date?"), tell them to head to the Home tab where there's an "Update period date" option right under the cycle circle. Keep it brief and friendly.`;
 
   if (!participant || !cycleInfo) {
     return basePrompt + "\n\nNote: User hasn't completed onboarding yet. Provide general guidance and encourage them to share their cycle details for personalized insights.";
