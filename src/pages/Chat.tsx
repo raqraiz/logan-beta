@@ -259,6 +259,7 @@ const Chat = () => {
     // Check period update messages first, then any message with last_period_start
     let lastPeriodStart: string | null = null;
     let cycleLengthDays: number | null = null;
+    let userTimezone: string | null = null;
 
     // Iterate in reverse to find most recent data
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -276,8 +277,14 @@ const Chat = () => {
       if (metadata.cycle_length_days && !cycleLengthDays) {
         cycleLengthDays = metadata.cycle_length_days;
       }
+      if (metadata.timezone && !userTimezone) {
+        userTimezone = metadata.timezone;
+      }
       if (lastPeriodStart && cycleLengthDays) break;
     }
+
+    // Use browser timezone as fallback instead of hardcoded value
+    const timezone = userTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     if (!lastPeriodStart || !cycleLengthDays) {
       // Fallback: use stale cycle_day from metadata if no period start found
@@ -296,7 +303,7 @@ const Chat = () => {
     }
 
     // Recalculate cycle day live using the same logic as the server
-    const liveInfo = calculateCycleInfo(lastPeriodStart, cycleLengthDays);
+    const liveInfo = calculateCycleInfo(lastPeriodStart, cycleLengthDays, timezone);
     if (liveInfo) {
       setCycleData({
         cycleDay: liveInfo.cycleDay,
