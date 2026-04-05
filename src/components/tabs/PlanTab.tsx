@@ -157,6 +157,38 @@ const NUTRITION_GUIDANCE: Record<string, { focus: string; foods: string[]; avoid
   },
 };
 
+// ── "How not to mess up today" tips by phase ──
+const DONT_MESS_UP: Record<string, string[]> = {
+  Menstruation: [
+    "Don't schedule anything you can cancel tomorrow — you'll want to.",
+    "Skip the intense workout. A walk counts. Your body is recovering.",
+    "Eat warm, iron-rich food. Now is not the time for a salad cleanse.",
+    "If someone irritates you, wait 24 hours before responding.",
+    "Go to bed 30 minutes earlier than you think you need to.",
+  ],
+  Follicular: [
+    "Don't waste this energy on busywork — tackle the hard thing first.",
+    "Say yes to the social plan. You actually have the bandwidth right now.",
+    "Start the project you've been putting off. Motivation is real today.",
+    "Eat enough protein — your muscles recover faster this week.",
+    "Don't overcommit for next week. Luteal-you will not have this energy.",
+  ],
+  Ovulation: [
+    "Have the hard conversation today — you'll handle it with grace.",
+    "Push for the PR or the big presentation. You're at peak performance.",
+    "Don't make long-term commitments based on how invincible you feel.",
+    "Stay hydrated — the estrogen surge can cause subtle dehydration.",
+    "Warm up properly. Ligament injury risk is quietly elevated right now.",
+  ],
+  Luteal: [
+    "Lower the bar on purpose. 'Good enough' is the goal today.",
+    "Don't send the emotional text. Write it, sleep on it, revisit tomorrow.",
+    "Eat the carbs. Your brain needs serotonin and fighting cravings backfires.",
+    "Cancel the optional plans without guilt. Protect your energy.",
+    "When you feel like everything is falling apart — it's progesterone, not reality.",
+  ],
+};
+
 // ── Mood guidance by phase ──
 const MOOD_GUIDANCE: Record<string, { outlook: string; headsUp: string; selfCare: string; relationships: { people: string; withPartner: string; withKids: string; strategy: string } }> = {
   Menstruation: {
