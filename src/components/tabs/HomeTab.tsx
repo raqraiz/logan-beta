@@ -136,7 +136,6 @@ export function HomeTab({ cycleData, onPeriodUpdate, onCycleLengthUpdate }: Home
                     await onCycleLengthUpdate(editedLength);
                   }
                   setShowDatePicker(false);
-                  setDismissed(true);
                   setSelectedDate(undefined);
                 } finally {
                   setIsSubmitting(false);
