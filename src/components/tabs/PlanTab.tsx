@@ -3,7 +3,7 @@ import { useTrackFeature } from "@/hooks/useTrackFeature";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dumbbell, Brain, Heart, Utensils, TrendingUp, Loader2,
-  AlertTriangle, Zap, ChevronRight, Clock
+  AlertTriangle, Zap, ChevronRight, Clock, ShieldAlert
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
