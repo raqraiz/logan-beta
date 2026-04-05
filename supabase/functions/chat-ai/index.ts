@@ -440,6 +440,7 @@ serve(async (req) => {
         cycle_phase: cycleInfo.phase,
         cycle_length_days: participant?.cycle_length_days || 28,
         last_period_start: participant?.last_period_start || null,
+        timezone: participant?.timezone || "UTC",
       } : {}
     });
 
