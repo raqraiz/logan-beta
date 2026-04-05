@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
-import { Zap, Shield, Moon, TrendingUp, TrendingDown, AlertTriangle, Heart, ChevronLeft, ChevronRight, X, Calendar } from "lucide-react";
+import { Zap, Shield, Users, Moon, TrendingUp, TrendingDown, AlertTriangle, Heart, ChevronLeft, ChevronRight, X, Calendar } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, differenceInCalendarDays, parseISO, isValid } from "date-fns";
 
 interface CycleForecastProps {
@@ -104,6 +104,37 @@ const PHASE_TIPS: Record<string, string[]> = {
   ],
 };
 
+const PARTNER_TIPS: Record<string, string[]> = {
+  Menstruation: [
+    "Don't ask 'what's wrong?' — just bring her tea and a blanket.",
+    "Take one thing off her plate without being asked. Dishes, kids, dinner — pick one.",
+    "She's not being dramatic. Her pain is real and her patience is gone. Don't test it.",
+    "Don't suggest she 'just take a painkiller and push through.' Read the room.",
+    "If she snaps at you, don't take it personally. She'll feel guilty about it later without your help.",
+  ],
+  Follicular: [
+    "She's got energy again — match it. Plan something fun together.",
+    "This is your window to bring up the thing you've been sitting on. She can handle it now.",
+    "Don't coast just because she's in a good mood. Show up — she notices.",
+    "Support the new idea or project she's excited about. Her confidence is climbing.",
+    "If you've been meaning to apologize for something, now's the time. She's receptive.",
+  ],
+  Ovulation: [
+    "She's at her sharpest and most social. Don't be boring — step up.",
+    "Plan the date night. She's feeling herself and wants to connect.",
+    "If you disagree on something, bring it up now — she'll debate fairly, not emotionally.",
+    "Don't be intimidated by her confidence. Hype her up, not down.",
+    "Pay attention. She's giving you her best self right now — notice it and say something.",
+  ],
+  Luteal: [
+    "She's not picking fights — her brain is literally wired to notice threats right now.",
+    "Don't say 'is it that time of the month?' Ever. Just don't.",
+    "Bring her comfort food without commentary. No diet advice. No jokes.",
+    "Handle bedtime or the morning routine without being asked. She's running on fumes.",
+    "When she says 'I'm fine' — she's not. Sit with her. You don't have to fix it.",
+  ],
+};
+
 function EnergyBar({ value, color }: { value: number; color: string }) {
   return (
     <div className="w-full h-1.5 rounded-full bg-muted/30 overflow-hidden">
@@ -148,6 +179,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   const selectedMetrics = hasValidSelectedCycleDay ? getDayMetrics(selectedCycleDay, cycleLengthDays) : null;
   const selectedColors = selectedPhase ? PHASE_COLORS[selectedPhase] : null;
   const selectedTips = selectedPhase ? PHASE_TIPS[selectedPhase] : null;
+  const selectedPartnerTips = selectedPhase ? PARTNER_TIPS[selectedPhase] : null;
 
   const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
   const PHASES = ["Menstruation", "Follicular", "Ovulation", "Luteal"] as const;
@@ -287,6 +319,21 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                       </p>
                     </div>
                   )}
+                </div>
+                <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
+                  <div className="px-3 py-2.5">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
+                      <Users className="w-3 h-3" /> For him — how not to mess up today
+                    </p>
+                    <ul className="space-y-1.5">
+                      {(selectedPartnerTips || []).map((tip, i) => (
+                        <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
+                          <span className="mt-1 w-1.5 h-1.5 rounded-full shrink-0 bg-primary/50" />
+                          {tip}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -451,7 +498,6 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                       ))}
                     </ul>
                   </div>
-
                   {anchorSymptom && selectedMetrics.symptomRisk > 0.5 && (
                     <div className="px-3 py-2 border-t border-border/15 flex items-center gap-2">
                       <Heart className="w-3 h-3 text-phase-menstruation shrink-0" />
@@ -460,6 +506,21 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                       </p>
                     </div>
                   )}
+                </div>
+                <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
+                  <div className="px-3 py-2.5">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
+                      <Users className="w-3 h-3" /> For him — how not to mess up today
+                    </p>
+                    <ul className="space-y-1.5">
+                      {(selectedPartnerTips || []).map((tip, i) => (
+                        <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
+                          <span className="mt-1 w-1.5 h-1.5 rounded-full shrink-0 bg-primary/50" />
+                          {tip}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               </div>
             ) : (
