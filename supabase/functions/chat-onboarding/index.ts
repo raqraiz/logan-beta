@@ -411,7 +411,7 @@ serve(async (req) => {
       // After SYMPTOMS → validate and show symptom map
       if (currentQuestion.key === "symptoms" && selectedSymptoms && selectedSymptoms.length > 0) {
         const cycleLength = participant?.cycle_length_days || 28;
-        const cycleInfo = calculateCycleInfo(participant?.last_period_start, cycleLength);
+        const cycleInfo = calculateCycleInfo(participant?.last_period_start, cycleLength, participant?.timezone || "UTC");
 
         const symptomList = selectedSymptoms.slice(0, 3);
         const hasEmotional = selectedSymptoms.some((s: string) => SYMPTOM_CATEGORIES.emotional.symptoms.includes(s));
@@ -505,7 +505,7 @@ serve(async (req) => {
 
       // If onboarding is complete, send the first insight
       if (nextStep === ONBOARDING_QUESTIONS.length - 1 && participant) {
-        const cycleInfo = calculateCycleInfo(participant.last_period_start, participant.cycle_length_days);
+        const cycleInfo = calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC");
 
         if (cycleInfo) {
           const firstInsight = generateFirstInsight(
