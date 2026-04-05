@@ -3,7 +3,7 @@ import { useTrackFeature } from "@/hooks/useTrackFeature";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dumbbell, Brain, Heart, Utensils, TrendingUp, Loader2,
-  AlertTriangle, Zap, ChevronRight, Clock
+  AlertTriangle, Zap, ChevronRight, Clock, ShieldAlert
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
@@ -155,6 +155,38 @@ const NUTRITION_GUIDANCE: Record<string, { focus: string; foods: string[]; avoid
     foods: ["Complex carbs (sweet potato, oats)", "Magnesium-rich foods (nuts, seeds)", "Dark leafy greens"],
     avoid: "Ignoring cravings completely — lean into them smartly",
   },
+};
+
+// ── "How not to mess up today" tips by phase ──
+const DONT_MESS_UP: Record<string, string[]> = {
+  Menstruation: [
+    "Don't schedule anything you can cancel tomorrow — you'll want to.",
+    "Skip the intense workout. A walk counts. Your body is recovering.",
+    "Eat warm, iron-rich food. Now is not the time for a salad cleanse.",
+    "If someone irritates you, wait 24 hours before responding.",
+    "Go to bed 30 minutes earlier than you think you need to.",
+  ],
+  Follicular: [
+    "Don't waste this energy on busywork — tackle the hard thing first.",
+    "Say yes to the social plan. You actually have the bandwidth right now.",
+    "Start the project you've been putting off. Motivation is real today.",
+    "Eat enough protein — your muscles recover faster this week.",
+    "Don't overcommit for next week. Luteal-you will not have this energy.",
+  ],
+  Ovulation: [
+    "Have the hard conversation today — you'll handle it with grace.",
+    "Push for the PR or the big presentation. You're at peak performance.",
+    "Don't make long-term commitments based on how invincible you feel.",
+    "Stay hydrated — the estrogen surge can cause subtle dehydration.",
+    "Warm up properly. Ligament injury risk is quietly elevated right now.",
+  ],
+  Luteal: [
+    "Lower the bar on purpose. 'Good enough' is the goal today.",
+    "Don't send the emotional text. Write it, sleep on it, revisit tomorrow.",
+    "Eat the carbs. Your brain needs serotonin and fighting cravings backfires.",
+    "Cancel the optional plans without guilt. Protect your energy.",
+    "When you feel like everything is falling apart — it's progesterone, not reality.",
+  ],
 };
 
 // ── Mood guidance by phase ──
@@ -448,7 +480,28 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
           </div>
         )}
 
-        {/* ── Guidance cards grid ── */}
+        {/* ── How not to mess up today ── */}
+        <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
+          <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border/20">
+            <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center">
+              <ShieldAlert className="w-4.5 h-4.5 text-destructive" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">How not to mess up today</p>
+              <p className="text-[11px] text-muted-foreground">{currentPhase} · Day {currentDay}</p>
+            </div>
+          </div>
+          <div className="px-4 py-3 space-y-2">
+            {(DONT_MESS_UP[currentPhase] || DONT_MESS_UP.Follicular).map((tip, i) => (
+              <div key={i} className="flex items-start gap-2.5">
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-destructive/50 shrink-0" />
+                <p className="text-xs text-muted-foreground leading-relaxed">{tip}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* ── Mood card ── */}
           <button
