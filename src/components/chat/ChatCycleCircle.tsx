@@ -137,7 +137,7 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md" 
 export function calculateCycleInfo(
   lastPeriodStart: string | null,
   cycleLengthDays: number | null,
-  timezone: string = "Asia/Jerusalem"
+  timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone
 ): { cycleDay: number; phase: string } | null {
   if (!lastPeriodStart || !cycleLengthDays) return null;
 
