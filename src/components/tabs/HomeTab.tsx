@@ -32,11 +32,9 @@ interface HomeTabProps {
 export function HomeTab({ cycleData, onPeriodUpdate, onCycleLengthUpdate }: HomeTabProps) {
   useTrackFeature("home_tab");
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showLengthEditor, setShowLengthEditor] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [editedLength, setEditedLength] = useState<number>(28);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmittingLength, setIsSubmittingLength] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   const handleConfirmUpdate = async () => {
