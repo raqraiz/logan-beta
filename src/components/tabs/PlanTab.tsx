@@ -480,7 +480,28 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
           </div>
         )}
 
-        {/* ── Guidance cards grid ── */}
+        {/* ── How not to mess up today ── */}
+        <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
+          <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border/20">
+            <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center">
+              <ShieldAlert className="w-4.5 h-4.5 text-destructive" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">How not to mess up today</p>
+              <p className="text-[11px] text-muted-foreground">{currentPhase} · Day {currentDay}</p>
+            </div>
+          </div>
+          <div className="px-4 py-3 space-y-2">
+            {(DONT_MESS_UP[currentPhase] || DONT_MESS_UP.Follicular).map((tip, i) => (
+              <div key={i} className="flex items-start gap-2.5">
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-destructive/50 shrink-0" />
+                <p className="text-xs text-muted-foreground leading-relaxed">{tip}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* ── Mood card ── */}
           <button
