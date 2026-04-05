@@ -885,6 +885,9 @@ const Chat = () => {
             const formatted = format(date, "MMMM d, yyyy");
             await sendAIMessage(`My last period started on ${formatted}. Please update my cycle.`);
           }}
+          onCycleLengthUpdate={async (days: number) => {
+            await sendAIMessage(`Please update my cycle length to ${days} days.`);
+          }}
         />
       )}
 
