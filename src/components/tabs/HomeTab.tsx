@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
+import { CycleAnalytics } from "@/components/chat/CycleAnalytics";
 import { LoganLogo } from "@/components/LoganLogo";
 import { format } from "date-fns";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
@@ -27,11 +28,13 @@ interface HomeTabProps {
   anchorSymptom?: string | null;
   onPeriodUpdate?: (date: Date) => void;
   onCycleLengthUpdate?: (days: number) => void;
+  userId?: string;
 }
 
-export function HomeTab({ cycleData, onPeriodUpdate, onCycleLengthUpdate }: HomeTabProps) {
+export function HomeTab({ cycleData, onPeriodUpdate, onCycleLengthUpdate, userId }: HomeTabProps) {
   useTrackFeature("home_tab");
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [editedLength, setEditedLength] = useState<number>(28);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,12 +54,18 @@ export function HomeTab({ cycleData, onPeriodUpdate, onCycleLengthUpdate }: Home
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center pb-16">
-      <ChatCycleCircle
-        cycleDay={cycleData.cycleDay}
-        phase={cycleData.phase}
-        cycleLengthDays={cycleData.cycleLengthDays}
-        size="md"
-      />
+      <button
+        onClick={() => setShowAnalytics(true)}
+        className="cursor-pointer transition-transform duration-200 active:scale-95 hover:scale-[1.02]"
+        aria-label="View cycle analytics"
+      >
+        <ChatCycleCircle
+          cycleDay={cycleData.cycleDay}
+          phase={cycleData.phase}
+          cycleLengthDays={cycleData.cycleLengthDays}
+          size="md"
+        />
+      </button>
       <p className="text-sm text-muted-foreground mt-3">
         {format(new Date(), "EEEE, MMMM d")}
       </p>
