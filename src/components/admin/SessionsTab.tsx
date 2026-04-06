@@ -313,7 +313,7 @@ export const SessionsTab = () => {
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="cursor-default h-full">
-                <Card>
+                <Card className="h-full">
                   <CardContent className="p-4 text-center">
                     <TrendingUp className="w-5 h-5 mx-auto mb-1 text-primary" />
                     <p className="text-2xl font-bold text-foreground">{totals.longestSession}m</p>
