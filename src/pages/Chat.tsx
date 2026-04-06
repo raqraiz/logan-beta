@@ -34,6 +34,7 @@ import { OutOfCredits } from "@/components/chat/OutOfCredits";
 import { BottomTabBar, type TabId } from "@/components/tabs/BottomTabBar";
 import { HomeTab } from "@/components/tabs/HomeTab";
 import { PlanTab } from "@/components/tabs/PlanTab";
+import { usePresence } from "@/hooks/usePresence";
 
 interface SymptomCategory {
   label: string;
@@ -116,6 +117,7 @@ const Chat = () => {
   const [activeTab, setActiveTab] = useState<TabId>("ask");
   
   const { user, loading: authLoading, signOut } = useAuth();
+  usePresence(user?.id, user?.email || undefined, user?.user_metadata?.full_name);
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
