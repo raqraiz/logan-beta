@@ -243,10 +243,10 @@ export const SessionsTab = () => {
       </div>
 
       {/* Live Online Users */}
-      <Card className="border-green-500/30 bg-green-500/5">
+      <Card className="border-accent/30 bg-accent/5">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Circle className="w-3 h-3 fill-green-500 text-green-500 animate-pulse" />
+            <Circle className="w-3 h-3 fill-accent text-accent animate-pulse" />
             Live — {onlineUsers.length} user{onlineUsers.length !== 1 ? "s" : ""} online
           </CardTitle>
         </CardHeader>
@@ -257,7 +257,7 @@ export const SessionsTab = () => {
             <div className="flex flex-wrap gap-2">
               {onlineUsers.map((u) => (
                 <Badge key={u.user_id} variant="secondary" className="gap-1.5">
-                  <Circle className="w-2 h-2 fill-green-500 text-green-500" />
+                  <Circle className="w-2 h-2 fill-accent text-accent" />
                   {u.full_name || u.email}
                 </Badge>
               ))}
