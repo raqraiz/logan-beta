@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Circle, Clock, Users, Activity, TrendingUp } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, subDays, differenceInMinutes } from "date-fns";
 import {
   ChartContainer,
@@ -61,6 +62,7 @@ export const SessionsTab = () => {
     avgDuration: 0,
     avgDurationPerUser: 0,
     longestSession: 0,
+    longestSessionUser: "",
     peakHour: "",
   });
 
@@ -205,6 +207,8 @@ export const SessionsTab = () => {
       // Totals
       const totalDuration = sessions.reduce((a, s) => a + s.durationMin, 0);
       const longestSession = sessions.length > 0 ? Math.max(...sessions.map((s) => s.durationMin)) : 0;
+      const longestSessionRecord = sessions.find((s) => s.durationMin === longestSession);
+      const longestSessionUser = longestSessionRecord?.fullName || "";
 
       // Per-user avg: average each user's mean session duration
       const userDurations = new Map<string, number[]>();
@@ -226,6 +230,7 @@ export const SessionsTab = () => {
         avgDuration: sessions.length > 0 ? Math.round(totalDuration / sessions.length) : 0,
         avgDurationPerUser,
         longestSession,
+        longestSessionUser,
         peakHour,
       });
     } catch (err) {
@@ -304,13 +309,22 @@ export const SessionsTab = () => {
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Duration (Per User)</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <TrendingUp className="w-5 h-5 mx-auto mb-1 text-primary" />
-            <p className="text-2xl font-bold text-foreground">{totals.longestSession}m</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Longest Session</p>
-          </CardContent>
-        </Card>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card className="cursor-default">
+                <CardContent className="p-4 text-center">
+                  <TrendingUp className="w-5 h-5 mx-auto mb-1 text-primary" />
+                  <p className="text-2xl font-bold text-foreground">{totals.longestSession}m</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Longest Session</p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{totals.longestSessionUser || "Unknown user"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <Card>
           <CardContent className="p-4 text-center">
             <Clock className="w-5 h-5 mx-auto mb-1 text-primary" />
