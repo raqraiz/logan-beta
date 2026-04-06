@@ -309,10 +309,10 @@ export const SessionsTab = () => {
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Duration (Per User)</p>
           </CardContent>
         </Card>
-        <TooltipProvider>
+        <TooltipProvider delayDuration={0}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="cursor-default h-full">
+              <button type="button" className="text-left w-full h-full">
                 <Card className="h-full">
                   <CardContent className="p-4 text-center">
                     <TrendingUp className="w-5 h-5 mx-auto mb-1 text-primary" />
@@ -320,7 +320,7 @@ export const SessionsTab = () => {
                     <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Longest Session</p>
                   </CardContent>
                 </Card>
-              </div>
+              </button>
             </TooltipTrigger>
             <TooltipContent>
               <p>{totals.longestSessionUser || "Unknown user"}</p>
