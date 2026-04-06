@@ -59,6 +59,7 @@ export const SessionsTab = () => {
   const [totals, setTotals] = useState({
     totalSessions: 0,
     avgDuration: 0,
+    avgDurationPerUser: 0,
     longestSession: 0,
     peakHour: "",
   });
@@ -205,11 +206,25 @@ export const SessionsTab = () => {
       const totalDuration = sessions.reduce((a, s) => a + s.durationMin, 0);
       const longestSession = sessions.length > 0 ? Math.max(...sessions.map((s) => s.durationMin)) : 0;
 
+      // Per-user avg: average each user's mean session duration
+      const userDurations = new Map<string, number[]>();
+      for (const s of sessions) {
+        if (!userDurations.has(s.userId)) userDurations.set(s.userId, []);
+        userDurations.get(s.userId)!.push(s.durationMin);
+      }
+      const perUserAvgs = Array.from(userDurations.values()).map(
+        (durations) => durations.reduce((a, b) => a + b, 0) / durations.length
+      );
+      const avgDurationPerUser = perUserAvgs.length > 0
+        ? Math.round(perUserAvgs.reduce((a, b) => a + b, 0) / perUserAvgs.length)
+        : 0;
+
       setRecentSessions(sessions.slice(0, 50));
       setDailyStats(daily);
       setTotals({
         totalSessions: sessions.length,
         avgDuration: sessions.length > 0 ? Math.round(totalDuration / sessions.length) : 0,
+        avgDurationPerUser,
         longestSession,
         peakHour,
       });
@@ -267,7 +282,7 @@ export const SessionsTab = () => {
       </Card>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Card>
           <CardContent className="p-4 text-center">
             <Activity className="w-5 h-5 mx-auto mb-1 text-primary" />
@@ -279,7 +294,14 @@ export const SessionsTab = () => {
           <CardContent className="p-4 text-center">
             <Clock className="w-5 h-5 mx-auto mb-1 text-primary" />
             <p className="text-2xl font-bold text-foreground">{totals.avgDuration}m</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Duration</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Duration (Global)</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <Users className="w-5 h-5 mx-auto mb-1 text-primary" />
+            <p className="text-2xl font-bold text-foreground">{totals.avgDurationPerUser}m</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Duration (Per User)</p>
           </CardContent>
         </Card>
         <Card>
@@ -291,7 +313,7 @@ export const SessionsTab = () => {
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <Users className="w-5 h-5 mx-auto mb-1 text-primary" />
+            <Clock className="w-5 h-5 mx-auto mb-1 text-primary" />
             <p className="text-2xl font-bold text-foreground">{totals.peakHour}</p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Peak Hour</p>
           </CardContent>
