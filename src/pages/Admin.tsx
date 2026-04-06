@@ -5,11 +5,12 @@ import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { LogOut, RefreshCw, Shield, User, BarChart3, Layers } from "lucide-react";
+import { LogOut, RefreshCw, Shield, User, BarChart3, Layers, Radio } from "lucide-react";
 import { AdminManagement } from "@/components/admin/AdminManagement";
 import { ProfilesTab } from "@/components/admin/ProfilesTab";
 import { EngagementTab } from "@/components/admin/EngagementTab";
 import { FeaturesTab } from "@/components/admin/FeaturesTab";
+import { SessionsTab } from "@/components/admin/SessionsTab";
 import { LoganLogo } from "@/components/LoganLogo";
 import { LoganFullLogo } from "@/components/LoganFullLogo";
 
@@ -105,10 +106,14 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="engagement" className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-4 bg-muted border border-border">
+          <TabsList className="grid w-full max-w-3xl grid-cols-5 bg-muted border border-border">
             <TabsTrigger value="engagement" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Engagement</span>
+            </TabsTrigger>
+            <TabsTrigger value="sessions" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Radio className="w-4 h-4" />
+              <span className="hidden sm:inline">Sessions</span>
             </TabsTrigger>
             <TabsTrigger value="features" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Layers className="w-4 h-4" />
@@ -126,6 +131,10 @@ const Admin = () => {
 
           <TabsContent value="engagement">
             <EngagementTab />
+          </TabsContent>
+
+          <TabsContent value="sessions">
+            <SessionsTab />
           </TabsContent>
 
           <TabsContent value="features">
