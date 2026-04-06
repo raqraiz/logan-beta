@@ -312,13 +312,15 @@ export const SessionsTab = () => {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Card className="cursor-default">
-                <CardContent className="p-4 text-center">
-                  <TrendingUp className="w-5 h-5 mx-auto mb-1 text-primary" />
-                  <p className="text-2xl font-bold text-foreground">{totals.longestSession}m</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Longest Session</p>
-                </CardContent>
-              </Card>
+              <div className="cursor-default">
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <TrendingUp className="w-5 h-5 mx-auto mb-1 text-primary" />
+                    <p className="text-2xl font-bold text-foreground">{totals.longestSession}m</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Longest Session</p>
+                  </CardContent>
+                </Card>
+              </div>
             </TooltipTrigger>
             <TooltipContent>
               <p>{totals.longestSessionUser || "Unknown user"}</p>
