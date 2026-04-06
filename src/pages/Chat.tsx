@@ -881,6 +881,7 @@ const Chat = () => {
       {effectiveTab === "home" && (
         <HomeTab
           cycleData={cycleData}
+          userId={user?.id}
           onPeriodUpdate={async (date: Date) => {
             const formatted = format(date, "MMMM d, yyyy");
             await sendAIMessage(`My last period started on ${formatted}. Please update my cycle.`);
