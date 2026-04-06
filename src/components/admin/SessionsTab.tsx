@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Circle, Clock, Users, Activity, TrendingUp } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, subDays, differenceInMinutes } from "date-fns";
 import {
   ChartContainer,
@@ -61,6 +62,7 @@ export const SessionsTab = () => {
     avgDuration: 0,
     avgDurationPerUser: 0,
     longestSession: 0,
+    longestSessionUser: "",
     peakHour: "",
   });
 
@@ -205,6 +207,8 @@ export const SessionsTab = () => {
       // Totals
       const totalDuration = sessions.reduce((a, s) => a + s.durationMin, 0);
       const longestSession = sessions.length > 0 ? Math.max(...sessions.map((s) => s.durationMin)) : 0;
+      const longestSessionRecord = sessions.find((s) => s.durationMin === longestSession);
+      const longestSessionUser = longestSessionRecord?.fullName || "";
 
       // Per-user avg: average each user's mean session duration
       const userDurations = new Map<string, number[]>();
@@ -226,6 +230,7 @@ export const SessionsTab = () => {
         avgDuration: sessions.length > 0 ? Math.round(totalDuration / sessions.length) : 0,
         avgDurationPerUser,
         longestSession,
+        longestSessionUser,
         peakHour,
       });
     } catch (err) {
