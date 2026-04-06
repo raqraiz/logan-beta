@@ -157,6 +157,18 @@ export function HomeTab({ cycleData, onPeriodUpdate, onCycleLengthUpdate, userId
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Cycle Analytics */}
+      {userId && (
+        <CycleAnalytics
+          open={showAnalytics}
+          onOpenChange={setShowAnalytics}
+          userId={userId}
+          currentCycleLength={cycleData.cycleLengthDays}
+          currentPhase={cycleData.phase}
+          currentCycleDay={cycleData.cycleDay}
+        />
+      )}
     </div>
   );
 }
