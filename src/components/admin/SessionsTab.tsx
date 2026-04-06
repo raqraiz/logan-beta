@@ -312,7 +312,7 @@ export const SessionsTab = () => {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="cursor-default">
+              <div className="cursor-default h-full">
                 <Card>
                   <CardContent className="p-4 text-center">
                     <TrendingUp className="w-5 h-5 mx-auto mb-1 text-primary" />
