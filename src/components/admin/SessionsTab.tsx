@@ -407,8 +407,8 @@ export const SessionsTab = () => {
 
       const profileMap = new Map(profiles.map((p) => [p.id, p]));
 
-      // Fetch messages from last 30 days (paginated)
-      let allMessages: { user_id: string; created_at: string }[] = [];
+      // Fetch chat messages from last 30 days (paginated)
+      let allTimestamps: { user_id: string; created_at: string }[] = [];
       let from = 0;
       const pageSize = 1000;
       while (true) {
@@ -420,22 +420,37 @@ export const SessionsTab = () => {
           .order("created_at", { ascending: true })
           .range(from, from + pageSize - 1);
         if (!batch || batch.length === 0) break;
-        allMessages = allMessages.concat(batch);
+        allTimestamps = allTimestamps.concat(batch);
         if (batch.length < pageSize) break;
         from += pageSize;
       }
 
-      // Build sessions from messages
-      const messagesByUser = new Map<string, string[]>();
-      for (const msg of allMessages) {
-        if (!messagesByUser.has(msg.user_id)) messagesByUser.set(msg.user_id, []);
-        messagesByUser.get(msg.user_id)!.push(msg.created_at);
+      // Also fetch activity events to build sessions from all user interactions
+      let actFrom = 0;
+      while (true) {
+        const { data: batch } = await supabase
+          .from("user_activity_events")
+          .select("user_id, created_at")
+          .gte("created_at", thirtyDaysAgo.toISOString())
+          .order("created_at", { ascending: true })
+          .range(actFrom, actFrom + pageSize - 1);
+        if (!batch || batch.length === 0) break;
+        allTimestamps = allTimestamps.concat(batch);
+        if (batch.length < pageSize) break;
+        actFrom += pageSize;
+      }
+
+      // Build sessions from all timestamps (messages + activity)
+      const timestampsByUser = new Map<string, string[]>();
+      for (const evt of allTimestamps) {
+        if (!timestampsByUser.has(evt.user_id)) timestampsByUser.set(evt.user_id, []);
+        timestampsByUser.get(evt.user_id)!.push(evt.created_at);
       }
 
       const sessions: SessionRecord[] = [];
       const hourCounts = new Array(24).fill(0);
 
-      for (const [userId, timestamps] of messagesByUser.entries()) {
+      for (const [userId, timestamps] of timestampsByUser.entries()) {
         const sorted = timestamps.map((t) => new Date(t).getTime()).sort();
         const profile = profileMap.get(userId);
 
