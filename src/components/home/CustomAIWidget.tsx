@@ -53,38 +53,64 @@ export function CustomAIWidget({ title, prompt, phase, cycleDay, cycleLengthDays
   const borderColor = PHASE_BORDER[phase] || "border-l-primary";
   const glow = PHASE_GLOW[phase] || "";
 
+  const PHASE_ICON: Record<string, string> = {
+    Menstruation: "🌙",
+    Follicular: "🌱",
+    Ovulation: "☀️",
+    Luteal: "🍂",
+  };
+
+  const PHASE_BG_ACCENT: Record<string, string> = {
+    Menstruation: "from-phase-menstruation/8 to-transparent",
+    Follicular: "from-phase-follicular/8 to-transparent",
+    Ovulation: "from-phase-ovulation/8 to-transparent",
+    Luteal: "from-phase-luteal/8 to-transparent",
+  };
+
+  const bgAccent = PHASE_BG_ACCENT[phase] || "from-primary/5 to-transparent";
+  const phaseIcon = PHASE_ICON[phase] || "🔮";
+
   return (
     <div
       className={`w-full text-left rounded-xl border border-border/30 border-l-2 ${borderColor}
-        bg-card/40 backdrop-blur-sm p-3.5 transition-all duration-200 ${glow}`}
+        bg-card/40 backdrop-blur-sm overflow-hidden transition-all duration-200 ${glow} relative`}
     >
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-1.5">
-          <Sparkles className="w-3 h-3 text-primary/60" />
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
-            {title}
-          </span>
-        </div>
-        <button
-          onClick={generate}
-          disabled={loading}
-          className="text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors disabled:opacity-30"
-        >
-          <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
-        </button>
+      {/* Gradient accent background */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${bgAccent} pointer-events-none`} />
+      {/* Decorative watermark */}
+      <div className="absolute -right-2 -bottom-2 text-[56px] opacity-[0.06] pointer-events-none select-none leading-none">
+        {phaseIcon}
       </div>
 
-      {loading ? (
-        <div className="flex gap-1.5 items-center">
-          <div className="h-2 w-2 rounded-full bg-primary/30 animate-pulse" />
-          <div className="h-2 w-2 rounded-full bg-primary/30 animate-pulse [animation-delay:150ms]" />
-          <div className="h-2 w-2 rounded-full bg-primary/30 animate-pulse [animation-delay:300ms]" />
+      <div className="relative p-3.5">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="w-3 h-3 text-primary/60" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+              {title}
+            </span>
+          </div>
+          <button
+            onClick={generate}
+            disabled={loading}
+            className="text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors disabled:opacity-30"
+          >
+            <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
+          </button>
         </div>
-      ) : error ? (
-        <p className="text-[13px] text-muted-foreground/60 leading-relaxed">{error}</p>
-      ) : (
-        <p className="text-[13px] text-foreground/85 leading-relaxed">{content}</p>
-      )}
+
+        {loading ? (
+          <div className="flex gap-1.5 items-center py-1">
+            <div className="h-2 w-2 rounded-full bg-primary/30 animate-pulse" />
+            <div className="h-2 w-2 rounded-full bg-primary/30 animate-pulse [animation-delay:150ms]" />
+            <div className="h-2 w-2 rounded-full bg-primary/30 animate-pulse [animation-delay:300ms]" />
+          </div>
+        ) : error ? (
+          <p className="text-[13px] text-muted-foreground/60 leading-relaxed">{error}</p>
+        ) : (
+          <p className="text-[13px] text-foreground/85 leading-relaxed">{content}</p>
+        )}
+      </div>
     </div>
   );
 }
