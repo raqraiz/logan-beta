@@ -541,34 +541,56 @@ serve(async (req) => {
 
       // If onboarding is complete, send the first insight
       if (nextStep === ONBOARDING_QUESTIONS.length - 1 && participant) {
-        const cycleInfo = calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC");
-
-        if (cycleInfo) {
-          const firstInsight = generateFirstInsight(
-            cycleInfo.phase,
-            cycleInfo.cycleDay,
-            participant.anchor_symptom || anchorSymptom
-          );
+        const pLifeStage = (participant as any).life_stage || "cycling";
+        
+        if (pLifeStage !== "cycling") {
+          // Non-cycling first insight
+          const stageLabel = pLifeStage === "postpartum" ? "Postpartum" : "Menopause";
+          const stageInsight = pLifeStage === "postpartum"
+            ? `Here's your first personal insight 👇\n\n**${stageLabel} — Recovery phase**\n\n- **Energy**: Variable — sleep deprivation and hormonal shifts are real\n- **What to expect**: Your body is rebuilding. Some days are harder than others\n${participant.anchor_symptom ? `- **Your anchor (${participant.anchor_symptom.toLowerCase()})**: may show up differently during recovery` : "- **Tip**: Be patient with your body — it did something extraordinary"}\n\nLogan adapts to where you are, not where a textbook says you should be.`
+            : `Here's your first personal insight 👇\n\n**${stageLabel} — Transition phase**\n\n- **Energy**: Fluctuating — estrogen and progesterone are declining\n- **What to expect**: Hot flashes, sleep changes, and mood shifts are common\n${participant.anchor_symptom ? `- **Your anchor (${participant.anchor_symptom.toLowerCase()})**: may intensify or shift during this transition` : "- **Tip**: This is a transition, not an ending"}\n\nLogan is here to help you navigate what's changing.`;
 
           await new Promise(resolve => setTimeout(resolve, 1500));
-
-          const { error: insightError } = await supabase.from("chat_messages").insert({
+          await supabase.from("chat_messages").insert({
             user_id: user.id,
             role: "assistant",
-            content: firstInsight,
+            content: stageInsight,
             message_type: "text",
             metadata: {
-              has_cycle_visual: true,
-              visual_type: "hormone_chart",
-              cycle_day: cycleInfo.cycleDay,
-              cycle_phase: cycleInfo.phase,
-              cycle_length_days: participant.cycle_length_days || 28,
-              insight_type: "awareness"
+              insight_type: "awareness",
+              life_stage: pLifeStage,
             }
           });
+        } else {
+          const cycleInfo = calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC");
 
-          if (insightError) {
-            console.error("Error sending first insight:", insightError);
+          if (cycleInfo) {
+            const firstInsight = generateFirstInsight(
+              cycleInfo.phase,
+              cycleInfo.cycleDay,
+              participant.anchor_symptom || anchorSymptom
+            );
+
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            const { error: insightError } = await supabase.from("chat_messages").insert({
+              user_id: user.id,
+              role: "assistant",
+              content: firstInsight,
+              message_type: "text",
+              metadata: {
+                has_cycle_visual: true,
+                visual_type: "hormone_chart",
+                cycle_day: cycleInfo.cycleDay,
+                cycle_phase: cycleInfo.phase,
+                cycle_length_days: participant.cycle_length_days || 28,
+                insight_type: "awareness"
+              }
+            });
+
+            if (insightError) {
+              console.error("Error sending first insight:", insightError);
+            }
           }
         }
       }
