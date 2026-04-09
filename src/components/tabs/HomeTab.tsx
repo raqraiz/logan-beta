@@ -78,24 +78,53 @@ const HIM_TIPS: Record<string, string[]> = {
   ],
 };
 
+const PHASE_BORDER: Record<string, string> = {
+  Menstruation: "border-l-phase-menstruation",
+  Follicular: "border-l-phase-follicular",
+  Ovulation: "border-l-phase-ovulation",
+  Luteal: "border-l-phase-luteal",
+};
+
+const PHASE_GLOW: Record<string, string> = {
+  Menstruation: "shadow-[0_0_20px_-6px_hsl(355,78%,60%,0.15)]",
+  Follicular: "shadow-[0_0_20px_-6px_hsl(152,60%,52%,0.15)]",
+  Ovulation: "shadow-[0_0_20px_-6px_hsl(40,90%,56%,0.15)]",
+  Luteal: "shadow-[0_0_20px_-6px_hsl(270,60%,65%,0.15)]",
+};
+
 function TipCard({ label, tips, phase }: { label: string; tips: string[]; phase: string }) {
   const phaseTips = tips.length > 0 ? tips : ["No tips available for this phase."];
   const [index, setIndex] = useState(() => Math.floor(Math.random() * phaseTips.length));
+  const [animating, setAnimating] = useState(false);
 
   const rotate = useCallback(() => {
-    setIndex(prev => (prev + 1) % phaseTips.length);
+    setAnimating(true);
+    setTimeout(() => {
+      setIndex(prev => (prev + 1) % phaseTips.length);
+      setAnimating(false);
+    }, 150);
   }, [phaseTips.length]);
+
+  const borderColor = PHASE_BORDER[phase] || "border-l-primary";
+  const glow = PHASE_GLOW[phase] || "";
 
   return (
     <button
       onClick={rotate}
-      className="w-full text-left rounded-xl border border-border/50 bg-card/60 p-3 transition-all duration-200 active:scale-[0.98] hover:bg-card/80 group"
+      className={`w-full text-left rounded-xl border border-border/30 border-l-2 ${borderColor} 
+        bg-card/40 backdrop-blur-sm p-3.5 transition-all duration-200 
+        active:scale-[0.97] hover:bg-card/60 group ${glow}`}
     >
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">{label}</span>
-        <Shuffle className="w-3 h-3 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors" />
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">{label}</span>
+        <div className="flex items-center gap-1 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors">
+          <span className="text-[9px]">tap to shuffle</span>
+          <Shuffle className="w-3 h-3" />
+        </div>
       </div>
-      <p className="text-xs text-foreground/90 leading-relaxed">{phaseTips[index]}</p>
+      <p className={`text-[13px] text-foreground/85 leading-relaxed transition-opacity duration-150 ${animating ? 'opacity-0' : 'opacity-100'}`}>
+        {phaseTips[index]}
+      </p>
     </button>
   );
 }
