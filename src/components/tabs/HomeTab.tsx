@@ -1,10 +1,14 @@
 import { useState, useCallback } from "react";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
 import { CycleAnalytics } from "@/components/chat/CycleAnalytics";
+import { HormoneChart } from "@/components/chat/HormoneChart";
+import { SymptomMap } from "@/components/chat/SymptomMap";
 import { LoganLogo } from "@/components/LoganLogo";
+import { WidgetEditMode } from "@/components/home/WidgetEditMode";
+import { useWidgetPreferences } from "@/hooks/useWidgetPreferences";
 import { format } from "date-fns";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
-import { X, Shuffle } from "lucide-react";
+import { X, Shuffle, Pencil, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
@@ -15,6 +19,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+
+// ── Tip data ──────────────────────────────────────────────
 
 const DONT_MESS_UP_HER: Record<string, string[]> = {
   Menstruation: [
@@ -140,6 +146,8 @@ const SUCCEED_HIM: Record<string, string[]> = {
   ],
 };
 
+// ── Phase styling ─────────────────────────────────────────
+
 const PHASE_BORDER: Record<string, string> = {
   Menstruation: "border-l-phase-menstruation",
   Follicular: "border-l-phase-follicular",
@@ -153,6 +161,8 @@ const PHASE_GLOW: Record<string, string> = {
   Ovulation: "shadow-[0_0_20px_-6px_hsl(40,90%,56%,0.15)]",
   Luteal: "shadow-[0_0_20px_-6px_hsl(270,60%,65%,0.15)]",
 };
+
+// ── TipCard ───────────────────────────────────────────────
 
 function TipCard({ label, tips, phase }: { label: string; tips: string[]; phase: string }) {
   const phaseTips = tips.length > 0 ? tips : ["No tips available for this phase."];
@@ -191,6 +201,8 @@ function TipCard({ label, tips, phase }: { label: string; tips: string[]; phase:
   );
 }
 
+// ── Types ─────────────────────────────────────────────────
+
 interface CycleData {
   cycleDay: number;
   phase: string;
@@ -206,7 +218,9 @@ interface HomeTabProps {
   userId?: string;
 }
 
-export function HomeTab({ cycleData, onPeriodUpdate, onCycleLengthUpdate, userId }: HomeTabProps) {
+// ── HomeTab ───────────────────────────────────────────────
+
+export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengthUpdate, userId }: HomeTabProps) {
   useTrackFeature("home_tab");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
@@ -214,6 +228,9 @@ export function HomeTab({ cycleData, onPeriodUpdate, onCycleLengthUpdate, userId
   const [editedLength, setEditedLength] = useState<number>(28);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+
+  const { widgets, loading, save, moveWidget, toggleWidget } = useWidgetPreferences(userId);
 
   if (!cycleData) {
     return (
@@ -227,68 +244,148 @@ export function HomeTab({ cycleData, onPeriodUpdate, onCycleLengthUpdate, userId
     );
   }
 
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center pb-16">
-      <button
-        onClick={() => setShowAnalytics(true)}
-        className="cursor-pointer transition-transform duration-200 active:scale-95 hover:scale-[1.02]"
-        aria-label="View cycle analytics"
-      >
-        <ChatCycleCircle
-          cycleDay={cycleData.cycleDay}
-          phase={cycleData.phase}
-          cycleLengthDays={cycleData.cycleLengthDays}
-          size="md"
-        />
-      </button>
-      <p className="text-sm text-muted-foreground mt-3">
-        {format(new Date(), "EEEE, MMMM d")}
-      </p>
-      <p className="text-xs text-muted-foreground mt-1">
-        Day {cycleData.cycleDay} of {cycleData.cycleLengthDays}
-      </p>
+  const visibleWidgets = widgets.filter(w => w.visible);
 
-      {/* Subtle accuracy check */}
-      {!dismissed && (
-        <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground/70">
-          <span>Not accurate?</span>
-          <button
-            onClick={() => {
-              setEditedLength(cycleData.cycleLengthDays);
-              setShowDatePicker(true);
-            }}
-            className="underline underline-offset-2 hover:text-foreground transition-colors"
-          >
-            Update period date
-          </button>
-          <button
-            onClick={() => setDismissed(true)}
-            className="ml-1 hover:text-foreground transition-colors"
-          >
-            <X className="w-3 h-3" />
-          </button>
+  const renderWidget = (id: string) => {
+    switch (id) {
+      case "cycle_circle":
+        return (
+          <div className="flex flex-col items-center" key={id}>
+            <button
+              onClick={() => setShowAnalytics(true)}
+              className="cursor-pointer transition-transform duration-200 active:scale-95 hover:scale-[1.02]"
+              aria-label="View cycle analytics"
+            >
+              <ChatCycleCircle
+                cycleDay={cycleData.cycleDay}
+                phase={cycleData.phase}
+                cycleLengthDays={cycleData.cycleLengthDays}
+                size="md"
+              />
+            </button>
+            <p className="text-sm text-muted-foreground mt-3">
+              {format(new Date(), "EEEE, MMMM d")}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Day {cycleData.cycleDay} of {cycleData.cycleLengthDays}
+            </p>
+            {!dismissed && (
+              <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground/70">
+                <span>Not accurate?</span>
+                <button
+                  onClick={() => {
+                    setEditedLength(cycleData.cycleLengthDays);
+                    setShowDatePicker(true);
+                  }}
+                  className="underline underline-offset-2 hover:text-foreground transition-colors"
+                >
+                  Update period date
+                </button>
+                <button onClick={() => setDismissed(true)} className="ml-1 hover:text-foreground transition-colors">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      case "succeed_you":
+        return (
+          <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
+              How to succeed today
+            </p>
+            <TipCard label="For you" tips={SUCCEED_HER[cycleData.phase] || []} phase={cycleData.phase} />
+          </div>
+        );
+      case "succeed_him":
+        return (
+          <div className="w-full max-w-xs" key={id}>
+            <TipCard label="For him" tips={SUCCEED_HIM[cycleData.phase] || []} phase={cycleData.phase} />
+          </div>
+        );
+      case "dontmessup_you":
+        return (
+          <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
+              How not to mess up today
+            </p>
+            <TipCard label="For you" tips={DONT_MESS_UP_HER[cycleData.phase] || []} phase={cycleData.phase} />
+          </div>
+        );
+      case "dontmessup_him":
+        return (
+          <div className="w-full max-w-xs" key={id}>
+            <TipCard label="For him" tips={DONT_MESS_UP_HIM[cycleData.phase] || []} phase={cycleData.phase} />
+          </div>
+        );
+      case "hormone_chart":
+        return (
+          <div className="w-full max-w-xs" key={id}>
+            <HormoneChart
+              cycleDay={cycleData.cycleDay}
+              phase={cycleData.phase}
+              cycleLengthDays={cycleData.cycleLengthDays}
+            />
+          </div>
+        );
+      case "symptom_map":
+        return (
+          <div className="w-full max-w-xs" key={id}>
+            <SymptomMap
+              anchorSymptom={anchorSymptom || undefined}
+              cycleDay={cycleData.cycleDay}
+              cycleLengthDays={cycleData.cycleLengthDays}
+              phase={cycleData.phase}
+            />
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="flex-1 flex flex-col items-center pb-16">
+      {/* Edit mode toggle */}
+      <div className="w-full max-w-xs flex justify-end px-2 pt-2 mb-2">
+        <Button
+          variant={editMode ? "default" : "ghost"}
+          size="sm"
+          className="gap-1.5 text-xs h-8"
+          onClick={async () => {
+            if (editMode) {
+              await save(widgets);
+            }
+            setEditMode(!editMode);
+          }}
+        >
+          {editMode ? (
+            <>
+              <Check className="w-3.5 h-3.5" />
+              Done
+            </>
+          ) : (
+            <>
+              <Pencil className="w-3.5 h-3.5" />
+              Customize
+            </>
+          )}
+        </Button>
+      </div>
+
+      {editMode ? (
+        <WidgetEditMode
+          widgets={widgets}
+          onMove={moveWidget}
+          onToggle={toggleWidget}
+        />
+      ) : (
+        <div className="flex flex-col items-center gap-4 px-2 w-full">
+          {visibleWidgets.map(w => renderWidget(w.id))}
         </div>
       )}
 
-      {/* How to succeed today */}
-      <div className="w-full max-w-xs mt-8 flex flex-col gap-3 px-2">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
-          How to succeed today
-        </p>
-        <TipCard label="For you" tips={SUCCEED_HER[cycleData.phase] || []} phase={cycleData.phase} />
-        <TipCard label="For him" tips={SUCCEED_HIM[cycleData.phase] || []} phase={cycleData.phase} />
-      </div>
-
-      {/* How not to mess up today */}
-      <div className="w-full max-w-xs mt-5 flex flex-col gap-3 px-2">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
-          How not to mess up today
-        </p>
-        <TipCard label="For you" tips={DONT_MESS_UP_HER[cycleData.phase] || []} phase={cycleData.phase} />
-        <TipCard label="For him" tips={DONT_MESS_UP_HIM[cycleData.phase] || []} phase={cycleData.phase} />
-      </div>
-
-      {/* Date picker dialog with inline cycle length */}
+      {/* Date picker dialog */}
       <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
         <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader>
@@ -306,8 +403,6 @@ export function HomeTab({ cycleData, onPeriodUpdate, onCycleLengthUpdate, userId
               className="p-3 pointer-events-auto"
             />
           </div>
-
-          {/* Subtle cycle length adjuster */}
           <div className="flex items-center justify-between gap-3 px-1">
             <span className="text-xs text-muted-foreground whitespace-nowrap">Cycle length</span>
             <div className="flex items-center gap-2 flex-1 max-w-[180px]">
@@ -322,21 +417,14 @@ export function HomeTab({ cycleData, onPeriodUpdate, onCycleLengthUpdate, userId
               <span className="text-xs font-medium text-muted-foreground w-12 text-right">{editedLength} days</span>
             </div>
           </div>
-
           <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setShowDatePicker(false)}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setShowDatePicker(false)}>Cancel</Button>
             <Button
               onClick={async () => {
                 setIsSubmitting(true);
                 try {
-                  if (selectedDate && onPeriodUpdate) {
-                    await onPeriodUpdate(selectedDate);
-                  }
-                  if (editedLength !== cycleData.cycleLengthDays && onCycleLengthUpdate) {
-                    await onCycleLengthUpdate(editedLength);
-                  }
+                  if (selectedDate && onPeriodUpdate) await onPeriodUpdate(selectedDate);
+                  if (editedLength !== cycleData.cycleLengthDays && onCycleLengthUpdate) await onCycleLengthUpdate(editedLength);
                   setShowDatePicker(false);
                   setSelectedDate(undefined);
                 } finally {
