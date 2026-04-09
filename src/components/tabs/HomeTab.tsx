@@ -338,6 +338,22 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   }
 
   const visibleWidgets = widgets.filter(w => w.visible);
+  const isNonCycling = cycleData.lifeStage && cycleData.lifeStage !== "cycling";
+  const stagePhase = isNonCycling
+    ? (cycleData.lifeStage === "postpartum" ? "Postpartum" : "Menopause")
+    : cycleData.phase;
+
+  // Helper to get life-stage-aware tips
+  const getTipsHer = (widgetId: string): string[] => {
+    if (cycleData.lifeStage === "postpartum") return POSTPARTUM_HER;
+    if (cycleData.lifeStage === "menopause") return MENOPAUSE_HER;
+    return widgetId.startsWith("succeed") ? (SUCCEED_HER[cycleData.phase] || []) : (DONT_MESS_UP_HER[cycleData.phase] || []);
+  };
+  const getTipsHim = (widgetId: string): string[] => {
+    if (cycleData.lifeStage === "postpartum") return POSTPARTUM_HIM;
+    if (cycleData.lifeStage === "menopause") return MENOPAUSE_HIM;
+    return widgetId.startsWith("succeed") ? (SUCCEED_HIM[cycleData.phase] || []) : (DONT_MESS_UP_HIM[cycleData.phase] || []);
+  };
 
   const renderWidget = (widget: typeof widgets[number]) => {
     const id = widget.id;
