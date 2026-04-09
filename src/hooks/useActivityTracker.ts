@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-
+import type { Json } from "@/integrations/supabase/types";
 /**
  * Tracks user activity (page views, clicks, tab switches, widget interactions)
  * and batches inserts to avoid spamming the database.
@@ -12,7 +12,7 @@ interface ActivityEvent {
   page_path: string;
   element_label: string | null;
   element_type: string | null;
-  metadata: Record<string, unknown>;
+  metadata: Json;
 }
 
 const FLUSH_INTERVAL = 5000; // flush every 5 seconds
@@ -49,7 +49,7 @@ export function useActivityTracker(userId?: string) {
         page_path: window.location.pathname,
         element_label: opts?.elementLabel || null,
         element_type: opts?.elementType || null,
-        metadata: opts?.metadata || {},
+        metadata: (opts?.metadata || {}) as Json,
       });
       if (bufferRef.current.length >= MAX_BUFFER) flush();
     },
