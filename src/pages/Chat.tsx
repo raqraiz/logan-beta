@@ -118,6 +118,12 @@ const Chat = () => {
   
   const { user, loading: authLoading, signOut } = useAuth();
   usePresence(user?.id, user?.email || undefined, user?.user_metadata?.full_name);
+  const { trackTabSwitch, trackPageView } = useActivityTracker(user?.id);
+
+  // Track initial page view
+  useEffect(() => {
+    trackPageView(window.location.pathname);
+  }, [trackPageView]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
