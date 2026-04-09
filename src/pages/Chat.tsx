@@ -618,6 +618,8 @@ const Chat = () => {
     } catch (error) {
       console.error("Error sending message:", error);
       toast({ title: "Failed to send message", variant: "destructive" });
+      // Remove optimistic message and restore input
+      setMessages(prev => prev.filter(m => m.id !== optimisticId));
       setInputValue(messageContent);
     } finally {
       setIsSending(false);
