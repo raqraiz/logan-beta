@@ -602,7 +602,6 @@ const Chat = () => {
           message_type: "text",
           created_at: new Date().toISOString(),
           user_id: user.id,
-          metadata: data.cycleInfo ? { cycle_day: data.cycleInfo.cycleDay, phase: data.cycleInfo.phase } : undefined,
         };
         setMessages(prev => {
           // Only add if realtime hasn't already delivered a newer assistant message
