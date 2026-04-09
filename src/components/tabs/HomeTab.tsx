@@ -384,7 +384,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
         />
       ) : (
         <div className="flex flex-col items-center gap-4 px-2 w-full">
-          {visibleWidgets.map(w => renderWidget(w.id))}
+          {visibleWidgets.map(w => renderWidget(w))}
         </div>
       )}
 
