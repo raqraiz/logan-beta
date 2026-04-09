@@ -282,6 +282,30 @@ export type Database = {
           },
         ]
       }
+      home_widget_preferences: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          widget_order: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          widget_order?: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          widget_order?: Json
+        }
+        Relationships: []
+      }
       insights: {
         Row: {
           admin_notes: string | null
