@@ -120,20 +120,23 @@ export const EngagementTab = () => {
       let totalSessions = 0;
 
       const userEngagements: UserEngagement[] = profiles.map((p) => {
-        const timestamps = (messagesByUser.get(p.id) || []).map((t) => new Date(t).getTime()).sort();
-        const totalMessages = timestamps.length;
+        const msgTimestamps = (messagesByUser.get(p.id) || []).map((t) => new Date(t).getTime()).sort();
+        const totalMessages = msgTimestamps.length;
 
-        // Calculate sessions
+        // Use combined activity (messages + events) for sessions & last active
+        const allTimestamps = (allActivityByUser.get(p.id) || []).map((t) => new Date(t).getTime()).sort();
+
+        // Calculate sessions from all activity
         let sessions = 0;
-        if (timestamps.length > 0) {
+        if (allTimestamps.length > 0) {
           sessions = 1;
-          for (let i = 1; i < timestamps.length; i++) {
-            if (timestamps[i] - timestamps[i - 1] > SESSION_GAP_MS) sessions++;
+          for (let i = 1; i < allTimestamps.length; i++) {
+            if (allTimestamps[i] - allTimestamps[i - 1] > SESSION_GAP_MS) sessions++;
           }
         }
         totalSessions += sessions;
 
-        const lastActive = timestamps.length > 0 ? new Date(timestamps[timestamps.length - 1]).toISOString() : null;
+        const lastActive = allTimestamps.length > 0 ? new Date(allTimestamps[allTimestamps.length - 1]).toISOString() : null;
         if (lastActive && new Date(lastActive) >= todayStart) activeToday++;
         if (lastActive && new Date(lastActive) >= weekAgo) activeThisWeek++;
 
@@ -152,7 +155,7 @@ export const EngagementTab = () => {
       // Sort by total messages desc
       userEngagements.sort((a, b) => b.totalMessages - a.totalMessages);
 
-      // Daily activity for last 30 days
+      // Daily activity for last 30 days — count active users from both sources
       const days = 30;
       const dailyMap = new Map<string, { messages: number; users: Set<string> }>();
       for (let i = 0; i < days; i++) {
@@ -164,6 +167,12 @@ export const EngagementTab = () => {
         if (dailyMap.has(d)) {
           dailyMap.get(d)!.messages++;
           dailyMap.get(d)!.users.add(msg.user_id);
+        }
+      }
+      for (const evt of allActivity) {
+        const d = format(new Date(evt.created_at), "yyyy-MM-dd");
+        if (dailyMap.has(d)) {
+          dailyMap.get(d)!.users.add(evt.user_id);
         }
       }
       const daily: DailyActivity[] = Array.from(dailyMap.entries())
