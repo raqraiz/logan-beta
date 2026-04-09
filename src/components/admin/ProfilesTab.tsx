@@ -862,6 +862,27 @@ export function ProfilesTab() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Home Preview Dialog */}
+        <Dialog open={showHomePreview} onOpenChange={setShowHomePreview}>
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0">
+            <DialogHeader className="px-4 pt-4 pb-0">
+              <DialogTitle className="text-sm font-medium flex items-center gap-2">
+                <Home className="w-4 h-4" />
+                {profile.full_name}'s Home
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Preview of this user's personalized home tab
+              </DialogDescription>
+            </DialogHeader>
+            <div className="px-2 pb-4 pointer-events-none">
+              <HomeTab
+                cycleData={cycleData}
+                userId={profile.id}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
