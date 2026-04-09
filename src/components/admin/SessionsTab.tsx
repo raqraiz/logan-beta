@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Circle, Clock, Users, Activity, TrendingUp } from "lucide-react";
+import { RefreshCw, Circle, Clock, Users, Activity, TrendingUp, ChevronDown, ChevronRight, MessageSquare } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, subDays, differenceInMinutes } from "date-fns";
 import {
@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface OnlineUser {
   user_id: string;
@@ -39,6 +40,13 @@ interface SessionRecord {
   messageCount: number;
 }
 
+interface ChatMessage {
+  id: string;
+  role: string;
+  content: string;
+  created_at: string;
+}
+
 interface DailySessionStats {
   date: string;
   sessions: number;
@@ -46,17 +54,83 @@ interface DailySessionStats {
 }
 
 const SESSION_GAP_MS = 30 * 60 * 1000;
+const SESSIONS_PER_PAGE = 20;
 
 const chartConfig = {
   sessions: { label: "Sessions", color: "hsl(var(--primary))" },
   avgDuration: { label: "Avg Duration (min)", color: "hsl(var(--accent))" },
 } satisfies ChartConfig;
 
+/* ── Session Detail (expandable row) ─────────────────────── */
+
+function SessionDetail({ session }: { session: SessionRecord }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("chat_messages")
+        .select("id, role, content, created_at")
+        .eq("user_id", session.userId)
+        .gte("created_at", session.startTime)
+        .lte("created_at", session.endTime)
+        .order("created_at", { ascending: true });
+      setMessages(data || []);
+      setLoading(false);
+    })();
+  }, [session]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 py-4 px-6 text-muted-foreground text-sm">
+        <RefreshCw className="w-3 h-3 animate-spin" /> Loading messages…
+      </div>
+    );
+  }
+
+  if (messages.length === 0) {
+    return (
+      <p className="py-4 px-6 text-sm text-muted-foreground">No messages found for this session.</p>
+    );
+  }
+
+  return (
+    <ScrollArea className="max-h-[400px]">
+      <div className="px-6 py-3 space-y-2">
+        {messages.map((m) => (
+          <div
+            key={m.id}
+            className={`flex gap-2 text-sm ${m.role === "user" ? "justify-end" : "justify-start"}`}
+          >
+            <div
+              className={`max-w-[80%] rounded-lg px-3 py-2 ${
+                m.role === "user"
+                  ? "bg-primary/15 text-foreground"
+                  : "bg-muted/50 text-foreground/80"
+              }`}
+            >
+              <p className="text-[10px] text-muted-foreground/60 mb-0.5">
+                {m.role === "user" ? session.fullName : "Logan"} · {format(new Date(m.created_at), "h:mm a")}
+              </p>
+              <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{m.content}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </ScrollArea>
+  );
+}
+
+/* ── Main Tab ─────────────────────────────────────────────── */
+
 export const SessionsTab = () => {
   const [loading, setLoading] = useState(true);
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
-  const [recentSessions, setRecentSessions] = useState<SessionRecord[]>([]);
+  const [allSessions, setAllSessions] = useState<SessionRecord[]>([]);
   const [dailyStats, setDailyStats] = useState<DailySessionStats[]>([]);
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  const [page, setPage] = useState(0);
   const [totals, setTotals] = useState({
     totalSessions: 0,
     avgDuration: 0,
@@ -89,7 +163,7 @@ export const SessionsTab = () => {
     };
   }, []);
 
-  const fetchSessionData = async () => {
+  const fetchSessionData = useCallback(async () => {
     setLoading(true);
     try {
       const now = new Date();
@@ -142,7 +216,6 @@ export const SessionsTab = () => {
 
         for (let i = 1; i < sorted.length; i++) {
           if (sorted[i] - sorted[i - 1] > SESSION_GAP_MS) {
-            // Close previous session
             const dur = Math.max(1, Math.round(differenceInMinutes(new Date(sessionEnd), new Date(sessionStart))));
             sessions.push({
               userId,
@@ -162,7 +235,6 @@ export const SessionsTab = () => {
             msgCount++;
           }
         }
-        // Close last session
         const dur = Math.max(1, Math.round(differenceInMinutes(new Date(sessionEnd), new Date(sessionStart))));
         sessions.push({
           userId,
@@ -176,7 +248,6 @@ export const SessionsTab = () => {
         hourCounts[new Date(sessionStart).getHours()]++;
       }
 
-      // Sort by most recent
       sessions.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
 
       // Daily stats
@@ -200,17 +271,14 @@ export const SessionsTab = () => {
         }))
         .reverse();
 
-      // Peak hour
       const peakHourIdx = hourCounts.indexOf(Math.max(...hourCounts));
       const peakHour = `${peakHourIdx.toString().padStart(2, "0")}:00`;
 
-      // Totals
       const totalDuration = sessions.reduce((a, s) => a + s.durationMin, 0);
       const longestSession = sessions.length > 0 ? Math.max(...sessions.map((s) => s.durationMin)) : 0;
       const longestSessionRecord = sessions.find((s) => s.durationMin === longestSession);
       const longestSessionUser = longestSessionRecord?.fullName || "";
 
-      // Per-user avg: average each user's mean session duration
       const userDurations = new Map<string, number[]>();
       for (const s of sessions) {
         if (!userDurations.has(s.userId)) userDurations.set(s.userId, []);
@@ -223,7 +291,9 @@ export const SessionsTab = () => {
         ? Math.round(perUserAvgs.reduce((a, b) => a + b, 0) / perUserAvgs.length)
         : 0;
 
-      setRecentSessions(sessions.slice(0, 50));
+      setAllSessions(sessions);
+      setPage(0);
+      setExpandedIdx(null);
       setDailyStats(daily);
       setTotals({
         totalSessions: sessions.length,
@@ -238,11 +308,14 @@ export const SessionsTab = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchSessionData();
-  }, []);
+  }, [fetchSessionData]);
+
+  const totalPages = Math.ceil(allSessions.length / SESSIONS_PER_PAGE);
+  const paginatedSessions = allSessions.slice(page * SESSIONS_PER_PAGE, (page + 1) * SESSIONS_PER_PAGE);
 
   if (loading) {
     return (
@@ -372,15 +445,19 @@ export const SessionsTab = () => {
         </CardContent>
       </Card>
 
-      {/* Recent Sessions Table */}
+      {/* Sessions Table with expandable detail */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Recent Sessions</CardTitle>
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            All Sessions ({allSessions.length})
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-8"></TableHead>
                 <TableHead>User</TableHead>
                 <TableHead>When</TableHead>
                 <TableHead className="text-right">Duration</TableHead>
@@ -388,25 +465,76 @@ export const SessionsTab = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recentSessions.slice(0, 20).map((s, i) => (
-                <TableRow key={i}>
-                  <TableCell className="font-medium text-sm">{s.fullName}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {format(new Date(s.startTime), "MMM d, h:mm a")}
-                  </TableCell>
-                  <TableCell className="text-right text-sm">{s.durationMin}m</TableCell>
-                  <TableCell className="text-right text-sm">{s.messageCount}</TableCell>
-                </TableRow>
-              ))}
-              {recentSessions.length === 0 && (
+              {paginatedSessions.map((s, i) => {
+                const globalIdx = page * SESSIONS_PER_PAGE + i;
+                const isExpanded = expandedIdx === globalIdx;
+                return (
+                  <>
+                    <TableRow
+                      key={globalIdx}
+                      className="cursor-pointer hover:bg-muted/30 transition-colors"
+                      onClick={() => setExpandedIdx(isExpanded ? null : globalIdx)}
+                    >
+                      <TableCell className="w-8 pr-0">
+                        {isExpanded ? (
+                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium text-sm">{s.fullName}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {format(new Date(s.startTime), "MMM d, h:mm a")}
+                      </TableCell>
+                      <TableCell className="text-right text-sm">{s.durationMin}m</TableCell>
+                      <TableCell className="text-right text-sm">{s.messageCount}</TableCell>
+                    </TableRow>
+                    {isExpanded && (
+                      <TableRow key={`${globalIdx}-detail`}>
+                        <TableCell colSpan={5} className="p-0 bg-muted/10 border-t border-border/20">
+                          <SessionDetail session={s} />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </>
+                );
+              })}
+              {allSessions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-4">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-4">
                     No sessions found
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4">
+              <p className="text-xs text-muted-foreground">
+                Page {page + 1} of {totalPages}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 0}
+                  onClick={() => { setPage(p => p - 1); setExpandedIdx(null); }}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => { setPage(p => p + 1); setExpandedIdx(null); }}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
