@@ -133,6 +133,7 @@ export function ProfilesTab() {
     anchor_symptom: "", typical_symptoms: "", goals: "", timezone: "Asia/Jerusalem",
   });
   const [saving, setSaving] = useState(false);
+  const [showHomePreview, setShowHomePreview] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
