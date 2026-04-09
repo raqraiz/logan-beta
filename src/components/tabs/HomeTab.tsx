@@ -230,7 +230,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   const [dismissed, setDismissed] = useState(false);
   const [editMode, setEditMode] = useState(false);
 
-  const { widgets, loading, save, moveWidget, toggleWidget } = useWidgetPreferences(userId);
+  const { widgets, loading, save, toggleWidget, renameWidget, setWidgets } = useWidgetPreferences(userId);
 
   if (!cycleData) {
     return (
@@ -376,8 +376,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       {editMode ? (
         <WidgetEditMode
           widgets={widgets}
-          onMove={moveWidget}
           onToggle={toggleWidget}
+          onRename={renameWidget}
+          onReorder={setWidgets}
         />
       ) : (
         <div className="flex flex-col items-center gap-4 px-2 w-full">
