@@ -91,6 +91,7 @@ interface CycleData {
   phase: string;
   cycleLengthDays: number;
   lastPeriodStart?: string;
+  lifeStage?: "cycling" | "postpartum" | "menopause";
 }
 
 const MESSAGES_PER_PAGE = 100;
