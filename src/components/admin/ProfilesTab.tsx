@@ -894,7 +894,17 @@ export function ProfilesTab() {
             </DialogHeader>
             <div className="px-2 pb-4 pointer-events-none">
               <HomeTab
-                cycleData={cycleData ? { ...cycleData, cycleLengthDays: participant?.cycle_length_days || 28, lastPeriodStart: participant?.last_period_start || undefined } : null}
+                cycleData={cycleData ? { 
+                  ...cycleData, 
+                  cycleLengthDays: participant?.cycle_length_days || 28, 
+                  lastPeriodStart: participant?.last_period_start || undefined,
+                  lifeStage: (participant?.life_stage as any) || "cycling",
+                } : participant?.life_stage && participant.life_stage !== "cycling" ? {
+                  cycleDay: 0,
+                  phase: participant.life_stage === "postpartum" ? "Postpartum" : "Menopause",
+                  cycleLengthDays: 0,
+                  lifeStage: participant.life_stage as "postpartum" | "menopause",
+                } : null}
                 userId={profile.id}
               />
             </div>
