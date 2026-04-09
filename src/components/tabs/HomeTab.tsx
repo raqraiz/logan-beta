@@ -416,7 +416,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
               {label}
             </p>
-            <TipCard label="For you" tips={SUCCEED_HER[cycleData.phase] || []} phase={cycleData.phase} widgetId="succeed_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
+            <TipCard label="For you" tips={getTipsHer("succeed")} phase={stagePhase} widgetId="succeed_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
           </div>
         );
       case "succeed_him":
@@ -425,7 +425,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
               {label}
             </p>
-            <TipCard label="For him" tips={SUCCEED_HIM[cycleData.phase] || []} phase={cycleData.phase} widgetId="succeed_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
+            <TipCard label="For him" tips={getTipsHim("succeed")} phase={stagePhase} widgetId="succeed_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
           </div>
         );
       case "dontmessup_you":
@@ -434,7 +434,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
               {label}
             </p>
-            <TipCard label="For you" tips={DONT_MESS_UP_HER[cycleData.phase] || []} phase={cycleData.phase} widgetId="dontmessup_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
+            <TipCard label="For you" tips={getTipsHer("dontmessup")} phase={stagePhase} widgetId="dontmessup_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
           </div>
         );
       case "dontmessup_him":
@@ -443,10 +443,12 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
               {label}
             </p>
-            <TipCard label="For him" tips={DONT_MESS_UP_HIM[cycleData.phase] || []} phase={cycleData.phase} widgetId="dontmessup_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
+            <TipCard label="For him" tips={getTipsHim("dontmessup")} phase={stagePhase} widgetId="dontmessup_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
           </div>
         );
       case "hormone_chart":
+        // Hide hormone chart for non-cycling users — not applicable
+        if (isNonCycling) return null;
         return (
           <div className="w-full max-w-xs" key={id}>
             <HormoneChart
