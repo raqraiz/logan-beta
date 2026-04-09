@@ -151,11 +151,47 @@ const SUCCEED_HIM: Record<string, string[]> = {
 
 // ── Phase styling ─────────────────────────────────────────
 
+// ── Postpartum & Menopause tips ──────────────────────────
+
+const POSTPARTUM_HER: string[] = [
+  "Rest is not laziness — it's how your body heals. Protect your sleep fiercely.",
+  "Your hormones are recalibrating. Mood swings are normal, not weakness.",
+  "Eat nutrient-dense meals. Your body is rebuilding — feed it like it matters.",
+  "Accept help without guilt. You don't get extra points for doing it all alone.",
+  "Move gently when you're ready — a short walk counts as a win.",
+];
+
+const POSTPARTUM_HIM: string[] = [
+  "She's recovering from the most physically intense thing a body can do. Act accordingly.",
+  "Don't wait to be asked — look around and handle what needs handling.",
+  "Tell her she's doing an amazing job. She won't believe it, but she needs to hear it.",
+  "Take the night shift or the early morning. One unbroken sleep cycle changes everything.",
+  "Her body changed to create life. Don't comment on it. Just love her louder.",
+];
+
+const MENOPAUSE_HER: string[] = [
+  "Hot flashes are your body adjusting, not breaking. They will pass.",
+  "Strength training protects your bones now more than ever. Start or keep going.",
+  "Brain fog is hormonal, not permanent. Write things down and give yourself grace.",
+  "Prioritize calcium, vitamin D, and magnesium. Your skeleton is counting on you.",
+  "This isn't an ending — it's a reinvention. Many women feel their most free after menopause.",
+];
+
+const MENOPAUSE_HIM: string[] = [
+  "She can't control the hot flashes. Don't joke about them. Just adjust the thermostat.",
+  "Her mood shifts aren't about you. Show up with patience, not defensiveness.",
+  "Ask how she's feeling — and actually listen without trying to fix it.",
+  "Encourage her interests and goals. This chapter has enormous potential.",
+  "Physical affection matters even when intimacy changes. Hold her hand. Hug her longer.",
+];
+
 const PHASE_BORDER: Record<string, string> = {
   Menstruation: "border-l-phase-menstruation",
   Follicular: "border-l-phase-follicular",
   Ovulation: "border-l-phase-ovulation",
   Luteal: "border-l-phase-luteal",
+  Postpartum: "border-l-pink-400",
+  Menopause: "border-l-amber-400",
 };
 
 const PHASE_GLOW: Record<string, string> = {
@@ -163,6 +199,8 @@ const PHASE_GLOW: Record<string, string> = {
   Follicular: "shadow-[0_0_20px_-6px_hsl(152,60%,52%,0.15)]",
   Ovulation: "shadow-[0_0_20px_-6px_hsl(40,90%,56%,0.15)]",
   Luteal: "shadow-[0_0_20px_-6px_hsl(270,60%,65%,0.15)]",
+  Postpartum: "shadow-[0_0_20px_-6px_hsl(330,80%,65%,0.15)]",
+  Menopause: "shadow-[0_0_20px_-6px_hsl(45,96%,56%,0.15)]",
 };
 
 // ── TipCard ───────────────────────────────────────────────
@@ -172,6 +210,8 @@ const PHASE_BG_ACCENT: Record<string, string> = {
   Follicular: "from-phase-follicular/8 to-transparent",
   Ovulation: "from-phase-ovulation/8 to-transparent",
   Luteal: "from-phase-luteal/8 to-transparent",
+  Postpartum: "from-pink-400/8 to-transparent",
+  Menopause: "from-amber-400/8 to-transparent",
 };
 
 function TipCard({
@@ -298,6 +338,22 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   }
 
   const visibleWidgets = widgets.filter(w => w.visible);
+  const isNonCycling = cycleData.lifeStage && cycleData.lifeStage !== "cycling";
+  const stagePhase = isNonCycling
+    ? (cycleData.lifeStage === "postpartum" ? "Postpartum" : "Menopause")
+    : cycleData.phase;
+
+  // Helper to get life-stage-aware tips
+  const getTipsHer = (widgetId: string): string[] => {
+    if (cycleData.lifeStage === "postpartum") return POSTPARTUM_HER;
+    if (cycleData.lifeStage === "menopause") return MENOPAUSE_HER;
+    return widgetId.startsWith("succeed") ? (SUCCEED_HER[cycleData.phase] || []) : (DONT_MESS_UP_HER[cycleData.phase] || []);
+  };
+  const getTipsHim = (widgetId: string): string[] => {
+    if (cycleData.lifeStage === "postpartum") return POSTPARTUM_HIM;
+    if (cycleData.lifeStage === "menopause") return MENOPAUSE_HIM;
+    return widgetId.startsWith("succeed") ? (SUCCEED_HIM[cycleData.phase] || []) : (DONT_MESS_UP_HIM[cycleData.phase] || []);
+  };
 
   const renderWidget = (widget: typeof widgets[number]) => {
     const id = widget.id;
@@ -360,7 +416,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
               {label}
             </p>
-            <TipCard label="For you" tips={SUCCEED_HER[cycleData.phase] || []} phase={cycleData.phase} widgetId="succeed_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
+            <TipCard label="For you" tips={getTipsHer("succeed")} phase={stagePhase} widgetId="succeed_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
           </div>
         );
       case "succeed_him":
@@ -369,7 +425,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
               {label}
             </p>
-            <TipCard label="For him" tips={SUCCEED_HIM[cycleData.phase] || []} phase={cycleData.phase} widgetId="succeed_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
+            <TipCard label="For him" tips={getTipsHim("succeed")} phase={stagePhase} widgetId="succeed_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
           </div>
         );
       case "dontmessup_you":
@@ -378,7 +434,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
               {label}
             </p>
-            <TipCard label="For you" tips={DONT_MESS_UP_HER[cycleData.phase] || []} phase={cycleData.phase} widgetId="dontmessup_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
+            <TipCard label="For you" tips={getTipsHer("dontmessup")} phase={stagePhase} widgetId="dontmessup_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
           </div>
         );
       case "dontmessup_him":
@@ -387,10 +443,12 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
               {label}
             </p>
-            <TipCard label="For him" tips={DONT_MESS_UP_HIM[cycleData.phase] || []} phase={cycleData.phase} widgetId="dontmessup_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
+            <TipCard label="For him" tips={getTipsHim("dontmessup")} phase={stagePhase} widgetId="dontmessup_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
           </div>
         );
       case "hormone_chart":
+        // Hide hormone chart for non-cycling users — not applicable
+        if (isNonCycling) return null;
         return (
           <div className="w-full max-w-xs" key={id}>
             <HormoneChart
