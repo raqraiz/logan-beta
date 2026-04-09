@@ -206,6 +206,151 @@ function SessionDetail({ session }: { session: SessionRecord }) {
   );
 }
 
+/* ── Page Popularity Summary ──────────────────────────────── */
+
+interface PopularityItem {
+  label: string;
+  count: number;
+  type: "page" | "click";
+}
+
+function PagePopularitySummary() {
+  const [items, setItems] = useState<PopularityItem[]>([]);
+  const [clickItems, setClickItems] = useState<PopularityItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      // Fetch page view counts
+      const { data: pageData } = await supabase
+        .from("user_activity_events")
+        .select("page_path")
+        .eq("event_type", "page_view");
+
+      // Fetch click counts
+      const { data: clickData } = await supabase
+        .from("user_activity_events")
+        .select("element_label, element_type")
+        .eq("event_type", "click");
+
+      // Aggregate page views
+      const pageCounts = new Map<string, number>();
+      for (const row of pageData || []) {
+        const p = row.page_path || "unknown";
+        pageCounts.set(p, (pageCounts.get(p) || 0) + 1);
+      }
+      const pages: PopularityItem[] = Array.from(pageCounts.entries())
+        .map(([label, count]) => ({ label, count, type: "page" as const }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+      // Aggregate clicks — group by label
+      const clickCounts = new Map<string, number>();
+      for (const row of clickData || []) {
+        const label = row.element_label?.slice(0, 40) || "unknown";
+        clickCounts.set(label, (clickCounts.get(label) || 0) + 1);
+      }
+      const clicks: PopularityItem[] = Array.from(clickCounts.entries())
+        .map(([label, count]) => ({ label, count, type: "click" as const }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+      setItems(pages);
+      setClickItems(clicks);
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-6 flex items-center justify-center">
+          <RefreshCw className="w-4 h-4 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const maxPageCount = items.length > 0 ? items[0].count : 1;
+  const maxClickCount = clickItems.length > 0 ? clickItems[0].count : 1;
+
+  const TAB_LABELS: Record<string, string> = {
+    "/chat/home": "Home",
+    "/chat/ask": "Ask (Chat)",
+    "/chat/plan": "Plan",
+    "/": "Landing",
+    "/chat": "Chat (legacy)",
+  };
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Pages / Tabs */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Eye className="w-4 h-4 text-blue-400" />
+            Most Visited Pages & Tabs
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {items.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No page view data yet</p>
+          ) : items.map((item, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground w-5 text-right">{i + 1}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-xs font-medium truncate">
+                    {TAB_LABELS[item.label] || item.label}
+                  </span>
+                  <span className="text-xs text-muted-foreground ml-2 shrink-0">{item.count}</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-blue-500/60"
+                    style={{ width: `${(item.count / maxPageCount) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Most Clicked */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <MousePointerClick className="w-4 h-4 text-primary" />
+            Most Clicked Elements
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {clickItems.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No click data yet</p>
+          ) : clickItems.map((item, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground w-5 text-right">{i + 1}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-xs font-medium truncate">{item.label}</span>
+                  <span className="text-xs text-muted-foreground ml-2 shrink-0">{item.count}</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-primary/60"
+                    style={{ width: `${(item.count / maxClickCount) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 /* ── Main Tab ─────────────────────────────────────────────── */
 
 export const SessionsTab = () => {
