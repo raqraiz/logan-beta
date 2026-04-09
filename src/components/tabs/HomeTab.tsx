@@ -294,14 +294,17 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
         return (
           <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
-              How to succeed today
+              {label}
             </p>
             <TipCard label="For you" tips={SUCCEED_HER[cycleData.phase] || []} phase={cycleData.phase} />
           </div>
         );
       case "succeed_him":
         return (
-          <div className="w-full max-w-xs" key={id}>
+          <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
+              {label}
+            </p>
             <TipCard label="For him" tips={SUCCEED_HIM[cycleData.phase] || []} phase={cycleData.phase} />
           </div>
         );
@@ -309,14 +312,17 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
         return (
           <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
-              How not to mess up today
+              {label}
             </p>
             <TipCard label="For you" tips={DONT_MESS_UP_HER[cycleData.phase] || []} phase={cycleData.phase} />
           </div>
         );
       case "dontmessup_him":
         return (
-          <div className="w-full max-w-xs" key={id}>
+          <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
+              {label}
+            </p>
             <TipCard label="For him" tips={DONT_MESS_UP_HIM[cycleData.phase] || []} phase={cycleData.phase} />
           </div>
         );
