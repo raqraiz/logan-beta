@@ -1,55 +1,161 @@
-import { ChevronUp, ChevronDown, Eye, EyeOff } from "lucide-react";
-import { WidgetConfig, WIDGET_LABELS } from "@/hooks/useWidgetPreferences";
+import { useState } from "react";
+import { Eye, EyeOff, GripVertical, Pencil, Check } from "lucide-react";
+import { WidgetConfig, getWidgetLabel, DEFAULT_WIDGET_LABELS } from "@/hooks/useWidgetPreferences";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Input } from "@/components/ui/input";
 
 interface WidgetEditModeProps {
   widgets: WidgetConfig[];
-  onMove: (index: number, direction: "up" | "down") => void;
   onToggle: (id: string) => void;
+  onRename: (id: string, newTitle: string) => void;
+  onReorder: (widgets: WidgetConfig[]) => void;
 }
 
-export function WidgetEditMode({ widgets, onMove, onToggle }: WidgetEditModeProps) {
+function SortableWidgetItem({
+  widget,
+  onToggle,
+  onRename,
+}: {
+  widget: WidgetConfig;
+  onToggle: (id: string) => void;
+  onRename: (id: string, newTitle: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(getWidgetLabel(widget));
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: widget.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
   return (
-    <div className="w-full max-w-xs mx-auto flex flex-col gap-2 px-2">
-      {widgets.map((widget, idx) => (
-        <div
-          key={widget.id}
-          className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 transition-all ${
-            widget.visible
-              ? "border-border/40 bg-card/60"
-              : "border-border/20 bg-card/20 opacity-50"
-          }`}
-        >
-          <div className="flex flex-col gap-0.5">
-            <button
-              onClick={() => onMove(idx, "up")}
-              disabled={idx === 0}
-              className="text-muted-foreground/50 hover:text-foreground disabled:opacity-20 transition-colors"
-            >
-              <ChevronUp className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => onMove(idx, "down")}
-              disabled={idx === widgets.length - 1}
-              className="text-muted-foreground/50 hover:text-foreground disabled:opacity-20 transition-colors"
-            >
-              <ChevronDown className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <span className="text-sm text-foreground/80 flex-1">
-            {WIDGET_LABELS[widget.id] || widget.id}
-          </span>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 transition-all ${
+        isDragging ? "shadow-lg scale-[1.02]" : ""
+      } ${
+        widget.visible
+          ? "border-border/40 bg-card/60"
+          : "border-border/20 bg-card/20 opacity-50"
+      }`}
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
+      >
+        <GripVertical className="w-4 h-4" />
+      </div>
+
+      {editing ? (
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <Input
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            className="h-7 text-sm px-2 flex-1 min-w-0"
+            placeholder={DEFAULT_WIDGET_LABELS[widget.id]}
+            autoFocus
+            onKeyDown={e => {
+              if (e.key === "Enter") {
+                onRename(widget.id, title);
+                setEditing(false);
+              }
+            }}
+          />
           <button
-            onClick={() => onToggle(widget.id)}
-            className="text-muted-foreground/60 hover:text-foreground transition-colors"
+            onClick={() => {
+              onRename(widget.id, title);
+              setEditing(false);
+            }}
+            className="text-primary hover:text-primary/80 transition-colors shrink-0"
           >
-            {widget.visible ? (
-              <Eye className="w-4 h-4" />
-            ) : (
-              <EyeOff className="w-4 h-4" />
-            )}
+            <Check className="w-3.5 h-3.5" />
           </button>
         </div>
-      ))}
+      ) : (
+        <button
+          onClick={() => setEditing(true)}
+          className="flex items-center gap-1.5 flex-1 min-w-0 group text-left"
+        >
+          <span className="text-sm text-foreground/80 truncate">
+            {getWidgetLabel(widget)}
+          </span>
+          <Pencil className="w-3 h-3 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors shrink-0" />
+        </button>
+      )}
+
+      <button
+        onClick={() => onToggle(widget.id)}
+        className="text-muted-foreground/60 hover:text-foreground transition-colors shrink-0"
+      >
+        {widget.visible ? (
+          <Eye className="w-4 h-4" />
+        ) : (
+          <EyeOff className="w-4 h-4" />
+        )}
+      </button>
+    </div>
+  );
+}
+
+export function WidgetEditMode({ widgets, onToggle, onRename, onReorder }: WidgetEditModeProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = widgets.findIndex(w => w.id === active.id);
+      const newIndex = widgets.findIndex(w => w.id === over.id);
+      onReorder(arrayMove(widgets, oldIndex, newIndex));
+    }
+  };
+
+  return (
+    <div className="w-full max-w-xs mx-auto flex flex-col gap-2 px-2">
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={widgets.map(w => w.id)} strategy={verticalListSortingStrategy}>
+          {widgets.map(widget => (
+            <SortableWidgetItem
+              key={widget.id}
+              widget={widget}
+              onToggle={onToggle}
+              onRename={onRename}
+            />
+          ))}
+        </SortableContext>
+      </DndContext>
     </div>
   );
 }

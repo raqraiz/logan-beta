@@ -5,7 +5,7 @@ import { HormoneChart } from "@/components/chat/HormoneChart";
 import { SymptomMap } from "@/components/chat/SymptomMap";
 import { LoganLogo } from "@/components/LoganLogo";
 import { WidgetEditMode } from "@/components/home/WidgetEditMode";
-import { useWidgetPreferences } from "@/hooks/useWidgetPreferences";
+import { useWidgetPreferences, getWidgetLabel } from "@/hooks/useWidgetPreferences";
 import { format } from "date-fns";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
 import { X, Shuffle, Pencil, Check } from "lucide-react";
@@ -230,7 +230,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   const [dismissed, setDismissed] = useState(false);
   const [editMode, setEditMode] = useState(false);
 
-  const { widgets, loading, save, moveWidget, toggleWidget } = useWidgetPreferences(userId);
+  const { widgets, loading, save, toggleWidget, renameWidget, setWidgets } = useWidgetPreferences(userId);
 
   if (!cycleData) {
     return (
@@ -246,7 +246,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
 
   const visibleWidgets = widgets.filter(w => w.visible);
 
-  const renderWidget = (id: string) => {
+  const renderWidget = (widget: typeof widgets[number]) => {
+    const id = widget.id;
+    const label = getWidgetLabel(widget);
     switch (id) {
       case "cycle_circle":
         return (
@@ -292,14 +294,17 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
         return (
           <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
-              How to succeed today
+              {label}
             </p>
             <TipCard label="For you" tips={SUCCEED_HER[cycleData.phase] || []} phase={cycleData.phase} />
           </div>
         );
       case "succeed_him":
         return (
-          <div className="w-full max-w-xs" key={id}>
+          <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
+              {label}
+            </p>
             <TipCard label="For him" tips={SUCCEED_HIM[cycleData.phase] || []} phase={cycleData.phase} />
           </div>
         );
@@ -307,14 +312,17 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
         return (
           <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
-              How not to mess up today
+              {label}
             </p>
             <TipCard label="For you" tips={DONT_MESS_UP_HER[cycleData.phase] || []} phase={cycleData.phase} />
           </div>
         );
       case "dontmessup_him":
         return (
-          <div className="w-full max-w-xs" key={id}>
+          <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
+              {label}
+            </p>
             <TipCard label="For him" tips={DONT_MESS_UP_HIM[cycleData.phase] || []} phase={cycleData.phase} />
           </div>
         );
@@ -376,12 +384,13 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       {editMode ? (
         <WidgetEditMode
           widgets={widgets}
-          onMove={moveWidget}
           onToggle={toggleWidget}
+          onRename={renameWidget}
+          onReorder={setWidgets}
         />
       ) : (
         <div className="flex flex-col items-center gap-4 px-2 w-full">
-          {visibleWidgets.map(w => renderWidget(w.id))}
+          {visibleWidgets.map(w => renderWidget(w))}
         </div>
       )}
 
