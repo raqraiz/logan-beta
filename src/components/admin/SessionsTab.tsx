@@ -450,7 +450,7 @@ export const SessionsTab = () => {
       const sessions: SessionRecord[] = [];
       const hourCounts = new Array(24).fill(0);
 
-      for (const [userId, timestamps] of messagesByUser.entries()) {
+      for (const [userId, timestamps] of timestampsByUser.entries()) {
         const sorted = timestamps.map((t) => new Date(t).getTime()).sort();
         const profile = profileMap.get(userId);
 
