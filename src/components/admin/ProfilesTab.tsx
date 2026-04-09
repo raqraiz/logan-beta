@@ -61,6 +61,7 @@ interface Participant {
   is_active: boolean | null;
   whatsapp_number: string;
   created_at: string;
+  life_stage: string | null;
 }
 
 
@@ -131,6 +132,7 @@ export function ProfilesTab() {
     full_name: "", email: "", phone: "",
     cycle_length_days: "28", cycle_regularity: "", last_period_start: "",
     anchor_symptom: "", typical_symptoms: "", goals: "", timezone: "Asia/Jerusalem",
+    life_stage: "cycling",
   });
   const [saving, setSaving] = useState(false);
   const [showHomePreview, setShowHomePreview] = useState(false);
@@ -280,6 +282,7 @@ export function ProfilesTab() {
       typical_symptoms: p?.typical_symptoms?.join(", ") || "",
       goals: p?.goals?.join(", ") || "",
       timezone: p?.timezone || "Asia/Jerusalem",
+      life_stage: (p as any)?.life_stage || "cycling",
     });
     setEditOpen(true);
   };
@@ -322,7 +325,8 @@ export function ProfilesTab() {
             typical_symptoms: symptomsArr,
             goals: goalsArr,
             timezone: editForm.timezone.trim() || "Asia/Jerusalem",
-          })
+            life_stage: editForm.life_stage,
+          } as any)
           .eq("id", selectedProfile.participant.id);
 
         if (pError) throw pError;
