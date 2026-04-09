@@ -229,6 +229,16 @@ const Chat = () => {
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMessage.id)) return prev;
             
+            // Replace fallback message if realtime delivers the real one
+            const fallbackIdx = prev.findIndex(
+              (m) => m.id.startsWith("fallback-") && m.role === newMessage.role && m.content === newMessage.content
+            );
+            if (fallbackIdx !== -1) {
+              const updated = [...prev];
+              updated[fallbackIdx] = newMessage;
+              return updated;
+            }
+            
             // Check if onboarding is complete
             if (newMessage.metadata?.onboarding_complete) {
               setIsOnboarding(false);
@@ -592,6 +602,22 @@ const Chat = () => {
         toast({ 
           title: data.error, 
           variant: "destructive" 
+        });
+      } else if (data?.message) {
+        // Fallback: directly add the assistant message in case realtime misses it
+        const fallbackMsg: ChatMessage = {
+          id: `fallback-${Date.now()}`,
+          role: "assistant",
+          content: data.message,
+          message_type: "text",
+          created_at: new Date().toISOString(),
+          user_id: user.id,
+        };
+        setMessages(prev => {
+          // Only add if realtime hasn't already delivered a newer assistant message
+          const lastMsg = prev[prev.length - 1];
+          if (lastMsg?.role === "assistant" && lastMsg.content === data.message) return prev;
+          return [...prev, fallbackMsg];
         });
       }
 
