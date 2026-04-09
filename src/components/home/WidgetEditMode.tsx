@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, EyeOff, GripVertical, Pencil, Check } from "lucide-react";
+import { Eye, EyeOff, GripVertical, Pencil, Check, Trash2, Plus, Sparkles } from "lucide-react";
 import { WidgetConfig, getWidgetLabel, DEFAULT_WIDGET_LABELS } from "@/hooks/useWidgetPreferences";
 import {
   DndContext,
@@ -20,25 +20,31 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface WidgetEditModeProps {
   widgets: WidgetConfig[];
   onToggle: (id: string) => void;
   onRename: (id: string, newTitle: string) => void;
   onReorder: (widgets: WidgetConfig[]) => void;
+  onRemove: (id: string) => void;
+  onAddCustom: () => void;
 }
 
 function SortableWidgetItem({
   widget,
   onToggle,
   onRename,
+  onRemove,
 }: {
   widget: WidgetConfig;
   onToggle: (id: string) => void;
   onRename: (id: string, newTitle: string) => void;
+  onRemove: (id: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(getWidgetLabel(widget));
+  const isCustom = widget.type === "custom";
 
   const {
     attributes,
@@ -75,13 +81,17 @@ function SortableWidgetItem({
         <GripVertical className="w-4 h-4" />
       </div>
 
+      {isCustom && (
+        <Sparkles className="w-3 h-3 text-primary/50 shrink-0" />
+      )}
+
       {editing ? (
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
           <Input
             value={title}
             onChange={e => setTitle(e.target.value)}
             className="h-7 text-sm px-2 flex-1 min-w-0"
-            placeholder={DEFAULT_WIDGET_LABELS[widget.id]}
+            placeholder={DEFAULT_WIDGET_LABELS[widget.id] || "Widget name"}
             autoFocus
             onKeyDown={e => {
               if (e.key === "Enter") {
@@ -112,21 +122,31 @@ function SortableWidgetItem({
         </button>
       )}
 
-      <button
-        onClick={() => onToggle(widget.id)}
-        className="text-muted-foreground/60 hover:text-foreground transition-colors shrink-0"
-      >
-        {widget.visible ? (
-          <Eye className="w-4 h-4" />
-        ) : (
-          <EyeOff className="w-4 h-4" />
+      <div className="flex items-center gap-1 shrink-0">
+        {isCustom && (
+          <button
+            onClick={() => onRemove(widget.id)}
+            className="text-muted-foreground/40 hover:text-destructive transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         )}
-      </button>
+        <button
+          onClick={() => onToggle(widget.id)}
+          className="text-muted-foreground/60 hover:text-foreground transition-colors"
+        >
+          {widget.visible ? (
+            <Eye className="w-4 h-4" />
+          ) : (
+            <EyeOff className="w-4 h-4" />
+          )}
+        </button>
+      </div>
     </div>
   );
 }
 
-export function WidgetEditMode({ widgets, onToggle, onRename, onReorder }: WidgetEditModeProps) {
+export function WidgetEditMode({ widgets, onToggle, onRename, onReorder, onRemove, onAddCustom }: WidgetEditModeProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
@@ -152,10 +172,22 @@ export function WidgetEditMode({ widgets, onToggle, onRename, onReorder }: Widge
               widget={widget}
               onToggle={onToggle}
               onRename={onRename}
+              onRemove={onRemove}
             />
           ))}
         </SortableContext>
       </DndContext>
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onAddCustom}
+        className="mt-2 gap-1.5 text-xs border-dashed border-border/50 text-muted-foreground hover:text-foreground"
+      >
+        <Plus className="w-3.5 h-3.5" />
+        <Sparkles className="w-3 h-3" />
+        Create AI Widget
+      </Button>
     </div>
   );
 }

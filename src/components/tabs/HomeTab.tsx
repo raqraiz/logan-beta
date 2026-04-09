@@ -5,6 +5,8 @@ import { HormoneChart } from "@/components/chat/HormoneChart";
 import { SymptomMap } from "@/components/chat/SymptomMap";
 import { LoganLogo } from "@/components/LoganLogo";
 import { WidgetEditMode } from "@/components/home/WidgetEditMode";
+import { AddCustomWidgetDialog } from "@/components/home/AddCustomWidgetDialog";
+import { CustomAIWidget } from "@/components/home/CustomAIWidget";
 import { useWidgetPreferences, getWidgetLabel } from "@/hooks/useWidgetPreferences";
 import { format } from "date-fns";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
@@ -229,8 +231,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [showAddWidget, setShowAddWidget] = useState(false);
 
-  const { widgets, loading, save, toggleWidget, renameWidget, setWidgets } = useWidgetPreferences(userId);
+  const { widgets, loading, save, toggleWidget, renameWidget, setWidgets, addCustomWidget, removeWidget } = useWidgetPreferences(userId);
 
   if (!cycleData) {
     return (
@@ -348,6 +351,23 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           </div>
         );
       default:
+        // Custom AI widgets
+        if (widget.type === "custom" && widget.prompt) {
+          return (
+            <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
+                {label}
+              </p>
+              <CustomAIWidget
+                title={label}
+                prompt={widget.prompt}
+                phase={cycleData.phase}
+                cycleDay={cycleData.cycleDay}
+                cycleLengthDays={cycleData.cycleLengthDays}
+              />
+            </div>
+          );
+        }
         return null;
     }
   };
@@ -387,6 +407,8 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           onToggle={toggleWidget}
           onRename={renameWidget}
           onReorder={setWidgets}
+          onRemove={removeWidget}
+          onAddCustom={() => setShowAddWidget(true)}
         />
       ) : (
         <div className="flex flex-col items-center gap-4 px-2 w-full">
@@ -459,6 +481,15 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           currentCycleDay={cycleData.cycleDay}
         />
       )}
+
+      {/* Add Custom Widget Dialog */}
+      <AddCustomWidgetDialog
+        open={showAddWidget}
+        onOpenChange={setShowAddWidget}
+        onAdd={(title, prompt) => {
+          addCustomWidget(title, prompt);
+        }}
+      />
     </div>
   );
 }

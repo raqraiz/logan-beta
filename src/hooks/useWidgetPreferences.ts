@@ -5,16 +5,18 @@ export interface WidgetConfig {
   id: string;
   visible: boolean;
   customTitle?: string;
+  type?: "built-in" | "custom";
+  prompt?: string; // AI prompt for custom widgets
 }
 
 const DEFAULT_WIDGETS: WidgetConfig[] = [
-  { id: "cycle_circle", visible: true },
-  { id: "succeed_you", visible: true },
-  { id: "succeed_him", visible: true },
-  { id: "dontmessup_you", visible: true },
-  { id: "dontmessup_him", visible: true },
-  { id: "hormone_chart", visible: false },
-  { id: "symptom_map", visible: false },
+  { id: "cycle_circle", visible: true, type: "built-in" },
+  { id: "succeed_you", visible: true, type: "built-in" },
+  { id: "succeed_him", visible: true, type: "built-in" },
+  { id: "dontmessup_you", visible: true, type: "built-in" },
+  { id: "dontmessup_him", visible: true, type: "built-in" },
+  { id: "hormone_chart", visible: false, type: "built-in" },
+  { id: "symptom_map", visible: false, type: "built-in" },
 ];
 
 export const DEFAULT_WIDGET_LABELS: Record<string, string> = {
@@ -79,5 +81,21 @@ export function useWidgetPreferences(userId?: string) {
     ));
   }, []);
 
-  return { widgets, loading, saving, save, toggleWidget, renameWidget, setWidgets };
+  const addCustomWidget = useCallback((title: string, prompt: string) => {
+    const id = `custom_${Date.now()}`;
+    setWidgets(prev => [...prev, {
+      id,
+      visible: true,
+      customTitle: title,
+      type: "custom",
+      prompt,
+    }]);
+    return id;
+  }, []);
+
+  const removeWidget = useCallback((id: string) => {
+    setWidgets(prev => prev.filter(w => w.id !== id));
+  }, []);
+
+  return { widgets, loading, saving, save, toggleWidget, renameWidget, setWidgets, addCustomWidget, removeWidget };
 }
