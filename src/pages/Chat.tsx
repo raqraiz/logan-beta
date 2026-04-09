@@ -1195,6 +1195,31 @@ const Chat = () => {
                     </div>
                   )}
 
+                  {showInteractiveInput && inputType === "life_stage_picker" && (
+                    <div className="mt-3 flex flex-col gap-2 max-w-xs">
+                      {[
+                        { value: "cycling", label: "I have a regular cycle", desc: "Currently menstruating" },
+                        { value: "postpartum", label: "Postpartum", desc: "Recently had a baby" },
+                        { value: "menopause", label: "Menopause / Perimenopause", desc: "Cycle is irregular or stopped" },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => {
+                            sendOnboardingResponse(option.value);
+                            if (option.value !== "cycling") {
+                              setLifeStage(option.value as "postpartum" | "menopause");
+                            }
+                          }}
+                          disabled={isSending}
+                          className="text-left px-4 py-3 rounded-xl border border-border/40 bg-card/60 hover:bg-card/90 transition-all active:scale-[0.98]"
+                        >
+                          <span className="text-sm font-medium text-foreground">{option.label}</span>
+                          <span className="block text-xs text-muted-foreground mt-0.5">{option.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   {showInteractiveInput && inputType === "topic_picker" && (
                     <div className="mt-3">
                       <TopicPicker
