@@ -197,6 +197,8 @@ serve(async (req) => {
       || /last (month|cycle|time)/i.test(userMessage)
       || /\d{4}/.test(userMessage);
 
+    const dayOfWeekPattern = /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)\b/i;
+
     const periodConfirmPatterns = [
       /^yes,?\s*(it )?(started|period|got it|began|came)/i,
       /started (today|yesterday|this morning|last night)/i,
@@ -207,6 +209,9 @@ serve(async (req) => {
       /my period (just )?(started|came|arrived|began)/i,
       /^(i )?(just )?(got|started|had) (my |the )?period/i,
       /got it yesterday/i,
+      // Day-of-week variants: "period began Tuesday", "started on Monday", "got my period friday"
+      /(?:period|it)\s+(?:started|began|came|arrived)\s+(?:on\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)/i,
+      /(?:started|began|came|got it)\s+(?:on\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)/i,
     ];
     
     const bareYesPatterns = [/^yes$/i, /^yes,? (it )?(started|has|did)/i];
@@ -217,11 +222,35 @@ serve(async (req) => {
       (isBareYes && wasPeridCheckin)
     );
 
+    // Helper: resolve a day-of-week name to the most recent past date
+    function resolveDayOfWeek(dayName: string): Date {
+      const dayMap: Record<string, number> = {
+        sunday: 0, sun: 0,
+        monday: 1, mon: 1,
+        tuesday: 2, tue: 2, tues: 2,
+        wednesday: 3, wed: 3,
+        thursday: 4, thu: 4, thur: 4, thurs: 4,
+        friday: 5, fri: 5,
+        saturday: 6, sat: 6,
+      };
+      const target = dayMap[dayName.toLowerCase()];
+      const now = new Date();
+      const current = now.getDay();
+      let diff = current - target;
+      if (diff <= 0) diff += 7; // always go to the most recent past occurrence
+      const result = new Date(now);
+      result.setDate(result.getDate() - diff);
+      return result;
+    }
+
     if (isPeriodConfirmation && participant) {
       let periodStartDate = new Date();
 
+      const dayOfWeekMatch = userMessage.match(dayOfWeekPattern);
       const daysAgoMatch = userMessage.match(/(\d+)\s+days?\s+ago/i);
-      if (daysAgoMatch) {
+      if (dayOfWeekMatch) {
+        periodStartDate = resolveDayOfWeek(dayOfWeekMatch[1]);
+      } else if (daysAgoMatch) {
         periodStartDate.setDate(periodStartDate.getDate() - parseInt(daysAgoMatch[1]));
       } else if (/yesterday/i.test(userMessage)) {
         periodStartDate.setDate(periodStartDate.getDate() - 1);
