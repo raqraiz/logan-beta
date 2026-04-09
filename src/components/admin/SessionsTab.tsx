@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Circle, Clock, Users, Activity, TrendingUp, ChevronDown, ChevronRight, MessageSquare } from "lucide-react";
+import { RefreshCw, Circle, Clock, Users, Activity, TrendingUp, ChevronDown, ChevronRight, MessageSquare, Eye, MousePointerClick, ArrowRightLeft, Puzzle, LayoutGrid } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, subDays, differenceInMinutes } from "date-fns";
 import {
@@ -40,10 +40,13 @@ interface SessionRecord {
   messageCount: number;
 }
 
-interface ChatMessage {
+interface ActivityEvent {
   id: string;
-  role: string;
-  content: string;
+  event_type: string;
+  page_path: string | null;
+  element_label: string | null;
+  element_type: string | null;
+  metadata: Record<string, unknown> | null;
   created_at: string;
 }
 
@@ -61,22 +64,73 @@ const chartConfig = {
   avgDuration: { label: "Avg Duration (min)", color: "hsl(var(--accent))" },
 } satisfies ChartConfig;
 
+const EVENT_ICON: Record<string, typeof Eye> = {
+  page_view: Eye,
+  click: MousePointerClick,
+  tab_switch: ArrowRightLeft,
+  widget_interact: Puzzle,
+};
+
+const EVENT_LABEL: Record<string, string> = {
+  page_view: "Viewed page",
+  click: "Clicked",
+  tab_switch: "Switched tab",
+  widget_interact: "Widget interaction",
+};
+
+const EVENT_COLOR: Record<string, string> = {
+  page_view: "bg-blue-500/20 text-blue-400",
+  click: "bg-primary/20 text-primary",
+  tab_switch: "bg-amber-500/20 text-amber-400",
+  widget_interact: "bg-purple-500/20 text-purple-400",
+};
+
 /* ── Session Detail (expandable row) ─────────────────────── */
 
 function SessionDetail({ session }: { session: SessionRecord }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasActivity, setHasActivity] = useState<boolean | null>(null);
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("chat_messages")
-        .select("id, role, content, created_at")
+      // Try activity events first
+      const { data: activityData } = await supabase
+        .from("user_activity_events")
+        .select("id, event_type, page_path, element_label, element_type, metadata, created_at")
         .eq("user_id", session.userId)
         .gte("created_at", session.startTime)
         .lte("created_at", session.endTime)
         .order("created_at", { ascending: true });
-      setMessages(data || []);
+
+      if (activityData && activityData.length > 0) {
+        setEvents(activityData.map(e => ({
+          ...e,
+          metadata: e.metadata as Record<string, unknown> | null,
+        })));
+        setHasActivity(true);
+      } else {
+        // Fall back to chat messages as activity proxy
+        const { data: msgData } = await supabase
+          .from("chat_messages")
+          .select("id, role, content, created_at")
+          .eq("user_id", session.userId)
+          .gte("created_at", session.startTime)
+          .lte("created_at", session.endTime)
+          .order("created_at", { ascending: true });
+
+        const fallbackEvents: ActivityEvent[] = (msgData || []).map(m => ({
+          id: m.id,
+          event_type: m.role === "user" ? "click" : "page_view",
+          page_path: "/chat",
+          element_label: m.role === "user" ? `Sent: "${m.content.slice(0, 50)}${m.content.length > 50 ? '…' : ''}"` : `Logan responded (${m.content.length} chars)`,
+          element_type: m.role === "user" ? "message" : "response",
+          metadata: null,
+          created_at: m.created_at,
+        }));
+        setEvents(fallbackEvents);
+        setHasActivity(false);
+      }
       setLoading(false);
     })();
   }, [session]);
@@ -84,35 +138,73 @@ function SessionDetail({ session }: { session: SessionRecord }) {
   if (loading) {
     return (
       <div className="flex items-center gap-2 py-4 px-6 text-muted-foreground text-sm">
-        <RefreshCw className="w-3 h-3 animate-spin" /> Loading messages…
+        <RefreshCw className="w-3 h-3 animate-spin" /> Loading activity…
       </div>
     );
   }
 
-  if (messages.length === 0) {
+  if (events.length === 0) {
     return (
-      <p className="py-4 px-6 text-sm text-muted-foreground">No messages found for this session.</p>
+      <p className="py-4 px-6 text-sm text-muted-foreground">No activity recorded for this session.</p>
     );
   }
 
   return (
     <ScrollArea className="max-h-[400px]">
-      <div className="px-6 py-3 space-y-2">
-        {messages.map((m) => (
-          <div
-            key={m.id}
-            className={`flex gap-2 text-sm ${m.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-[80%] rounded-lg px-3 py-2 ${
-                m.role === "user"
-                  ? "bg-primary/15 text-foreground"
-                  : "bg-muted/50 text-foreground/80"
-              }`}
-            >
-              <p className="text-[10px] text-muted-foreground/60 mb-0.5">
-                {m.role === "user" ? session.fullName : "Logan"} · {format(new Date(m.created_at), "h:mm a")}
-              </p>
+      <div className="px-6 py-3">
+        {hasActivity === false && (
+          <div className="mb-3 px-3 py-2 rounded-lg bg-muted/30 text-xs text-muted-foreground">
+            <LayoutGrid className="w-3 h-3 inline mr-1.5" />
+            Activity tracking started recently — showing chat messages as a proxy for older sessions.
+          </div>
+        )}
+        <div className="relative">
+          {/* Timeline line */}
+          <div className="absolute left-[15px] top-2 bottom-2 w-px bg-border/30" />
+
+          <div className="space-y-1">
+            {events.map((evt, i) => {
+              const Icon = EVENT_ICON[evt.event_type] || MousePointerClick;
+              const colorClass = EVENT_COLOR[evt.event_type] || "bg-muted/20 text-muted-foreground";
+              const label = evt.element_label || EVENT_LABEL[evt.event_type] || evt.event_type;
+              const description = evt.event_type === "page_view"
+                ? evt.page_path || "Unknown page"
+                : evt.event_type === "tab_switch"
+                ? `→ ${evt.element_label || "unknown"}`
+                : label;
+
+              return (
+                <div key={evt.id} className="flex items-start gap-3 relative pl-0">
+                  {/* Icon circle */}
+                  <div className={`w-[30px] h-[30px] rounded-full flex items-center justify-center flex-shrink-0 ${colorClass} z-10`}>
+                    <Icon className="w-3.5 h-3.5" />
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 py-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-medium text-foreground/80 truncate">
+                        {description}
+                      </span>
+                      {evt.element_type && (
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 shrink-0">
+                          {evt.element_type}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/50">
+                      {format(new Date(evt.created_at), "h:mm:ss a")}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </ScrollArea>
+  );
+}
               <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{m.content}</p>
             </div>
           </div>
