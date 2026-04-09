@@ -43,7 +43,7 @@ export function useWidgetPreferences(userId?: string) {
       
       if (data?.widget_order && Array.isArray(data.widget_order)) {
         // Merge saved prefs with defaults (in case new widgets were added)
-        const saved = data.widget_order as WidgetConfig[];
+        const saved = (data.widget_order as unknown) as WidgetConfig[];
         const savedIds = new Set(saved.map(w => w.id));
         const merged = [
           ...saved,
