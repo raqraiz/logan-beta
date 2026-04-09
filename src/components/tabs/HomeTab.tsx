@@ -270,13 +270,22 @@ export function HomeTab({ cycleData, onPeriodUpdate, onCycleLengthUpdate, userId
         </div>
       )}
 
-      {/* How not to mess up today */}
+      {/* How to succeed today */}
       <div className="w-full max-w-xs mt-8 flex flex-col gap-3 px-2">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
+          How to succeed today
+        </p>
+        <TipCard label="For you" tips={SUCCEED_HER[cycleData.phase] || []} phase={cycleData.phase} />
+        <TipCard label="For him" tips={SUCCEED_HIM[cycleData.phase] || []} phase={cycleData.phase} />
+      </div>
+
+      {/* How not to mess up today */}
+      <div className="w-full max-w-xs mt-5 flex flex-col gap-3 px-2">
         <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
           How not to mess up today
         </p>
-        <TipCard label="For you" tips={HER_TIPS[cycleData.phase] || []} phase={cycleData.phase} />
-        <TipCard label="For him" tips={HIM_TIPS[cycleData.phase] || []} phase={cycleData.phase} />
+        <TipCard label="For you" tips={DONT_MESS_UP_HER[cycleData.phase] || []} phase={cycleData.phase} />
+        <TipCard label="For him" tips={DONT_MESS_UP_HIM[cycleData.phase] || []} phase={cycleData.phase} />
       </div>
 
       {/* Date picker dialog with inline cycle length */}
