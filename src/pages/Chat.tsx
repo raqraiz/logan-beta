@@ -35,7 +35,7 @@ import { BottomTabBar, type TabId } from "@/components/tabs/BottomTabBar";
 import { HomeTab } from "@/components/tabs/HomeTab";
 import { PlanTab } from "@/components/tabs/PlanTab";
 import { usePresence } from "@/hooks/usePresence";
-
+import { useActivityTracker } from "@/hooks/useActivityTracker";
 interface SymptomCategory {
   label: string;
   symptoms: string[];
@@ -118,6 +118,12 @@ const Chat = () => {
   
   const { user, loading: authLoading, signOut } = useAuth();
   usePresence(user?.id, user?.email || undefined, user?.user_metadata?.full_name);
+  const { trackTabSwitch, trackPageView } = useActivityTracker(user?.id);
+
+  // Track initial page view
+  useEffect(() => {
+    trackPageView(window.location.pathname);
+  }, [trackPageView]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
@@ -1331,7 +1337,7 @@ const Chat = () => {
       {!isOnboarding && (
         <BottomTabBar
           activeTab={effectiveTab}
-          onTabChange={setActiveTab}
+          onTabChange={(tab) => { setActiveTab(tab); trackTabSwitch(tab); }}
           cycleDay={cycleData?.cycleDay}
           cycleLengthDays={cycleData?.cycleLengthDays}
           phase={cycleData?.phase}
