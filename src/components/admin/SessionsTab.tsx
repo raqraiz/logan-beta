@@ -205,14 +205,6 @@ function SessionDetail({ session }: { session: SessionRecord }) {
     </ScrollArea>
   );
 }
-              <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{m.content}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </ScrollArea>
-  );
-}
 
 /* ── Main Tab ─────────────────────────────────────────────── */
 
