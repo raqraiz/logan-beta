@@ -593,6 +593,23 @@ const Chat = () => {
           title: data.error, 
           variant: "destructive" 
         });
+      } else if (data?.message) {
+        // Fallback: directly add the assistant message in case realtime misses it
+        const fallbackMsg: ChatMessage = {
+          id: `fallback-${Date.now()}`,
+          role: "assistant",
+          content: data.message,
+          message_type: "text",
+          created_at: new Date().toISOString(),
+          user_id: user.id,
+          metadata: data.cycleInfo ? { cycle_day: data.cycleInfo.cycleDay, phase: data.cycleInfo.phase } : undefined,
+        };
+        setMessages(prev => {
+          // Only add if realtime hasn't already delivered a newer assistant message
+          const lastMsg = prev[prev.length - 1];
+          if (lastMsg?.role === "assistant" && lastMsg.content === data.message) return prev;
+          return [...prev, fallbackMsg];
+        });
       }
 
       // Update credit balance from response
