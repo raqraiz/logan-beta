@@ -638,6 +638,9 @@ export const SessionsTab = () => {
         </Card>
       </div>
 
+      {/* Page & Tab Popularity */}
+      <PagePopularitySummary />
+
       {/* Daily Sessions Chart */}
       <Card>
         <CardHeader className="pb-2">
