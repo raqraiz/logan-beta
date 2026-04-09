@@ -35,7 +35,7 @@ import { BottomTabBar, type TabId } from "@/components/tabs/BottomTabBar";
 import { HomeTab } from "@/components/tabs/HomeTab";
 import { PlanTab } from "@/components/tabs/PlanTab";
 import { usePresence } from "@/hooks/usePresence";
-
+import { useActivityTracker } from "@/hooks/useActivityTracker";
 interface SymptomCategory {
   label: string;
   symptoms: string[];
