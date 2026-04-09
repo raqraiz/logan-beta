@@ -213,7 +213,7 @@ export function HomeTab({ cycleData, onPeriodUpdate, onCycleLengthUpdate, userId
         <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
           How not to mess up today
         </p>
-        <TipCard label="For her" tips={HER_TIPS[cycleData.phase] || []} phase={cycleData.phase} />
+        <TipCard label="For you" tips={HER_TIPS[cycleData.phase] || []} phase={cycleData.phase} />
         <TipCard label="For him" tips={HIM_TIPS[cycleData.phase] || []} phase={cycleData.phase} />
       </div>
 
