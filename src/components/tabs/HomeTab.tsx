@@ -5,7 +5,7 @@ import { HormoneChart } from "@/components/chat/HormoneChart";
 import { SymptomMap } from "@/components/chat/SymptomMap";
 import { LoganLogo } from "@/components/LoganLogo";
 import { WidgetEditMode } from "@/components/home/WidgetEditMode";
-import { useWidgetPreferences } from "@/hooks/useWidgetPreferences";
+import { useWidgetPreferences, getWidgetLabel } from "@/hooks/useWidgetPreferences";
 import { format } from "date-fns";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
 import { X, Shuffle, Pencil, Check } from "lucide-react";
@@ -246,7 +246,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
 
   const visibleWidgets = widgets.filter(w => w.visible);
 
-  const renderWidget = (id: string) => {
+  const renderWidget = (widget: typeof widgets[number]) => {
+    const id = widget.id;
+    const label = getWidgetLabel(widget);
     switch (id) {
       case "cycle_circle":
         return (
