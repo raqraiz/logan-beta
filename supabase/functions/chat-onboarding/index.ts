@@ -358,7 +358,14 @@ serve(async (req) => {
         }
       }
 
-      const nextStep = currentStep + 1;
+      // Determine next step, skipping cycle-specific questions for non-cycling users
+      let nextStep = currentStep + 1;
+      const userLifeStage = (participant as any)?.life_stage || "cycling";
+      if (userLifeStage !== "cycling") {
+        while (nextStep < ONBOARDING_QUESTIONS.length - 1 && (ONBOARDING_QUESTIONS[nextStep] as any).requiresStage === "cycling") {
+          nextStep++;
+        }
+      }
       const nextQuestion = ONBOARDING_QUESTIONS[nextStep];
 
       // ─── Educational moments between steps ───────────────────────
