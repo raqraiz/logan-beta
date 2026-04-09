@@ -295,7 +295,16 @@ serve(async (req) => {
       let parsedValue: any = userMessage?.trim() || "";
       const parseType = currentQuestion.parseType;
 
-      if (parseType === "date") {
+      if (parseType === "life_stage") {
+        const lower = (userMessage || "").toLowerCase();
+        if (lower.includes("postpartum") || lower.includes("post-partum") || lower.includes("just had")) {
+          parsedValue = "postpartum";
+        } else if (lower.includes("menopause") || lower.includes("peri")) {
+          parsedValue = "menopause";
+        } else {
+          parsedValue = "cycling";
+        }
+      } else if (parseType === "date") {
         parsedValue = selectedDate || parseNaturalDate(userMessage || "");
       } else if (parseType === "number") {
         const match = (userMessage || "").match(/\d+/);
