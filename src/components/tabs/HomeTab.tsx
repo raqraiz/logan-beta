@@ -179,6 +179,15 @@ export function HomeTab({ cycleData, onPeriodUpdate, onCycleLengthUpdate, userId
         </div>
       )}
 
+      {/* How not to mess up today */}
+      <div className="w-full max-w-xs mt-6 flex flex-col gap-2.5 px-2">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 text-center">
+          How not to mess up today
+        </p>
+        <TipCard label="For her" tips={HER_TIPS[cycleData.phase] || []} phase={cycleData.phase} />
+        <TipCard label="For him" tips={HIM_TIPS[cycleData.phase] || []} phase={cycleData.phase} />
+      </div>
+
       {/* Date picker dialog with inline cycle length */}
       <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
         <DialogContent className="max-w-sm rounded-2xl">
