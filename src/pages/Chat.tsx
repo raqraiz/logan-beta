@@ -108,6 +108,7 @@ const Chat = () => {
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
+  const [lifeStage, setLifeStage] = useState<"cycling" | "postpartum" | "menopause">("cycling");
   const [showForecast, setShowForecast] = useState(false);
   
   const [showScrollButton, setShowScrollButton] = useState(false);
