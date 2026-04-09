@@ -199,6 +199,8 @@ const PHASE_GLOW: Record<string, string> = {
   Follicular: "shadow-[0_0_20px_-6px_hsl(152,60%,52%,0.15)]",
   Ovulation: "shadow-[0_0_20px_-6px_hsl(40,90%,56%,0.15)]",
   Luteal: "shadow-[0_0_20px_-6px_hsl(270,60%,65%,0.15)]",
+  Postpartum: "shadow-[0_0_20px_-6px_hsl(330,80%,65%,0.15)]",
+  Menopause: "shadow-[0_0_20px_-6px_hsl(45,96%,56%,0.15)]",
 };
 
 // ── TipCard ───────────────────────────────────────────────
@@ -208,6 +210,8 @@ const PHASE_BG_ACCENT: Record<string, string> = {
   Follicular: "from-phase-follicular/8 to-transparent",
   Ovulation: "from-phase-ovulation/8 to-transparent",
   Luteal: "from-phase-luteal/8 to-transparent",
+  Postpartum: "from-pink-400/8 to-transparent",
+  Menopause: "from-amber-400/8 to-transparent",
 };
 
 function TipCard({
