@@ -34,6 +34,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { ChatCycleCircle, calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
 import { cn } from "@/lib/utils";
 import { Json } from "@/integrations/supabase/types";
+import { HomeTab } from "@/components/tabs/HomeTab";
 
 interface Profile {
   id: string;
