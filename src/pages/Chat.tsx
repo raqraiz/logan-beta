@@ -931,12 +931,13 @@ const Chat = () => {
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
            <div className="flex items-center gap-3">
              {cycleData ? (
-               <ChatCycleCircle
-                 cycleDay={cycleData.cycleDay}
-                 phase={cycleData.phase}
-                 cycleLengthDays={cycleData.cycleLengthDays}
-                 size="sm"
-               />
+                <ChatCycleCircle
+                  cycleDay={cycleData.cycleDay}
+                  phase={cycleData.phase}
+                  cycleLengthDays={cycleData.cycleLengthDays}
+                  size="sm"
+                  lifeStage={cycleData.lifeStage}
+                />
              ) : (
                <LoganLogo size="sm" />
              )}
