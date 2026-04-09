@@ -348,7 +348,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
               {label}
             </p>
-            <TipCard label="For you" tips={SUCCEED_HER[cycleData.phase] || []} phase={cycleData.phase} widgetId="succeed_you" />
+            <TipCard label="For you" tips={SUCCEED_HER[cycleData.phase] || []} phase={cycleData.phase} widgetId="succeed_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
           </div>
         );
       case "succeed_him":
@@ -357,7 +357,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
               {label}
             </p>
-            <TipCard label="For him" tips={SUCCEED_HIM[cycleData.phase] || []} phase={cycleData.phase} widgetId="succeed_him" />
+            <TipCard label="For him" tips={SUCCEED_HIM[cycleData.phase] || []} phase={cycleData.phase} widgetId="succeed_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
           </div>
         );
       case "dontmessup_you":
@@ -366,7 +366,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
               {label}
             </p>
-            <TipCard label="For you" tips={DONT_MESS_UP_HER[cycleData.phase] || []} phase={cycleData.phase} widgetId="dontmessup_you" />
+            <TipCard label="For you" tips={DONT_MESS_UP_HER[cycleData.phase] || []} phase={cycleData.phase} widgetId="dontmessup_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
           </div>
         );
       case "dontmessup_him":
@@ -375,7 +375,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
               {label}
             </p>
-            <TipCard label="For him" tips={DONT_MESS_UP_HIM[cycleData.phase] || []} phase={cycleData.phase} widgetId="dontmessup_him" />
+            <TipCard label="For him" tips={DONT_MESS_UP_HIM[cycleData.phase] || []} phase={cycleData.phase} widgetId="dontmessup_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
           </div>
         );
       case "hormone_chart":
