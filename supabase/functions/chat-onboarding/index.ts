@@ -67,12 +67,20 @@ const ONBOARDING_QUESTIONS = [
     inputType: "text"
   },
   {
+    key: "life_stage",
+    message: "Which best describes where you are right now?",
+    field: "life_stage",
+    parseType: "life_stage",
+    inputType: "life_stage_picker"
+  },
+  {
     key: "cycle_length",
     message: "How many days is your cycle? (From the start of one period to the start of the next.)\n\nMost people are somewhere between 24 and 35 days. If you're not sure, that's totally fine — tap \"I'm not sure\" below.",
     field: "cycle_length_days",
     parseType: "number",
     inputType: "text",
-    showNotSure: true
+    showNotSure: true,
+    requiresStage: "cycling"
   },
   {
     key: "last_period",
@@ -80,7 +88,8 @@ const ONBOARDING_QUESTIONS = [
     field: "last_period_start",
     parseType: "date",
     inputType: "date_picker",
-    showNotSure: true
+    showNotSure: true,
+    requiresStage: "cycling"
   },
   {
     key: "symptoms",
