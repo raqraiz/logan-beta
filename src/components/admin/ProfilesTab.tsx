@@ -478,6 +478,12 @@ export function ProfilesTab() {
                   <Download className="w-4 h-4 mr-2" />
                   Download
                 </Button>
+                {cycleData && (
+                  <Button variant="outline" size="sm" onClick={() => setShowHomePreview(true)}>
+                    <Home className="w-4 h-4 mr-2" />
+                    View Home
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" onClick={openEditDialog}>
                   <Pencil className="w-4 h-4 mr-2" />
                   Edit
