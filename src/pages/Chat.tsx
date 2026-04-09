@@ -541,16 +541,37 @@ const Chat = () => {
     setInputValue("");
     setIsSending(true);
 
+    // Optimistically add the user message so it appears immediately
+    const optimisticId = `optimistic-${Date.now()}`;
+    const optimisticMsg: ChatMessage = {
+      id: optimisticId,
+      role: "user",
+      content: messageContent,
+      message_type: "text",
+      created_at: new Date().toISOString(),
+      user_id: user.id,
+    };
+    setMessages(prev => [...prev, optimisticMsg]);
+
     try {
-      // First, insert the user's message
-      const { error: insertError } = await supabase.from("chat_messages").insert({
-        user_id: user.id,
-        role: "user",
-        content: messageContent,
-        message_type: "text",
-      });
+      // Insert the user's message into the database
+      const { data: insertedRow, error: insertError } = await supabase
+        .from("chat_messages")
+        .insert({
+          user_id: user.id,
+          role: "user",
+          content: messageContent,
+          message_type: "text",
+        })
+        .select("id")
+        .single();
 
       if (insertError) throw insertError;
+
+      // Replace optimistic message with the real one (so realtime dedup works)
+      if (insertedRow) {
+        setMessages(prev => prev.map(m => m.id === optimisticId ? { ...m, id: insertedRow.id } : m));
+      }
 
       // Call the AI chat function
       const { data, error } = await supabase.functions.invoke("chat-ai", {
@@ -597,6 +618,8 @@ const Chat = () => {
     } catch (error) {
       console.error("Error sending message:", error);
       toast({ title: "Failed to send message", variant: "destructive" });
+      // Remove optimistic message and restore input
+      setMessages(prev => prev.filter(m => m.id !== optimisticId));
       setInputValue(messageContent);
     } finally {
       setIsSending(false);
