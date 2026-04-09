@@ -590,7 +590,16 @@ export function ProfilesTab() {
               {participant ? (
                 <div className="space-y-4">
                   {/* Cycle Circle Visualization */}
-                  {cycleDay && phase && (
+                  {participant.life_stage && participant.life_stage !== "cycling" ? (
+                    <div className="flex justify-center py-2">
+                      <ChatCycleCircle
+                        cycleDay={0}
+                        phase={participant.life_stage === "postpartum" ? "Postpartum" : "Menopause"}
+                        cycleLengthDays={0}
+                        lifeStage={participant.life_stage as "postpartum" | "menopause"}
+                      />
+                    </div>
+                  ) : cycleDay && phase ? (
                     <div className="flex justify-center py-2">
                       <ChatCycleCircle
                         cycleDay={cycleDay}
@@ -598,7 +607,7 @@ export function ProfilesTab() {
                         cycleLengthDays={participant.cycle_length_days || 28}
                       />
                     </div>
-                  )}
+                  ) : null}
                   
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
