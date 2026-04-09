@@ -276,22 +276,29 @@ const Chat = () => {
       return;
     }
 
+    // For non-cycling users, provide a minimal CycleData with life stage info
+    if (lifeStage !== "cycling") {
+      setCycleData({
+        cycleDay: 0,
+        phase: lifeStage === "postpartum" ? "Postpartum" : "Menopause",
+        cycleLengthDays: 0,
+        lifeStage,
+      });
+      return;
+    }
+
     // Find the most recent last_period_start from metadata
-    // Check period update messages first, then any message with last_period_start
     let lastPeriodStart: string | null = null;
     let cycleLengthDays: number | null = null;
     let userTimezone: string | null = null;
 
-    // Iterate in reverse to find most recent data
     for (let i = messages.length - 1; i >= 0; i--) {
       const metadata = messages[i].metadata as any;
       if (!metadata) continue;
 
-      // Period update messages have new_period_start
       if (metadata.new_period_start && !lastPeriodStart) {
         lastPeriodStart = metadata.new_period_start;
       }
-      // Regular messages may have last_period_start
       if (metadata.last_period_start && !lastPeriodStart) {
         lastPeriodStart = metadata.last_period_start;
       }
@@ -304,11 +311,9 @@ const Chat = () => {
       if (lastPeriodStart && cycleLengthDays) break;
     }
 
-    // Use browser timezone as fallback instead of hardcoded value
     const timezone = userTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     if (!lastPeriodStart || !cycleLengthDays) {
-      // Fallback: use stale cycle_day from metadata if no period start found
       const messagesWithCycleData = messages.filter(
         (msg) => msg.metadata && (msg.metadata as any).cycle_day && (msg.metadata as any).cycle_length_days
       );
@@ -318,12 +323,12 @@ const Chat = () => {
           cycleDay: metadata.cycle_day,
           phase: metadata.cycle_phase || "Unknown",
           cycleLengthDays: metadata.cycle_length_days,
+          lifeStage: "cycling",
         });
       }
       return;
     }
 
-    // Recalculate cycle day live using the same logic as the server
     const liveInfo = calculateCycleInfo(lastPeriodStart, cycleLengthDays, timezone);
     if (liveInfo) {
       setCycleData({
@@ -331,9 +336,10 @@ const Chat = () => {
         phase: liveInfo.phase,
         cycleLengthDays,
         lastPeriodStart,
+        lifeStage: "cycling",
       });
     }
-  }, [user, isOnboarding, messages]);
+  }, [user, isOnboarding, messages, lifeStage]);
 
   // Scroll to bottom on initial load
   const hasScrolledToBottom = useRef(false);
