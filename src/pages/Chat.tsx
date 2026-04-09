@@ -91,6 +91,7 @@ interface CycleData {
   phase: string;
   cycleLengthDays: number;
   lastPeriodStart?: string;
+  lifeStage?: "cycling" | "postpartum" | "menopause";
 }
 
 const MESSAGES_PER_PAGE = 100;
@@ -107,6 +108,7 @@ const Chat = () => {
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
+  const [lifeStage, setLifeStage] = useState<"cycling" | "postpartum" | "menopause">("cycling");
   const [showForecast, setShowForecast] = useState(false);
   
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -206,9 +208,10 @@ const Chat = () => {
         generateOnOpenInsight();
       }
 
-      // Fetch credits if onboarding complete
+      // Fetch credits and life stage if onboarding complete
       if (effectivelyComplete) {
         fetchCredits();
+        fetchLifeStage();
       }
 
       // Check if existing user needs topic preferences prompt
@@ -273,22 +276,29 @@ const Chat = () => {
       return;
     }
 
+    // For non-cycling users, provide a minimal CycleData with life stage info
+    if (lifeStage !== "cycling") {
+      setCycleData({
+        cycleDay: 0,
+        phase: lifeStage === "postpartum" ? "Postpartum" : "Menopause",
+        cycleLengthDays: 0,
+        lifeStage,
+      });
+      return;
+    }
+
     // Find the most recent last_period_start from metadata
-    // Check period update messages first, then any message with last_period_start
     let lastPeriodStart: string | null = null;
     let cycleLengthDays: number | null = null;
     let userTimezone: string | null = null;
 
-    // Iterate in reverse to find most recent data
     for (let i = messages.length - 1; i >= 0; i--) {
       const metadata = messages[i].metadata as any;
       if (!metadata) continue;
 
-      // Period update messages have new_period_start
       if (metadata.new_period_start && !lastPeriodStart) {
         lastPeriodStart = metadata.new_period_start;
       }
-      // Regular messages may have last_period_start
       if (metadata.last_period_start && !lastPeriodStart) {
         lastPeriodStart = metadata.last_period_start;
       }
@@ -301,11 +311,9 @@ const Chat = () => {
       if (lastPeriodStart && cycleLengthDays) break;
     }
 
-    // Use browser timezone as fallback instead of hardcoded value
     const timezone = userTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     if (!lastPeriodStart || !cycleLengthDays) {
-      // Fallback: use stale cycle_day from metadata if no period start found
       const messagesWithCycleData = messages.filter(
         (msg) => msg.metadata && (msg.metadata as any).cycle_day && (msg.metadata as any).cycle_length_days
       );
@@ -315,12 +323,12 @@ const Chat = () => {
           cycleDay: metadata.cycle_day,
           phase: metadata.cycle_phase || "Unknown",
           cycleLengthDays: metadata.cycle_length_days,
+          lifeStage: "cycling",
         });
       }
       return;
     }
 
-    // Recalculate cycle day live using the same logic as the server
     const liveInfo = calculateCycleInfo(lastPeriodStart, cycleLengthDays, timezone);
     if (liveInfo) {
       setCycleData({
@@ -328,9 +336,10 @@ const Chat = () => {
         phase: liveInfo.phase,
         cycleLengthDays,
         lastPeriodStart,
+        lifeStage: "cycling",
       });
     }
-  }, [user, isOnboarding, messages]);
+  }, [user, isOnboarding, messages, lifeStage]);
 
   // Scroll to bottom on initial load
   const hasScrolledToBottom = useRef(false);
@@ -451,6 +460,22 @@ const Chat = () => {
       }
     } catch (error) {
       console.error("Error generating on-open insight:", error);
+    }
+  };
+
+  const fetchLifeStage = async () => {
+    if (!user) return;
+    try {
+      const { data } = await supabase
+        .from("participants")
+        .select("life_stage")
+        .eq("email", user.email)
+        .single();
+      if (data?.life_stage) {
+        setLifeStage(data.life_stage as "cycling" | "postpartum" | "menopause");
+      }
+    } catch (e) {
+      // Participant may not exist yet
     }
   };
 
@@ -806,7 +831,7 @@ const Chat = () => {
     const lastMessage = messages[messages.length - 1];
     if (lastMessage.role !== "assistant") return false;
     const inputType = lastMessage.metadata?.input_type;
-    return inputType === "symptom_picker" || inputType === "anchor_picker" || inputType === "date_picker" || inputType === "topic_picker";
+    return inputType === "symptom_picker" || inputType === "anchor_picker" || inputType === "date_picker" || inputType === "topic_picker" || inputType === "life_stage_picker";
   };
   const sendFeedback = async (messageId: string, isPositive: boolean) => {
     if (!user) return;
@@ -906,12 +931,13 @@ const Chat = () => {
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
            <div className="flex items-center gap-3">
              {cycleData ? (
-               <ChatCycleCircle
-                 cycleDay={cycleData.cycleDay}
-                 phase={cycleData.phase}
-                 cycleLengthDays={cycleData.cycleLengthDays}
-                 size="sm"
-               />
+                <ChatCycleCircle
+                  cycleDay={cycleData.cycleDay}
+                  phase={cycleData.phase}
+                  cycleLengthDays={cycleData.cycleLengthDays}
+                  size="sm"
+                  lifeStage={cycleData.lifeStage}
+                />
              ) : (
                <LoganLogo size="sm" />
              )}
@@ -1167,6 +1193,31 @@ const Chat = () => {
                         onSubmit={handleDateSubmit}
                         isSubmitting={isSending}
                       />
+                    </div>
+                  )}
+
+                  {showInteractiveInput && inputType === "life_stage_picker" && (
+                    <div className="mt-3 flex flex-col gap-2 max-w-xs">
+                      {[
+                        { value: "cycling", label: "I have a regular cycle", desc: "Currently menstruating" },
+                        { value: "postpartum", label: "Postpartum", desc: "Recently had a baby" },
+                        { value: "menopause", label: "Menopause / Perimenopause", desc: "Cycle is irregular or stopped" },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => {
+                            sendOnboardingResponse(option.value);
+                            if (option.value !== "cycling") {
+                              setLifeStage(option.value as "postpartum" | "menopause");
+                            }
+                          }}
+                          disabled={isSending}
+                          className="text-left px-4 py-3 rounded-xl border border-border/40 bg-card/60 hover:bg-card/90 transition-all active:scale-[0.98]"
+                        >
+                          <span className="text-sm font-medium text-foreground">{option.label}</span>
+                          <span className="block text-xs text-muted-foreground mt-0.5">{option.desc}</span>
+                        </button>
+                      ))}
                     </div>
                   )}
 

@@ -737,7 +737,27 @@ CYCLE DATA EDITS:
 - If a user TELLS you to change their cycle length or period date (e.g. "change my cycle to 30 days", "my period started on March 15"), the system handles it automatically — just confirm it's done.
 - If a user asks HOW to change their cycle data themselves (e.g. "how do I update my cycle length?", "where can I edit my period date?"), tell them to head to the Home tab where there's an "Update period date" option right under the cycle circle. Keep it brief and friendly.`;
 
-  if (!participant || !cycleInfo) {
+  if (!participant) {
+    return basePrompt + "\n\nNote: User hasn't completed onboarding yet. Provide general guidance and encourage them to share their cycle details for personalized insights.";
+  }
+
+  const userLifeStage = participant.life_stage || "cycling";
+
+  if (userLifeStage !== "cycling") {
+    const age = participant.age || null;
+    const topics = participant.goals?.length ? participant.goals.join(", ") : null;
+    const stageLabel = userLifeStage === "postpartum" ? "Postpartum" : "Menopause / Perimenopause";
+    
+    const stageContext = userLifeStage === "postpartum"
+      ? `This user is POSTPARTUM — they do not have a regular cycle right now. Their hormones are recalibrating after pregnancy. Focus on: recovery, sleep deprivation, mood shifts, identity adjustments, physical healing, breastfeeding impacts on hormones. Do NOT reference cycle phases, cycle days, or ovulation. Instead, center guidance on where they are in postpartum recovery.`
+      : `This user is in MENOPAUSE or PERIMENOPAUSE — their cycle is irregular or has stopped. Their estrogen and progesterone are declining. Focus on: hot flashes, sleep disruption, mood changes, bone health, energy management, cognitive shifts, weight changes. Do NOT reference specific cycle days or ovulation windows. Instead, provide guidance relevant to hormonal transition and thriving through it.`;
+
+    let userContext = `\n\nUSER CONTEXT:\n- Life stage: ${stageLabel}\n- Age: ${age || "unknown"}\n- Anchor symptom: ${participant.anchor_symptom || "not specified"}\n- Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}\n${topics ? `- Focus areas: ${topics}` : ""}\n\n${stageContext}`;
+    
+    return basePrompt + userContext;
+  }
+
+  if (!cycleInfo) {
     return basePrompt + "\n\nNote: User hasn't completed onboarding yet. Provide general guidance and encourage them to share their cycle details for personalized insights.";
   }
 

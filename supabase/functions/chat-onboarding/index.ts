@@ -67,12 +67,20 @@ const ONBOARDING_QUESTIONS = [
     inputType: "text"
   },
   {
+    key: "life_stage",
+    message: "Which best describes where you are right now?",
+    field: "life_stage",
+    parseType: "life_stage",
+    inputType: "life_stage_picker"
+  },
+  {
     key: "cycle_length",
     message: "How many days is your cycle? (From the start of one period to the start of the next.)\n\nMost people are somewhere between 24 and 35 days. If you're not sure, that's totally fine — tap \"I'm not sure\" below.",
     field: "cycle_length_days",
     parseType: "number",
     inputType: "text",
-    showNotSure: true
+    showNotSure: true,
+    requiresStage: "cycling"
   },
   {
     key: "last_period",
@@ -80,7 +88,8 @@ const ONBOARDING_QUESTIONS = [
     field: "last_period_start",
     parseType: "date",
     inputType: "date_picker",
-    showNotSure: true
+    showNotSure: true,
+    requiresStage: "cycling"
   },
   {
     key: "symptoms",
@@ -286,7 +295,16 @@ serve(async (req) => {
       let parsedValue: any = userMessage?.trim() || "";
       const parseType = currentQuestion.parseType;
 
-      if (parseType === "date") {
+      if (parseType === "life_stage") {
+        const lower = (userMessage || "").toLowerCase();
+        if (lower.includes("postpartum") || lower.includes("post-partum") || lower.includes("just had")) {
+          parsedValue = "postpartum";
+        } else if (lower.includes("menopause") || lower.includes("peri")) {
+          parsedValue = "menopause";
+        } else {
+          parsedValue = "cycling";
+        }
+      } else if (parseType === "date") {
         parsedValue = selectedDate || parseNaturalDate(userMessage || "");
       } else if (parseType === "number") {
         const match = (userMessage || "").match(/\d+/);
@@ -340,17 +358,30 @@ serve(async (req) => {
         }
       }
 
-      const nextStep = currentStep + 1;
+      // Determine next step, skipping cycle-specific questions for non-cycling users
+      let nextStep = currentStep + 1;
+      const userLifeStage = (participant as any)?.life_stage || "cycling";
+      if (userLifeStage !== "cycling") {
+        while (nextStep < ONBOARDING_QUESTIONS.length - 1 && (ONBOARDING_QUESTIONS[nextStep] as any).requiresStage === "cycling") {
+          nextStep++;
+        }
+      }
       const nextQuestion = ONBOARDING_QUESTIONS[nextStep];
 
       // ─── Educational moments between steps ───────────────────────
 
-      // After AGE → show hormone basics before asking cycle length
-      if (currentQuestion.key === "age") {
+      // After LIFE_STAGE → show hormone basics (adapted for non-cycling)
+      if (currentQuestion.key === "life_stage") {
+        const stageContent = userLifeStage === "postpartum"
+          ? "Your hormones are recalibrating after pregnancy. It takes time — Logan will adapt guidance to your recovery:"
+          : userLifeStage === "menopause"
+          ? "Your hormones are shifting into a new pattern. Understanding what's changing helps you navigate it:"
+          : "Your body has two main hormones that rise and fall each month — they're behind most of what you feel:";
+        
         await supabase.from("chat_messages").insert({
           user_id: user.id,
           role: "assistant",
-          content: "Your body has two main hormones that rise and fall each month — they're behind most of what you feel:",
+          content: stageContent,
           message_type: "text",
           metadata: {
             visual_type: "education_hormones",
@@ -358,6 +389,11 @@ serve(async (req) => {
           }
         });
         await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      // After AGE → no longer show hormones here (moved to after life_stage)
+      if (currentQuestion.key === "age") {
+        // Life stage question follows — no educational card needed here
       }
 
       // After LAST PERIOD → show cycle circle + educational context
@@ -505,34 +541,56 @@ serve(async (req) => {
 
       // If onboarding is complete, send the first insight
       if (nextStep === ONBOARDING_QUESTIONS.length - 1 && participant) {
-        const cycleInfo = calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC");
-
-        if (cycleInfo) {
-          const firstInsight = generateFirstInsight(
-            cycleInfo.phase,
-            cycleInfo.cycleDay,
-            participant.anchor_symptom || anchorSymptom
-          );
+        const pLifeStage = (participant as any).life_stage || "cycling";
+        
+        if (pLifeStage !== "cycling") {
+          // Non-cycling first insight
+          const stageLabel = pLifeStage === "postpartum" ? "Postpartum" : "Menopause";
+          const stageInsight = pLifeStage === "postpartum"
+            ? `Here's your first personal insight 👇\n\n**${stageLabel} — Recovery phase**\n\n- **Energy**: Variable — sleep deprivation and hormonal shifts are real\n- **What to expect**: Your body is rebuilding. Some days are harder than others\n${participant.anchor_symptom ? `- **Your anchor (${participant.anchor_symptom.toLowerCase()})**: may show up differently during recovery` : "- **Tip**: Be patient with your body — it did something extraordinary"}\n\nLogan adapts to where you are, not where a textbook says you should be.`
+            : `Here's your first personal insight 👇\n\n**${stageLabel} — Transition phase**\n\n- **Energy**: Fluctuating — estrogen and progesterone are declining\n- **What to expect**: Hot flashes, sleep changes, and mood shifts are common\n${participant.anchor_symptom ? `- **Your anchor (${participant.anchor_symptom.toLowerCase()})**: may intensify or shift during this transition` : "- **Tip**: This is a transition, not an ending"}\n\nLogan is here to help you navigate what's changing.`;
 
           await new Promise(resolve => setTimeout(resolve, 1500));
-
-          const { error: insightError } = await supabase.from("chat_messages").insert({
+          await supabase.from("chat_messages").insert({
             user_id: user.id,
             role: "assistant",
-            content: firstInsight,
+            content: stageInsight,
             message_type: "text",
             metadata: {
-              has_cycle_visual: true,
-              visual_type: "hormone_chart",
-              cycle_day: cycleInfo.cycleDay,
-              cycle_phase: cycleInfo.phase,
-              cycle_length_days: participant.cycle_length_days || 28,
-              insight_type: "awareness"
+              insight_type: "awareness",
+              life_stage: pLifeStage,
             }
           });
+        } else {
+          const cycleInfo = calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC");
 
-          if (insightError) {
-            console.error("Error sending first insight:", insightError);
+          if (cycleInfo) {
+            const firstInsight = generateFirstInsight(
+              cycleInfo.phase,
+              cycleInfo.cycleDay,
+              participant.anchor_symptom || anchorSymptom
+            );
+
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            const { error: insightError } = await supabase.from("chat_messages").insert({
+              user_id: user.id,
+              role: "assistant",
+              content: firstInsight,
+              message_type: "text",
+              metadata: {
+                has_cycle_visual: true,
+                visual_type: "hormone_chart",
+                cycle_day: cycleInfo.cycleDay,
+                cycle_phase: cycleInfo.phase,
+                cycle_length_days: participant.cycle_length_days || 28,
+                insight_type: "awareness"
+              }
+            });
+
+            if (insightError) {
+              console.error("Error sending first insight:", insightError);
+            }
           }
         }
       }

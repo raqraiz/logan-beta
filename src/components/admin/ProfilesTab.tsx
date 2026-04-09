@@ -61,6 +61,7 @@ interface Participant {
   is_active: boolean | null;
   whatsapp_number: string;
   created_at: string;
+  life_stage: string | null;
 }
 
 
@@ -131,6 +132,7 @@ export function ProfilesTab() {
     full_name: "", email: "", phone: "",
     cycle_length_days: "28", cycle_regularity: "", last_period_start: "",
     anchor_symptom: "", typical_symptoms: "", goals: "", timezone: "Asia/Jerusalem",
+    life_stage: "cycling",
   });
   const [saving, setSaving] = useState(false);
   const [showHomePreview, setShowHomePreview] = useState(false);
@@ -280,6 +282,7 @@ export function ProfilesTab() {
       typical_symptoms: p?.typical_symptoms?.join(", ") || "",
       goals: p?.goals?.join(", ") || "",
       timezone: p?.timezone || "Asia/Jerusalem",
+      life_stage: (p as any)?.life_stage || "cycling",
     });
     setEditOpen(true);
   };
@@ -322,7 +325,8 @@ export function ProfilesTab() {
             typical_symptoms: symptomsArr,
             goals: goalsArr,
             timezone: editForm.timezone.trim() || "Asia/Jerusalem",
-          })
+            life_stage: editForm.life_stage,
+          } as any)
           .eq("id", selectedProfile.participant.id);
 
         if (pError) throw pError;
@@ -478,7 +482,7 @@ export function ProfilesTab() {
                   <Download className="w-4 h-4 mr-2" />
                   Download
                 </Button>
-                {cycleData && (
+                {(cycleData || participant?.life_stage !== "cycling") && (
                   <Button variant="outline" size="sm" onClick={() => setShowHomePreview(true)}>
                     <Home className="w-4 h-4 mr-2" />
                     View Home
@@ -586,7 +590,16 @@ export function ProfilesTab() {
               {participant ? (
                 <div className="space-y-4">
                   {/* Cycle Circle Visualization */}
-                  {cycleDay && phase && (
+                  {participant.life_stage && participant.life_stage !== "cycling" ? (
+                    <div className="flex justify-center py-2">
+                      <ChatCycleCircle
+                        cycleDay={0}
+                        phase={participant.life_stage === "postpartum" ? "Postpartum" : "Menopause"}
+                        cycleLengthDays={0}
+                        lifeStage={participant.life_stage as "postpartum" | "menopause"}
+                      />
+                    </div>
+                  ) : cycleDay && phase ? (
                     <div className="flex justify-center py-2">
                       <ChatCycleCircle
                         cycleDay={cycleDay}
@@ -594,7 +607,7 @@ export function ProfilesTab() {
                         cycleLengthDays={participant.cycle_length_days || 28}
                       />
                     </div>
-                  )}
+                  ) : null}
                   
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
@@ -846,6 +859,19 @@ export function ProfilesTab() {
                       <Input id="edit-goals" placeholder="Comma-separated, e.g. diet, exercise, sleep, mood, energy, skin" value={editForm.goals} onChange={(e) => setEditForm(f => ({ ...f, goals: e.target.value }))} />
                     </div>
                     <div className="space-y-1.5">
+                      <Label htmlFor="edit-life-stage">Life Stage</Label>
+                      <select
+                        id="edit-life-stage"
+                        value={editForm.life_stage}
+                        onChange={(e) => setEditForm(f => ({ ...f, life_stage: e.target.value }))}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="cycling">Cycling</option>
+                        <option value="postpartum">Postpartum</option>
+                        <option value="menopause">Menopause</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
                       <Label htmlFor="edit-tz">Timezone</Label>
                       <Input id="edit-tz" value={editForm.timezone} onChange={(e) => setEditForm(f => ({ ...f, timezone: e.target.value }))} />
                     </div>
@@ -877,7 +903,17 @@ export function ProfilesTab() {
             </DialogHeader>
             <div className="px-2 pb-4 pointer-events-none">
               <HomeTab
-                cycleData={cycleData ? { ...cycleData, cycleLengthDays: participant?.cycle_length_days || 28, lastPeriodStart: participant?.last_period_start || undefined } : null}
+                cycleData={cycleData ? { 
+                  ...cycleData, 
+                  cycleLengthDays: participant?.cycle_length_days || 28, 
+                  lastPeriodStart: participant?.last_period_start || undefined,
+                  lifeStage: (participant?.life_stage as any) || "cycling",
+                } : participant?.life_stage && participant.life_stage !== "cycling" ? {
+                  cycleDay: 0,
+                  phase: participant.life_stage === "postpartum" ? "Postpartum" : "Menopause",
+                  cycleLengthDays: 0,
+                  lifeStage: participant.life_stage as "postpartum" | "menopause",
+                } : null}
                 userId={profile.id}
               />
             </div>

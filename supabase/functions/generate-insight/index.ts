@@ -137,6 +137,18 @@ serve(async (req) => {
       );
     }
 
+    const userLifeStage = participant.life_stage || "cycling";
+
+    // For non-cycling users, skip cycle-based insights
+    if (userLifeStage !== "cycling") {
+      // Remove placeholder and skip — non-cycling proactive insights can be added later
+      await supabase.from("chat_messages").delete().eq("id", placeholderId);
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, reason: "non_cycling_user" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Calculate cycle info using participant's timezone
     const cycleInfo = calculateCycleInfo(
       participant.last_period_start,

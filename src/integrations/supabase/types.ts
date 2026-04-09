@@ -417,6 +417,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           last_period_start: string | null
+          life_stage: string
           preferred_channel: string | null
           telegram_chat_id: string | null
           timezone: string | null
@@ -439,6 +440,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           last_period_start?: string | null
+          life_stage?: string
           preferred_channel?: string | null
           telegram_chat_id?: string | null
           timezone?: string | null
@@ -461,6 +463,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           last_period_start?: string | null
+          life_stage?: string
           preferred_channel?: string | null
           telegram_chat_id?: string | null
           timezone?: string | null

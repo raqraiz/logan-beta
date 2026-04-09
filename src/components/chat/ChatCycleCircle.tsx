@@ -1,10 +1,12 @@
 
+type LifeStage = "cycling" | "postpartum" | "menopause";
 
 interface ChatCycleCircleProps {
   cycleDay: number;
   phase: string;
   cycleLengthDays: number;
   size?: "sm" | "md";
+  lifeStage?: LifeStage;
 }
 
 const PHASE_STYLES: Record<string, { color: string; ringColor: string; hex: string }> = {
@@ -27,6 +29,16 @@ const PHASE_STYLES: Record<string, { color: string; ringColor: string; hex: stri
     color: "text-phase-luteal",
     ringColor: "stroke-phase-luteal",
     hex: "#9B6DD7",
+  },
+  Postpartum: {
+    color: "text-pink-400",
+    ringColor: "stroke-pink-400",
+    hex: "#F472B6",
+  },
+  Menopause: {
+    color: "text-amber-400",
+    ringColor: "stroke-amber-400",
+    hex: "#FBBF24",
   },
 };
 
@@ -88,7 +100,61 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
   );
 }
 
-export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md" }: ChatCycleCircleProps) {
+// Static badge for non-cycling life stages
+function LifeStageBadge({ lifeStage, size }: { lifeStage: "postpartum" | "menopause"; size: "sm" | "md" }) {
+  const stageKey = lifeStage === "postpartum" ? "Postpartum" : "Menopause";
+  const styles = PHASE_STYLES[stageKey];
+  const label = lifeStage === "postpartum" ? "Postpartum" : "Menopause";
+  const subtitle = lifeStage === "postpartum" ? "Recovery" : "Transition";
+
+  if (size === "sm") {
+    return (
+      <div className="relative w-10 h-10 flex-shrink-0">
+        <div className="absolute inset-0 rounded-full opacity-20 blur-xl" style={{ backgroundColor: styles.hex }} />
+        <div className="absolute inset-[3px] rounded-full bg-[hsl(220,10%,8%)] border border-border/20" />
+        <div className="absolute inset-0 flex items-center justify-center z-20">
+          <span className="text-[8px] font-bold" style={{ color: styles.hex }}>
+            {lifeStage === "postpartum" ? "PP" : "M"}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-center py-4">
+      <div className="relative w-56 h-56 flex-shrink-0">
+        <div className="absolute inset-0 rounded-full opacity-20 blur-xl" style={{ backgroundColor: styles.hex }} />
+        <div className="absolute inset-[6px] rounded-full bg-[hsl(220,10%,8%)] shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)]" />
+        {/* Decorative static ring */}
+        <svg className="w-full h-full relative z-10" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="42" fill="none" strokeWidth="3" stroke="hsl(220 10% 16%)" />
+          <circle
+            cx="50" cy="50" r="42" fill="none" strokeWidth="3"
+            strokeLinecap="round"
+            strokeDasharray="8 12"
+            stroke={styles.hex}
+            style={{ filter: `drop-shadow(0 0 4px ${styles.hex}80)` }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
+          <span className="text-3xl font-bold" style={{ color: styles.hex }}>
+            {lifeStage === "postpartum" ? "🌱" : "✦"}
+          </span>
+          <span className="text-sm font-semibold mt-1" style={{ color: styles.hex }}>{label}</span>
+          <span className="text-xs text-muted-foreground mt-0.5">{subtitle}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling" }: ChatCycleCircleProps) {
+  // Non-cycling users get a static badge
+  if (lifeStage !== "cycling") {
+    return <LifeStageBadge lifeStage={lifeStage} size={size} />;
+  }
+
   const isSmall = size === "sm";
 
   if (isSmall) {

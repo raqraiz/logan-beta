@@ -259,6 +259,7 @@ interface CycleData {
   phase: string;
   cycleLengthDays: number;
   lastPeriodStart?: string;
+  lifeStage?: "cycling" | "postpartum" | "menopause";
 }
 
 interface HomeTabProps {
@@ -302,46 +303,57 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     const id = widget.id;
     const label = getWidgetLabel(widget);
     switch (id) {
-      case "cycle_circle":
+      case "cycle_circle": {
+        const isNonCycling = cycleData.lifeStage && cycleData.lifeStage !== "cycling";
         return (
           <div className="flex flex-col items-center" key={id}>
             <button
-              onClick={() => setShowAnalytics(true)}
-              className="cursor-pointer transition-transform duration-200 active:scale-95 hover:scale-[1.02]"
-              aria-label="View cycle analytics"
+              onClick={() => !isNonCycling && setShowAnalytics(true)}
+              className={`transition-transform duration-200 active:scale-95 hover:scale-[1.02] ${isNonCycling ? "" : "cursor-pointer"}`}
+              aria-label={isNonCycling ? `${cycleData.phase} status` : "View cycle analytics"}
             >
               <ChatCycleCircle
                 cycleDay={cycleData.cycleDay}
                 phase={cycleData.phase}
                 cycleLengthDays={cycleData.cycleLengthDays}
                 size="md"
+                lifeStage={cycleData.lifeStage}
               />
             </button>
             <p className="text-sm text-muted-foreground mt-3">
               {format(new Date(), "EEEE, MMMM d")}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Day {cycleData.cycleDay} of {cycleData.cycleLengthDays}
-            </p>
-            {!dismissed && (
-              <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground/70">
-                <span>Not accurate?</span>
-                <button
-                  onClick={() => {
-                    setEditedLength(cycleData.cycleLengthDays);
-                    setShowDatePicker(true);
-                  }}
-                  className="underline underline-offset-2 hover:text-foreground transition-colors"
-                >
-                  Update period date
-                </button>
-                <button onClick={() => setDismissed(true)} className="ml-1 hover:text-foreground transition-colors">
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
+            {isNonCycling ? (
+              <p className="text-xs text-muted-foreground mt-1">
+                {cycleData.lifeStage === "postpartum" ? "Your body is recovering — Logan adapts to you" : "A new chapter — Logan is here for it"}
+              </p>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Day {cycleData.cycleDay} of {cycleData.cycleLengthDays}
+                </p>
+                {!dismissed && (
+                  <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground/70">
+                    <span>Not accurate?</span>
+                    <button
+                      onClick={() => {
+                        setEditedLength(cycleData.cycleLengthDays);
+                        setShowDatePicker(true);
+                      }}
+                      className="underline underline-offset-2 hover:text-foreground transition-colors"
+                    >
+                      Update period date
+                    </button>
+                    <button onClick={() => setDismissed(true)} className="ml-1 hover:text-foreground transition-colors">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         );
+      }
       case "succeed_you":
         return (
           <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
