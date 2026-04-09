@@ -559,6 +559,39 @@ export type Database = {
           },
         ]
       }
+      user_activity_events: {
+        Row: {
+          created_at: string
+          element_label: string | null
+          element_type: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          page_path: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          element_label?: string | null
+          element_type?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          page_path?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          element_label?: string | null
+          element_type?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          page_path?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_credits: {
         Row: {
           bonus_credits_awarded: boolean
