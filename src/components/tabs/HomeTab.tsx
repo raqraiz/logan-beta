@@ -7,6 +7,7 @@ import { LoganLogo } from "@/components/LoganLogo";
 import { WidgetEditMode } from "@/components/home/WidgetEditMode";
 import { AddCustomWidgetDialog } from "@/components/home/AddCustomWidgetDialog";
 import { CustomAIWidget } from "@/components/home/CustomAIWidget";
+import { MiniPhaseArc, getWidgetGraphic } from "@/components/home/WidgetGraphics";
 import { useWidgetPreferences, getWidgetLabel } from "@/hooks/useWidgetPreferences";
 import { format } from "date-fns";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
@@ -166,13 +167,6 @@ const PHASE_GLOW: Record<string, string> = {
 
 // ── TipCard ───────────────────────────────────────────────
 
-const PHASE_ICON: Record<string, string> = {
-  Menstruation: "🌙",
-  Follicular: "🌱",
-  Ovulation: "☀️",
-  Luteal: "🍂",
-};
-
 const PHASE_BG_ACCENT: Record<string, string> = {
   Menstruation: "from-phase-menstruation/8 to-transparent",
   Follicular: "from-phase-follicular/8 to-transparent",
@@ -180,14 +174,21 @@ const PHASE_BG_ACCENT: Record<string, string> = {
   Luteal: "from-phase-luteal/8 to-transparent",
 };
 
-const CARD_ICON: Record<string, string> = {
-  "succeed_you": "✨",
-  "succeed_him": "💪",
-  "dontmessup_you": "🛡️",
-  "dontmessup_him": "🤝",
-};
-
-function TipCard({ label, tips, phase, widgetId }: { label: string; tips: string[]; phase: string; widgetId?: string }) {
+function TipCard({
+  label,
+  tips,
+  phase,
+  widgetId,
+  cycleDay,
+  cycleLengthDays,
+}: {
+  label: string;
+  tips: string[];
+  phase: string;
+  widgetId?: string;
+  cycleDay: number;
+  cycleLengthDays: number;
+}) {
   const phaseTips = tips.length > 0 ? tips : ["No tips available for this phase."];
   const [index, setIndex] = useState(() => Math.floor(Math.random() * phaseTips.length));
   const [animating, setAnimating] = useState(false);
@@ -203,8 +204,6 @@ function TipCard({ label, tips, phase, widgetId }: { label: string; tips: string
   const borderColor = PHASE_BORDER[phase] || "border-l-primary";
   const glow = PHASE_GLOW[phase] || "";
   const bgAccent = PHASE_BG_ACCENT[phase] || "from-primary/5 to-transparent";
-  const phaseIcon = PHASE_ICON[phase] || "🔮";
-  const cardIcon = widgetId ? (CARD_ICON[widgetId] || "💡") : "💡";
 
   return (
     <button
@@ -215,38 +214,39 @@ function TipCard({ label, tips, phase, widgetId }: { label: string; tips: string
     >
       {/* Gradient accent background */}
       <div className={`absolute inset-0 bg-gradient-to-br ${bgAccent} pointer-events-none`} />
-      {/* Large faded phase icon as decorative watermark */}
-      <div className="absolute -right-2 -bottom-2 text-[56px] opacity-[0.06] pointer-events-none select-none leading-none">
-        {phaseIcon}
-      </div>
-      
+
       <div className="relative p-3.5">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm">{cardIcon}</span>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">{label}</span>
-          </div>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">{label}</span>
           <div className="flex items-center gap-1 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors">
             <span className="text-[9px]">tap to shuffle</span>
             <Shuffle className="w-3 h-3" />
           </div>
         </div>
-        
-        {/* Progress dots showing tip position */}
-        <div className="flex gap-1 mb-2">
-          {phaseTips.map((_, i) => (
-            <div
-              key={i}
-              className={`h-0.5 rounded-full transition-all duration-200 ${
-                i === index ? "w-4 bg-primary/50" : "w-1.5 bg-muted-foreground/15"
-              }`}
-            />
-          ))}
+
+        {/* Visual: graphic + text side by side */}
+        <div className="flex items-start gap-3">
+          <div className="flex flex-col items-center gap-1.5 pt-0.5">
+            {widgetId && getWidgetGraphic(widgetId, phase)}
+            <MiniPhaseArc cycleDay={cycleDay} cycleLengthDays={cycleLengthDays} phase={phase} size={28} />
+          </div>
+          <div className="flex-1 min-w-0">
+            {/* Progress dots */}
+            <div className="flex gap-1 mb-1.5">
+              {phaseTips.map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-0.5 rounded-full transition-all duration-200 ${
+                    i === index ? "w-4 bg-primary/50" : "w-1.5 bg-muted-foreground/15"
+                  }`}
+                />
+              ))}
+            </div>
+            <p className={`text-[13px] text-foreground/85 leading-relaxed transition-opacity duration-150 ${animating ? 'opacity-0' : 'opacity-100'}`}>
+              {phaseTips[index]}
+            </p>
+          </div>
         </div>
-        
-        <p className={`text-[13px] text-foreground/85 leading-relaxed transition-opacity duration-150 ${animating ? 'opacity-0' : 'opacity-100'}`}>
-          {phaseTips[index]}
-        </p>
       </div>
     </button>
   );
@@ -348,7 +348,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
               {label}
             </p>
-            <TipCard label="For you" tips={SUCCEED_HER[cycleData.phase] || []} phase={cycleData.phase} widgetId="succeed_you" />
+            <TipCard label="For you" tips={SUCCEED_HER[cycleData.phase] || []} phase={cycleData.phase} widgetId="succeed_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
           </div>
         );
       case "succeed_him":
@@ -357,7 +357,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
               {label}
             </p>
-            <TipCard label="For him" tips={SUCCEED_HIM[cycleData.phase] || []} phase={cycleData.phase} widgetId="succeed_him" />
+            <TipCard label="For him" tips={SUCCEED_HIM[cycleData.phase] || []} phase={cycleData.phase} widgetId="succeed_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
           </div>
         );
       case "dontmessup_you":
@@ -366,7 +366,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
               {label}
             </p>
-            <TipCard label="For you" tips={DONT_MESS_UP_HER[cycleData.phase] || []} phase={cycleData.phase} widgetId="dontmessup_you" />
+            <TipCard label="For you" tips={DONT_MESS_UP_HER[cycleData.phase] || []} phase={cycleData.phase} widgetId="dontmessup_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
           </div>
         );
       case "dontmessup_him":
@@ -375,7 +375,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
               {label}
             </p>
-            <TipCard label="For him" tips={DONT_MESS_UP_HIM[cycleData.phase] || []} phase={cycleData.phase} widgetId="dontmessup_him" />
+            <TipCard label="For him" tips={DONT_MESS_UP_HIM[cycleData.phase] || []} phase={cycleData.phase} widgetId="dontmessup_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
           </div>
         );
       case "hormone_chart":
