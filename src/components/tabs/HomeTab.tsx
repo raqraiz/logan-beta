@@ -209,8 +209,8 @@ export function HomeTab({ cycleData, onPeriodUpdate, onCycleLengthUpdate, userId
       )}
 
       {/* How not to mess up today */}
-      <div className="w-full max-w-xs mt-6 flex flex-col gap-2.5 px-2">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 text-center">
+      <div className="w-full max-w-xs mt-8 flex flex-col gap-3 px-2">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
           How not to mess up today
         </p>
         <TipCard label="For her" tips={HER_TIPS[cycleData.phase] || []} phase={cycleData.phase} />
