@@ -78,11 +78,37 @@ export const EngagementTab = () => {
         from += pageSize;
       }
 
+      // Fetch activity events to capture users who browsed without chatting
+      let allActivity: { user_id: string; created_at: string }[] = [];
+      let actFrom = 0;
+      while (true) {
+        const { data: batch } = await supabase
+          .from("user_activity_events")
+          .select("user_id, created_at")
+          .order("created_at", { ascending: true })
+          .range(actFrom, actFrom + pageSize - 1);
+        if (!batch || batch.length === 0) break;
+        allActivity = allActivity.concat(batch);
+        if (batch.length < pageSize) break;
+        actFrom += pageSize;
+      }
+
       // Group messages by user
       const messagesByUser = new Map<string, string[]>();
       for (const msg of allMessages) {
         if (!messagesByUser.has(msg.user_id)) messagesByUser.set(msg.user_id, []);
         messagesByUser.get(msg.user_id)!.push(msg.created_at);
+      }
+
+      // Group all activity (messages + events) by user for accurate active tracking
+      const allActivityByUser = new Map<string, string[]>();
+      for (const msg of allMessages) {
+        if (!allActivityByUser.has(msg.user_id)) allActivityByUser.set(msg.user_id, []);
+        allActivityByUser.get(msg.user_id)!.push(msg.created_at);
+      }
+      for (const evt of allActivity) {
+        if (!allActivityByUser.has(evt.user_id)) allActivityByUser.set(evt.user_id, []);
+        allActivityByUser.get(evt.user_id)!.push(evt.created_at);
       }
 
       // Calculate per-user engagement
