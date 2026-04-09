@@ -208,9 +208,10 @@ const Chat = () => {
         generateOnOpenInsight();
       }
 
-      // Fetch credits if onboarding complete
+      // Fetch credits and life stage if onboarding complete
       if (effectivelyComplete) {
         fetchCredits();
+        fetchLifeStage();
       }
 
       // Check if existing user needs topic preferences prompt
@@ -453,6 +454,22 @@ const Chat = () => {
       }
     } catch (error) {
       console.error("Error generating on-open insight:", error);
+    }
+  };
+
+  const fetchLifeStage = async () => {
+    if (!user) return;
+    try {
+      const { data } = await supabase
+        .from("participants")
+        .select("life_stage")
+        .eq("email", user.email)
+        .single();
+      if (data?.life_stage) {
+        setLifeStage(data.life_stage as "cycling" | "postpartum" | "menopause");
+      }
+    } catch (e) {
+      // Participant may not exist yet
     }
   };
 
