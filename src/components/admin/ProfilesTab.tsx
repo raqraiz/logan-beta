@@ -959,9 +959,11 @@ export function ProfilesTab() {
       ) : (
         <div className="grid gap-3">
           {filtered.map((profile) => {
+            const isNonCycling = profile.participant?.life_stage && profile.participant.life_stage !== "cycling";
             const cycleData = profile.participant ? getCycleData(profile.participant) : null;
             const cycleDay = cycleData?.cycleDay ?? null;
             const phase = cycleData?.phase ?? null;
+            const lifeStage = (profile.participant?.life_stage || "cycling") as "cycling" | "postpartum" | "menopause";
             
             return (
               <Card
@@ -971,7 +973,17 @@ export function ProfilesTab() {
               >
                 <CardContent className="py-3 px-4">
                   <div className="flex items-center gap-4">
-                    {cycleDay && phase ? (
+                    {isNonCycling ? (
+                      <div className="shrink-0">
+                        <ChatCycleCircle
+                          cycleDay={0}
+                          phase={lifeStage === "postpartum" ? "Postpartum" : "Menopause"}
+                          cycleLengthDays={0}
+                          size="sm"
+                          lifeStage={lifeStage}
+                        />
+                      </div>
+                    ) : cycleDay && phase ? (
                       <div className="shrink-0">
                         <ChatCycleCircle
                           cycleDay={cycleDay}
@@ -992,12 +1004,14 @@ export function ProfilesTab() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-medium">{profile.full_name}</span>
-                        {cycleDay && phase && (
+                        {isNonCycling ? (
+                          <Badge variant="secondary" className="text-xs capitalize">{lifeStage}</Badge>
+                        ) : cycleDay && phase ? (
                           <>
                             <Badge variant="outline" className="text-xs">Day {cycleDay}</Badge>
                             <Badge variant="secondary" className="text-xs">{phase}</Badge>
                           </>
-                        )}
+                        ) : null}
                       </div>
                       <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
                         <span className="flex items-center gap-1">
