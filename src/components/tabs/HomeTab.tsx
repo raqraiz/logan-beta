@@ -151,11 +151,47 @@ const SUCCEED_HIM: Record<string, string[]> = {
 
 // ── Phase styling ─────────────────────────────────────────
 
+// ── Postpartum & Menopause tips ──────────────────────────
+
+const POSTPARTUM_HER: string[] = [
+  "Rest is not laziness — it's how your body heals. Protect your sleep fiercely.",
+  "Your hormones are recalibrating. Mood swings are normal, not weakness.",
+  "Eat nutrient-dense meals. Your body is rebuilding — feed it like it matters.",
+  "Accept help without guilt. You don't get extra points for doing it all alone.",
+  "Move gently when you're ready — a short walk counts as a win.",
+];
+
+const POSTPARTUM_HIM: string[] = [
+  "She's recovering from the most physically intense thing a body can do. Act accordingly.",
+  "Don't wait to be asked — look around and handle what needs handling.",
+  "Tell her she's doing an amazing job. She won't believe it, but she needs to hear it.",
+  "Take the night shift or the early morning. One unbroken sleep cycle changes everything.",
+  "Her body changed to create life. Don't comment on it. Just love her louder.",
+];
+
+const MENOPAUSE_HER: string[] = [
+  "Hot flashes are your body adjusting, not breaking. They will pass.",
+  "Strength training protects your bones now more than ever. Start or keep going.",
+  "Brain fog is hormonal, not permanent. Write things down and give yourself grace.",
+  "Prioritize calcium, vitamin D, and magnesium. Your skeleton is counting on you.",
+  "This isn't an ending — it's a reinvention. Many women feel their most free after menopause.",
+];
+
+const MENOPAUSE_HIM: string[] = [
+  "She can't control the hot flashes. Don't joke about them. Just adjust the thermostat.",
+  "Her mood shifts aren't about you. Show up with patience, not defensiveness.",
+  "Ask how she's feeling — and actually listen without trying to fix it.",
+  "Encourage her interests and goals. This chapter has enormous potential.",
+  "Physical affection matters even when intimacy changes. Hold her hand. Hug her longer.",
+];
+
 const PHASE_BORDER: Record<string, string> = {
   Menstruation: "border-l-phase-menstruation",
   Follicular: "border-l-phase-follicular",
   Ovulation: "border-l-phase-ovulation",
   Luteal: "border-l-phase-luteal",
+  Postpartum: "border-l-pink-400",
+  Menopause: "border-l-amber-400",
 };
 
 const PHASE_GLOW: Record<string, string> = {
