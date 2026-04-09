@@ -850,6 +850,19 @@ export function ProfilesTab() {
                       <Input id="edit-goals" placeholder="Comma-separated, e.g. diet, exercise, sleep, mood, energy, skin" value={editForm.goals} onChange={(e) => setEditForm(f => ({ ...f, goals: e.target.value }))} />
                     </div>
                     <div className="space-y-1.5">
+                      <Label htmlFor="edit-life-stage">Life Stage</Label>
+                      <select
+                        id="edit-life-stage"
+                        value={editForm.life_stage}
+                        onChange={(e) => setEditForm(f => ({ ...f, life_stage: e.target.value }))}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="cycling">Cycling</option>
+                        <option value="postpartum">Postpartum</option>
+                        <option value="menopause">Menopause</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
                       <Label htmlFor="edit-tz">Timezone</Label>
                       <Input id="edit-tz" value={editForm.timezone} onChange={(e) => setEditForm(f => ({ ...f, timezone: e.target.value }))} />
                     </div>
