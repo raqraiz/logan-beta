@@ -481,6 +481,15 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           currentCycleDay={cycleData.cycleDay}
         />
       )}
+
+      {/* Add Custom Widget Dialog */}
+      <AddCustomWidgetDialog
+        open={showAddWidget}
+        onOpenChange={setShowAddWidget}
+        onAdd={(title, prompt) => {
+          addCustomWidget(title, prompt);
+        }}
+      />
     </div>
   );
 }
