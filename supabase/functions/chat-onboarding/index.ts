@@ -370,12 +370,18 @@ serve(async (req) => {
 
       // ─── Educational moments between steps ───────────────────────
 
-      // After AGE → show hormone basics before asking cycle length
-      if (currentQuestion.key === "age") {
+      // After LIFE_STAGE → show hormone basics (adapted for non-cycling)
+      if (currentQuestion.key === "life_stage") {
+        const stageContent = userLifeStage === "postpartum"
+          ? "Your hormones are recalibrating after pregnancy. It takes time — Logan will adapt guidance to your recovery:"
+          : userLifeStage === "menopause"
+          ? "Your hormones are shifting into a new pattern. Understanding what's changing helps you navigate it:"
+          : "Your body has two main hormones that rise and fall each month — they're behind most of what you feel:";
+        
         await supabase.from("chat_messages").insert({
           user_id: user.id,
           role: "assistant",
-          content: "Your body has two main hormones that rise and fall each month — they're behind most of what you feel:",
+          content: stageContent,
           message_type: "text",
           metadata: {
             visual_type: "education_hormones",
@@ -383,6 +389,11 @@ serve(async (req) => {
           }
         });
         await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      // After AGE → no longer show hormones here (moved to after life_stage)
+      if (currentQuestion.key === "age") {
+        // Life stage question follows — no educational card needed here
       }
 
       // After LAST PERIOD → show cycle circle + educational context
