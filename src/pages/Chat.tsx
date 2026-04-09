@@ -1337,7 +1337,7 @@ const Chat = () => {
       {!isOnboarding && (
         <BottomTabBar
           activeTab={effectiveTab}
-          onTabChange={(tab) => { setActiveTab(tab); trackTabSwitch(tab); }}
+          onTabChange={(tab) => { setActiveTab(tab); trackTabSwitch(tab); trackPageView(`/chat/${tab}`); }}
           cycleDay={cycleData?.cycleDay}
           cycleLengthDays={cycleData?.cycleLengthDays}
           phase={cycleData?.phase}
