@@ -16,7 +16,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 
-const HER_TIPS: Record<string, string[]> = {
+const DONT_MESS_UP_HER: Record<string, string[]> = {
   Menstruation: [
     "Don't schedule anything you can cancel tomorrow — you'll want to.",
     "Skip the intense workout. A walk counts. Your body is recovering.",
@@ -47,7 +47,7 @@ const HER_TIPS: Record<string, string[]> = {
   ],
 };
 
-const HIM_TIPS: Record<string, string[]> = {
+const DONT_MESS_UP_HIM: Record<string, string[]> = {
   Menstruation: [
     "Don't ask 'what's wrong?' — just bring her tea and a blanket.",
     "Take one thing off her plate without being asked. Dishes, kids, dinner — pick one.",
@@ -75,6 +75,68 @@ const HIM_TIPS: Record<string, string[]> = {
     "Bring her comfort food without commentary. No diet advice. No jokes.",
     "Handle bedtime or the morning routine without being asked. She's running on fumes.",
     "When she says 'I'm fine' — she's not. Sit with her. You don't have to fix it.",
+  ],
+};
+
+const SUCCEED_HER: Record<string, string[]> = {
+  Menstruation: [
+    "Journal for 5 minutes. Clarity comes easier when your body is slowing down.",
+    "Batch-cook something nourishing — future you will be grateful.",
+    "Use this low-energy window to plan your week ahead. Strategy over hustle.",
+    "Do one kind thing for yourself that costs nothing. A bath, a nap, silence.",
+    "Reflect on last cycle's wins. You accomplished more than you remember.",
+  ],
+  Follicular: [
+    "Brainstorm and start — this is your creative superpower phase.",
+    "Book the thing you've been nervous about. Your confidence is rising.",
+    "Network or reconnect with someone. You're naturally magnetic right now.",
+    "Try a new workout or recipe. Your brain craves novelty this week.",
+    "Set one clear goal for this cycle. You have the momentum to hit it.",
+  ],
+  Ovulation: [
+    "Negotiate the raise, pitch the idea, lead the meeting. You're built for this today.",
+    "Record a voice memo of your ideas — you're sharper than you'll be next week.",
+    "Celebrate a recent win out loud. Own it. You earned it.",
+    "Strengthen a relationship — your empathy and communication peak now.",
+    "Do the scary thing. Your risk tolerance is at its highest.",
+  ],
+  Luteal: [
+    "Finish and polish — your detail-oriented brain catches what others miss.",
+    "Organize your space. Nesting energy is real and productive.",
+    "Write the honest feedback, review, or reflection. Your filter is off — use it wisely.",
+    "Meal-prep comfort food so you're not relying on willpower later.",
+    "Say no to one thing that drains you. Boundaries are a success strategy.",
+  ],
+};
+
+const SUCCEED_HIM: Record<string, string[]> = {
+  Menstruation: [
+    "Run a hot bath for her without being asked. Small effort, huge impact.",
+    "Pick up dinner so she doesn't have to think about it.",
+    "Send her a text that says 'I've got everything handled tonight.'",
+    "Watch her favorite show with her — even if it's not your thing.",
+    "Ask 'what would make tonight easier?' and actually do it.",
+  ],
+  Follicular: [
+    "Suggest an adventure — hike, day trip, trying a new restaurant. She's game.",
+    "Start a project together. Her creative energy is contagious right now.",
+    "Compliment something specific she did, not just how she looks.",
+    "Be playful. She has the bandwidth for fun and wants you to match it.",
+    "Share something you've been thinking about. She's open to deep conversation.",
+  ],
+  Ovulation: [
+    "Tell her she's impressive. She won't fish for it, but she'll light up.",
+    "Be her hype man in public — brag about her to friends.",
+    "Plan something romantic. She's feeling connected and wants closeness.",
+    "Ask her opinion on something you're working on. She'll see angles you miss.",
+    "Match her energy. She's operating at 100% — show up fully.",
+  ],
+  Luteal: [
+    "Anticipate what she needs before she has to ask. Proactive > reactive.",
+    "Leave a note, a snack, or a playlist somewhere she'll find it.",
+    "Validate her feelings even if they seem disproportionate. They're real to her.",
+    "Take the kids or the dog out so she gets 30 minutes of silence.",
+    "Tell her 'you're doing better than you think.' She needs to hear it.",
   ],
 };
 
@@ -208,13 +270,22 @@ export function HomeTab({ cycleData, onPeriodUpdate, onCycleLengthUpdate, userId
         </div>
       )}
 
-      {/* How not to mess up today */}
+      {/* How to succeed today */}
       <div className="w-full max-w-xs mt-8 flex flex-col gap-3 px-2">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
+          How to succeed today
+        </p>
+        <TipCard label="For you" tips={SUCCEED_HER[cycleData.phase] || []} phase={cycleData.phase} />
+        <TipCard label="For him" tips={SUCCEED_HIM[cycleData.phase] || []} phase={cycleData.phase} />
+      </div>
+
+      {/* How not to mess up today */}
+      <div className="w-full max-w-xs mt-5 flex flex-col gap-3 px-2">
         <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
           How not to mess up today
         </p>
-        <TipCard label="For you" tips={HER_TIPS[cycleData.phase] || []} phase={cycleData.phase} />
-        <TipCard label="For him" tips={HIM_TIPS[cycleData.phase] || []} phase={cycleData.phase} />
+        <TipCard label="For you" tips={DONT_MESS_UP_HER[cycleData.phase] || []} phase={cycleData.phase} />
+        <TipCard label="For him" tips={DONT_MESS_UP_HIM[cycleData.phase] || []} phase={cycleData.phase} />
       </div>
 
       {/* Date picker dialog with inline cycle length */}
