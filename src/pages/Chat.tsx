@@ -229,6 +229,16 @@ const Chat = () => {
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMessage.id)) return prev;
             
+            // Replace fallback message if realtime delivers the real one
+            const fallbackIdx = prev.findIndex(
+              (m) => m.id.startsWith("fallback-") && m.role === newMessage.role && m.content === newMessage.content
+            );
+            if (fallbackIdx !== -1) {
+              const updated = [...prev];
+              updated[fallbackIdx] = newMessage;
+              return updated;
+            }
+            
             // Check if onboarding is complete
             if (newMessage.metadata?.onboarding_complete) {
               setIsOnboarding(false);
