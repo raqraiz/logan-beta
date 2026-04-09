@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, RefreshCw } from "lucide-react";
+import { MiniPhaseArc, CustomWidgetGraphic } from "@/components/home/WidgetGraphics";
 
 interface CustomAIWidgetProps {
   title: string;
@@ -53,13 +54,6 @@ export function CustomAIWidget({ title, prompt, phase, cycleDay, cycleLengthDays
   const borderColor = PHASE_BORDER[phase] || "border-l-primary";
   const glow = PHASE_GLOW[phase] || "";
 
-  const PHASE_ICON: Record<string, string> = {
-    Menstruation: "🌙",
-    Follicular: "🌱",
-    Ovulation: "☀️",
-    Luteal: "🍂",
-  };
-
   const PHASE_BG_ACCENT: Record<string, string> = {
     Menstruation: "from-phase-menstruation/8 to-transparent",
     Follicular: "from-phase-follicular/8 to-transparent",
@@ -68,19 +62,13 @@ export function CustomAIWidget({ title, prompt, phase, cycleDay, cycleLengthDays
   };
 
   const bgAccent = PHASE_BG_ACCENT[phase] || "from-primary/5 to-transparent";
-  const phaseIcon = PHASE_ICON[phase] || "🔮";
 
   return (
     <div
       className={`w-full text-left rounded-xl border border-border/30 border-l-2 ${borderColor}
         bg-card/40 backdrop-blur-sm overflow-hidden transition-all duration-200 ${glow} relative`}
     >
-      {/* Gradient accent background */}
       <div className={`absolute inset-0 bg-gradient-to-br ${bgAccent} pointer-events-none`} />
-      {/* Decorative watermark */}
-      <div className="absolute -right-2 -bottom-2 text-[56px] opacity-[0.06] pointer-events-none select-none leading-none">
-        {phaseIcon}
-      </div>
 
       <div className="relative p-3.5">
         <div className="flex items-center justify-between mb-2">
@@ -99,17 +87,25 @@ export function CustomAIWidget({ title, prompt, phase, cycleDay, cycleLengthDays
           </button>
         </div>
 
-        {loading ? (
-          <div className="flex gap-1.5 items-center py-1">
-            <div className="h-2 w-2 rounded-full bg-primary/30 animate-pulse" />
-            <div className="h-2 w-2 rounded-full bg-primary/30 animate-pulse [animation-delay:150ms]" />
-            <div className="h-2 w-2 rounded-full bg-primary/30 animate-pulse [animation-delay:300ms]" />
+        <div className="flex items-start gap-3">
+          <div className="flex flex-col items-center gap-1.5 pt-0.5">
+            <CustomWidgetGraphic phase={phase} />
+            <MiniPhaseArc cycleDay={cycleDay} cycleLengthDays={cycleLengthDays} phase={phase} size={28} />
           </div>
-        ) : error ? (
-          <p className="text-[13px] text-muted-foreground/60 leading-relaxed">{error}</p>
-        ) : (
-          <p className="text-[13px] text-foreground/85 leading-relaxed">{content}</p>
-        )}
+          <div className="flex-1 min-w-0">
+            {loading ? (
+              <div className="flex gap-1.5 items-center py-3">
+                <div className="h-2 w-2 rounded-full bg-primary/30 animate-pulse" />
+                <div className="h-2 w-2 rounded-full bg-primary/30 animate-pulse [animation-delay:150ms]" />
+                <div className="h-2 w-2 rounded-full bg-primary/30 animate-pulse [animation-delay:300ms]" />
+              </div>
+            ) : error ? (
+              <p className="text-[13px] text-muted-foreground/60 leading-relaxed">{error}</p>
+            ) : (
+              <p className="text-[13px] text-foreground/85 leading-relaxed">{content}</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
