@@ -166,7 +166,28 @@ const PHASE_GLOW: Record<string, string> = {
 
 // ── TipCard ───────────────────────────────────────────────
 
-function TipCard({ label, tips, phase }: { label: string; tips: string[]; phase: string }) {
+const PHASE_ICON: Record<string, string> = {
+  Menstruation: "🌙",
+  Follicular: "🌱",
+  Ovulation: "☀️",
+  Luteal: "🍂",
+};
+
+const PHASE_BG_ACCENT: Record<string, string> = {
+  Menstruation: "from-phase-menstruation/8 to-transparent",
+  Follicular: "from-phase-follicular/8 to-transparent",
+  Ovulation: "from-phase-ovulation/8 to-transparent",
+  Luteal: "from-phase-luteal/8 to-transparent",
+};
+
+const CARD_ICON: Record<string, string> = {
+  "succeed_you": "✨",
+  "succeed_him": "💪",
+  "dontmessup_you": "🛡️",
+  "dontmessup_him": "🤝",
+};
+
+function TipCard({ label, tips, phase, widgetId }: { label: string; tips: string[]; phase: string; widgetId?: string }) {
   const phaseTips = tips.length > 0 ? tips : ["No tips available for this phase."];
   const [index, setIndex] = useState(() => Math.floor(Math.random() * phaseTips.length));
   const [animating, setAnimating] = useState(false);
@@ -181,24 +202,52 @@ function TipCard({ label, tips, phase }: { label: string; tips: string[]; phase:
 
   const borderColor = PHASE_BORDER[phase] || "border-l-primary";
   const glow = PHASE_GLOW[phase] || "";
+  const bgAccent = PHASE_BG_ACCENT[phase] || "from-primary/5 to-transparent";
+  const phaseIcon = PHASE_ICON[phase] || "🔮";
+  const cardIcon = widgetId ? (CARD_ICON[widgetId] || "💡") : "💡";
 
   return (
     <button
       onClick={rotate}
       className={`w-full text-left rounded-xl border border-border/30 border-l-2 ${borderColor} 
-        bg-card/40 backdrop-blur-sm p-3.5 transition-all duration-200 
-        active:scale-[0.97] hover:bg-card/60 group ${glow}`}
+        bg-card/40 backdrop-blur-sm overflow-hidden transition-all duration-200 
+        active:scale-[0.97] hover:bg-card/60 group ${glow} relative`}
     >
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">{label}</span>
-        <div className="flex items-center gap-1 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors">
-          <span className="text-[9px]">tap to shuffle</span>
-          <Shuffle className="w-3 h-3" />
-        </div>
+      {/* Gradient accent background */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${bgAccent} pointer-events-none`} />
+      {/* Large faded phase icon as decorative watermark */}
+      <div className="absolute -right-2 -bottom-2 text-[56px] opacity-[0.06] pointer-events-none select-none leading-none">
+        {phaseIcon}
       </div>
-      <p className={`text-[13px] text-foreground/85 leading-relaxed transition-opacity duration-150 ${animating ? 'opacity-0' : 'opacity-100'}`}>
-        {phaseTips[index]}
-      </p>
+      
+      <div className="relative p-3.5">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm">{cardIcon}</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">{label}</span>
+          </div>
+          <div className="flex items-center gap-1 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors">
+            <span className="text-[9px]">tap to shuffle</span>
+            <Shuffle className="w-3 h-3" />
+          </div>
+        </div>
+        
+        {/* Progress dots showing tip position */}
+        <div className="flex gap-1 mb-2">
+          {phaseTips.map((_, i) => (
+            <div
+              key={i}
+              className={`h-0.5 rounded-full transition-all duration-200 ${
+                i === index ? "w-4 bg-primary/50" : "w-1.5 bg-muted-foreground/15"
+              }`}
+            />
+          ))}
+        </div>
+        
+        <p className={`text-[13px] text-foreground/85 leading-relaxed transition-opacity duration-150 ${animating ? 'opacity-0' : 'opacity-100'}`}>
+          {phaseTips[index]}
+        </p>
+      </div>
     </button>
   );
 }
