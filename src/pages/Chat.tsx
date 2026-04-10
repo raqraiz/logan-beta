@@ -342,7 +342,7 @@ const Chat = () => {
         lifeStage: "cycling",
       });
     }
-  }, [user, isOnboarding, messages, lifeStage]);
+  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate]);
 
   // Scroll to bottom on initial load
   const hasScrolledToBottom = useRef(false);
