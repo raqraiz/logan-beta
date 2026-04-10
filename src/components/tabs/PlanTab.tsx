@@ -470,6 +470,152 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
     );
   }
 
+  // Non-cycling life stages get tailored content
+  const isNonCycling = cycleData?.lifeStage && cycleData.lifeStage !== "cycling";
+
+  if (isNonCycling) {
+    const stage = cycleData!.lifeStage!;
+    const stageLabel = stage === "postpartum" ? "Postpartum" : "Menopause";
+    const stageColor = stage === "postpartum" ? "text-pink-400" : "text-amber-400";
+    const stageBgFaint = stage === "postpartum" ? "bg-pink-400/15" : "bg-amber-400/15";
+    const stageBorder = stage === "postpartum" ? "border-pink-400/20" : "border-amber-400/20";
+
+    const PP_WORKOUT = {
+      suggestion: "Your body is healing. Focus on pelvic floor recovery, gentle walks, and rebuilding core strength gradually. No rushing.",
+      examples: ["Pelvic floor exercises", "Short walks", "Gentle stretching", "Postnatal yoga"],
+      trainingNote: "Avoid high-impact and heavy lifts until cleared by your provider. Core stability before intensity.",
+    };
+    const MENO_WORKOUT = {
+      suggestion: "Strength training protects bone density and manages symptoms. Consistency matters more than intensity.",
+      examples: ["Weight training", "Resistance bands", "Walking", "Swimming"],
+      trainingNote: "Prioritize compound movements. Bone density and muscle mass preservation are your main goals.",
+    };
+    const PP_NUTRITION = {
+      focus: "Support healing & energy",
+      foods: ["Iron-rich foods (red meat, lentils)", "Omega-3s (salmon, walnuts)", "Bone broth & warm meals", "Hydrate — especially if nursing"],
+      avoid: "Extreme calorie restriction — your body needs fuel to heal",
+    };
+    const MENO_NUTRITION = {
+      focus: "Bone health & hormone balance",
+      foods: ["Calcium-rich foods (dairy, leafy greens)", "Vitamin D sources", "Phytoestrogens (soy, flaxseed)", "Magnesium (nuts, seeds)"],
+      avoid: "Excess alcohol and caffeine — they can worsen hot flashes and sleep disruption",
+    };
+    const PP_MOOD = {
+      outlook: "Recovery — be patient with yourself",
+      headsUp: "Hormones are recalibrating after pregnancy. Mood swings, tearfulness, and anxiety are common — not a sign of weakness.",
+      selfCare: "Ask for help. Sleep when you can. One good meal and one short walk can shift your entire day.",
+      relationships: {
+        people: "You may feel isolated or overwhelmed. One honest conversation with someone you trust goes further than pretending you're fine.",
+        withPartner: "Tell them specifically what helps — they can't read your mind and they want to support you.",
+        withKids: "Older kids may need reassurance. Simple routines and predictable rhythms help everyone adjust.",
+        strategy: "This phase is temporary. Your hormones will stabilize. Give yourself the grace you'd give a friend.",
+      },
+    };
+    const MENO_MOOD = {
+      outlook: "Transition — embrace the change",
+      headsUp: "Declining estrogen affects mood, sleep, and cognitive function. Brain fog, irritability, and anxiety are hormonal — not personal failings.",
+      selfCare: "Protect your sleep aggressively. Stress management isn't optional now — it's medicine.",
+      relationships: {
+        people: "You may feel more reactive or withdrawn. Naming it ('my hormones are making this harder') removes shame and invites support.",
+        withPartner: "Intimacy may shift. Open conversation about what feels different builds closeness instead of distance.",
+        withKids: "You're still the same mom. When patience is thin, take a pause. Modeling self-care teaches them resilience.",
+        strategy: "Many women report feeling their most authentic and free after this transition. The hard part doesn't last forever.",
+      },
+    };
+
+    const workout = stage === "postpartum" ? PP_WORKOUT : MENO_WORKOUT;
+    const nutrition = stage === "postpartum" ? PP_NUTRITION : MENO_NUTRITION;
+    const moodGuide = stage === "postpartum" ? PP_MOOD : MENO_MOOD;
+
+    return (
+      <div className="flex-1 overflow-y-auto pb-20">
+        <div className="max-w-lg md:max-w-4xl mx-auto px-4 py-5 space-y-4">
+          <div>
+            <h2 className="font-display font-semibold text-lg text-foreground">Your Week</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              <span className={cn("font-medium", stageColor)}>{stageLabel}</span>
+              {" · "}Tailored guidance for your stage
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Mood */}
+            <button onClick={() => toggle("mood")} className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70">
+              <div className="flex items-center gap-3 px-4 py-3.5">
+                <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", stageBgFaint)}>
+                  <Heart className={cn("w-5 h-5", stageColor)} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">Mood & Energy</p>
+                  <p className="text-xs text-muted-foreground truncate">{moodGuide.outlook}</p>
+                </div>
+                <ChevronRight className={cn("w-4 h-4 text-muted-foreground transition-transform", expandedSection === "mood" && "rotate-90")} />
+              </div>
+              {expandedSection === "mood" && (
+                <div className="px-4 pb-4 space-y-3 border-t border-border/15 pt-3" onClick={(e) => e.stopPropagation()}>
+                  <div className={cn("rounded-lg px-3 py-2.5 border", stageBgFaint, stageBorder)}>
+                    <p className={cn("text-xs font-medium mb-1", stageColor)}>⚡ Heads up</p>
+                    <p className="text-xs text-muted-foreground">{moodGuide.headsUp}</p>
+                  </div>
+                  <div><p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">What to do</p><p className="text-xs text-muted-foreground">{moodGuide.selfCare}</p></div>
+                  <div className="space-y-2 pt-1">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Your relationships</p>
+                    <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5"><p className="text-xs text-muted-foreground">{moodGuide.relationships.people}</p></div>
+                    <details className="group">
+                      <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors list-none flex items-center gap-1">
+                        <ChevronRight className="w-3 h-3 transition-transform group-open:rotate-90" />If you have a partner or kids
+                      </summary>
+                      <div className="mt-2 space-y-2">
+                        <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5"><p className="text-[10px] font-semibold text-primary/80 mb-0.5">💑 With a partner</p><p className="text-xs text-muted-foreground">{moodGuide.relationships.withPartner}</p></div>
+                        <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5"><p className="text-[10px] font-semibold text-primary/80 mb-0.5">👨‍👩‍👧‍👦 With kids / teens</p><p className="text-xs text-muted-foreground">{moodGuide.relationships.withKids}</p></div>
+                      </div>
+                    </details>
+                    <div className="rounded-lg bg-phase-follicular/5 border border-phase-follicular/15 px-3 py-2.5"><p className="text-xs font-medium text-phase-follicular mb-1">💡 Try this</p><p className="text-xs text-muted-foreground">{moodGuide.relationships.strategy}</p></div>
+                  </div>
+                </div>
+              )}
+            </button>
+
+            {/* Workout */}
+            <button onClick={() => toggle("exercise")} className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70">
+              <div className="flex items-center gap-3 px-4 py-3.5">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center"><Dumbbell className="w-5 h-5 text-primary" /></div>
+                <div className="flex-1 min-w-0"><p className="text-sm font-semibold text-foreground">Workout</p><p className="text-xs text-muted-foreground truncate">{stage === "postpartum" ? "Rebuild gently" : "Protect & strengthen"}</p></div>
+                <ChevronRight className={cn("w-4 h-4 text-muted-foreground transition-transform", expandedSection === "exercise" && "rotate-90")} />
+              </div>
+              {expandedSection === "exercise" && (
+                <div className="px-4 pb-4 space-y-3 border-t border-border/15 pt-3" onClick={(e) => e.stopPropagation()}>
+                  <p className="text-xs text-muted-foreground">{workout.suggestion}</p>
+                  <div><p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Try this week</p>
+                    <div className="flex flex-wrap gap-1.5">{workout.examples.map(ex => <span key={ex} className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/15">{ex}</span>)}</div>
+                  </div>
+                  <div className="rounded-lg bg-muted/30 border border-border/15 px-3 py-2.5"><p className="text-[10px] font-semibold text-muted-foreground mb-0.5">Training intel</p><p className="text-xs text-muted-foreground">{workout.trainingNote}</p></div>
+                </div>
+              )}
+            </button>
+
+            {/* Nutrition */}
+            <button onClick={() => toggle("nutrition")} className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70">
+              <div className="flex items-center gap-3 px-4 py-3.5">
+                <div className="w-9 h-9 rounded-lg bg-phase-luteal/10 flex items-center justify-center"><Utensils className="w-5 h-5 text-phase-luteal" /></div>
+                <div className="flex-1 min-w-0"><p className="text-sm font-semibold text-foreground">Nutrition</p><p className="text-xs text-muted-foreground truncate">{nutrition.focus}</p></div>
+                <ChevronRight className={cn("w-4 h-4 text-muted-foreground transition-transform", expandedSection === "nutrition" && "rotate-90")} />
+              </div>
+              {expandedSection === "nutrition" && (
+                <div className="px-4 pb-4 space-y-3 border-t border-border/15 pt-3" onClick={(e) => e.stopPropagation()}>
+                  <div><p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Prioritize</p>
+                    <ul className="space-y-1">{nutrition.foods.map(food => <li key={food} className="text-xs text-muted-foreground flex items-start gap-1.5"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-phase-luteal shrink-0" />{food}</li>)}</ul>
+                  </div>
+                  <div className="rounded-lg bg-phase-luteal/5 border border-phase-luteal/15 px-3 py-2"><p className="text-xs text-muted-foreground"><span className="font-medium text-phase-luteal">Note:</span> {nutrition.avoid}</p></div>
+                </div>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const toggle = (section: string) =>
     setExpandedSection((prev) => (prev === section ? null : section));
 
