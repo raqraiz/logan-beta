@@ -375,6 +375,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
                 cycleLengthDays={cycleData.cycleLengthDays}
                 size="md"
                 lifeStage={cycleData.lifeStage}
+                postpartumStartDate={cycleData.postpartumStartDate}
               />
             </button>
             <p className="text-sm text-muted-foreground mt-3">
