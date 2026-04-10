@@ -165,10 +165,10 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "
   );
 }
 
-export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling" }: ChatCycleCircleProps) {
+export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling", postpartumStartDate }: ChatCycleCircleProps) {
   // Non-cycling users get a static badge
   if (lifeStage !== "cycling") {
-    return <LifeStageBadge lifeStage={lifeStage} size={size} />;
+    return <LifeStageBadge lifeStage={lifeStage} size={size} postpartumStartDate={postpartumStartDate} />;
   }
 
   const isSmall = size === "sm";
