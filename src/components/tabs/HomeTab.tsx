@@ -300,6 +300,7 @@ interface CycleData {
   cycleLengthDays: number;
   lastPeriodStart?: string;
   lifeStage?: "cycling" | "postpartum" | "menopause";
+  postpartumStartDate?: string;
 }
 
 interface HomeTabProps {
