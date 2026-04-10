@@ -943,6 +943,7 @@ const Chat = () => {
                   cycleLengthDays={cycleData.cycleLengthDays}
                   size="sm"
                   lifeStage={cycleData.lifeStage}
+                  postpartumStartDate={cycleData.postpartumStartDate}
                 />
              ) : (
                <LoganLogo size="sm" />
