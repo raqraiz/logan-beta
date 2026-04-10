@@ -7,6 +7,7 @@ interface ChatCycleCircleProps {
   cycleLengthDays: number;
   size?: "sm" | "md";
   lifeStage?: LifeStage;
+  postpartumStartDate?: string;
 }
 
 const PHASE_STYLES: Record<string, { color: string; ringColor: string; hex: string }> = {
