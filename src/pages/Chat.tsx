@@ -285,6 +285,7 @@ const Chat = () => {
         phase: lifeStage === "postpartum" ? "Postpartum" : "Menopause",
         cycleLengthDays: 0,
         lifeStage,
+        postpartumStartDate: postpartumStartDate || undefined,
       });
       return;
     }
