@@ -7,6 +7,7 @@ interface ChatCycleCircleProps {
   cycleLengthDays: number;
   size?: "sm" | "md";
   lifeStage?: LifeStage;
+  postpartumStartDate?: string;
 }
 
 const PHASE_STYLES: Record<string, { color: string; ringColor: string; hex: string }> = {
@@ -101,18 +102,33 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
 }
 
 // Static badge for non-cycling life stages
-function LifeStageBadge({ lifeStage, size }: { lifeStage: "postpartum" | "menopause"; size: "sm" | "md" }) {
+function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "postpartum" | "menopause"; size: "sm" | "md"; postpartumStartDate?: string }) {
   const stageKey = lifeStage === "postpartum" ? "Postpartum" : "Menopause";
   const styles = PHASE_STYLES[stageKey];
   const label = lifeStage === "postpartum" ? "Postpartum" : "Menopause";
-  const subtitle = lifeStage === "postpartum" ? "Recovery" : "Transition";
+
+  // Calculate days/weeks postpartum
+  let ppLabel = lifeStage === "postpartum" ? "Recovery" : "Transition";
+  if (lifeStage === "postpartum" && postpartumStartDate) {
+    const start = new Date(postpartumStartDate + "T12:00:00Z");
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) {
+      ppLabel = "Recovery";
+    } else if (diffDays < 14) {
+      ppLabel = `Day ${diffDays + 1}`;
+    } else {
+      const weeks = Math.floor(diffDays / 7);
+      ppLabel = `Week ${weeks}`;
+    }
+  }
 
   if (size === "sm") {
     return (
       <div className="relative w-10 h-10 flex-shrink-0">
         <div className="absolute inset-0 rounded-full opacity-20 blur-xl" style={{ backgroundColor: styles.hex }} />
         <div className="absolute inset-[3px] rounded-full bg-[hsl(220,10%,8%)] border border-border/20" />
-        <div className="absolute inset-0 flex items-center justify-center z-20">
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
           <span className="text-[8px] font-bold" style={{ color: styles.hex }}>
             {lifeStage === "postpartum" ? "PP" : "M"}
           </span>
@@ -142,17 +158,17 @@ function LifeStageBadge({ lifeStage, size }: { lifeStage: "postpartum" | "menopa
             {lifeStage === "postpartum" ? "🌱" : "✦"}
           </span>
           <span className="text-sm font-semibold mt-1" style={{ color: styles.hex }}>{label}</span>
-          <span className="text-xs text-muted-foreground mt-0.5">{subtitle}</span>
+          <span className="text-xs text-muted-foreground mt-0.5">{ppLabel}</span>
         </div>
       </div>
     </div>
   );
 }
 
-export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling" }: ChatCycleCircleProps) {
+export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling", postpartumStartDate }: ChatCycleCircleProps) {
   // Non-cycling users get a static badge
   if (lifeStage !== "cycling") {
-    return <LifeStageBadge lifeStage={lifeStage} size={size} />;
+    return <LifeStageBadge lifeStage={lifeStage} size={size} postpartumStartDate={postpartumStartDate} />;
   }
 
   const isSmall = size === "sm";
