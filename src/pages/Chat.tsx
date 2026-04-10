@@ -92,6 +92,7 @@ interface CycleData {
   cycleLengthDays: number;
   lastPeriodStart?: string;
   lifeStage?: "cycling" | "postpartum" | "menopause";
+  postpartumStartDate?: string;
 }
 
 const MESSAGES_PER_PAGE = 100;
@@ -109,6 +110,7 @@ const Chat = () => {
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
   const [lifeStage, setLifeStage] = useState<"cycling" | "postpartum" | "menopause">("cycling");
+  const [postpartumStartDate, setPostpartumStartDate] = useState<string | null>(null);
   const [showForecast, setShowForecast] = useState(false);
   
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -468,11 +470,14 @@ const Chat = () => {
     try {
       const { data } = await supabase
         .from("participants")
-        .select("life_stage")
+        .select("life_stage, postpartum_start_date")
         .eq("email", user.email)
         .single();
       if (data?.life_stage) {
         setLifeStage(data.life_stage as "cycling" | "postpartum" | "menopause");
+      }
+      if (data?.postpartum_start_date) {
+        setPostpartumStartDate(data.postpartum_start_date);
       }
     } catch (e) {
       // Participant may not exist yet
