@@ -415,6 +415,25 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           </div>
         );
       }
+      case "symptom_tracker":
+        return userId ? (
+          <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
+              {label}
+            </p>
+            <SymptomLogWidget
+              userId={userId}
+              cycleDay={isNonCycling ? undefined : cycleData.cycleDay}
+              phase={isNonCycling ? stagePhase : cycleData.phase}
+            />
+            <button
+              onClick={() => setShowSymptomHistory(true)}
+              className="text-[10px] text-muted-foreground/50 hover:text-foreground transition-colors underline underline-offset-2"
+            >
+              View symptom history & patterns
+            </button>
+          </div>
+        ) : null;
       case "succeed_you":
         return (
           <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
