@@ -565,6 +565,39 @@ export type Database = {
           },
         ]
       }
+      symptom_logs: {
+        Row: {
+          created_at: string
+          cycle_day: number | null
+          cycle_phase: string | null
+          id: string
+          logged_at: string
+          notes: string | null
+          symptoms: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          cycle_day?: number | null
+          cycle_phase?: string | null
+          id?: string
+          logged_at?: string
+          notes?: string | null
+          symptoms?: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          cycle_day?: number | null
+          cycle_phase?: string | null
+          id?: string
+          logged_at?: string
+          notes?: string | null
+          symptoms?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_activity_events: {
         Row: {
           created_at: string

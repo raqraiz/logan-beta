@@ -539,11 +539,54 @@ serve(async (req) => {
       }
     }
 
+    // Fetch recent symptom logs for personalized context
+    let symptomContext = "";
+    {
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: symptomLogs } = await supabase
+        .from("symptom_logs")
+        .select("symptoms, cycle_day, cycle_phase, logged_at, notes")
+        .eq("user_id", user.id)
+        .gte("logged_at", since)
+        .order("logged_at", { ascending: false })
+        .limit(30);
+
+      if (symptomLogs && symptomLogs.length > 0) {
+        // Compute frequency and average severity
+        const freq: Record<string, { count: number; totalSev: number }> = {};
+        symptomLogs.forEach((log: any) => {
+          const symptoms = log.symptoms || [];
+          symptoms.forEach((s: { name: string; severity: number }) => {
+            if (!freq[s.name]) freq[s.name] = { count: 0, totalSev: 0 };
+            freq[s.name].count++;
+            freq[s.name].totalSev += s.severity;
+          });
+        });
+
+        const topSymptoms = Object.entries(freq)
+          .map(([name, { count, totalSev }]) => `${name} (${count}× avg ${(totalSev / count).toFixed(1)}/5)`)
+          .sort((a, b) => {
+            const countA = parseInt(a.match(/\((\d+)×/)?.[1] || "0");
+            const countB = parseInt(b.match(/\((\d+)×/)?.[1] || "0");
+            return countB - countA;
+          })
+          .slice(0, 6);
+
+        // Most recent log
+        const latest = symptomLogs[0];
+        const latestSymptoms = (latest.symptoms as any[]).map((s: any) => `${s.name}(${s.severity}/5)`).join(", ");
+        const latestTime = new Date(latest.logged_at).toLocaleDateString();
+
+        symptomContext = `\n\nSYMPTOM LOG DATA (last 30 days, ${symptomLogs.length} entries):\n- Most frequent: ${topSymptoms.join(", ")}\n- Latest log (${latestTime}): ${latestSymptoms}${latest.notes ? ` — "${latest.notes}"` : ""}`;
+        symptomContext += `\nUse this symptom data to personalize responses — reference patterns you see, validate what they're feeling, and give phase-specific advice based on their ACTUAL reported experience, not just textbook phases.`;
+      }
+    }
+
     const cycleInfo = participant?.last_period_start && participant?.cycle_length_days
       ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
       : null;
 
-    const systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext);
+    const systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext);
 
     // Smart truncation: keep first 10 (onboarding/profile context) + last 50 (recent conversation)
     const allMessages = (recentMessages || [])
@@ -657,7 +700,8 @@ serve(async (req) => {
 function buildSystemPrompt(
   participant: any | null, 
   cycleInfo: { cycleDay: number; phase: string } | null,
-  cycleHistoryContext: string = ""
+  cycleHistoryContext: string = "",
+  symptomContext: string = ""
 ): string {
   const basePrompt = `You are Logan — that one friend who always seems to know what's going on with you before you do. You're not a doctor, not a coach, not an app reading from a textbook. You're the person someone texts at 10pm going "is it normal that I want to cry AND eat an entire pizza?" and you just get it.
 
@@ -752,7 +796,7 @@ CYCLE DATA EDITS:
       ? `This user is POSTPARTUM — they do not have a regular cycle right now. Their hormones are recalibrating after pregnancy. Focus on: recovery, sleep deprivation, mood shifts, identity adjustments, physical healing, breastfeeding impacts on hormones. Do NOT reference cycle phases, cycle days, or ovulation. Instead, center guidance on where they are in postpartum recovery.`
       : `This user is in MENOPAUSE or PERIMENOPAUSE — their cycle is irregular or has stopped. Their estrogen and progesterone are declining. Focus on: hot flashes, sleep disruption, mood changes, bone health, energy management, cognitive shifts, weight changes. Do NOT reference specific cycle days or ovulation windows. Instead, provide guidance relevant to hormonal transition and thriving through it.`;
 
-    let userContext = `\n\nUSER CONTEXT:\n- Life stage: ${stageLabel}\n- Age: ${age || "unknown"}\n- Anchor symptom: ${participant.anchor_symptom || "not specified"}\n- Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}\n${topics ? `- Focus areas: ${topics}` : ""}\n\n${stageContext}`;
+    let userContext = `\n\nUSER CONTEXT:\n- Life stage: ${stageLabel}\n- Age: ${age || "unknown"}\n- Anchor symptom: ${participant.anchor_symptom || "not specified"}\n- Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}\n${topics ? `- Focus areas: ${topics}` : ""}\n\n${stageContext}${symptomContext}`;
     
     return basePrompt + userContext;
   }
@@ -780,9 +824,9 @@ USER CONTEXT:
 - Age: ${age || "unknown"}
 - Anchor symptom (most disruptive): ${participant.anchor_symptom || "not specified"}
 - Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}
-${topics ? `- Focus areas: ${topics}. Weave relevant tips from these areas into responses when naturally fitting.` : ""}${cycleHistoryContext}${lengthGuidance}
+${topics ? `- Focus areas: ${topics}. Weave relevant tips from these areas into responses when naturally fitting.` : ""}${cycleHistoryContext}${symptomContext}${lengthGuidance}
 
-Use this context to make your responses personally relevant. Reference their current phase and how it might affect their request. If they mention their anchor symptom, acknowledge it and provide phase-appropriate guidance. When users ask about their cycle length or patterns, use the cycle history data to provide specific insights.`;
+Use this context to make your responses personally relevant. Reference their current phase and how it might affect their request. If they mention their anchor symptom, acknowledge it and provide phase-appropriate guidance. When users ask about their cycle length or patterns, use the cycle history data to provide specific insights. When symptom log data is available, reference their actual reported symptoms and patterns — this is more accurate than textbook generalizations.`;
 
   return basePrompt + userContext;
 }
