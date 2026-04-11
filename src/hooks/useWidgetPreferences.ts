@@ -11,6 +11,7 @@ export interface WidgetConfig {
 
 const DEFAULT_WIDGETS: WidgetConfig[] = [
   { id: "cycle_circle", visible: true, type: "built-in" },
+  { id: "symptom_tracker", visible: true, type: "built-in" },
   { id: "succeed_you", visible: true, type: "built-in" },
   { id: "succeed_him", visible: true, type: "built-in" },
   { id: "dontmessup_you", visible: true, type: "built-in" },
@@ -21,6 +22,7 @@ const DEFAULT_WIDGETS: WidgetConfig[] = [
 
 export const DEFAULT_WIDGET_LABELS: Record<string, string> = {
   cycle_circle: "Cycle Circle",
+  symptom_tracker: "Symptom Tracker",
   succeed_you: "Succeed Today — For You",
   succeed_him: "Succeed Today — For Him",
   dontmessup_you: "Don't Mess Up — For You",
