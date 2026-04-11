@@ -633,6 +633,15 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           addCustomWidget(title, prompt);
         }}
       />
+
+      {/* Symptom History */}
+      {userId && (
+        <SymptomHistory
+          open={showSymptomHistory}
+          onOpenChange={setShowSymptomHistory}
+          userId={userId}
+        />
+      )}
     </div>
   );
 }
