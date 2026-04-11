@@ -586,7 +586,7 @@ serve(async (req) => {
       ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
       : null;
 
-    const systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext);
+    const systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext);
 
     // Smart truncation: keep first 10 (onboarding/profile context) + last 50 (recent conversation)
     const allMessages = (recentMessages || [])
