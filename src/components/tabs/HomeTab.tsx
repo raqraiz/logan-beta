@@ -17,9 +17,6 @@ import { X, Shuffle, Pencil, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Slider } from "@/components/ui/slider";
 import {
   Dialog,
   DialogContent,
