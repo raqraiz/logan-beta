@@ -539,6 +539,49 @@ serve(async (req) => {
       }
     }
 
+    // Fetch recent symptom logs for personalized context
+    let symptomContext = "";
+    {
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: symptomLogs } = await supabase
+        .from("symptom_logs")
+        .select("symptoms, cycle_day, cycle_phase, logged_at, notes")
+        .eq("user_id", user.id)
+        .gte("logged_at", since)
+        .order("logged_at", { ascending: false })
+        .limit(30);
+
+      if (symptomLogs && symptomLogs.length > 0) {
+        // Compute frequency and average severity
+        const freq: Record<string, { count: number; totalSev: number }> = {};
+        symptomLogs.forEach((log: any) => {
+          const symptoms = log.symptoms || [];
+          symptoms.forEach((s: { name: string; severity: number }) => {
+            if (!freq[s.name]) freq[s.name] = { count: 0, totalSev: 0 };
+            freq[s.name].count++;
+            freq[s.name].totalSev += s.severity;
+          });
+        });
+
+        const topSymptoms = Object.entries(freq)
+          .map(([name, { count, totalSev }]) => `${name} (${count}× avg ${(totalSev / count).toFixed(1)}/5)`)
+          .sort((a, b) => {
+            const countA = parseInt(a.match(/\((\d+)×/)?.[1] || "0");
+            const countB = parseInt(b.match(/\((\d+)×/)?.[1] || "0");
+            return countB - countA;
+          })
+          .slice(0, 6);
+
+        // Most recent log
+        const latest = symptomLogs[0];
+        const latestSymptoms = (latest.symptoms as any[]).map((s: any) => `${s.name}(${s.severity}/5)`).join(", ");
+        const latestTime = new Date(latest.logged_at).toLocaleDateString();
+
+        symptomContext = `\n\nSYMPTOM LOG DATA (last 30 days, ${symptomLogs.length} entries):\n- Most frequent: ${topSymptoms.join(", ")}\n- Latest log (${latestTime}): ${latestSymptoms}${latest.notes ? ` — "${latest.notes}"` : ""}`;
+        symptomContext += `\nUse this symptom data to personalize responses — reference patterns you see, validate what they're feeling, and give phase-specific advice based on their ACTUAL reported experience, not just textbook phases.`;
+      }
+    }
+
     const cycleInfo = participant?.last_period_start && participant?.cycle_length_days
       ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
       : null;
