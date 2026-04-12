@@ -143,7 +143,7 @@ function SessionDetail({ session }: { session: SessionRecord }) {
   }
 
   return (
-    <ScrollArea className="max-h-[400px]">
+    <div>
       <div className="px-6 py-3">
         {hasActivity === false && (
           <p className="mb-3 text-xs text-muted-foreground italic">
