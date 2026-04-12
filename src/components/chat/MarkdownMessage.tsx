@@ -1,27 +1,36 @@
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { AnnotatedText } from "./CycleGlossary";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface MarkdownMessageProps {
   content: string;
   className?: string;
+  /** Number of characters before truncating. Default 400 */
+  truncateAt?: number;
 }
 
 /**
  * Renders an assistant message with markdown support + cycle term glossary.
- * Handles bold, bullets, headers, and inline glossary tooltips.
+ * Long messages are truncated with a "See more" toggle.
  */
-export function MarkdownMessage({ content, className = "" }: MarkdownMessageProps) {
+export function MarkdownMessage({ content, className = "", truncateAt = 400 }: MarkdownMessageProps) {
+  const [expanded, setExpanded] = useState(false);
+
+  const shouldTruncate = content.length > truncateAt;
+  const displayContent = shouldTruncate && !expanded
+    ? content.slice(0, truncateAt).replace(/\s+\S*$/, "") + "…"
+    : content;
+
   return (
     <div className={`prose prose-sm prose-invert max-w-none ${className}`}>
       <ReactMarkdown
         components={{
-          // Render paragraphs with glossary annotations
           p: ({ children }) => (
             <p className="mb-2 last:mb-0 leading-relaxed">
               {processChildren(children)}
             </p>
           ),
-          // Styled bullet lists
           ul: ({ children }) => (
             <ul className="my-2 ml-1 space-y-1.5 list-none">
               {children}
@@ -33,15 +42,12 @@ export function MarkdownMessage({ content, className = "" }: MarkdownMessageProp
               <span>{processChildren(children)}</span>
             </li>
           ),
-          // Bold text
           strong: ({ children }) => (
             <strong className="font-semibold text-foreground">{children}</strong>
           ),
-          // Italic
           em: ({ children }) => (
             <em className="text-muted-foreground italic">{children}</em>
           ),
-          // Headers as small section dividers
           h3: ({ children }) => (
             <h3 className="text-sm font-semibold text-foreground mt-3 mb-1.5 uppercase tracking-wide">
               {children}
@@ -52,7 +58,6 @@ export function MarkdownMessage({ content, className = "" }: MarkdownMessageProp
               {children}
             </h4>
           ),
-          // Ordered lists
           ol: ({ children }) => (
             <ol className="my-2 ml-1 space-y-1.5 list-none counter-reset-item">
               {children}
@@ -60,15 +65,25 @@ export function MarkdownMessage({ content, className = "" }: MarkdownMessageProp
           ),
         }}
       >
-        {content}
+        {displayContent}
       </ReactMarkdown>
+
+      {shouldTruncate && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex items-center gap-1 mt-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+        >
+          {expanded ? (
+            <>Show less <ChevronUp className="h-3 w-3" /></>
+          ) : (
+            <>See more <ChevronDown className="h-3 w-3" /></>
+          )}
+        </button>
+      )}
     </div>
   );
 }
 
-/**
- * Process children to annotate string nodes with glossary terms.
- */
 function processChildren(children: React.ReactNode): React.ReactNode {
   if (!children) return children;
 
