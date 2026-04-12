@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Circle, Clock, Users, Activity, TrendingUp, ChevronDown, ChevronRight, MessageSquare, Eye, MousePointerClick, ArrowRightLeft, Puzzle, LayoutGrid } from "lucide-react";
+import { RefreshCw, Circle, Clock, Users, Activity, TrendingUp, ChevronDown, ChevronRight, MessageSquare, Eye, MousePointerClick } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, subDays, differenceInMinutes } from "date-fns";
 import {
@@ -64,25 +64,18 @@ const chartConfig = {
   avgDuration: { label: "Avg Duration (min)", color: "hsl(var(--accent))" },
 } satisfies ChartConfig;
 
-const EVENT_ICON: Record<string, typeof Eye> = {
-  page_view: Eye,
-  click: MousePointerClick,
-  tab_switch: ArrowRightLeft,
-  widget_interact: Puzzle,
+const EVENT_EMOJI: Record<string, string> = {
+  page_view: "👁",
+  click: "👆",
+  tab_switch: "↔️",
+  widget_interact: "🧩",
 };
 
 const EVENT_LABEL: Record<string, string> = {
-  page_view: "Viewed page",
-  click: "Clicked",
-  tab_switch: "Switched tab",
-  widget_interact: "Widget interaction",
-};
-
-const EVENT_COLOR: Record<string, string> = {
-  page_view: "bg-blue-500/20 text-blue-400",
-  click: "bg-primary/20 text-primary",
-  tab_switch: "bg-amber-500/20 text-amber-400",
-  widget_interact: "bg-purple-500/20 text-purple-400",
+  page_view: "Viewed",
+  click: "Tapped",
+  tab_switch: "Switched to",
+  widget_interact: "Used widget",
 };
 
 /* ── Session Detail (expandable row) ─────────────────────── */
@@ -153,53 +146,32 @@ function SessionDetail({ session }: { session: SessionRecord }) {
     <ScrollArea className="max-h-[400px]">
       <div className="px-6 py-3">
         {hasActivity === false && (
-          <div className="mb-3 px-3 py-2 rounded-lg bg-muted/30 text-xs text-muted-foreground">
-            <LayoutGrid className="w-3 h-3 inline mr-1.5" />
-            Activity tracking started recently — showing chat messages as a proxy for older sessions.
-          </div>
+          <p className="mb-3 text-xs text-muted-foreground italic">
+            Showing chat messages (activity tracking started recently).
+          </p>
         )}
-        <div className="relative">
-          {/* Timeline line */}
-          <div className="absolute left-[15px] top-2 bottom-2 w-px bg-border/30" />
+        <div className="space-y-1.5">
+          {events.map((evt) => {
+            const emoji = EVENT_EMOJI[evt.event_type] || "•";
+            const action = EVENT_LABEL[evt.event_type] || evt.event_type;
+            const detail = evt.event_type === "page_view"
+              ? evt.page_path || "unknown page"
+              : evt.event_type === "tab_switch"
+              ? evt.element_label || "unknown"
+              : evt.element_label || "";
 
-          <div className="space-y-1">
-            {events.map((evt, i) => {
-              const Icon = EVENT_ICON[evt.event_type] || MousePointerClick;
-              const colorClass = EVENT_COLOR[evt.event_type] || "bg-muted/20 text-muted-foreground";
-              const label = evt.element_label || EVENT_LABEL[evt.event_type] || evt.event_type;
-              const description = evt.event_type === "page_view"
-                ? evt.page_path || "Unknown page"
-                : evt.event_type === "tab_switch"
-                ? `→ ${evt.element_label || "unknown"}`
-                : label;
-
-              return (
-                <div key={evt.id} className="flex items-start gap-3 relative pl-0">
-                  {/* Icon circle */}
-                  <div className={`w-[30px] h-[30px] rounded-full flex items-center justify-center flex-shrink-0 ${colorClass} z-10`}>
-                    <Icon className="w-3.5 h-3.5" />
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0 py-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-medium text-foreground/80 truncate">
-                        {description}
-                      </span>
-                      {evt.element_type && (
-                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 shrink-0">
-                          {evt.element_type}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground/50">
-                      {format(new Date(evt.created_at), "h:mm:ss a")}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+            return (
+              <div key={evt.id} className="flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground/60 w-[68px] shrink-0 text-right tabular-nums">
+                  {format(new Date(evt.created_at), "h:mm:ss a")}
+                </span>
+                <span>{emoji}</span>
+                <span className="text-foreground/80 truncate">
+                  {action} {detail && <span className="text-muted-foreground">— {detail}</span>}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </ScrollArea>
@@ -570,7 +542,8 @@ export const SessionsTab = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <ScrollArea className="h-[calc(100vh-120px)]">
+    <div className="space-y-6 pr-2">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-foreground">Sessions & Live Activity</h2>
@@ -785,5 +758,6 @@ export const SessionsTab = () => {
         </CardContent>
       </Card>
     </div>
+    </ScrollArea>
   );
 };
