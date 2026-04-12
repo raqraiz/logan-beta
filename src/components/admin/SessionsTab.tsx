@@ -174,7 +174,7 @@ function SessionDetail({ session }: { session: SessionRecord }) {
           })}
         </div>
       </div>
-    </ScrollArea>
+    </div>
   );
 }
 
