@@ -14,7 +14,7 @@ interface MarkdownMessageProps {
  * Renders an assistant message with markdown support + cycle term glossary.
  * Long messages are truncated with a "See more" toggle.
  */
-export function MarkdownMessage({ content, className = "", truncateAt = 400 }: MarkdownMessageProps) {
+export function MarkdownMessage({ content, className = "", truncateAt = 200 }: MarkdownMessageProps) {
   const [expanded, setExpanded] = useState(false);
 
   const shouldTruncate = content.length > truncateAt;
