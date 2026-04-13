@@ -17,9 +17,25 @@ interface MarkdownMessageProps {
 export function MarkdownMessage({ content, className = "", truncateAt = 200 }: MarkdownMessageProps) {
   const [expanded, setExpanded] = useState(false);
 
-  const shouldTruncate = content.length > truncateAt;
+  // Find a natural sentence break near the truncation point
+  const findSentenceBreak = (text: string, target: number): number => {
+    const searchRegion = text.slice(0, Math.min(target + 80, text.length));
+    const sentenceEnd = searchRegion.search(/[.!?]\s/g);
+    // Walk forward to find the last sentence ending within the region
+    let lastBreak = -1;
+    for (let i = 0; i < searchRegion.length; i++) {
+      if (".!?".includes(searchRegion[i]) && (i + 1 >= searchRegion.length || /\s/.test(searchRegion[i + 1]))) {
+        lastBreak = i + 1;
+        if (i >= target - 40) break; // close enough to target
+      }
+    }
+    return lastBreak > 40 ? lastBreak : target;
+  };
+
+  const shouldTruncate = content.length > truncateAt * 1.5; // only truncate if there's meaningfully more to show
+  const breakPoint = shouldTruncate ? findSentenceBreak(content, truncateAt) : content.length;
   const displayContent = shouldTruncate && !expanded
-    ? content.slice(0, truncateAt).replace(/\s+\S*$/, "") + "…"
+    ? content.slice(0, breakPoint).trim() + "…"
     : content;
 
   return (
