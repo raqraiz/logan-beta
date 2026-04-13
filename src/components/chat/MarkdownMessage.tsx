@@ -6,37 +6,24 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 interface MarkdownMessageProps {
   content: string;
   className?: string;
-  /** Number of characters before truncating. Default 400 */
-  truncateAt?: number;
 }
 
 /**
  * Renders an assistant message with markdown support + cycle term glossary.
- * Long messages are truncated with a "See more" toggle.
+ * If the message contains a "---" separator, the content after it is hidden
+ * behind a "See more" toggle for users who want deeper context.
  */
-export function MarkdownMessage({ content, className = "", truncateAt = 200 }: MarkdownMessageProps) {
+export function MarkdownMessage({ content, className = "" }: MarkdownMessageProps) {
   const [expanded, setExpanded] = useState(false);
 
-  // Find a natural sentence break near the truncation point
-  const findSentenceBreak = (text: string, target: number): number => {
-    const searchRegion = text.slice(0, Math.min(target + 80, text.length));
-    const sentenceEnd = searchRegion.search(/[.!?]\s/g);
-    // Walk forward to find the last sentence ending within the region
-    let lastBreak = -1;
-    for (let i = 0; i < searchRegion.length; i++) {
-      if (".!?".includes(searchRegion[i]) && (i + 1 >= searchRegion.length || /\s/.test(searchRegion[i + 1]))) {
-        lastBreak = i + 1;
-        if (i >= target - 40) break; // close enough to target
-      }
-    }
-    return lastBreak > 40 ? lastBreak : target;
-  };
+  // Split on the first "---" line (horizontal rule used as deep-dive separator)
+  const separatorIndex = content.indexOf("\n---\n");
+  const hasDeepDive = separatorIndex !== -1;
 
-  const shouldTruncate = content.length > truncateAt * 1.5; // only truncate if there's meaningfully more to show
-  const breakPoint = shouldTruncate ? findSentenceBreak(content, truncateAt) : content.length;
-  const displayContent = shouldTruncate && !expanded
-    ? content.slice(0, breakPoint).trim() + "…"
-    : content;
+  const mainContent = hasDeepDive ? content.slice(0, separatorIndex).trim() : content;
+  const deepDiveContent = hasDeepDive ? content.slice(separatorIndex + 5).trim() : "";
+
+  const displayContent = expanded ? content.replace("\n---\n", "\n\n") : mainContent;
 
   return (
     <div className={`prose prose-sm prose-invert max-w-none ${className}`}>
@@ -79,12 +66,13 @@ export function MarkdownMessage({ content, className = "", truncateAt = 200 }: M
               {children}
             </ol>
           ),
+          hr: () => null, // Hide any remaining hr elements
         }}
       >
         {displayContent}
       </ReactMarkdown>
 
-      {shouldTruncate && (
+      {hasDeepDive && (
         <button
           onClick={() => setExpanded(!expanded)}
           className="flex items-center gap-1 mt-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
