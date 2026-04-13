@@ -91,7 +91,7 @@ export function MarkdownMessage({ content, className = "" }: MarkdownMessageProp
               <ReactMarkdown
                 components={{
                   p: ({ children }) => (
-                    <p className="mb-2 last:mb-0 leading-relaxed text-foreground/80 text-sm">
+                    <p className="mb-2 last:mb-0 leading-relaxed text-muted-foreground text-sm">
                       {processChildren(children)}
                     </p>
                   ),
