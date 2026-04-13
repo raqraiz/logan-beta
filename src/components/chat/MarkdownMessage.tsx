@@ -23,7 +23,8 @@ export function MarkdownMessage({ content, className = "" }: MarkdownMessageProp
   const mainContent = hasDeepDive ? content.slice(0, separatorIndex).trim() : content;
   const deepDiveContent = hasDeepDive ? content.slice(separatorIndex + 5).trim() : "";
 
-  const displayContent = expanded ? content.replace("\n---\n", "\n\n") : mainContent;
+  // Always show only the main content in the primary block; deep dive renders separately
+  const displayContent = mainContent;
 
   return (
     <div className={`prose prose-sm prose-invert max-w-none ${className}`}>
