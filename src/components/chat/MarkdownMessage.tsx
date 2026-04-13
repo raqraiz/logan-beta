@@ -73,16 +73,46 @@ export function MarkdownMessage({ content, className = "" }: MarkdownMessageProp
       </ReactMarkdown>
 
       {hasDeepDive && (
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1 mt-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-        >
-          {expanded ? (
-            <>Show less <ChevronUp className="h-3 w-3" /></>
-          ) : (
-            <>See more <ChevronDown className="h-3 w-3" /></>
+        <>
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="flex items-center gap-1 mt-2 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+          >
+            {expanded ? (
+              <>Show less <ChevronUp className="h-3 w-3" /></>
+            ) : (
+              <>See more <ChevronDown className="h-3 w-3" /></>
+            )}
+          </button>
+
+          {expanded && (
+            <div className="mt-3 pt-3 border-t border-border/40 space-y-3">
+              <ReactMarkdown
+                components={{
+                  p: ({ children }) => (
+                    <p className="mb-2 last:mb-0 leading-relaxed text-muted-foreground text-sm">
+                      {processChildren(children)}
+                    </p>
+                  ),
+                  h3: ({ children }) => (
+                    <h3 className="text-xs font-semibold text-primary uppercase tracking-widest mb-1">
+                      {children}
+                    </h3>
+                  ),
+                  strong: ({ children }) => (
+                    <strong className="font-semibold text-foreground">{children}</strong>
+                  ),
+                  em: ({ children }) => (
+                    <em className="text-muted-foreground italic">{children}</em>
+                  ),
+                  hr: () => null,
+                }}
+              >
+                {deepDiveContent}
+              </ReactMarkdown>
+            </div>
           )}
-        </button>
+        </>
       )}
     </div>
   );
