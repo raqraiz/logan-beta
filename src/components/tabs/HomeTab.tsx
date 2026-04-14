@@ -259,8 +259,8 @@ function TipCard({
 
       <div className="relative p-3.5">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">{label}</span>
-          <div className="flex items-center gap-1 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">{label}</span>
+          <div className="flex items-center gap-1 text-muted-foreground/50 group-hover:text-muted-foreground/70 transition-colors">
             <span className="text-[9px]">tap to shuffle</span>
             <Shuffle className="w-3 h-3" />
           </div>
@@ -284,7 +284,7 @@ function TipCard({
                 />
               ))}
             </div>
-            <p className={`text-[13px] text-foreground/85 leading-relaxed transition-opacity duration-150 ${animating ? 'opacity-0' : 'opacity-100'}`}>
+            <p className={`text-[13px] text-foreground leading-relaxed transition-opacity duration-150 ${animating ? 'opacity-0' : 'opacity-100'}`}>
               {phaseTips[index]}
             </p>
           </div>
@@ -418,7 +418,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       case "symptom_tracker":
         return userId ? (
           <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70 text-center">
               {label}
             </p>
             <SymptomLogWidget
@@ -428,7 +428,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             />
             <button
               onClick={() => setShowSymptomHistory(true)}
-              className="text-[10px] text-muted-foreground/50 hover:text-foreground transition-colors underline underline-offset-2"
+              className="text-[10px] text-muted-foreground/70 hover:text-foreground transition-colors underline underline-offset-2"
             >
               View symptom history & patterns
             </button>
@@ -437,7 +437,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       case "succeed_you":
         return (
           <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70 text-center">
               {label}
             </p>
             <TipCard label="For you" tips={getTipsHer("succeed")} phase={stagePhase} widgetId="succeed_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
@@ -446,7 +446,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       case "succeed_him":
         return (
           <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70 text-center">
               {label}
             </p>
             <TipCard label="For him" tips={getTipsHim("succeed")} phase={stagePhase} widgetId="succeed_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
@@ -455,7 +455,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       case "dontmessup_you":
         return (
           <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70 text-center">
               {label}
             </p>
             <TipCard label="For you" tips={getTipsHer("dontmessup")} phase={stagePhase} widgetId="dontmessup_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
@@ -464,7 +464,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       case "dontmessup_him":
         return (
           <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70 text-center">
               {label}
             </p>
             <TipCard label="For him" tips={getTipsHim("dontmessup")} phase={stagePhase} widgetId="dontmessup_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
