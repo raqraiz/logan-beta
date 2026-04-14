@@ -62,6 +62,7 @@ interface Participant {
   whatsapp_number: string;
   created_at: string;
   life_stage: string | null;
+  postpartum_start_date: string | null;
 }
 
 
