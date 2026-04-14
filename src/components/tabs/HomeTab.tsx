@@ -498,7 +498,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
         if (widget.type === "custom" && widget.prompt) {
           return (
             <div className="w-full max-w-xs flex flex-col gap-2" key={id}>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40 text-center">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70 text-center">
                 {label}
               </p>
               <CustomAIWidget
