@@ -908,11 +908,13 @@ export function ProfilesTab() {
                   cycleLengthDays: participant?.cycle_length_days || 28, 
                   lastPeriodStart: participant?.last_period_start || undefined,
                   lifeStage: (participant?.life_stage as any) || "cycling",
+                  postpartumStartDate: participant?.postpartum_start_date || undefined,
                 } : participant?.life_stage && participant.life_stage !== "cycling" ? {
                   cycleDay: 0,
                   phase: participant.life_stage === "postpartum" ? "Postpartum" : "Menopause",
                   cycleLengthDays: 0,
                   lifeStage: participant.life_stage as "postpartum" | "menopause",
+                  postpartumStartDate: participant?.postpartum_start_date || undefined,
                 } : null}
                 userId={profile.id}
               />
