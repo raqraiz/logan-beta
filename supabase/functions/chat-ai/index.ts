@@ -805,11 +805,26 @@ CYCLE DATA EDITS:
     const topics = participant.goals?.length ? participant.goals.join(", ") : null;
     const stageLabel = userLifeStage === "postpartum" ? "Postpartum" : "Menopause / Perimenopause";
     
+    // Calculate postpartum timeline
+    let ppTimeline = "";
+    if (userLifeStage === "postpartum" && participant.postpartum_start_date) {
+      const birthDate = new Date(participant.postpartum_start_date + "T12:00:00Z");
+      const now = new Date();
+      const diffDays = Math.floor((now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
+      const weeks = Math.floor(diffDays / 7);
+      const months = Math.floor(diffDays / 30);
+      if (months >= 1) {
+        ppTimeline = `\n- Postpartum timeline: ${months} month${months > 1 ? "s" : ""} postpartum (baby born ${birthDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})`;
+      } else {
+        ppTimeline = `\n- Postpartum timeline: ${weeks} week${weeks !== 1 ? "s" : ""} postpartum (baby born ${birthDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})`;
+      }
+    }
+
     const stageContext = userLifeStage === "postpartum"
-      ? `This user is POSTPARTUM — they do not have a regular cycle right now. Their hormones are recalibrating after pregnancy. Focus on: recovery, sleep deprivation, mood shifts, identity adjustments, physical healing, breastfeeding impacts on hormones. Do NOT reference cycle phases, cycle days, or ovulation. Instead, center guidance on where they are in postpartum recovery.`
+      ? `This user is POSTPARTUM — they do not have a regular cycle right now. Their hormones are recalibrating after pregnancy. Focus on: recovery, sleep deprivation, mood shifts, identity adjustments, physical healing, hormonal recalibration. Do NOT assume whether the user is breastfeeding or not — only reference breastfeeding if the USER brings it up first. If they mention having multiple children, do NOT assume they are breastfeeding all of them. Do NOT reference cycle phases, cycle days, or ovulation. Instead, center guidance on where they are in postpartum recovery.`
       : `This user is in MENOPAUSE or PERIMENOPAUSE — their cycle is irregular or has stopped. Their estrogen and progesterone are declining. Focus on: hot flashes, sleep disruption, mood changes, bone health, energy management, cognitive shifts, weight changes. Do NOT reference specific cycle days or ovulation windows. Instead, provide guidance relevant to hormonal transition and thriving through it.`;
 
-    let userContext = `\n\nUSER CONTEXT:\n- Life stage: ${stageLabel}\n- Age: ${age || "unknown"}\n- Anchor symptom: ${participant.anchor_symptom || "not specified"}\n- Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}\n${topics ? `- Focus areas: ${topics}` : ""}\n\n${stageContext}${symptomContext}`;
+    let userContext = `\n\nUSER CONTEXT:\n- Life stage: ${stageLabel}\n- Age: ${age || "unknown"}${ppTimeline}\n- Anchor symptom: ${participant.anchor_symptom || "not specified"}\n- Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}\n${topics ? `- Focus areas: ${topics}` : ""}\n\n${stageContext}${symptomContext}`;
     
     return basePrompt + userContext;
   }
