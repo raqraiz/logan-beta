@@ -133,7 +133,7 @@ export function ProfilesTab() {
     full_name: "", email: "", phone: "",
     cycle_length_days: "28", cycle_regularity: "", last_period_start: "",
     anchor_symptom: "", typical_symptoms: "", goals: "", timezone: "Asia/Jerusalem",
-    life_stage: "cycling",
+    life_stage: "cycling", postpartum_start_date: "",
   });
   const [saving, setSaving] = useState(false);
   const [showHomePreview, setShowHomePreview] = useState(false);
@@ -284,6 +284,7 @@ export function ProfilesTab() {
       goals: p?.goals?.join(", ") || "",
       timezone: p?.timezone || "Asia/Jerusalem",
       life_stage: (p as any)?.life_stage || "cycling",
+      postpartum_start_date: p?.postpartum_start_date || "",
     });
     setEditOpen(true);
   };
@@ -327,6 +328,7 @@ export function ProfilesTab() {
             goals: goalsArr,
             timezone: editForm.timezone.trim() || "Asia/Jerusalem",
             life_stage: editForm.life_stage,
+            postpartum_start_date: editForm.postpartum_start_date || null,
           } as any)
           .eq("id", selectedProfile.participant.id);
 
@@ -872,6 +874,12 @@ export function ProfilesTab() {
                         <option value="menopause">Menopause</option>
                       </select>
                     </div>
+                    {editForm.life_stage === "postpartum" && (
+                      <div className="space-y-1.5">
+                        <Label htmlFor="edit-birth-date">Baby's Birth Date</Label>
+                        <Input id="edit-birth-date" type="date" value={editForm.postpartum_start_date} onChange={(e) => setEditForm(f => ({ ...f, postpartum_start_date: e.target.value }))} />
+                      </div>
+                    )}
                     <div className="space-y-1.5">
                       <Label htmlFor="edit-tz">Timezone</Label>
                       <Input id="edit-tz" value={editForm.timezone} onChange={(e) => setEditForm(f => ({ ...f, timezone: e.target.value }))} />
