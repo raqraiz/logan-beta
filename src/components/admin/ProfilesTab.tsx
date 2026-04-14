@@ -600,6 +600,7 @@ export function ProfilesTab() {
                         phase={participant.life_stage === "postpartum" ? "Postpartum" : "Menopause"}
                         cycleLengthDays={0}
                         lifeStage={participant.life_stage as "postpartum" | "menopause"}
+                        postpartumStartDate={participant.postpartum_start_date || undefined}
                       />
                     </div>
                   ) : cycleDay && phase ? (
@@ -625,6 +626,12 @@ export function ProfilesTab() {
                       <div className="col-span-2">
                         <p className="text-muted-foreground">Last Period</p>
                         <p className="font-medium">{format(new Date(participant.last_period_start), "MMM d, yyyy")}</p>
+                      </div>
+                    )}
+                    {participant.postpartum_start_date && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Birth Date</p>
+                        <p className="font-medium">{format(new Date(participant.postpartum_start_date), "MMM d, yyyy")}</p>
                       </div>
                     )}
                   </div>
