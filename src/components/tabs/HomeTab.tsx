@@ -394,7 +394,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
                   Day {cycleData.cycleDay} of {cycleData.cycleLengthDays}
                 </p>
                 {!dismissed && (
-                  <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground/70">
+                  <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
                     <span>Not accurate?</span>
                     <button
                       onClick={() => {
