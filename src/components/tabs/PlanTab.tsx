@@ -470,6 +470,9 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
     );
   }
 
+  const toggle = (section: string) =>
+    setExpandedSection((prev) => (prev === section ? null : section));
+
   // Non-cycling life stages get tailored content
   const isNonCycling = cycleData?.lifeStage && cycleData.lifeStage !== "cycling";
 
@@ -616,8 +619,6 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
     );
   }
 
-  const toggle = (section: string) =>
-    setExpandedSection((prev) => (prev === section ? null : section));
 
   return (
     <div className="flex-1 overflow-y-auto pb-20">
