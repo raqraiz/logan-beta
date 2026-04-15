@@ -101,36 +101,54 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
   );
 }
 
-// Static badge for non-cycling life stages
+// Static badge for non-cycling life stages — now with week number like cycling users
 function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "postpartum" | "menopause"; size: "sm" | "md"; postpartumStartDate?: string }) {
   const stageKey = lifeStage === "postpartum" ? "Postpartum" : "Menopause";
   const styles = PHASE_STYLES[stageKey];
   const label = lifeStage === "postpartum" ? "Postpartum" : "Menopause";
 
-  // Calculate days/weeks postpartum
-  let ppLabel = lifeStage === "postpartum" ? "Recovery" : "Transition";
+  // Calculate weeks postpartum (or a default number for menopause)
+  let displayNumber = "—";
+  let subLabel = lifeStage === "postpartum" ? "Recovery" : "Transition";
   if (lifeStage === "postpartum" && postpartumStartDate) {
     const start = new Date(postpartumStartDate + "T12:00:00Z");
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays < 0) {
-      ppLabel = "Recovery";
-    } else if (diffDays < 14) {
-      ppLabel = `Day ${diffDays + 1}`;
+      displayNumber = "0";
+      subLabel = "Week";
+    } else if (diffDays < 7) {
+      displayNumber = String(diffDays + 1);
+      subLabel = "Day";
     } else {
       const weeks = Math.floor(diffDays / 7);
-      ppLabel = `Week ${weeks}`;
+      displayNumber = String(weeks);
+      subLabel = weeks === 1 ? "Week" : "Weeks";
     }
+  } else if (lifeStage === "postpartum") {
+    displayNumber = "—";
+    subLabel = "Week";
   }
 
   if (size === "sm") {
     return (
       <div className="relative w-10 h-10 flex-shrink-0">
         <div className="absolute inset-0 rounded-full opacity-20 blur-xl" style={{ backgroundColor: styles.hex }} />
+        <svg className="w-full h-full relative z-10" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="42" fill="none" strokeWidth="3" stroke="hsl(220 10% 16%)" />
+          <circle
+            cx="50" cy="50" r="42" fill="none" strokeWidth="3"
+            strokeLinecap="round"
+            stroke={styles.hex}
+            style={{ filter: `drop-shadow(0 0 3px ${styles.hex}80)` }}
+            strokeDasharray={`${264 * 0.75} ${264 * 0.25}`}
+            strokeDashoffset="66"
+          />
+        </svg>
         <div className="absolute inset-[3px] rounded-full bg-[hsl(220,10%,8%)] border border-border/20" />
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-          <span className="text-[8px] font-bold" style={{ color: styles.hex }}>
-            {lifeStage === "postpartum" ? "PP" : "M"}
+          <span className="text-[11px] font-bold leading-none" style={{ color: styles.hex }}>
+            {displayNumber}
           </span>
         </div>
       </div>
@@ -142,23 +160,23 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "
       <div className="relative w-56 h-56 flex-shrink-0">
         <div className="absolute inset-0 rounded-full opacity-20 blur-xl" style={{ backgroundColor: styles.hex }} />
         <div className="absolute inset-[6px] rounded-full bg-[hsl(220,10%,8%)] shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)]" />
-        {/* Decorative static ring */}
         <svg className="w-full h-full relative z-10" viewBox="0 0 100 100">
           <circle cx="50" cy="50" r="42" fill="none" strokeWidth="3" stroke="hsl(220 10% 16%)" />
           <circle
             cx="50" cy="50" r="42" fill="none" strokeWidth="3"
             strokeLinecap="round"
-            strokeDasharray="8 12"
             stroke={styles.hex}
-            style={{ filter: `drop-shadow(0 0 4px ${styles.hex}80)` }}
+            style={{ filter: `drop-shadow(0 0 6px ${styles.hex}80)` }}
+            strokeDasharray={`${264 * 0.75} ${264 * 0.25}`}
+            strokeDashoffset="66"
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-          <span className="text-3xl font-bold" style={{ color: styles.hex }}>
-            {lifeStage === "postpartum" ? "🌱" : "✦"}
+          <span className="text-4xl font-bold leading-none" style={{ color: styles.hex }}>
+            {displayNumber}
           </span>
-          <span className="text-sm font-semibold mt-1" style={{ color: styles.hex }}>{label}</span>
-          <span className="text-xs text-muted-foreground mt-0.5">{ppLabel}</span>
+          <span className="text-xs text-muted-foreground mt-1">{subLabel}</span>
+          <span className="text-sm font-semibold mt-0.5" style={{ color: styles.hex }}>{label}</span>
         </div>
       </div>
     </div>
