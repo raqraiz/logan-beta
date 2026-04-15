@@ -139,30 +139,6 @@ serve(async (req) => {
 
     const userLifeStage = participant.life_stage || "cycling";
 
-    // For non-cycling users, skip cycle-based insights
-    if (userLifeStage !== "cycling") {
-      // Remove placeholder and skip — non-cycling proactive insights can be added later
-      await supabase.from("chat_messages").delete().eq("id", placeholderId);
-      return new Response(
-        JSON.stringify({ success: true, skipped: true, reason: "non_cycling_user" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Calculate cycle info using participant's timezone
-    const cycleInfo = calculateCycleInfo(
-      participant.last_period_start,
-      participant.cycle_length_days,
-      participant.timezone || "UTC"
-    );
-
-    if (!cycleInfo) {
-      return new Response(
-        JSON.stringify({ success: true, skipped: true, reason: "no_cycle_data" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // Get user's name
     const { data: profile } = await supabase
       .from("profiles")
@@ -187,6 +163,50 @@ serve(async (req) => {
       .eq("message_type", "checkin")
       .order("created_at", { ascending: false })
       .limit(12);
+
+    // For non-cycling users, generate stage-specific insights
+    if (userLifeStage !== "cycling") {
+      const prompt = buildNonCyclingInsightPrompt(
+        profile?.full_name || "there",
+        participant,
+        userLifeStage,
+        recentMessages || [],
+        checkinMessages || []
+      );
+
+      const { insight, question, conversationStarters, cheatSheet } = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt);
+
+      await supabase.from("chat_messages").update({
+        content: insight,
+        metadata: {
+          insight_type: "proactive",
+          life_stage: userLifeStage,
+          generated_at: new Date().toISOString(),
+          engagement_question: question,
+          conversation_starters: conversationStarters,
+          cheat_sheet: cheatSheet,
+        }
+      }).eq("id", placeholderId);
+
+      return new Response(
+        JSON.stringify({ success: true, generated: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Calculate cycle info using participant's timezone
+    const cycleInfo = calculateCycleInfo(
+      participant.last_period_start,
+      participant.cycle_length_days,
+      participant.timezone || "UTC"
+    );
+
+    if (!cycleInfo) {
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, reason: "no_cycle_data" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Check if user is in late luteal — ask about period
     const isLateLuteal = cycleInfo.phase === "Luteal" && cycleInfo.daysUntilNextPhase <= 3;
@@ -225,7 +245,7 @@ serve(async (req) => {
         checkinMessages || []
       );
 
-      const { insight, question, conversationStarters, cheatSheet } = await generateAIInsight(lovableApiKey, prompt);
+      const { insight, question, conversationStarters, cheatSheet } = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt);
 
       await supabase.from("chat_messages").update({
         content: insight,
