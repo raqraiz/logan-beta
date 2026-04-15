@@ -619,8 +619,6 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
     );
   }
 
-  const toggle = (section: string) =>
-    setExpandedSection((prev) => (prev === section ? null : section));
 
   return (
     <div className="flex-1 overflow-y-auto pb-20">
