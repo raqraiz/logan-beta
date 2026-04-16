@@ -151,7 +151,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "
             cx="50" cy="50" r={radius}
             fill="none" strokeWidth="3"
             stroke={styles.hex}
-            strokeDasharray="6 4"
+            strokeDasharray="12 8"
             opacity="0.9"
             style={{ filter: `drop-shadow(0 0 3px ${styles.hex}80)` }}
           />
