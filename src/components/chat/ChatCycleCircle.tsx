@@ -130,22 +130,32 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "
     subLabel = "Week";
   }
 
+  // Perforated (dashed) ring style
+  const radius = 42;
+  const circumference = 2 * Math.PI * radius;
+
   if (size === "sm") {
     return (
       <div className="relative w-10 h-10 flex-shrink-0">
         <div className="absolute inset-0 rounded-full opacity-20 blur-xl" style={{ backgroundColor: styles.hex }} />
+        <div className="absolute inset-[3px] rounded-full bg-[hsl(220,10%,8%)]" />
         <svg className="w-full h-full relative z-10" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="42" fill="none" strokeWidth="3" stroke="hsl(220 10% 16%)" />
           <circle
-            cx="50" cy="50" r="42" fill="none" strokeWidth="3"
-            strokeLinecap="round"
+            cx="50" cy="50" r={radius}
+            fill="none" strokeWidth="3"
             stroke={styles.hex}
+            strokeDasharray="6 4"
+            opacity="0.5"
+          />
+          <circle
+            cx="50" cy="50" r={radius}
+            fill="none" strokeWidth="3"
+            stroke={styles.hex}
+            strokeDasharray="6 4"
+            opacity="0.9"
             style={{ filter: `drop-shadow(0 0 3px ${styles.hex}80)` }}
-            strokeDasharray={`${264 * 0.75} ${264 * 0.25}`}
-            strokeDashoffset="66"
           />
         </svg>
-        <div className="absolute inset-[3px] rounded-full bg-[hsl(220,10%,8%)] border border-border/20" />
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
           <span className="text-[11px] font-bold leading-none" style={{ color: styles.hex }}>
             {displayNumber}
@@ -161,14 +171,20 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "
         <div className="absolute inset-0 rounded-full opacity-20 blur-xl" style={{ backgroundColor: styles.hex }} />
         <div className="absolute inset-[6px] rounded-full bg-[hsl(220,10%,8%)] shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)]" />
         <svg className="w-full h-full relative z-10" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="42" fill="none" strokeWidth="3" stroke="hsl(220 10% 16%)" />
           <circle
-            cx="50" cy="50" r="42" fill="none" strokeWidth="3"
-            strokeLinecap="round"
+            cx="50" cy="50" r={radius}
+            fill="none" strokeWidth="3"
             stroke={styles.hex}
+            strokeDasharray="6 4"
+            opacity="0.35"
+          />
+          <circle
+            cx="50" cy="50" r={radius}
+            fill="none" strokeWidth="3"
+            stroke={styles.hex}
+            strokeDasharray="6 4"
+            opacity="0.85"
             style={{ filter: `drop-shadow(0 0 6px ${styles.hex}80)` }}
-            strokeDasharray={`${264 * 0.75} ${264 * 0.25}`}
-            strokeDashoffset="66"
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
