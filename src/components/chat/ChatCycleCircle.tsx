@@ -142,18 +142,19 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "
         <svg className="w-full h-full relative z-10" viewBox="0 0 100 100">
           <circle
             cx="50" cy="50" r={radius}
-            fill="none" strokeWidth="3"
-            strokeLinecap="round"
-            stroke="hsl(220 10% 18%)"
-            strokeDasharray="12 8"
+            fill="none"
+            strokeWidth="3.5"
+            stroke="hsl(var(--muted))"
+            opacity="0.9"
           />
           <circle
             cx="50" cy="50" r={radius}
-            fill="none" strokeWidth="2.5"
+            fill="none"
+            strokeWidth="2.5"
             strokeLinecap="round"
             stroke={styles.hex}
             strokeDasharray="12 8"
-            opacity="0.9"
+            opacity="0.95"
             style={{ filter: `drop-shadow(0 0 3px ${styles.hex}80)` }}
           />
         </svg>
@@ -174,18 +175,19 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "
         <svg className="w-full h-full relative z-10" viewBox="0 0 100 100">
           <circle
             cx="50" cy="50" r={radius}
-            fill="none" strokeWidth="3.5"
-            strokeLinecap="round"
-            stroke="hsl(220 10% 18%)"
-            strokeDasharray="14 10"
+            fill="none"
+            strokeWidth="5"
+            stroke="hsl(var(--muted))"
+            opacity="0.9"
           />
           <circle
             cx="50" cy="50" r={radius}
-            fill="none" strokeWidth="3"
+            fill="none"
+            strokeWidth="3"
             strokeLinecap="round"
             stroke={styles.hex}
             strokeDasharray="14 10"
-            opacity="0.85"
+            opacity="0.9"
             style={{ filter: `drop-shadow(0 0 6px ${styles.hex}80)` }}
           />
         </svg>
