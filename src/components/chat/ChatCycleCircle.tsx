@@ -144,14 +144,14 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "
             cx="50" cy="50" r={radius}
             fill="none" strokeWidth="3"
             stroke={styles.hex}
-            strokeDasharray="6 4"
-            opacity="0.5"
+            strokeDasharray="12 8"
+            opacity="0.4"
           />
           <circle
             cx="50" cy="50" r={radius}
             fill="none" strokeWidth="3"
             stroke={styles.hex}
-            strokeDasharray="6 4"
+            strokeDasharray="12 8"
             opacity="0.9"
             style={{ filter: `drop-shadow(0 0 3px ${styles.hex}80)` }}
           />
@@ -173,16 +173,16 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "
         <svg className="w-full h-full relative z-10" viewBox="0 0 100 100">
           <circle
             cx="50" cy="50" r={radius}
-            fill="none" strokeWidth="3"
+            fill="none" strokeWidth="4"
             stroke={styles.hex}
-            strokeDasharray="6 4"
+            strokeDasharray="14 10"
             opacity="0.35"
           />
           <circle
             cx="50" cy="50" r={radius}
-            fill="none" strokeWidth="3"
+            fill="none" strokeWidth="4"
             stroke={styles.hex}
-            strokeDasharray="6 4"
+            strokeDasharray="14 10"
             opacity="0.85"
             style={{ filter: `drop-shadow(0 0 6px ${styles.hex}80)` }}
           />
