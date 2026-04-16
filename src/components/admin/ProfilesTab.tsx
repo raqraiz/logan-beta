@@ -999,6 +999,7 @@ export function ProfilesTab() {
                           cycleLengthDays={0}
                           size="sm"
                           lifeStage={lifeStage}
+                          postpartumStartDate={profile.participant?.postpartum_start_date || undefined}
                         />
                       </div>
                     ) : cycleDay && phase ? (
