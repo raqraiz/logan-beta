@@ -513,6 +513,147 @@ serve(async (req) => {
     }
     // --- End cycle edit detection ---
 
+    // --- Postpartum life-stage / birth-date detection ---
+    if (participant) {
+      const lowerMsg = userMessage.toLowerCase();
+
+      // Patterns for "X months/weeks/days postpartum" or "X months/weeks after giving birth"
+      const ppDurationMatch = userMessage.match(
+        /(\d{1,2})\s*(month|months|week|weeks|day|days)\s*(?:postpartum|pp|after\s+(?:giving\s+)?birth|after\s+(?:my\s+)?baby|since\s+(?:i\s+)?(?:gave\s+birth|had\s+(?:my\s+)?baby))/i
+      ) || userMessage.match(
+        /(?:i'?m|i\s+am|currently)\s+(\d{1,2})\s*(month|months|week|weeks)\s*(?:postpartum|pp)/i
+      );
+
+      // Pattern for explicit birth date: "gave birth on March 5", "baby born April 12", "had my baby on Jan 3"
+      const ppDateMatch = userMessage.match(
+        /(?:gave\s+birth|had\s+(?:my\s+)?baby|baby\s+(?:was\s+)?born|delivered)\s+(?:on\s+)?(?:the\s+)?(\w+\s+\d{1,2}(?:,?\s*\d{4})?)/i
+      );
+
+      // Bare "I'm postpartum" mention with no duration/date
+      const ppBareMention = /\b(?:i'?m|i\s+am|currently)\s+postpartum\b/i.test(userMessage)
+        || /\bjust\s+had\s+(?:a\s+)?baby\b/i.test(userMessage);
+
+      const isPostpartumSignal = ppDurationMatch || ppDateMatch || ppBareMention;
+
+      if (isPostpartumSignal) {
+        let computedStartDate: string | null = null;
+        let askForDate = false;
+
+        if (ppDateMatch) {
+          const parsed = new Date(ppDateMatch[1]);
+          if (!isNaN(parsed.getTime()) && parsed <= new Date()) {
+            computedStartDate = parsed.toISOString().split("T")[0];
+          }
+        } else if (ppDurationMatch) {
+          const n = parseInt(ppDurationMatch[1]);
+          const unit = ppDurationMatch[2].toLowerCase();
+          const days = unit.startsWith("month") ? n * 30 : unit.startsWith("week") ? n * 7 : n;
+          const d = new Date();
+          d.setDate(d.getDate() - days);
+          computedStartDate = d.toISOString().split("T")[0];
+          // Even with a duration, ask for the exact date for accuracy
+          askForDate = true;
+        } else {
+          askForDate = true;
+        }
+
+        // Only act if life stage is changing OR start date is missing/changing
+        const needsLifeStageSwitch = participant.life_stage !== "postpartum";
+        const needsDateUpdate = computedStartDate && participant.postpartum_start_date !== computedStartDate;
+
+        if (needsLifeStageSwitch || needsDateUpdate) {
+          const updatePayload: any = { life_stage: "postpartum" };
+          if (computedStartDate) updatePayload.postpartum_start_date = computedStartDate;
+
+          const { error: ppUpdateErr } = await supabase
+            .from("participants")
+            .update(updatePayload)
+            .eq("id", participant.id);
+
+          if (!ppUpdateErr) {
+            const { data: refreshed } = await supabase
+              .from("participants")
+              .select("*")
+              .eq("id", participant.id)
+              .single();
+            if (refreshed) participant = refreshed;
+
+            let msg = "";
+            if (computedStartDate) {
+              const friendlyDate = new Date(computedStartDate + "T12:00:00Z").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+              msg = `Got it — switching you over to **postpartum** mode. I've set your baby's birth around **${friendlyDate}** based on what you shared.\n\nIf that's not exact, what's the actual birth date? Even a rough one helps me track your recovery timeline more accurately.`;
+            } else {
+              msg = `Got it — switching you over to **postpartum** mode. To track your recovery timeline accurately, what's your baby's birth date? An approximate one is fine.`;
+            }
+
+            await supabase.from("chat_messages").insert({
+              user_id: user.id,
+              role: "assistant",
+              content: msg,
+              message_type: "text",
+              metadata: {
+                has_cycle_visual: true,
+                visual_type: "cycle_circle",
+                life_stage: "postpartum",
+                postpartum_start_date: computedStartDate || participant.postpartum_start_date,
+                postpartum_update: true,
+                awaiting_birth_date: askForDate,
+              }
+            });
+
+            return new Response(
+              JSON.stringify({
+                success: true,
+                message: msg,
+                lifeStageUpdated: true,
+                postpartumStartDate: computedStartDate || participant.postpartum_start_date,
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+      }
+
+      // Standalone birth date follow-up — when last assistant msg was awaiting it
+      const wasAwaitingBirthDate = (lastAssistantMsg?.metadata as any)?.awaiting_birth_date === true;
+      if (wasAwaitingBirthDate && participant.life_stage === "postpartum") {
+        const dateOnlyMatch = userMessage.match(/\b(\w+\s+\d{1,2}(?:,?\s*\d{4})?)\b/);
+        if (dateOnlyMatch) {
+          const parsed = new Date(dateOnlyMatch[1]);
+          if (!isNaN(parsed.getTime()) && parsed <= new Date()) {
+            const formattedDate = parsed.toISOString().split("T")[0];
+            await supabase
+              .from("participants")
+              .update({ postpartum_start_date: formattedDate })
+              .eq("id", participant.id);
+
+            const friendlyDate = parsed.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+            const msg = `Perfect — locked in **${friendlyDate}** as your baby's birth date. Your postpartum timeline is now accurate everywhere.`;
+
+            await supabase.from("chat_messages").insert({
+              user_id: user.id,
+              role: "assistant",
+              content: msg,
+              message_type: "text",
+              metadata: {
+                has_cycle_visual: true,
+                visual_type: "cycle_circle",
+                life_stage: "postpartum",
+                postpartum_start_date: formattedDate,
+                postpartum_update: true,
+              }
+            });
+
+            return new Response(
+              JSON.stringify({ success: true, message: msg, postpartumStartDate: formattedDate }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+      }
+    }
+    // --- End postpartum detection ---
+
     // Get full chat history
     const { data: recentMessages } = await supabase
       .from("chat_messages")
