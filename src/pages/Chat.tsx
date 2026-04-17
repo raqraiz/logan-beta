@@ -131,7 +131,6 @@ const Chat = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
-  const lastUserQuestionRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
   const inputRef = useRef<HTMLInputElement>(null);
   const onboardingInitialized = useRef(false);
@@ -364,33 +363,9 @@ const Chat = () => {
     const lastMsg = messages[messages.length - 1];
 
     if (lastMsg.role === "assistant") {
-      // Keep the user's question visible at the top of the viewport while the answer appears below.
-      // For long user questions, only the last line stays visible (anchor to the bottom of the question).
+      // Scroll to the START of the new assistant message so the user reads from the top
       requestAnimationFrame(() => {
-        const viewport = scrollContainerRef.current?.querySelector(
-          '[data-radix-scroll-area-viewport]'
-        ) as HTMLDivElement | null;
-        const questionEl = lastUserQuestionRef.current;
-        if (viewport && questionEl) {
-          const viewportRect = viewport.getBoundingClientRect();
-          const questionRect = questionEl.getBoundingClientRect();
-          const questionHeight = questionRect.height;
-          // If question is taller than ~40% of viewport, anchor its bottom near the top (last line visible).
-          // Otherwise, anchor its top to the top of the viewport.
-          const maxQuestionVisible = viewport.clientHeight * 0.4;
-          const offsetWithinViewport = questionRect.top - viewportRect.top;
-          let delta: number;
-          if (questionHeight > maxQuestionVisible) {
-            // Show only the last ~1.5 lines (~40px) of the question at the top
-            const lastLineHeight = 40;
-            delta = offsetWithinViewport - 8 - (questionHeight - lastLineHeight);
-          } else {
-            delta = offsetWithinViewport - 8;
-          }
-          viewport.scrollBy({ top: delta, behavior: "smooth" });
-        } else {
-          lastMessageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
+        lastMessageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       });
       return;
     }
@@ -1113,22 +1088,8 @@ const Chat = () => {
                   ? "negative" as const
                   : null;
 
-              const isPrevToLastAssistant =
-                index === filteredMessages.length - 2 &&
-                message.role === "user" &&
-                filteredMessages[filteredMessages.length - 1]?.role === "assistant";
-
               return (
-                <div
-                  key={message.id}
-                  ref={
-                    isLastMessage
-                      ? lastMessageRef
-                      : isPrevToLastAssistant
-                        ? lastUserQuestionRef
-                        : null
-                  }
-                >
+                <div key={message.id} ref={isLastMessage ? lastMessageRef : null}>
                   <div
                     className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                   >
