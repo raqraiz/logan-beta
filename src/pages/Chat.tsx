@@ -906,11 +906,19 @@ const Chat = () => {
   // During onboarding, force the Ask tab
   const effectiveTab = isOnboarding ? "ask" : activeTab;
 
-  // When switching to Ask tab, scroll to the start of the last message
+  // When switching tabs, position the scroll appropriately
   useEffect(() => {
-    if (effectiveTab === "ask" && lastMessageRef.current) {
+    if (effectiveTab === "ask") {
+      // On Ask, jump to the start of the most recent message
       requestAnimationFrame(() => {
-        lastMessageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        lastMessageRef.current?.scrollIntoView({ behavior: "instant" as ScrollBehavior, block: "start" });
+      });
+    } else {
+      // On Home / Plan / any other tab, start at the top of the view
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
       });
     }
   }, [effectiveTab]);
