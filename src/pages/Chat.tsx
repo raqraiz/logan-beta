@@ -356,15 +356,24 @@ const Chat = () => {
     }
   }, [messages]);
 
-  // Auto-scroll on new user messages (if near bottom)
+  // Auto-scroll on new messages
   useEffect(() => {
     if (messages.length === 0) return;
     if (!hasScrolledToBottom.current) return; // skip until initial scroll done
     const lastMsg = messages[messages.length - 1];
-    if (lastMsg.role !== "user") return;
-    if (!isNearBottomRef.current) return;
 
-    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (lastMsg.role === "assistant") {
+      // Scroll to the START of the new assistant message so the user reads from the top
+      requestAnimationFrame(() => {
+        lastMessageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      return;
+    }
+
+    // For user messages, only auto-scroll to bottom if already near bottom
+    if (lastMsg.role === "user" && isNearBottomRef.current) {
+      scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   // Track scroll position reliably for "jump to bottom" visibility
@@ -897,11 +906,19 @@ const Chat = () => {
   // During onboarding, force the Ask tab
   const effectiveTab = isOnboarding ? "ask" : activeTab;
 
-  // When switching to Ask tab, scroll to the start of the last message
+  // When switching tabs, position the scroll appropriately
   useEffect(() => {
-    if (effectiveTab === "ask" && lastMessageRef.current) {
+    if (effectiveTab === "ask") {
+      // On Ask, jump to the start of the most recent message
       requestAnimationFrame(() => {
-        lastMessageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        lastMessageRef.current?.scrollIntoView({ behavior: "instant" as ScrollBehavior, block: "start" });
+      });
+    } else {
+      // On Home / Plan / any other tab, start at the top of the view
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
       });
     }
   }, [effectiveTab]);
