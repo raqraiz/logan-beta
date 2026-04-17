@@ -356,15 +356,24 @@ const Chat = () => {
     }
   }, [messages]);
 
-  // Auto-scroll on new user messages (if near bottom)
+  // Auto-scroll on new messages
   useEffect(() => {
     if (messages.length === 0) return;
     if (!hasScrolledToBottom.current) return; // skip until initial scroll done
     const lastMsg = messages[messages.length - 1];
-    if (lastMsg.role !== "user") return;
-    if (!isNearBottomRef.current) return;
 
-    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (lastMsg.role === "assistant") {
+      // Scroll to the START of the new assistant message so the user reads from the top
+      requestAnimationFrame(() => {
+        lastMessageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      return;
+    }
+
+    // For user messages, only auto-scroll to bottom if already near bottom
+    if (lastMsg.role === "user" && isNearBottomRef.current) {
+      scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   // Track scroll position reliably for "jump to bottom" visibility
