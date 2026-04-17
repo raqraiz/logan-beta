@@ -933,7 +933,11 @@ ATHLETIC & TRAINING CONTEXT:
 
 CYCLE DATA EDITS:
 - If a user TELLS you to change their cycle length or period date (e.g. "change my cycle to 30 days", "my period started on March 15"), the system handles it automatically — just confirm it's done.
-- If a user asks HOW to change their cycle data themselves (e.g. "how do I update my cycle length?", "where can I edit my period date?"), tell them to head to the Home tab where there's an "Update period date" option right under the cycle circle. Keep it brief and friendly.`;
+- If a user asks HOW to change their cycle data themselves (e.g. "how do I update my cycle length?", "where can I edit my period date?"), tell them to head to the Home tab where there's an "Update period date" option right under the cycle circle. Keep it brief and friendly.
+
+LIFE STAGE CHANGES:
+- If a user mentions they are postpartum, just had a baby, gave birth recently, or shares a postpartum duration (e.g. "I'm 10 months postpartum", "had my baby in March"), the system automatically switches their life stage to postpartum and asks for the baby's birth date.
+- If a user mentions perimenopause or menopause symptoms or stage, acknowledge it warmly and ask for confirmation before making assumptions. Always ask for the baby's birth date when postpartum is mentioned without one — it's essential for accurate recovery tracking.`;
 
   if (!participant) {
     return basePrompt + "\n\nNote: User hasn't completed onboarding yet. Provide general guidance and encourage them to share their cycle details for personalized insights.";
