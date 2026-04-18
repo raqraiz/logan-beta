@@ -395,25 +395,25 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       case "succeed_you":
         return (
           <div className="w-full max-w-sm" key={id}>
-            <TipCard label={label} tips={getTipsHer("succeed")} phase={stagePhase} widgetId="succeed_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
+            <TipCard label={label} tips={getTipsHer("succeed")} phase={stagePhase} widgetId="succeed_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} icon={Sparkles} />
           </div>
         );
       case "succeed_him":
         return (
           <div className="w-full max-w-sm" key={id}>
-            <TipCard label={label} tips={getTipsHim("succeed")} phase={stagePhase} widgetId="succeed_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
+            <TipCard label={label} tips={getTipsHim("succeed")} phase={stagePhase} widgetId="succeed_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} icon={Heart} />
           </div>
         );
       case "dontmessup_you":
         return (
           <div className="w-full max-w-sm" key={id}>
-            <TipCard label={label} tips={getTipsHer("dontmessup")} phase={stagePhase} widgetId="dontmessup_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
+            <TipCard label={label} tips={getTipsHer("dontmessup")} phase={stagePhase} widgetId="dontmessup_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} icon={Shield} />
           </div>
         );
       case "dontmessup_him":
         return (
           <div className="w-full max-w-sm" key={id}>
-            <TipCard label={label} tips={getTipsHim("dontmessup")} phase={stagePhase} widgetId="dontmessup_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} />
+            <TipCard label={label} tips={getTipsHim("dontmessup")} phase={stagePhase} widgetId="dontmessup_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} icon={Users} />
           </div>
         );
       case "hormone_chart":
