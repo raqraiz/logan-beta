@@ -221,9 +221,6 @@ function TipCard({
   label,
   tips,
   phase,
-  widgetId,
-  cycleDay,
-  cycleLengthDays,
 }: {
   label: string;
   tips: string[];
@@ -251,49 +248,49 @@ function TipCard({
   return (
     <button
       onClick={rotate}
-      className={`w-full text-left rounded-xl border border-border/30 border-l-2 ${borderColor} 
-        bg-card/40 backdrop-blur-sm overflow-hidden transition-all duration-200 
-        active:scale-[0.97] hover:bg-card/60 group ${glow} relative`}
+      className={`w-full text-left rounded-2xl border border-border/30 border-l-2 ${borderColor}
+        bg-card/40 backdrop-blur-sm overflow-hidden transition-all duration-200
+        active:scale-[0.98] hover:bg-card/60 group ${glow} relative`}
     >
       {/* Gradient accent background */}
       <div className={`absolute inset-0 bg-gradient-to-br ${bgAccent} pointer-events-none`} />
 
-      <div className="relative p-3.5">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">{label}</span>
-          <div className="flex items-center gap-1 text-muted-foreground/50 group-hover:text-muted-foreground/70 transition-colors">
-            <span className="text-[9px]">tap to shuffle</span>
+      <div className="relative px-5 py-4">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+            {label}
+          </span>
+          <div className="flex items-center gap-1 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors">
             <Shuffle className="w-3 h-3" />
           </div>
         </div>
 
-        {/* Visual: graphic + text side by side */}
-        <div className="flex items-start gap-3">
-          <div className="flex flex-col items-center gap-1.5 pt-0.5">
-            {widgetId && getWidgetGraphic(widgetId, phase)}
-            <MiniPhaseArc cycleDay={cycleDay} cycleLengthDays={cycleLengthDays} phase={phase} size={28} />
-          </div>
-          <div className="flex-1 min-w-0">
-            {/* Progress dots */}
-            <div className="flex gap-1 mb-1.5">
-              {phaseTips.map((_, i) => (
-                <div
-                  key={i}
-                  className={`h-0.5 rounded-full transition-all duration-200 ${
-                    i === index ? "w-4 bg-primary/50" : "w-1.5 bg-muted-foreground/15"
-                  }`}
-                />
-              ))}
-            </div>
-            <p className={`text-[13px] text-foreground leading-relaxed transition-opacity duration-150 ${animating ? 'opacity-0' : 'opacity-100'}`}>
-              {phaseTips[index]}
-            </p>
-          </div>
+        {/* Pull-quote tip */}
+        <p
+          className={`text-[15px] text-foreground/90 leading-snug font-medium transition-opacity duration-150 ${
+            animating ? "opacity-0" : "opacity-100"
+          }`}
+        >
+          {phaseTips[index]}
+        </p>
+
+        {/* Progress dots */}
+        <div className="flex gap-1 mt-3">
+          {phaseTips.map((_, i) => (
+            <div
+              key={i}
+              className={`h-0.5 rounded-full transition-all duration-200 ${
+                i === index ? "w-5 bg-primary/60" : "w-2 bg-muted-foreground/20"
+              }`}
+            />
+          ))}
         </div>
       </div>
     </button>
   );
 }
+
 
 // ── Types ─────────────────────────────────────────────────
 
