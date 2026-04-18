@@ -534,7 +534,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           onAddCustom={() => setShowAddWidget(true)}
         />
       ) : (
-        <div className="flex flex-col items-center gap-4 px-2 w-full">
+        <div className="flex flex-col items-center gap-7 px-3 w-full pt-1">
           {visibleWidgets.map(w => renderWidget(w))}
         </div>
       )}
