@@ -10,6 +10,7 @@ import { CustomAIWidget } from "@/components/home/CustomAIWidget";
 import { SymptomLogWidget } from "@/components/home/SymptomLogWidget";
 import { SymptomHistory } from "@/components/home/SymptomHistory";
 import { MiniPhaseArc, getWidgetGraphic } from "@/components/home/WidgetGraphics";
+import { DailyBriefingHero } from "@/components/home/DailyBriefingHero";
 import { useWidgetPreferences, getWidgetLabel } from "@/hooks/useWidgetPreferences";
 import { format } from "date-fns";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
