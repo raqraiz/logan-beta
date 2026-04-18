@@ -14,7 +14,7 @@ import { DailyBriefingHero } from "@/components/home/DailyBriefingHero";
 import { useWidgetPreferences, getWidgetLabel } from "@/hooks/useWidgetPreferences";
 import { format } from "date-fns";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
-import { X, Shuffle, Pencil, Check } from "lucide-react";
+import { X, Pencil, Check, Shield, Users, Sparkles, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
