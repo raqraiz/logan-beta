@@ -65,47 +65,39 @@ export function CustomAIWidget({ title, prompt, phase, cycleDay, cycleLengthDays
 
   return (
     <div
-      className={`w-full text-left rounded-xl border border-border/30 border-l-2 ${borderColor}
+      className={`w-full text-left rounded-2xl border border-border/30 border-l-2 ${borderColor}
         bg-card/40 backdrop-blur-sm overflow-hidden transition-all duration-200 ${glow} relative`}
     >
       <div className={`absolute inset-0 bg-gradient-to-br ${bgAccent} pointer-events-none`} />
 
-      <div className="relative p-3.5">
-        <div className="flex items-center justify-between mb-2">
+      <div className="relative px-5 py-4">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-1.5">
             <Sparkles className="w-3 h-3 text-primary/60" />
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">
               {title}
             </span>
           </div>
           <button
             onClick={generate}
             disabled={loading}
-            className="text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors disabled:opacity-30"
+            className="text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors disabled:opacity-30"
           >
             <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
           </button>
         </div>
 
-        <div className="flex items-start gap-3">
-          <div className="flex flex-col items-center gap-1.5 pt-0.5">
-            <CustomWidgetGraphic phase={phase} />
-            <MiniPhaseArc cycleDay={cycleDay} cycleLengthDays={cycleLengthDays} phase={phase} size={28} />
+        {loading ? (
+          <div className="flex gap-1.5 items-center py-3">
+            <div className="h-2 w-2 rounded-full bg-primary/30 animate-pulse" />
+            <div className="h-2 w-2 rounded-full bg-primary/30 animate-pulse [animation-delay:150ms]" />
+            <div className="h-2 w-2 rounded-full bg-primary/30 animate-pulse [animation-delay:300ms]" />
           </div>
-          <div className="flex-1 min-w-0">
-            {loading ? (
-              <div className="flex gap-1.5 items-center py-3">
-                <div className="h-2 w-2 rounded-full bg-primary/30 animate-pulse" />
-                <div className="h-2 w-2 rounded-full bg-primary/30 animate-pulse [animation-delay:150ms]" />
-                <div className="h-2 w-2 rounded-full bg-primary/30 animate-pulse [animation-delay:300ms]" />
-              </div>
-            ) : error ? (
-              <p className="text-[13px] text-muted-foreground/60 leading-relaxed">{error}</p>
-            ) : (
-              <p className="text-[13px] text-foreground/85 leading-relaxed">{content}</p>
-            )}
-          </div>
-        </div>
+        ) : error ? (
+          <p className="text-[14px] text-muted-foreground/70 leading-snug">{error}</p>
+        ) : (
+          <p className="text-[15px] text-foreground/90 leading-snug font-medium">{content}</p>
+        )}
       </div>
     </div>
   );
