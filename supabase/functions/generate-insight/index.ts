@@ -245,7 +245,26 @@ serve(async (req) => {
         checkinMessages || []
       );
 
-      const { insight, question, conversationStarters, cheatSheet } = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt);
+      let aiResult;
+      try {
+        aiResult = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt);
+      } catch (aiErr) {
+        const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
+        console.error("AI insight generation failed, removing placeholder:", msg);
+        // Remove placeholder so UI doesn't show a blank message
+        await supabase.from("chat_messages").delete().eq("id", placeholderId);
+        const isBilling = /\b402\b|payment_required|Not enough credits/i.test(msg);
+        const isRate = /\b429\b|rate limit/i.test(msg);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            skipped: true,
+            reason: isBilling ? "ai_credits_exhausted" : isRate ? "ai_rate_limited" : "ai_unavailable",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const { insight, question, conversationStarters, cheatSheet } = aiResult;
 
       await supabase.from("chat_messages").update({
         content: insight,
