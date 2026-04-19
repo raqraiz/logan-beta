@@ -422,7 +422,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       }
       case "symptom_tracker":
         return userId ? (
-          <div className="w-full max-w-sm flex flex-col gap-2" key={id}>
+          <div className="w-full flex flex-col gap-2" key={id}>
             <SymptomLogWidget
               userId={userId}
               cycleDay={isNonCycling ? undefined : cycleData.cycleDay}
