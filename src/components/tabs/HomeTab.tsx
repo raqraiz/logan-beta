@@ -463,7 +463,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       case "hormone_chart":
         if (isNonCycling) return null;
         return (
-          <div className="w-full max-w-sm" key={id}>
+          <div className="w-full" key={id}>
             <HormoneChart
               cycleDay={cycleData.cycleDay}
               phase={cycleData.phase}
@@ -473,7 +473,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
         );
       case "symptom_map":
         return (
-          <div className="w-full max-w-sm" key={id}>
+          <div className="w-full" key={id}>
             <SymptomMap
               anchorSymptom={anchorSymptom || undefined}
               cycleDay={cycleData.cycleDay}
@@ -485,7 +485,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       default:
         if (widget.type === "custom" && widget.prompt) {
           return (
-            <div className="w-full max-w-sm" key={id}>
+            <div className="w-full" key={id}>
               <CustomAIWidget
                 title={label}
                 prompt={widget.prompt}
