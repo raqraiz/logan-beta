@@ -539,8 +539,8 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           onAddCustom={() => setShowAddWidget(true)}
         />
       ) : (
-        <div className="flex flex-col items-center gap-7 px-3 w-full pt-1">
-          <div className="w-full max-w-lg lg:max-w-xl xl:max-w-2xl">
+        <div className="flex flex-col items-center gap-7 px-4 sm:px-6 lg:px-8 w-full pt-1">
+          <div className="w-full max-w-3xl xl:max-w-5xl 2xl:max-w-6xl">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {visibleWidgets.map(w => (
                 <div className={w.id === 'cycle_circle' || w.id === 'symptom_tracker' ? 'md:col-span-2' : ''} key={w.id}>
