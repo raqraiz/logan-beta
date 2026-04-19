@@ -422,7 +422,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       }
       case "symptom_tracker":
         return userId ? (
-          <div className="w-full max-w-sm flex flex-col gap-2" key={id}>
+          <div className="w-full flex flex-col gap-2" key={id}>
             <SymptomLogWidget
               userId={userId}
               cycleDay={isNonCycling ? undefined : cycleData.cycleDay}
@@ -438,32 +438,32 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
         ) : null;
       case "succeed_you":
         return (
-          <div className="w-full max-w-sm" key={id}>
+          <div className="w-full" key={id}>
             <TipCard label={label} tips={getTipsHer("succeed")} phase={stagePhase} widgetId="succeed_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} icon={Sparkles} />
           </div>
         );
       case "succeed_him":
         return (
-          <div className="w-full max-w-sm" key={id}>
+          <div className="w-full" key={id}>
             <TipCard label={label} tips={getTipsHim("succeed")} phase={stagePhase} widgetId="succeed_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} icon={Heart} />
           </div>
         );
       case "dontmessup_you":
         return (
-          <div className="w-full max-w-sm" key={id}>
+          <div className="w-full" key={id}>
             <TipCard label={label} tips={getTipsHer("dontmessup")} phase={stagePhase} widgetId="dontmessup_you" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} icon={Shield} />
           </div>
         );
       case "dontmessup_him":
         return (
-          <div className="w-full max-w-sm" key={id}>
+          <div className="w-full" key={id}>
             <TipCard label={label} tips={getTipsHim("dontmessup")} phase={stagePhase} widgetId="dontmessup_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} icon={Users} />
           </div>
         );
       case "hormone_chart":
         if (isNonCycling) return null;
         return (
-          <div className="w-full max-w-sm" key={id}>
+          <div className="w-full" key={id}>
             <HormoneChart
               cycleDay={cycleData.cycleDay}
               phase={cycleData.phase}
@@ -473,7 +473,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
         );
       case "symptom_map":
         return (
-          <div className="w-full max-w-sm" key={id}>
+          <div className="w-full" key={id}>
             <SymptomMap
               anchorSymptom={anchorSymptom || undefined}
               cycleDay={cycleData.cycleDay}
@@ -485,7 +485,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       default:
         if (widget.type === "custom" && widget.prompt) {
           return (
-            <div className="w-full max-w-sm" key={id}>
+            <div className="w-full" key={id}>
               <CustomAIWidget
                 title={label}
                 prompt={widget.prompt}
@@ -540,7 +540,15 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
         />
       ) : (
         <div className="flex flex-col items-center gap-7 px-3 w-full pt-1">
-          {visibleWidgets.map(w => renderWidget(w))}
+          <div className="w-full max-w-lg lg:max-w-xl xl:max-w-2xl">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {visibleWidgets.map(w => (
+                <div className={w.id === 'cycle_circle' || w.id === 'symptom_tracker' ? 'md:col-span-2' : ''} key={w.id}>
+                  {renderWidget(w)}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
