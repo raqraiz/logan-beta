@@ -267,28 +267,12 @@ const WIDGET_COLORS: Record<string, {
 
 // ── TipCard ───────────────────────────────────────────────
 
-const PHASE_BG_ACCENT: Record<string, string> = {
-  Menstruation: "from-phase-menstruation/8 to-transparent",
-  Follicular: "from-phase-follicular/8 to-transparent",
-  Ovulation: "from-phase-ovulation/8 to-transparent",
-  Luteal: "from-phase-luteal/8 to-transparent",
-  Postpartum: "from-pink-400/8 to-transparent",
-  Menopause: "from-amber-400/8 to-transparent",
-};
-
-const PHASE_DOT: Record<string, string> = {
-  Menstruation: "bg-phase-menstruation",
-  Follicular: "bg-phase-follicular",
-  Ovulation: "bg-phase-ovulation",
-  Luteal: "bg-phase-luteal",
-  Postpartum: "bg-pink-400",
-  Menopause: "bg-amber-400",
-};
+// ── TipCard ───────────────────────────────────────────────
 
 function TipCard({
   label,
   tips,
-  phase,
+  widgetId = "custom",
   icon: Icon,
 }: {
   label: string;
@@ -300,22 +284,23 @@ function TipCard({
   icon?: React.ComponentType<{ className?: string }>;
 }) {
   const phaseTips = tips.length > 0 ? tips : ["No tips available for this phase."];
-  const borderColor = PHASE_BORDER[phase] || "border-l-primary";
-  const glow = PHASE_GLOW[phase] || "";
-  const bgAccent = PHASE_BG_ACCENT[phase] || "from-primary/5 to-transparent";
-  const dotColor = PHASE_DOT[phase] || "bg-primary";
+  const colors = WIDGET_COLORS[widgetId] || WIDGET_COLORS.custom;
 
   return (
     <div
-      className={`w-full rounded-2xl border border-border/30 border-l-2 ${borderColor}
-        bg-card/40 backdrop-blur-sm overflow-hidden ${glow} relative`}
+      className={`w-full rounded-2xl border border-border/40 ${colors.border} border-l-[3px]
+        bg-card/50 backdrop-blur-md overflow-hidden relative`}
     >
-      <div className={`absolute inset-0 bg-gradient-to-br ${bgAccent} pointer-events-none`} />
+      <div className={`absolute inset-0 bg-gradient-to-br ${colors.bgGradient} pointer-events-none`} />
 
       <div className="relative px-5 py-4">
-        <div className="flex items-center gap-1.5 mb-3">
-          {Icon && <Icon className="w-3.5 h-3.5 text-muted-foreground/60" />}
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+        <div className="flex items-center gap-2.5 mb-3">
+          {Icon && (
+            <div className={`w-7 h-7 rounded-lg ${colors.iconBg} flex items-center justify-center`}>
+              <Icon className={`w-4 h-4 ${colors.iconColor}`} />
+            </div>
+          )}
+          <span className={`text-[10px] font-semibold uppercase tracking-widest ${colors.labelColor}`}>
             {label}
           </span>
         </div>
@@ -323,7 +308,7 @@ function TipCard({
         <ul className="space-y-2.5">
           {phaseTips.map((tip, i) => (
             <li key={i} className="flex gap-2.5 items-start">
-              <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} />
+              <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${colors.dot}`} />
               <span className="text-[14px] text-foreground/85 leading-snug">{tip}</span>
             </li>
           ))}
