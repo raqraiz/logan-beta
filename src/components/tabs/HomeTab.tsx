@@ -188,22 +188,81 @@ const MENOPAUSE_HIM: string[] = [
   "Physical affection matters even when intimacy changes. Hold her hand. Hug her longer.",
 ];
 
-const PHASE_BORDER: Record<string, string> = {
-  Menstruation: "border-l-phase-menstruation",
-  Follicular: "border-l-phase-follicular",
-  Ovulation: "border-l-phase-ovulation",
-  Luteal: "border-l-phase-luteal",
-  Postpartum: "border-l-pink-400",
-  Menopause: "border-l-amber-400",
-};
+// ── Widget-specific color schemes for visual variety ────
+// Each widget category has its own identity, independent of cycle phase
 
-const PHASE_GLOW: Record<string, string> = {
-  Menstruation: "shadow-[0_0_20px_-6px_hsl(355,78%,60%,0.15)]",
-  Follicular: "shadow-[0_0_20px_-6px_hsl(152,60%,52%,0.15)]",
-  Ovulation: "shadow-[0_0_20px_-6px_hsl(40,90%,56%,0.15)]",
-  Luteal: "shadow-[0_0_20px_-6px_hsl(270,60%,65%,0.15)]",
-  Postpartum: "shadow-[0_0_20px_-6px_hsl(330,80%,65%,0.15)]",
-  Menopause: "shadow-[0_0_20px_-6px_hsl(45,96%,56%,0.15)]",
+const WIDGET_COLORS: Record<string, {
+  border: string;
+  bgGradient: string;
+  dot: string;
+  iconBg: string;
+  iconColor: string;
+  labelColor: string;
+}> = {
+  succeed_you: {
+    border: "border-l-emerald-500",
+    bgGradient: "from-emerald-500/10 via-emerald-500/5 to-transparent",
+    dot: "bg-emerald-500",
+    iconBg: "bg-emerald-500/15",
+    iconColor: "text-emerald-400",
+    labelColor: "text-emerald-400/80",
+  },
+  succeed_him: {
+    border: "border-l-sky-500",
+    bgGradient: "from-sky-500/10 via-sky-500/5 to-transparent",
+    dot: "bg-sky-500",
+    iconBg: "bg-sky-500/15",
+    iconColor: "text-sky-400",
+    labelColor: "text-sky-400/80",
+  },
+  dontmessup_you: {
+    border: "border-l-amber-500",
+    bgGradient: "from-amber-500/10 via-amber-500/5 to-transparent",
+    dot: "bg-amber-500",
+    iconBg: "bg-amber-500/15",
+    iconColor: "text-amber-400",
+    labelColor: "text-amber-400/80",
+  },
+  dontmessup_him: {
+    border: "border-l-violet-500",
+    bgGradient: "from-violet-500/10 via-violet-500/5 to-transparent",
+    dot: "bg-violet-500",
+    iconBg: "bg-violet-500/15",
+    iconColor: "text-violet-400",
+    labelColor: "text-violet-400/80",
+  },
+  symptom_tracker: {
+    border: "border-l-rose-500",
+    bgGradient: "from-rose-500/10 via-rose-500/5 to-transparent",
+    dot: "bg-rose-500",
+    iconBg: "bg-rose-500/15",
+    iconColor: "text-rose-400",
+    labelColor: "text-rose-400/80",
+  },
+  hormone_chart: {
+    border: "border-l-cyan-500",
+    bgGradient: "from-cyan-500/10 via-cyan-500/5 to-transparent",
+    dot: "bg-cyan-500",
+    iconBg: "bg-cyan-500/15",
+    iconColor: "text-cyan-400",
+    labelColor: "text-cyan-400/80",
+  },
+  symptom_map: {
+    border: "border-l-fuchsia-500",
+    bgGradient: "from-fuchsia-500/10 via-fuchsia-500/5 to-transparent",
+    dot: "bg-fuchsia-500",
+    iconBg: "bg-fuchsia-500/15",
+    iconColor: "text-fuchsia-400",
+    labelColor: "text-fuchsia-400/80",
+  },
+  custom: {
+    border: "border-l-primary",
+    bgGradient: "from-primary/10 via-primary/5 to-transparent",
+    dot: "bg-primary",
+    iconBg: "bg-primary/15",
+    iconColor: "text-primary",
+    labelColor: "text-primary/80",
+  },
 };
 
 // ── TipCard ───────────────────────────────────────────────
