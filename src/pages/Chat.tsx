@@ -846,7 +846,7 @@ const Chat = () => {
     const lastMessage = messages[messages.length - 1];
     if (lastMessage.role !== "assistant") return false;
     const inputType = lastMessage.metadata?.input_type;
-    return inputType === "symptom_picker" || inputType === "anchor_picker" || inputType === "date_picker" || inputType === "topic_picker" || inputType === "life_stage_picker";
+    return inputType === "symptom_picker" || inputType === "anchor_picker" || inputType === "date_picker" || inputType === "topic_picker" || inputType === "life_stage_picker" || inputType === "age_picker";
   };
   const sendFeedback = async (messageId: string, isPositive: boolean) => {
     if (!user) return;
@@ -1217,6 +1217,29 @@ const Chat = () => {
                         onSubmit={handleDateSubmit}
                         isSubmitting={isSending}
                       />
+                    </div>
+                  )}
+
+                  {showInteractiveInput && inputType === "age_picker" && (
+                    <div className="mt-3 flex flex-wrap gap-2 max-w-sm">
+                      {[
+                        { value: "20", label: "Under 25" },
+                        { value: "27", label: "25–29" },
+                        { value: "32", label: "30–34" },
+                        { value: "37", label: "35–39" },
+                        { value: "42", label: "40–44" },
+                        { value: "47", label: "45–49" },
+                        { value: "52", label: "50+" },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => sendOnboardingResponse(option.value)}
+                          disabled={isSending}
+                          className="px-4 py-2 rounded-full border border-border/40 bg-card/60 hover:bg-card/90 text-sm font-medium text-foreground transition-all active:scale-[0.98]"
+                        >
+                          {option.label}
+                        </button>
+                      ))}
                     </div>
                   )}
 
