@@ -61,10 +61,10 @@ const SYMPTOM_CATEGORIES = {
 const ONBOARDING_QUESTIONS = [
   {
     key: "age",
-    message: "First things first — how old are you? Tap a range below (or type a number).",
+    message: "First things first — how old are you?",
     field: "age",
     parseType: "number",
-    inputType: "age_picker"
+    inputType: "text"
   },
   {
     key: "life_stage",
