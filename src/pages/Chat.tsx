@@ -139,92 +139,85 @@ const Chat = () => {
   const SCROLL_NEAR_BOTTOM_PX = 80;
   const SCROLL_BUTTON_SHOW_PX = 48;
 
+  const refreshMessages = async (currentUserId: string) => {
+    const { count } = await supabase
+      .from("chat_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", currentUserId);
+
+    const totalCount = count || 0;
+    const offset = Math.max(0, totalCount - MESSAGES_PER_PAGE);
+
+    const { data, error } = await supabase
+      .from("chat_messages")
+      .select("*")
+      .eq("user_id", currentUserId)
+      .order("created_at", { ascending: true })
+      .range(offset, offset + MESSAGES_PER_PAGE - 1);
+
+    if (error) {
+      console.error("Error fetching messages:", error);
+      toast({ title: "Failed to load messages", variant: "destructive" });
+      setIsLoading(false);
+      return [] as ChatMessage[];
+    }
+
+    const typedMessages = (data || []).map((m) => ({
+      ...m,
+      role: m.role as "user" | "assistant" | "system",
+      metadata: m.metadata as ChatMessage["metadata"],
+    }));
+
+    setMessages(typedMessages);
+    setHasOlderMessages(offset > 0);
+    setIsLoading(false);
+
+    const hasOnboardingMessages = typedMessages.some(
+      m => m.message_type === "onboarding" || m.metadata?.onboarding_step !== undefined
+    );
+    const isOnboardingComplete = typedMessages.some(
+      m => m.metadata?.onboarding_complete === true
+    );
+    const inferredComplete = !hasOnboardingMessages && typedMessages.length > 0;
+    const effectivelyComplete = isOnboardingComplete || inferredComplete;
+
+    const latestOnboardingMsg = [...typedMessages].reverse().find(
+      m => m.metadata?.onboarding_step !== undefined
+    );
+    if (latestOnboardingMsg?.metadata?.onboarding_step !== undefined) {
+      setOnboardingStep(latestOnboardingMsg.metadata.onboarding_step);
+    }
+
+    setIsOnboarding(hasOnboardingMessages && !isOnboardingComplete);
+
+    if (typedMessages.length === 0 && !onboardingInitialized.current) {
+      onboardingInitialized.current = true;
+      initializeOnboarding();
+    }
+
+    if (effectivelyComplete && typedMessages.length > 0 && !insightGenerated.current) {
+      insightGenerated.current = true;
+      generateOnOpenInsight();
+    }
+
+    if (effectivelyComplete) {
+      fetchCredits();
+      fetchLifeStage();
+    }
+
+    if (effectivelyComplete && !showTopicPrompt && !topicPromptChecked.current) {
+      checkTopicPreferences();
+    }
+
+    return typedMessages;
+  };
+
   // Fetch messages and initialize onboarding if needed
   useEffect(() => {
     if (!user) return;
 
-    const fetchMessages = async () => {
-      // First get total count
-      const { count } = await supabase
-        .from("chat_messages")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id);
+    refreshMessages(user.id);
 
-      const totalCount = count || 0;
-      const offset = Math.max(0, totalCount - MESSAGES_PER_PAGE);
-
-      const { data, error } = await supabase
-        .from("chat_messages")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: true })
-        .range(offset, offset + MESSAGES_PER_PAGE - 1);
-
-      if (error) {
-        console.error("Error fetching messages:", error);
-        toast({ title: "Failed to load messages", variant: "destructive" });
-        setIsLoading(false);
-        return;
-      }
-
-      const typedMessages = (data || []).map((m) => ({
-        ...m,
-        role: m.role as "user" | "assistant" | "system",
-        metadata: m.metadata as ChatMessage["metadata"],
-      }));
-      setMessages(typedMessages);
-      setHasOlderMessages(offset > 0);
-      setIsLoading(false);
-
-      // Check if onboarding is in progress and get current step
-      const hasOnboardingMessages = typedMessages.some(
-        m => m.message_type === "onboarding" || m.metadata?.onboarding_step !== undefined
-      );
-      const isOnboardingComplete = typedMessages.some(
-        m => m.metadata?.onboarding_complete === true
-      );
-      // If user has many messages but no onboarding messages in current page,
-      // onboarding is long finished (pagination hides the old completion message)
-      const inferredComplete = !hasOnboardingMessages && typedMessages.length > 0;
-      const effectivelyComplete = isOnboardingComplete || inferredComplete;
-      
-      // Find the latest onboarding step
-      const latestOnboardingMsg = [...typedMessages].reverse().find(
-        m => m.metadata?.onboarding_step !== undefined
-      );
-      if (latestOnboardingMsg?.metadata?.onboarding_step !== undefined) {
-        setOnboardingStep(latestOnboardingMsg.metadata.onboarding_step);
-      }
-      
-      setIsOnboarding(hasOnboardingMessages && !isOnboardingComplete);
-
-      // If no messages and hasn't been initialized, start onboarding
-      if (typedMessages.length === 0 && !onboardingInitialized.current) {
-        onboardingInitialized.current = true;
-        initializeOnboarding();
-      }
-
-      // If onboarding is complete, trigger on-open insight generation (once per session)
-      if (effectivelyComplete && typedMessages.length > 0 && !insightGenerated.current) {
-        insightGenerated.current = true;
-        generateOnOpenInsight();
-      }
-
-      // Fetch credits and life stage if onboarding complete
-      if (effectivelyComplete) {
-        fetchCredits();
-        fetchLifeStage();
-      }
-
-      // Check if existing user needs topic preferences prompt
-      if (effectivelyComplete && !showTopicPrompt && !topicPromptChecked.current) {
-        checkTopicPreferences();
-      }
-    };
-
-    fetchMessages();
-
-    // Subscribe to realtime updates
     const channel = supabase
       .channel("chat_messages_realtime")
       .on(
@@ -239,8 +232,7 @@ const Chat = () => {
           const newMessage = payload.new as ChatMessage;
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMessage.id)) return prev;
-            
-            // Replace fallback message if realtime delivers the real one
+
             const fallbackIdx = prev.findIndex(
               (m) => m.id.startsWith("fallback-") && m.role === newMessage.role && m.content === newMessage.content
             );
@@ -249,17 +241,15 @@ const Chat = () => {
               updated[fallbackIdx] = newMessage;
               return updated;
             }
-            
-            // Check if onboarding is complete
+
             if (newMessage.metadata?.onboarding_complete) {
               setIsOnboarding(false);
             }
-            
-            // Update onboarding step from new message
+
             if (newMessage.metadata?.onboarding_step !== undefined) {
               setOnboardingStep(newMessage.metadata.onboarding_step);
             }
-            
+
             return [...prev, newMessage];
           });
         }
@@ -650,7 +640,6 @@ const Chat = () => {
           variant: "destructive" 
         });
       } else if (data?.message) {
-        // Fallback: directly add the assistant message in case realtime misses it
         const fallbackMsg: ChatMessage = {
           id: `fallback-${Date.now()}`,
           role: "assistant",
@@ -660,14 +649,12 @@ const Chat = () => {
           user_id: user.id,
         };
         setMessages(prev => {
-          // Only add if realtime hasn't already delivered a newer assistant message
           const lastMsg = prev[prev.length - 1];
           if (lastMsg?.role === "assistant" && lastMsg.content === data.message) return prev;
           return [...prev, fallbackMsg];
         });
       }
 
-      // Update credit balance from response
       if (data?.creditBalance) {
         setCreditBalance({
           free: data.creditBalance.free,
@@ -677,7 +664,6 @@ const Chat = () => {
         setOutOfCredits(data.creditBalance.total <= 0);
       }
 
-      // If period was updated, refresh cycle data from the response
       if (data?.periodUpdated && data?.cycleInfo) {
         setCycleData({
           cycleDay: data.cycleInfo.cycleDay,
@@ -685,7 +671,8 @@ const Chat = () => {
           cycleLengthDays: data.cycleInfo.cycleLengthDays || cycleData?.cycleLengthDays || 28,
         });
       }
-      
+
+      await refreshMessages(user.id);
       inputRef.current?.focus();
     } catch (error) {
       console.error("Error sending message:", error);
@@ -748,8 +735,11 @@ const Chat = () => {
 
       if (onboardingError) {
         console.error("Onboarding error:", onboardingError);
-      } else if (data?.onboardingComplete) {
-        setIsOnboarding(false);
+      } else {
+        await refreshMessages(user.id);
+        if (data?.onboardingComplete) {
+          setIsOnboarding(false);
+        }
       }
       
       inputRef.current?.focus();
@@ -792,7 +782,10 @@ const Chat = () => {
       });
       const { data, error: onboardingError } = await supabase.functions.invoke("chat-onboarding", { body });
       if (onboardingError) console.error("Onboarding error:", onboardingError);
-      else if (data?.onboardingComplete) setIsOnboarding(false);
+      else {
+        await refreshMessages(user.id);
+        if (data?.onboardingComplete) setIsOnboarding(false);
+      }
       inputRef.current?.focus();
     } catch (error) {
       console.error("Error sending message:", error);
