@@ -1220,7 +1220,7 @@ const Chat = () => {
                       {[
                         { value: "cycling", label: "I have a regular cycle", desc: "Currently menstruating" },
                         { value: "postpartum", label: "Postpartum", desc: "Recently had a baby" },
-                        { value: "menopause", label: "Menopause / Perimenopause", desc: "Cycle is irregular or stopped" },
+                        { value: "menopause", label: "Menopause", desc: "Cycle is irregular or stopped" },
                       ].map((option) => (
                         <button
                           key={option.value}
