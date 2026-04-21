@@ -1273,12 +1273,19 @@ const Chat = () => {
                   {isLastMessage && 
                    message.role === "assistant" && 
                    !isOnboarding && (() => {
-                    const starterSets = [
+                    const cyclingStarterSets = [
                       ["What can I expect tomorrow?", "How should I plan my week?", "What's my energy like today?"],
                       ["What phase am I in right now?", "Any workout tips for today?", "How's my mood likely to shift?"],
                       ["What should I eat this week?", "When's my next energy peak?", "How can I sleep better tonight?"],
                       ["What's coming up in my cycle?", "How do I make the most of today?", "Why do I feel this way?"],
                     ];
+                    const menopauseStarterSets = [
+                      ["How can I sleep better tonight?", "What helps hot flashes?", "Why is my mood shifting?"],
+                      ["What should I focus on today?", "How do I protect bone health?", "Why am I so tired?"],
+                      ["Any strength training tips?", "How can I reduce brain fog?", "What should I eat this week?"],
+                      ["Why do I feel this way?", "How do I manage stress better?", "What patterns should I track?"],
+                    ];
+                    const starterSets = lifeStage === "menopause" ? menopauseStarterSets : cyclingStarterSets;
                     const assistantCount = messages.filter(m => m.role === "assistant" && !m.metadata?.onboarding_step).length;
                     const setIndex = (assistantCount - 1) % starterSets.length;
                     const starters =

@@ -1010,7 +1010,7 @@ CYCLE DATA EDITS:
 
 LIFE STAGE CHANGES:
 - If a user mentions they are postpartum, just had a baby, gave birth recently, or shares a postpartum duration (e.g. "I'm 10 months postpartum", "had my baby in March"), the system automatically switches their life stage to postpartum and asks for the baby's birth date.
-- If a user mentions perimenopause or menopause symptoms or stage, acknowledge it warmly and ask for confirmation before making assumptions. Always ask for the baby's birth date when postpartum is mentioned without one — it's essential for accurate recovery tracking.`;
+- If a user mentions menopause symptoms or stage, acknowledge it warmly and ask for confirmation before making assumptions. Always ask for the baby's birth date when postpartum is mentioned without one — it's essential for accurate recovery tracking.`;
 
   if (!participant) {
     return basePrompt + "\n\nNote: User hasn't completed onboarding yet. Provide general guidance and encourage them to share their cycle details for personalized insights.";
@@ -1021,7 +1021,7 @@ LIFE STAGE CHANGES:
   if (userLifeStage !== "cycling") {
     const age = participant.age || null;
     const topics = participant.goals?.length ? participant.goals.join(", ") : null;
-    const stageLabel = userLifeStage === "postpartum" ? "Postpartum" : "Menopause / Perimenopause";
+    const stageLabel = userLifeStage === "postpartum" ? "Postpartum" : "Menopause";
     
     // Calculate postpartum timeline
     let ppTimeline = "";
@@ -1040,7 +1040,7 @@ LIFE STAGE CHANGES:
 
     const stageContext = userLifeStage === "postpartum"
       ? `This user is POSTPARTUM — they do not have a regular cycle right now. Their hormones are recalibrating after pregnancy. Focus on: recovery, sleep deprivation, mood shifts, identity adjustments, physical healing, hormonal recalibration. Do NOT assume whether the user is breastfeeding or not — only reference breastfeeding if the USER brings it up first. If they mention having multiple children, do NOT assume they are breastfeeding all of them. Do NOT reference cycle phases, cycle days, or ovulation. Instead, center guidance on where they are in postpartum recovery.`
-      : `This user is in MENOPAUSE or PERIMENOPAUSE — their cycle is irregular or has stopped. Their estrogen and progesterone are declining. Focus on: hot flashes, sleep disruption, mood changes, bone health, energy management, cognitive shifts, weight changes. Do NOT reference specific cycle days or ovulation windows. Instead, provide guidance relevant to hormonal transition and thriving through it.`;
+      : `This user is in MENOPAUSE — their cycle may be irregular or has stopped. Their estrogen and progesterone are declining. Focus on: hot flashes, sleep disruption, mood changes, bone health, energy management, cognitive shifts, weight changes. Do NOT reference specific cycle days or ovulation windows. Instead, provide guidance relevant to hormonal transition and thriving through it.`;
 
     let userContext = `\n\nUSER CONTEXT:\n- Life stage: ${stageLabel}\n- Age: ${age || "unknown"}${ppTimeline}\n- Anchor symptom: ${participant.anchor_symptom || "not specified"}\n- Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}\n${topics ? `- Focus areas: ${topics}` : ""}\n\n${stageContext}${symptomContext}`;
     

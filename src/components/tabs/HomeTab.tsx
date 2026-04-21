@@ -472,6 +472,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           </div>
         );
       case "symptom_map":
+        if (isNonCycling) return null;
         return (
           <div className="w-full" key={id}>
             <SymptomMap
