@@ -93,14 +93,14 @@ const ONBOARDING_QUESTIONS = [
   },
   {
     key: "symptoms",
-    message: "Now let's talk about what you feel across your whole cycle — not just right now. Pick anything that sounds familiar.",
+    message: "Now let's talk about what you feel most often — not just right now. Pick anything that sounds familiar.",
     field: "typical_symptoms",
     parseType: "symptoms",
     inputType: "symptom_picker"
   },
   {
     key: "anchor_symptom",
-    message: "Across your entire cycle, which one disrupts your life the most? This becomes your anchor — the signal Logan watches for every month.",
+    message: "Which one disrupts your life the most? This becomes your anchor — the signal Logan watches most closely.",
     field: "anchor_symptom",
     parseType: "anchor",
     inputType: "anchor_picker"
@@ -114,7 +114,7 @@ const ONBOARDING_QUESTIONS = [
   },
   {
     key: "complete",
-    message: "You're all set! Logan now knows your cycle, your phase, and what matters to you. From here, everything gets personal.",
+    message: "You're all set! Logan now knows your stage, your signals, and what matters to you. From here, everything gets personal.",
     field: null,
     parseType: null,
     inputType: null
@@ -230,21 +230,8 @@ serve(async (req) => {
         }
       });
 
-      // Brief pause, then send the cycle basics education card
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      await supabase.from("chat_messages").insert({
-        user_id: user.id,
-        role: "assistant",
-        content: "Here's the big picture of how your cycle works:",
-        message_type: "text",
-        metadata: { 
-          visual_type: "education_cycle_basics",
-          insight_type: "education"
-        }
-      });
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Brief pause, then ask the first question before showing stage-specific education
+      await new Promise(resolve => setTimeout(resolve, 600));
 
       // Now send the first question
       const welcomeQ = ONBOARDING_QUESTIONS[0];
@@ -456,7 +443,17 @@ serve(async (req) => {
 
         let validationMsg = "";
 
-        if (hasEmotional && hasPhysical) {
+        if (userLifeStage === "menopause") {
+          if (hasEmotional && hasPhysical) {
+            validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. You're getting hit on both sides — mind and body. In menopause, these signals can shift with sleep, stress, and changing hormones. That's what I'm here to help you track.`;
+          } else if (hasEmotional) {
+            validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Mood, focus, and sleep changes are real menopause signals — not a character flaw. Logan will watch for patterns without tying them to a cycle.`;
+          } else if (hasPhysical) {
+            validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Your body is telling us where this stage is asking for support. We'll track what flares, what settles, and what helps.`;
+          } else {
+            validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These patterns matter in menopause. Once you start noticing what drives them, they stop feeling random.`;
+          }
+        } else if (hasEmotional && hasPhysical) {
           validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. You're getting hit on both sides — mind and body. These shift in intensity across your cycle. That's what I'm here to help you track.`;
         } else if (hasEmotional) {
           validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These are linked to a hormone called progesterone — it rises and falls across your cycle. You're not imagining it.`;
