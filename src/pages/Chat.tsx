@@ -1067,6 +1067,28 @@ const Chat = () => {
               .filter(msg => msg.message_type !== "reaction" && msg.message_type !== "checkin")
               .map((message, index, filteredMessages) => {
               const isLastMessage = index === filteredMessages.length - 1;
+              
+              // Date separator logic
+              const messageDate = new Date(message.created_at);
+              const prevMessage = index > 0 ? filteredMessages[index - 1] : null;
+              const prevDate = prevMessage ? new Date(prevMessage.created_at) : null;
+              const showDateSeparator = !prevDate || 
+                messageDate.toDateString() !== prevDate.toDateString();
+              
+              const today = new Date();
+              const yesterday = new Date(today);
+              yesterday.setDate(yesterday.getDate() - 1);
+              
+              let dateLabel = "";
+              if (showDateSeparator) {
+                if (messageDate.toDateString() === today.toDateString()) {
+                  dateLabel = "Today";
+                } else if (messageDate.toDateString() === yesterday.toDateString()) {
+                  dateLabel = "Yesterday";
+                } else {
+                  dateLabel = format(messageDate, "MMMM d, yyyy");
+                }
+              }
               const inputType = message.metadata?.input_type;
               const showInteractiveInput = isLastMessage && message.role === "assistant" && isOnboarding && !isSending;
 
@@ -1083,6 +1105,13 @@ const Chat = () => {
 
               return (
                 <div key={message.id} ref={isLastMessage ? lastMessageRef : null}>
+                  {showDateSeparator && (
+                    <div className="flex items-center justify-center my-4">
+                      <span className="text-xs text-muted-foreground bg-background/80 px-3 py-1 rounded-full border border-border/40">
+                        {dateLabel}
+                      </span>
+                    </div>
+                  )}
                   <div
                     className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                   >
