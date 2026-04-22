@@ -197,6 +197,16 @@ export const EngagementTab = () => {
     }
   };
 
+  const activeTodayUsers = useMemo(() => {
+    const start = startOfDay(new Date());
+    return users.filter((u) => u.lastActive && new Date(u.lastActive) >= start);
+  }, [users]);
+
+  const activeWeekUsers = useMemo(() => {
+    const start = subDays(new Date(), 7);
+    return users.filter((u) => u.lastActive && new Date(u.lastActive) >= start);
+  }, [users]);
+
   useEffect(() => {
     fetchEngagementData();
   }, []);
@@ -211,17 +221,19 @@ export const EngagementTab = () => {
 
   const maxMessages = Math.max(...users.map((u) => u.totalMessages), 1);
 
-  const now = new Date();
-  const todayStart = startOfDay(now);
-  const weekAgo = subDays(now, 7);
-
-  const activeTodayUsers = useMemo(
-    () => users.filter((u) => u.lastActive && new Date(u.lastActive) >= todayStart),
-    [users]
-  );
-  const activeWeekUsers = useMemo(
-    () => users.filter((u) => u.lastActive && new Date(u.lastActive) >= weekAgo),
-    [users]
+  const UserListPopover = ({ userList, label }: { userList: UserEngagement[]; label: string }) => (
+    <div className="space-y-1.5">
+      <p className="text-xs font-medium text-foreground mb-2">{label}</p>
+      {userList.length === 0 && <p className="text-xs text-muted-foreground">No users</p>}
+      {userList.map((u) => (
+        <div key={u.userId} className="flex items-center justify-between gap-2">
+          <span className="text-xs text-foreground truncate">{u.fullName}</span>
+          <span className="text-[10px] text-muted-foreground shrink-0">
+            {u.lastActive ? format(new Date(u.lastActive), "h:mm a") : ""}
+          </span>
+        </div>
+      ))}
+    </div>
   );
 
   return (
@@ -250,20 +262,34 @@ export const EngagementTab = () => {
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Messages</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <Activity className="w-5 h-5 mx-auto mb-1 text-green-500" />
-            <p className="text-2xl font-bold text-foreground">{totals.activeToday}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active Today</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <TrendingUp className="w-5 h-5 mx-auto mb-1 text-blue-500" />
-            <p className="text-2xl font-bold text-foreground">{totals.activeThisWeek}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active This Week</p>
-          </CardContent>
-        </Card>
+        <HoverCard>
+          <HoverCardTrigger asChild>
+            <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+              <CardContent className="p-4 text-center">
+                <Activity className="w-5 h-5 mx-auto mb-1 text-green-500" />
+                <p className="text-2xl font-bold text-foreground">{totals.activeToday}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active Today</p>
+              </CardContent>
+            </Card>
+          </HoverCardTrigger>
+          <HoverCardContent className="w-64">
+            <UserListPopover userList={activeTodayUsers} label="Active Today" />
+          </HoverCardContent>
+        </HoverCard>
+        <HoverCard>
+          <HoverCardTrigger asChild>
+            <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+              <CardContent className="p-4 text-center">
+                <TrendingUp className="w-5 h-5 mx-auto mb-1 text-blue-500" />
+                <p className="text-2xl font-bold text-foreground">{totals.activeThisWeek}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active This Week</p>
+              </CardContent>
+            </Card>
+          </HoverCardTrigger>
+          <HoverCardContent className="w-64">
+            <UserListPopover userList={activeWeekUsers} label="Active This Week" />
+          </HoverCardContent>
+        </HoverCard>
         <Card>
           <CardContent className="p-4 text-center">
             <Clock className="w-5 h-5 mx-auto mb-1 text-orange-500" />
