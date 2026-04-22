@@ -211,6 +211,19 @@ export const EngagementTab = () => {
 
   const maxMessages = Math.max(...users.map((u) => u.totalMessages), 1);
 
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const weekAgo = subDays(now, 7);
+
+  const activeTodayUsers = useMemo(
+    () => users.filter((u) => u.lastActive && new Date(u.lastActive) >= todayStart),
+    [users]
+  );
+  const activeWeekUsers = useMemo(
+    () => users.filter((u) => u.lastActive && new Date(u.lastActive) >= weekAgo),
+    [users]
+  );
+
   return (
     <div className="space-y-6">
       {/* Refresh */}
