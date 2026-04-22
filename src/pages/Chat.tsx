@@ -1105,6 +1105,13 @@ const Chat = () => {
 
               return (
                 <div key={message.id} ref={isLastMessage ? lastMessageRef : null}>
+                  {showDateSeparator && (
+                    <div className="flex items-center justify-center my-4">
+                      <span className="text-xs text-muted-foreground bg-background/80 px-3 py-1 rounded-full border border-border/40">
+                        {dateLabel}
+                      </span>
+                    </div>
+                  )}
                   <div
                     className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                   >
