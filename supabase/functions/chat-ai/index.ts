@@ -796,11 +796,53 @@ serve(async (req) => {
       }
     }
 
+    // Fetch custom tracker correlations (e.g. "surfing performance", "loneliness")
+    let trackerContext = "";
+    {
+      const { data: trackers } = await supabase
+        .from("custom_trackers")
+        .select("id, name, emoji")
+        .eq("user_id", user.id)
+        .eq("is_active", true);
+
+      if (trackers && trackers.length > 0) {
+        const trackerIds = trackers.map((t: any) => t.id);
+        const { data: tLogs } = await supabase
+          .from("tracker_logs")
+          .select("tracker_id, intensity, cycle_phase, logged_at")
+          .in("tracker_id", trackerIds)
+          .order("logged_at", { ascending: false })
+          .limit(500);
+
+        if (tLogs && tLogs.length > 0) {
+          const summaries: string[] = [];
+          for (const t of trackers as any[]) {
+            const tLogsForT = tLogs.filter((l: any) => l.tracker_id === t.id);
+            if (tLogsForT.length === 0) continue;
+            const buckets: Record<string, { sum: number; n: number }> = {};
+            for (const l of tLogsForT) {
+              const phase = l.cycle_phase || "Unknown";
+              if (!buckets[phase]) buckets[phase] = { sum: 0, n: 0 };
+              buckets[phase].sum += l.intensity;
+              buckets[phase].n += 1;
+            }
+            const parts = Object.entries(buckets)
+              .map(([p, v]) => `${p} ${(v.sum / v.n).toFixed(1)}/5 (n=${v.n})`)
+              .join(", ");
+            summaries.push(`  • ${t.emoji || ""} ${t.name} — ${tLogsForT.length} logs: ${parts}`);
+          }
+          if (summaries.length > 0) {
+            trackerContext = `\n\nUSER-TRACKED ITEMS (custom 1-5 daily ratings, broken down by cycle phase):\n${summaries.join("\n")}\nIf the user asks whether one of these is tied to their cycle, USE THIS DATA. Cite the phase averages, name the peak phase, and be honest about confidence based on log count. If a tracked item is stable across phases, say it doesn't look cycle-driven.`;
+          }
+        }
+      }
+    }
+
     const cycleInfo = participant?.last_period_start && participant?.cycle_length_days
       ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
       : null;
 
-    const systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext);
+    const systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext);
 
     // Smart truncation: keep first 10 (onboarding/profile context) + last 50 (recent conversation)
     const allMessages = (recentMessages || [])
