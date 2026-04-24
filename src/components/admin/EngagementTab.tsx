@@ -229,14 +229,21 @@ export const EngagementTab = () => {
     <div className="space-y-1.5">
       <p className="text-xs font-medium text-foreground mb-2">{label}</p>
       {userList.length === 0 && <p className="text-xs text-muted-foreground">No users</p>}
-      {userList.map((u) => (
-        <div key={u.userId} className="flex items-center justify-between gap-2">
-          <span className="text-xs text-foreground truncate">{u.fullName}</span>
-          <span className="text-[10px] text-muted-foreground shrink-0">
-            {u.lastActive ? format(new Date(u.lastActive), "h:mm a") : ""}
-          </span>
-        </div>
-      ))}
+      {userList.map((u) => {
+        const lastActiveDate = u.lastActive ? new Date(u.lastActive) : null;
+        const isToday = lastActiveDate && lastActiveDate >= startOfDay(new Date());
+        const timeLabel = lastActiveDate
+          ? isToday
+            ? format(lastActiveDate, "h:mm a")
+            : format(lastActiveDate, "MMM d, h:mm a")
+          : "";
+        return (
+          <div key={u.userId} className="flex items-center justify-between gap-2">
+            <span className="text-xs text-foreground truncate">{u.fullName}</span>
+            <span className="text-[10px] text-muted-foreground shrink-0">{timeLabel}</span>
+          </div>
+        );
+      })}
     </div>
   );
 
