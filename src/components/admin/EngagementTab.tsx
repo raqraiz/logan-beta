@@ -199,12 +199,16 @@ export const EngagementTab = () => {
 
   const activeTodayUsers = useMemo(() => {
     const start = startOfDay(new Date());
-    return users.filter((u) => u.lastActive && new Date(u.lastActive) >= start);
+    return users
+      .filter((u) => u.lastActive && new Date(u.lastActive) >= start)
+      .sort((a, b) => new Date(b.lastActive!).getTime() - new Date(a.lastActive!).getTime());
   }, [users]);
 
   const activeWeekUsers = useMemo(() => {
     const start = subDays(new Date(), 7);
-    return users.filter((u) => u.lastActive && new Date(u.lastActive) >= start);
+    return users
+      .filter((u) => u.lastActive && new Date(u.lastActive) >= start)
+      .sort((a, b) => new Date(b.lastActive!).getTime() - new Date(a.lastActive!).getTime());
   }, [users]);
 
   useEffect(() => {
