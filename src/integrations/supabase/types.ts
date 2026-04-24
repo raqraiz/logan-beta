@@ -128,6 +128,39 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_trackers: {
+        Row: {
+          created_at: string
+          description: string | null
+          emoji: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          emoji?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          emoji?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       cycle_history: {
         Row: {
           created_at: string
@@ -597,6 +630,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      tracker_logs: {
+        Row: {
+          created_at: string
+          cycle_day: number | null
+          cycle_phase: string | null
+          id: string
+          intensity: number
+          logged_at: string
+          notes: string | null
+          tracker_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          cycle_day?: number | null
+          cycle_phase?: string | null
+          id?: string
+          intensity: number
+          logged_at?: string
+          notes?: string | null
+          tracker_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          cycle_day?: number | null
+          cycle_phase?: string | null
+          id?: string
+          intensity?: number
+          logged_at?: string
+          notes?: string | null
+          tracker_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracker_logs_tracker_id_fkey"
+            columns: ["tracker_id"]
+            isOneToOne: false
+            referencedRelation: "custom_trackers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_activity_events: {
         Row: {
