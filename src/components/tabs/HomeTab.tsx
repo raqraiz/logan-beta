@@ -9,6 +9,7 @@ import { AddCustomWidgetDialog } from "@/components/home/AddCustomWidgetDialog";
 import { CustomAIWidget } from "@/components/home/CustomAIWidget";
 import { SymptomLogWidget } from "@/components/home/SymptomLogWidget";
 import { SymptomHistory } from "@/components/home/SymptomHistory";
+import { CycleCorrelationsWidget } from "@/components/home/CycleCorrelationsWidget";
 import { MiniPhaseArc, getWidgetGraphic } from "@/components/home/WidgetGraphics";
 import { DailyBriefingHero } from "@/components/home/DailyBriefingHero";
 import { useWidgetPreferences, getWidgetLabel } from "@/hooks/useWidgetPreferences";
@@ -436,6 +437,19 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             </button>
           </div>
         ) : null;
+      case "cycle_correlations":
+        return userId ? (
+          <div className="w-full" key={id}>
+            <CycleCorrelationsWidget
+              userId={userId}
+              cyclePhase={cycleData.phase}
+              cycleDay={cycleData.cycleDay}
+              lastPeriodStart={cycleData.lastPeriodStart}
+              cycleLengthDays={cycleData.cycleLengthDays}
+              isNonCycling={!!isNonCycling}
+            />
+          </div>
+        ) : null;
       case "succeed_you":
         return (
           <div className="w-full" key={id}>
@@ -544,7 +558,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           <div className="w-full max-w-3xl xl:max-w-5xl 2xl:max-w-6xl">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {visibleWidgets.map(w => (
-                <div className={w.id === 'cycle_circle' || w.id === 'symptom_tracker' ? 'md:col-span-2' : ''} key={w.id}>
+                <div className={w.id === 'cycle_circle' || w.id === 'symptom_tracker' || w.id === 'cycle_correlations' ? 'md:col-span-2' : ''} key={w.id}>
                   {renderWidget(w)}
                 </div>
               ))}
