@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import { Check, ChevronDown, ChevronUp, Activity } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Activity, Plus, Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const SYMPTOM_OPTIONS = [
@@ -19,6 +20,8 @@ const SYMPTOM_OPTIONS = [
   // Other
   "Cravings", "Hot flashes", "Night sweats", "Spotting",
 ];
+
+const BUILT_IN_SET = new Set(SYMPTOM_OPTIONS.map(s => s.toLowerCase()));
 
 interface SymptomEntry {
   name: string;
