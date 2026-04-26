@@ -53,6 +53,8 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
   const [showAddForm, setShowAddForm] = useState(false);
   const [newSymptom, setNewSymptom] = useState("");
   const [addingSymptom, setAddingSymptom] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   useEffect(() => {
     if (!userId) return;
