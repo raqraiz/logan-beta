@@ -270,32 +270,94 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
               {communitySymptoms.map(cs => {
                 const isSelected = selected.some(s => s.name === cs.name);
                 const isMine = cs.added_by === userId;
-                const isRecent = Date.now() - new Date(cs.created_at).getTime() < 1000 * 60 * 60 * 24 * 14; // 14 days
+                const isRecent = Date.now() - new Date(cs.created_at).getTime() < 1000 * 60 * 60 * 24 * 14;
+                const isEditing = editingId === cs.id;
+
+                if (isEditing) {
+                  return (
+                    <div key={cs.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-primary/50 bg-card">
+                      <Input
+                        autoFocus
+                        value={editValue}
+                        onChange={e => setEditValue(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") handleSaveEdit(cs);
+                          if (e.key === "Escape") cancelEdit();
+                        }}
+                        maxLength={50}
+                        className="h-6 text-xs w-32 px-2"
+                      />
+                      <button
+                        onClick={() => handleSaveEdit(cs)}
+                        className="p-1 rounded-full text-primary hover:bg-primary/10"
+                        title="Save"
+                      >
+                        <Check className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={cancelEdit}
+                        className="p-1 rounded-full text-muted-foreground hover:bg-muted"
+                        title="Cancel"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  );
+                }
+
                 return (
-                  <button
+                  <div
                     key={cs.id}
-                    onClick={() => toggleSymptom(cs.name)}
                     className={cn(
-                      "px-2.5 py-1 text-xs rounded-full border transition-all inline-flex items-center gap-1.5",
+                      "inline-flex items-center rounded-full border transition-all overflow-hidden",
                       isSelected
                         ? "bg-primary text-primary-foreground border-primary"
                         : "bg-card/60 border-border/40 hover:border-primary/40 text-foreground/70"
                     )}
                     title={isMine ? "You added this" : "Added by the community"}
                   >
-                    {cs.name}
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider px-1 py-0.5 rounded-full",
-                        isSelected
-                          ? "bg-primary-foreground/20 text-primary-foreground"
-                          : "bg-accent/40 text-accent-foreground/80"
-                      )}
+                    <button
+                      onClick={() => toggleSymptom(cs.name)}
+                      className="px-2.5 py-1 text-xs inline-flex items-center gap-1.5"
                     >
-                      <Sparkles className="w-2 h-2" />
-                      {isRecent ? "new" : "community"}
-                    </span>
-                  </button>
+                      {cs.name}
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider px-1 py-0.5 rounded-full",
+                          isSelected
+                            ? "bg-primary-foreground/20 text-primary-foreground"
+                            : "bg-accent/40 text-accent-foreground/80"
+                        )}
+                      >
+                        <Sparkles className="w-2 h-2" />
+                        {isRecent ? "new" : "community"}
+                      </span>
+                    </button>
+                    {isMine && (
+                      <>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); startEdit(cs); }}
+                          className={cn(
+                            "px-1.5 py-1 hover:bg-black/10",
+                            isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-foreground"
+                          )}
+                          title="Edit"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSymptom(cs); }}
+                          className={cn(
+                            "px-1.5 py-1 hover:bg-destructive/20",
+                            isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-destructive"
+                          )}
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 );
               })}
               {!showAddForm && (
