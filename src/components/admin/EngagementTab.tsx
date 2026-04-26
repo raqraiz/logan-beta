@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Users, MessageSquare, Activity, TrendingUp, Clock, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, subDays, differenceInDays, startOfDay, parseISO } from "date-fns";
 import {
   ChartContainer,
