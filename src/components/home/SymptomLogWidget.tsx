@@ -203,7 +203,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
       toast({ title: "Symptoms logged", description: `${selected.length} symptom${selected.length !== 1 ? "s" : ""} recorded` });
       setSelected([]);
       setNotes("");
-      setExpanded(false);
+      
       setTodayCount(prev => prev + 1);
       setLastLogTime(new Date().toISOString());
       onLogged?.();
