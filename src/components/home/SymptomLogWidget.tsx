@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import { Check, ChevronDown, ChevronUp, Activity } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Activity, Plus, Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const SYMPTOM_OPTIONS = [
@@ -20,6 +21,8 @@ const SYMPTOM_OPTIONS = [
   "Cravings", "Hot flashes", "Night sweats", "Spotting",
 ];
 
+const BUILT_IN_SET = new Set(SYMPTOM_OPTIONS.map(s => s.toLowerCase()));
+
 interface SymptomEntry {
   name: string;
   severity: number;
@@ -32,6 +35,13 @@ interface SymptomLogWidgetProps {
   onLogged?: () => void;
 }
 
+interface CommunitySymptom {
+  id: string;
+  name: string;
+  added_by: string;
+  created_at: string;
+}
+
 export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomLogWidgetProps) {
   const [expanded, setExpanded] = useState(false);
   const [selected, setSelected] = useState<SymptomEntry[]>([]);
@@ -39,8 +49,11 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
   const [saving, setSaving] = useState(false);
   const [todayCount, setTodayCount] = useState(0);
   const [lastLogTime, setLastLogTime] = useState<string | null>(null);
+  const [communitySymptoms, setCommunitySymptoms] = useState<CommunitySymptom[]>([]);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newSymptom, setNewSymptom] = useState("");
+  const [addingSymptom, setAddingSymptom] = useState(false);
 
-  // Fetch today's log count
   useEffect(() => {
     if (!userId) return;
     const todayStart = new Date();
@@ -59,6 +72,50 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
         }
       });
   }, [userId]);
+
+  useEffect(() => {
+    supabase
+      .from("community_symptoms")
+      .select("id, name, added_by, created_at")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) {
+          const filtered = data.filter(s => !BUILT_IN_SET.has(s.name.trim().toLowerCase()));
+          setCommunitySymptoms(filtered);
+        }
+      });
+  }, []);
+
+  const handleAddCommunitySymptom = async () => {
+    const name = newSymptom.trim();
+    if (!name || name.length > 50) return;
+    if (
+      BUILT_IN_SET.has(name.toLowerCase()) ||
+      communitySymptoms.some(s => s.name.toLowerCase() === name.toLowerCase())
+    ) {
+      toast({ title: "Already on the list", description: "This symptom is already available." });
+      setNewSymptom("");
+      setShowAddForm(false);
+      return;
+    }
+    setAddingSymptom(true);
+    const { data, error } = await supabase
+      .from("community_symptoms")
+      .insert({ name, added_by: userId })
+      .select()
+      .single();
+
+    if (error) {
+      toast({ title: "Couldn't add", description: error.message, variant: "destructive" });
+    } else if (data) {
+      setCommunitySymptoms(prev => [data as CommunitySymptom, ...prev]);
+      setSelected(prev => [...prev, { name: data.name, severity: 3 }]);
+      toast({ title: "Added to the community list", description: "Others can see this too 💜" });
+      setNewSymptom("");
+      setShowAddForm(false);
+    }
+    setAddingSymptom(false);
+  };
 
   const toggleSymptom = useCallback((name: string) => {
     setSelected(prev => {
@@ -154,7 +211,82 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
                   </button>
                 );
               })}
+              {communitySymptoms.map(cs => {
+                const isSelected = selected.some(s => s.name === cs.name);
+                const isMine = cs.added_by === userId;
+                const isRecent = Date.now() - new Date(cs.created_at).getTime() < 1000 * 60 * 60 * 24 * 14; // 14 days
+                return (
+                  <button
+                    key={cs.id}
+                    onClick={() => toggleSymptom(cs.name)}
+                    className={cn(
+                      "px-2.5 py-1 text-xs rounded-full border transition-all inline-flex items-center gap-1.5",
+                      isSelected
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card/60 border-border/40 hover:border-primary/40 text-foreground/70"
+                    )}
+                    title={isMine ? "You added this" : "Added by the community"}
+                  >
+                    {cs.name}
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider px-1 py-0.5 rounded-full",
+                        isSelected
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : "bg-accent/40 text-accent-foreground/80"
+                      )}
+                    >
+                      <Sparkles className="w-2 h-2" />
+                      {isRecent ? "new" : "community"}
+                    </span>
+                  </button>
+                );
+              })}
+              {!showAddForm && (
+                <button
+                  onClick={() => setShowAddForm(true)}
+                  className="px-2.5 py-1 text-xs rounded-full border border-dashed border-primary/40 text-primary/80 hover:bg-primary/5 transition-all inline-flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" />
+                  Add yours
+                </button>
+              )}
             </div>
+            {showAddForm && (
+              <div className="mt-2 flex items-center gap-2">
+                <Input
+                  autoFocus
+                  value={newSymptom}
+                  onChange={e => setNewSymptom(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") handleAddCommunitySymptom();
+                    if (e.key === "Escape") { setShowAddForm(false); setNewSymptom(""); }
+                  }}
+                  placeholder="e.g. Tingly hands, vivid dreams..."
+                  maxLength={50}
+                  className="h-8 text-xs"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleAddCommunitySymptom}
+                  disabled={addingSymptom || !newSymptom.trim()}
+                  className="h-8 text-xs"
+                >
+                  Add
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => { setShowAddForm(false); setNewSymptom(""); }}
+                  className="h-8 text-xs"
+                >
+                  Cancel
+                </Button>
+              </div>
+            )}
+            <p className="text-[10px] text-muted-foreground/60 mt-2">
+              Symptoms you add are shared with the community (no personal info attached).
+            </p>
           </div>
 
           {/* Severity sliders for selected symptoms */}

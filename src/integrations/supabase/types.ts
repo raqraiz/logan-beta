@@ -101,6 +101,27 @@ export type Database = {
         }
         Relationships: []
       }
+      community_symptoms: {
+        Row: {
+          added_by: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          added_by: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          added_by?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       credit_transactions: {
         Row: {
           amount: number
