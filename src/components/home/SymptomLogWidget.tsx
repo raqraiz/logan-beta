@@ -35,6 +35,13 @@ interface SymptomLogWidgetProps {
   onLogged?: () => void;
 }
 
+interface CommunitySymptom {
+  id: string;
+  name: string;
+  added_by: string;
+  created_at: string;
+}
+
 export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomLogWidgetProps) {
   const [expanded, setExpanded] = useState(false);
   const [selected, setSelected] = useState<SymptomEntry[]>([]);
@@ -42,8 +49,11 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
   const [saving, setSaving] = useState(false);
   const [todayCount, setTodayCount] = useState(0);
   const [lastLogTime, setLastLogTime] = useState<string | null>(null);
+  const [communitySymptoms, setCommunitySymptoms] = useState<CommunitySymptom[]>([]);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newSymptom, setNewSymptom] = useState("");
+  const [addingSymptom, setAddingSymptom] = useState(false);
 
-  // Fetch today's log count
   useEffect(() => {
     if (!userId) return;
     const todayStart = new Date();
@@ -62,6 +72,50 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
         }
       });
   }, [userId]);
+
+  useEffect(() => {
+    supabase
+      .from("community_symptoms")
+      .select("id, name, added_by, created_at")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) {
+          const filtered = data.filter(s => !BUILT_IN_SET.has(s.name.trim().toLowerCase()));
+          setCommunitySymptoms(filtered);
+        }
+      });
+  }, []);
+
+  const handleAddCommunitySymptom = async () => {
+    const name = newSymptom.trim();
+    if (!name || name.length > 50) return;
+    if (
+      BUILT_IN_SET.has(name.toLowerCase()) ||
+      communitySymptoms.some(s => s.name.toLowerCase() === name.toLowerCase())
+    ) {
+      toast({ title: "Already on the list", description: "This symptom is already available." });
+      setNewSymptom("");
+      setShowAddForm(false);
+      return;
+    }
+    setAddingSymptom(true);
+    const { data, error } = await supabase
+      .from("community_symptoms")
+      .insert({ name, added_by: userId })
+      .select()
+      .single();
+
+    if (error) {
+      toast({ title: "Couldn't add", description: error.message, variant: "destructive" });
+    } else if (data) {
+      setCommunitySymptoms(prev => [data as CommunitySymptom, ...prev]);
+      setSelected(prev => [...prev, { name: data.name, severity: 3 }]);
+      toast({ title: "Added to the community list", description: "Others can see this too 💜" });
+      setNewSymptom("");
+      setShowAddForm(false);
+    }
+    setAddingSymptom(false);
+  };
 
   const toggleSymptom = useCallback((name: string) => {
     setSelected(prev => {
