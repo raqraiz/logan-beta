@@ -119,6 +119,60 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
     setAddingSymptom(false);
   };
 
+  const startEdit = (cs: CommunitySymptom) => {
+    setEditingId(cs.id);
+    setEditValue(cs.name);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditValue("");
+  };
+
+  const handleSaveEdit = async (cs: CommunitySymptom) => {
+    const newName = editValue.trim();
+    if (!newName || newName.length > 50) return;
+    if (newName.toLowerCase() === cs.name.toLowerCase()) {
+      cancelEdit();
+      return;
+    }
+    if (
+      BUILT_IN_SET.has(newName.toLowerCase()) ||
+      communitySymptoms.some(s => s.id !== cs.id && s.name.toLowerCase() === newName.toLowerCase())
+    ) {
+      toast({ title: "Already on the list", description: "Pick a different name.", variant: "destructive" });
+      return;
+    }
+    const oldName = cs.name;
+    const { error } = await supabase
+      .from("community_symptoms")
+      .update({ name: newName })
+      .eq("id", cs.id);
+    if (error) {
+      toast({ title: "Couldn't update", description: error.message, variant: "destructive" });
+    } else {
+      setCommunitySymptoms(prev => prev.map(s => s.id === cs.id ? { ...s, name: newName } : s));
+      setSelected(prev => prev.map(s => s.name === oldName ? { ...s, name: newName } : s));
+      toast({ title: "Updated" });
+      cancelEdit();
+    }
+  };
+
+  const handleDeleteSymptom = async (cs: CommunitySymptom) => {
+    if (!confirm(`Remove "${cs.name}" from the community list?`)) return;
+    const { error } = await supabase
+      .from("community_symptoms")
+      .delete()
+      .eq("id", cs.id);
+    if (error) {
+      toast({ title: "Couldn't delete", description: error.message, variant: "destructive" });
+    } else {
+      setCommunitySymptoms(prev => prev.filter(s => s.id !== cs.id));
+      setSelected(prev => prev.filter(s => s.name !== cs.name));
+      toast({ title: "Removed" });
+    }
+  };
+
   const toggleSymptom = useCallback((name: string) => {
     setSelected(prev => {
       const existing = prev.find(s => s.name === name);
