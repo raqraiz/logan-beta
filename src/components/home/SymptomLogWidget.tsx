@@ -211,7 +211,82 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
                   </button>
                 );
               })}
+              {communitySymptoms.map(cs => {
+                const isSelected = selected.some(s => s.name === cs.name);
+                const isMine = cs.added_by === userId;
+                const isRecent = Date.now() - new Date(cs.created_at).getTime() < 1000 * 60 * 60 * 24 * 14; // 14 days
+                return (
+                  <button
+                    key={cs.id}
+                    onClick={() => toggleSymptom(cs.name)}
+                    className={cn(
+                      "px-2.5 py-1 text-xs rounded-full border transition-all inline-flex items-center gap-1.5",
+                      isSelected
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card/60 border-border/40 hover:border-primary/40 text-foreground/70"
+                    )}
+                    title={isMine ? "You added this" : "Added by the community"}
+                  >
+                    {cs.name}
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider px-1 py-0.5 rounded-full",
+                        isSelected
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : "bg-accent/40 text-accent-foreground/80"
+                      )}
+                    >
+                      <Sparkles className="w-2 h-2" />
+                      {isRecent ? "new" : "community"}
+                    </span>
+                  </button>
+                );
+              })}
+              {!showAddForm && (
+                <button
+                  onClick={() => setShowAddForm(true)}
+                  className="px-2.5 py-1 text-xs rounded-full border border-dashed border-primary/40 text-primary/80 hover:bg-primary/5 transition-all inline-flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" />
+                  Add yours
+                </button>
+              )}
             </div>
+            {showAddForm && (
+              <div className="mt-2 flex items-center gap-2">
+                <Input
+                  autoFocus
+                  value={newSymptom}
+                  onChange={e => setNewSymptom(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") handleAddCommunitySymptom();
+                    if (e.key === "Escape") { setShowAddForm(false); setNewSymptom(""); }
+                  }}
+                  placeholder="e.g. Tingly hands, vivid dreams..."
+                  maxLength={50}
+                  className="h-8 text-xs"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleAddCommunitySymptom}
+                  disabled={addingSymptom || !newSymptom.trim()}
+                  className="h-8 text-xs"
+                >
+                  Add
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => { setShowAddForm(false); setNewSymptom(""); }}
+                  className="h-8 text-xs"
+                >
+                  Cancel
+                </Button>
+              </div>
+            )}
+            <p className="text-[10px] text-muted-foreground/60 mt-2">
+              Symptoms you add are shared with the community (no personal info attached).
+            </p>
           </div>
 
           {/* Severity sliders for selected symptoms */}
