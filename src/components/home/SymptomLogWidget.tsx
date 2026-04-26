@@ -218,11 +218,8 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
 
   return (
     <div className="w-full rounded-xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-hidden">
-      {/* Header — always visible */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-card/60 transition-colors"
-      >
+      {/* Header — always visible, no toggle */}
+      <div className="w-full flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2.5">
           <Activity className="w-4 h-4 text-primary/70" />
           <div>
@@ -234,16 +231,9 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
             )}
           </div>
         </div>
-        {expanded ? (
-          <ChevronUp className="w-4 h-4 text-muted-foreground/50" />
-        ) : (
-          <ChevronDown className="w-4 h-4 text-muted-foreground/50" />
-        )}
-      </button>
+      </div>
 
-      {/* Expanded content */}
-      {expanded && (
-        <div className="px-4 pb-4 space-y-3 border-t border-border/20">
+      <div className="px-4 pb-4 space-y-3 border-t border-border/20">
           {/* Symptom chips */}
           <div className="pt-3">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50 mb-2">
@@ -458,7 +448,6 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
             </Button>
           </div>
         </div>
-      )}
     </div>
   );
 }
