@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import { Check, ChevronDown, ChevronUp, Activity, Plus, Sparkles } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Activity, Plus, Sparkles, Pencil, Trash2, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const SYMPTOM_OPTIONS = [
