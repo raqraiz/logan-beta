@@ -421,14 +421,22 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           </div>
         );
       }
-      case "symptom_tracker":
+      case "symptom_tracker": {
+        const colors = WIDGET_COLORS.symptom_tracker;
         return userId ? (
           <div className="w-full flex flex-col gap-2" key={id}>
-            <SymptomLogWidget
-              userId={userId}
-              cycleDay={isNonCycling ? undefined : cycleData.cycleDay}
-              phase={isNonCycling ? stagePhase : cycleData.phase}
-            />
+            <div
+              className={`w-full rounded-2xl border border-border/40 ${colors.border} border-l-[3px] bg-card/50 backdrop-blur-md overflow-hidden relative`}
+            >
+              <div className={`absolute inset-0 bg-gradient-to-br ${colors.bgGradient} pointer-events-none`} />
+              <div className="relative">
+                <SymptomLogWidget
+                  userId={userId}
+                  cycleDay={isNonCycling ? undefined : cycleData.cycleDay}
+                  phase={isNonCycling ? stagePhase : cycleData.phase}
+                />
+              </div>
+            </div>
             <button
               onClick={() => setShowSymptomHistory(true)}
               className="text-[11px] text-muted-foreground/70 hover:text-foreground transition-colors underline underline-offset-2 self-center"
@@ -437,6 +445,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             </button>
           </div>
         ) : null;
+      }
       case "cycle_correlations":
         return userId ? (
           <div className="w-full" key={id}>
