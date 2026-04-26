@@ -448,7 +448,6 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
             </Button>
           </div>
         </div>
-      )}
     </div>
   );
 }
