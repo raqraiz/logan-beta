@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Users, MessageSquare, Activity, TrendingUp, Clock, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, subDays, differenceInDays, startOfDay, parseISO } from "date-fns";
 import {
   ChartContainer,
@@ -273,8 +273,8 @@ export const EngagementTab = () => {
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Messages</p>
           </CardContent>
         </Card>
-        <HoverCard>
-          <HoverCardTrigger asChild>
+        <Popover>
+          <PopoverTrigger asChild>
             <Card className="cursor-pointer hover:border-primary/50 transition-colors">
               <CardContent className="p-4 text-center">
                 <Activity className="w-5 h-5 mx-auto mb-1 text-green-500" />
@@ -282,13 +282,13 @@ export const EngagementTab = () => {
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active Today</p>
               </CardContent>
             </Card>
-          </HoverCardTrigger>
-          <HoverCardContent className="w-64">
+          </PopoverTrigger>
+          <PopoverContent className="w-64">
             <UserListPopover userList={activeTodayUsers} label="Active Today" />
-          </HoverCardContent>
-        </HoverCard>
-        <HoverCard>
-          <HoverCardTrigger asChild>
+          </PopoverContent>
+        </Popover>
+        <Popover>
+          <PopoverTrigger asChild>
             <Card className="cursor-pointer hover:border-primary/50 transition-colors">
               <CardContent className="p-4 text-center">
                 <TrendingUp className="w-5 h-5 mx-auto mb-1 text-blue-500" />
@@ -296,11 +296,11 @@ export const EngagementTab = () => {
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active This Week</p>
               </CardContent>
             </Card>
-          </HoverCardTrigger>
-          <HoverCardContent className="w-64">
+          </PopoverTrigger>
+          <PopoverContent className="w-64">
             <UserListPopover userList={activeWeekUsers} label="Active This Week" />
-          </HoverCardContent>
-        </HoverCard>
+          </PopoverContent>
+        </Popover>
         <Card>
           <CardContent className="p-4 text-center">
             <Clock className="w-5 h-5 mx-auto mb-1 text-orange-500" />
