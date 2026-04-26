@@ -43,7 +43,7 @@ interface CommunitySymptom {
 }
 
 export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomLogWidgetProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [selected, setSelected] = useState<SymptomEntry[]>([]);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
