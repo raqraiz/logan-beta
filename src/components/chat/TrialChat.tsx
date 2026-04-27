@@ -316,9 +316,12 @@ export const TrialChat = () => {
                     )}
 
                     <div className="text-center">
-                      <h3 className="font-display font-semibold text-lg text-foreground mb-4">
+                      <h3 className="font-display font-semibold text-lg text-foreground mb-2">
                         {getContextualHeadline(lastUserQuestion)}
                       </h3>
+                      <p className="text-sm text-muted-foreground mb-5 max-w-sm mx-auto">
+                        {getContextualDescription(lastUserQuestion)}
+                      </p>
                       <InlineChatAuth />
                     </div>
                   </div>
