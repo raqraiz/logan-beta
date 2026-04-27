@@ -294,29 +294,38 @@ export const TrialChat = () => {
             </div>
           )}
 
-          {/* Inline auth prompt after trial — visually attached to the teaser answer above */}
-          {showAuth && (
-            <div className="-mt-2 pb-6 animate-fade-in">
-              <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/30 rounded-3xl p-6 text-center overflow-hidden">
-                {/* Glow effect */}
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
-                <div className="absolute top-0 left-1/2 w-32 h-32 bg-primary/20 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2" />
-                
-                <div className="relative z-10">
-                  <div className="relative inline-block mb-4">
-                    <LoganLogo size="md" />
+          {/* Inline auth prompt after trial — answer is rendered inside the card */}
+          {showAuth && (() => {
+            const lastAssistant = [...messages].reverse().find(m => m.role === "assistant");
+            return (
+              <div className="py-6 animate-fade-in">
+                <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/30 rounded-3xl p-6 sm:p-8 overflow-hidden">
+                  {/* Glow effect */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
+                  <div className="absolute top-0 left-1/2 w-32 h-32 bg-primary/20 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2" />
+
+                  <div className="relative z-10">
+                    {/* Logan's answer, merged into the card */}
+                    {lastAssistant && (
+                      <div className="flex items-start gap-3 mb-5 text-left">
+                        <LoganLogo size="sm" className="flex-shrink-0 mt-0.5" />
+                        <div className="text-sm text-foreground/90 leading-relaxed">
+                          <MarkdownMessage content={lastAssistant.content} />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="text-center">
+                      <h3 className="font-display font-semibold text-lg text-foreground mb-4">
+                        {getContextualHeadline(lastUserQuestion)}
+                      </h3>
+                      <InlineChatAuth />
+                    </div>
                   </div>
-                  <h3 className="font-display font-semibold text-xl text-foreground mb-3">
-                    {getContextualHeadline(lastUserQuestion)}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-                    {getContextualDescription(lastUserQuestion)}
-                  </p>
-                  <InlineChatAuth />
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           <div ref={scrollRef} />
         </div>
