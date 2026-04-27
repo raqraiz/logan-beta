@@ -119,7 +119,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 py-8">
+    <div className="max-w-md mx-auto px-4 pt-2 pb-6">
       <div className="bg-card/80 backdrop-blur-sm rounded-2xl border border-border p-6 shadow-lg">
         {/* Value proposition — only shown for forgot password / sign in views.
             Sign-up context is already provided by the surrounding TrialChat headline. */}
