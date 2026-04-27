@@ -136,7 +136,14 @@ export const TrialChat = () => {
 
       if (error) throw error;
 
-      const aiResponse = data?.response || "I'd love to help you understand your cycle better. What would you like to know?";
+      const fullResponse = data?.response || "I'd love to help you understand your cycle better. What would you like to know?";
+
+      // Trim the trial answer to a short teaser (first sentence, max ~180 chars)
+      // so it merges naturally with the sign-up card that follows.
+      const firstSentence = fullResponse.match(/^.*?[.!?](\s|$)/)?.[0]?.trim() || fullResponse;
+      const aiResponse = firstSentence.length > 180
+        ? firstSentence.slice(0, 177).trimEnd() + "…"
+        : firstSentence;
 
       setMessages(prev => [...prev, {
         id: `assistant-${Date.now()}`,
@@ -280,10 +287,10 @@ export const TrialChat = () => {
             </div>
           )}
 
-          {/* Inline auth prompt after trial */}
+          {/* Inline auth prompt after trial — visually attached to the teaser answer above */}
           {showAuth && (
-            <div className="py-6 animate-fade-in">
-              <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/30 rounded-3xl p-8 text-center overflow-hidden">
+            <div className="-mt-2 pb-6 animate-fade-in">
+              <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/30 rounded-3xl p-6 text-center overflow-hidden">
                 {/* Glow effect */}
                 <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
                 <div className="absolute top-0 left-1/2 w-32 h-32 bg-primary/20 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2" />
