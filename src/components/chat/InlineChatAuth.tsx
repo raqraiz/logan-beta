@@ -135,6 +135,13 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
           </div>
         )}
 
+        {/* Logo divider — sits in the gap above the first form field */}
+        {isSignUp && !isForgotPassword && (
+          <div className="flex justify-center mb-4">
+            <LoganLogo size="md" />
+          </div>
+        )}
+
         {/* Inline auth form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {isSignUp && !isForgotPassword && (
