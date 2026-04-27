@@ -287,10 +287,10 @@ export const TrialChat = () => {
             </div>
           )}
 
-          {/* Inline auth prompt after trial */}
+          {/* Inline auth prompt after trial — visually attached to the teaser answer above */}
           {showAuth && (
-            <div className="py-6 animate-fade-in">
-              <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/30 rounded-3xl p-8 text-center overflow-hidden">
+            <div className="-mt-2 pb-6 animate-fade-in">
+              <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/30 rounded-3xl p-6 text-center overflow-hidden">
                 {/* Glow effect */}
                 <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
                 <div className="absolute top-0 left-1/2 w-32 h-32 bg-primary/20 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2" />
