@@ -138,12 +138,12 @@ export const TrialChat = () => {
 
       const fullResponse = data?.response || "I'd love to help you understand your cycle better. What would you like to know?";
 
-      // Trim the trial answer to a short teaser (first sentence, max ~180 chars)
-      // so it merges naturally with the sign-up card that follows.
-      const firstSentence = fullResponse.match(/^.*?[.!?](\s|$)/)?.[0]?.trim() || fullResponse;
-      const aiResponse = firstSentence.length > 180
-        ? firstSentence.slice(0, 177).trimEnd() + "…"
-        : firstSentence;
+      // Keep the first 2-3 sentences (max ~360 chars) so the answer is substantive
+      // but still fits cleanly inside the sign-up card that follows.
+      const sentences = fullResponse.match(/[^.!?]+[.!?]+(\s|$)/g) || [fullResponse];
+      let teaser = sentences.slice(0, 3).join("").trim();
+      if (teaser.length > 360) teaser = teaser.slice(0, 357).trimEnd() + "…";
+      const aiResponse = teaser || fullResponse;
 
       setMessages(prev => [...prev, {
         id: `assistant-${Date.now()}`,
@@ -235,28 +235,35 @@ export const TrialChat = () => {
         }}
       >
         <div className="max-w-3xl mx-auto py-8 space-y-6">
-          {messages.map((message, index) => (
-            <div
-              key={message.id}
-              ref={index === messages.length - 1 ? lastMessageRef : null}
-              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
+          {messages.map((message, index) => {
+            const isLastAssistant =
+              message.role === "assistant" && index === messages.length - 1;
+            // When the auth card is shown, hide the last assistant bubble —
+            // its content is rendered inside the card instead.
+            if (showAuth && isLastAssistant) return null;
+            return (
               <div
-                className={`max-w-[85%] rounded-2xl px-5 py-4 ${
-                  message.role === "user"
-                    ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-glow"
-                    : "bg-gradient-to-br from-card to-card/80 border border-border/50 shadow-card backdrop-blur-sm"
-                }`}
+                key={message.id}
+                ref={index === messages.length - 1 ? lastMessageRef : null}
+                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
+                style={{ animationDelay: `${index * 50}ms` }}
               >
-                {message.role === "assistant" ? (
-                  <MarkdownMessage content={message.content} />
-                ) : (
-                  <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
-                )}
+                <div
+                  className={`max-w-[85%] rounded-2xl px-5 py-4 ${
+                    message.role === "user"
+                      ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-glow"
+                      : "bg-gradient-to-br from-card to-card/80 border border-border/50 shadow-card backdrop-blur-sm"
+                  }`}
+                >
+                  {message.role === "assistant" ? (
+                    <MarkdownMessage content={message.content} />
+                  ) : (
+                    <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Suggested questions - show only at start */}
           {messages.length === 1 && !isTyping && (
@@ -287,29 +294,38 @@ export const TrialChat = () => {
             </div>
           )}
 
-          {/* Inline auth prompt after trial — visually attached to the teaser answer above */}
-          {showAuth && (
-            <div className="-mt-2 pb-6 animate-fade-in">
-              <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/30 rounded-3xl p-6 text-center overflow-hidden">
-                {/* Glow effect */}
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
-                <div className="absolute top-0 left-1/2 w-32 h-32 bg-primary/20 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2" />
-                
-                <div className="relative z-10">
-                  <div className="relative inline-block mb-4">
-                    <LoganLogo size="md" />
+          {/* Inline auth prompt after trial — answer is rendered inside the card */}
+          {showAuth && (() => {
+            const lastAssistant = [...messages].reverse().find(m => m.role === "assistant");
+            return (
+              <div className="py-6 animate-fade-in">
+                <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/30 rounded-3xl p-6 sm:p-8 overflow-hidden">
+                  {/* Glow effect */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
+                  <div className="absolute top-0 left-1/2 w-32 h-32 bg-primary/20 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2" />
+
+                  <div className="relative z-10">
+                    {/* Logan's answer, merged into the card */}
+                    {lastAssistant && (
+                      <div className="flex items-start gap-3 mb-5 text-left">
+                        <LoganLogo size="sm" className="flex-shrink-0 mt-0.5" />
+                        <div className="text-sm text-foreground/90 leading-relaxed">
+                          <MarkdownMessage content={lastAssistant.content} />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="text-center">
+                      <h3 className="font-display font-semibold text-lg text-foreground mb-4">
+                        {getContextualHeadline(lastUserQuestion)}
+                      </h3>
+                      <InlineChatAuth />
+                    </div>
                   </div>
-                  <h3 className="font-display font-semibold text-xl text-foreground mb-3">
-                    {getContextualHeadline(lastUserQuestion)}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-                    {getContextualDescription(lastUserQuestion)}
-                  </p>
-                  <InlineChatAuth />
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           <div ref={scrollRef} />
         </div>
