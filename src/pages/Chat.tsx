@@ -941,7 +941,7 @@ const Chat = () => {
 
   return (
     <>
-    <div className="min-h-screen bg-background flex flex-col relative">
+    <div className="h-[100svh] supports-[height:100dvh]:h-[100dvh] bg-background flex flex-col relative">
       {/* Header */}
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -1406,6 +1406,12 @@ const Chat = () => {
                 ref={inputRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
+                onFocus={(e) => {
+                  // Ensure input is visible when mobile keyboard opens
+                  setTimeout(() => {
+                    e.target.scrollIntoView({ block: "center", behavior: "smooth" });
+                  }, 300);
+                }}
                 placeholder={isOnboarding ? "Type your answer..." : "Ask Logan..."}
                 className="flex-1 h-12"
                 disabled={isSending}
