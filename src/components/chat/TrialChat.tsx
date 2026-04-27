@@ -355,6 +355,12 @@ export const TrialChat = () => {
                   ref={inputRef}
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
+                  onFocus={(e) => {
+                    // Ensure input is visible when mobile keyboard opens
+                    setTimeout(() => {
+                      e.target.scrollIntoView({ block: "center", behavior: "smooth" });
+                    }, 300);
+                  }}
                   placeholder="Ask Logan anything..."
                   className="h-13 pl-5 pr-4 bg-muted/50 border-border/50 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300"
                   disabled={isTyping}
