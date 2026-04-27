@@ -138,12 +138,12 @@ export const TrialChat = () => {
 
       const fullResponse = data?.response || "I'd love to help you understand your cycle better. What would you like to know?";
 
-      // Trim the trial answer to a short teaser (first sentence, max ~180 chars)
-      // so it merges naturally with the sign-up card that follows.
-      const firstSentence = fullResponse.match(/^.*?[.!?](\s|$)/)?.[0]?.trim() || fullResponse;
-      const aiResponse = firstSentence.length > 180
-        ? firstSentence.slice(0, 177).trimEnd() + "…"
-        : firstSentence;
+      // Keep the first 2-3 sentences (max ~360 chars) so the answer is substantive
+      // but still fits cleanly inside the sign-up card that follows.
+      const sentences = fullResponse.match(/[^.!?]+[.!?]+(\s|$)/g) || [fullResponse];
+      let teaser = sentences.slice(0, 3).join("").trim();
+      if (teaser.length > 360) teaser = teaser.slice(0, 357).trimEnd() + "…";
+      const aiResponse = teaser || fullResponse;
 
       setMessages(prev => [...prev, {
         id: `assistant-${Date.now()}`,
