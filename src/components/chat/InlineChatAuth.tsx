@@ -121,26 +121,19 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
   return (
     <div className="max-w-md mx-auto px-4 py-8">
       <div className="bg-card/80 backdrop-blur-sm rounded-2xl border border-border p-6 shadow-lg">
-        {/* Value proposition */}
-        <div className="mb-6 space-y-3">
-          <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 inline-block max-w-[90%]">
-            <p className="text-foreground">
-              {isForgotPassword
-                ? "No worries — enter your email and I'll send you a link to reset your password."
-                : isSignUp 
-                  ? "To actually help you, I need to remember our conversations and learn your patterns over time. Sign up and I'll build a picture of your unique cycle so every insight gets more accurate, not generic advice, real guidance based on you."
-                  : "Welcome back. Sign in to pick up where we left off."
-              }
-            </p>
-          </div>
-          {isSignUp && !isForgotPassword && (
-            <div className="flex flex-col gap-1.5 pl-2 text-sm text-muted-foreground">
-              <span className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-primary inline-block" /> Your cycle data stays private and secure</span>
-              <span className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-primary inline-block" /> Insights adapt as I learn your patterns</span>
-              <span className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-primary inline-block" /> Proactive check-ins timed to your phase</span>
+        {/* Value proposition — only shown for forgot password / sign in views.
+            Sign-up context is already provided by the surrounding TrialChat headline. */}
+        {(isForgotPassword || (!isSignUp && !isForgotPassword)) && (
+          <div className="mb-6">
+            <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 inline-block max-w-[90%]">
+              <p className="text-foreground text-sm">
+                {isForgotPassword
+                  ? "No worries — enter your email and I'll send you a link to reset your password."
+                  : "Welcome back. Sign in to pick up where we left off."}
+              </p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Inline auth form */}
         <form onSubmit={handleSubmit} className="space-y-4">
