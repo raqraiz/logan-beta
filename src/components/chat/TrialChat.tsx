@@ -235,28 +235,35 @@ export const TrialChat = () => {
         }}
       >
         <div className="max-w-3xl mx-auto py-8 space-y-6">
-          {messages.map((message, index) => (
-            <div
-              key={message.id}
-              ref={index === messages.length - 1 ? lastMessageRef : null}
-              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
+          {messages.map((message, index) => {
+            const isLastAssistant =
+              message.role === "assistant" && index === messages.length - 1;
+            // When the auth card is shown, hide the last assistant bubble —
+            // its content is rendered inside the card instead.
+            if (showAuth && isLastAssistant) return null;
+            return (
               <div
-                className={`max-w-[85%] rounded-2xl px-5 py-4 ${
-                  message.role === "user"
-                    ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-glow"
-                    : "bg-gradient-to-br from-card to-card/80 border border-border/50 shadow-card backdrop-blur-sm"
-                }`}
+                key={message.id}
+                ref={index === messages.length - 1 ? lastMessageRef : null}
+                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
+                style={{ animationDelay: `${index * 50}ms` }}
               >
-                {message.role === "assistant" ? (
-                  <MarkdownMessage content={message.content} />
-                ) : (
-                  <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
-                )}
+                <div
+                  className={`max-w-[85%] rounded-2xl px-5 py-4 ${
+                    message.role === "user"
+                      ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-glow"
+                      : "bg-gradient-to-br from-card to-card/80 border border-border/50 shadow-card backdrop-blur-sm"
+                  }`}
+                >
+                  {message.role === "assistant" ? (
+                    <MarkdownMessage content={message.content} />
+                  ) : (
+                    <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Suggested questions - show only at start */}
           {messages.length === 1 && !isTyping && (
