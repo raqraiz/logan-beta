@@ -1406,6 +1406,12 @@ const Chat = () => {
                 ref={inputRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
+                onFocus={(e) => {
+                  // Ensure input is visible when mobile keyboard opens
+                  setTimeout(() => {
+                    e.target.scrollIntoView({ block: "center", behavior: "smooth" });
+                  }, 300);
+                }}
                 placeholder={isOnboarding ? "Type your answer..." : "Ask Logan..."}
                 className="flex-1 h-12"
                 disabled={isSending}
