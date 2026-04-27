@@ -307,11 +307,8 @@ export const TrialChat = () => {
                   <div className="relative z-10">
                     {/* Logan's answer, merged into the card */}
                     {lastAssistant && (
-                      <div className="flex items-start gap-3 mb-5 text-left">
-                        <LoganLogo size="sm" className="flex-shrink-0 mt-0.5" />
-                        <div className="text-sm text-foreground/90 leading-relaxed">
-                          <MarkdownMessage content={lastAssistant.content} />
-                        </div>
+                      <div className="mb-5 text-left text-sm text-foreground/90 leading-relaxed">
+                        <MarkdownMessage content={lastAssistant.content} />
                       </div>
                     )}
 
