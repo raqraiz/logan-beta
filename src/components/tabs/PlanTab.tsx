@@ -345,6 +345,12 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
   const [anchorSymptom, setAnchorSymptom] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [liveCycle, setLiveCycle] = useState<{
+    cycleDay: number;
+    phase: string;
+    cycleLengthDays: number;
+    lastPeriodStart: string | null;
+  } | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -358,7 +364,7 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
           .limit(50),
         supabase
           .from("participants")
-          .select("anchor_symptom")
+          .select("anchor_symptom, last_period_start, cycle_length_days, timezone")
           .eq("email", (await supabase.auth.getUser()).data.user?.email || "")
           .maybeSingle(),
       ]);
@@ -381,16 +387,32 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
 
       if (!participantRes.error && participantRes.data) {
         setAnchorSymptom(participantRes.data.anchor_symptom);
+        const lps = participantRes.data.last_period_start;
+        const cld = participantRes.data.cycle_length_days;
+        if (lps && cld) {
+          const tz = participantRes.data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+          const info = calculateCycleInfo(lps, cld, tz);
+          if (info) {
+            setLiveCycle({
+              cycleDay: info.cycleDay,
+              phase: info.phase,
+              cycleLengthDays: cld,
+              lastPeriodStart: lps,
+            });
+          }
+        }
       }
 
       setLoading(false);
     };
     fetchData();
-  }, [userId]);
+  }, [userId, cycleData?.lastPeriodStart, cycleData?.cycleLengthDays]);
 
-  const currentPhase = cycleData?.phase || "Follicular";
-  const currentDay = cycleData?.cycleDay || 1;
-  const cycleLength = cycleData?.cycleLengthDays || 28;
+  // Prefer live participant data (always current); fall back to chat-derived prop.
+  const currentPhase = liveCycle?.phase || cycleData?.phase || "Follicular";
+  const currentDay = liveCycle?.cycleDay || cycleData?.cycleDay || 1;
+  const cycleLength = liveCycle?.cycleLengthDays || cycleData?.cycleLengthDays || 28;
+  const lastPeriodStart = liveCycle?.lastPeriodStart || cycleData?.lastPeriodStart;
 
   // Build 7-day forecast (kept for alerts calculation)
   const forecast: DayForecast[] = useMemo(() => {
