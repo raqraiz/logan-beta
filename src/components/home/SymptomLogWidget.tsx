@@ -177,7 +177,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
     setSelected(prev => {
       const existing = prev.find(s => s.name === name);
       if (existing) return prev.filter(s => s.name !== name);
-      return [...prev, { name, severity: 3 }];
+      return [...prev, { name, severity: 0 }];
     });
   }, []);
 
