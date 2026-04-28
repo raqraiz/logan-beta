@@ -111,7 +111,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
       toast({ title: "Couldn't add", description: error.message, variant: "destructive" });
     } else if (data) {
       setCommunitySymptoms(prev => [data as CommunitySymptom, ...prev]);
-      setSelected(prev => [...prev, { name: data.name, severity: 3 }]);
+      setSelected(prev => [...prev, { name: data.name, severity: 0 }]);
       toast({ title: "Added to the community list", description: "Others can see this too 💜" });
       setNewSymptom("");
       setShowAddForm(false);
@@ -177,7 +177,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
     setSelected(prev => {
       const existing = prev.find(s => s.name === name);
       if (existing) return prev.filter(s => s.name !== name);
-      return [...prev, { name, severity: 3 }];
+      return [...prev, { name, severity: 0 }];
     });
   }, []);
 
@@ -401,13 +401,13 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
           {selected.length > 0 && (
             <div className="space-y-2">
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50">
-                Severity (1 = mild, 5 = severe)
+                Severity (0 = not feeling it, 5 = severe)
               </p>
               {selected.map(entry => (
                 <div key={entry.name} className="flex items-center gap-3">
                   <span className="text-xs text-foreground/70 w-28 truncate">{entry.name}</span>
                   <Slider
-                    min={1}
+                    min={0}
                     max={5}
                     step={1}
                     value={[entry.severity]}
