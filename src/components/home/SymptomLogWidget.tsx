@@ -111,7 +111,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
       toast({ title: "Couldn't add", description: error.message, variant: "destructive" });
     } else if (data) {
       setCommunitySymptoms(prev => [data as CommunitySymptom, ...prev]);
-      setSelected(prev => [...prev, { name: data.name, severity: 3 }]);
+      setSelected(prev => [...prev, { name: data.name, severity: 0 }]);
       toast({ title: "Added to the community list", description: "Others can see this too 💜" });
       setNewSymptom("");
       setShowAddForm(false);
