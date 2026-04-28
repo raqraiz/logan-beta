@@ -8,6 +8,7 @@ import {
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
 import { CycleForecast } from "@/components/chat/CycleForecast";
+import { calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
 
 interface CycleData {
   cycleDay: number;
