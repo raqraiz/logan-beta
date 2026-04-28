@@ -891,12 +891,12 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
         </div>
 
         {/* ── Cycle Forecast ── */}
-        {cycleData?.lastPeriodStart && (
+        {lastPeriodStart && (
           <CycleForecast
             cycleDay={currentDay}
             phase={currentPhase}
             cycleLengthDays={cycleLength}
-            lastPeriodStart={cycleData.lastPeriodStart}
+            lastPeriodStart={lastPeriodStart}
             anchorSymptom={anchorSymptom}
             onClose={() => {}}
             embedded
