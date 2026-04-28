@@ -30,7 +30,7 @@ interface SymptomHistoryProps {
 }
 
 const SEVERITY_COLORS = [
-  "",
+  "bg-muted-foreground/30",
   "bg-green-400/70",
   "bg-lime-400/70",
   "bg-yellow-400/70",
@@ -38,7 +38,7 @@ const SEVERITY_COLORS = [
   "bg-red-400/70",
 ];
 
-const SEVERITY_LABELS = ["", "Mild", "Light", "Moderate", "Strong", "Severe"];
+const SEVERITY_LABELS = ["None", "Mild", "Light", "Moderate", "Strong", "Severe"];
 
 export function SymptomHistory({ open, onOpenChange, userId }: SymptomHistoryProps) {
   const [logs, setLogs] = useState<SymptomLog[]>([]);
