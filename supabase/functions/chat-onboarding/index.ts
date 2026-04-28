@@ -354,13 +354,15 @@ serve(async (req) => {
         }
       }
 
-      // Determine next step, skipping cycle-specific questions for non-cycling users
+      // Determine next step, skipping questions that don't apply to this user's life stage
       let nextStep = currentStep + 1;
       const userLifeStage = (participant as any)?.life_stage || "cycling";
-      if (userLifeStage !== "cycling") {
-        while (nextStep < ONBOARDING_QUESTIONS.length - 1 && (ONBOARDING_QUESTIONS[nextStep] as any).requiresStage === "cycling") {
-          nextStep++;
-        }
+      while (
+        nextStep < ONBOARDING_QUESTIONS.length - 1 &&
+        (ONBOARDING_QUESTIONS[nextStep] as any).requiresStage &&
+        (ONBOARDING_QUESTIONS[nextStep] as any).requiresStage !== userLifeStage
+      ) {
+        nextStep++;
       }
       const nextQuestion = ONBOARDING_QUESTIONS[nextStep];
 
