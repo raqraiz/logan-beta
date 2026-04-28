@@ -74,6 +74,15 @@ const ONBOARDING_QUESTIONS = [
     inputType: "life_stage_picker"
   },
   {
+    key: "birth_date",
+    message: "When was your baby born? Even an approximate date works — I'll use it to track your recovery timeline.",
+    field: "postpartum_start_date",
+    parseType: "date",
+    inputType: "date_picker",
+    showNotSure: false,
+    requiresStage: "postpartum"
+  },
+  {
     key: "cycle_length",
     message: "How many days is your cycle? (From the start of one period to the start of the next.)\n\nMost people are somewhere between 24 and 35 days. If you're not sure, that's totally fine — tap \"I'm not sure\" below.",
     field: "cycle_length_days",
