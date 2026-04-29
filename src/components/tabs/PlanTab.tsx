@@ -938,6 +938,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             anchorSymptom={anchorSymptom}
             onClose={() => {}}
             embedded
+            onPeriodUpdate={onPeriodUpdate}
           />
         )}
 
