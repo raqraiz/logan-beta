@@ -21,6 +21,7 @@ interface CycleData {
 interface PlanTabProps {
   userId: string;
   cycleData: CycleData | null;
+  onPeriodUpdate?: (date: Date) => Promise<void> | void;
 }
 
 interface CheckinEntry {
