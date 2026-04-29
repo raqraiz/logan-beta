@@ -147,7 +147,7 @@ function EnergyBar({ value, color }: { value: number; color: string }) {
   );
 }
 
-export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStart, anchorSymptom, onClose, embedded = false }: CycleForecastProps) {
+export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStart, anchorSymptom, onClose, embedded = false, onPeriodUpdate }: CycleForecastProps) {
   useTrackFeature("cycle_forecast");
   const today = useMemo(() => new Date(), []);
   const periodStart = useMemo(() => {
@@ -158,6 +158,9 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   const [currentMonth, setCurrentMonth] = useState(today);
   const [selectedDate, setSelectedDate] = useState<Date | null>(today);
   const insightsRef = useRef<HTMLDivElement>(null);
+  const [showEditPeriod, setShowEditPeriod] = useState(false);
+  const [editPeriodDate, setEditPeriodDate] = useState<Date | undefined>(periodStart);
+  const [isSavingPeriod, setIsSavingPeriod] = useState(false);
 
 
   // Build calendar grid
