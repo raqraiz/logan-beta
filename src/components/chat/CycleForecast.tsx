@@ -191,10 +191,51 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
   const PHASES = ["Menstruation", "Follicular", "Ovulation", "Luteal"] as const;
 
+  const editPeriodDialog = onPeriodUpdate ? (
+    <Dialog open={showEditPeriod} onOpenChange={setShowEditPeriod}>
+      <DialogContent className="max-w-sm rounded-2xl">
+        <DialogHeader>
+          <DialogTitle>When did your last period start?</DialogTitle>
+          <DialogDescription>
+            Pick the first day of your most recent period so we can recalculate your cycle.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex justify-center">
+          <CalendarPicker
+            mode="single"
+            selected={editPeriodDate}
+            onSelect={setEditPeriodDate}
+            disabled={(d) => d > new Date()}
+            className="p-3 pointer-events-auto"
+          />
+        </div>
+        <div className="flex gap-2 justify-end">
+          <Button variant="outline" onClick={() => setShowEditPeriod(false)}>Cancel</Button>
+          <Button
+            onClick={async () => {
+              if (!editPeriodDate || !onPeriodUpdate) return;
+              setIsSavingPeriod(true);
+              try {
+                await onPeriodUpdate(editPeriodDate);
+                setShowEditPeriod(false);
+              } finally {
+                setIsSavingPeriod(false);
+              }
+            }}
+            disabled={!editPeriodDate || isSavingPeriod}
+          >
+            {isSavingPeriod ? "Updating…" : "Save"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  ) : null;
+
   if (embedded) {
     // Inline version without the fixed overlay and header
     return (
       <div>
+        {editPeriodDialog}
         <div className="max-w-4xl mx-auto md:flex md:gap-6 md:px-6 md:py-4">
           {/* Calendar */}
           <div className="md:w-[340px] md:shrink-0">
