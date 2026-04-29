@@ -267,13 +267,6 @@ const Chat = () => {
     };
   }, [user]);
 
-  // Extract cycle data from messages metadata and recalculate live
-  useEffect(() => {
-    if (!user || isOnboarding || messages.length === 0) {
-      setCycleData(null);
-      return;
-    }
-
   // Extract cycle data — participants table is authoritative; chat metadata is fallback
   useEffect(() => {
     if (!user || isOnboarding || messages.length === 0) {
