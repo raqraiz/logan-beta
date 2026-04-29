@@ -1,7 +1,10 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
-import { Zap, Shield, Users, Moon, TrendingUp, TrendingDown, AlertTriangle, Heart, ChevronLeft, ChevronRight, X, Calendar } from "lucide-react";
+import { Zap, Shield, Users, Moon, TrendingUp, TrendingDown, AlertTriangle, Heart, ChevronLeft, ChevronRight, X, Calendar, Pencil } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, differenceInCalendarDays, parseISO, isValid } from "date-fns";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
 
 interface CycleForecastProps {
   cycleDay: number;
@@ -11,6 +14,7 @@ interface CycleForecastProps {
   anchorSymptom?: string | null;
   onClose: () => void;
   embedded?: boolean;
+  onPeriodUpdate?: (date: Date) => Promise<void> | void;
 }
 
 function getPhaseForDay(day: number, cycleLength: number): string {
@@ -143,7 +147,7 @@ function EnergyBar({ value, color }: { value: number; color: string }) {
   );
 }
 
-export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStart, anchorSymptom, onClose, embedded = false }: CycleForecastProps) {
+export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStart, anchorSymptom, onClose, embedded = false, onPeriodUpdate }: CycleForecastProps) {
   useTrackFeature("cycle_forecast");
   const today = useMemo(() => new Date(), []);
   const periodStart = useMemo(() => {
@@ -154,6 +158,9 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   const [currentMonth, setCurrentMonth] = useState(today);
   const [selectedDate, setSelectedDate] = useState<Date | null>(today);
   const insightsRef = useRef<HTMLDivElement>(null);
+  const [showEditPeriod, setShowEditPeriod] = useState(false);
+  const [editPeriodDate, setEditPeriodDate] = useState<Date | undefined>(periodStart);
+  const [isSavingPeriod, setIsSavingPeriod] = useState(false);
 
 
   // Build calendar grid
@@ -184,19 +191,76 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
   const PHASES = ["Menstruation", "Follicular", "Ovulation", "Luteal"] as const;
 
+  const editPeriodDialog = onPeriodUpdate ? (
+    <Dialog open={showEditPeriod} onOpenChange={setShowEditPeriod}>
+      <DialogContent className="max-w-sm rounded-2xl">
+        <DialogHeader>
+          <DialogTitle>When did your last period start?</DialogTitle>
+          <DialogDescription>
+            Pick the first day of your most recent period so we can recalculate your cycle.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex justify-center">
+          <CalendarPicker
+            mode="single"
+            selected={editPeriodDate}
+            onSelect={setEditPeriodDate}
+            disabled={(d) => d > new Date()}
+            className="p-3 pointer-events-auto"
+          />
+        </div>
+        <div className="flex gap-2 justify-end">
+          <Button variant="outline" onClick={() => setShowEditPeriod(false)}>Cancel</Button>
+          <Button
+            onClick={async () => {
+              if (!editPeriodDate || !onPeriodUpdate) return;
+              setIsSavingPeriod(true);
+              try {
+                await onPeriodUpdate(editPeriodDate);
+                setShowEditPeriod(false);
+              } finally {
+                setIsSavingPeriod(false);
+              }
+            }}
+            disabled={!editPeriodDate || isSavingPeriod}
+          >
+            {isSavingPeriod ? "Updating…" : "Save"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  ) : null;
+
   if (embedded) {
     // Inline version without the fixed overlay and header
     return (
       <div>
+        {editPeriodDialog}
         <div className="max-w-4xl mx-auto md:flex md:gap-6 md:px-6 md:py-4">
           {/* Calendar */}
           <div className="md:w-[340px] md:shrink-0">
             <div className="px-4 md:px-0 pt-4 pb-2">
-              <div className="flex items-center gap-2 mb-1">
-                <Calendar className="w-5 h-5 text-primary" />
-                <h3 className="font-display font-semibold text-base text-foreground">Cycle Forecast</h3>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-primary" />
+                  <h3 className="font-display font-semibold text-base text-foreground">Cycle Forecast</h3>
+                </div>
+                {onPeriodUpdate && (
+                  <button
+                    onClick={() => { setEditPeriodDate(periodStart); setShowEditPeriod(true); }}
+                    className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 transition-colors px-2 py-1 rounded-md border border-primary/30 hover:bg-primary/5"
+                  >
+                    <Pencil className="w-3 h-3" />
+                    Edit period date
+                  </button>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground mb-3">Tap any date to see insights for that day</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Tap any date to see insights for that day
+                {lastPeriodStart && (
+                  <> · Last period: <span className="text-foreground/70">{format(periodStart, "MMM d, yyyy")}</span></>
+                )}
+              </p>
               <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3">
                 {PHASES.map((p) => (
                   <div key={p} className="flex items-center gap-1.5">
