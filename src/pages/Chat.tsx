@@ -267,6 +267,44 @@ const Chat = () => {
     };
   }, [user]);
 
+  // Subscribe to authoritative participant cycle data so all tabs sync
+  // when last_period_start / cycle_length_days change (from chat, date picker, admin, etc.)
+  useEffect(() => {
+    if (!user?.email) return;
+
+    const channel = supabase
+      .channel("participants_cycle_sync")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "participants",
+          filter: `email=eq.${user.email}`,
+        },
+        (payload) => {
+          const row = payload.new as any;
+          if (!row) return;
+          setParticipantCycle({
+            lastPeriodStart: row.last_period_start ?? null,
+            cycleLengthDays: row.cycle_length_days ?? null,
+            timezone: row.timezone ?? null,
+          });
+          if (row.life_stage) {
+            setLifeStage(row.life_stage as "cycling" | "postpartum" | "menopause");
+          }
+          if (row.postpartum_start_date !== undefined) {
+            setPostpartumStartDate(row.postpartum_start_date ?? null);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.email]);
+
   // Extract cycle data — participants table is authoritative; chat metadata is fallback
   useEffect(() => {
     if (!user || isOnboarding || messages.length === 0) {
