@@ -1303,14 +1303,16 @@ const Chat = () => {
                    message.role === "assistant" && 
                    !isOnboarding && (() => {
                     const cyclingStarterSets = [
-                      ["What can I expect tomorrow?", "How should I plan my week?", "What's my energy like today?"],
+                      ["I just need to vent", "Why do I feel off today?", "What's my energy like today?"],
+                      ["What can I expect tomorrow?", "How should I plan my week?", "Tell me what's normal right now"],
                       ["What phase am I in right now?", "Any workout tips for today?", "How's my mood likely to shift?"],
-                      ["What should I eat this week?", "When's my next energy peak?", "How can I sleep better tonight?"],
+                      ["I'm having a hard day", "What should I eat this week?", "How can I sleep better tonight?"],
                       ["What's coming up in my cycle?", "How do I make the most of today?", "Why do I feel this way?"],
                     ];
                     const menopauseStarterSets = [
-                      ["How can I sleep better tonight?", "What helps hot flashes?", "Why is my mood shifting?"],
-                      ["What should I focus on today?", "How do I protect bone health?", "Why am I so tired?"],
+                      ["I just need to vent", "Why is my mood shifting?", "Tell me what's normal right now"],
+                      ["How can I sleep better tonight?", "What helps hot flashes?", "Why am I so tired?"],
+                      ["What should I focus on today?", "How do I protect bone health?", "I'm having a hard day"],
                       ["Any strength training tips?", "How can I reduce brain fog?", "What should I eat this week?"],
                       ["Why do I feel this way?", "How do I manage stress better?", "What patterns should I track?"],
                     ];
@@ -1412,7 +1414,7 @@ const Chat = () => {
                     e.target.scrollIntoView({ block: "center", behavior: "smooth" });
                   }, 300);
                 }}
-                placeholder={isOnboarding ? "Type your answer..." : "Ask Logan..."}
+                placeholder={isOnboarding ? "Type your answer..." : "Ask me anything — or just vent..."}
                 className="flex-1 h-12"
                 disabled={isSending}
               />
