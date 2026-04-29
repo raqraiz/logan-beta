@@ -340,7 +340,7 @@ const ANCHOR_INSIGHTS: Record<string, Record<string, string>> = {
   },
 };
 
-export function PlanTab({ userId, cycleData }: PlanTabProps) {
+export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
   useTrackFeature("plan_tab");
   const [checkins, setCheckins] = useState<CheckinEntry[]>([]);
   const [anchorSymptom, setAnchorSymptom] = useState<string | null>(null);
