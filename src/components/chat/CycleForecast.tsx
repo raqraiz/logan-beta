@@ -1,7 +1,10 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
-import { Zap, Shield, Users, Moon, TrendingUp, TrendingDown, AlertTriangle, Heart, ChevronLeft, ChevronRight, X, Calendar } from "lucide-react";
+import { Zap, Shield, Users, Moon, TrendingUp, TrendingDown, AlertTriangle, Heart, ChevronLeft, ChevronRight, X, Calendar, Pencil } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, differenceInCalendarDays, parseISO, isValid } from "date-fns";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
 
 interface CycleForecastProps {
   cycleDay: number;
@@ -11,6 +14,7 @@ interface CycleForecastProps {
   anchorSymptom?: string | null;
   onClose: () => void;
   embedded?: boolean;
+  onPeriodUpdate?: (date: Date) => Promise<void> | void;
 }
 
 function getPhaseForDay(day: number, cycleLength: number): string {
