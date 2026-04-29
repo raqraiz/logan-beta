@@ -1051,7 +1051,14 @@ const Chat = () => {
       )}
 
       {effectiveTab === "plan" && user && (
-        <PlanTab userId={user.id} cycleData={cycleData} />
+        <PlanTab
+          userId={user.id}
+          cycleData={cycleData}
+          onPeriodUpdate={async (date: Date) => {
+            const formatted = format(date, "MMMM d, yyyy");
+            await sendAIMessage(`My last period started on ${formatted}. Please update my cycle.`);
+          }}
+        />
       )}
 
       {effectiveTab === "ask" && (<>
