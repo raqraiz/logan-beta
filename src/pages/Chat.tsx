@@ -111,6 +111,12 @@ const Chat = () => {
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
   const [lifeStage, setLifeStage] = useState<"cycling" | "postpartum" | "menopause">("cycling");
   const [postpartumStartDate, setPostpartumStartDate] = useState<string | null>(null);
+  // Authoritative cycle data from `participants` table — wins over chat metadata
+  const [participantCycle, setParticipantCycle] = useState<{
+    lastPeriodStart: string | null;
+    cycleLengthDays: number | null;
+    timezone: string | null;
+  } | null>(null);
   const [showForecast, setShowForecast] = useState(false);
   
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -470,7 +476,7 @@ const Chat = () => {
     try {
       const { data } = await supabase
         .from("participants")
-        .select("life_stage, postpartum_start_date")
+        .select("life_stage, postpartum_start_date, last_period_start, cycle_length_days, timezone")
         .eq("email", user.email)
         .single();
       if (data?.life_stage) {
@@ -478,6 +484,13 @@ const Chat = () => {
       }
       if (data?.postpartum_start_date) {
         setPostpartumStartDate(data.postpartum_start_date);
+      }
+      if (data) {
+        setParticipantCycle({
+          lastPeriodStart: data.last_period_start ?? null,
+          cycleLengthDays: data.cycle_length_days ?? null,
+          timezone: data.timezone ?? null,
+        });
       }
     } catch (e) {
       // Participant may not exist yet
