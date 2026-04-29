@@ -724,9 +724,13 @@ const Chat = () => {
           phase: data.cycleInfo.phase,
           cycleLengthDays: data.cycleInfo.cycleLengthDays || cycleData?.cycleLengthDays || 28,
         });
+        // Pull authoritative values from the DB so every tab stays in sync
+        fetchLifeStage();
       }
 
       await refreshMessages(user.id);
+      // Always re-pull participant cycle in case the AI silently updated it
+      fetchLifeStage();
       inputRef.current?.focus();
     } catch (error) {
       console.error("Error sending message:", error);
