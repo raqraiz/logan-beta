@@ -274,6 +274,13 @@ const Chat = () => {
       return;
     }
 
+  // Extract cycle data — participants table is authoritative; chat metadata is fallback
+  useEffect(() => {
+    if (!user || isOnboarding || messages.length === 0) {
+      setCycleData(null);
+      return;
+    }
+
     // For non-cycling users, provide a minimal CycleData with life stage info
     if (lifeStage !== "cycling") {
       setCycleData({
@@ -286,28 +293,31 @@ const Chat = () => {
       return;
     }
 
-    // Find the most recent last_period_start from metadata
-    let lastPeriodStart: string | null = null;
-    let cycleLengthDays: number | null = null;
-    let userTimezone: string | null = null;
+    // 1) Authoritative source: participants table
+    let lastPeriodStart: string | null = participantCycle?.lastPeriodStart ?? null;
+    let cycleLengthDays: number | null = participantCycle?.cycleLengthDays ?? null;
+    let userTimezone: string | null = participantCycle?.timezone ?? null;
 
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const metadata = messages[i].metadata as any;
-      if (!metadata) continue;
+    // 2) Fallback to most recent values from chat metadata
+    if (!lastPeriodStart || !cycleLengthDays || !userTimezone) {
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const metadata = messages[i].metadata as any;
+        if (!metadata) continue;
 
-      if (metadata.new_period_start && !lastPeriodStart) {
-        lastPeriodStart = metadata.new_period_start;
+        if (metadata.new_period_start && !lastPeriodStart) {
+          lastPeriodStart = metadata.new_period_start;
+        }
+        if (metadata.last_period_start && !lastPeriodStart) {
+          lastPeriodStart = metadata.last_period_start;
+        }
+        if (metadata.cycle_length_days && !cycleLengthDays) {
+          cycleLengthDays = metadata.cycle_length_days;
+        }
+        if (metadata.timezone && !userTimezone) {
+          userTimezone = metadata.timezone;
+        }
+        if (lastPeriodStart && cycleLengthDays && userTimezone) break;
       }
-      if (metadata.last_period_start && !lastPeriodStart) {
-        lastPeriodStart = metadata.last_period_start;
-      }
-      if (metadata.cycle_length_days && !cycleLengthDays) {
-        cycleLengthDays = metadata.cycle_length_days;
-      }
-      if (metadata.timezone && !userTimezone) {
-        userTimezone = metadata.timezone;
-      }
-      if (lastPeriodStart && cycleLengthDays) break;
     }
 
     const timezone = userTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -338,7 +348,7 @@ const Chat = () => {
         lifeStage: "cycling",
       });
     }
-  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate]);
+  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, participantCycle]);
 
   // Scroll to bottom on initial load
   const hasScrolledToBottom = useRef(false);
