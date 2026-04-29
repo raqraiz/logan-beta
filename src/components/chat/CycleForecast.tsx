@@ -199,11 +199,27 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
           {/* Calendar */}
           <div className="md:w-[340px] md:shrink-0">
             <div className="px-4 md:px-0 pt-4 pb-2">
-              <div className="flex items-center gap-2 mb-1">
-                <Calendar className="w-5 h-5 text-primary" />
-                <h3 className="font-display font-semibold text-base text-foreground">Cycle Forecast</h3>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-primary" />
+                  <h3 className="font-display font-semibold text-base text-foreground">Cycle Forecast</h3>
+                </div>
+                {onPeriodUpdate && (
+                  <button
+                    onClick={() => { setEditPeriodDate(periodStart); setShowEditPeriod(true); }}
+                    className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 transition-colors px-2 py-1 rounded-md border border-primary/30 hover:bg-primary/5"
+                  >
+                    <Pencil className="w-3 h-3" />
+                    Edit period date
+                  </button>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground mb-3">Tap any date to see insights for that day</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Tap any date to see insights for that day
+                {lastPeriodStart && (
+                  <> · Last period: <span className="text-foreground/70">{format(periodStart, "MMM d, yyyy")}</span></>
+                )}
+              </p>
               <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3">
                 {PHASES.map((p) => (
                   <div key={p} className="flex items-center gap-1.5">
