@@ -406,6 +406,43 @@ export function PlanTab({ userId, cycleData }: PlanTabProps) {
       setLoading(false);
     };
     fetchData();
+
+    // Subscribe to participant updates so Plan tab stays in sync after period edits
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    (async () => {
+      const email = (await supabase.auth.getUser()).data.user?.email;
+      if (!email) return;
+      channel = supabase
+        .channel(`plan_participants_sync_${userId}`)
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "participants", filter: `email=eq.${email}` },
+          (payload) => {
+            const row = payload.new as any;
+            if (!row) return;
+            const lps = row.last_period_start;
+            const cld = row.cycle_length_days;
+            if (row.anchor_symptom !== undefined) setAnchorSymptom(row.anchor_symptom);
+            if (lps && cld) {
+              const tz = row.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+              const info = calculateCycleInfo(lps, cld, tz);
+              if (info) {
+                setLiveCycle({
+                  cycleDay: info.cycleDay,
+                  phase: info.phase,
+                  cycleLengthDays: cld,
+                  lastPeriodStart: lps,
+                });
+              }
+            }
+          }
+        )
+        .subscribe();
+    })();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [userId, cycleData?.lastPeriodStart, cycleData?.cycleLengthDays]);
 
   // Prefer live participant data (always current); fall back to chat-derived prop.

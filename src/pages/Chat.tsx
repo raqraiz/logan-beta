@@ -111,6 +111,12 @@ const Chat = () => {
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
   const [lifeStage, setLifeStage] = useState<"cycling" | "postpartum" | "menopause">("cycling");
   const [postpartumStartDate, setPostpartumStartDate] = useState<string | null>(null);
+  // Authoritative cycle data from `participants` table — wins over chat metadata
+  const [participantCycle, setParticipantCycle] = useState<{
+    lastPeriodStart: string | null;
+    cycleLengthDays: number | null;
+    timezone: string | null;
+  } | null>(null);
   const [showForecast, setShowForecast] = useState(false);
   
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -261,7 +267,45 @@ const Chat = () => {
     };
   }, [user]);
 
-  // Extract cycle data from messages metadata and recalculate live
+  // Subscribe to authoritative participant cycle data so all tabs sync
+  // when last_period_start / cycle_length_days change (from chat, date picker, admin, etc.)
+  useEffect(() => {
+    if (!user?.email) return;
+
+    const channel = supabase
+      .channel("participants_cycle_sync")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "participants",
+          filter: `email=eq.${user.email}`,
+        },
+        (payload) => {
+          const row = payload.new as any;
+          if (!row) return;
+          setParticipantCycle({
+            lastPeriodStart: row.last_period_start ?? null,
+            cycleLengthDays: row.cycle_length_days ?? null,
+            timezone: row.timezone ?? null,
+          });
+          if (row.life_stage) {
+            setLifeStage(row.life_stage as "cycling" | "postpartum" | "menopause");
+          }
+          if (row.postpartum_start_date !== undefined) {
+            setPostpartumStartDate(row.postpartum_start_date ?? null);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.email]);
+
+  // Extract cycle data — participants table is authoritative; chat metadata is fallback
   useEffect(() => {
     if (!user || isOnboarding || messages.length === 0) {
       setCycleData(null);
@@ -280,28 +324,31 @@ const Chat = () => {
       return;
     }
 
-    // Find the most recent last_period_start from metadata
-    let lastPeriodStart: string | null = null;
-    let cycleLengthDays: number | null = null;
-    let userTimezone: string | null = null;
+    // 1) Authoritative source: participants table
+    let lastPeriodStart: string | null = participantCycle?.lastPeriodStart ?? null;
+    let cycleLengthDays: number | null = participantCycle?.cycleLengthDays ?? null;
+    let userTimezone: string | null = participantCycle?.timezone ?? null;
 
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const metadata = messages[i].metadata as any;
-      if (!metadata) continue;
+    // 2) Fallback to most recent values from chat metadata
+    if (!lastPeriodStart || !cycleLengthDays || !userTimezone) {
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const metadata = messages[i].metadata as any;
+        if (!metadata) continue;
 
-      if (metadata.new_period_start && !lastPeriodStart) {
-        lastPeriodStart = metadata.new_period_start;
+        if (metadata.new_period_start && !lastPeriodStart) {
+          lastPeriodStart = metadata.new_period_start;
+        }
+        if (metadata.last_period_start && !lastPeriodStart) {
+          lastPeriodStart = metadata.last_period_start;
+        }
+        if (metadata.cycle_length_days && !cycleLengthDays) {
+          cycleLengthDays = metadata.cycle_length_days;
+        }
+        if (metadata.timezone && !userTimezone) {
+          userTimezone = metadata.timezone;
+        }
+        if (lastPeriodStart && cycleLengthDays && userTimezone) break;
       }
-      if (metadata.last_period_start && !lastPeriodStart) {
-        lastPeriodStart = metadata.last_period_start;
-      }
-      if (metadata.cycle_length_days && !cycleLengthDays) {
-        cycleLengthDays = metadata.cycle_length_days;
-      }
-      if (metadata.timezone && !userTimezone) {
-        userTimezone = metadata.timezone;
-      }
-      if (lastPeriodStart && cycleLengthDays) break;
     }
 
     const timezone = userTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -332,7 +379,7 @@ const Chat = () => {
         lifeStage: "cycling",
       });
     }
-  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate]);
+  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, participantCycle]);
 
   // Scroll to bottom on initial load
   const hasScrolledToBottom = useRef(false);
@@ -470,7 +517,7 @@ const Chat = () => {
     try {
       const { data } = await supabase
         .from("participants")
-        .select("life_stage, postpartum_start_date")
+        .select("life_stage, postpartum_start_date, last_period_start, cycle_length_days, timezone")
         .eq("email", user.email)
         .single();
       if (data?.life_stage) {
@@ -478,6 +525,13 @@ const Chat = () => {
       }
       if (data?.postpartum_start_date) {
         setPostpartumStartDate(data.postpartum_start_date);
+      }
+      if (data) {
+        setParticipantCycle({
+          lastPeriodStart: data.last_period_start ?? null,
+          cycleLengthDays: data.cycle_length_days ?? null,
+          timezone: data.timezone ?? null,
+        });
       }
     } catch (e) {
       // Participant may not exist yet
@@ -670,9 +724,13 @@ const Chat = () => {
           phase: data.cycleInfo.phase,
           cycleLengthDays: data.cycleInfo.cycleLengthDays || cycleData?.cycleLengthDays || 28,
         });
+        // Pull authoritative values from the DB so every tab stays in sync
+        fetchLifeStage();
       }
 
       await refreshMessages(user.id);
+      // Always re-pull participant cycle in case the AI silently updated it
+      fetchLifeStage();
       inputRef.current?.focus();
     } catch (error) {
       console.error("Error sending message:", error);
