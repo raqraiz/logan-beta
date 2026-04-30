@@ -31,6 +31,7 @@ import { CalendarSubscribe } from "@/components/chat/CalendarSubscribe";
 import { CycleForecast } from "@/components/chat/CycleForecast";
 import { CreditBalance } from "@/components/chat/CreditBalance";
 import { OutOfCredits } from "@/components/chat/OutOfCredits";
+import { ResourceOfferCard, ResourceCard } from "@/components/chat/ResourceCards";
 import { BottomTabBar, type TabId } from "@/components/tabs/BottomTabBar";
 import { HomeTab } from "@/components/tabs/HomeTab";
 import { PlanTab } from "@/components/tabs/PlanTab";
