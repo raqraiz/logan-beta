@@ -521,10 +521,12 @@ serve(async (req) => {
       const mealPlanPatterns: RegExp[] = [
         /\bmeal\s*plan(s|ner)?\b/i,
         /\b(make|create|build|generate|give me|i want|can you (make|create|build|give))\b[^.?!]{0,60}\b(meal|recipe|menu|food|grocery|shopping)\b/i,
-        /\bwhat (should|do|can) i eat\b[^.?!]{0,80}(week|cycle|phase|month|days?)/i,
+        /\bwhat (should|do|can|to) i?\s*(eat|cook|make for (breakfast|lunch|dinner|a meal))\b/i,
+        /\bwhat'?s? (good|best) to eat\b/i,
         /\b(weekly|monthly|cyclical|cycle[- ]synced)\s+(meal|menu|food|recipe)/i,
         /\b(grocery|shopping)\s+list\b/i,
         /\b(recipes?|menu)\s+(for|by|that match|aligned with)\b[^.?!]{0,40}\b(cycle|phase|week|hormones?)\b/i,
+        /\b(food|meal|recipe|menu)s?\s+(suggestions?|ideas?|for (this|my) (phase|cycle|week))\b/i,
       ];
       const isMealPlanIntent = mealPlanPatterns.some(p => p.test(userMessage));
 
