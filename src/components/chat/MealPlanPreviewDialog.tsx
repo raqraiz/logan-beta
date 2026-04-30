@@ -294,7 +294,7 @@ export function MealPlanPreviewDialog({
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2.5 min-w-0">
                           {d.image_path && (
-                            <div className="relative h-10 w-10 shrink-0 rounded-md overflow-hidden bg-black/20">
+                            <div className="relative h-16 w-16 shrink-0 rounded-lg overflow-hidden bg-black/20">
                               {imageUrls[d.day_number] ? (
                                 <img
                                   src={imageUrls[d.day_number]}
