@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Download, Loader2, ShoppingBasket, Moon, Sun, ThumbsUp, ThumbsDown, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MealDay {
   day_number: number;
@@ -13,6 +14,7 @@ interface MealDay {
   dinner: string;
   snack: string;
   hormone_focus?: string;
+  image_path?: string | null;
 }
 
 interface WeekBlock {
@@ -98,6 +100,35 @@ export function MealPlanPreviewDialog({
   const days = preview?.days ?? [];
   const weeks = preview?.weeks ?? [];
   const hasStructuredPreview = days.length > 0;
+
+  // Resolve signed URLs for each day's hero photo (image_path -> https url)
+  const [imageUrls, setImageUrls] = useState<Record<number, string>>({});
+  useEffect(() => {
+    let active = true;
+    const paths = days
+      .map(d => ({ day: d.day_number, path: d.image_path }))
+      .filter(p => !!p.path) as { day: number; path: string }[];
+    if (paths.length === 0) {
+      setImageUrls({});
+      return;
+    }
+    (async () => {
+      const entries = await Promise.all(
+        paths.map(async ({ day, path }) => {
+          const { data } = await supabase.storage
+            .from("resources")
+            .createSignedUrl(path, 60 * 60);
+          return [day, data?.signedUrl ?? ""] as const;
+        }),
+      );
+      if (!active) return;
+      const next: Record<number, string> = {};
+      entries.forEach(([day, url]) => { if (url) next[day] = url; });
+      setImageUrls(next);
+    })();
+    return () => { active = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days.map(d => `${d.day_number}:${d.image_path ?? ""}`).join("|")]);
 
   const isDark = mode === "dark";
   const surface = isDark
@@ -258,34 +289,58 @@ export function MealPlanPreviewDialog({
 
               <div className="space-y-3">
                 {days.map(d => (
-                  <div key={d.day_number} className={cn("rounded-xl border p-3", cardSurface)}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-sm font-semibold">
-                        Day {d.day_number}
-                        <span className={cn("text-xs font-normal ml-2", mutedText)}>
-                          Cycle day {d.cycle_day}
-                        </span>
-                      </div>
-                      <span
-                        className={cn(
-                          "text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border",
-                          PHASE_CHIP[mode][d.phase] ?? chipMuted,
+                  <div key={d.day_number} className={cn("rounded-xl border overflow-hidden", cardSurface)}>
+                    {d.image_path && (
+                      <div className="relative w-full aspect-[16/9] bg-black/20 overflow-hidden">
+                        {imageUrls[d.day_number] ? (
+                          <img
+                            src={imageUrls[d.day_number]}
+                            alt={`Day ${d.day_number} ${d.phase} dinner`}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground/60" />
+                          </div>
                         )}
-                      >
-                        {d.phase}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs leading-relaxed">
-                      <div><span className={mutedText}>Breakfast · </span>{renderMealLine(d.breakfast)}</div>
-                      <div><span className={mutedText}>Lunch · </span>{renderMealLine(d.lunch)}</div>
-                      <div><span className={mutedText}>Dinner · </span>{renderMealLine(d.dinner)}</div>
-                      <div><span className={mutedText}>Snack · </span>{renderMealLine(d.snack)}</div>
-                    </div>
-                    {d.hormone_focus && (
-                      <div className={cn("text-[11px] italic mt-2 pt-2 border-t", subtleText, introBorder)}>
-                        {d.hormone_focus}
+                        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
+                        <div className="absolute bottom-2 left-3 right-3">
+                          <span className="text-[11px] text-white font-medium drop-shadow line-clamp-1">
+                            {d.dinner}
+                          </span>
+                        </div>
                       </div>
                     )}
+                    <div className="p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="text-sm font-semibold">
+                          Day {d.day_number}
+                          <span className={cn("text-xs font-normal ml-2", mutedText)}>
+                            Cycle day {d.cycle_day}
+                          </span>
+                        </div>
+                        <span
+                          className={cn(
+                            "text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border",
+                            PHASE_CHIP[mode][d.phase] ?? chipMuted,
+                          )}
+                        >
+                          {d.phase}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs leading-relaxed">
+                        <div><span className={mutedText}>Breakfast · </span>{renderMealLine(d.breakfast)}</div>
+                        <div><span className={mutedText}>Lunch · </span>{renderMealLine(d.lunch)}</div>
+                        <div><span className={mutedText}>Dinner · </span>{renderMealLine(d.dinner)}</div>
+                        <div><span className={mutedText}>Snack · </span>{renderMealLine(d.snack)}</div>
+                      </div>
+                      {d.hormone_focus && (
+                        <div className={cn("text-[11px] italic mt-2 pt-2 border-t", subtleText, introBorder)}>
+                          {d.hormone_focus}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
