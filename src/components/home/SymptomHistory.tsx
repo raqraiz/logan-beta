@@ -114,7 +114,7 @@ export function SymptomHistory({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm rounded-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-md rounded-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-lg">Symptom History</DialogTitle>
         </DialogHeader>
