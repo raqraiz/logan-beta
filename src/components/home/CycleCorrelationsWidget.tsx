@@ -181,6 +181,10 @@ export function CycleCorrelationsWidget({
             setActiveTracker(null);
             load();
           }}
+          onUpdated={(updated) => {
+            setActiveTracker(updated);
+            load();
+          }}
         />
       )}
     </div>
