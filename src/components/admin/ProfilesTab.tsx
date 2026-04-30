@@ -491,7 +491,7 @@ export function ProfilesTab() {
                 {(cycleData || participant?.life_stage !== "cycling") && (
                   <Button variant="outline" size="sm" onClick={() => setShowHomePreview(true)}>
                     <Home className="w-4 h-4 mr-2" />
-                    View Home
+                    View as user
                   </Button>
                 )}
                 <Button variant="outline" size="sm" onClick={openEditDialog}>
