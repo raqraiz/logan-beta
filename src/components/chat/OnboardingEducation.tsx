@@ -471,7 +471,7 @@ export function AnchorExplainerCard() {
         {/* Explanation text */}
         <div className="flex-1 space-y-2 pt-1">
           <p className="text-xs text-muted-foreground leading-relaxed">
-            It's the <span className="text-foreground font-medium">one thing</span> that bothers you most each cycle. Logan uses it as your main signal — so you'll get a heads-up before it hits, instead of being blindsided.
+            It's the <span className="text-foreground font-medium">one thing</span> that bothers you most each cycle. Logan uses it as your main signal — so you should get a heads-up before it hits, instead of being blindsided.
           </p>
           <div className="bg-muted/30 rounded-lg p-2.5">
             <p className="text-[11px] text-foreground leading-snug">

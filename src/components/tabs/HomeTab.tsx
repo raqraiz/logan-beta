@@ -94,7 +94,7 @@ const DONT_MESS_UP_HIM: Record<string, string[]> = {
 const SUCCEED_HER: Record<string, string[]> = {
   Menstruation: [
     "Journal for 5 minutes. Clarity comes easier when your body is slowing down.",
-    "Batch-cook something nourishing — future you will be grateful.",
+    "Batch-cook something nourishing — future you should be grateful.",
     "Use this low-energy window to plan your week ahead. Strategy over hustle.",
     "Do one kind thing for yourself that costs nothing. A bath, a nap, silence.",
     "Reflect on last cycle's wins. You accomplished more than you remember.",
@@ -108,7 +108,7 @@ const SUCCEED_HER: Record<string, string[]> = {
   ],
   Ovulation: [
     "Negotiate the raise, pitch the idea, lead the meeting. You're built for this today.",
-    "Record a voice memo of your ideas — you're sharper than you'll be next week.",
+    "Record a voice memo of your ideas — you may be sharper than you should be next week.",
     "Celebrate a recent win out loud. Own it. You earned it.",
     "Strengthen a relationship — your empathy and communication peak now.",
     "Do the scary thing. Your risk tolerance is at its highest.",
