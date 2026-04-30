@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Download, Loader2, ShoppingBasket, Moon, Sun, ThumbsUp, ThumbsDown, Sparkles, X } from "lucide-react";
+import { Loader2, ShoppingBasket, Moon, Sun, ThumbsUp, ThumbsDown, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -36,8 +35,6 @@ interface Props {
   preview: PreviewData | null;
   previewUrl?: string | null;
   previewLoading?: boolean;
-  onDownload: () => void;
-  downloading: boolean;
   onReact?: (reaction: "up" | "down") => Promise<void> | void;
   onRefine?: (args: { excludeIngredients: string[]; feedbackText: string }) => Promise<void> | void;
   refining?: boolean;
@@ -76,7 +73,6 @@ const normalize = (s: string) => s.toLowerCase().trim().replace(/s$/, "");
 
 export function MealPlanPreviewDialog({
   open, onOpenChange, title, preview, previewUrl, previewLoading,
-  onDownload, downloading,
   onReact, onRefine, refining = false, initialReaction = null,
 }: Props) {
   const [mode, setMode] = useState<"dark" | "light">("dark");
@@ -440,16 +436,6 @@ export function MealPlanPreviewDialog({
               </div>
             </div>
           )}
-
-          <Button
-            onClick={onDownload}
-            disabled={downloading || refining}
-            variant="premium"
-            className="w-full sticky bottom-0"
-          >
-            {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            Download PDF
-          </Button>
 
           {!hasStructuredPreview ? null : (
             <p className="text-[10px] text-center text-muted-foreground/70 -mt-2 flex items-center justify-center gap-1">

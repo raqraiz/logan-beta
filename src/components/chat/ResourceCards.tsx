@@ -1,22 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Download, FileText, Loader2, AlertCircle, RefreshCw, Eye } from "lucide-react";
+import { Sparkles, FileText, Loader2, AlertCircle, RefreshCw, Eye } from "lucide-react";
 import { MealPlanSetupDialog } from "./MealPlanSetupDialog";
 import { MealPlanPreviewDialog } from "./MealPlanPreviewDialog";
 import { cn } from "@/lib/utils";
-
-const triggerBrowserDownload = (blob: Blob, filename: string) => {
-  const blobUrl = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = blobUrl;
-  link.download = filename;
-  link.style.display = "none";
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-};
 
 type ResourceMetadata = {
   preview?: {
@@ -75,7 +63,7 @@ export function ResourceOfferCard({ userId, resourceType }: { userId: string; re
           </div>
           <h3 className="text-base font-semibold text-foreground mb-1">Cyclical meal plan</h3>
           <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-            Each meal aligned to your phase. Includes a grocery list. Downloadable PDF.
+            Each meal aligned to your phase. Includes a grocery list and preview.
           </p>
           <Button onClick={() => setOpen(true)} variant="premium" size="sm" className="w-full">
             <Sparkles className="h-3.5 w-3.5" /> Build it
@@ -93,7 +81,6 @@ export function ResourceOfferCard({ userId, resourceType }: { userId: string; re
  */
 export function ResourceCard({ resourceId, userId }: { resourceId: string; userId: string }) {
   const [resource, setResource] = useState<MealPlanResource | null>(null);
-  const [downloading, setDownloading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -145,40 +132,6 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
       clearInterval(interval);
     };
   }, [resourceId]);
-
-  const downloadFilename = useMemo(() => {
-    const base = (resource?.title || "meal-plan")
-      .replace(/[\\/:*?"<>|]+/g, "")
-      .trim();
-    return `${base || "meal-plan"}.pdf`;
-  }, [resource?.title]);
-
-  const handleDownload = async () => {
-    if (!resource?.id) {
-      console.warn("Download: no resource id");
-      return;
-    }
-    setDownloading(true);
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-resource`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${sessionData.session?.access_token ?? ""}`,
-        },
-        body: JSON.stringify({ resourceId: resource.id }),
-      });
-
-      if (!response.ok) throw new Error(`Download failed: ${response.status}`);
-      const pdfBlob = new Blob([await response.blob()], { type: "application/pdf" });
-      triggerBrowserDownload(pdfBlob, downloadFilename);
-    } catch (err) {
-      console.error("Download failed:", err);
-    } finally {
-      setDownloading(false);
-    }
-  };
 
   const handlePreview = async () => {
     setPreviewOpen(true);
@@ -298,16 +251,6 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
                 <Eye className="h-3.5 w-3.5" />
                 Preview plan
               </Button>
-              <Button
-                onClick={handleDownload}
-                disabled={downloading}
-                variant="outline"
-                size="sm"
-                className="min-w-[76px]"
-              >
-                {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                <span>PDF</span>
-              </Button>
             </div>
           )}
 
@@ -337,8 +280,6 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
         preview={resource.metadata?.preview ?? null}
         previewUrl={previewUrl}
         previewLoading={previewLoading}
-        onDownload={handleDownload}
-        downloading={downloading}
         onReact={handleReact}
         onRefine={handleRefine}
         refining={refining}
