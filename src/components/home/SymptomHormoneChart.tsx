@@ -216,10 +216,11 @@ export function SymptomHormoneChart({
             />
             <XAxis
               dataKey="phase"
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
               axisLine={false}
               tickLine={false}
               dy={4}
+              interval={0}
             />
             <YAxis
               domain={[0, 5]}
