@@ -619,6 +619,36 @@ export type Database = {
           },
         ]
       }
+      resource_feedback: {
+        Row: {
+          comment: string | null
+          created_at: string
+          excluded_ingredients: string[] | null
+          id: string
+          reaction: string
+          resource_id: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          excluded_ingredients?: string[] | null
+          id?: string
+          reaction: string
+          resource_id: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          excluded_ingredients?: string[] | null
+          id?: string
+          reaction?: string
+          resource_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       symptom_logs: {
         Row: {
           created_at: string

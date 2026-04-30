@@ -121,6 +121,44 @@ serve(async (req) => {
     const style: Style = body.style === "light" ? "light" : "dark";
     const dietaryPrefs = body.dietaryPrefs || {};
 
+    // Optional revision context — when refining an existing plan
+    const parentResourceId: string | null = typeof body.parentResourceId === "string" ? body.parentResourceId : null;
+    const excludeIngredients: string[] = Array.isArray(body.excludeIngredients)
+      ? body.excludeIngredients.map((s: any) => String(s).trim()).filter(Boolean).slice(0, 30)
+      : [];
+    const feedbackText: string = typeof body.feedbackText === "string"
+      ? body.feedbackText.slice(0, 500)
+      : "";
+
+    // Load parent plan for revision (ownership enforced by user-scoped client + RLS)
+    let parentPlan: MealPlanData | null = null;
+    let parentResource: any = null;
+    let revisionLengthDays: LengthDays | null = null;
+    if (parentResourceId) {
+      const { data: pr } = await userClient
+        .from("user_resources")
+        .select("*")
+        .eq("id", parentResourceId)
+        .maybeSingle();
+      if (pr && pr.user_id === user.id) {
+        parentResource = pr;
+        parentPlan = pr.metadata?.preview ?? null;
+        if ([3, 7, 14, 28].includes(pr.metadata?.length_days)) {
+          revisionLengthDays = pr.metadata.length_days as LengthDays;
+        }
+      }
+    }
+    // When revising, inherit length from the parent so the structure matches
+    const effectiveLengthDays: LengthDays = revisionLengthDays ?? lengthDays;
+
+    // Permanently skip excluded ingredients going forward
+    if (excludeIngredients.length) {
+      dietaryPrefs.dislikes = Array.from(new Set([
+        ...(dietaryPrefs.dislikes ?? []),
+        ...excludeIngredients,
+      ]));
+    }
+
     // Save dietary prefs for re-use
     if (
       dietaryPrefs.diet_type ||
@@ -159,9 +197,10 @@ serve(async (req) => {
     const startingPhase = lifeStage === "cycling"
       ? getPhaseForDay(startCycleDay, cycleLengthDays)
       : (lifeStage === "postpartum" ? "Postpartum" : lifeStage === "menopause" ? "Menopause" : "Cyclical");
-    const lengthLabel = lengthDays === 3 ? "3-Day" : lengthDays === 7 ? "1-Week" : lengthDays === 14 ? "2-Week" : "4-Week";
+    const lengthLabel = effectiveLengthDays === 3 ? "3-Day" : effectiveLengthDays === 7 ? "1-Week" : effectiveLengthDays === 14 ? "2-Week" : "4-Week";
     const possessive = firstName ? `${firstName}'${firstName.endsWith("s") ? "" : "s"} ` : "";
-    const title = `${possessive}${lengthLabel} ${startingPhase} Menu`;
+    const baseTitle = `${possessive}${lengthLabel} ${startingPhase} Menu`;
+    const title = parentResource ? `${baseTitle} (revised)` : baseTitle;
 
     // Insert resource row immediately (status: generating)
     const { data: resource, error: insertError } = await supabase
@@ -173,11 +212,16 @@ serve(async (req) => {
         status: "generating",
         style,
         metadata: {
-          length_days: lengthDays,
+          length_days: effectiveLengthDays,
           start_cycle_day: startCycleDay,
           cycle_length_days: cycleLengthDays,
           life_stage: lifeStage,
           dietary_prefs: dietaryPrefs,
+          ...(parentResource ? {
+            parent_resource_id: parentResource.id,
+            revision_excludes: excludeIngredients,
+            revision_feedback: feedbackText,
+          } : {}),
         },
       })
       .select()
@@ -192,10 +236,13 @@ serve(async (req) => {
     }
 
     // Drop a chat message that anchors the ResourceCard inline in the chat.
+    const chatBlurb = parentResource
+      ? `Reworking your meal plan with your tweaks — new PDF coming up.`
+      : `Building your ${title.toLowerCase()} now — I'll drop the PDF here when it's ready.`;
     await supabase.from("chat_messages").insert({
       user_id: user.id,
       role: "assistant",
-      content: `Building your ${title.toLowerCase()} now — I'll drop the PDF here when it's ready.`,
+      content: chatBlurb,
       message_type: "resource",
       metadata: {
         resource_id: resource.id,
@@ -210,13 +257,16 @@ serve(async (req) => {
       userId: user.id,
       resourceId: resource.id,
       participant,
-      lengthDays,
+      lengthDays: effectiveLengthDays,
       style,
       dietaryPrefs,
       startCycleDay,
       cycleLengthDays,
       lifeStage,
       title,
+      parentPlan,
+      excludeIngredients,
+      feedbackText,
     });
 
     // @ts-ignore: Deno background task
@@ -250,11 +300,15 @@ async function generateAndUploadPdf(args: {
   cycleLengthDays: number;
   lifeStage: string;
   title: string;
+  parentPlan?: MealPlanData | null;
+  excludeIngredients?: string[];
+  feedbackText?: string;
 }) {
   const {
     supabase, lovableApiKey, userId, resourceId, participant,
     lengthDays, style, dietaryPrefs, startCycleDay, cycleLengthDays,
     lifeStage, title,
+    parentPlan = null, excludeIngredients = [], feedbackText = "",
   } = args;
 
   try {
@@ -296,7 +350,21 @@ For each WEEK, also produce a phase_summary (1-2 sentences explaining what hormo
 
 Write a 2-sentence intro that explains the plan's logic in Logan's voice (warm, grounded, no fluff, no emojis).`;
 
-    const userPrompt = `Build the ${lengthDays}-day plan starting on cycle day ${startCycleDay} of a ${cycleLengthDays}-day cycle. Day-to-phase mapping:\n${dayScaffold.map(d => `Day ${d.day_number}: cycle day ${d.cycle_day} (${d.phase})`).join("\n")}\n\nReturn structured JSON via the build_meal_plan tool.`;
+    const revisionBlock: string[] = [];
+    if (parentPlan?.days?.length) {
+      const parentSummary = parentPlan.days.map(d =>
+        `Day ${d.day_number} (${d.phase}, cycle day ${d.cycle_day}): B="${d.breakfast}" | L="${d.lunch}" | D="${d.dinner}" | S="${d.snack}"`
+      ).join("\n");
+      revisionBlock.push(`This is a REVISION of an existing plan. Keep the same overall structure, phase logic and any meals the user didn't complain about. Only change what's necessary to address the feedback below.\n\nPREVIOUS PLAN:\n${parentSummary}`);
+    }
+    if (excludeIngredients.length) {
+      revisionBlock.push(`HARD EXCLUSIONS — these ingredients must NOT appear anywhere in the new plan, including grocery lists or meal names: ${excludeIngredients.join(", ")}.`);
+    }
+    if (feedbackText.trim()) {
+      revisionBlock.push(`USER FEEDBACK to address:\n"${feedbackText.trim()}"`);
+    }
+
+    const userPrompt = `Build the ${lengthDays}-day plan starting on cycle day ${startCycleDay} of a ${cycleLengthDays}-day cycle. Day-to-phase mapping:\n${dayScaffold.map(d => `Day ${d.day_number}: cycle day ${d.cycle_day} (${d.phase})`).join("\n")}\n\n${revisionBlock.join("\n\n")}\n\nReturn structured JSON via the build_meal_plan tool.`;
 
     const aiResponse = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",

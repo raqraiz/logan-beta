@@ -49,6 +49,8 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [refining, setRefining] = useState(false);
+  const [reaction, setReaction] = useState<"up" | "down" | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -58,6 +60,16 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
       .eq("id", resourceId)
       .maybeSingle()
       .then(({ data }) => { if (active) setResource(data); });
+
+    // Load this user's last reaction for this resource (if any)
+    supabase
+      .from("resource_feedback")
+      .select("reaction")
+      .eq("resource_id", resourceId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => { if (active && data?.reaction) setReaction(data.reaction as "up" | "down"); });
 
     const channel = supabase
       .channel(`resource_${resourceId}`)
@@ -118,6 +130,51 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
       console.error("Preview failed:", err);
     } finally {
       setPreviewLoading(false);
+    }
+  };
+
+  const handleReact = async (next: "up" | "down") => {
+    setReaction(next);
+    try {
+      await supabase.from("resource_feedback").insert({
+        user_id: userId,
+        resource_id: resourceId,
+        reaction: next,
+      });
+    } catch (err) {
+      console.error("Reaction failed:", err);
+    }
+  };
+
+  const handleRefine = async ({
+    excludeIngredients,
+    feedbackText,
+  }: { excludeIngredients: string[]; feedbackText: string }) => {
+    if (!resource) return;
+    setRefining(true);
+    try {
+      await supabase.from("resource_feedback").insert({
+        user_id: userId,
+        resource_id: resourceId,
+        reaction: reaction ?? "down",
+        comment: feedbackText || null,
+        excluded_ingredients: excludeIngredients,
+      });
+
+      await supabase.functions.invoke("generate-meal-plan", {
+        body: {
+          parentResourceId: resourceId,
+          style: resource.style,
+          lengthDays: resource.metadata?.length_days,
+          excludeIngredients,
+          feedbackText,
+          dietaryPrefs: resource.metadata?.dietary_prefs ?? {},
+        },
+      });
+    } catch (err) {
+      console.error("Refine failed:", err);
+    } finally {
+      setRefining(false);
     }
   };
 
@@ -215,6 +272,10 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
         previewLoading={previewLoading}
         onDownload={handleDownload}
         downloading={downloading}
+        onReact={handleReact}
+        onRefine={handleRefine}
+        refining={refining}
+        initialReaction={reaction}
       />
     </div>
   );
