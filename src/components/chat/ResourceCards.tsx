@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Download, FileText, Loader2, AlertCircle, RefreshCw, Eye } from "lucide-react";
@@ -46,6 +46,7 @@ export function ResourceOfferCard({ userId, resourceType }: { userId: string; re
 export function ResourceCard({ resourceId, userId }: { resourceId: string; userId: string }) {
   const [resource, setResource] = useState<any>(null);
   const [downloading, setDownloading] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -98,34 +99,58 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
     };
   }, [resourceId]);
 
+  const downloadFilename = useMemo(() => {
+    const base = (resource?.title || "meal-plan")
+      .replace(/[\\/:*?"<>|]+/g, "")
+      .trim();
+    return `${base || "meal-plan"}.pdf`;
+  }, [resource?.title]);
+
+  useEffect(() => {
+    let active = true;
+    setDownloadUrl(null);
+    if (!resource?.pdf_path || resource.status !== "ready") return;
+
+    supabase.storage
+      .from("resources")
+      .createSignedUrl(resource.pdf_path, 60 * 60, { download: downloadFilename })
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error || !data?.signedUrl) {
+          console.error("Download URL failed:", error);
+          return;
+        }
+        setDownloadUrl(data.signedUrl);
+      });
+
+    return () => { active = false; };
+  }, [resource?.pdf_path, resource?.status, downloadFilename]);
+
   const handleDownload = async () => {
     if (!resource?.pdf_path) {
       console.warn("Download: no pdf_path on resource", resource?.id);
       return;
     }
+    if (downloadUrl) {
+      window.open(downloadUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    // Open synchronously, then fill the URL after signing so browser popup/download blockers don't swallow the click.
+    const downloadWindow = window.open("about:blank", "_blank", "noopener,noreferrer");
     setDownloading(true);
     try {
       const { data, error } = await supabase.storage
         .from("resources")
         .createSignedUrl(resource.pdf_path, 60 * 5, {
-          download: resource.title ? `${resource.title}.pdf` : true,
+          download: downloadFilename,
         });
       if (error || !data?.signedUrl) throw error || new Error("No signed URL");
-
-      // Fetch as blob and trigger download via anchor — avoids popup blockers
-      // and works reliably from inside a dialog.
-      const res = await fetch(data.signedUrl);
-      if (!res.ok) throw new Error(`Download failed: ${res.status}`);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = resource.title ? `${resource.title}.pdf` : "meal-plan.pdf";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setDownloadUrl(data.signedUrl);
+      if (downloadWindow) downloadWindow.location.href = data.signedUrl;
+      else window.location.href = data.signedUrl;
     } catch (err) {
+      downloadWindow?.close();
       console.error("Download failed:", err);
     } finally {
       setDownloading(false);
