@@ -105,11 +105,35 @@ export function MealPlanPreviewDialog({ open, onOpenChange, title, preview, prev
                   <Loader2 className="h-4 w-4 animate-spin" /> Loading preview…
                 </div>
               ) : previewUrl ? (
-                <iframe
-                  title={`${title} preview`}
-                  src={`${previewUrl}#toolbar=0&navpanes=0`}
-                  className="h-[60vh] w-full bg-background"
-                />
+                <div className="flex flex-col">
+                  <object
+                    data={`${previewUrl}#toolbar=0&navpanes=0&view=FitH`}
+                    type="application/pdf"
+                    className="h-[60vh] w-full bg-background"
+                  >
+                    <div className="flex h-[60vh] flex-col items-center justify-center gap-3 px-6 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Your browser can't preview PDFs inline.
+                      </p>
+                      <a
+                        href={previewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary underline underline-offset-2"
+                      >
+                        Open PDF in a new tab
+                      </a>
+                    </div>
+                  </object>
+                  <a
+                    href={previewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 self-end text-xs text-primary/80 hover:text-primary underline underline-offset-2"
+                  >
+                    Open in new tab ↗
+                  </a>
+                </div>
               ) : (
                 <div className="flex h-40 items-center justify-center px-4 text-center text-sm text-muted-foreground">
                   Preview is still getting ready. Try again in a moment.
