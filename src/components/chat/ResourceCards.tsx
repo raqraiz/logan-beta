@@ -167,7 +167,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
           "Content-Type": "application/json",
           Authorization: `Bearer ${sessionData.session?.access_token ?? ""}`,
         },
-        body: { resourceId: resource.id },
+        body: JSON.stringify({ resourceId: resource.id }),
       });
 
       if (!response.ok) throw new Error(`Download failed: ${response.status}`);
