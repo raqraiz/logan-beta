@@ -290,52 +290,52 @@ export function MealPlanPreviewDialog({
               <div className="space-y-3">
                 {days.map(d => (
                   <div key={d.day_number} className={cn("rounded-xl border overflow-hidden", cardSurface)}>
-                    <div className="p-3">
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          {d.image_path && (
-                            <div className="relative h-16 w-16 shrink-0 rounded-lg overflow-hidden bg-black/20">
-                              {imageUrls[d.day_number] ? (
-                                <img
-                                  src={imageUrls[d.day_number]}
-                                  alt={`Day ${d.day_number} ${d.phase} dinner`}
-                                  className="w-full h-full object-cover"
-                                  loading="lazy"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/60" />
-                                </div>
-                              )}
+                    <div className="flex items-stretch">
+                      {d.image_path && (
+                        <div className="relative w-1/2 shrink-0 self-stretch bg-black/20 min-h-[140px]">
+                          {imageUrls[d.day_number] ? (
+                            <img
+                              src={imageUrls[d.day_number]}
+                              alt={`Day ${d.day_number} ${d.phase} dinner`}
+                              className="absolute inset-0 w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground/60" />
                             </div>
                           )}
+                        </div>
+                      )}
+                      <div className={cn("p-3 flex-1 min-w-0", d.image_path && "w-1/2")}>
+                        <div className="flex items-center justify-between gap-2 mb-2">
                           <div className="text-sm font-semibold truncate">
                             Day {d.day_number}
                             <span className={cn("text-xs font-normal ml-2", mutedText)}>
                               Cycle day {d.cycle_day}
                             </span>
                           </div>
+                          <span
+                            className={cn(
+                              "text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border shrink-0",
+                              PHASE_CHIP[mode][d.phase] ?? chipMuted,
+                            )}
+                          >
+                            {d.phase}
+                          </span>
                         </div>
-                        <span
-                          className={cn(
-                            "text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border",
-                            PHASE_CHIP[mode][d.phase] ?? chipMuted,
-                          )}
-                        >
-                          {d.phase}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs leading-relaxed">
-                        <div><span className={mutedText}>Breakfast · </span>{renderMealLine(d.breakfast)}</div>
-                        <div><span className={mutedText}>Lunch · </span>{renderMealLine(d.lunch)}</div>
-                        <div><span className={mutedText}>Dinner · </span>{renderMealLine(d.dinner)}</div>
-                        <div><span className={mutedText}>Snack · </span>{renderMealLine(d.snack)}</div>
-                      </div>
-                      {d.hormone_focus && (
-                        <div className={cn("text-[11px] italic mt-2 pt-2 border-t", subtleText, introBorder)}>
-                          {d.hormone_focus}
+                        <div className="grid grid-cols-1 gap-y-1.5 text-xs leading-relaxed">
+                          <div><span className={mutedText}>Breakfast · </span>{renderMealLine(d.breakfast)}</div>
+                          <div><span className={mutedText}>Lunch · </span>{renderMealLine(d.lunch)}</div>
+                          <div><span className={mutedText}>Dinner · </span>{renderMealLine(d.dinner)}</div>
+                          <div><span className={mutedText}>Snack · </span>{renderMealLine(d.snack)}</div>
                         </div>
-                      )}
+                        {d.hormone_focus && (
+                          <div className={cn("text-[11px] italic mt-2 pt-2 border-t", subtleText, introBorder)}>
+                            {d.hormone_focus}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
