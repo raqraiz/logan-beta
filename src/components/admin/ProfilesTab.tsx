@@ -908,36 +908,58 @@ export function ProfilesTab() {
           </DialogContent>
         </Dialog>
 
-        {/* Home Preview Dialog */}
+        {/* User View Preview Dialog (read-only) */}
         <Dialog open={showHomePreview} onOpenChange={setShowHomePreview}>
           <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0">
-            <DialogHeader className="px-4 pt-4 pb-0">
+            <DialogHeader className="px-4 pt-4 pb-2">
               <DialogTitle className="text-sm font-medium flex items-center gap-2">
                 <Home className="w-4 h-4" />
-                {profile.full_name}'s Home
+                {profile.full_name}'s App
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Preview of this user's personalized home tab
+                Read-only preview of what this user sees
               </DialogDescription>
             </DialogHeader>
-            <div className="px-2 pb-4 pointer-events-none">
-              <HomeTab
-                cycleData={cycleData ? { 
-                  ...cycleData, 
-                  cycleLengthDays: participant?.cycle_length_days || 28, 
-                  lastPeriodStart: participant?.last_period_start || undefined,
-                  lifeStage: (participant?.life_stage as any) || "cycling",
-                  postpartumStartDate: participant?.postpartum_start_date || undefined,
-                } : participant?.life_stage && participant.life_stage !== "cycling" ? {
-                  cycleDay: 0,
-                  phase: participant.life_stage === "postpartum" ? "Postpartum" : "Menopause",
-                  cycleLengthDays: 0,
-                  lifeStage: participant.life_stage as "postpartum" | "menopause",
-                  postpartumStartDate: participant?.postpartum_start_date || undefined,
-                } : null}
-                userId={profile.id}
-              />
-            </div>
+            {(() => {
+              const previewCycleData = cycleData ? {
+                ...cycleData,
+                cycleLengthDays: participant?.cycle_length_days || 28,
+                lastPeriodStart: participant?.last_period_start || undefined,
+                lifeStage: (participant?.life_stage as any) || "cycling",
+                postpartumStartDate: participant?.postpartum_start_date || undefined,
+              } : participant?.life_stage && participant.life_stage !== "cycling" ? {
+                cycleDay: 0,
+                phase: participant.life_stage === "postpartum" ? "Postpartum" : "Menopause",
+                cycleLengthDays: 0,
+                lifeStage: participant.life_stage as "postpartum" | "menopause",
+                postpartumStartDate: participant?.postpartum_start_date || undefined,
+              } : null;
+
+              return (
+                <Tabs defaultValue="home" className="w-full">
+                  <TabsList className="grid grid-cols-2 mx-4 mb-2">
+                    <TabsTrigger value="home" className="gap-2">
+                      <Home className="w-4 h-4" />
+                      Home
+                    </TabsTrigger>
+                    <TabsTrigger value="plan" className="gap-2">
+                      <CalendarDays className="w-4 h-4" />
+                      Plan
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="home" className="mt-0">
+                    <div className="px-2 pb-4 pointer-events-none select-none">
+                      <HomeTab cycleData={previewCycleData} userId={profile.id} />
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="plan" className="mt-0">
+                    <div className="px-2 pb-4 pointer-events-none select-none">
+                      <PlanTab cycleData={previewCycleData} userId={profile.id} />
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              );
+            })()}
           </DialogContent>
         </Dialog>
       </div>
