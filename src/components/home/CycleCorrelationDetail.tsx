@@ -207,6 +207,8 @@ export function CycleCorrelationDetail({
     onUpdated?.({ ...tracker, name, emoji });
   };
 
+  const recentLogs = logs.slice(0, 7);
+
   const cancelEdit = () => {
     setEditName(tracker.name);
     setEditEmoji(tracker.emoji);
