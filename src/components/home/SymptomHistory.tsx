@@ -7,7 +7,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { format, subDays, startOfDay } from "date-fns";
+import { format, subDays } from "date-fns";
+import { ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { SymptomHormoneChart } from "./SymptomHormoneChart";
 
 interface SymptomEntry {
   name: string;
@@ -27,6 +30,9 @@ interface SymptomHistoryProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
+  lastPeriodStart?: string;
+  cycleLengthDays?: number;
+  isNonCycling?: boolean;
 }
 
 const SEVERITY_COLORS = [
@@ -40,10 +46,18 @@ const SEVERITY_COLORS = [
 
 const SEVERITY_LABELS = ["None", "Mild", "Light", "Moderate", "Strong", "Severe"];
 
-export function SymptomHistory({ open, onOpenChange, userId }: SymptomHistoryProps) {
+export function SymptomHistory({
+  open,
+  onOpenChange,
+  userId,
+  lastPeriodStart,
+  cycleLengthDays = 28,
+  isNonCycling = false,
+}: SymptomHistoryProps) {
   const [logs, setLogs] = useState<SymptomLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [topSymptoms, setTopSymptoms] = useState<{ name: string; count: number; avgSeverity: number }[]>([]);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !userId) return;
@@ -100,7 +114,7 @@ export function SymptomHistory({ open, onOpenChange, userId }: SymptomHistoryPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm rounded-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-md rounded-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-lg">Symptom History</DialogTitle>
         </DialogHeader>
@@ -121,18 +135,51 @@ export function SymptomHistory({ open, onOpenChange, userId }: SymptomHistoryPro
                 <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                   Your Top Patterns (90 days)
                 </h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {topSymptoms.map(s => (
-                    <div key={s.name} className="flex items-center gap-2 rounded-lg bg-muted/50 px-2.5 py-1.5">
-                      <div className={`w-2 h-2 rounded-full ${SEVERITY_COLORS[Math.round(s.avgSeverity)] || "bg-muted-foreground/30"}`} />
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-foreground truncate">{s.name}</p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {s.count}× · avg {SEVERITY_LABELS[Math.round(s.avgSeverity)] || s.avgSeverity}
-                        </p>
+                <p className="text-[10px] text-muted-foreground/60 mb-2">
+                  Tap a symptom to see how it tracks against your hormone curves.
+                </p>
+                <div className="space-y-2">
+                  {topSymptoms.map(s => {
+                    const isOpen = expanded === s.name;
+                    return (
+                      <div
+                        key={s.name}
+                        className="rounded-xl border border-border/30 bg-muted/30 overflow-hidden"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setExpanded(isOpen ? null : s.name)}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 text-left hover:bg-muted/50 transition-colors"
+                          aria-expanded={isOpen}
+                        >
+                          <div className={`w-2 h-2 rounded-full ${SEVERITY_COLORS[Math.round(s.avgSeverity)] || "bg-muted-foreground/30"}`} />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium text-foreground truncate">{s.name}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {s.count}× · avg {SEVERITY_LABELS[Math.round(s.avgSeverity)] || s.avgSeverity}
+                            </p>
+                          </div>
+                          <ChevronDown
+                            className={cn(
+                              "w-4 h-4 text-muted-foreground transition-transform shrink-0",
+                              isOpen && "rotate-180"
+                            )}
+                          />
+                        </button>
+                        {isOpen && (
+                          <div className="px-2 pb-2">
+                            <SymptomHormoneChart
+                              userId={userId}
+                              symptomName={s.name}
+                              lastPeriodStart={lastPeriodStart}
+                              cycleLengthDays={cycleLengthDays}
+                              isNonCycling={isNonCycling}
+                            />
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

@@ -657,6 +657,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           open={showSymptomHistory}
           onOpenChange={setShowSymptomHistory}
           userId={userId}
+          lastPeriodStart={cycleData.lastPeriodStart}
+          cycleLengthDays={cycleData.cycleLengthDays}
+          isNonCycling={!!isNonCycling}
         />
       )}
     </div>
