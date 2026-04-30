@@ -101,6 +101,35 @@ export function MealPlanPreviewDialog({
   const weeks = preview?.weeks ?? [];
   const hasStructuredPreview = days.length > 0;
 
+  // Resolve signed URLs for each day's hero photo (image_path -> https url)
+  const [imageUrls, setImageUrls] = useState<Record<number, string>>({});
+  useEffect(() => {
+    let active = true;
+    const paths = days
+      .map(d => ({ day: d.day_number, path: d.image_path }))
+      .filter(p => !!p.path) as { day: number; path: string }[];
+    if (paths.length === 0) {
+      setImageUrls({});
+      return;
+    }
+    (async () => {
+      const entries = await Promise.all(
+        paths.map(async ({ day, path }) => {
+          const { data } = await supabase.storage
+            .from("resources")
+            .createSignedUrl(path, 60 * 60);
+          return [day, data?.signedUrl ?? ""] as const;
+        }),
+      );
+      if (!active) return;
+      const next: Record<number, string> = {};
+      entries.forEach(([day, url]) => { if (url) next[day] = url; });
+      setImageUrls(next);
+    })();
+    return () => { active = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days.map(d => `${d.day_number}:${d.image_path ?? ""}`).join("|")]);
+
   const isDark = mode === "dark";
   const surface = isDark
     ? "bg-[hsl(220,15%,8%)] text-[hsl(0,0%,95%)] border-white/10"
