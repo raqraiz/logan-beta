@@ -350,7 +350,21 @@ For each WEEK, also produce a phase_summary (1-2 sentences explaining what hormo
 
 Write a 2-sentence intro that explains the plan's logic in Logan's voice (warm, grounded, no fluff, no emojis).`;
 
-    const userPrompt = `Build the ${lengthDays}-day plan starting on cycle day ${startCycleDay} of a ${cycleLengthDays}-day cycle. Day-to-phase mapping:\n${dayScaffold.map(d => `Day ${d.day_number}: cycle day ${d.cycle_day} (${d.phase})`).join("\n")}\n\nReturn structured JSON via the build_meal_plan tool.`;
+    const revisionBlock: string[] = [];
+    if (parentPlan?.days?.length) {
+      const parentSummary = parentPlan.days.map(d =>
+        `Day ${d.day_number} (${d.phase}, cycle day ${d.cycle_day}): B="${d.breakfast}" | L="${d.lunch}" | D="${d.dinner}" | S="${d.snack}"`
+      ).join("\n");
+      revisionBlock.push(`This is a REVISION of an existing plan. Keep the same overall structure, phase logic and any meals the user didn't complain about. Only change what's necessary to address the feedback below.\n\nPREVIOUS PLAN:\n${parentSummary}`);
+    }
+    if (excludeIngredients.length) {
+      revisionBlock.push(`HARD EXCLUSIONS — these ingredients must NOT appear anywhere in the new plan, including grocery lists or meal names: ${excludeIngredients.join(", ")}.`);
+    }
+    if (feedbackText.trim()) {
+      revisionBlock.push(`USER FEEDBACK to address:\n"${feedbackText.trim()}"`);
+    }
+
+    const userPrompt = `Build the ${lengthDays}-day plan starting on cycle day ${startCycleDay} of a ${cycleLengthDays}-day cycle. Day-to-phase mapping:\n${dayScaffold.map(d => `Day ${d.day_number}: cycle day ${d.cycle_day} (${d.phase})`).join("\n")}\n\n${revisionBlock.join("\n\n")}\n\nReturn structured JSON via the build_meal_plan tool.`;
 
     const aiResponse = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
