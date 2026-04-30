@@ -290,35 +290,31 @@ export function MealPlanPreviewDialog({
               <div className="space-y-3">
                 {days.map(d => (
                   <div key={d.day_number} className={cn("rounded-xl border overflow-hidden", cardSurface)}>
-                    {d.image_path && (
-                      <div className="relative w-full aspect-[16/9] bg-black/20 overflow-hidden">
-                        {imageUrls[d.day_number] ? (
-                          <img
-                            src={imageUrls[d.day_number]}
-                            alt={`Day ${d.day_number} ${d.phase} dinner`}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground/60" />
-                          </div>
-                        )}
-                        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
-                        <div className="absolute bottom-2 left-3 right-3">
-                          <span className="text-[11px] text-white font-medium drop-shadow line-clamp-1">
-                            {d.dinner}
-                          </span>
-                        </div>
-                      </div>
-                    )}
                     <div className="p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="text-sm font-semibold">
-                          Day {d.day_number}
-                          <span className={cn("text-xs font-normal ml-2", mutedText)}>
-                            Cycle day {d.cycle_day}
-                          </span>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {d.image_path && (
+                            <div className="relative h-10 w-10 shrink-0 rounded-md overflow-hidden bg-black/20">
+                              {imageUrls[d.day_number] ? (
+                                <img
+                                  src={imageUrls[d.day_number]}
+                                  alt={`Day ${d.day_number} ${d.phase} dinner`}
+                                  className="w-full h-full object-cover"
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/60" />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          <div className="text-sm font-semibold truncate">
+                            Day {d.day_number}
+                            <span className={cn("text-xs font-normal ml-2", mutedText)}>
+                              Cycle day {d.cycle_day}
+                            </span>
+                          </div>
                         </div>
                         <span
                           className={cn(
