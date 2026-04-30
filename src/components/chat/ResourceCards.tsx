@@ -99,14 +99,32 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
   }, [resourceId]);
 
   const handleDownload = async () => {
-    if (!resource?.pdf_path) return;
+    if (!resource?.pdf_path) {
+      console.warn("Download: no pdf_path on resource", resource?.id);
+      return;
+    }
     setDownloading(true);
     try {
       const { data, error } = await supabase.storage
         .from("resources")
-        .createSignedUrl(resource.pdf_path, 60 * 5);
-      if (error || !data?.signedUrl) throw error;
-      window.open(data.signedUrl, "_blank");
+        .createSignedUrl(resource.pdf_path, 60 * 5, {
+          download: resource.title ? `${resource.title}.pdf` : true,
+        });
+      if (error || !data?.signedUrl) throw error || new Error("No signed URL");
+
+      // Fetch as blob and trigger download via anchor — avoids popup blockers
+      // and works reliably from inside a dialog.
+      const res = await fetch(data.signedUrl);
+      if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = resource.title ? `${resource.title}.pdf` : "meal-plan.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (err) {
       console.error("Download failed:", err);
     } finally {
