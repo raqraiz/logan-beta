@@ -8,9 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { format, subDays } from "date-fns";
-import { ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { SymptomHormoneChart } from "./SymptomHormoneChart";
+import { AllSymptomsChart } from "./AllSymptomsChart";
 
 interface SymptomEntry {
   name: string;
