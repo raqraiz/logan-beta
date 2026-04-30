@@ -46,10 +46,18 @@ const SEVERITY_COLORS = [
 
 const SEVERITY_LABELS = ["None", "Mild", "Light", "Moderate", "Strong", "Severe"];
 
-export function SymptomHistory({ open, onOpenChange, userId }: SymptomHistoryProps) {
+export function SymptomHistory({
+  open,
+  onOpenChange,
+  userId,
+  lastPeriodStart,
+  cycleLengthDays = 28,
+  isNonCycling = false,
+}: SymptomHistoryProps) {
   const [logs, setLogs] = useState<SymptomLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [topSymptoms, setTopSymptoms] = useState<{ name: string; count: number; avgSeverity: number }[]>([]);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !userId) return;
