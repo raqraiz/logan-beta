@@ -300,11 +300,15 @@ async function generateAndUploadPdf(args: {
   cycleLengthDays: number;
   lifeStage: string;
   title: string;
+  parentPlan?: MealPlanData | null;
+  excludeIngredients?: string[];
+  feedbackText?: string;
 }) {
   const {
     supabase, lovableApiKey, userId, resourceId, participant,
     lengthDays, style, dietaryPrefs, startCycleDay, cycleLengthDays,
     lifeStage, title,
+    parentPlan = null, excludeIngredients = [], feedbackText = "",
   } = args;
 
   try {
