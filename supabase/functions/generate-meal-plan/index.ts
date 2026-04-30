@@ -28,6 +28,7 @@ interface MealDay {
   dinner: string;
   snack: string;
   hormone_focus: string;
+  image_path?: string | null;
 }
 
 interface WeekBlock {
