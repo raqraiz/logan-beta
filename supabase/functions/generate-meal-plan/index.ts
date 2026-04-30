@@ -154,14 +154,14 @@ serve(async (req) => {
     const startCycleDay = getCycleDay(lastPeriodStart, cycleLengthDays);
     const lifeStage = participant?.life_stage || "cycling";
 
-    // Title
-    const titleByLength: Record<LengthDays, string> = {
-      3: "3-Day Cyclical Meal Plan",
-      7: "1-Week Cyclical Meal Plan",
-      14: "2-Week Cyclical Meal Plan",
-      28: "4-Week Cyclical Meal Plan",
-    };
-    const title = titleByLength[lengthDays];
+    // Personalized title — e.g. "Raquella's 3-Day Luteal Menu"
+    const firstName = participant?.full_name?.split(" ")?.[0]?.trim() || null;
+    const startingPhase = lifeStage === "cycling"
+      ? getPhaseForDay(startCycleDay, cycleLengthDays)
+      : (lifeStage === "postpartum" ? "Postpartum" : lifeStage === "menopause" ? "Menopause" : "Cyclical");
+    const lengthLabel = lengthDays === 3 ? "3-Day" : lengthDays === 7 ? "1-Week" : lengthDays === 14 ? "2-Week" : "4-Week";
+    const possessive = firstName ? `${firstName}'${firstName.endsWith("s") ? "" : "s"} ` : "";
+    const title = `${possessive}${lengthLabel} ${startingPhase} Menu`;
 
     // Insert resource row immediately (status: generating)
     const { data: resource, error: insertError } = await supabase
