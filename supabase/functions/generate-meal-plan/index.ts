@@ -191,6 +191,18 @@ serve(async (req) => {
       });
     }
 
+    // Drop a chat message that anchors the ResourceCard inline in the chat.
+    await supabase.from("chat_messages").insert({
+      user_id: user.id,
+      role: "assistant",
+      content: `Building your ${title.toLowerCase()} now — I'll drop the PDF here when it's ready.`,
+      message_type: "resource",
+      metadata: {
+        resource_id: resource.id,
+        resource_type: "meal_plan",
+      },
+    });
+
     // Kick off generation in the background (don't block the response)
     const generationTask = generateAndUploadPdf({
       supabase,

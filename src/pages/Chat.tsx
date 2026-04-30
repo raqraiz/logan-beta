@@ -31,6 +31,7 @@ import { CalendarSubscribe } from "@/components/chat/CalendarSubscribe";
 import { CycleForecast } from "@/components/chat/CycleForecast";
 import { CreditBalance } from "@/components/chat/CreditBalance";
 import { OutOfCredits } from "@/components/chat/OutOfCredits";
+import { ResourceOfferCard, ResourceCard } from "@/components/chat/ResourceCards";
 import { BottomTabBar, type TabId } from "@/components/tabs/BottomTabBar";
 import { HomeTab } from "@/components/tabs/HomeTab";
 import { PlanTab } from "@/components/tabs/PlanTab";
@@ -83,6 +84,8 @@ interface ChatMessage {
       nutrition?: { level: string; note: string };
     } | null;
     cheat_sheet_responses?: Record<string, string>;
+    resource_type?: string;
+    resource_id?: string;
   };
 }
 
@@ -1254,6 +1257,22 @@ const Chat = () => {
                         <div className="mt-3">
                           <MarkdownMessage content={message.metadata.engagement_question as string} />
                         </div>
+                      )}
+
+                      {/* Resource offer card (Logan suggesting a downloadable) */}
+                      {message.message_type === "resource_offer" && message.metadata?.resource_type && user && (
+                        <ResourceOfferCard
+                          userId={user.id}
+                          resourceType={message.metadata.resource_type as string}
+                        />
+                      )}
+
+                      {/* Generated/generating resource card */}
+                      {message.metadata?.resource_id && user && (
+                        <ResourceCard
+                          resourceId={message.metadata.resource_id as string}
+                          userId={user.id}
+                        />
                       )}
                       
                       <div className={`flex items-center gap-2 mt-1 ${
