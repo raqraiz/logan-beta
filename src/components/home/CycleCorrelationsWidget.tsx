@@ -22,7 +22,7 @@ interface Props {
   isNonCycling: boolean;
 }
 
-const QUICK_INTENSITIES = [1, 2, 3, 4, 5];
+const QUICK_INTENSITIES = [0, 1, 2, 3, 4, 5];
 
 export function CycleCorrelationsWidget({
   userId,
