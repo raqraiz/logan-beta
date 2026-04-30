@@ -54,6 +54,7 @@ interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onDeleted: () => void;
+  onUpdated?: (t: Tracker) => void;
 }
 
 export function CycleCorrelationDetail({
@@ -65,9 +66,20 @@ export function CycleCorrelationDetail({
   open,
   onOpenChange,
   onDeleted,
+  onUpdated,
 }: Props) {
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(tracker.name);
+  const [editEmoji, setEditEmoji] = useState(tracker.emoji);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  useEffect(() => {
+    setEditName(tracker.name);
+    setEditEmoji(tracker.emoji);
+    setEditing(false);
+  }, [tracker.id, tracker.name, tracker.emoji]);
 
   useEffect(() => {
     if (!open) return;
