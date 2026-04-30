@@ -458,6 +458,23 @@ Write a 2-sentence intro that explains the plan's logic in Logan's voice (warm, 
       throw new Error("AI returned incomplete meal plan");
     }
 
+    // ---------- Generate hero photos for each day (parallel, best-effort) ----------
+    // We pick the dinner as the photographed meal — the most "shareable" plate.
+    // If image gen fails for any day we just skip — the rest of the flow continues.
+    const imagePaths = await generateDayHeroImages({
+      supabase,
+      lovableApiKey,
+      userId,
+      resourceId,
+      days: planData.days,
+    });
+    // Attach image_path to each day in the plan data for the preview metadata
+    const daysWithImages = planData.days.map((d, i) => ({
+      ...d,
+      image_path: imagePaths[i] ?? null,
+    }));
+    planData.days = daysWithImages as MealDay[];
+
     // Render PDF
     const pdfBytes = await renderMealPlanPdf({
       planData,
