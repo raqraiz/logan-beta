@@ -7,7 +7,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { format, subDays, startOfDay } from "date-fns";
+import { format, subDays } from "date-fns";
+import { ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { SymptomHormoneChart } from "./SymptomHormoneChart";
 
 interface SymptomEntry {
   name: string;
@@ -27,6 +30,9 @@ interface SymptomHistoryProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
+  lastPeriodStart?: string;
+  cycleLengthDays?: number;
+  isNonCycling?: boolean;
 }
 
 const SEVERITY_COLORS = [
