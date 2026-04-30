@@ -186,6 +186,14 @@ export function MealPlanSetupDialog({ open, onOpenChange, userId, onGenerated }:
                   </button>
                 ))}
               </div>
+              {dietType === "Other" && (
+                <Input
+                  value={dietOther}
+                  onChange={e => setDietOther(e.target.value)}
+                  placeholder="Describe your diet (e.g. low-FODMAP, raw vegan)"
+                  className="h-8 text-xs mt-2"
+                />
+              )}
             </div>
 
             {/* Allergies */}
