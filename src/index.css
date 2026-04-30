@@ -59,15 +59,24 @@
     --phase-ovulation: 40 90% 56%;
     --phase-luteal: 270 60% 65%;
     
-    /* Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(168 80% 42%) 0%, hsl(168 60% 35%) 100%);
-    --gradient-soft: linear-gradient(180deg, hsl(240 10% 4%) 0%, hsl(220 10% 8%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(220 10% 12%) 0%, hsl(220 10% 8%) 100%);
-    
-    /* Shadows */
-    --shadow-soft: 0 4px 20px -4px hsl(0 0% 0% / 0.5);
-    --shadow-glow: 0 0 30px -5px hsl(168 80% 42% / 0.4);
-    --shadow-card: 0 2px 20px -4px hsl(0 0% 0% / 0.6);
+    /* Gradients — premium, layered */
+    --gradient-hero: linear-gradient(135deg, hsl(168 80% 48%) 0%, hsl(168 70% 36%) 60%, hsl(190 70% 30%) 100%);
+    --gradient-soft: radial-gradient(1200px 600px at 20% -10%, hsl(168 60% 14% / 0.55), transparent 60%), radial-gradient(900px 500px at 100% 0%, hsl(270 50% 18% / 0.35), transparent 55%), linear-gradient(180deg, hsl(240 10% 4%) 0%, hsl(220 10% 6%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(220 10% 13% / 0.85) 0%, hsl(220 10% 8% / 0.75) 100%);
+    --gradient-glass: linear-gradient(145deg, hsl(210 20% 97% / 0.06) 0%, hsl(210 20% 97% / 0.02) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(168 85% 50%), hsl(168 70% 38%));
+    --gradient-text: linear-gradient(135deg, hsl(210 20% 99%), hsl(168 60% 80%));
+
+    /* Shadows — refined depth */
+    --shadow-soft: 0 4px 24px -8px hsl(0 0% 0% / 0.5);
+    --shadow-glow: 0 0 40px -8px hsl(168 80% 42% / 0.45);
+    --shadow-card: 0 8px 32px -12px hsl(0 0% 0% / 0.6), 0 2px 4px -2px hsl(0 0% 0% / 0.4);
+    --shadow-elevated: 0 20px 60px -20px hsl(0 0% 0% / 0.7), 0 8px 24px -12px hsl(168 80% 42% / 0.15);
+    --shadow-inset: inset 0 1px 0 0 hsl(210 20% 97% / 0.06);
+
+    /* Motion */
+    --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+    --duration-base: 240ms;
 
     --sidebar-background: 240 10% 4%;
     --sidebar-foreground: 210 20% 97%;
