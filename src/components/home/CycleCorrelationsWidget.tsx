@@ -140,7 +140,7 @@ export function CycleCorrelationsWidget({
                       className="flex-1 h-7 rounded-md border border-border/40 bg-background/60
                         hover:bg-teal-500/10 hover:border-teal-500/40 transition-colors
                         text-xs text-foreground/80 disabled:opacity-50"
-                      aria-label={`Rate ${i} out of 5`}
+                      aria-label={`Rate ${i} (0 = none, 5 = max)`}
                     >
                       {i}
                     </button>
