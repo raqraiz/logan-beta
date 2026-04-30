@@ -40,6 +40,8 @@ type MealPlanResource = {
   error_message: string | null;
 };
 
+const asMealPlanResource = (value: unknown) => value as MealPlanResource;
+
 /**
  * Card shown in chat when Logan offers a meal plan resource.
  * Tapping "Build it" opens the setup dialog.
@@ -94,7 +96,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
       .select("*")
       .eq("id", resourceId)
       .maybeSingle()
-      .then(({ data }) => { if (active) setResource(data); });
+      .then(({ data }) => { if (active && data) setResource(asMealPlanResource(data)); });
 
     // Load this user's last reaction for this resource (if any)
     supabase
@@ -111,7 +113,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
       .on("postgres_changes", {
         event: "UPDATE", schema: "public", table: "user_resources",
         filter: `id=eq.${resourceId}`,
-      }, (payload) => { if (active) setResource(payload.new); })
+      }, (payload) => { if (active) setResource(asMealPlanResource(payload.new)); })
       .subscribe();
 
     // Poll fallback every 4s while generating, in case realtime misses the update
@@ -122,7 +124,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
         .select("*")
         .eq("id", resourceId)
         .maybeSingle();
-      if (data && active) setResource(data);
+      if (data && active) setResource(asMealPlanResource(data));
       if (data?.status !== "generating") clearInterval(interval);
     }, 4000);
 
