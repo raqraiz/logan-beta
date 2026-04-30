@@ -251,16 +251,6 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
                 <Eye className="h-3.5 w-3.5" />
                 Preview plan
               </Button>
-              <Button
-                onClick={handleDownload}
-                disabled={downloading}
-                variant="outline"
-                size="sm"
-                className="min-w-[76px]"
-              >
-                {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                <span>PDF</span>
-              </Button>
             </div>
           )}
 
@@ -290,8 +280,6 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
         preview={resource.metadata?.preview ?? null}
         previewUrl={previewUrl}
         previewLoading={previewLoading}
-        onDownload={handleDownload}
-        downloading={downloading}
         onReact={handleReact}
         onRefine={handleRefine}
         refining={refining}
