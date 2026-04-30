@@ -77,7 +77,7 @@ serve(async (req) => {
     return new Response(file, {
       headers: {
         ...corsHeaders,
-        "Content-Type": "application/pdf",
+        "Content-Type": "application/octet-stream",
         "Content-Disposition": `attachment; filename="${safeFilename(resource.title)}"`,
       },
     });
