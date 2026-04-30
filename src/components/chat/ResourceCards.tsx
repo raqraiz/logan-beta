@@ -47,6 +47,8 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
   const [resource, setResource] = useState<any>(null);
   const [downloading, setDownloading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -100,6 +102,23 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
     }
   };
 
+  const handlePreview = async () => {
+    setPreviewOpen(true);
+    if (resource?.metadata?.preview?.days?.length || previewUrl || !resource?.pdf_path) return;
+    setPreviewLoading(true);
+    try {
+      const { data, error } = await supabase.storage
+        .from("resources")
+        .createSignedUrl(resource.pdf_path, 60 * 5);
+      if (error || !data?.signedUrl) throw error;
+      setPreviewUrl(data.signedUrl);
+    } catch (err) {
+      console.error("Preview failed:", err);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   if (!resource) {
     return (
       <div className="mt-3 rounded-2xl border border-border/40 bg-card/40 p-4 flex items-center gap-2">
@@ -147,7 +166,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
           {isReady && (
             <div className="mt-3 flex flex-wrap gap-2">
               <Button
-                onClick={() => setPreviewOpen(true)}
+                onClick={handlePreview}
                 variant="premium"
                 size="sm"
               >
@@ -190,6 +209,8 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
         onOpenChange={setPreviewOpen}
         title={resource.title}
         preview={resource.metadata?.preview ?? null}
+        previewUrl={previewUrl}
+        previewLoading={previewLoading}
         onDownload={handleDownload}
         downloading={downloading}
       />

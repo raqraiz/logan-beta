@@ -31,6 +31,8 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   title: string;
   preview: PreviewData | null;
+  previewUrl?: string | null;
+  previewLoading?: boolean;
   onDownload: () => void;
   downloading: boolean;
 }
@@ -42,26 +44,26 @@ const PHASE_COLOR: Record<string, string> = {
   Luteal: "text-[hsl(270,55%,63%)] border-[hsl(270,55%,63%)]/30 bg-[hsl(270,55%,63%)]/10",
 };
 
-export function MealPlanPreviewDialog({ open, onOpenChange, title, preview, onDownload, downloading }: Props) {
+export function MealPlanPreviewDialog({ open, onOpenChange, title, preview, previewUrl, previewLoading, onDownload, downloading }: Props) {
   const days = preview?.days ?? [];
   const weeks = preview?.weeks ?? [];
+  const hasStructuredPreview = days.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          {preview?.intro && (
-            <DialogDescription className="text-sm leading-relaxed pt-1">
-              {preview.intro}
-            </DialogDescription>
-          )}
+          <DialogDescription className="text-sm leading-relaxed pt-1">
+            {preview?.intro || "Preview your meal plan before downloading the PDF."}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 py-2">
           {/* Days */}
-          <div className="space-y-3">
-            {days.map(d => (
+          {hasStructuredPreview ? (
+            <div className="space-y-3">
+              {days.map(d => (
               <div
                 key={d.day_number}
                 className="rounded-xl border border-border/40 bg-card/40 p-3"
@@ -94,11 +96,30 @@ export function MealPlanPreviewDialog({ open, onOpenChange, title, preview, onDo
                   </div>
                 )}
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-border/40 bg-card/40">
+              {previewLoading ? (
+                <div className="flex h-[60vh] items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading preview…
+                </div>
+              ) : previewUrl ? (
+                <iframe
+                  title={`${title} preview`}
+                  src={`${previewUrl}#toolbar=0&navpanes=0`}
+                  className="h-[60vh] w-full bg-background"
+                />
+              ) : (
+                <div className="flex h-40 items-center justify-center px-4 text-center text-sm text-muted-foreground">
+                  Preview is still getting ready. Try again in a moment.
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Grocery lists */}
-          {weeks.length > 0 && (
+          {hasStructuredPreview && weeks.length > 0 && (
             <div className="space-y-3">
               {weeks.map(w => (
                 <div key={w.week_number} className="rounded-xl border border-border/40 bg-card/40 p-3">
