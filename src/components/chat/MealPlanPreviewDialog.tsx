@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Download, Loader2, ShoppingBasket, Moon, Sun, ThumbsUp, ThumbsDown, Sparkles, X, Wand2 } from "lucide-react";
+import { Download, Loader2, ShoppingBasket, Moon, Sun, ThumbsUp, ThumbsDown, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MealDay {
@@ -58,6 +57,21 @@ const PHASE_CHIP: Record<"dark" | "light", Record<string, string>> = {
   },
 };
 
+// Words that aren't real ingredients — never excludable
+const STOP_WORDS = new Set([
+  "with","and","or","of","a","an","the","on","in","to","for","over","under","plus",
+  "served","topped","drizzled","sprinkled","side","sides","style","mix","slice","slices",
+  "cup","cups","tbsp","tsp","oz","g","ml","handful","pinch","small","large","medium",
+  "fresh","raw","cooked","roasted","grilled","baked","steamed","sauteed","sautéed",
+  "chopped","sliced","diced","minced","whole","half","quarter","light","heavy",
+]);
+
+// Strip basic punctuation around a token to get a clean ingredient candidate
+const cleanToken = (raw: string) => raw.replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, "");
+
+// Normalize for excludes set (lowercase, singular-ish)
+const normalize = (s: string) => s.toLowerCase().trim().replace(/s$/, "");
+
 export function MealPlanPreviewDialog({
   open, onOpenChange, title, preview, previewUrl, previewLoading,
   onDownload, downloading,
@@ -65,30 +79,25 @@ export function MealPlanPreviewDialog({
 }: Props) {
   const [mode, setMode] = useState<"dark" | "light">("dark");
   const [reaction, setReaction] = useState<"up" | "down" | null>(initialReaction);
-  const [refineOpen, setRefineOpen] = useState(false);
   const [excludes, setExcludes] = useState<string[]>([]);
-  const [excludeInput, setExcludeInput] = useState("");
-  const [feedbackText, setFeedbackText] = useState("");
+  const refineTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Reset transient refine state whenever a new resource is loaded
+  // Reset transient state whenever a new resource is loaded
   useEffect(() => {
     setExcludes([]);
-    setExcludeInput("");
-    setFeedbackText("");
-    setRefineOpen(false);
     setReaction(initialReaction);
+    if (refineTimer.current) clearTimeout(refineTimer.current);
   }, [title, initialReaction]);
+
+  // Normalized set for fast strikethrough lookup
+  const excludeSet = useMemo(
+    () => new Set(excludes.map(normalize)),
+    [excludes],
+  );
 
   const days = preview?.days ?? [];
   const weeks = preview?.weeks ?? [];
   const hasStructuredPreview = days.length > 0;
-
-  // Aggregate every grocery item across weeks for one-click exclude
-  const allGroceryItems = useMemo(() => {
-    const set = new Set<string>();
-    weeks.forEach(w => w.grocery_list?.forEach(i => set.add(i)));
-    return Array.from(set);
-  }, [weeks]);
 
   const isDark = mode === "dark";
   const surface = isDark
@@ -103,19 +112,38 @@ export function MealPlanPreviewDialog({
     ? "bg-white/5 text-white/70 border-white/10"
     : "bg-black/5 text-black/70 border-black/10";
   const introBorder = isDark ? "border-white/10" : "border-black/10";
+  const wordHover = isDark
+    ? "hover:bg-destructive/20 hover:text-destructive-foreground"
+    : "hover:bg-destructive/15 hover:text-destructive";
 
-  const toggleExclude = (item: string) => {
-    setExcludes(prev => prev.includes(item) ? prev.filter(x => x !== item) : [...prev, item]);
+  // Toggle a word — debounced auto-regenerate
+  const toggleWord = (raw: string) => {
+    const clean = cleanToken(raw);
+    if (!clean) return;
+    const norm = normalize(clean);
+    if (norm.length < 3 || STOP_WORDS.has(norm)) return;
+
+    setExcludes(prev => {
+      const exists = prev.some(p => normalize(p) === norm);
+      const next = exists ? prev.filter(p => normalize(p) !== norm) : [...prev, clean.toLowerCase()];
+
+      // Schedule a debounced regenerate
+      if (refineTimer.current) clearTimeout(refineTimer.current);
+      if (next.length > 0 && onRefine) {
+        refineTimer.current = setTimeout(() => {
+          onRefine({ excludeIngredients: next, feedbackText: "" });
+        }, 1200);
+      }
+      return next;
+    });
   };
-  const addManualExclude = () => {
-    const v = excludeInput.trim();
-    if (v && !excludes.includes(v)) setExcludes(prev => [...prev, v]);
-    setExcludeInput("");
+
+  const removeExclude = (item: string) => {
+    setExcludes(prev => prev.filter(p => normalize(p) !== normalize(item)));
   };
 
   const handleReact = async (next: "up" | "down") => {
     setReaction(next);
-    if (next === "down") setRefineOpen(true);
     try {
       await onReact?.(next);
     } catch (err) {
@@ -123,18 +151,35 @@ export function MealPlanPreviewDialog({
     }
   };
 
-  const handleRefine = async () => {
-    if (!onRefine) return;
-    if (!excludes.length && !feedbackText.trim()) return;
-    try {
-      await onRefine({ excludeIngredients: excludes, feedbackText: feedbackText.trim() });
-      onOpenChange(false);
-    } catch (err) {
-      console.error("Refine failed:", err);
-    }
+  // Render meal text as tappable words. Excluded words get strikethrough.
+  const renderMealLine = (text: string) => {
+    if (!text) return null;
+    const parts = text.split(/(\s+)/); // keep whitespace
+    return parts.map((part, i) => {
+      if (/^\s+$/.test(part)) return <span key={i}>{part}</span>;
+      const clean = cleanToken(part);
+      const norm = normalize(clean);
+      const excludable = clean.length >= 3 && !STOP_WORDS.has(norm);
+      const excluded = excludeSet.has(norm);
+      if (!excludable) return <span key={i}>{part}</span>;
+      return (
+        <button
+          key={i}
+          type="button"
+          onClick={() => toggleWord(part)}
+          className={cn(
+            "rounded px-0.5 -mx-0.5 transition-colors cursor-pointer",
+            excluded
+              ? "line-through text-destructive/80 bg-destructive/10"
+              : wordHover,
+          )}
+          title={excluded ? `Click to keep "${clean}"` : `Click to remove "${clean}"`}
+        >
+          {part}
+        </button>
+      );
+    });
   };
-
-  const canRefine = excludes.length > 0 || feedbackText.trim().length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -144,10 +189,9 @@ export function MealPlanPreviewDialog({
             <div className="flex-1 min-w-0">
               <DialogTitle>{title}</DialogTitle>
               <DialogDescription className="text-sm leading-relaxed pt-1">
-                {preview?.intro || "Preview your meal plan before downloading the PDF."}
+                {preview?.intro || "Tap any ingredient to remove it — your plan updates automatically."}
               </DialogDescription>
             </div>
-            {/* Light/Dark mode toggle for the PDF preview */}
             <div className="shrink-0 inline-flex items-center rounded-full border border-border/40 bg-card/40 p-0.5 mr-8">
               <button
                 type="button"
@@ -157,7 +201,6 @@ export function MealPlanPreviewDialog({
                   isDark ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
                 aria-pressed={isDark}
-                aria-label="Preview in dark mode"
               >
                 <Moon className="h-3 w-3" /> Dark
               </button>
@@ -169,13 +212,40 @@ export function MealPlanPreviewDialog({
                   !isDark ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
                 aria-pressed={!isDark}
-                aria-label="Preview in light mode"
               >
                 <Sun className="h-3 w-3" /> Light
               </button>
             </div>
           </div>
         </DialogHeader>
+
+        {/* Sticky excludes + status bar */}
+        {(excludes.length > 0 || refining) && (
+          <div className="sticky top-0 z-10 -mx-6 px-6 py-2 bg-background/95 backdrop-blur border-b border-border/30">
+            <div className="flex items-center gap-2 flex-wrap">
+              {refining ? (
+                <span className="inline-flex items-center gap-1.5 text-xs text-primary">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Updating your plan…
+                </span>
+              ) : excludes.length > 0 ? (
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Removing:
+                </span>
+              ) : null}
+              {!refining && excludes.map(item => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => removeExclude(item)}
+                  className="text-[11px] px-2 py-0.5 rounded-full border border-destructive/40 bg-destructive/10 text-destructive flex items-center gap-1"
+                >
+                  {item} <X className="h-2.5 w-2.5" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="space-y-5 py-2">
           {hasStructuredPreview ? (
@@ -205,11 +275,11 @@ export function MealPlanPreviewDialog({
                         {d.phase}
                       </span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                      <div><span className={mutedText}>Breakfast · </span><span>{d.breakfast}</span></div>
-                      <div><span className={mutedText}>Lunch · </span><span>{d.lunch}</span></div>
-                      <div><span className={mutedText}>Dinner · </span><span>{d.dinner}</span></div>
-                      <div><span className={mutedText}>Snack · </span><span>{d.snack}</span></div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs leading-relaxed">
+                      <div><span className={mutedText}>Breakfast · </span>{renderMealLine(d.breakfast)}</div>
+                      <div><span className={mutedText}>Lunch · </span>{renderMealLine(d.lunch)}</div>
+                      <div><span className={mutedText}>Dinner · </span>{renderMealLine(d.dinner)}</div>
+                      <div><span className={mutedText}>Snack · </span>{renderMealLine(d.snack)}</div>
                     </div>
                     {d.hormone_focus && (
                       <div className={cn("text-[11px] italic mt-2 pt-2 border-t", subtleText, introBorder)}>
@@ -224,38 +294,28 @@ export function MealPlanPreviewDialog({
                 <div className="space-y-3">
                   {weeks.map(w => (
                     <div key={w.week_number} className={cn("rounded-xl border p-3", cardSurface)}>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-1.5">
-                          <ShoppingBasket className="h-3.5 w-3.5 text-primary" />
-                          <span className="text-xs font-semibold">
-                            Week {w.week_number} grocery list
-                          </span>
-                        </div>
-                        {refineOpen && (
-                          <span className={cn("text-[10px] uppercase tracking-wider", subtleText)}>
-                            Tap to skip
-                          </span>
-                        )}
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <ShoppingBasket className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-xs font-semibold">
+                          Week {w.week_number} grocery list
+                        </span>
                       </div>
                       {w.phase_summary && (
                         <p className={cn("text-[11px] mb-2 italic", mutedText)}>{w.phase_summary}</p>
                       )}
                       <div className="flex flex-wrap gap-1">
                         {w.grocery_list.map(item => {
-                          const excluded = excludes.includes(item);
+                          const excluded = excludeSet.has(normalize(item));
                           return (
                             <button
                               key={item}
                               type="button"
-                              onClick={() => refineOpen && toggleExclude(item)}
-                              disabled={!refineOpen}
+                              onClick={() => toggleWord(item)}
                               className={cn(
-                                "text-[11px] px-2 py-0.5 rounded-full border transition-all",
+                                "text-[11px] px-2 py-0.5 rounded-full border transition-all cursor-pointer",
                                 excluded
                                   ? "bg-destructive/15 text-destructive border-destructive/40 line-through"
-                                  : chipMuted,
-                                refineOpen && "cursor-pointer hover:border-destructive/50",
-                                !refineOpen && "cursor-default",
+                                  : cn(chipMuted, "hover:border-destructive/50"),
                               )}
                             >
                               {item}
@@ -275,35 +335,18 @@ export function MealPlanPreviewDialog({
                   <Loader2 className="h-4 w-4 animate-spin" /> Loading preview…
                 </div>
               ) : previewUrl ? (
-                <div className="flex flex-col">
-                  <object
-                    data={`${previewUrl}#toolbar=0&navpanes=0&view=FitH`}
-                    type="application/pdf"
-                    className="h-[60vh] w-full bg-background"
-                  >
-                    <div className="flex h-[60vh] flex-col items-center justify-center gap-3 px-6 text-center">
-                      <p className="text-sm text-muted-foreground">
-                        Your browser can't preview PDFs inline.
-                      </p>
-                      <a
-                        href={previewUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary underline underline-offset-2"
-                      >
-                        Open PDF in a new tab
-                      </a>
-                    </div>
-                  </object>
-                  <a
-                    href={previewUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 self-end text-xs text-primary/80 hover:text-primary underline underline-offset-2"
-                  >
-                    Open in new tab ↗
-                  </a>
-                </div>
+                <object
+                  data={`${previewUrl}#toolbar=0&navpanes=0&view=FitH`}
+                  type="application/pdf"
+                  className="h-[60vh] w-full bg-background"
+                >
+                  <div className="flex h-[60vh] flex-col items-center justify-center gap-3 px-6 text-center">
+                    <p className="text-sm text-muted-foreground">Your browser can't preview PDFs inline.</p>
+                    <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary underline underline-offset-2">
+                      Open PDF in a new tab
+                    </a>
+                  </div>
+                </object>
               ) : (
                 <div className="flex h-40 items-center justify-center px-4 text-center text-sm text-muted-foreground">
                   Preview is still getting ready. Try again in a moment.
@@ -312,139 +355,56 @@ export function MealPlanPreviewDialog({
             </div>
           )}
 
-          {/* Feedback + refine controls */}
-          {hasStructuredPreview && (onReact || onRefine) && (
-            <div className="rounded-xl border border-border/40 bg-card/40 p-3 space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-xs text-muted-foreground">
-                  How does this plan look?
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => handleReact("up")}
-                    className={cn(
-                      "h-8 w-8 rounded-full border flex items-center justify-center transition-colors",
-                      reaction === "up"
-                        ? "border-primary bg-primary/15 text-primary"
-                        : "border-border/40 text-muted-foreground hover:text-foreground",
-                    )}
-                    aria-label="Love it"
-                  >
-                    <ThumbsUp className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleReact("down")}
-                    className={cn(
-                      "h-8 w-8 rounded-full border flex items-center justify-center transition-colors",
-                      reaction === "down"
-                        ? "border-destructive bg-destructive/10 text-destructive"
-                        : "border-border/40 text-muted-foreground hover:text-foreground",
-                    )}
-                    aria-label="Not quite"
-                  >
-                    <ThumbsDown className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {onRefine && !refineOpen && (
+          {/* Reactions */}
+          {hasStructuredPreview && onReact && (
+            <div className="rounded-xl border border-border/40 bg-card/40 p-3 flex items-center justify-between gap-3">
+              <div className="text-xs text-muted-foreground">How does this plan look?</div>
+              <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => setRefineOpen(true)}
-                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                  onClick={() => handleReact("up")}
+                  className={cn(
+                    "h-8 w-8 rounded-full border flex items-center justify-center transition-colors",
+                    reaction === "up"
+                      ? "border-primary bg-primary/15 text-primary"
+                      : "border-border/40 text-muted-foreground hover:text-foreground",
+                  )}
+                  aria-label="Love it"
                 >
-                  <Wand2 className="h-3 w-3" /> Tweak this plan
+                  <ThumbsUp className="h-3.5 w-3.5" />
                 </button>
-              )}
-
-              {onRefine && refineOpen && (
-                <div className="space-y-3 pt-2 border-t border-border/30">
-                  {/* Selected exclusions */}
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">
-                      Skip these ingredients
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {excludes.length === 0 && (
-                        <span className="text-[11px] text-muted-foreground/70 italic">
-                          Tap any grocery item above, or type one below.
-                        </span>
-                      )}
-                      {excludes.map(item => (
-                        <button
-                          key={item}
-                          type="button"
-                          onClick={() => toggleExclude(item)}
-                          className="text-[11px] px-2 py-0.5 rounded-full border border-destructive/40 bg-destructive/10 text-destructive flex items-center gap-1"
-                        >
-                          {item}
-                          <X className="h-2.5 w-2.5" />
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex gap-2 mt-2">
-                      <input
-                        value={excludeInput}
-                        onChange={e => setExcludeInput(e.target.value)}
-                        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addManualExclude(); } }}
-                        placeholder="e.g. avocado, cilantro"
-                        className="flex-1 h-8 rounded-md border border-border/40 bg-card/40 px-2 text-xs focus:outline-none focus:border-primary/60"
-                      />
-                      <Button onClick={addManualExclude} size="sm" variant="outline" className="h-8">
-                        Add
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Free-form feedback */}
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">
-                      Anything else? (optional)
-                    </div>
-                    <Textarea
-                      value={feedbackText}
-                      onChange={e => setFeedbackText(e.target.value)}
-                      placeholder="e.g. lighter dinners, more snacks, less repetition…"
-                      className="text-sm min-h-[60px]"
-                      maxLength={500}
-                    />
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleRefine}
-                      disabled={!canRefine || refining}
-                      variant="premium"
-                      size="sm"
-                      className="flex-1"
-                    >
-                      {refining ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                      Regenerate with these tweaks
-                    </Button>
-                    <Button
-                      onClick={() => { setRefineOpen(false); setExcludes([]); setFeedbackText(""); }}
-                      variant="ghost"
-                      size="sm"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              )}
+                <button
+                  type="button"
+                  onClick={() => handleReact("down")}
+                  className={cn(
+                    "h-8 w-8 rounded-full border flex items-center justify-center transition-colors",
+                    reaction === "down"
+                      ? "border-destructive bg-destructive/10 text-destructive"
+                      : "border-border/40 text-muted-foreground hover:text-foreground",
+                  )}
+                  aria-label="Not quite"
+                >
+                  <ThumbsDown className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
           )}
 
           <Button
             onClick={onDownload}
-            disabled={downloading}
+            disabled={downloading || refining}
             variant="premium"
             className="w-full sticky bottom-0"
           >
             {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             Download PDF
           </Button>
+
+          {!hasStructuredPreview ? null : (
+            <p className="text-[10px] text-center text-muted-foreground/70 -mt-2 flex items-center justify-center gap-1">
+              <Sparkles className="h-2.5 w-2.5" /> Tap any ingredient to swap it out instantly
+            </p>
+          )}
         </div>
       </DialogContent>
     </Dialog>
