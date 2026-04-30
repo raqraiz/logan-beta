@@ -234,7 +234,7 @@ const MOOD_GUIDANCE: Record<string, { outlook: string; headsUp: string; selfCare
       people: "You may feel off — shorter fuse, less patience, then guilt about it. Name it early: 'I'm running on empty right now.' One sentence changes everything.",
       withPartner: "Let them know you're in your lowest window. It's not about them — one heads-up prevents a spiral.",
       withKids: "Your fuse is shortest right now. Keep things simple. You don't have to be perfect today — just present.",
-      strategy: "Remind yourself: this is temporary. In a few days you'll feel like a completely different person — because you will be.",
+      strategy: "Remind yourself: this is temporary. In a few days you should feel like a completely different person — because you might be.",
     },
   },
   Follicular: {
@@ -254,7 +254,7 @@ const MOOD_GUIDANCE: Record<string, { outlook: string; headsUp: string; selfCare
     selfCare: "You feel powerful and strong right now. Have the hard conversation. Take on the big task. Just don't overcommit for future-you.",
     relationships: {
       people: "Your best window for real connection. You can show up without the irritability filter — be honest, be present, be generous.",
-      withPartner: "If something needs to be said, say it now. Date night, real talk — you'll handle it with grace.",
+      withPartner: "If something needs to be said, say it now. Date night, real talk — you should handle it with grace.",
       withKids: "You can handle the chaos and the attitudes with energy to spare. Lean in — these are the moments that build the relationship bank.",
       strategy: "Bookmark this feeling. When the hard days hit, remembering 'I was this person three days ago' helps you give yourself grace.",
     },
@@ -267,7 +267,7 @@ const MOOD_GUIDANCE: Record<string, { outlook: string; headsUp: string; selfCare
       people: "Everything feels bigger right now — a comment, a look, a tone. Your communication may feel off. That's this phase, not a personality flaw.",
       withPartner: "Tell them before you're in it: 'My hard days start around day X.' It removes the guesswork and the guilt spiral.",
       withKids: "Low energy + their attitudes = the moment you say something you regret. Lower the bar. Walk away when you need to. That's not weakness — it's wisdom.",
-      strategy: "You're doing your best even when it doesn't feel like it. This window is temporary — better days are just ahead and you'll begin to feel like yourself again.",
+      strategy: "You're doing your best even when it doesn't feel like it. This window is temporary — better days are just ahead and you should begin to feel like yourself again.",
     },
   },
 };
