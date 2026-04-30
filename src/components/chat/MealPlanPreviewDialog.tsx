@@ -237,7 +237,7 @@ export function MealPlanPreviewDialog({ open, onOpenChange, title, preview, prev
             className="w-full sticky bottom-0"
           >
             {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            Download {isDark ? "Dark" : "Light"} PDF
+            Download PDF
           </Button>
         </div>
       </DialogContent>
