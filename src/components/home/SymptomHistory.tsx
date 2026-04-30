@@ -55,7 +55,6 @@ export function SymptomHistory({
   const [logs, setLogs] = useState<SymptomLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [topSymptoms, setTopSymptoms] = useState<{ name: string; count: number; avgSeverity: number }[]>([]);
-  const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !userId) return;
