@@ -63,7 +63,7 @@ export function ResourceOfferCard({ userId, resourceType }: { userId: string; re
           </div>
           <h3 className="text-base font-semibold text-foreground mb-1">Cyclical meal plan</h3>
           <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-            Each meal aligned to your phase. Includes a grocery list. Downloadable PDF.
+            Each meal aligned to your phase. Includes a grocery list and preview.
           </p>
           <Button onClick={() => setOpen(true)} variant="premium" size="sm" className="w-full">
             <Sparkles className="h-3.5 w-3.5" /> Build it
