@@ -323,6 +323,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
         previewUrl={previewUrl}
         previewLoading={previewLoading}
         onDownload={handleDownload}
+        downloadUrl={downloadUrl}
         downloading={downloading}
         onReact={handleReact}
         onRefine={handleRefine}
