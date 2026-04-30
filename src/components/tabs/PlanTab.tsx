@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
 import { CycleForecast } from "@/components/chat/CycleForecast";
 import { calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
+import { NutritionMenuActions } from "@/components/chat/NutritionMenuActions";
 
 interface CycleData {
   cycleDay: number;
@@ -671,6 +672,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
                     <ul className="space-y-1">{nutrition.foods.map(food => <li key={food} className="text-xs text-muted-foreground flex items-start gap-1.5"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-phase-luteal shrink-0" />{food}</li>)}</ul>
                   </div>
                   <div className="rounded-lg bg-phase-luteal/5 border border-phase-luteal/15 px-3 py-2"><p className="text-xs text-muted-foreground"><span className="font-medium text-phase-luteal">Note:</span> {nutrition.avoid}</p></div>
+                  <NutritionMenuActions userId={userId} />
                 </div>
               )}
             </button>
@@ -895,6 +897,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
                     <span className="font-medium text-phase-luteal">Note:</span> {nutrition.avoid}
                   </p>
                 </div>
+                <NutritionMenuActions userId={userId} />
               </div>
             )}
           </button>
