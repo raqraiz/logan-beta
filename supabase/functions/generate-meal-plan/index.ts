@@ -121,6 +121,44 @@ serve(async (req) => {
     const style: Style = body.style === "light" ? "light" : "dark";
     const dietaryPrefs = body.dietaryPrefs || {};
 
+    // Optional revision context — when refining an existing plan
+    const parentResourceId: string | null = typeof body.parentResourceId === "string" ? body.parentResourceId : null;
+    const excludeIngredients: string[] = Array.isArray(body.excludeIngredients)
+      ? body.excludeIngredients.map((s: any) => String(s).trim()).filter(Boolean).slice(0, 30)
+      : [];
+    const feedbackText: string = typeof body.feedbackText === "string"
+      ? body.feedbackText.slice(0, 500)
+      : "";
+
+    // Load parent plan for revision (ownership enforced by user-scoped client + RLS)
+    let parentPlan: MealPlanData | null = null;
+    let parentResource: any = null;
+    let revisionLengthDays: LengthDays | null = null;
+    if (parentResourceId) {
+      const { data: pr } = await userClient
+        .from("user_resources")
+        .select("*")
+        .eq("id", parentResourceId)
+        .maybeSingle();
+      if (pr && pr.user_id === user.id) {
+        parentResource = pr;
+        parentPlan = pr.metadata?.preview ?? null;
+        if ([3, 7, 14, 28].includes(pr.metadata?.length_days)) {
+          revisionLengthDays = pr.metadata.length_days as LengthDays;
+        }
+      }
+    }
+    // When revising, inherit length from the parent so the structure matches
+    const effectiveLengthDays: LengthDays = revisionLengthDays ?? lengthDays;
+
+    // Permanently skip excluded ingredients going forward
+    if (excludeIngredients.length) {
+      dietaryPrefs.dislikes = Array.from(new Set([
+        ...(dietaryPrefs.dislikes ?? []),
+        ...excludeIngredients,
+      ]));
+    }
+
     // Save dietary prefs for re-use
     if (
       dietaryPrefs.diet_type ||
