@@ -437,16 +437,6 @@ export function MealPlanPreviewDialog({
             </div>
           )}
 
-          <Button
-            onClick={onDownload}
-            disabled={downloading || refining}
-            variant="premium"
-            className="w-full sticky bottom-0"
-          >
-            {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            Download PDF
-          </Button>
-
           {!hasStructuredPreview ? null : (
             <p className="text-[10px] text-center text-muted-foreground/70 -mt-2 flex items-center justify-center gap-1">
               <Sparkles className="h-2.5 w-2.5" /> Tap any ingredient to swap it out instantly
