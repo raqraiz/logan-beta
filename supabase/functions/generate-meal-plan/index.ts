@@ -427,6 +427,11 @@ Write a 2-sentence intro that explains the plan's logic in Logan's voice (warm, 
           dietary_prefs: dietaryPrefs,
           intro: planData.intro,
           num_days: planData.days.length,
+          preview: {
+            intro: planData.intro,
+            days: planData.days,
+            weeks: planData.weeks,
+          },
         },
       })
       .eq("id", resourceId);
