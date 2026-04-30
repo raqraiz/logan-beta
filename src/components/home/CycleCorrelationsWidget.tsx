@@ -182,7 +182,7 @@ export function CycleCorrelationsWidget({
             load();
           }}
           onUpdated={(updated) => {
-            setActiveTracker(updated);
+            setActiveTracker((prev) => (prev ? { ...prev, ...updated } : prev));
             load();
           }}
         />
