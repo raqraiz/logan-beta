@@ -145,16 +145,25 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
           )}
 
           {isReady && (
-            <Button
-              onClick={handleDownload}
-              disabled={downloading}
-              variant="premium"
-              size="sm"
-              className="mt-3"
-            >
-              {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-              Download PDF
-            </Button>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                onClick={() => setPreviewOpen(true)}
+                variant="premium"
+                size="sm"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                Preview plan
+              </Button>
+              <Button
+                onClick={handleDownload}
+                disabled={downloading}
+                variant="outline"
+                size="sm"
+              >
+                {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                PDF
+              </Button>
+            </div>
           )}
 
           {isFailed && (
