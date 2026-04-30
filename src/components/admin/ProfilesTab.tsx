@@ -35,6 +35,9 @@ import { ChatCycleCircle, calculateCycleInfo } from "@/components/chat/ChatCycle
 import { cn } from "@/lib/utils";
 import { Json } from "@/integrations/supabase/types";
 import { HomeTab } from "@/components/tabs/HomeTab";
+import { PlanTab } from "@/components/tabs/PlanTab";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CalendarDays } from "lucide-react";
 
 interface Profile {
   id: string;
