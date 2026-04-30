@@ -8,7 +8,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Trash2, Pencil, Check, X } from "lucide-react";
 import { format } from "date-fns";
 import {
   ResponsiveContainer,
@@ -35,6 +36,7 @@ interface Tracker {
   id: string;
   name: string;
   emoji: string;
+  description?: string | null;
 }
 
 interface LogRow {
@@ -53,6 +55,7 @@ interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onDeleted: () => void;
+  onUpdated?: (t: Tracker) => void;
 }
 
 export function CycleCorrelationDetail({
@@ -64,9 +67,20 @@ export function CycleCorrelationDetail({
   open,
   onOpenChange,
   onDeleted,
+  onUpdated,
 }: Props) {
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(tracker.name);
+  const [editEmoji, setEditEmoji] = useState(tracker.emoji);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  useEffect(() => {
+    setEditName(tracker.name);
+    setEditEmoji(tracker.emoji);
+    setEditing(false);
+  }, [tracker.id, tracker.name, tracker.emoji]);
 
   useEffect(() => {
     if (!open) return;
@@ -168,15 +182,106 @@ export function CycleCorrelationDetail({
     onDeleted();
   };
 
+  const handleSaveEdit = async () => {
+    const name = editName.trim();
+    const emoji = (editEmoji || "✨").slice(0, 4);
+    if (!name) {
+      toast.error("Name can't be empty");
+      return;
+    }
+    if (name === tracker.name && emoji === tracker.emoji) {
+      setEditing(false);
+      return;
+    }
+    setSavingEdit(true);
+    const { error } = await supabase
+      .from("custom_trackers")
+      .update({ name, emoji })
+      .eq("id", tracker.id);
+    setSavingEdit(false);
+    if (error) {
+      toast.error("Couldn't save changes");
+      return;
+    }
+    toast.success("Updated");
+    setEditing(false);
+    onUpdated?.({ ...tracker, name, emoji });
+  };
+
   const recentLogs = logs.slice(0, 7);
+
+  const cancelEdit = () => {
+    setEditName(tracker.name);
+    setEditEmoji(tracker.emoji);
+    setEditing(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <span>{tracker.emoji}</span>
-            <span>{tracker.name}</span>
+          <DialogTitle asChild>
+            <div className="flex items-center gap-2 pr-8">
+              {editing ? (
+                <>
+                  <Input
+                    value={editEmoji}
+                    onChange={(e) => setEditEmoji(e.target.value.slice(0, 4))}
+                    maxLength={4}
+                    className="w-14 h-9 text-center text-base"
+                    aria-label="Emoji"
+                  />
+                  <Input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    maxLength={60}
+                    className="h-9 flex-1"
+                    aria-label="Tracker name"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSaveEdit();
+                      if (e.key === "Escape") cancelEdit();
+                    }}
+                    autoFocus
+                  />
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 shrink-0"
+                    onClick={handleSaveEdit}
+                    disabled={savingEdit}
+                    aria-label="Save"
+                  >
+                    <Check className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 shrink-0"
+                    onClick={cancelEdit}
+                    disabled={savingEdit}
+                    aria-label="Cancel"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <span className="text-lg">{tracker.emoji}</span>
+                  <span className="text-lg font-semibold leading-none tracking-tight truncate">
+                    {tracker.name}
+                  </span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                    onClick={() => setEditing(true)}
+                    aria-label="Edit tracker"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                </>
+              )}
+            </div>
           </DialogTitle>
           <DialogDescription>
             {result.totalLogs > 0
