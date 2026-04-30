@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2, ShoppingBasket, Moon, Sun, ThumbsUp, ThumbsDown, Sparkles, X } from "lucide-react";
+import { Download, Loader2, ShoppingBasket, Moon, Sun, ThumbsUp, ThumbsDown, Sparkles, X, ImageOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MealDay {
   day_number: number;
@@ -13,6 +14,7 @@ interface MealDay {
   dinner: string;
   snack: string;
   hormone_focus?: string;
+  image_path?: string | null;
 }
 
 interface WeekBlock {
