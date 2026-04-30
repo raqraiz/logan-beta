@@ -272,6 +272,10 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
         previewLoading={previewLoading}
         onDownload={handleDownload}
         downloading={downloading}
+        onReact={handleReact}
+        onRefine={handleRefine}
+        refining={refining}
+        initialReaction={reaction}
       />
     </div>
   );
