@@ -25,14 +25,17 @@ const LENGTH_OPTIONS: { value: Length; label: string; sub: string; eta: string }
   { value: 28, label: "4 weeks", sub: "Full cycle", eta: "~60s" },
 ];
 
-const DIET_TYPES = ["Omnivore", "Pescatarian", "Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Keto", "Paleo"];
+const DIET_TYPES = ["Omnivore", "Pescatarian", "Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Keto", "Paleo", "Kosher", "Halal", "Other"];
 const COMMON_ALLERGIES = ["Nuts", "Peanuts", "Shellfish", "Eggs", "Soy", "Gluten", "Dairy"];
 const CUISINE_VIBES = ["Mediterranean", "Asian", "Mexican", "Middle Eastern", "Italian", "Comfort food", "Quick & simple"];
+
+const PRESET_DIETS = ["Omnivore", "Pescatarian", "Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Keto", "Paleo", "Kosher", "Halal"];
 
 export function MealPlanSetupDialog({ open, onOpenChange, userId, onGenerated }: MealPlanSetupDialogProps) {
   const [length, setLength] = useState<Length>(7);
   const [style, setStyle] = useState<Style>("dark");
   const [dietType, setDietType] = useState<string>("Omnivore");
+  const [dietOther, setDietOther] = useState<string>("");
   const [allergies, setAllergies] = useState<string[]>([]);
   const [allergyInput, setAllergyInput] = useState("");
   const [dislikes, setDislikes] = useState("");
@@ -50,7 +53,15 @@ export function MealPlanSetupDialog({ open, onOpenChange, userId, onGenerated }:
       .maybeSingle()
       .then(({ data }) => {
         if (data) {
-          if (data.diet_type) setDietType(data.diet_type);
+          if (data.diet_type) {
+            if (PRESET_DIETS.includes(data.diet_type)) {
+              setDietType(data.diet_type);
+              setDietOther("");
+            } else {
+              setDietType("Other");
+              setDietOther(data.diet_type);
+            }
+          }
           if (data.allergies?.length) setAllergies(data.allergies);
           if (data.dislikes?.length) setDislikes(data.dislikes.join(", "));
           if (data.cuisines?.length) setCuisines(data.cuisines);
@@ -79,13 +90,16 @@ export function MealPlanSetupDialog({ open, onOpenChange, userId, onGenerated }:
     setSubmitting(true);
     try {
       const dislikeList = dislikes.split(",").map(s => s.trim()).filter(Boolean);
+      const resolvedDiet = dietType === "Other"
+        ? (dietOther.trim() || "Other")
+        : dietType;
 
       const { data, error } = await supabase.functions.invoke("generate-meal-plan", {
         body: {
           lengthDays: length,
           style,
           dietaryPrefs: {
-            diet_type: dietType,
+            diet_type: resolvedDiet,
             allergies,
             dislikes: dislikeList,
             cuisines,
@@ -172,6 +186,14 @@ export function MealPlanSetupDialog({ open, onOpenChange, userId, onGenerated }:
                   </button>
                 ))}
               </div>
+              {dietType === "Other" && (
+                <Input
+                  value={dietOther}
+                  onChange={e => setDietOther(e.target.value)}
+                  placeholder="Describe your diet (e.g. low-FODMAP, raw vegan)"
+                  className="h-8 text-xs mt-2"
+                />
+              )}
             </div>
 
             {/* Allergies */}
