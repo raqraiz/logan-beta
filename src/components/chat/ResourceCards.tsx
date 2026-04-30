@@ -313,7 +313,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
               </Button>
               {downloadUrl ? (
                 <Button asChild variant="outline" size="sm">
-                  <a href={downloadUrl} download={downloadFilename} target="_blank" rel="noopener noreferrer">
+                  <a href={downloadUrl} download={downloadFilename} rel="noopener noreferrer">
                     <Download className="h-3.5 w-3.5" />
                     PDF
                   </a>

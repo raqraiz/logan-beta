@@ -444,7 +444,7 @@ export function MealPlanPreviewDialog({
 
           {downloadUrl && !refining ? (
             <Button asChild variant="premium" className="w-full sticky bottom-0">
-              <a href={downloadUrl} download target="_blank" rel="noopener noreferrer">
+              <a href={downloadUrl} download rel="noopener noreferrer">
                 <Download className="h-4 w-4" />
                 Download PDF
               </a>
