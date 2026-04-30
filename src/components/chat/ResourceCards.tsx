@@ -168,7 +168,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
       if (!data) throw new Error("No PDF returned");
 
       const pdfBlob = data instanceof Blob
-        ? data
+        ? new Blob([data], { type: "application/pdf" })
         : new Blob([data], { type: "application/pdf" });
       triggerBrowserDownload(pdfBlob, downloadFilename);
     } catch (err) {
