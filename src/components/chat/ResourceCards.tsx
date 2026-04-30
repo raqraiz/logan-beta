@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Download, FileText, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { Sparkles, Download, FileText, Loader2, AlertCircle, RefreshCw, Eye } from "lucide-react";
 import { MealPlanSetupDialog } from "./MealPlanSetupDialog";
+import { MealPlanPreviewDialog } from "./MealPlanPreviewDialog";
 import { cn } from "@/lib/utils";
 
 /**
