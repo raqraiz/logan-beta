@@ -137,7 +137,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
     }
 
     // Open synchronously, then fill the URL after signing so browser popup/download blockers don't swallow the click.
-    const downloadWindow = window.open("about:blank", "_blank", "noopener,noreferrer");
+    const downloadWindow = window.open("about:blank", "_blank");
     setDownloading(true);
     try {
       const { data, error } = await supabase.storage
@@ -275,15 +275,24 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
                 <Eye className="h-3.5 w-3.5" />
                 Preview plan
               </Button>
-              <Button
-                onClick={handleDownload}
-                disabled={downloading}
-                variant="outline"
-                size="sm"
-              >
-                {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                PDF
-              </Button>
+              {downloadUrl ? (
+                <Button asChild variant="outline" size="sm">
+                  <a href={downloadUrl} download={downloadFilename} target="_blank" rel="noopener noreferrer">
+                    <Download className="h-3.5 w-3.5" />
+                    PDF
+                  </a>
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleDownload}
+                  disabled={downloading}
+                  variant="outline"
+                  size="sm"
+                >
+                  {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                  PDF
+                </Button>
+              )}
             </div>
           )}
 
