@@ -37,6 +37,7 @@ interface Props {
   previewUrl?: string | null;
   previewLoading?: boolean;
   onDownload: () => void;
+  downloadUrl?: string | null;
   downloading: boolean;
   onReact?: (reaction: "up" | "down") => Promise<void> | void;
   onRefine?: (args: { excludeIngredients: string[]; feedbackText: string }) => Promise<void> | void;
@@ -76,7 +77,7 @@ const normalize = (s: string) => s.toLowerCase().trim().replace(/s$/, "");
 
 export function MealPlanPreviewDialog({
   open, onOpenChange, title, preview, previewUrl, previewLoading,
-  onDownload, downloading,
+  onDownload, downloadUrl, downloading,
   onReact, onRefine, refining = false, initialReaction = null,
 }: Props) {
   const [mode, setMode] = useState<"dark" | "light">("dark");
@@ -441,15 +442,24 @@ export function MealPlanPreviewDialog({
             </div>
           )}
 
-          <Button
-            onClick={onDownload}
-            disabled={downloading || refining}
-            variant="premium"
-            className="w-full sticky bottom-0"
-          >
-            {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            Download PDF
-          </Button>
+          {downloadUrl && !refining ? (
+            <Button asChild variant="premium" className="w-full sticky bottom-0">
+              <a href={downloadUrl} download target="_blank" rel="noopener noreferrer">
+                <Download className="h-4 w-4" />
+                Download PDF
+              </a>
+            </Button>
+          ) : (
+            <Button
+              onClick={onDownload}
+              disabled={downloading || refining}
+              variant="premium"
+              className="w-full sticky bottom-0"
+            >
+              {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              Download PDF
+            </Button>
+          )}
 
           {!hasStructuredPreview ? null : (
             <p className="text-[10px] text-center text-muted-foreground/70 -mt-2 flex items-center justify-center gap-1">

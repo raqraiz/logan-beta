@@ -1,10 +1,46 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Download, FileText, Loader2, AlertCircle, RefreshCw, Eye } from "lucide-react";
 import { MealPlanSetupDialog } from "./MealPlanSetupDialog";
 import { MealPlanPreviewDialog } from "./MealPlanPreviewDialog";
 import { cn } from "@/lib/utils";
+
+type ResourceMetadata = {
+  preview?: {
+    intro?: string;
+    days?: Array<{
+      day_number: number;
+      cycle_day: number;
+      phase: string;
+      breakfast: string;
+      lunch: string;
+      dinner: string;
+      snack: string;
+      hormone_focus?: string;
+      image_path?: string | null;
+    }>;
+    weeks?: Array<{
+      week_number: number;
+      phase_summary: string;
+      grocery_list: string[];
+    }>;
+  } | null;
+  length_days?: number;
+  dietary_prefs?: Record<string, unknown>;
+};
+
+type MealPlanResource = {
+  id: string;
+  title: string | null;
+  status: string | null;
+  pdf_path: string | null;
+  style: string | null;
+  metadata: ResourceMetadata | null;
+  error_message: string | null;
+};
+
+const asMealPlanResource = (value: unknown) => value as MealPlanResource;
 
 /**
  * Card shown in chat when Logan offers a meal plan resource.
@@ -44,8 +80,9 @@ export function ResourceOfferCard({ userId, resourceType }: { userId: string; re
  * via realtime so status flips automatically when the edge function finishes.
  */
 export function ResourceCard({ resourceId, userId }: { resourceId: string; userId: string }) {
-  const [resource, setResource] = useState<any>(null);
+  const [resource, setResource] = useState<MealPlanResource | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -59,7 +96,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
       .select("*")
       .eq("id", resourceId)
       .maybeSingle()
-      .then(({ data }) => { if (active) setResource(data); });
+      .then(({ data }) => { if (active && data) setResource(asMealPlanResource(data)); });
 
     // Load this user's last reaction for this resource (if any)
     supabase
@@ -76,7 +113,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
       .on("postgres_changes", {
         event: "UPDATE", schema: "public", table: "user_resources",
         filter: `id=eq.${resourceId}`,
-      }, (payload) => { if (active) setResource(payload.new); })
+      }, (payload) => { if (active) setResource(asMealPlanResource(payload.new)); })
       .subscribe();
 
     // Poll fallback every 4s while generating, in case realtime misses the update
@@ -87,7 +124,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
         .select("*")
         .eq("id", resourceId)
         .maybeSingle();
-      if (data && active) setResource(data);
+      if (data && active) setResource(asMealPlanResource(data));
       if (data?.status !== "generating") clearInterval(interval);
     }, 4000);
 
@@ -98,34 +135,58 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
     };
   }, [resourceId]);
 
+  const downloadFilename = useMemo(() => {
+    const base = (resource?.title || "meal-plan")
+      .replace(/[\\/:*?"<>|]+/g, "")
+      .trim();
+    return `${base || "meal-plan"}.pdf`;
+  }, [resource?.title]);
+
+  useEffect(() => {
+    let active = true;
+    setDownloadUrl(null);
+    if (!resource?.pdf_path || resource.status !== "ready") return;
+
+    supabase.storage
+      .from("resources")
+      .createSignedUrl(resource.pdf_path, 60 * 60, { download: downloadFilename })
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error || !data?.signedUrl) {
+          console.error("Download URL failed:", error);
+          return;
+        }
+        setDownloadUrl(data.signedUrl);
+      });
+
+    return () => { active = false; };
+  }, [resource?.pdf_path, resource?.status, downloadFilename]);
+
   const handleDownload = async () => {
     if (!resource?.pdf_path) {
       console.warn("Download: no pdf_path on resource", resource?.id);
       return;
     }
+    if (downloadUrl) {
+      window.open(downloadUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    // Open synchronously, then fill the URL after signing so browser popup/download blockers don't swallow the click.
+    const downloadWindow = window.open("about:blank", "_blank");
     setDownloading(true);
     try {
       const { data, error } = await supabase.storage
         .from("resources")
         .createSignedUrl(resource.pdf_path, 60 * 5, {
-          download: resource.title ? `${resource.title}.pdf` : true,
+          download: downloadFilename,
         });
       if (error || !data?.signedUrl) throw error || new Error("No signed URL");
-
-      // Fetch as blob and trigger download via anchor — avoids popup blockers
-      // and works reliably from inside a dialog.
-      const res = await fetch(data.signedUrl);
-      if (!res.ok) throw new Error(`Download failed: ${res.status}`);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = resource.title ? `${resource.title}.pdf` : "meal-plan.pdf";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setDownloadUrl(data.signedUrl);
+      if (downloadWindow) downloadWindow.location.href = data.signedUrl;
+      else window.location.href = data.signedUrl;
     } catch (err) {
+      downloadWindow?.close();
       console.error("Download failed:", err);
     } finally {
       setDownloading(false);
@@ -250,15 +311,24 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
                 <Eye className="h-3.5 w-3.5" />
                 Preview plan
               </Button>
-              <Button
-                onClick={handleDownload}
-                disabled={downloading}
-                variant="outline"
-                size="sm"
-              >
-                {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                PDF
-              </Button>
+              {downloadUrl ? (
+                <Button asChild variant="outline" size="sm">
+                  <a href={downloadUrl} download={downloadFilename} target="_blank" rel="noopener noreferrer">
+                    <Download className="h-3.5 w-3.5" />
+                    PDF
+                  </a>
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleDownload}
+                  disabled={downloading}
+                  variant="outline"
+                  size="sm"
+                >
+                  {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                  PDF
+                </Button>
+              )}
             </div>
           )}
 
@@ -289,6 +359,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
         previewUrl={previewUrl}
         previewLoading={previewLoading}
         onDownload={handleDownload}
+        downloadUrl={downloadUrl}
         downloading={downloading}
         onReact={handleReact}
         onRefine={handleRefine}
