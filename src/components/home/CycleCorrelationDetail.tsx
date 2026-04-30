@@ -203,27 +203,57 @@ export function CycleCorrelationDetail({
 
             {/* Chart */}
             {!isNonCycling && result.totalLogs > 0 && (
-              <div className="h-44 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-                    <XAxis dataKey="phase" tick={{ fontSize: 10 }} />
-                    <YAxis domain={[0, 5]} tick={{ fontSize: 10 }} />
-                    <Tooltip
-                      contentStyle={{
-                        background: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: 8,
-                        fontSize: 12,
-                      }}
-                      formatter={(value: number, _name, p: any) => [
-                        `${value} (${p.payload.count} logs)`,
-                        "Avg intensity",
-                      ]}
-                    />
-                    <Bar dataKey="avg" fill="hsl(173 80% 40%)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="space-y-1.5">
+                <div className="h-52 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+                      <XAxis dataKey="phase" tick={{ fontSize: 10 }} />
+                      <YAxis domain={[0, 5]} tick={{ fontSize: 10 }} />
+                      <Tooltip
+                        contentStyle={{
+                          background: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: 8,
+                          fontSize: 12,
+                        }}
+                        formatter={(value: number, name: string, p: any) => {
+                          if (name === "Symptom") return [`${value} (${p.payload.count} logs)`, "Avg intensity"];
+                          return [value.toFixed(2), name];
+                        }}
+                      />
+                      <Bar dataKey="avg" name="Symptom" fill="hsl(173 80% 40%)" radius={[4, 4, 0, 0]} />
+                      {HORMONES.map((h) => (
+                        <Line
+                          key={h.key}
+                          type="monotone"
+                          dataKey={h.key}
+                          name={h.label}
+                          stroke={h.color}
+                          strokeWidth={1.5}
+                          dot={{ r: 2, fill: h.color }}
+                          activeDot={{ r: 3 }}
+                          isAnimationActive={false}
+                        />
+                      ))}
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-sm" style={{ background: "hsl(173 80% 40%)" }} />
+                    <span className="text-[10px] text-muted-foreground">Symptom</span>
+                  </div>
+                  {HORMONES.map((h) => (
+                    <div key={h.key} className="flex items-center gap-1.5">
+                      <span className="w-3 h-0.5 rounded-full" style={{ background: h.color }} />
+                      <span className="text-[10px] text-muted-foreground">{h.label}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground/60 text-center leading-tight pt-0.5">
+                  Hormone curves are typical patterns — overlay shows when each hormone peaks vs. your symptom intensity.
+                </p>
               </div>
             )}
 
