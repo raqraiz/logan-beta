@@ -937,7 +937,7 @@ export function ProfilesTab() {
 
               return (
                 <Tabs defaultValue="home" className="w-full">
-                  <TabsList className="grid grid-cols-2 mx-4 mb-2">
+                  <TabsList className="grid grid-cols-3 mx-4 mb-2">
                     <TabsTrigger value="home" className="gap-2">
                       <Home className="w-4 h-4" />
                       Home
@@ -946,15 +946,69 @@ export function ProfilesTab() {
                       <CalendarDays className="w-4 h-4" />
                       Plan
                     </TabsTrigger>
+                    <TabsTrigger value="ask" className="gap-2">
+                      <MessageCircle className="w-4 h-4" />
+                      Ask
+                    </TabsTrigger>
                   </TabsList>
                   <TabsContent value="home" className="mt-0">
-                    <div className="px-2 pb-4 pointer-events-none select-none">
+                    <div className="px-2 pb-4">
                       <HomeTab cycleData={previewCycleData} userId={profile.id} />
                     </div>
                   </TabsContent>
                   <TabsContent value="plan" className="mt-0">
-                    <div className="px-2 pb-4 pointer-events-none select-none">
+                    <div className="px-2 pb-4">
                       <PlanTab cycleData={previewCycleData} userId={profile.id} />
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="ask" className="mt-0">
+                    <div className="px-2 pb-4 max-h-[70vh] overflow-y-auto">
+                      {loadingMessages ? (
+                        <div className="flex items-center justify-center py-8">
+                          <RefreshCw className="w-6 h-6 animate-spin text-primary" />
+                        </div>
+                      ) : chatMessages.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground text-sm">
+                          <MessageSquare className="w-10 h-10 mx-auto mb-3 opacity-50" />
+                          No messages yet
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {chatMessages.map((msg) => {
+                            const isAssistant = msg.role === "assistant" || msg.role === "system";
+                            const metadata = msg.metadata as MessageMetadata | null;
+                            const hasCycleVisual = metadata?.has_cycle_visual;
+                            return (
+                              <div key={msg.id} className={cn("max-w-[88%]", isAssistant ? "mr-auto" : "ml-auto")}>
+                                <div className={cn(
+                                  "rounded-2xl p-3",
+                                  isAssistant ? "bg-muted text-foreground" : "bg-primary text-primary-foreground"
+                                )}>
+                                  {hasCycleVisual && metadata?.cycle_day && metadata?.cycle_phase && (
+                                    <div className="mb-3">
+                                      <ChatCycleCircle
+                                        cycleDay={metadata.cycle_day}
+                                        phase={metadata.cycle_phase}
+                                        cycleLengthDays={metadata.cycle_length_days || 28}
+                                      />
+                                    </div>
+                                  )}
+                                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                  {msg.emoji_reaction && (
+                                    <div className="mt-2"><span className="text-xl">{msg.emoji_reaction}</span></div>
+                                  )}
+                                  <p className={cn(
+                                    "text-[10px] mt-2",
+                                    isAssistant ? "text-muted-foreground" : "text-primary-foreground/60"
+                                  )}>
+                                    {format(new Date(msg.created_at), "MMM d, h:mm a")}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </TabsContent>
                 </Tabs>
