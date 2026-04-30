@@ -181,7 +181,37 @@ export function CycleCorrelationDetail({
     onDeleted();
   };
 
-  const recentLogs = logs.slice(0, 7);
+  const handleSaveEdit = async () => {
+    const name = editName.trim();
+    const emoji = (editEmoji || "✨").slice(0, 4);
+    if (!name) {
+      toast.error("Name can't be empty");
+      return;
+    }
+    if (name === tracker.name && emoji === tracker.emoji) {
+      setEditing(false);
+      return;
+    }
+    setSavingEdit(true);
+    const { error } = await supabase
+      .from("custom_trackers")
+      .update({ name, emoji })
+      .eq("id", tracker.id);
+    setSavingEdit(false);
+    if (error) {
+      toast.error("Couldn't save changes");
+      return;
+    }
+    toast.success("Updated");
+    setEditing(false);
+    onUpdated?.({ ...tracker, name, emoji });
+  };
+
+  const cancelEdit = () => {
+    setEditName(tracker.name);
+    setEditEmoji(tracker.emoji);
+    setEditing(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
