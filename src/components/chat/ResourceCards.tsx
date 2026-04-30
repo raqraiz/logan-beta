@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Download, FileText, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { Sparkles, Download, FileText, Loader2, AlertCircle, RefreshCw, Eye } from "lucide-react";
 import { MealPlanSetupDialog } from "./MealPlanSetupDialog";
+import { MealPlanPreviewDialog } from "./MealPlanPreviewDialog";
 import { cn } from "@/lib/utils";
 
 /**
@@ -45,6 +46,7 @@ export function ResourceOfferCard({ userId, resourceType }: { userId: string; re
 export function ResourceCard({ resourceId, userId }: { resourceId: string; userId: string }) {
   const [resource, setResource] = useState<any>(null);
   const [downloading, setDownloading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -143,16 +145,25 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
           )}
 
           {isReady && (
-            <Button
-              onClick={handleDownload}
-              disabled={downloading}
-              variant="premium"
-              size="sm"
-              className="mt-3"
-            >
-              {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-              Download PDF
-            </Button>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                onClick={() => setPreviewOpen(true)}
+                variant="premium"
+                size="sm"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                Preview plan
+              </Button>
+              <Button
+                onClick={handleDownload}
+                disabled={downloading}
+                variant="outline"
+                size="sm"
+              >
+                {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                PDF
+              </Button>
+            </div>
           )}
 
           {isFailed && (
@@ -174,6 +185,14 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
           )}
         </div>
       </div>
+      <MealPlanPreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        title={resource.title}
+        preview={resource.metadata?.preview ?? null}
+        onDownload={handleDownload}
+        downloading={downloading}
+      />
     </div>
   );
 }
