@@ -101,10 +101,55 @@ export function CycleCorrelationDetail({
     [enrichedLogs, tracker.name]
   );
 
+  // Average hormone levels per phase (normalized 0-1, scaled to 0-5 for chart overlay)
+  const HORMONES = [
+    { key: "estrogen", label: "Estrogen", color: "hsl(187, 100%, 42%)" },
+    { key: "progesterone", label: "Progesterone", color: "hsl(270, 60%, 65%)" },
+    { key: "fsh", label: "FSH", color: "hsl(40, 85%, 55%)" },
+    { key: "lh", label: "LH", color: "hsl(355, 75%, 60%)" },
+  ] as const;
+
+  const hormoneByPhase = useMemo(() => {
+    const len = cycleLengthDays || 28;
+    const menEnd = 5;
+    const ovDay = len - 14;
+    const ovStart = ovDay - 1;
+    const ovEnd = ovDay + 2;
+    const phaseRanges: Record<string, [number, number]> = {
+      Menstruation: [1, menEnd],
+      Follicular: [menEnd + 1, ovStart - 1],
+      Ovulation: [ovStart, ovEnd],
+      Luteal: [ovEnd + 1, len],
+    };
+    const out: Record<string, Record<string, number>> = {};
+    for (const phase of PHASES) {
+      const [s, e] = phaseRanges[phase];
+      const vals: Record<string, number[]> = { estrogen: [], progesterone: [], fsh: [], lh: [] };
+      for (let d = s; d <= e; d++) {
+        vals.estrogen.push(getHormoneValue("estrogen", d, len, menEnd, ovDay, ovStart, ovEnd));
+        vals.progesterone.push(getHormoneValue("progesterone", d, len, menEnd, ovDay, ovStart, ovEnd));
+        vals.fsh.push(getHormoneValue("fsh", d, len, menEnd, ovDay, ovStart, ovEnd));
+        vals.lh.push(getHormoneValue("lh", d, len, menEnd, ovDay, ovStart, ovEnd));
+      }
+      out[phase] = {
+        estrogen: avg(vals.estrogen) * 5,
+        progesterone: avg(vals.progesterone) * 5,
+        fsh: avg(vals.fsh) * 5,
+        lh: avg(vals.lh) * 5,
+      };
+    }
+    return out;
+  }, [cycleLengthDays]);
+
   const chartData = result.phaseStats.map((s) => ({
     phase: s.phase.slice(0, 4),
+    fullPhase: s.phase,
     avg: Number(s.avg.toFixed(2)),
     count: s.count,
+    estrogen: Number(hormoneByPhase[s.phase].estrogen.toFixed(2)),
+    progesterone: Number(hormoneByPhase[s.phase].progesterone.toFixed(2)),
+    fsh: Number(hormoneByPhase[s.phase].fsh.toFixed(2)),
+    lh: Number(hormoneByPhase[s.phase].lh.toFixed(2)),
   }));
 
   const handleDelete = async () => {
