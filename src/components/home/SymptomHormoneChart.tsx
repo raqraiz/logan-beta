@@ -132,7 +132,7 @@ export function SymptomHormoneChart({
   }, [cycleLengthDays]);
 
   const chartData = result.phaseStats.map((s) => ({
-    phase: s.phase.slice(0, 4),
+    phase: s.phase,
     fullPhase: s.phase,
     avg: Number(s.avg.toFixed(2)),
     count: s.count,
