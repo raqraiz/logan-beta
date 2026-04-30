@@ -160,16 +160,18 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
     }
     setDownloading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("download-resource", {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-resource`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionData.session?.access_token ?? ""}`,
+        },
         body: { resourceId: resource.id },
       });
 
-      if (error) throw error;
-      if (!data) throw new Error("No PDF returned");
-
-      const pdfBlob = data instanceof Blob
-        ? new Blob([data], { type: "application/pdf" })
-        : new Blob([data], { type: "application/pdf" });
+      if (!response.ok) throw new Error(`Download failed: ${response.status}`);
+      const pdfBlob = new Blob([await response.blob()], { type: "application/pdf" });
       triggerBrowserDownload(pdfBlob, downloadFilename);
     } catch (err) {
       console.error("Download failed:", err);
