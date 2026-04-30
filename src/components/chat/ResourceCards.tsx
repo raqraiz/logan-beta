@@ -46,6 +46,7 @@ export function ResourceOfferCard({ userId, resourceType }: { userId: string; re
 export function ResourceCard({ resourceId, userId }: { resourceId: string; userId: string }) {
   const [resource, setResource] = useState<any>(null);
   const [downloading, setDownloading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
