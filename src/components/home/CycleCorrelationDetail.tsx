@@ -12,12 +12,14 @@ import { Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import {
   ResponsiveContainer,
-  BarChart,
+  ComposedChart,
   Bar,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
 } from "recharts";
 import {
   analyzeCorrelation,
