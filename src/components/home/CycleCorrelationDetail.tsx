@@ -15,6 +15,7 @@ import {
   ComposedChart,
   Bar,
   Line,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -203,26 +204,91 @@ export function CycleCorrelationDetail({
 
             {/* Chart */}
             {!isNonCycling && result.totalLogs > 0 && (
-              <div className="space-y-1.5">
-                <div className="h-52 w-full">
+              <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/10 backdrop-blur-xl p-3 space-y-2.5">
+                <div className="flex items-center justify-between px-1">
+                  <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 font-medium">
+                    Symptom × Hormones
+                  </p>
+                  <p className="text-[9px] text-muted-foreground/50">avg per phase</p>
+                </div>
+
+                <div className="h-56 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-                      <XAxis dataKey="phase" tick={{ fontSize: 10 }} />
-                      <YAxis domain={[0, 5]} tick={{ fontSize: 10 }} />
+                    <ComposedChart data={chartData} margin={{ top: 8, right: 4, left: -28, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="symptomBarFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(173 80% 50%)" stopOpacity={0.95} />
+                          <stop offset="100%" stopColor="hsl(173 80% 35%)" stopOpacity={0.55} />
+                        </linearGradient>
+                        {HORMONES.map((h) => (
+                          <linearGradient key={h.key} id={`hormoneFill-${h.key}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={h.color} stopOpacity={0.18} />
+                            <stop offset="100%" stopColor={h.color} stopOpacity={0} />
+                          </linearGradient>
+                        ))}
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="2 4"
+                        stroke="hsl(var(--border))"
+                        strokeOpacity={0.18}
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="phase"
+                        tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                        axisLine={false}
+                        tickLine={false}
+                        dy={4}
+                      />
+                      <YAxis
+                        domain={[0, 5]}
+                        tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={28}
+                      />
                       <Tooltip
+                        cursor={{ fill: "hsl(var(--foreground) / 0.04)" }}
                         contentStyle={{
-                          background: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: 8,
-                          fontSize: 12,
+                          background: "hsl(var(--card) / 0.95)",
+                          backdropFilter: "blur(12px)",
+                          border: "1px solid hsl(var(--border) / 0.5)",
+                          borderRadius: 12,
+                          fontSize: 11,
+                          padding: "8px 10px",
+                          boxShadow: "0 8px 24px hsl(0 0% 0% / 0.4)",
+                        }}
+                        labelStyle={{
+                          fontSize: 10,
+                          color: "hsl(var(--muted-foreground))",
+                          marginBottom: 4,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.08em",
                         }}
                         formatter={(value: number, name: string, p: any) => {
-                          if (name === "Symptom") return [`${value} (${p.payload.count} logs)`, "Avg intensity"];
+                          if (name === "Symptom") return [`${value} · ${p.payload.count} log${p.payload.count === 1 ? "" : "s"}`, "Symptom"];
                           return [value.toFixed(2), name];
                         }}
                       />
-                      <Bar dataKey="avg" name="Symptom" fill="hsl(173 80% 40%)" radius={[4, 4, 0, 0]} />
+                      <Bar
+                        dataKey="avg"
+                        name="Symptom"
+                        fill="url(#symptomBarFill)"
+                        radius={[6, 6, 2, 2]}
+                        barSize={28}
+                      />
+                      {HORMONES.map((h) => (
+                        <Area
+                          key={`area-${h.key}`}
+                          type="monotone"
+                          dataKey={h.key}
+                          stroke="none"
+                          fill={`url(#hormoneFill-${h.key})`}
+                          isAnimationActive={false}
+                          legendType="none"
+                          tooltipType="none"
+                        />
+                      ))}
                       {HORMONES.map((h) => (
                         <Line
                           key={h.key}
@@ -230,29 +296,37 @@ export function CycleCorrelationDetail({
                           dataKey={h.key}
                           name={h.label}
                           stroke={h.color}
-                          strokeWidth={1.5}
-                          dot={{ r: 2, fill: h.color }}
-                          activeDot={{ r: 3 }}
+                          strokeWidth={1.75}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          dot={false}
+                          activeDot={{ r: 3, strokeWidth: 0, fill: h.color }}
                           isAnimationActive={false}
+                          opacity={0.9}
                         />
                       ))}
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-sm" style={{ background: "hsl(173 80% 40%)" }} />
-                    <span className="text-[10px] text-muted-foreground">Symptom</span>
+
+                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 pt-1 border-t border-white/5">
+                  <div className="flex items-center gap-1.5 pt-1.5">
+                    <span className="w-2 h-2.5 rounded-sm bg-gradient-to-b from-teal-400 to-teal-600" />
+                    <span className="text-[10px] text-foreground/70 font-medium">Symptom</span>
                   </div>
                   {HORMONES.map((h) => (
-                    <div key={h.key} className="flex items-center gap-1.5">
-                      <span className="w-3 h-0.5 rounded-full" style={{ background: h.color }} />
-                      <span className="text-[10px] text-muted-foreground">{h.label}</span>
+                    <div key={h.key} className="flex items-center gap-1.5 pt-1.5">
+                      <span
+                        className="w-3.5 h-[2px] rounded-full"
+                        style={{ background: h.color, boxShadow: `0 0 6px ${h.color}40` }}
+                      />
+                      <span className="text-[10px] text-foreground/70">{h.label}</span>
                     </div>
                   ))}
                 </div>
-                <p className="text-[10px] text-muted-foreground/60 text-center leading-tight pt-0.5">
-                  Hormone curves are typical patterns — overlay shows when each hormone peaks vs. your symptom intensity.
+
+                <p className="text-[10px] text-muted-foreground/55 text-center leading-snug px-2">
+                  Typical hormone curves overlaid on your logged intensity — see which hormones may be driving each pattern.
                 </p>
               </div>
             )}
