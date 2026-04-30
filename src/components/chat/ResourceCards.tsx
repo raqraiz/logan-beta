@@ -133,6 +133,51 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
     }
   };
 
+  const handleReact = async (next: "up" | "down") => {
+    setReaction(next);
+    try {
+      await supabase.from("resource_feedback").insert({
+        user_id: userId,
+        resource_id: resourceId,
+        reaction: next,
+      });
+    } catch (err) {
+      console.error("Reaction failed:", err);
+    }
+  };
+
+  const handleRefine = async ({
+    excludeIngredients,
+    feedbackText,
+  }: { excludeIngredients: string[]; feedbackText: string }) => {
+    if (!resource) return;
+    setRefining(true);
+    try {
+      await supabase.from("resource_feedback").insert({
+        user_id: userId,
+        resource_id: resourceId,
+        reaction: reaction ?? "down",
+        comment: feedbackText || null,
+        excluded_ingredients: excludeIngredients,
+      });
+
+      await supabase.functions.invoke("generate-meal-plan", {
+        body: {
+          parentResourceId: resourceId,
+          style: resource.style,
+          lengthDays: resource.metadata?.length_days,
+          excludeIngredients,
+          feedbackText,
+          dietaryPrefs: resource.metadata?.dietary_prefs ?? {},
+        },
+      });
+    } catch (err) {
+      console.error("Refine failed:", err);
+    } finally {
+      setRefining(false);
+    }
+  };
+
   if (!resource) {
     return (
       <div className="mt-3 rounded-2xl border border-border/40 bg-card/40 p-4 flex items-center gap-2">
