@@ -36,6 +36,7 @@ interface Tracker {
   id: string;
   name: string;
   emoji: string;
+  description?: string | null;
 }
 
 interface LogRow {
