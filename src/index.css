@@ -168,11 +168,53 @@
   .shadow-card {
     box-shadow: var(--shadow-card);
   }
-  
+
+  .shadow-elevated {
+    box-shadow: var(--shadow-elevated);
+  }
+
   .text-gradient {
-    background: var(--gradient-hero);
+    background: var(--gradient-text);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  /* Premium glass surface */
+  .glass {
+    background: var(--gradient-glass);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    border: 1px solid hsl(210 20% 97% / 0.08);
+    box-shadow: var(--shadow-card), var(--shadow-inset);
+  }
+
+  .glass-strong {
+    background: linear-gradient(145deg, hsl(220 10% 14% / 0.92), hsl(220 10% 8% / 0.88));
+    backdrop-filter: blur(28px) saturate(160%);
+    -webkit-backdrop-filter: blur(28px) saturate(160%);
+    border: 1px solid hsl(210 20% 97% / 0.08);
+    box-shadow: var(--shadow-elevated), var(--shadow-inset);
+  }
+
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .ring-glow {
+    box-shadow: 0 0 0 1px hsl(168 80% 42% / 0.35), 0 0 24px -4px hsl(168 80% 42% / 0.4);
+  }
+
+  .hairline {
+    background: linear-gradient(90deg, transparent, hsl(210 20% 97% / 0.12), transparent);
+    height: 1px;
+  }
+
+  .lift {
+    transition: transform var(--duration-base, 240ms) var(--ease-out-soft, cubic-bezier(0.22,1,0.36,1)), box-shadow var(--duration-base, 240ms) var(--ease-out-soft, cubic-bezier(0.22,1,0.36,1));
+  }
+  .lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-elevated);
   }
 }
