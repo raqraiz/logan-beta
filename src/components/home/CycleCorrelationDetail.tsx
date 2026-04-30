@@ -15,11 +15,13 @@ import {
   ComposedChart,
   Bar,
   Line,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
+  defs,
 } from "recharts";
 import {
   analyzeCorrelation,
