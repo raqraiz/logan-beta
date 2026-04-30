@@ -6,6 +6,18 @@ import { MealPlanSetupDialog } from "./MealPlanSetupDialog";
 import { MealPlanPreviewDialog } from "./MealPlanPreviewDialog";
 import { cn } from "@/lib/utils";
 
+const triggerBrowserDownload = (blob: Blob, filename: string) => {
+  const blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = filename;
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+};
+
 type ResourceMetadata = {
   preview?: {
     intro?: string;
@@ -142,31 +154,23 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
   }, [resource?.title]);
 
   const handleDownload = async () => {
-    if (!resource?.pdf_path) {
-      console.warn("Download: no pdf_path on resource", resource?.id);
+    if (!resource?.id) {
+      console.warn("Download: no resource id");
       return;
     }
     setDownloading(true);
     try {
-      const { data, error } = await supabase.storage
-        .from("resources")
-        .createSignedUrl(resource.pdf_path, 60 * 5, {
-          download: downloadFilename,
-        });
-      if (error || !data?.signedUrl) throw error || new Error("No signed URL");
+      const { data, error } = await supabase.functions.invoke("download-resource", {
+        body: { resourceId: resource.id },
+      });
 
-      const response = await fetch(data.signedUrl);
-      if (!response.ok) throw new Error(`Download failed: ${response.status}`);
-      const buffer = await response.arrayBuffer();
-      const blobUrl = URL.createObjectURL(new Blob([buffer], { type: "application/pdf" }));
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = downloadFilename;
-      link.style.display = "none";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      if (error) throw error;
+      if (!data) throw new Error("No PDF returned");
+
+      const pdfBlob = data instanceof Blob
+        ? data
+        : new Blob([data], { type: "application/pdf" });
+      triggerBrowserDownload(pdfBlob, downloadFilename);
     } catch (err) {
       console.error("Download failed:", err);
     } finally {
@@ -297,9 +301,10 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
                 disabled={downloading}
                 variant="outline"
                 size="sm"
+                className="min-w-[76px]"
               >
                 {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                PDF
+                <span>PDF</span>
               </Button>
             </div>
           )}
