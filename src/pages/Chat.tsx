@@ -1256,6 +1256,22 @@ const Chat = () => {
                           <MarkdownMessage content={message.metadata.engagement_question as string} />
                         </div>
                       )}
+
+                      {/* Resource offer card (Logan suggesting a downloadable) */}
+                      {message.message_type === "resource_offer" && message.metadata?.resource_type && user && (
+                        <ResourceOfferCard
+                          userId={user.id}
+                          resourceType={message.metadata.resource_type as string}
+                        />
+                      )}
+
+                      {/* Generated/generating resource card */}
+                      {message.metadata?.resource_id && user && (
+                        <ResourceCard
+                          resourceId={message.metadata.resource_id as string}
+                          userId={user.id}
+                        />
+                      )}
                       
                       <div className={`flex items-center gap-2 mt-1 ${
                         message.role === "user" ? "justify-end" : "justify-start"
