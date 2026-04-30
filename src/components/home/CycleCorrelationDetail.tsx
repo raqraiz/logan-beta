@@ -219,9 +219,68 @@ export function CycleCorrelationDetail({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <span>{tracker.emoji}</span>
-            <span>{tracker.name}</span>
+          <DialogTitle asChild>
+            <div className="flex items-center gap-2 pr-8">
+              {editing ? (
+                <>
+                  <Input
+                    value={editEmoji}
+                    onChange={(e) => setEditEmoji(e.target.value.slice(0, 4))}
+                    maxLength={4}
+                    className="w-14 h-9 text-center text-base"
+                    aria-label="Emoji"
+                  />
+                  <Input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    maxLength={60}
+                    className="h-9 flex-1"
+                    aria-label="Tracker name"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSaveEdit();
+                      if (e.key === "Escape") cancelEdit();
+                    }}
+                    autoFocus
+                  />
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 shrink-0"
+                    onClick={handleSaveEdit}
+                    disabled={savingEdit}
+                    aria-label="Save"
+                  >
+                    <Check className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 shrink-0"
+                    onClick={cancelEdit}
+                    disabled={savingEdit}
+                    aria-label="Cancel"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <span className="text-lg">{tracker.emoji}</span>
+                  <span className="text-lg font-semibold leading-none tracking-tight truncate">
+                    {tracker.name}
+                  </span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                    onClick={() => setEditing(true)}
+                    aria-label="Edit tracker"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                </>
+              )}
+            </div>
           </DialogTitle>
           <DialogDescription>
             {result.totalLogs > 0
