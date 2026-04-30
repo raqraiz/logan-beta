@@ -84,6 +84,8 @@ interface ChatMessage {
       nutrition?: { level: string; note: string };
     } | null;
     cheat_sheet_responses?: Record<string, string>;
+    resource_type?: string;
+    resource_id?: string;
   };
 }
 
