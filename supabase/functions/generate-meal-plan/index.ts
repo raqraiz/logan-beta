@@ -534,6 +534,102 @@ Write a 2-sentence intro that explains the plan's logic in Logan's voice (warm, 
   }
 }
 
+
+// ---------- Hero image generation ----------
+// Generates one editorial-style food photo per day from the dinner description.
+// Runs in parallel batches; any failures fall back to null so the plan still ships.
+async function generateDayHeroImages(args: {
+  supabase: any;
+  lovableApiKey: string;
+  userId: string;
+  resourceId: string;
+  days: MealDay[];
+}): Promise<(string | null)[]> {
+  const { supabase, lovableApiKey, userId, resourceId, days } = args;
+
+  // Cap at 14 photos per generation to keep edge function within time budget.
+  const MAX_IMAGES = 14;
+  const targets = days.slice(0, MAX_IMAGES);
+
+  const generateOne = async (day: MealDay, index: number): Promise<string | null> => {
+    try {
+      // Pick the most photogenic meal of the day — dinner usually wins, fall back to lunch
+      const meal = day.dinner || day.lunch || day.breakfast;
+      if (!meal) return null;
+
+      const prompt = `Editorial overhead food photography of: ${meal}.
+Beautifully plated on a ceramic plate, on a warm wooden table with soft natural daylight from the side.
+Shallow depth of field, fresh colorful whole-food ingredients visible, rustic minimal styling, magazine cookbook aesthetic.
+No text, no logos, no people, no hands, no cutlery branding. Photorealistic, ultra detailed, soft shadows.`;
+
+      const resp = await fetch(
+        "https://ai.gateway.lovable.dev/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${lovableApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash-image",
+            messages: [{ role: "user", content: prompt }],
+            modalities: ["image", "text"],
+          }),
+        },
+      );
+
+      if (!resp.ok) {
+        console.warn(`Image gen failed for day ${day.day_number}: ${resp.status}`);
+        return null;
+      }
+
+      const data = await resp.json();
+      const dataUrl: string | undefined =
+        data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      if (!dataUrl?.startsWith("data:image/")) return null;
+
+      // Strip the data URL prefix and decode
+      const commaIdx = dataUrl.indexOf(",");
+      const b64 = dataUrl.slice(commaIdx + 1);
+      const mimeMatch = dataUrl.slice(0, commaIdx).match(/data:(image\/[a-zA-Z0-9.+-]+)/);
+      const contentType = mimeMatch?.[1] ?? "image/png";
+      const ext = contentType.split("/")[1]?.split("+")[0] ?? "png";
+
+      const binary = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      const path = `${userId}/meal-plans/${resourceId}/day-${day.day_number}.${ext}`;
+
+      const { error: upErr } = await supabase.storage
+        .from("resources")
+        .upload(path, binary, { contentType, upsert: true });
+      if (upErr) {
+        console.warn(`Image upload failed for day ${day.day_number}: ${upErr.message}`);
+        return null;
+      }
+      return path;
+    } catch (err) {
+      console.warn(`Image step crashed for day ${day.day_number}:`, err);
+      return null;
+    }
+  };
+
+  // Run in batches of 4 to balance speed vs gateway concurrency
+  const BATCH = 4;
+  const results: (string | null)[] = new Array(targets.length).fill(null);
+  for (let i = 0; i < targets.length; i += BATCH) {
+    const slice = targets.slice(i, i + BATCH);
+    const settled = await Promise.allSettled(
+      slice.map((d, j) => generateOne(d, i + j)),
+    );
+    settled.forEach((r, j) => {
+      results[i + j] = r.status === "fulfilled" ? r.value : null;
+    });
+  }
+
+  // Pad with nulls for any days beyond the cap
+  while (results.length < days.length) results.push(null);
+  return results;
+}
+
 // ---------- PDF rendering ----------
 async function renderMealPlanPdf(args: {
   planData: MealPlanData;
