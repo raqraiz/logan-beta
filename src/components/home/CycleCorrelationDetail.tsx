@@ -158,7 +158,7 @@ export function CycleCorrelationDetail({
   }, [cycleLengthDays]);
 
   const chartData = result.phaseStats.map((s) => ({
-    phase: s.phase.slice(0, 4),
+    phase: s.phase,
     fullPhase: s.phase,
     avg: Number(s.avg.toFixed(2)),
     count: s.count,
@@ -340,10 +340,11 @@ export function CycleCorrelationDetail({
                       />
                       <XAxis
                         dataKey="phase"
-                        tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                        tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
                         axisLine={false}
                         tickLine={false}
                         dy={4}
+                        interval={0}
                       />
                       <YAxis
                         domain={[0, 5]}
