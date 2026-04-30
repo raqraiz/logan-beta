@@ -35,6 +35,7 @@ export function MealPlanSetupDialog({ open, onOpenChange, userId, onGenerated }:
   const [length, setLength] = useState<Length>(7);
   const [style, setStyle] = useState<Style>("dark");
   const [dietType, setDietType] = useState<string>("Omnivore");
+  const [dietOther, setDietOther] = useState<string>("");
   const [allergies, setAllergies] = useState<string[]>([]);
   const [allergyInput, setAllergyInput] = useState("");
   const [dislikes, setDislikes] = useState("");
