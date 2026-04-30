@@ -762,6 +762,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_dietary_prefs: {
+        Row: {
+          allergies: string[] | null
+          created_at: string
+          cuisines: string[] | null
+          diet_type: string | null
+          dislikes: string[] | null
+          id: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allergies?: string[] | null
+          created_at?: string
+          cuisines?: string[] | null
+          diet_type?: string | null
+          dislikes?: string[] | null
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allergies?: string[] | null
+          created_at?: string
+          cuisines?: string[] | null
+          diet_type?: string | null
+          dislikes?: string[] | null
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_feedback: {
         Row: {
           category: string
@@ -782,6 +818,48 @@ export type Database = {
           created_at?: string
           id?: string
           message?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_resources: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          metadata: Json
+          pdf_path: string | null
+          status: Database["public"]["Enums"]["resource_status"]
+          style: string
+          title: string
+          type: Database["public"]["Enums"]["resource_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json
+          pdf_path?: string | null
+          status?: Database["public"]["Enums"]["resource_status"]
+          style?: string
+          title: string
+          type: Database["public"]["Enums"]["resource_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json
+          pdf_path?: string | null
+          status?: Database["public"]["Enums"]["resource_status"]
+          style?: string
+          title?: string
+          type?: Database["public"]["Enums"]["resource_type"]
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -853,6 +931,8 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user"
       insight_status: "pending" | "approved" | "rejected" | "sent"
+      resource_status: "generating" | "ready" | "failed"
+      resource_type: "meal_plan" | "training_program" | "meditation" | "planner"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -982,6 +1062,8 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user"],
       insight_status: ["pending", "approved", "rejected", "sent"],
+      resource_status: ["generating", "ready", "failed"],
+      resource_type: ["meal_plan", "training_program", "meditation", "planner"],
     },
   },
 } as const
