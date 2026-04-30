@@ -49,6 +49,8 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [refining, setRefining] = useState(false);
+  const [reaction, setReaction] = useState<"up" | "down" | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -58,6 +60,16 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
       .eq("id", resourceId)
       .maybeSingle()
       .then(({ data }) => { if (active) setResource(data); });
+
+    // Load this user's last reaction for this resource (if any)
+    supabase
+      .from("resource_feedback")
+      .select("reaction")
+      .eq("resource_id", resourceId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => { if (active && data?.reaction) setReaction(data.reaction as "up" | "down"); });
 
     const channel = supabase
       .channel(`resource_${resourceId}`)
