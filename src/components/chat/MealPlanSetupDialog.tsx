@@ -25,7 +25,7 @@ const LENGTH_OPTIONS: { value: Length; label: string; sub: string; eta: string }
   { value: 28, label: "4 weeks", sub: "Full cycle", eta: "~60s" },
 ];
 
-const DIET_TYPES = ["Omnivore", "Pescatarian", "Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Keto", "Paleo"];
+const DIET_TYPES = ["Omnivore", "Pescatarian", "Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Keto", "Paleo", "Kosher", "Halal", "Other"];
 const COMMON_ALLERGIES = ["Nuts", "Peanuts", "Shellfish", "Eggs", "Soy", "Gluten", "Dairy"];
 const CUISINE_VIBES = ["Mediterranean", "Asian", "Mexican", "Middle Eastern", "Italian", "Comfort food", "Quick & simple"];
 
