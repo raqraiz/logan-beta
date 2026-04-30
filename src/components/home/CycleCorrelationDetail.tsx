@@ -21,7 +21,6 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  defs,
 } from "recharts";
 import {
   analyzeCorrelation,
