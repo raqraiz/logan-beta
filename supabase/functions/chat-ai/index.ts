@@ -950,6 +950,29 @@ serve(async (req) => {
       console.error("Error saving assistant message:", insertError);
     }
 
+    // Follow-up: small bubble offering the full meal plan resource (after the normal answer)
+    if (shouldOfferMealPlan) {
+      const liveCycle = participant?.last_period_start && participant?.cycle_length_days
+        ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
+        : null;
+
+      // Tiny delay so the offer arrives just after the main answer (better UX)
+      await new Promise(r => setTimeout(r, 400));
+
+      await supabase.from("chat_messages").insert({
+        user_id: user.id,
+        role: "assistant",
+        content: "Want me to build you a full cycle-synced meal plan? Each meal aligned to your phase, plus a grocery list.",
+        message_type: "resource_offer",
+        metadata: {
+          resource_type: "meal_plan",
+          cycle_day: liveCycle?.cycleDay,
+          cycle_phase: liveCycle?.phase,
+          cycle_length_days: participant?.cycle_length_days || 28,
+        },
+      });
+    }
+
     // Get updated credit balance to return to frontend (disabled during alpha)
     let creditBalance = null;
 
