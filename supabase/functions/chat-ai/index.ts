@@ -514,9 +514,9 @@ serve(async (req) => {
     // --- End cycle edit detection ---
 
     // --- Meal plan intent detection ---
-    // If the user asks about a meal plan, recipes, what to eat for the cycle/week, or food
-    // planning, surface a "Generate my meal plan" resource offer card instead of letting
-    // the AI answer in-line. The card opens the dietary-prefs flow on the client.
+    // If the user asks about food/meals/recipes, let Logan answer normally first,
+    // then append a small follow-up bubble offering the full cycle-synced meal plan resource.
+    let shouldOfferMealPlan = false;
     {
       const mealPlanPatterns: RegExp[] = [
         /\bmeal\s*plan(s|ner)?\b/i,
@@ -528,33 +528,7 @@ serve(async (req) => {
         /\b(recipes?|menu)\s+(for|by|that match|aligned with)\b[^.?!]{0,40}\b(cycle|phase|week|hormones?)\b/i,
         /\b(food|meal|recipe|menu)s?\s+(suggestions?|ideas?|for (this|my) (phase|cycle|week))\b/i,
       ];
-      const isMealPlanIntent = mealPlanPatterns.some(p => p.test(userMessage));
-
-      if (isMealPlanIntent) {
-        const liveCycle = participant?.last_period_start && participant?.cycle_length_days
-          ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
-          : null;
-
-        const offerMessage = "Yes — I can build you a cycle-synced meal plan, with each meal aligned to where you are in your cycle. Pick a length and I'll handle the rest.";
-
-        await supabase.from("chat_messages").insert({
-          user_id: user.id,
-          role: "assistant",
-          content: offerMessage,
-          message_type: "resource_offer",
-          metadata: {
-            resource_type: "meal_plan",
-            cycle_day: liveCycle?.cycleDay,
-            cycle_phase: liveCycle?.phase,
-            cycle_length_days: participant?.cycle_length_days || 28,
-          },
-        });
-
-        return new Response(
-          JSON.stringify({ success: true, message: offerMessage, resourceOffer: "meal_plan" }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
+      shouldOfferMealPlan = mealPlanPatterns.some(p => p.test(userMessage));
     }
     // --- End meal plan intent ---
 
@@ -974,6 +948,29 @@ serve(async (req) => {
 
     if (insertError) {
       console.error("Error saving assistant message:", insertError);
+    }
+
+    // Follow-up: small bubble offering the full meal plan resource (after the normal answer)
+    if (shouldOfferMealPlan) {
+      const liveCycle = participant?.last_period_start && participant?.cycle_length_days
+        ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
+        : null;
+
+      // Tiny delay so the offer arrives just after the main answer (better UX)
+      await new Promise(r => setTimeout(r, 400));
+
+      await supabase.from("chat_messages").insert({
+        user_id: user.id,
+        role: "assistant",
+        content: "Want me to build you a full cycle-synced meal plan? Each meal aligned to your phase, plus a grocery list.",
+        message_type: "resource_offer",
+        metadata: {
+          resource_type: "meal_plan",
+          cycle_day: liveCycle?.cycleDay,
+          cycle_phase: liveCycle?.phase,
+          cycle_length_days: participant?.cycle_length_days || 28,
+        },
+      });
     }
 
     // Get updated credit balance to return to frontend (disabled during alpha)
