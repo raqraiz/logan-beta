@@ -29,7 +29,7 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50">
-      <div className="relative border-t border-border/50 bg-card/95 backdrop-blur-md">
+      <div className="relative glass-strong border-t border-white/5">
         <div className="max-w-md mx-auto flex items-end justify-around h-16 px-6 pb-2">
           {/* Home tab */}
           <button
