@@ -8,7 +8,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Trash2, Pencil, Check, X } from "lucide-react";
 import { format } from "date-fns";
 import {
   ResponsiveContainer,
