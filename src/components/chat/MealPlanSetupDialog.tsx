@@ -29,6 +29,8 @@ const DIET_TYPES = ["Omnivore", "Pescatarian", "Vegetarian", "Vegan", "Gluten-fr
 const COMMON_ALLERGIES = ["Nuts", "Peanuts", "Shellfish", "Eggs", "Soy", "Gluten", "Dairy"];
 const CUISINE_VIBES = ["Mediterranean", "Asian", "Mexican", "Middle Eastern", "Italian", "Comfort food", "Quick & simple"];
 
+const PRESET_DIETS = ["Omnivore", "Pescatarian", "Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Keto", "Paleo", "Kosher", "Halal"];
+
 export function MealPlanSetupDialog({ open, onOpenChange, userId, onGenerated }: MealPlanSetupDialogProps) {
   const [length, setLength] = useState<Length>(7);
   const [style, setStyle] = useState<Style>("dark");
