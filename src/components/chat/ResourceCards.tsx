@@ -185,6 +185,14 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
           )}
         </div>
       </div>
+      <MealPlanPreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        title={resource.title}
+        preview={resource.metadata?.preview ?? null}
+        onDownload={handleDownload}
+        downloading={downloading}
+      />
     </div>
   );
 }
