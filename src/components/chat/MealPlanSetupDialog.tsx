@@ -34,7 +34,7 @@ const PRESET_DIETS = ["Omnivore", "Pescatarian", "Vegetarian", "Vegan", "Gluten-
 export function MealPlanSetupDialog({ open, onOpenChange, userId, onGenerated }: MealPlanSetupDialogProps) {
   const [length, setLength] = useState<Length>(7);
   const [style, setStyle] = useState<Style>("dark");
-  const [dietType, setDietType] = useState<string>("Omnivore");
+  const [dietTypes, setDietTypes] = useState<string[]>(["Omnivore"]);
   const [dietOther, setDietOther] = useState<string>("");
   const [allergies, setAllergies] = useState<string[]>([]);
   const [allergyInput, setAllergyInput] = useState("");
@@ -54,13 +54,22 @@ export function MealPlanSetupDialog({ open, onOpenChange, userId, onGenerated }:
       .then(({ data }) => {
         if (data) {
           if (data.diet_type) {
-            if (PRESET_DIETS.includes(data.diet_type)) {
-              setDietType(data.diet_type);
-              setDietOther("");
+            // diet_type is stored as comma-separated string; split + map back to chips
+            const parts = data.diet_type.split(",").map((s: string) => s.trim()).filter(Boolean);
+            const presets: string[] = [];
+            const customs: string[] = [];
+            parts.forEach((p: string) => {
+              if (PRESET_DIETS.includes(p)) presets.push(p);
+              else customs.push(p);
+            });
+            const next = [...presets];
+            if (customs.length) {
+              next.push("Other");
+              setDietOther(customs.join(", "));
             } else {
-              setDietType("Other");
-              setDietOther(data.diet_type);
+              setDietOther("");
             }
+            setDietTypes(next.length ? next : ["Omnivore"]);
           }
           if (data.allergies?.length) setAllergies(data.allergies);
           if (data.dislikes?.length) setDislikes(data.dislikes.join(", "));
@@ -69,6 +78,16 @@ export function MealPlanSetupDialog({ open, onOpenChange, userId, onGenerated }:
         setLoadingPrefs(false);
       });
   }, [open, userId]);
+
+  const toggleDiet = (d: string) => {
+    setDietTypes(prev => {
+      if (prev.includes(d)) {
+        const next = prev.filter(x => x !== d);
+        return next.length ? next : ["Omnivore"];
+      }
+      return [...prev, d];
+    });
+  };
 
   const toggleAllergy = (a: string) => {
     setAllergies(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a]);
@@ -90,9 +109,13 @@ export function MealPlanSetupDialog({ open, onOpenChange, userId, onGenerated }:
     setSubmitting(true);
     try {
       const dislikeList = dislikes.split(",").map(s => s.trim()).filter(Boolean);
-      const resolvedDiet = dietType === "Other"
-        ? (dietOther.trim() || "Other")
-        : dietType;
+      const resolvedParts = dietTypes.flatMap(d => {
+        if (d === "Other") {
+          return dietOther.split(",").map(s => s.trim()).filter(Boolean);
+        }
+        return [d];
+      });
+      const resolvedDiet = resolvedParts.length ? resolvedParts.join(", ") : "Omnivore";
 
       const { data, error } = await supabase.functions.invoke("generate-meal-plan", {
         body: {
@@ -165,32 +188,36 @@ export function MealPlanSetupDialog({ open, onOpenChange, userId, onGenerated }:
               </div>
             </div>
 
-            {/* Diet type */}
+            {/* Diet type — multi select */}
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">
-                Diet
+                Diet <span className="text-muted-foreground/60 normal-case tracking-normal">(pick any that apply)</span>
               </Label>
               <div className="flex flex-wrap gap-1.5">
-                {DIET_TYPES.map(d => (
-                  <button
-                    key={d}
-                    onClick={() => setDietType(d)}
-                    className={cn(
-                      "rounded-full px-3 py-1 text-xs border transition-all",
-                      dietType === d
-                        ? "border-primary bg-primary/15 text-primary"
-                        : "border-border/40 bg-card/40 text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {d}
-                  </button>
-                ))}
+                {DIET_TYPES.map(d => {
+                  const active = dietTypes.includes(d);
+                  return (
+                    <button
+                      key={d}
+                      onClick={() => toggleDiet(d)}
+                      className={cn(
+                        "rounded-full px-3 py-1 text-xs border transition-all flex items-center gap-1",
+                        active
+                          ? "border-primary bg-primary/15 text-primary"
+                          : "border-border/40 bg-card/40 text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {active && <Check className="h-3 w-3" />}
+                      {d}
+                    </button>
+                  );
+                })}
               </div>
-              {dietType === "Other" && (
+              {dietTypes.includes("Other") && (
                 <Input
                   value={dietOther}
                   onChange={e => setDietOther(e.target.value)}
-                  placeholder="Describe your diet (e.g. low-FODMAP, raw vegan)"
+                  placeholder="Describe (e.g. low-FODMAP, raw vegan)"
                   className="h-8 text-xs mt-2"
                 />
               )}
