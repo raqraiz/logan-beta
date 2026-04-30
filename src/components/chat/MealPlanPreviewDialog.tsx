@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2, ShoppingBasket, Moon, Sun } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Download, Loader2, ShoppingBasket, Moon, Sun, ThumbsUp, ThumbsDown, Sparkles, X, Wand2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MealDay {
@@ -36,9 +37,12 @@ interface Props {
   previewLoading?: boolean;
   onDownload: () => void;
   downloading: boolean;
+  onReact?: (reaction: "up" | "down") => Promise<void> | void;
+  onRefine?: (args: { excludeIngredients: string[]; feedbackText: string }) => Promise<void> | void;
+  refining?: boolean;
+  initialReaction?: "up" | "down" | null;
 }
 
-// Phase chip colors per theme mode (independent of app theme so toggle is meaningful)
 const PHASE_CHIP: Record<"dark" | "light", Record<string, string>> = {
   dark: {
     Menstruation: "text-[hsl(354,73%,70%)] border-[hsl(354,73%,60%)]/40 bg-[hsl(354,73%,60%)]/15",
@@ -54,15 +58,39 @@ const PHASE_CHIP: Record<"dark" | "light", Record<string, string>> = {
   },
 };
 
-export function MealPlanPreviewDialog({ open, onOpenChange, title, preview, previewUrl, previewLoading, onDownload, downloading }: Props) {
+export function MealPlanPreviewDialog({
+  open, onOpenChange, title, preview, previewUrl, previewLoading,
+  onDownload, downloading,
+  onReact, onRefine, refining = false, initialReaction = null,
+}: Props) {
   const [mode, setMode] = useState<"dark" | "light">("dark");
+  const [reaction, setReaction] = useState<"up" | "down" | null>(initialReaction);
+  const [refineOpen, setRefineOpen] = useState(false);
+  const [excludes, setExcludes] = useState<string[]>([]);
+  const [excludeInput, setExcludeInput] = useState("");
+  const [feedbackText, setFeedbackText] = useState("");
+
+  // Reset transient refine state whenever a new resource is loaded
+  useEffect(() => {
+    setExcludes([]);
+    setExcludeInput("");
+    setFeedbackText("");
+    setRefineOpen(false);
+    setReaction(initialReaction);
+  }, [title, initialReaction]);
+
   const days = preview?.days ?? [];
   const weeks = preview?.weeks ?? [];
   const hasStructuredPreview = days.length > 0;
 
-  const isDark = mode === "dark";
+  // Aggregate every grocery item across weeks for one-click exclude
+  const allGroceryItems = useMemo(() => {
+    const set = new Set<string>();
+    weeks.forEach(w => w.grocery_list?.forEach(i => set.add(i)));
+    return Array.from(set);
+  }, [weeks]);
 
-  // Themed surface classes for preview content (independent of app theme)
+  const isDark = mode === "dark";
   const surface = isDark
     ? "bg-[hsl(220,15%,8%)] text-[hsl(0,0%,95%)] border-white/10"
     : "bg-[hsl(40,30%,97%)] text-[hsl(220,15%,15%)] border-black/10";
@@ -75,6 +103,38 @@ export function MealPlanPreviewDialog({ open, onOpenChange, title, preview, prev
     ? "bg-white/5 text-white/70 border-white/10"
     : "bg-black/5 text-black/70 border-black/10";
   const introBorder = isDark ? "border-white/10" : "border-black/10";
+
+  const toggleExclude = (item: string) => {
+    setExcludes(prev => prev.includes(item) ? prev.filter(x => x !== item) : [...prev, item]);
+  };
+  const addManualExclude = () => {
+    const v = excludeInput.trim();
+    if (v && !excludes.includes(v)) setExcludes(prev => [...prev, v]);
+    setExcludeInput("");
+  };
+
+  const handleReact = async (next: "up" | "down") => {
+    setReaction(next);
+    if (next === "down") setRefineOpen(true);
+    try {
+      await onReact?.(next);
+    } catch (err) {
+      console.error("Reaction failed:", err);
+    }
+  };
+
+  const handleRefine = async () => {
+    if (!onRefine) return;
+    if (!excludes.length && !feedbackText.trim()) return;
+    try {
+      await onRefine({ excludeIngredients: excludes, feedbackText: feedbackText.trim() });
+      onOpenChange(false);
+    } catch (err) {
+      console.error("Refine failed:", err);
+    }
+  };
+
+  const canRefine = excludes.length > 0 || feedbackText.trim().length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -120,7 +180,6 @@ export function MealPlanPreviewDialog({ open, onOpenChange, title, preview, prev
         <div className="space-y-5 py-2">
           {hasStructuredPreview ? (
             <div className={cn("rounded-xl border p-4 space-y-4 transition-colors", surface)}>
-              {/* Themed intro inside the preview canvas */}
               {preview?.intro && (
                 <p className={cn("text-xs leading-relaxed pb-3 border-b italic", mutedText, introBorder)}>
                   {preview.intro}
@@ -165,21 +224,44 @@ export function MealPlanPreviewDialog({ open, onOpenChange, title, preview, prev
                 <div className="space-y-3">
                   {weeks.map(w => (
                     <div key={w.week_number} className={cn("rounded-xl border p-3", cardSurface)}>
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <ShoppingBasket className="h-3.5 w-3.5 text-primary" />
-                        <span className="text-xs font-semibold">
-                          Week {w.week_number} grocery list
-                        </span>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <ShoppingBasket className="h-3.5 w-3.5 text-primary" />
+                          <span className="text-xs font-semibold">
+                            Week {w.week_number} grocery list
+                          </span>
+                        </div>
+                        {refineOpen && (
+                          <span className={cn("text-[10px] uppercase tracking-wider", subtleText)}>
+                            Tap to skip
+                          </span>
+                        )}
                       </div>
                       {w.phase_summary && (
                         <p className={cn("text-[11px] mb-2 italic", mutedText)}>{w.phase_summary}</p>
                       )}
                       <div className="flex flex-wrap gap-1">
-                        {w.grocery_list.map(item => (
-                          <span key={item} className={cn("text-[11px] px-2 py-0.5 rounded-full border", chipMuted)}>
-                            {item}
-                          </span>
-                        ))}
+                        {w.grocery_list.map(item => {
+                          const excluded = excludes.includes(item);
+                          return (
+                            <button
+                              key={item}
+                              type="button"
+                              onClick={() => refineOpen && toggleExclude(item)}
+                              disabled={!refineOpen}
+                              className={cn(
+                                "text-[11px] px-2 py-0.5 rounded-full border transition-all",
+                                excluded
+                                  ? "bg-destructive/15 text-destructive border-destructive/40 line-through"
+                                  : chipMuted,
+                                refineOpen && "cursor-pointer hover:border-destructive/50",
+                                !refineOpen && "cursor-default",
+                              )}
+                            >
+                              {item}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
@@ -225,6 +307,130 @@ export function MealPlanPreviewDialog({ open, onOpenChange, title, preview, prev
               ) : (
                 <div className="flex h-40 items-center justify-center px-4 text-center text-sm text-muted-foreground">
                   Preview is still getting ready. Try again in a moment.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Feedback + refine controls */}
+          {hasStructuredPreview && (onReact || onRefine) && (
+            <div className="rounded-xl border border-border/40 bg-card/40 p-3 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs text-muted-foreground">
+                  How does this plan look?
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleReact("up")}
+                    className={cn(
+                      "h-8 w-8 rounded-full border flex items-center justify-center transition-colors",
+                      reaction === "up"
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-border/40 text-muted-foreground hover:text-foreground",
+                    )}
+                    aria-label="Love it"
+                  >
+                    <ThumbsUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleReact("down")}
+                    className={cn(
+                      "h-8 w-8 rounded-full border flex items-center justify-center transition-colors",
+                      reaction === "down"
+                        ? "border-destructive bg-destructive/10 text-destructive"
+                        : "border-border/40 text-muted-foreground hover:text-foreground",
+                    )}
+                    aria-label="Not quite"
+                  >
+                    <ThumbsDown className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {onRefine && !refineOpen && (
+                <button
+                  type="button"
+                  onClick={() => setRefineOpen(true)}
+                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  <Wand2 className="h-3 w-3" /> Tweak this plan
+                </button>
+              )}
+
+              {onRefine && refineOpen && (
+                <div className="space-y-3 pt-2 border-t border-border/30">
+                  {/* Selected exclusions */}
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">
+                      Skip these ingredients
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {excludes.length === 0 && (
+                        <span className="text-[11px] text-muted-foreground/70 italic">
+                          Tap any grocery item above, or type one below.
+                        </span>
+                      )}
+                      {excludes.map(item => (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => toggleExclude(item)}
+                          className="text-[11px] px-2 py-0.5 rounded-full border border-destructive/40 bg-destructive/10 text-destructive flex items-center gap-1"
+                        >
+                          {item}
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <input
+                        value={excludeInput}
+                        onChange={e => setExcludeInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addManualExclude(); } }}
+                        placeholder="e.g. avocado, cilantro"
+                        className="flex-1 h-8 rounded-md border border-border/40 bg-card/40 px-2 text-xs focus:outline-none focus:border-primary/60"
+                      />
+                      <Button onClick={addManualExclude} size="sm" variant="outline" className="h-8">
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Free-form feedback */}
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">
+                      Anything else? (optional)
+                    </div>
+                    <Textarea
+                      value={feedbackText}
+                      onChange={e => setFeedbackText(e.target.value)}
+                      placeholder="e.g. lighter dinners, more snacks, less repetition…"
+                      className="text-sm min-h-[60px]"
+                      maxLength={500}
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleRefine}
+                      disabled={!canRefine || refining}
+                      variant="premium"
+                      size="sm"
+                      className="flex-1"
+                    >
+                      {refining ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                      Regenerate with these tweaks
+                    </Button>
+                    <Button
+                      onClick={() => { setRefineOpen(false); setExcludes([]); setFeedbackText(""); }}
+                      variant="ghost"
+                      size="sm"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
