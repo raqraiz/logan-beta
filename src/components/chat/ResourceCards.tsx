@@ -6,6 +6,40 @@ import { MealPlanSetupDialog } from "./MealPlanSetupDialog";
 import { MealPlanPreviewDialog } from "./MealPlanPreviewDialog";
 import { cn } from "@/lib/utils";
 
+type ResourceMetadata = {
+  preview?: {
+    intro?: string;
+    days?: Array<{
+      day_number: number;
+      cycle_day: number;
+      phase: string;
+      breakfast: string;
+      lunch: string;
+      dinner: string;
+      snack: string;
+      hormone_focus?: string;
+      image_path?: string | null;
+    }>;
+    weeks?: Array<{
+      week_number: number;
+      phase_summary: string;
+      grocery_list: string[];
+    }>;
+  } | null;
+  length_days?: number;
+  dietary_prefs?: Record<string, unknown>;
+};
+
+type MealPlanResource = {
+  id: string;
+  title: string | null;
+  status: string | null;
+  pdf_path: string | null;
+  style: string | null;
+  metadata: ResourceMetadata | null;
+  error_message: string | null;
+};
+
 /**
  * Card shown in chat when Logan offers a meal plan resource.
  * Tapping "Build it" opens the setup dialog.
@@ -44,7 +78,7 @@ export function ResourceOfferCard({ userId, resourceType }: { userId: string; re
  * via realtime so status flips automatically when the edge function finishes.
  */
 export function ResourceCard({ resourceId, userId }: { resourceId: string; userId: string }) {
-  const [resource, setResource] = useState<any>(null);
+  const [resource, setResource] = useState<MealPlanResource | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
