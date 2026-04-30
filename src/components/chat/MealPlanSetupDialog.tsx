@@ -53,7 +53,15 @@ export function MealPlanSetupDialog({ open, onOpenChange, userId, onGenerated }:
       .maybeSingle()
       .then(({ data }) => {
         if (data) {
-          if (data.diet_type) setDietType(data.diet_type);
+          if (data.diet_type) {
+            if (PRESET_DIETS.includes(data.diet_type)) {
+              setDietType(data.diet_type);
+              setDietOther("");
+            } else {
+              setDietType("Other");
+              setDietOther(data.diet_type);
+            }
+          }
           if (data.allergies?.length) setAllergies(data.allergies);
           if (data.dislikes?.length) setDislikes(data.dislikes.join(", "));
           if (data.cuisines?.length) setCuisines(data.cuisines);
