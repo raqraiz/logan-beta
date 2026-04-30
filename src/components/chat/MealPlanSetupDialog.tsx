@@ -90,13 +90,16 @@ export function MealPlanSetupDialog({ open, onOpenChange, userId, onGenerated }:
     setSubmitting(true);
     try {
       const dislikeList = dislikes.split(",").map(s => s.trim()).filter(Boolean);
+      const resolvedDiet = dietType === "Other"
+        ? (dietOther.trim() || "Other")
+        : dietType;
 
       const { data, error } = await supabase.functions.invoke("generate-meal-plan", {
         body: {
           lengthDays: length,
           style,
           dietaryPrefs: {
-            diet_type: dietType,
+            diet_type: resolvedDiet,
             allergies,
             dislikes: dislikeList,
             cuisines,
