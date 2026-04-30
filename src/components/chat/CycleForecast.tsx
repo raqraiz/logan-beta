@@ -150,7 +150,12 @@ function EnergyBar({ value, color }: { value: number; color: string }) {
 export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStart, anchorSymptom, onClose, embedded = false, onPeriodUpdate }: CycleForecastProps) {
   useTrackFeature("cycle_forecast");
   const today = useMemo(() => new Date(), []);
+  // Parse YYYY-MM-DD as noon UTC to match calculateCycleInfo and avoid timezone off-by-one
   const periodStart = useMemo(() => {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodStart)) {
+      const [y, m, d] = lastPeriodStart.split("-").map(Number);
+      return new Date(y, m - 1, d); // local midnight — safe for differenceInCalendarDays
+    }
     const parsed = parseISO(lastPeriodStart);
     return isValid(parsed) ? parsed : today;
   }, [lastPeriodStart, today]);
@@ -170,13 +175,13 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   const calEnd = endOfWeek(monthEnd);
   const calendarDays = eachDayOfInterval({ start: calStart, end: calEnd });
 
-  // Map a calendar date to cycle day (wrapping across cycles)
+  // Map a calendar date to cycle day (wrapping across cycles).
+  // Period start day == cycle day 1 (matches calculateCycleInfo).
   function getCycleDayForDate(date: Date): number {
     const diff = differenceInCalendarDays(date, periodStart);
     if (!Number.isFinite(diff)) return cycleDay;
-
     const mod = ((diff % cycleLengthDays) + cycleLengthDays) % cycleLengthDays;
-    return mod === 0 ? cycleLengthDays : mod;
+    return mod + 1;
   }
 
   // Selected day info
