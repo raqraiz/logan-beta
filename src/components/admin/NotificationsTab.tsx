@@ -198,6 +198,7 @@ export function NotificationsTab() {
       cycle_phase: f.cycle_phase ?? [],
       timezone: f.timezone ?? [],
       credits: f.credits ?? "",
+      participant_ids: f.participant_ids ?? [],
     });
     setPreviewCount(null);
   };
