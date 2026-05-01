@@ -159,6 +159,10 @@ const Admin = () => {
             <FeaturesTab />
           </TabsContent>
 
+          <TabsContent value="notifications">
+            <NotificationsTab />
+          </TabsContent>
+
           <TabsContent value="users">
             <ProfilesTab />
           </TabsContent>
