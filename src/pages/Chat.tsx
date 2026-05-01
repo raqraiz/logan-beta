@@ -1132,7 +1132,7 @@ const Chat = () => {
             />
           )}
 
-
+          {messages.length === 0 && !isLoading ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
