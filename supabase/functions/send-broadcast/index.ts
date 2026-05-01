@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
     }
 
     // Activity filter
-    if (filters.activity) {
+    if (!hasSpecific && filters.activity) {
       const now = Date.now();
       const windows: Record<string, number> = {
         today: 86400000,
