@@ -61,6 +61,8 @@ export function NotificationsTab() {
   const [content, setContent] = useState("");
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [timezones, setTimezones] = useState<string[]>([]);
+  const [participantsList, setParticipantsList] = useState<ParticipantLite[]>([]);
+  const [participantSearch, setParticipantSearch] = useState("");
   const [previewCount, setPreviewCount] = useState<number | null>(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isSending, setIsSending] = useState(false);
