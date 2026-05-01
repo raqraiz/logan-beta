@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import {
   ResponsiveContainer,
   ComposedChart,
+  Bar,
   Line,
   Area,
   XAxis,
@@ -250,21 +251,16 @@ export function AllSymptomsChart({
               />
             ))}
 
-            {/* Symptom lines (foreground) */}
+            {/* Symptom bars (grouped per phase) */}
             {symptomNames.map((name, i) => (
-              <Line
+              <Bar
                 key={name}
-                type="monotone"
                 dataKey={name}
                 name={name}
-                stroke={SYMPTOM_PALETTE[i % SYMPTOM_PALETTE.length]}
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                dot={{ r: 2.5, strokeWidth: 0, fill: SYMPTOM_PALETTE[i % SYMPTOM_PALETTE.length] }}
-                activeDot={{ r: 4, strokeWidth: 0 }}
+                fill={SYMPTOM_PALETTE[i % SYMPTOM_PALETTE.length]}
+                radius={[4, 4, 1, 1]}
+                maxBarSize={14}
                 isAnimationActive={false}
-                connectNulls
               />
             ))}
           </ComposedChart>
@@ -300,7 +296,7 @@ export function AllSymptomsChart({
       </div>
 
       <p className="text-[10px] text-muted-foreground/55 text-center leading-snug px-2">
-        Your symptoms (solid) overlaid with typical hormone curves (dashed) — spot which hormones may be driving each pattern.
+        Your symptoms (bars) grouped per phase, with typical hormone curves (dashed) overlaid — spot which hormones may be driving each pattern.
       </p>
     </div>
   );
