@@ -331,7 +331,7 @@ export function MealPlanSetupDialog({ open, onOpenChange, userId, onGenerated }:
                 >
                   <Sun className="h-4 w-4 text-foreground" />
                   <div className="text-xs font-medium">Light</div>
-                  <div className="text-[10px] text-muted-foreground">Print-friendly</div>
+                  <div className="text-[10px] text-muted-foreground">Bright & airy</div>
                 </button>
               </div>
             </div>
