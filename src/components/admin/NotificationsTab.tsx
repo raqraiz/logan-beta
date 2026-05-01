@@ -71,17 +71,22 @@ export function NotificationsTab() {
   const [history, setHistory] = useState<Broadcast[]>([]);
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
 
-  // Load distinct timezones from participants
+  // Load distinct timezones + full participants list
   useEffect(() => {
     supabase
       .from("participants")
-      .select("timezone")
-      .not("timezone", "is", null)
+      .select("id, full_name, email, timezone")
+      .eq("is_active", true)
+      .order("full_name", { ascending: true })
       .then(({ data }) => {
+        const rows = data ?? [];
         const unique = Array.from(
-          new Set((data ?? []).map((p) => p.timezone).filter(Boolean) as string[]),
+          new Set(rows.map((p) => p.timezone).filter(Boolean) as string[]),
         ).sort();
         setTimezones(unique);
+        setParticipantsList(
+          rows.map((p) => ({ id: p.id, full_name: p.full_name, email: p.email })),
+        );
       });
     loadBroadcasts();
   }, []);
