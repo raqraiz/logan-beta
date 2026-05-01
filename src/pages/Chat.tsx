@@ -32,6 +32,7 @@ import { CycleForecast } from "@/components/chat/CycleForecast";
 import { CreditBalance } from "@/components/chat/CreditBalance";
 import { OutOfCredits } from "@/components/chat/OutOfCredits";
 import { ResourceOfferCard, ResourceCard } from "@/components/chat/ResourceCards";
+import { MenuBuilderAnnouncement } from "@/components/chat/MenuBuilderAnnouncement";
 import { BottomTabBar, type TabId } from "@/components/tabs/BottomTabBar";
 import { HomeTab } from "@/components/tabs/HomeTab";
 import { PlanTab } from "@/components/tabs/PlanTab";
@@ -1123,6 +1124,14 @@ const Chat = () => {
             </div>
           )}
 
+          {/* One-time announcement: Menu Builder */}
+          {!isOnboarding && user && messages.length > 0 && (
+            <MenuBuilderAnnouncement
+              userId={user.id}
+              onOpenPlan={() => setActiveTab("plan")}
+            />
+          )}
+
           {messages.length === 0 && !isLoading ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
@@ -1379,8 +1388,7 @@ const Chat = () => {
                         disabled={isSending}
                       />
                     </div>
-                  )}
-
+          )}
 
                   {/* Conversation starters — rotate sets so each message gets fresh prompts */}
                   {isLastMessage && 
