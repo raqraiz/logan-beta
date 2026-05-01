@@ -5,7 +5,7 @@ import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { LogOut, RefreshCw, Shield, User, BarChart3, Layers, Radio } from "lucide-react";
+import { LogOut, RefreshCw, Shield, User, BarChart3, Layers, Radio, Sparkles } from "lucide-react";
 import { AdminManagement } from "@/components/admin/AdminManagement";
 import { ProfilesTab } from "@/components/admin/ProfilesTab";
 import { EngagementTab } from "@/components/admin/EngagementTab";
