@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
 
-import { Send, Loader2, LogOut, ChevronLeft, ArrowDown, MessageSquarePlus } from "lucide-react";
+import { Send, Loader2, LogOut, ChevronLeft, ChevronRight, ArrowDown, MessageSquarePlus } from "lucide-react";
 import { FeedbackModal } from "@/components/chat/FeedbackModal";
 import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
 import { format } from "date-fns";
@@ -87,6 +87,14 @@ interface ChatMessage {
     cheat_sheet_responses?: Record<string, string>;
     resource_type?: string;
     resource_id?: string;
+    broadcast?: boolean;
+    broadcast_title?: string | null;
+    broadcast_id?: string | null;
+    broadcast_cta?: {
+      label: string;
+      tab: "home" | "ask" | "plan";
+      plan_section?: "mood" | "exercise" | "nutrition" | null;
+    };
   };
 }
 
