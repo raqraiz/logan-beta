@@ -245,8 +245,8 @@ export function AllSymptomsChart({
                 textTransform: "uppercase",
                 letterSpacing: "0.08em",
               }}
-              labelFormatter={(d: number) => {
-                const phase = PHASES.find((p) => phaseMidDays[p] === d);
+              labelFormatter={(d: number | string) => {
+                const phase = PHASES.find((p) => String(phaseMidDays[p]) === String(d));
                 return phase ? phase : `Day ${d}`;
               }}
               formatter={(value: number, name: string) => [value.toFixed(2), name]}
