@@ -9,8 +9,9 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "@/hooks/use-toast";
-import { Send, Save, Users, Loader2, Trash2, RefreshCw } from "lucide-react";
+import { Send, Save, Users, Loader2, Trash2, RefreshCw, ChevronDown, X } from "lucide-react";
 import { format } from "date-fns";
 
 type Activity = "" | "today" | "week" | "month" | "dormant";
