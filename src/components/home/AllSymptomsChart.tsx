@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import {
   ResponsiveContainer,
   ComposedChart,
+  Bar,
   Line,
   Area,
   XAxis,
