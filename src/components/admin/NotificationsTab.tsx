@@ -9,8 +9,9 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "@/hooks/use-toast";
-import { Send, Save, Users, Loader2, Trash2, RefreshCw } from "lucide-react";
+import { Send, Save, Users, Loader2, Trash2, RefreshCw, ChevronDown, X } from "lucide-react";
 import { format } from "date-fns";
 
 type Activity = "" | "today" | "week" | "month" | "dormant";
@@ -285,56 +286,112 @@ export function NotificationsTab() {
                   </Button>
                 )}
               </div>
-              <Input
-                placeholder="Search by name or email..."
-                value={participantSearch}
-                onChange={(e) => setParticipantSearch(e.target.value)}
-              />
-              <ScrollArea className="h-40 rounded-md border border-border p-2">
-                <div className="space-y-1">
-                  {participantsList
-                    .filter((p) => {
-                      const q = participantSearch.toLowerCase().trim();
-                      if (!q) return true;
-                      return (
-                        p.full_name?.toLowerCase().includes(q) ||
-                        p.email?.toLowerCase().includes(q)
-                      );
-                    })
-                    .slice(0, 100)
-                    .map((p) => {
-                      const checked = filters.participant_ids.includes(p.id);
-                      return (
-                        <label
-                          key={p.id}
-                          className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5"
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between font-normal"
+                  >
+                    <span className={filters.participant_ids.length === 0 ? "text-muted-foreground" : ""}>
+                      {filters.participant_ids.length === 0
+                        ? "Select specific users"
+                        : `${filters.participant_ids.length} user${filters.participant_ids.length === 1 ? "" : "s"} selected`}
+                    </span>
+                    <ChevronDown className="w-4 h-4 opacity-50 shrink-0 ml-2" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-[--radix-popover-trigger-width] p-0"
+                  align="start"
+                >
+                  <div className="p-2 border-b border-border">
+                    <Input
+                      placeholder="Search by name or email..."
+                      value={participantSearch}
+                      onChange={(e) => setParticipantSearch(e.target.value)}
+                      className="h-8"
+                    />
+                  </div>
+                  <ScrollArea className="h-64">
+                    <div className="p-1">
+                      {participantsList.length === 0 && (
+                        <p className="text-xs text-muted-foreground p-3">Loading users...</p>
+                      )}
+                      {participantsList
+                        .filter((p) => {
+                          const q = participantSearch.toLowerCase().trim();
+                          if (!q) return true;
+                          return (
+                            p.full_name?.toLowerCase().includes(q) ||
+                            p.email?.toLowerCase().includes(q)
+                          );
+                        })
+                        .slice(0, 100)
+                        .map((p) => {
+                          const checked = filters.participant_ids.includes(p.id);
+                          return (
+                            <label
+                              key={p.id}
+                              className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 rounded px-2 py-1.5"
+                            >
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={() => {
+                                  setFilters((f) => ({
+                                    ...f,
+                                    participant_ids: checked
+                                      ? f.participant_ids.filter((x) => x !== p.id)
+                                      : [...f.participant_ids, p.id],
+                                  }));
+                                  setPreviewCount(null);
+                                }}
+                              />
+                              <span className="text-foreground truncate flex-1 min-w-0">
+                                {p.full_name}
+                                <span className="text-muted-foreground ml-1 text-xs">
+                                  {p.email}
+                                </span>
+                              </span>
+                            </label>
+                          );
+                        })}
+                    </div>
+                  </ScrollArea>
+                </PopoverContent>
+              </Popover>
+
+              {filters.participant_ids.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {filters.participant_ids.map((id) => {
+                    const p = participantsList.find((x) => x.id === id);
+                    if (!p) return null;
+                    return (
+                      <Badge
+                        key={id}
+                        variant="secondary"
+                        className="gap-1 pr-1 font-normal"
+                      >
+                        {p.full_name}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFilters((f) => ({
+                              ...f,
+                              participant_ids: f.participant_ids.filter((x) => x !== id),
+                            }));
+                            setPreviewCount(null);
+                          }}
+                          className="hover:bg-muted rounded-sm p-0.5"
+                          aria-label={`Remove ${p.full_name}`}
                         >
-                          <Checkbox
-                            checked={checked}
-                            onCheckedChange={() => {
-                              setFilters((f) => ({
-                                ...f,
-                                participant_ids: checked
-                                  ? f.participant_ids.filter((x) => x !== p.id)
-                                  : [...f.participant_ids, p.id],
-                              }));
-                              setPreviewCount(null);
-                            }}
-                          />
-                          <span className="text-foreground truncate">
-                            {p.full_name}
-                            <span className="text-muted-foreground ml-1 text-xs">
-                              {p.email}
-                            </span>
-                          </span>
-                        </label>
-                      );
-                    })}
-                  {participantsList.length === 0 && (
-                    <p className="text-xs text-muted-foreground">Loading users...</p>
-                  )}
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
                 </div>
-              </ScrollArea>
+              )}
             </div>
 
             <div className="space-y-2">
