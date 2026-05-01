@@ -5,7 +5,7 @@ import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { LogOut, RefreshCw, Shield, User, BarChart3, Layers, Radio, Sparkles, Megaphone } from "lucide-react";
+import { LogOut, RefreshCw, Shield, User, BarChart3, Layers, Radio, Megaphone } from "lucide-react";
 import { AdminManagement } from "@/components/admin/AdminManagement";
 import { ProfilesTab } from "@/components/admin/ProfilesTab";
 import { EngagementTab } from "@/components/admin/EngagementTab";
@@ -89,19 +89,6 @@ const Admin = () => {
           </div>
           <div className="flex items-center gap-2 md:gap-4">
             <span className="text-sm text-muted-foreground hidden md:block">{session.user.email}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                const key = `logan_menu_builder_announcement_dismissed_v1_${session.user.id}`;
-                localStorage.removeItem(key);
-                toast({ title: "Banner reset", description: "Reload the chat to preview the Menu Builder announcement." });
-              }}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Reset banner</span>
-            </Button>
             <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground hover:text-foreground">
               <LogOut className="w-4 h-4 mr-2" />
               Sign out

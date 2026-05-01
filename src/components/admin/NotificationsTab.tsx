@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "@/hooks/use-toast";
-import { Send, Save, Users, Loader2, Trash2, RefreshCw, ChevronDown, X } from "lucide-react";
+import { Send, Save, Users, Loader2, Trash2, RefreshCw, ChevronDown, X, Sparkles, Wand2 } from "lucide-react";
 import { format } from "date-fns";
 
 type Activity = "" | "today" | "week" | "month" | "dormant";
@@ -71,6 +71,58 @@ export function NotificationsTab() {
   const [drafts, setDrafts] = useState<Broadcast[]>([]);
   const [history, setHistory] = useState<Broadcast[]>([]);
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
+
+  // AI assist
+  const [aiTopic, setAiTopic] = useState("");
+  const [isDrafting, setIsDrafting] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<
+    Array<{ id: string; label: string; description: string; augmented_message: string }>
+  >([]);
+  const [baseAiMessage, setBaseAiMessage] = useState<string>("");
+  const [activeSuggestionIds, setActiveSuggestionIds] = useState<string[]>([]);
+
+  const handleAiDraft = async () => {
+    const topic = aiTopic.trim() || title.trim();
+    if (!topic) {
+      toast({ title: "Add a topic", description: "Type a short title or topic first.", variant: "destructive" });
+      return;
+    }
+    setIsDrafting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("draft-broadcast", {
+        body: { topic },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setBaseAiMessage(data.message);
+      setContent(data.message);
+      if (!title.trim() && data.title) setTitle(data.title);
+      setAiSuggestions(data.suggestions ?? []);
+      setActiveSuggestionIds([]);
+      setPreviewCount(null);
+    } catch (e: any) {
+      toast({ title: "Draft failed", description: e.message, variant: "destructive" });
+    } finally {
+      setIsDrafting(false);
+    }
+  };
+
+  const toggleSuggestion = (id: string) => {
+    const next = activeSuggestionIds.includes(id)
+      ? activeSuggestionIds.filter((x) => x !== id)
+      : [...activeSuggestionIds, id];
+    setActiveSuggestionIds(next);
+    // Apply the LAST toggled-on suggestion's augmented message; if none active, restore base.
+    if (next.length === 0) {
+      setContent(baseAiMessage);
+    } else {
+      const lastId = next[next.length - 1];
+      const sug = aiSuggestions.find((s) => s.id === lastId);
+      if (sug) setContent(sug.augmented_message);
+    }
+    setPreviewCount(null);
+  };
+
 
   // Load distinct timezones + full participants list
   useEffect(() => {
@@ -240,6 +292,66 @@ export function NotificationsTab() {
               <Button variant="ghost" size="sm" onClick={resetForm}>
                 <RefreshCw className="w-3 h-3 mr-1" /> New
               </Button>
+            )}
+          </div>
+
+          {/* AI Assist */}
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <Label className="text-sm font-semibold text-foreground">Draft with AI</Label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Type a topic (e.g. "Menu Builder launch") and Logan will draft the message and suggest enhancements.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input
+                value={aiTopic}
+                onChange={(e) => setAiTopic(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAiDraft();
+                  }
+                }}
+                placeholder="e.g. Menu Builder launch, Period reminder check-in..."
+                className="flex-1"
+              />
+              <Button onClick={handleAiDraft} disabled={isDrafting} className="shrink-0">
+                {isDrafting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
+                Generate
+              </Button>
+            </div>
+
+            {aiSuggestions.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-primary/10">
+                <p className="text-xs font-medium text-foreground">Smart enhancements — toggle to apply:</p>
+                <div className="space-y-1.5">
+                  {aiSuggestions.map((s) => {
+                    const active = activeSuggestionIds.includes(s.id);
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => toggleSuggestion(s.id)}
+                        className={`w-full text-left rounded-md border p-2.5 transition-colors ${
+                          active
+                            ? "bg-primary/15 border-primary/40"
+                            : "bg-background/50 border-border hover:border-primary/30"
+                        }`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <Checkbox checked={active} className="mt-0.5 pointer-events-none" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-foreground">{s.label}</p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">{s.description}</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
 
