@@ -1,13 +1,40 @@
 // Generate a broadcast draft + smart suggestions from a short admin prompt.
-// Uses Lovable AI Gateway (Gemini) with tool-calling for structured output.
+// Product-aware: knows the actual sections of the Logan app so it doesn't
+// invent sections like "Nourish" that don't exist.
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Source of truth for what actually exists in the app. Keep in sync with the UI.
+const PRODUCT_MAP = `
+LOGAN APP STRUCTURE (use these EXACT names — never invent sections):
+
+Bottom tabs (3 only):
+- "Home" tab — customizable dashboard of widgets: Daily Briefing, Cycle Circle, Symptom Log, Cycle Correlations (custom 1-5 trackers like surfing, loneliness), Succeed Today, Don't Mess Up Today, custom AI widgets the user creates.
+- "Ask" tab — chat with Logan (this is where broadcasts appear).
+- "Plan" tab — three collapsible sections ONLY:
+    • "Mood" (mood tracking, check-ins, symptom map)
+    • "Exercise" (workout guidance, load capacity)
+    • "Nutrition" (meal guidance, the Menu Builder lives HERE — generates personalized meal plans)
+
+Other surfaces:
+- Cycle Forecast grid ("How not to mess up today") — accessible from chat/Plan
+- Calendar Sync (.ics webcal feed)
+- Symptom tracking (1-5 sliders)
+- Conversation starter bubbles below each Logan message in the Ask tab
+
+Things that DO NOT exist (never reference these):
+- "Nourish" section (doesn't exist — nutrition lives in Plan > Nutrition)
+- Settings tab, Profile tab, Insights tab, Library tab
+- Any standalone page for Menu Builder (it lives inside Plan > Nutrition)
+`.trim();
+
 const SYSTEM_PROMPT = `You are Logan — a knowledgeable, grounded friend helping women predict and control their health and performance.
 
-You're drafting an in-app broadcast message that an admin will send to users from Logan's voice.
+You're drafting an in-app broadcast that an admin will send to users from Logan's voice (it appears in their Ask tab chat).
+
+${PRODUCT_MAP}
 
 VOICE RULES (strict):
 - Casual, warm, texting feel. Like a smart friend.
@@ -17,10 +44,17 @@ VOICE RULES (strict):
 - Don't over-explain. Hint at value, invite curiosity.
 - Use first person ("I just added...", "I built you...").
 
-When given a short topic/title from an admin, produce:
-1. A draft message body in Logan's voice.
-2. Smart suggestion toggles the admin might want to add (walkthrough hint, where-to-find-it pointer, CTA, deadline, etc.) — pick whichever genuinely fit the topic.
-3. For each suggestion, provide an "augmented" message that incorporates that suggestion (still 2-4 sentences, still Logan's voice).`;
+CRITICAL PRODUCT ACCURACY:
+- Only reference real sections from the structure above.
+- If telling users where to find a feature, use the EXACT path: e.g. "Plan tab, under Nutrition" — never "Nourish section".
+- If unsure where a feature lives, omit the location rather than guess.
+
+WHEN GIVEN A TOPIC, you produce:
+1. A base message body (2-4 sentences, Logan's voice, no location pointer).
+2. A "where_to_find" object specifying the correct in-app location: which tab ("home" | "ask" | "plan") and, if Plan, which section ("mood" | "exercise" | "nutrition" | null). Set tab to null if it's not about a specific feature.
+3. A short CTA button label (2-4 words, e.g. "Take me there", "Open Menu Builder", "Try it now") — only if there's a real destination.
+4. Three conversation starter bubbles that DIRECTLY relate to the announcement (e.g. for a Menu Builder launch: "Build me a meal plan for this week", "What should I eat in luteal phase?", "Show me my Menu Builder"). They MUST feel like natural follow-ups to the broadcast, not generic cycle questions.
+5. Two to four optional toggleable enhancements (walkthrough hint, deadline, social proof, etc.) — for each, provide an augmented_message that incorporates that enhancement (still 2-4 sentences, still Logan's voice, still using correct section names).`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -47,19 +81,38 @@ Deno.serve(async (req) => {
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: `Admin topic / title: "${topic.trim()}"\n\nDraft the broadcast and give me 2-4 smart suggestions I can toggle on.` },
+          { role: "user", content: `Admin topic / title: "${topic.trim()}"\n\nDraft the broadcast now. Make sure conversation starters and where_to_find directly correlate to this topic, and ONLY use real section names from the product map.` },
         ],
         tools: [
           {
             type: "function",
             function: {
               name: "create_broadcast_draft",
-              description: "Return the draft and toggleable suggestions.",
+              description: "Return the draft, deep-link target, related starters, and toggleable enhancements.",
               parameters: {
                 type: "object",
                 properties: {
                   title: { type: "string", description: "Short internal title (admin-facing only)" },
-                  message: { type: "string", description: "The base message body in Logan's voice, 2-4 sentences." },
+                  message: { type: "string", description: "Base message body in Logan's voice, 2-4 sentences. Does NOT include the location pointer (the CTA button handles that)." },
+                  where_to_find: {
+                    type: "object",
+                    description: "Where this feature lives in the app. Set tab to null if not about a specific feature.",
+                    properties: {
+                      tab: { type: ["string", "null"], enum: ["home", "ask", "plan", null] },
+                      plan_section: { type: ["string", "null"], enum: ["mood", "exercise", "nutrition", null], description: "Only set if tab is 'plan'." },
+                      human_label: { type: "string", description: "Human path like 'Plan tab, under Nutrition' or 'Home tab' — empty string if no destination." },
+                    },
+                    required: ["tab", "plan_section", "human_label"],
+                    additionalProperties: false,
+                  },
+                  cta_label: { type: "string", description: "Short button label, 2-4 words. Empty string if no destination." },
+                  conversation_starters: {
+                    type: "array",
+                    description: "Exactly 3 short follow-up prompts directly related to this broadcast. Max 8 words each. Phrased as the user would say them.",
+                    items: { type: "string" },
+                    minItems: 3,
+                    maxItems: 3,
+                  },
                   suggestions: {
                     type: "array",
                     description: "2 to 4 toggleable enhancements the admin might want.",
@@ -69,14 +122,14 @@ Deno.serve(async (req) => {
                         id: { type: "string", description: "Short kebab-case id" },
                         label: { type: "string", description: "Short label, e.g. 'Add walkthrough hint'" },
                         description: { type: "string", description: "One sentence explaining what this adds" },
-                        augmented_message: { type: "string", description: "The full message with this enhancement applied, still 2-4 sentences in Logan's voice." },
+                        augmented_message: { type: "string", description: "The full message with this enhancement applied, still 2-4 sentences in Logan's voice, still using correct section names." },
                       },
                       required: ["id", "label", "description", "augmented_message"],
                       additionalProperties: false,
                     },
                   },
                 },
-                required: ["title", "message", "suggestions"],
+                required: ["title", "message", "where_to_find", "cta_label", "conversation_starters", "suggestions"],
                 additionalProperties: false,
               },
             },
