@@ -966,7 +966,7 @@ serve(async (req) => {
       await supabase.from("chat_messages").insert({
         user_id: user.id,
         role: "assistant",
-        content: "Want me to build you a full cycle-synced meal plan? Each meal aligned to your phase, plus a grocery list.",
+        content: "Tap below and I'll build your cycle-synced plan — every meal mapped to your phase, with a grocery list.",
         message_type: "resource_offer",
         metadata: {
           resource_type: "meal_plan",
