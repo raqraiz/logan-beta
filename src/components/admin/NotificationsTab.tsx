@@ -23,6 +23,7 @@ interface Filters {
   cycle_phase: string[];
   timezone: string[];
   credits: Credits;
+  participant_ids: string[];
 }
 
 interface Broadcast {
@@ -36,6 +37,12 @@ interface Broadcast {
   created_at: string;
 }
 
+interface ParticipantLite {
+  id: string;
+  full_name: string;
+  email: string | null;
+}
+
 const LIFE_STAGES = ["cycling", "postpartum", "menopause"];
 const PHASES = ["menstrual", "follicular", "ovulation", "luteal"];
 
@@ -46,6 +53,7 @@ const emptyFilters: Filters = {
   cycle_phase: [],
   timezone: [],
   credits: "",
+  participant_ids: [],
 };
 
 export function NotificationsTab() {
@@ -53,6 +61,8 @@ export function NotificationsTab() {
   const [content, setContent] = useState("");
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [timezones, setTimezones] = useState<string[]>([]);
+  const [participantsList, setParticipantsList] = useState<ParticipantLite[]>([]);
+  const [participantSearch, setParticipantSearch] = useState("");
   const [previewCount, setPreviewCount] = useState<number | null>(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -61,17 +71,22 @@ export function NotificationsTab() {
   const [history, setHistory] = useState<Broadcast[]>([]);
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
 
-  // Load distinct timezones from participants
+  // Load distinct timezones + full participants list
   useEffect(() => {
     supabase
       .from("participants")
-      .select("timezone")
-      .not("timezone", "is", null)
+      .select("id, full_name, email, timezone")
+      .eq("is_active", true)
+      .order("full_name", { ascending: true })
       .then(({ data }) => {
+        const rows = data ?? [];
         const unique = Array.from(
-          new Set((data ?? []).map((p) => p.timezone).filter(Boolean) as string[]),
+          new Set(rows.map((p) => p.timezone).filter(Boolean) as string[]),
         ).sort();
         setTimezones(unique);
+        setParticipantsList(
+          rows.map((p) => ({ id: p.id, full_name: p.full_name, email: p.email })),
+        );
       });
     loadBroadcasts();
   }, []);
@@ -98,6 +113,7 @@ export function NotificationsTab() {
       cycle_phase: filters.cycle_phase.length > 0 ? filters.cycle_phase : undefined,
       timezone: filters.timezone.length > 0 ? filters.timezone : undefined,
       credits: filters.credits || undefined,
+      participant_ids: filters.participant_ids.length > 0 ? filters.participant_ids : undefined,
     },
     broadcast_id: editingDraftId ?? undefined,
   });
@@ -182,6 +198,7 @@ export function NotificationsTab() {
       cycle_phase: f.cycle_phase ?? [],
       timezone: f.timezone ?? [],
       credits: f.credits ?? "",
+      participant_ids: f.participant_ids ?? [],
     });
     setPreviewCount(null);
   };
@@ -243,6 +260,82 @@ export function NotificationsTab() {
           {/* Filters */}
           <div className="space-y-4 pt-2 border-t border-border">
             <h4 className="text-sm font-semibold text-foreground">Segment filters</h4>
+
+            {/* Specific users — overrides other filters when used */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-muted-foreground">
+                  Specific users {filters.participant_ids.length > 0 && (
+                    <span className="text-primary">
+                      ({filters.participant_ids.length} selected — overrides other filters)
+                    </span>
+                  )}
+                </Label>
+                {filters.participant_ids.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs"
+                    onClick={() => {
+                      setFilters((f) => ({ ...f, participant_ids: [] }));
+                      setPreviewCount(null);
+                    }}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+              <Input
+                placeholder="Search by name or email..."
+                value={participantSearch}
+                onChange={(e) => setParticipantSearch(e.target.value)}
+              />
+              <ScrollArea className="h-40 rounded-md border border-border p-2">
+                <div className="space-y-1">
+                  {participantsList
+                    .filter((p) => {
+                      const q = participantSearch.toLowerCase().trim();
+                      if (!q) return true;
+                      return (
+                        p.full_name?.toLowerCase().includes(q) ||
+                        p.email?.toLowerCase().includes(q)
+                      );
+                    })
+                    .slice(0, 100)
+                    .map((p) => {
+                      const checked = filters.participant_ids.includes(p.id);
+                      return (
+                        <label
+                          key={p.id}
+                          className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={() => {
+                              setFilters((f) => ({
+                                ...f,
+                                participant_ids: checked
+                                  ? f.participant_ids.filter((x) => x !== p.id)
+                                  : [...f.participant_ids, p.id],
+                              }));
+                              setPreviewCount(null);
+                            }}
+                          />
+                          <span className="text-foreground truncate">
+                            {p.full_name}
+                            <span className="text-muted-foreground ml-1 text-xs">
+                              {p.email}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  {participantsList.length === 0 && (
+                    <p className="text-xs text-muted-foreground">Loading users...</p>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
 
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Life stage</Label>

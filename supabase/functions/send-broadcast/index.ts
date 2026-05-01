@@ -15,6 +15,7 @@ interface SegmentFilters {
   cycle_phase?: string[]; // menstrual | follicular | ovulation | luteal
   timezone?: string[]; // exact timezone strings
   credits?: "out" | "free_only" | "paid" | null;
+  participant_ids?: string[]; // specific participants (overrides other filters)
 }
 
 interface BroadcastPayload {
@@ -91,11 +92,16 @@ Deno.serve(async (req) => {
       .select("id, email, life_stage, last_period_start, cycle_length_days, timezone")
       .eq("is_active", true);
 
-    if (filters.life_stage && filters.life_stage.length > 0) {
-      q = q.in("life_stage", filters.life_stage);
-    }
-    if (filters.timezone && filters.timezone.length > 0) {
-      q = q.in("timezone", filters.timezone);
+    const hasSpecific = filters.participant_ids && filters.participant_ids.length > 0;
+    if (hasSpecific) {
+      q = q.in("id", filters.participant_ids!);
+    } else {
+      if (filters.life_stage && filters.life_stage.length > 0) {
+        q = q.in("life_stage", filters.life_stage);
+      }
+      if (filters.timezone && filters.timezone.length > 0) {
+        q = q.in("timezone", filters.timezone);
+      }
     }
 
     const { data: participants, error: pErr } = await q;
@@ -117,8 +123,8 @@ Deno.serve(async (req) => {
       }))
       .filter((p) => p.user_id);
 
-    // Cycle-phase filter (in-memory)
-    if (filters.cycle_phase && filters.cycle_phase.length > 0) {
+    // Cycle-phase filter (in-memory) — skipped when targeting specific users
+    if (!hasSpecific && filters.cycle_phase && filters.cycle_phase.length > 0) {
       candidates = candidates.filter((p) => {
         const phase = currentPhase(p.last_period_start, p.cycle_length_days);
         return phase && filters.cycle_phase!.includes(phase);
@@ -126,7 +132,7 @@ Deno.serve(async (req) => {
     }
 
     // Activity filter
-    if (filters.activity) {
+    if (!hasSpecific && filters.activity) {
       const now = Date.now();
       const windows: Record<string, number> = {
         today: 86400000,
@@ -157,7 +163,7 @@ Deno.serve(async (req) => {
     }
 
     // Most active (top N by message count last 30 days)
-    if (filters.most_active && filters.most_active > 0) {
+    if (!hasSpecific && filters.most_active && filters.most_active > 0) {
       const cutoff = new Date(Date.now() - 30 * 86400000).toISOString();
       const userIds = candidates.map((c) => c.user_id!);
       const { data: recent } = await admin
@@ -179,7 +185,7 @@ Deno.serve(async (req) => {
     }
 
     // Credits filter
-    if (filters.credits) {
+    if (!hasSpecific && filters.credits) {
       const userIds = candidates.map((c) => c.user_id!);
       const { data: credits } = await admin
         .from("user_credits")
