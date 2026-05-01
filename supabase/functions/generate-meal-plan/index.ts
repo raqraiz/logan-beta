@@ -238,8 +238,8 @@ serve(async (req) => {
 
     // Drop a chat message that anchors the ResourceCard inline in the chat.
     const chatBlurb = parentResource
-      ? `Reworking your meal plan with your tweaks — new PDF coming up.`
-      : `Building your ${title.toLowerCase()} now — I'll drop the PDF here when it's ready.`;
+      ? `Reworking your meal plan with your tweaks — new version coming up.`
+      : `Building your ${title.toLowerCase()} now — I'll drop it here when it's ready.`;
     await supabase.from("chat_messages").insert({
       user_id: user.id,
       role: "assistant",
