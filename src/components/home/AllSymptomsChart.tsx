@@ -251,21 +251,16 @@ export function AllSymptomsChart({
               />
             ))}
 
-            {/* Symptom lines (foreground) */}
+            {/* Symptom bars (grouped per phase) */}
             {symptomNames.map((name, i) => (
-              <Line
+              <Bar
                 key={name}
-                type="monotone"
                 dataKey={name}
                 name={name}
-                stroke={SYMPTOM_PALETTE[i % SYMPTOM_PALETTE.length]}
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                dot={{ r: 2.5, strokeWidth: 0, fill: SYMPTOM_PALETTE[i % SYMPTOM_PALETTE.length] }}
-                activeDot={{ r: 4, strokeWidth: 0 }}
+                fill={SYMPTOM_PALETTE[i % SYMPTOM_PALETTE.length]}
+                radius={[4, 4, 1, 1]}
+                maxBarSize={14}
                 isAnimationActive={false}
-                connectNulls
               />
             ))}
           </ComposedChart>
