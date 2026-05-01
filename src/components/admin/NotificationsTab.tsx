@@ -295,6 +295,66 @@ export function NotificationsTab() {
             )}
           </div>
 
+          {/* AI Assist */}
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <Label className="text-sm font-semibold text-foreground">Draft with AI</Label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Type a topic (e.g. "Menu Builder launch") and Logan will draft the message and suggest enhancements.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input
+                value={aiTopic}
+                onChange={(e) => setAiTopic(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAiDraft();
+                  }
+                }}
+                placeholder="e.g. Menu Builder launch, Period reminder check-in..."
+                className="flex-1"
+              />
+              <Button onClick={handleAiDraft} disabled={isDrafting} className="shrink-0">
+                {isDrafting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
+                Generate
+              </Button>
+            </div>
+
+            {aiSuggestions.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-primary/10">
+                <p className="text-xs font-medium text-foreground">Smart enhancements — toggle to apply:</p>
+                <div className="space-y-1.5">
+                  {aiSuggestions.map((s) => {
+                    const active = activeSuggestionIds.includes(s.id);
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => toggleSuggestion(s.id)}
+                        className={`w-full text-left rounded-md border p-2.5 transition-colors ${
+                          active
+                            ? "bg-primary/15 border-primary/40"
+                            : "bg-background/50 border-border hover:border-primary/30"
+                        }`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <Checkbox checked={active} className="mt-0.5 pointer-events-none" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-foreground">{s.label}</p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">{s.description}</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label>Title (internal — not shown to users)</Label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Menu Builder launch" />
