@@ -354,6 +354,22 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
     lastPeriodStart: string | null;
   } | null>(null);
 
+  // Allow other parts of the app (e.g. broadcast CTAs in chat) to deep-link into a section.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { section?: string } | undefined;
+      if (detail?.section && ["mood", "exercise", "nutrition"].includes(detail.section)) {
+        setExpandedSection(detail.section);
+        setTimeout(() => {
+          const el = document.getElementById(`plan-section-${detail.section}`);
+          el?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+      }
+    };
+    window.addEventListener("logan:open-plan-section", handler);
+    return () => window.removeEventListener("logan:open-plan-section", handler);
+  }, []);
+
   useEffect(() => {
     const fetchData = async () => {
       const [checkinsRes, participantRes] = await Promise.all([
