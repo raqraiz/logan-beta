@@ -171,21 +171,33 @@ export function NotificationsTab() {
     setHistory(all.filter((b) => b.status === "sent"));
   };
 
-  const buildPayload = (action: "preview" | "send") => ({
-    action,
-    title: title.trim() || null,
-    content: content.trim(),
-    filters: {
-      life_stage: filters.life_stage.length > 0 ? filters.life_stage : undefined,
-      activity: filters.activity || undefined,
-      most_active: filters.most_active || undefined,
-      cycle_phase: filters.cycle_phase.length > 0 ? filters.cycle_phase : undefined,
-      timezone: filters.timezone.length > 0 ? filters.timezone : undefined,
-      credits: filters.credits || undefined,
-      participant_ids: filters.participant_ids.length > 0 ? filters.participant_ids : undefined,
-    },
-    broadcast_id: editingDraftId ?? undefined,
-  });
+  const buildPayload = (action: "preview" | "send") => {
+    const cleanedStarters = starters.map((s) => s.trim()).filter(Boolean);
+    const cta = ctaTab && ctaLabel.trim()
+      ? {
+          label: ctaLabel.trim(),
+          tab: ctaTab,
+          plan_section: ctaTab === "plan" ? (ctaPlanSection || null) : null,
+        }
+      : null;
+    return {
+      action,
+      title: title.trim() || null,
+      content: content.trim(),
+      filters: {
+        life_stage: filters.life_stage.length > 0 ? filters.life_stage : undefined,
+        activity: filters.activity || undefined,
+        most_active: filters.most_active || undefined,
+        cycle_phase: filters.cycle_phase.length > 0 ? filters.cycle_phase : undefined,
+        timezone: filters.timezone.length > 0 ? filters.timezone : undefined,
+        credits: filters.credits || undefined,
+        participant_ids: filters.participant_ids.length > 0 ? filters.participant_ids : undefined,
+      },
+      broadcast_id: editingDraftId ?? undefined,
+      cta,
+      conversation_starters: cleanedStarters.length > 0 ? cleanedStarters : null,
+    };
+  };
 
   const handlePreview = async () => {
     setIsPreviewing(true);
@@ -285,6 +297,15 @@ export function NotificationsTab() {
     setContent("");
     setFilters(emptyFilters);
     setPreviewCount(null);
+    setCtaLabel("");
+    setCtaTab("");
+    setCtaPlanSection("");
+    setCtaHumanLabel("");
+    setStarters(["", "", ""]);
+    setAiSuggestions([]);
+    setActiveSuggestionIds([]);
+    setBaseAiMessage("");
+    setAiTopic("");
   };
 
   const toggleArr = (key: "life_stage" | "cycle_phase" | "timezone", val: string) => {
