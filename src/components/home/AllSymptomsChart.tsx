@@ -50,11 +50,11 @@ const HORMONES = [
   { key: "lh", label: "LH", color: "hsl(355, 75%, 60%)" },
 ] as const;
 
-const PHASE_SHORT: Record<string, string> = {
-  Menstruation: "Mens",
-  Follicular: "Foll",
-  Ovulation: "Ovul",
-  Luteal: "Lute",
+const PHASE_FULL: Record<string, string> = {
+  Menstruation: "Menstruation",
+  Follicular: "Follicular",
+  Ovulation: "Ovulation",
+  Luteal: "Luteal",
 };
 
 export function AllSymptomsChart({
