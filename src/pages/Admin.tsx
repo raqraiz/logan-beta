@@ -86,8 +86,21 @@ const Admin = () => {
             </Link>
             <span className="text-muted-foreground text-sm">Admin Dashboard</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             <span className="text-sm text-muted-foreground hidden md:block">{session.user.email}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const key = `logan_menu_builder_announcement_dismissed_v1_${session.user.id}`;
+                localStorage.removeItem(key);
+                toast({ title: "Banner reset", description: "Reload the chat to preview the Menu Builder announcement." });
+              }}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Reset banner</span>
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground hover:text-foreground">
               <LogOut className="w-4 h-4 mr-2" />
               Sign out
