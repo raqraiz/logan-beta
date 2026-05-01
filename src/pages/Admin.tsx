@@ -120,7 +120,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="engagement" className="space-y-6">
-          <TabsList className="grid w-full max-w-3xl grid-cols-5 bg-muted border border-border">
+          <TabsList className="grid w-full max-w-4xl grid-cols-6 bg-muted border border-border">
             <TabsTrigger value="engagement" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Engagement</span>
@@ -132,6 +132,10 @@ const Admin = () => {
             <TabsTrigger value="features" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Layers className="w-4 h-4" />
               <span className="hidden sm:inline">Features</span>
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Megaphone className="w-4 h-4" />
+              <span className="hidden sm:inline">Notify</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <User className="w-4 h-4" />
