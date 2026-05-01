@@ -113,6 +113,7 @@ export function NotificationsTab() {
       cycle_phase: filters.cycle_phase.length > 0 ? filters.cycle_phase : undefined,
       timezone: filters.timezone.length > 0 ? filters.timezone : undefined,
       credits: filters.credits || undefined,
+      participant_ids: filters.participant_ids.length > 0 ? filters.participant_ids : undefined,
     },
     broadcast_id: editingDraftId ?? undefined,
   });
