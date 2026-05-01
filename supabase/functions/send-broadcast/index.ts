@@ -15,6 +15,7 @@ interface SegmentFilters {
   cycle_phase?: string[]; // menstrual | follicular | ovulation | luteal
   timezone?: string[]; // exact timezone strings
   credits?: "out" | "free_only" | "paid" | null;
+  participant_ids?: string[]; // specific participants (overrides other filters)
 }
 
 interface BroadcastPayload {
