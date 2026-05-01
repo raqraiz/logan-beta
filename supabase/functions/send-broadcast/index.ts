@@ -123,8 +123,8 @@ Deno.serve(async (req) => {
       }))
       .filter((p) => p.user_id);
 
-    // Cycle-phase filter (in-memory)
-    if (filters.cycle_phase && filters.cycle_phase.length > 0) {
+    // Cycle-phase filter (in-memory) — skipped when targeting specific users
+    if (!hasSpecific && filters.cycle_phase && filters.cycle_phase.length > 0) {
       candidates = candidates.filter((p) => {
         const phase = currentPhase(p.last_period_start, p.cycle_length_days);
         return phase && filters.cycle_phase!.includes(phase);
