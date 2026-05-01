@@ -11,7 +11,7 @@ import {
   Tooltip,
 } from "recharts";
 import { getPhaseForDate, PHASES } from "@/lib/cycleCorrelation";
-import { getHormoneValue, avg } from "@/lib/hormoneCurves";
+import { getHormoneValue } from "@/lib/hormoneCurves";
 
 interface SymptomEntry {
   name: string;
@@ -32,16 +32,15 @@ interface Props {
   isNonCycling: boolean;
 }
 
-// Distinct symptom palette
 const SYMPTOM_PALETTE = [
-  "hsl(173, 80%, 50%)",   // teal
-  "hsl(355, 75%, 65%)",   // red
-  "hsl(40, 85%, 60%)",    // amber
-  "hsl(140, 60%, 55%)",   // green
-  "hsl(195, 85%, 60%)",   // sky
-  "hsl(20, 85%, 65%)",    // orange
-  "hsl(310, 60%, 70%)",   // pink
-  "hsl(85, 65%, 55%)",    // lime
+  "hsl(173, 80%, 50%)",
+  "hsl(355, 75%, 65%)",
+  "hsl(40, 85%, 60%)",
+  "hsl(140, 60%, 55%)",
+  "hsl(195, 85%, 60%)",
+  "hsl(20, 85%, 65%)",
+  "hsl(310, 60%, 70%)",
+  "hsl(85, 65%, 55%)",
 ];
 
 const HORMONES = [
@@ -51,6 +50,13 @@ const HORMONES = [
   { key: "lh", label: "LH", color: "hsl(355, 75%, 60%)" },
 ] as const;
 
+const PHASE_SHORT: Record<string, string> = {
+  Menstruation: "Mens",
+  Follicular: "Foll",
+  Ovulation: "Ovul",
+  Luteal: "Lute",
+};
+
 export function AllSymptomsChart({
   logs,
   symptomNames,
@@ -58,53 +64,38 @@ export function AllSymptomsChart({
   cycleLengthDays,
   isNonCycling,
 }: Props) {
-  const hormoneByPhase = useMemo(() => {
+  const { chartData, phaseMidDays } = useMemo(() => {
     const len = cycleLengthDays || 28;
     const menEnd = 5;
     const ovDay = len - 14;
     const ovStart = ovDay - 1;
     const ovEnd = ovDay + 2;
+
     const phaseRanges: Record<string, [number, number]> = {
       Menstruation: [1, menEnd],
       Follicular: [menEnd + 1, ovStart - 1],
       Ovulation: [ovStart, ovEnd],
       Luteal: [ovEnd + 1, len],
     };
-    const out: Record<string, Record<string, number>> = {};
+
+    const midDays: Record<string, number> = {};
     for (const phase of PHASES) {
       const [s, e] = phaseRanges[phase];
-      const vals: Record<string, number[]> = { estrogen: [], progesterone: [], fsh: [], lh: [] };
-      for (let d = s; d <= e; d++) {
-        vals.estrogen.push(getHormoneValue("estrogen", d, len, menEnd, ovDay, ovStart, ovEnd));
-        vals.progesterone.push(getHormoneValue("progesterone", d, len, menEnd, ovDay, ovStart, ovEnd));
-        vals.fsh.push(getHormoneValue("fsh", d, len, menEnd, ovDay, ovStart, ovEnd));
-        vals.lh.push(getHormoneValue("lh", d, len, menEnd, ovDay, ovStart, ovEnd));
-      }
-      out[phase] = {
-        estrogen: avg(vals.estrogen) * 5,
-        progesterone: avg(vals.progesterone) * 5,
-        fsh: avg(vals.fsh) * 5,
-        lh: avg(vals.lh) * 5,
-      };
+      midDays[phase] = Math.round((s + e) / 2);
     }
-    return out;
-  }, [cycleLengthDays]);
 
-  const chartData = useMemo(() => {
+    // Bucket symptom logs per phase
     const buckets: Record<string, Record<string, number[]>> = {};
     for (const phase of PHASES) {
       buckets[phase] = {};
       for (const name of symptomNames) buckets[phase][name] = [];
     }
-
     for (const l of logs) {
       let phase = l.cycle_phase;
       if (!phase && lastPeriodStart && !isNonCycling) {
         try {
           phase = getPhaseForDate(new Date(l.logged_at), lastPeriodStart, cycleLengthDays);
-        } catch {
-          /* ignore */
-        }
+        } catch { /* ignore */ }
       }
       if (!phase || !buckets[phase]) continue;
       const arr = Array.isArray(l.symptoms) ? l.symptoms : [];
@@ -114,23 +105,55 @@ export function AllSymptomsChart({
         buckets[phase][s.name].push(s.severity);
       }
     }
-
-    return PHASES.map((phase) => {
-      const row: Record<string, number | string> = { phase };
+    const symAvgByPhase: Record<string, Record<string, number | undefined>> = {};
+    for (const phase of PHASES) {
+      symAvgByPhase[phase] = {};
       for (const name of symptomNames) {
-        const vals = buckets[phase][name];
-        if (vals.length > 0) {
-          row[name] = Number((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2));
+        const v = buckets[phase][name];
+        if (v.length > 0) {
+          symAvgByPhase[phase][name] = Number(
+            (v.reduce((a, b) => a + b, 0) / v.length).toFixed(2)
+          );
         }
       }
-      const h = hormoneByPhase[phase] || {};
-      row.estrogen = Number((h.estrogen ?? 0).toFixed(2));
-      row.progesterone = Number((h.progesterone ?? 0).toFixed(2));
-      row.fsh = Number((h.fsh ?? 0).toFixed(2));
-      row.lh = Number((h.lh ?? 0).toFixed(2));
-      return row;
-    });
-  }, [logs, symptomNames, lastPeriodStart, cycleLengthDays, isNonCycling, hormoneByPhase]);
+    }
+
+    // Build per-day rows for smooth hormone curves
+    const data: Record<string, number | string | undefined>[] = [];
+    for (let d = 1; d <= len; d++) {
+      const row: Record<string, number | string | undefined> = { day: d };
+      row.estrogen = Number(
+        (getHormoneValue("estrogen", d, len, menEnd, ovDay, ovStart, ovEnd) * 5).toFixed(2)
+      );
+      row.progesterone = Number(
+        (getHormoneValue("progesterone", d, len, menEnd, ovDay, ovStart, ovEnd) * 5).toFixed(2)
+      );
+      row.fsh = Number(
+        (getHormoneValue("fsh", d, len, menEnd, ovDay, ovStart, ovEnd) * 5).toFixed(2)
+      );
+      row.lh = Number(
+        (getHormoneValue("lh", d, len, menEnd, ovDay, ovStart, ovEnd) * 5).toFixed(2)
+      );
+
+      // Attach symptom bars only at phase midpoints
+      let phaseAtDay: string | null = null;
+      for (const phase of PHASES) {
+        if (midDays[phase] === d) {
+          phaseAtDay = phase;
+          break;
+        }
+      }
+      if (phaseAtDay) {
+        for (const name of symptomNames) {
+          const v = symAvgByPhase[phaseAtDay][name];
+          if (typeof v === "number") row[name] = v;
+        }
+      }
+      data.push(row);
+    }
+
+    return { chartData: data, phaseMidDays: midDays };
+  }, [logs, symptomNames, lastPeriodStart, cycleLengthDays, isNonCycling]);
 
   if (isNonCycling) {
     return (
@@ -143,7 +166,6 @@ export function AllSymptomsChart({
   const hasAnyData = chartData.some((row) =>
     symptomNames.some((n) => typeof row[n] === "number")
   );
-
   if (!hasAnyData) {
     return (
       <p className="text-[11px] text-muted-foreground/70 px-1 py-3">
@@ -151,6 +173,8 @@ export function AllSymptomsChart({
       </p>
     );
   }
+
+  const phaseTicks = PHASES.map((p) => phaseMidDays[p]);
 
   return (
     <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/10 backdrop-blur-xl p-3 space-y-2.5">
@@ -163,16 +187,13 @@ export function AllSymptomsChart({
 
       <div className="h-56 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 8, right: 4, left: -28, bottom: 0 }}>
+          <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: -28, bottom: 0 }}>
             <defs>
               {HORMONES.map((h) => (
                 <linearGradient
                   key={h.key}
                   id={`allHormFill-${h.key}`}
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  y2="1"
+                  x1="0" y1="0" x2="0" y2="1"
                 >
                   <stop offset="0%" stopColor={h.color} stopOpacity={0.18} />
                   <stop offset="100%" stopColor={h.color} stopOpacity={0} />
@@ -186,8 +207,15 @@ export function AllSymptomsChart({
               vertical={false}
             />
             <XAxis
-              dataKey="phase"
-              tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+              dataKey="day"
+              type="number"
+              domain={[1, "dataMax"]}
+              ticks={phaseTicks}
+              tickFormatter={(d: number) => {
+                const phase = PHASES.find((p) => phaseMidDays[p] === d);
+                return phase ? PHASE_SHORT[phase] : "";
+              }}
+              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
               axisLine={false}
               tickLine={false}
               dy={4}
@@ -218,10 +246,14 @@ export function AllSymptomsChart({
                 textTransform: "uppercase",
                 letterSpacing: "0.08em",
               }}
+              labelFormatter={(d: number) => {
+                const phase = PHASES.find((p) => phaseMidDays[p] === d);
+                return phase ? phase : `Day ${d}`;
+              }}
               formatter={(value: number, name: string) => [value.toFixed(2), name]}
             />
 
-            {/* Hormone areas + lines (background) */}
+            {/* Hormone areas + smooth lines */}
             {HORMONES.map((h) => (
               <Area
                 key={`area-${h.key}`}
@@ -241,17 +273,16 @@ export function AllSymptomsChart({
                 dataKey={h.key}
                 name={h.label}
                 stroke={h.color}
-                strokeWidth={1.5}
-                strokeDasharray="3 3"
+                strokeWidth={2}
                 strokeLinecap="round"
                 dot={false}
                 activeDot={{ r: 3, strokeWidth: 0, fill: h.color }}
                 isAnimationActive={false}
-                opacity={0.75}
+                opacity={0.95}
               />
             ))}
 
-            {/* Symptom bars (grouped per phase) */}
+            {/* Symptom bars at phase midpoints (grouped) */}
             {symptomNames.map((name, i) => (
               <Bar
                 key={name}
@@ -259,7 +290,7 @@ export function AllSymptomsChart({
                 name={name}
                 fill={SYMPTOM_PALETTE[i % SYMPTOM_PALETTE.length]}
                 radius={[4, 4, 1, 1]}
-                maxBarSize={14}
+                maxBarSize={12}
                 isAnimationActive={false}
               />
             ))}
@@ -273,7 +304,7 @@ export function AllSymptomsChart({
           {symptomNames.map((name, i) => (
             <div key={name} className="flex items-center gap-1.5">
               <span
-                className="w-2.5 h-2.5 rounded-full"
+                className="w-2.5 h-2.5 rounded-sm"
                 style={{ background: SYMPTOM_PALETTE[i % SYMPTOM_PALETTE.length] }}
               />
               <span className="text-[10px] text-foreground/70">{name}</span>
@@ -285,9 +316,7 @@ export function AllSymptomsChart({
             <div key={h.key} className="flex items-center gap-1.5">
               <span
                 className="w-3.5 h-[2px] rounded-full"
-                style={{
-                  background: `repeating-linear-gradient(90deg, ${h.color} 0 3px, transparent 3px 6px)`,
-                }}
+                style={{ background: h.color, boxShadow: `0 0 6px ${h.color}40` }}
               />
               <span className="text-[10px] text-muted-foreground/70">{h.label}</span>
             </div>
@@ -296,7 +325,7 @@ export function AllSymptomsChart({
       </div>
 
       <p className="text-[10px] text-muted-foreground/55 text-center leading-snug px-2">
-        Your symptoms (bars) grouped per phase, with typical hormone curves (dashed) overlaid — spot which hormones may be driving each pattern.
+        Typical hormone curves overlaid on your logged intensity per phase — see which hormones may be driving each pattern.
       </p>
     </div>
   );
