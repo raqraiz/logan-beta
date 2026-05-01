@@ -23,6 +23,7 @@ interface Filters {
   cycle_phase: string[];
   timezone: string[];
   credits: Credits;
+  participant_ids: string[];
 }
 
 interface Broadcast {
@@ -36,6 +37,12 @@ interface Broadcast {
   created_at: string;
 }
 
+interface ParticipantLite {
+  id: string;
+  full_name: string;
+  email: string | null;
+}
+
 const LIFE_STAGES = ["cycling", "postpartum", "menopause"];
 const PHASES = ["menstrual", "follicular", "ovulation", "luteal"];
 
@@ -46,6 +53,7 @@ const emptyFilters: Filters = {
   cycle_phase: [],
   timezone: [],
   credits: "",
+  participant_ids: [],
 };
 
 export function NotificationsTab() {
