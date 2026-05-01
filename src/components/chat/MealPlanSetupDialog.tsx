@@ -301,10 +301,10 @@ export function MealPlanSetupDialog({ open, onOpenChange, userId, onGenerated }:
               </div>
             </div>
 
-            {/* PDF style */}
+            {/* Visual style */}
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">
-                PDF style
+                Visual style
               </Label>
               <div className="grid grid-cols-2 gap-2">
                 <button
