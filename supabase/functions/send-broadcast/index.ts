@@ -92,11 +92,16 @@ Deno.serve(async (req) => {
       .select("id, email, life_stage, last_period_start, cycle_length_days, timezone")
       .eq("is_active", true);
 
-    if (filters.life_stage && filters.life_stage.length > 0) {
-      q = q.in("life_stage", filters.life_stage);
-    }
-    if (filters.timezone && filters.timezone.length > 0) {
-      q = q.in("timezone", filters.timezone);
+    const hasSpecific = filters.participant_ids && filters.participant_ids.length > 0;
+    if (hasSpecific) {
+      q = q.in("id", filters.participant_ids!);
+    } else {
+      if (filters.life_stage && filters.life_stage.length > 0) {
+        q = q.in("life_stage", filters.life_stage);
+      }
+      if (filters.timezone && filters.timezone.length > 0) {
+        q = q.in("timezone", filters.timezone);
+      }
     }
 
     const { data: participants, error: pErr } = await q;
