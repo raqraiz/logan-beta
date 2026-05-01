@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_broadcasts: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          recipient_count: number | null
+          segment_filters: Json
+          sent_at: string | null
+          status: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+          recipient_count?: number | null
+          segment_filters?: Json
+          sent_at?: string | null
+          status?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          recipient_count?: number | null
+          segment_filters?: Json
+          sent_at?: string | null
+          status?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       calendar_tokens: {
         Row: {
           created_at: string
