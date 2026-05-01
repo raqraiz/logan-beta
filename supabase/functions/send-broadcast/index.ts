@@ -227,7 +227,7 @@ Deno.serve(async (req) => {
       user_id: c.user_id!,
       role: "assistant",
       content: body.content,
-      message_type: "broadcast",
+      message_type: "text",
       metadata: {
         broadcast: true,
         broadcast_title: body.title ?? null,
