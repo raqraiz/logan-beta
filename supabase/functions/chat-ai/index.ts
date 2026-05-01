@@ -514,19 +514,17 @@ serve(async (req) => {
     // --- End cycle edit detection ---
 
     // --- Meal plan intent detection ---
-    // If the user asks about food/meals/recipes, let Logan answer normally first,
-    // then append a small follow-up bubble offering the full cycle-synced meal plan resource.
+    // Only trigger the "Build my meal plan" offer card when the user EXPLICITLY asks
+    // to build/make/generate a plan or menu. Casual food questions ("what should I eat?")
+    // get a normal conversational answer with no offer card.
     let shouldOfferMealPlan = false;
     {
       const mealPlanPatterns: RegExp[] = [
-        /\bmeal\s*plan(s|ner)?\b/i,
-        /\b(make|create|build|generate|give me|i want|can you (make|create|build|give))\b[^.?!]{0,60}\b(meal|recipe|menu|food|grocery|shopping)\b/i,
-        /\bwhat (should|do|can|to) i?\s*(eat|cook|make for (breakfast|lunch|dinner|a meal))\b/i,
-        /\bwhat'?s? (good|best) to eat\b/i,
-        /\b(weekly|monthly|cyclical|cycle[- ]synced)\s+(meal|menu|food|recipe)/i,
+        /\b(make|create|build|generate|design|put together|plan)\b[^.?!]{0,40}\b(meal\s*plan|menu|weekly\s+meals?|cycle[- ]synced\s+(meals?|menu|plan))\b/i,
+        /\b(meal\s*plan|cycle[- ]synced\s+(meals?|menu|plan))\b[^.?!]{0,30}\b(for\s+(me|this\s+week|the\s+week|my\s+cycle))\b/i,
+        /\b(give me|i want|i'?d like|can you (make|create|build|give|generate))\b[^.?!]{0,40}\b(meal\s*plan|menu|weekly\s+meals?)\b/i,
+        /\b(weekly|monthly|cyclical|cycle[- ]synced)\s+(meal\s*plan|menu)\b/i,
         /\b(grocery|shopping)\s+list\b/i,
-        /\b(recipes?|menu)\s+(for|by|that match|aligned with)\b[^.?!]{0,40}\b(cycle|phase|week|hormones?)\b/i,
-        /\b(food|meal|recipe|menu)s?\s+(suggestions?|ideas?|for (this|my) (phase|cycle|week))\b/i,
       ];
       shouldOfferMealPlan = mealPlanPatterns.some(p => p.test(userMessage));
     }
@@ -861,7 +859,13 @@ serve(async (req) => {
       ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
       : null;
 
-    const systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext);
+    let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext);
+
+    // Runtime hint: if the Menu Builder offer card is about to follow this reply,
+    // tell the model to write a short hand-off line instead of promising to build anything.
+    if (shouldOfferMealPlan) {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user just asked you to build a meal plan. A "Build my meal plan" card will appear DIRECTLY BELOW your reply — they tap it to open the Menu Builder. Your reply MUST be ONE short sentence: a phase-aware framing that hands off to the card. Do NOT say "I'm building", "I'll drop", "starting on it", "give me a sec", or anything implying you are working on it. Do NOT ask follow-up questions. Example: "Luteal week — magnesium and slow carbs are your friends right now." Then stop.`;
+    }
 
     // Smart truncation: keep first 10 (onboarding/profile context) + last 50 (recent conversation)
     const allMessages = (recentMessages || [])
@@ -962,7 +966,7 @@ serve(async (req) => {
       await supabase.from("chat_messages").insert({
         user_id: user.id,
         role: "assistant",
-        content: "Want me to build you a full cycle-synced meal plan? Each meal aligned to your phase, plus a grocery list.",
+        content: "Tap below and I'll build your cycle-synced plan — every meal mapped to your phase, with a grocery list.",
         message_type: "resource_offer",
         metadata: {
           resource_type: "meal_plan",
@@ -1107,8 +1111,9 @@ LIFE STAGE CHANGES:
 MEAL PLANS / MENUS — STRICT RULES:
 - NEVER mention PDFs, downloads, files, attachments, printables, or "dropping" anything. That feature does not exist.
 - NEVER say things like "I'll drop the PDF here", "I'll attach the file", "downloadable plan", or "printable menu".
-- Meal plans are generated and viewed entirely in-app via the Menu Builder (Plan tab → Nutrition). The system handles the offer to build one — you do NOT need to promise to deliver a file.
-- If a user asks for a meal plan, answer their question conversationally with phase-aware food guidance (one food mention max). Do NOT promise to build, send, or deliver anything yourself — a separate in-app offer appears automatically.`;
+- NEVER say "I'm building", "I'll build", "starting on it", "coming up", "give me a sec", or anything that implies YOU are generating a plan in the background. You are NOT. A separate "Build my meal plan" offer card appears right after your reply — the user taps it to launch the Menu Builder.
+- When the user asks for a meal plan / menu / weekly meals: keep your reply to ONE short sentence — a quick phase-aware framing (e.g. "Luteal week — magnesium and slow carbs will keep your energy from crashing.") that naturally hands off to the offer card below. Do NOT ask follow-up questions, do NOT promise anything, do NOT list foods.
+- For general food questions (not "build me a plan"), answer conversationally with one food mention max — no offer follows in that case.`;
 
   if (!participant) {
     return basePrompt + "\n\nNote: User hasn't completed onboarding yet. Provide general guidance and encourage them to share their cycle details for personalized insights.";
