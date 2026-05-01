@@ -50,11 +50,11 @@ const HORMONES = [
   { key: "lh", label: "LH", color: "hsl(355, 75%, 60%)" },
 ] as const;
 
-const PHASE_SHORT: Record<string, string> = {
-  Menstruation: "Mens",
-  Follicular: "Foll",
-  Ovulation: "Ovul",
-  Luteal: "Lute",
+const PHASE_FULL: Record<string, string> = {
+  Menstruation: "Menstruation",
+  Follicular: "Follicular",
+  Ovulation: "Ovulation",
+  Luteal: "Luteal",
 };
 
 export function AllSymptomsChart({
@@ -208,12 +208,11 @@ export function AllSymptomsChart({
             />
             <XAxis
               dataKey="day"
-              type="number"
-              domain={[1, "dataMax"]}
-              ticks={phaseTicks}
-              tickFormatter={(d: number) => {
-                const phase = PHASES.find((p) => phaseMidDays[p] === d);
-                return phase ? PHASE_SHORT[phase] : "";
+              type="category"
+              ticks={phaseTicks.map(String)}
+              tickFormatter={(d: string) => {
+                const phase = PHASES.find((p) => String(phaseMidDays[p]) === String(d));
+                return phase ? PHASE_FULL[phase] : "";
               }}
               tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
               axisLine={false}
@@ -246,8 +245,8 @@ export function AllSymptomsChart({
                 textTransform: "uppercase",
                 letterSpacing: "0.08em",
               }}
-              labelFormatter={(d: number) => {
-                const phase = PHASES.find((p) => phaseMidDays[p] === d);
+              labelFormatter={(d: number | string) => {
+                const phase = PHASES.find((p) => String(phaseMidDays[p]) === String(d));
                 return phase ? phase : `Day ${d}`;
               }}
               formatter={(value: number, name: string) => [value.toFixed(2), name]}
