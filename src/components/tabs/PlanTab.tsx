@@ -746,6 +746,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
 
           {/* ── Mood card ── */}
           <button
+            id="plan-section-mood"
             onClick={() => toggle("mood")}
             className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70"
           >
@@ -806,6 +807,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
 
           {/* ── Exercise card ── */}
           <button
+            id="plan-section-exercise"
             onClick={() => toggle("exercise")}
             className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70"
           >
@@ -879,6 +881,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
 
           {/* ── Nutrition card ── */}
           <button
+            id="plan-section-nutrition"
             onClick={() => toggle("nutrition")}
             className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70"
           >
