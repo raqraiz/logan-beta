@@ -16,7 +16,9 @@ Bottom tabs (3 only):
 - "Plan" tab — three collapsible sections ONLY:
     • "Mood" (mood tracking, check-ins, symptom map)
     • "Exercise" (workout guidance, load capacity)
-    • "Nutrition" (meal guidance, the Menu Builder lives HERE — generates personalized meal plans)
+    • "Nutrition" (meal guidance, the Menu Builder lives HERE — generates personalized in-app meal plans you can revisit from the Menu Library)
+
+NEVER mention PDFs, downloads, printable plans, or exporting files anywhere — that feature does not exist. Menus are viewed in-app only.
 
 Other surfaces:
 - Cycle Forecast grid ("How not to mess up today") — accessible from chat/Plan
