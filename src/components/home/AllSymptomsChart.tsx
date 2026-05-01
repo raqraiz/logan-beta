@@ -208,12 +208,11 @@ export function AllSymptomsChart({
             />
             <XAxis
               dataKey="day"
-              type="number"
-              domain={[1, "dataMax"]}
-              ticks={phaseTicks}
-              tickFormatter={(d: number) => {
-                const phase = PHASES.find((p) => phaseMidDays[p] === d);
-                return phase ? PHASE_SHORT[phase] : "";
+              type="category"
+              ticks={phaseTicks.map(String)}
+              tickFormatter={(d: string) => {
+                const phase = PHASES.find((p) => String(phaseMidDays[p]) === String(d));
+                return phase ? PHASE_FULL[phase] : "";
               }}
               tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
               axisLine={false}
