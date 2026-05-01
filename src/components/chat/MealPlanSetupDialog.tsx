@@ -301,10 +301,10 @@ export function MealPlanSetupDialog({ open, onOpenChange, userId, onGenerated }:
               </div>
             </div>
 
-            {/* PDF style */}
+            {/* Visual style */}
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">
-                PDF style
+                Visual style
               </Label>
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -331,7 +331,7 @@ export function MealPlanSetupDialog({ open, onOpenChange, userId, onGenerated }:
                 >
                   <Sun className="h-4 w-4 text-foreground" />
                   <div className="text-xs font-medium">Light</div>
-                  <div className="text-[10px] text-muted-foreground">Print-friendly</div>
+                  <div className="text-[10px] text-muted-foreground">Bright & airy</div>
                 </button>
               </div>
             </div>
