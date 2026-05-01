@@ -296,7 +296,7 @@ export function AllSymptomsChart({
       </div>
 
       <p className="text-[10px] text-muted-foreground/55 text-center leading-snug px-2">
-        Your symptoms (solid) overlaid with typical hormone curves (dashed) — spot which hormones may be driving each pattern.
+        Your symptoms (bars) grouped per phase, with typical hormone curves (dashed) overlaid — spot which hormones may be driving each pattern.
       </p>
     </div>
   );
