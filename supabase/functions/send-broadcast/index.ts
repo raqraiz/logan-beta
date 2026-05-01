@@ -18,12 +18,20 @@ interface SegmentFilters {
   participant_ids?: string[]; // specific participants (overrides other filters)
 }
 
+interface BroadcastCta {
+  label?: string | null;
+  tab?: "home" | "ask" | "plan" | null;
+  plan_section?: "mood" | "exercise" | "nutrition" | null;
+}
+
 interface BroadcastPayload {
   action: "preview" | "send";
   broadcast_id?: string; // if sending an existing draft
   title?: string;
   content: string;
   filters: SegmentFilters;
+  cta?: BroadcastCta | null;
+  conversation_starters?: string[] | null;
 }
 
 // Compute current cycle phase from last_period_start + cycle_length.
@@ -223,6 +231,17 @@ Deno.serve(async (req) => {
       );
     }
 
+    const cta = body.cta && body.cta.label && body.cta.tab
+      ? {
+          label: body.cta.label,
+          tab: body.cta.tab,
+          plan_section: body.cta.plan_section ?? null,
+        }
+      : null;
+    const starters = Array.isArray(body.conversation_starters) && body.conversation_starters.length > 0
+      ? body.conversation_starters.slice(0, 3)
+      : null;
+
     const rows = candidates.map((c) => ({
       user_id: c.user_id!,
       role: "assistant",
@@ -232,6 +251,8 @@ Deno.serve(async (req) => {
         broadcast: true,
         broadcast_title: body.title ?? null,
         broadcast_id: body.broadcast_id ?? null,
+        ...(cta ? { broadcast_cta: cta } : {}),
+        ...(starters ? { conversation_starters: starters } : {}),
       },
     }));
 

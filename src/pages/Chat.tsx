@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
 
-import { Send, Loader2, LogOut, ChevronLeft, ArrowDown, MessageSquarePlus } from "lucide-react";
+import { Send, Loader2, LogOut, ChevronLeft, ChevronRight, ArrowDown, MessageSquarePlus } from "lucide-react";
 import { FeedbackModal } from "@/components/chat/FeedbackModal";
 import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
 import { format } from "date-fns";
@@ -87,6 +87,14 @@ interface ChatMessage {
     cheat_sheet_responses?: Record<string, string>;
     resource_type?: string;
     resource_id?: string;
+    broadcast?: boolean;
+    broadcast_title?: string | null;
+    broadcast_id?: string | null;
+    broadcast_cta?: {
+      label: string;
+      tab: "home" | "ask" | "plan";
+      plan_section?: "mood" | "exercise" | "nutrition" | null;
+    };
   };
 }
 
@@ -1267,6 +1275,40 @@ const Chat = () => {
                           <MarkdownMessage content={message.metadata.engagement_question as string} />
                         </div>
                       )}
+
+                      {/* Broadcast CTA — deep-link button under admin broadcasts */}
+                      {message.metadata?.broadcast && message.metadata?.broadcast_cta && (() => {
+                        const cta = message.metadata.broadcast_cta as {
+                          label: string;
+                          tab: "home" | "ask" | "plan";
+                          plan_section?: "mood" | "exercise" | "nutrition" | null;
+                        };
+                        return (
+                          <div className="mt-3">
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="gap-1.5"
+                              onClick={() => {
+                                setActiveTab(cta.tab);
+                                trackTabSwitch(cta.tab);
+                                if (cta.tab === "plan" && cta.plan_section) {
+                                  setTimeout(() => {
+                                    window.dispatchEvent(
+                                      new CustomEvent("logan:open-plan-section", {
+                                        detail: { section: cta.plan_section },
+                                      }),
+                                    );
+                                  }, 50);
+                                }
+                              }}
+                            >
+                              {cta.label}
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        );
+                      })()}
 
                       {/* Resource offer card (Logan suggesting a downloadable) */}
                       {message.message_type === "resource_offer" && message.metadata?.resource_type && user && (
