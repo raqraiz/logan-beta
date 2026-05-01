@@ -72,6 +72,58 @@ export function NotificationsTab() {
   const [history, setHistory] = useState<Broadcast[]>([]);
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
 
+  // AI assist
+  const [aiTopic, setAiTopic] = useState("");
+  const [isDrafting, setIsDrafting] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<
+    Array<{ id: string; label: string; description: string; augmented_message: string }>
+  >([]);
+  const [baseAiMessage, setBaseAiMessage] = useState<string>("");
+  const [activeSuggestionIds, setActiveSuggestionIds] = useState<string[]>([]);
+
+  const handleAiDraft = async () => {
+    const topic = aiTopic.trim() || title.trim();
+    if (!topic) {
+      toast({ title: "Add a topic", description: "Type a short title or topic first.", variant: "destructive" });
+      return;
+    }
+    setIsDrafting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("draft-broadcast", {
+        body: { topic },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setBaseAiMessage(data.message);
+      setContent(data.message);
+      if (!title.trim() && data.title) setTitle(data.title);
+      setAiSuggestions(data.suggestions ?? []);
+      setActiveSuggestionIds([]);
+      setPreviewCount(null);
+    } catch (e: any) {
+      toast({ title: "Draft failed", description: e.message, variant: "destructive" });
+    } finally {
+      setIsDrafting(false);
+    }
+  };
+
+  const toggleSuggestion = (id: string) => {
+    const next = activeSuggestionIds.includes(id)
+      ? activeSuggestionIds.filter((x) => x !== id)
+      : [...activeSuggestionIds, id];
+    setActiveSuggestionIds(next);
+    // Apply the LAST toggled-on suggestion's augmented message; if none active, restore base.
+    if (next.length === 0) {
+      setContent(baseAiMessage);
+    } else {
+      const lastId = next[next.length - 1];
+      const sug = aiSuggestions.find((s) => s.id === lastId);
+      if (sug) setContent(sug.augmented_message);
+    }
+    setPreviewCount(null);
+  };
+
+
   // Load distinct timezones + full participants list
   useEffect(() => {
     supabase
