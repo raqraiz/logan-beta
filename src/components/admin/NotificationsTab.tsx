@@ -407,6 +407,83 @@ export function NotificationsTab() {
             />
           </div>
 
+          {/* CTA — deep link to a real section */}
+          <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-semibold text-foreground">In-app destination (optional)</Label>
+              {(ctaTab || ctaLabel) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs"
+                  onClick={() => {
+                    setCtaTab("");
+                    setCtaPlanSection("");
+                    setCtaLabel("");
+                    setCtaHumanLabel("");
+                  }}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Adds a tappable button under the message that takes the user straight to the feature — no need to write "you'll find it under…" in the message.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <Select value={ctaTab} onValueChange={(v) => { setCtaTab(v as CtaTab); if (v !== "plan") setCtaPlanSection(""); }}>
+                <SelectTrigger><SelectValue placeholder="No destination" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="home">Home tab</SelectItem>
+                  <SelectItem value="ask">Ask tab</SelectItem>
+                  <SelectItem value="plan">Plan tab</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={ctaPlanSection}
+                onValueChange={(v) => setCtaPlanSection(v as PlanSection)}
+                disabled={ctaTab !== "plan"}
+              >
+                <SelectTrigger><SelectValue placeholder="Plan section" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mood">Mood</SelectItem>
+                  <SelectItem value="exercise">Exercise</SelectItem>
+                  <SelectItem value="nutrition">Nutrition</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                value={ctaLabel}
+                onChange={(e) => setCtaLabel(e.target.value)}
+                placeholder="Button label (e.g. Take me there)"
+              />
+            </div>
+            {ctaHumanLabel && (
+              <p className="text-[11px] text-muted-foreground italic">AI suggested location: {ctaHumanLabel}</p>
+            )}
+          </div>
+
+          {/* Conversation starters — replace defaults under this broadcast */}
+          <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
+            <Label className="text-sm font-semibold text-foreground">Follow-up prompts (optional)</Label>
+            <p className="text-xs text-muted-foreground">
+              Replaces the default starter bubbles under this message so they correlate with what you're announcing. Up to 3.
+            </p>
+            <div className="space-y-2">
+              {[0, 1, 2].map((i) => (
+                <Input
+                  key={i}
+                  value={starters[i]}
+                  onChange={(e) => {
+                    const next = [...starters];
+                    next[i] = e.target.value;
+                    setStarters(next);
+                  }}
+                  placeholder={`Starter ${i + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+
           {/* Filters */}
           <div className="space-y-4 pt-2 border-t border-border">
             <h4 className="text-sm font-semibold text-foreground">Segment filters</h4>
