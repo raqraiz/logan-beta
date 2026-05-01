@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
     }
 
     // Most active (top N by message count last 30 days)
-    if (filters.most_active && filters.most_active > 0) {
+    if (!hasSpecific && filters.most_active && filters.most_active > 0) {
       const cutoff = new Date(Date.now() - 30 * 86400000).toISOString();
       const userIds = candidates.map((c) => c.user_id!);
       const { data: recent } = await admin
