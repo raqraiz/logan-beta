@@ -1268,6 +1268,40 @@ const Chat = () => {
                         </div>
                       )}
 
+                      {/* Broadcast CTA — deep-link button under admin broadcasts */}
+                      {message.metadata?.broadcast && message.metadata?.broadcast_cta && (() => {
+                        const cta = message.metadata.broadcast_cta as {
+                          label: string;
+                          tab: "home" | "ask" | "plan";
+                          plan_section?: "mood" | "exercise" | "nutrition" | null;
+                        };
+                        return (
+                          <div className="mt-3">
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="gap-1.5"
+                              onClick={() => {
+                                setActiveTab(cta.tab);
+                                trackTabSwitch(cta.tab);
+                                if (cta.tab === "plan" && cta.plan_section) {
+                                  setTimeout(() => {
+                                    window.dispatchEvent(
+                                      new CustomEvent("logan:open-plan-section", {
+                                        detail: { section: cta.plan_section },
+                                      }),
+                                    );
+                                  }, 50);
+                                }
+                              }}
+                            >
+                              {cta.label}
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        );
+                      })()}
+
                       {/* Resource offer card (Logan suggesting a downloadable) */}
                       {message.message_type === "resource_offer" && message.metadata?.resource_type && user && (
                         <ResourceOfferCard
