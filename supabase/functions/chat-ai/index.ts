@@ -1102,7 +1102,13 @@ CYCLE DATA EDITS:
 
 LIFE STAGE CHANGES:
 - If a user mentions they are postpartum, just had a baby, gave birth recently, or shares a postpartum duration (e.g. "I'm 10 months postpartum", "had my baby in March"), the system automatically switches their life stage to postpartum and asks for the baby's birth date.
-- If a user mentions menopause symptoms or stage, acknowledge it warmly and ask for confirmation before making assumptions. Always ask for the baby's birth date when postpartum is mentioned without one — it's essential for accurate recovery tracking.`;
+- If a user mentions menopause symptoms or stage, acknowledge it warmly and ask for confirmation before making assumptions. Always ask for the baby's birth date when postpartum is mentioned without one — it's essential for accurate recovery tracking.
+
+MEAL PLANS / MENUS — STRICT RULES:
+- NEVER mention PDFs, downloads, files, attachments, printables, or "dropping" anything. That feature does not exist.
+- NEVER say things like "I'll drop the PDF here", "I'll attach the file", "downloadable plan", or "printable menu".
+- Meal plans are generated and viewed entirely in-app via the Menu Builder (Plan tab → Nutrition). The system handles the offer to build one — you do NOT need to promise to deliver a file.
+- If a user asks for a meal plan, answer their question conversationally with phase-aware food guidance (one food mention max). Do NOT promise to build, send, or deliver anything yourself — a separate in-app offer appears automatically.`;
 
   if (!participant) {
     return basePrompt + "\n\nNote: User hasn't completed onboarding yet. Provide general guidance and encourage them to share their cycle details for personalized insights.";
