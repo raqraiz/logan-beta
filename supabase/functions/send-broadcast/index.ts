@@ -185,7 +185,7 @@ Deno.serve(async (req) => {
     }
 
     // Credits filter
-    if (filters.credits) {
+    if (!hasSpecific && filters.credits) {
       const userIds = candidates.map((c) => c.user_id!);
       const { data: credits } = await admin
         .from("user_credits")
