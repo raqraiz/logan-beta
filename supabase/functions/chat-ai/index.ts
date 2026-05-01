@@ -514,19 +514,17 @@ serve(async (req) => {
     // --- End cycle edit detection ---
 
     // --- Meal plan intent detection ---
-    // If the user asks about food/meals/recipes, let Logan answer normally first,
-    // then append a small follow-up bubble offering the full cycle-synced meal plan resource.
+    // Only trigger the "Build my meal plan" offer card when the user EXPLICITLY asks
+    // to build/make/generate a plan or menu. Casual food questions ("what should I eat?")
+    // get a normal conversational answer with no offer card.
     let shouldOfferMealPlan = false;
     {
       const mealPlanPatterns: RegExp[] = [
-        /\bmeal\s*plan(s|ner)?\b/i,
-        /\b(make|create|build|generate|give me|i want|can you (make|create|build|give))\b[^.?!]{0,60}\b(meal|recipe|menu|food|grocery|shopping)\b/i,
-        /\bwhat (should|do|can|to) i?\s*(eat|cook|make for (breakfast|lunch|dinner|a meal))\b/i,
-        /\bwhat'?s? (good|best) to eat\b/i,
-        /\b(weekly|monthly|cyclical|cycle[- ]synced)\s+(meal|menu|food|recipe)/i,
+        /\b(make|create|build|generate|design|put together|plan)\b[^.?!]{0,40}\b(meal\s*plan|menu|weekly\s+meals?|cycle[- ]synced\s+(meals?|menu|plan))\b/i,
+        /\b(meal\s*plan|cycle[- ]synced\s+(meals?|menu|plan))\b[^.?!]{0,30}\b(for\s+(me|this\s+week|the\s+week|my\s+cycle))\b/i,
+        /\b(give me|i want|i'?d like|can you (make|create|build|give|generate))\b[^.?!]{0,40}\b(meal\s*plan|menu|weekly\s+meals?)\b/i,
+        /\b(weekly|monthly|cyclical|cycle[- ]synced)\s+(meal\s*plan|menu)\b/i,
         /\b(grocery|shopping)\s+list\b/i,
-        /\b(recipes?|menu)\s+(for|by|that match|aligned with)\b[^.?!]{0,40}\b(cycle|phase|week|hormones?)\b/i,
-        /\b(food|meal|recipe|menu)s?\s+(suggestions?|ideas?|for (this|my) (phase|cycle|week))\b/i,
       ];
       shouldOfferMealPlan = mealPlanPatterns.some(p => p.test(userMessage));
     }
