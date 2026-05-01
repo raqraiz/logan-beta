@@ -1380,7 +1380,15 @@ const Chat = () => {
                         disabled={isSending}
                       />
                     </div>
-                  )}
+          )}
+
+          {/* One-time announcement: Menu Builder */}
+          {!isOnboarding && user && messages.length > 0 && (
+            <MenuBuilderAnnouncement
+              userId={user.id}
+              onOpenPlan={() => setActiveTab("plan")}
+            />
+          )}
 
 
                   {/* Conversation starters — rotate sets so each message gets fresh prompts */}
