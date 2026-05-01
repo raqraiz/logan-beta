@@ -28,6 +28,7 @@ Other surfaces:
 
 Things that DO NOT exist (never reference these):
 - "Nourish" section (doesn't exist — nutrition lives in Plan > Nutrition)
+- PDF export, downloadable menus, printable meal plans (removed — never reference these)
 - Settings tab, Profile tab, Insights tab, Library tab
 - Any standalone page for Menu Builder (it lives inside Plan > Nutrition)
 `.trim();
