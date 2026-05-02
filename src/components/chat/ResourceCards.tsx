@@ -326,6 +326,8 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
         previewLoading={previewLoading}
         onReact={handleReact}
         onRefine={handleRefine}
+        onSwapSuggest={handleSwapSuggest}
+        onSwapApply={handleSwapApply}
         refining={refining}
         initialReaction={reaction}
       />
