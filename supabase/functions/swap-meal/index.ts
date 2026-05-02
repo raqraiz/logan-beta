@@ -162,14 +162,15 @@ serve(async (req) => {
 
     const systemPrompt = `You are Logan — a knowledgeable, grounded friend who builds meal plans backed by hormonal nutrition science.
 
-The user is swapping ONE meal because some ingredients aren't easy to find where they live. Generate 3 distinct alternative ${slot} options.
+The user wants to swap ONE meal for a different option. Generate 3 distinct alternative ${slot} options.
 
 ${phaseGuidance}
 
 Each alternative must:
 - Be realistic and easy to prepare (15-30 min)
 - Match the same nutritional intent as the original meal
-- AVOID every unavailable ingredient (and obvious close substitutes if the user said they can't find a category)
+- Be meaningfully DIFFERENT from the original (different protein, cuisine, or main ingredient — not a minor tweak)
+- ${unavailable.length ? "AVOID every unavailable ingredient (and obvious close substitutes)" : "Offer variety vs. the original — don't just rename it"}
 - Use whole, accessible ingredients
 - Be specific (e.g. "Smoked salmon avocado toast on rye" not "Toast"). Each name under 80 chars.
 
@@ -191,8 +192,8 @@ Return STRICT JSON only, no prose, no markdown:
 }`;
 
     const unavailableLine = unavailable.length
-      ? `Ingredients the user CAN'T find locally (must avoid): ${unavailable.join(", ")}`
-      : "";
+      ? `Ingredients to avoid: ${unavailable.join(", ")}`
+      : "No specific ingredients to avoid — the user just wants different options.";
 
     const userPrompt = `Original ${slot}: "${currentMeal}"
 Original ingredients: ${currentIngredients.join(", ") || "(unknown)"}
