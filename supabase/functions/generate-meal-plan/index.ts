@@ -329,34 +329,69 @@ async function generateAndUploadPdf(args: {
     if (dietaryPrefs.cuisines?.length) dietBits.push(`Cuisine preferences: ${dietaryPrefs.cuisines.join(", ")}`);
     const dietContext = dietBits.length ? dietBits.join("\n") : "Omnivore, no restrictions";
 
-    const systemPrompt = `You are Logan — a knowledgeable, grounded friend who builds cycle-synced meal plans backed by hormonal nutrition science.
+    const isCycling = lifeStage === "cycling";
 
-Build a ${lengthDays}-day meal plan that aligns each day's meals with the user's exact cycle phase. Every meal must be:
-- Realistic and easy to prepare (15-30 min)
-- Made with whole, accessible ingredients
-- Hormonally optimized for that day's phase
-
-Phase nutrition principles:
+    const cyclingPrinciples = `Phase nutrition principles:
 - Menstruation: iron-rich (lentils, beef, dark leafy greens), warming foods, vitamin C to aid iron absorption, anti-inflammatory (ginger, turmeric, omega-3s).
 - Follicular: light fresh foods, fermented foods (yogurt, kimchi) for estrogen metabolism, leafy greens, sprouted grains, seeds (flax, pumpkin).
 - Ovulation: cruciferous vegetables (broccoli, cauliflower) for healthy estrogen clearance, B vitamins, antioxidant-rich berries, fiber.
-- Luteal: complex carbs (sweet potato, quinoa, oats) to support serotonin, magnesium-rich (dark chocolate, leafy greens, sunflower/sesame seeds), B6, calcium.
+- Luteal: complex carbs (sweet potato, quinoa, oats) to support serotonin, magnesium-rich (dark chocolate, leafy greens, sunflower/sesame seeds), B6, calcium.`;
+
+    const postpartumPrinciples = `Postpartum nutrition principles (this user is POSTPARTUM — they do NOT have a regular cycle right now, so do NOT reference cycle days, phases, ovulation, luteal, follicular, or menstruation anywhere in the meals, intros, or summaries):
+- Recovery & repair: collagen-rich foods (bone broth, slow-cooked meats), iron (red meat, lentils, dark leafy greens) to rebuild blood stores.
+- Hormonal recalibration: healthy fats (avocado, olive oil, nuts, seeds, oily fish) for steroid hormone production; cruciferous vegetables for estrogen metabolism.
+- Energy & sleep deprivation: stable blood sugar via complex carbs + protein at every meal; magnesium (leafy greens, pumpkin seeds, dark chocolate) to support nervous system.
+- Mood & nervous system: B-vitamins (eggs, whole grains, legumes), omega-3s (salmon, sardines, walnuts, flax) for mood regulation.
+- Easy & one-handed: meals must be doable while caring for a baby — minimal prep, ideally 10-20 min, batch-friendly.
+- Do NOT assume breastfeeding — only optimize for breastfeeding if the user explicitly mentioned it in their dietary notes.`;
+
+    const menopausePrinciples = `Menopause nutrition principles (this user is in MENOPAUSE — they do NOT have a regular cycle, so do NOT reference cycle days, phases, ovulation, luteal, follicular, or menstruation anywhere):
+- Hot flashes & sleep: phytoestrogen-rich foods (flax, soy, sesame), tryptophan-rich (turkey, oats, nuts) for evening meals.
+- Bone health: calcium (dairy, leafy greens, sardines), vitamin D, magnesium, vitamin K (cruciferous, fermented foods).
+- Cardiovascular & metabolic: high fiber, omega-3s, plenty of plants, lean protein at every meal to preserve muscle mass.
+- Blood sugar & weight: complex carbs over refined, protein-forward meals, anti-inflammatory spices (turmeric, ginger).
+- Cognitive support: berries, leafy greens, fatty fish, nuts.`;
+
+    const principles = lifeStage === "postpartum" ? postpartumPrinciples : lifeStage === "menopause" ? menopausePrinciples : cyclingPrinciples;
+
+    const buildIntent = isCycling
+      ? `Build a ${lengthDays}-day meal plan that aligns each day's meals with the user's exact cycle phase.`
+      : `Build a ${lengthDays}-day meal plan tailored to where this user is in their ${lifeStage} journey. All meals serve the same hormonal goals — there is no cycle phase variation.`;
+
+    const mealQualifier = isCycling ? "Hormonally optimized for that day's phase" : `Aligned with ${lifeStage} nutritional needs`;
+
+    const summaryGuidance = isCycling
+      ? `For each WEEK, also produce a phase_summary (1-2 sentences explaining what hormonal goals this week's meals serve) and a grocery_list (15-25 items consolidated from that week's meals — no quantities, just ingredient names).`
+      : `For each WEEK, also produce a phase_summary (1-2 sentences explaining what ${lifeStage} goals this week's meals serve — do NOT mention cycle phases) and a grocery_list (15-25 items consolidated from that week's meals — no quantities, just ingredient names).`;
+
+    const introGuidance = isCycling
+      ? `Write a 2-sentence intro that explains the plan's logic in Logan's voice (warm, grounded, no fluff, no emojis).`
+      : `Write a 2-sentence intro that explains the plan's logic in Logan's voice (warm, grounded, no fluff, no emojis). Do NOT mention cycle phases, luteal, follicular, ovulation, or menstruation — frame it around ${lifeStage} recovery / transition.`;
+
+    const systemPrompt = `You are Logan — a knowledgeable, grounded friend who builds meal plans backed by hormonal nutrition science.
+
+${buildIntent} Every meal must be:
+- Realistic and easy to prepare (15-30 min)
+- Made with whole, accessible ingredients
+- ${mealQualifier}
+
+${principles}
 
 User dietary context:
 ${dietContext}
 
 Return ONE meal per slot per day — no "or" options. Be specific (e.g. "Smoked salmon avocado toast on rye" not "Toast"). Each meal name must be concise (under 80 chars).
 
-For each WEEK, also produce a phase_summary (1-2 sentences explaining what hormonal goals this week's meals serve) and a grocery_list (15-25 items consolidated from that week's meals — no quantities, just ingredient names).
+${summaryGuidance}
 
-Write a 2-sentence intro that explains the plan's logic in Logan's voice (warm, grounded, no fluff, no emojis).`;
+${introGuidance}`;
 
     const revisionBlock: string[] = [];
     if (parentPlan?.days?.length) {
       const parentSummary = parentPlan.days.map(d =>
-        `Day ${d.day_number} (${d.phase}, cycle day ${d.cycle_day}): B="${d.breakfast}" | L="${d.lunch}" | D="${d.dinner}" | S="${d.snack}"`
+        `Day ${d.day_number} (${d.phase}${isCycling ? `, cycle day ${d.cycle_day}` : ""}): B="${d.breakfast}" | L="${d.lunch}" | D="${d.dinner}" | S="${d.snack}"`
       ).join("\n");
-      revisionBlock.push(`This is a REVISION of an existing plan. Keep the same overall structure, phase logic and any meals the user didn't complain about. Only change what's necessary to address the feedback below.\n\nPREVIOUS PLAN:\n${parentSummary}`);
+      revisionBlock.push(`This is a REVISION of an existing plan. Keep the same overall structure${isCycling ? ", phase logic" : ""} and any meals the user didn't complain about. Only change what's necessary to address the feedback below.\n\nPREVIOUS PLAN:\n${parentSummary}`);
     }
     if (excludeIngredients.length) {
       revisionBlock.push(`HARD EXCLUSIONS — these ingredients must NOT appear anywhere in the new plan, including grocery lists or meal names: ${excludeIngredients.join(", ")}.`);
@@ -365,7 +400,9 @@ Write a 2-sentence intro that explains the plan's logic in Logan's voice (warm, 
       revisionBlock.push(`USER FEEDBACK to address:\n"${feedbackText.trim()}"`);
     }
 
-    const userPrompt = `Build the ${lengthDays}-day plan starting on cycle day ${startCycleDay} of a ${cycleLengthDays}-day cycle. Day-to-phase mapping:\n${dayScaffold.map(d => `Day ${d.day_number}: cycle day ${d.cycle_day} (${d.phase})`).join("\n")}\n\n${revisionBlock.join("\n\n")}\n\nReturn structured JSON via the build_meal_plan tool.`;
+    const userPrompt = isCycling
+      ? `Build the ${lengthDays}-day plan starting on cycle day ${startCycleDay} of a ${cycleLengthDays}-day cycle. Day-to-phase mapping:\n${dayScaffold.map(d => `Day ${d.day_number}: cycle day ${d.cycle_day} (${d.phase})`).join("\n")}\n\n${revisionBlock.join("\n\n")}\n\nReturn structured JSON via the build_meal_plan tool.`
+      : `Build a ${lengthDays}-day ${lifeStage} meal plan. Every day's "phase" field must be exactly "${lifeStage}" — there is no cycle phase variation. Do NOT mention cycle days, luteal, follicular, ovulation, or menstruation anywhere.\n\n${revisionBlock.join("\n\n")}\n\nReturn structured JSON via the build_meal_plan tool.`;
 
     const aiResponse = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
