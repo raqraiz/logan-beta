@@ -109,6 +109,21 @@ serve(async (req) => {
           ingredients: chosenOption.ingredients ?? [],
           recipe: chosenOption.recipe ?? "",
         };
+
+        // If swapping dinner (the hero photo source), regenerate the day's hero image.
+        if (slot === "dinner") {
+          const newImagePath = await generateMealHeroImage({
+            supabase,
+            lovableApiKey,
+            userId: user.id,
+            resourceId,
+            dayNumber,
+            mealName: chosenOption.name,
+          });
+          if (newImagePath) {
+            targetDay.image_path = newImagePath;
+          }
+        }
       }
 
       const newMetadata = {
