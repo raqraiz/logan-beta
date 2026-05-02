@@ -362,37 +362,16 @@ export function MealPlanPreviewDialog({
               {weeks.length > 0 && (
                 <div className="space-y-3">
                   {weeks.map(w => (
-                    <div key={w.week_number} className={cn("rounded-xl border p-3", cardSurface)}>
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <ShoppingBasket className="h-3.5 w-3.5 text-primary" />
-                        <span className="text-xs font-semibold">
-                          Week {w.week_number} grocery list
-                        </span>
-                      </div>
-                      {w.phase_summary && (
-                        <p className={cn("text-[11px] mb-2 italic", mutedText)}>{w.phase_summary}</p>
-                      )}
-                      <div className="flex flex-wrap gap-1">
-                        {w.grocery_list.map(item => {
-                          const excluded = excludeSet.has(normalize(item));
-                          return (
-                            <button
-                              key={item}
-                              type="button"
-                              onClick={() => toggleWord(item)}
-                              className={cn(
-                                "text-[11px] px-2 py-0.5 rounded-full border transition-all cursor-pointer",
-                                excluded
-                                  ? "bg-destructive/15 text-destructive border-destructive/40 line-through"
-                                  : cn(chipMuted, "hover:border-destructive/50"),
-                              )}
-                            >
-                              {item}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    <GroceryListCard
+                      key={w.week_number}
+                      week={w}
+                      excludeSet={excludeSet}
+                      toggleWord={toggleWord}
+                      cardSurface={cardSurface}
+                      chipMuted={chipMuted}
+                      mutedText={mutedText}
+                      isDark={isDark}
+                    />
                   ))}
                 </div>
               )}
