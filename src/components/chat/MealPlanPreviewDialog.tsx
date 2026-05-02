@@ -331,11 +331,22 @@ export function MealPlanPreviewDialog({
                             {d.phase}
                           </span>
                         </div>
-                        <div className="grid grid-cols-1 gap-y-1.5 text-xs leading-relaxed">
-                          <div><span className={mutedText}>Breakfast · </span>{renderMealLine(d.breakfast)}</div>
-                          <div><span className={mutedText}>Lunch · </span>{renderMealLine(d.lunch)}</div>
-                          <div><span className={mutedText}>Dinner · </span>{renderMealLine(d.dinner)}</div>
-                          <div><span className={mutedText}>Snack · </span>{renderMealLine(d.snack)}</div>
+                        <div className="space-y-1">
+                          {(["breakfast", "lunch", "dinner", "snack"] as const).map(slot => (
+                            <MealRow
+                              key={slot}
+                              slot={slot}
+                              mealText={d[slot]}
+                              recipe={d.recipes?.[slot]}
+                              renderMealLine={renderMealLine}
+                              toggleWord={toggleWord}
+                              excludeSet={excludeSet}
+                              isDark={isDark}
+                              mutedText={mutedText}
+                              subtleText={subtleText}
+                              introBorder={introBorder}
+                            />
+                          ))}
                         </div>
                         {d.hormone_focus && (
                           <div className={cn("text-[11px] italic mt-2 pt-2 border-t", subtleText, introBorder)}>
