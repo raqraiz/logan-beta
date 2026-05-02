@@ -457,10 +457,54 @@ ${introGuidance}`;
                           dinner: { type: "string" },
                           snack: { type: "string" },
                           hormone_focus: { type: "string" },
+                          recipes: {
+                            type: "object",
+                            description: "Per-meal ingredient lists and short recipes. Each meal must have 4-10 ingredients (just names, no quantities) and a 2-4 sentence recipe.",
+                            properties: {
+                              breakfast: {
+                                type: "object",
+                                properties: {
+                                  ingredients: { type: "array", items: { type: "string" } },
+                                  recipe: { type: "string" },
+                                },
+                                required: ["ingredients", "recipe"],
+                                additionalProperties: false,
+                              },
+                              lunch: {
+                                type: "object",
+                                properties: {
+                                  ingredients: { type: "array", items: { type: "string" } },
+                                  recipe: { type: "string" },
+                                },
+                                required: ["ingredients", "recipe"],
+                                additionalProperties: false,
+                              },
+                              dinner: {
+                                type: "object",
+                                properties: {
+                                  ingredients: { type: "array", items: { type: "string" } },
+                                  recipe: { type: "string" },
+                                },
+                                required: ["ingredients", "recipe"],
+                                additionalProperties: false,
+                              },
+                              snack: {
+                                type: "object",
+                                properties: {
+                                  ingredients: { type: "array", items: { type: "string" } },
+                                  recipe: { type: "string" },
+                                },
+                                required: ["ingredients", "recipe"],
+                                additionalProperties: false,
+                              },
+                            },
+                            required: ["breakfast", "lunch", "dinner", "snack"],
+                            additionalProperties: false,
+                          },
                         },
                         required: [
                           "day_number", "cycle_day", "phase",
-                          "breakfast", "lunch", "dinner", "snack", "hormone_focus",
+                          "breakfast", "lunch", "dinner", "snack", "hormone_focus", "recipes",
                         ],
                         additionalProperties: false,
                       },
