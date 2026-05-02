@@ -357,6 +357,7 @@ export function MealPlanPreviewDialog({
                           {(["breakfast", "lunch", "dinner", "snack"] as const).map(slot => (
                             <MealRow
                               key={slot}
+                              dayNumber={d.day_number}
                               slot={slot}
                               mealText={d[slot]}
                               recipe={d.recipes?.[slot]}
@@ -367,6 +368,8 @@ export function MealPlanPreviewDialog({
                               mutedText={mutedText}
                               subtleText={subtleText}
                               introBorder={introBorder}
+                              onSwapSuggest={onSwapSuggest}
+                              onSwapApply={onSwapApply}
                             />
                           ))}
                         </div>
