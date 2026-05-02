@@ -678,7 +678,7 @@ function MealRow({
                 <div className={cn("rounded-md p-3 space-y-2.5 border", swapSurface)}>
                   <div className="flex items-start justify-between gap-2">
                     <div className={cn("text-[10px] uppercase tracking-wider font-medium", subtleText)}>
-                      Can't find some ingredients?
+                      Want a different meal?
                     </div>
                     <button
                       type="button"
