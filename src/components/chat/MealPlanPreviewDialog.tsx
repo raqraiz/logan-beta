@@ -678,7 +678,7 @@ function MealRow({
                 <div className={cn("rounded-md p-3 space-y-2.5 border", swapSurface)}>
                   <div className="flex items-start justify-between gap-2">
                     <div className={cn("text-[10px] uppercase tracking-wider font-medium", subtleText)}>
-                      Can't find some ingredients?
+                      Want a different meal?
                     </div>
                     <button
                       type="button"
@@ -694,7 +694,7 @@ function MealRow({
                   {recipe!.ingredients?.length > 0 && (
                     <div>
                       <div className={cn("text-[10px] mb-1.5", subtleText)}>
-                        Tap any ingredient you can't find locally:
+                        Optional — tap any ingredient you want to avoid (or just hit "Find alternatives" below):
                       </div>
                       <div className="flex flex-wrap gap-1">
                         {recipe!.ingredients.map(ing => {
@@ -775,7 +775,7 @@ function MealRow({
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     onClick={(e) => e.stopPropagation()}
-                    placeholder="Optional: add context (e.g. I'm in Colombia)"
+                    placeholder="Optional: tell Logan what you'd prefer (e.g. lighter, more protein, no fish)"
                     className={cn(
                       "w-full text-[11px] px-2 py-1 rounded-md border bg-transparent outline-none",
                       isDark ? "border-white/15 placeholder:text-white/40" : "border-black/15 placeholder:text-black/40",
@@ -785,7 +785,7 @@ function MealRow({
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); findAlternatives(); }}
-                    disabled={loadingOptions || (unavailable.length === 0 && !note.trim())}
+                    disabled={loadingOptions}
                     className={cn(
                       "w-full text-[11.5px] px-3 py-1.5 rounded-md font-medium inline-flex items-center justify-center gap-1.5 transition-colors",
                       "bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed",
