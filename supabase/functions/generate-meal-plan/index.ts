@@ -17,7 +17,7 @@ const corsHeaders = {
 };
 
 type Style = "dark" | "light";
-type LengthDays = 3 | 7 | 14 | 28;
+type LengthDays = 1 | 3 | 7 | 14 | 28;
 
 interface MealDay {
   day_number: number;
@@ -116,7 +116,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const lengthDays: LengthDays = [3, 7, 14, 28].includes(body.lengthDays)
+    const lengthDays: LengthDays = [1, 3, 7, 14, 28].includes(body.lengthDays)
       ? body.lengthDays
       : 7;
     const style: Style = body.style === "light" ? "light" : "dark";
@@ -144,7 +144,7 @@ serve(async (req) => {
       if (pr && pr.user_id === user.id) {
         parentResource = pr;
         parentPlan = pr.metadata?.preview ?? null;
-        if ([3, 7, 14, 28].includes(pr.metadata?.length_days)) {
+        if ([1, 3, 7, 14, 28].includes(pr.metadata?.length_days)) {
           revisionLengthDays = pr.metadata.length_days as LengthDays;
         }
       }

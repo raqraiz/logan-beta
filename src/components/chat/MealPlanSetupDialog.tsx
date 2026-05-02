@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, Sun, Moon, Loader2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Length = 3 | 7 | 14 | 28;
+type Length = 1 | 3 | 7 | 14 | 28;
 type Style = "dark" | "light";
 
 interface MealPlanSetupDialogProps {
@@ -19,6 +19,7 @@ interface MealPlanSetupDialogProps {
 }
 
 const LENGTH_OPTIONS: { value: Length; label: string; sub: string; eta: string }[] = [
+  { value: 1, label: "1 day", sub: "Just today", eta: "~5s" },
   { value: 3, label: "3 days", sub: "Quick try", eta: "~10s" },
   { value: 7, label: "1 week", sub: "Most popular", eta: "~20s" },
   { value: 14, label: "2 weeks", sub: "Half a cycle", eta: "~35s" },
