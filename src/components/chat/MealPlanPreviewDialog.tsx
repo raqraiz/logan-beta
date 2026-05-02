@@ -105,7 +105,8 @@ const normalize = (s: string) => s.toLowerCase().trim().replace(/s$/, "");
 
 export function MealPlanPreviewDialog({
   open, onOpenChange, title, preview, previewUrl, previewLoading,
-  onReact, onRefine, refining = false, initialReaction = null,
+  onReact, onRefine, onSwapSuggest, onSwapApply,
+  refining = false, initialReaction = null,
 }: Props) {
   const [mode, setMode] = useState<"dark" | "light">("dark");
   const [reaction, setReaction] = useState<"up" | "down" | null>(initialReaction);
