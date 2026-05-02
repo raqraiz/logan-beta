@@ -197,6 +197,50 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
     }
   };
 
+  const handleSwapSuggest = async ({
+    dayNumber, slot, unavailable, note,
+  }: { dayNumber: number; slot: "breakfast" | "lunch" | "dinner" | "snack"; unavailable: string[]; note: string }) => {
+    const { data, error } = await supabase.functions.invoke("swap-meal", {
+      body: {
+        resourceId,
+        dayNumber,
+        slot,
+        unavailableIngredients: unavailable,
+        note,
+      },
+    });
+    if (error) {
+      console.error("swap-meal suggest error:", error);
+      return [];
+    }
+    return (data?.options ?? []) as Array<{ name: string; ingredients: string[]; recipe: string }>;
+  };
+
+  const handleSwapApply = async ({
+    dayNumber, slot, option,
+  }: { dayNumber: number; slot: "breakfast" | "lunch" | "dinner" | "snack"; option: { name: string; ingredients: string[]; recipe: string } }) => {
+    const { data, error } = await supabase.functions.invoke("swap-meal", {
+      body: {
+        resourceId,
+        dayNumber,
+        slot,
+        apply: true,
+        chosenOption: option,
+      },
+    });
+    if (error) {
+      console.error("swap-meal apply error:", error);
+      throw error;
+    }
+    // Optimistically update local state with the returned preview
+    if (data?.preview) {
+      setResource(prev => prev ? {
+        ...prev,
+        metadata: { ...(prev.metadata ?? {}), preview: data.preview },
+      } : prev);
+    }
+  };
+
   if (!resource) {
     return (
       <div className="mt-3 rounded-2xl border border-border/40 bg-card/40 p-4 flex items-center gap-2">
@@ -282,6 +326,8 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
         previewLoading={previewLoading}
         onReact={handleReact}
         onRefine={handleRefine}
+        onSwapSuggest={handleSwapSuggest}
+        onSwapApply={handleSwapApply}
         refining={refining}
         initialReaction={reaction}
       />
