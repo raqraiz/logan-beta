@@ -694,7 +694,7 @@ function MealRow({
                   {recipe!.ingredients?.length > 0 && (
                     <div>
                       <div className={cn("text-[10px] mb-1.5", subtleText)}>
-                        Tap any ingredient you can't find locally:
+                        Optional — tap any ingredient you want to avoid (or just hit "Find alternatives" below):
                       </div>
                       <div className="flex flex-wrap gap-1">
                         {recipe!.ingredients.map(ing => {
