@@ -382,6 +382,10 @@ ${dietContext}
 
 Return ONE meal per slot per day — no "or" options. Be specific (e.g. "Smoked salmon avocado toast on rye" not "Toast"). Each meal name must be concise (under 80 chars).
 
+For EVERY meal (breakfast, lunch, dinner, snack on every day), you MUST also return a "recipes" object containing:
+- ingredients: 4-10 ingredient names (just names, no quantities, no measurements — these feed the per-meal shopping view)
+- recipe: a 2-4 sentence plain-English recipe describing how to make it. Warm, casual, no numbered steps, no headings, no emojis.
+
 ${summaryGuidance}
 
 ${introGuidance}`;
