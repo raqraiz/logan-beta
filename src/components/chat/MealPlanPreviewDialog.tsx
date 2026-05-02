@@ -448,3 +448,214 @@ export function MealPlanPreviewDialog({
     </Dialog>
   );
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// MealRow — collapsible per-meal row showing ingredients + a short recipe
+// ──────────────────────────────────────────────────────────────────────────
+interface MealRowProps {
+  slot: "breakfast" | "lunch" | "dinner" | "snack";
+  mealText: string;
+  recipe?: MealRecipe;
+  renderMealLine: (text: string) => React.ReactNode;
+  toggleWord: (raw: string) => void;
+  excludeSet: Set<string>;
+  isDark: boolean;
+  mutedText: string;
+  subtleText: string;
+  introBorder: string;
+}
+
+const SLOT_LABEL: Record<MealRowProps["slot"], string> = {
+  breakfast: "Breakfast",
+  lunch: "Lunch",
+  dinner: "Dinner",
+  snack: "Snack",
+};
+
+function MealRow({
+  slot, mealText, recipe, renderMealLine, toggleWord, excludeSet,
+  isDark, mutedText, subtleText, introBorder,
+}: MealRowProps) {
+  const [open, setOpen] = useState(false);
+  const hasRecipe = !!recipe && (recipe.ingredients?.length || recipe.recipe);
+
+  const headerHover = isDark ? "hover:bg-white/[0.04]" : "hover:bg-black/[0.03]";
+  const recipeSurface = isDark ? "bg-white/[0.02]" : "bg-black/[0.02]";
+
+  return (
+    <div className={cn("rounded-lg overflow-hidden border-0", hasRecipe && "border")} style={hasRecipe ? { borderColor: "transparent" } : undefined}>
+      <div
+        className={cn(
+          "flex items-start gap-2 py-1.5 px-1.5 -mx-1.5 rounded-md transition-colors text-xs leading-relaxed",
+          hasRecipe && cn("cursor-pointer", headerHover),
+        )}
+        onClick={hasRecipe ? () => setOpen(o => !o) : undefined}
+        role={hasRecipe ? "button" : undefined}
+        aria-expanded={hasRecipe ? open : undefined}
+      >
+        <div className="flex-1 min-w-0">
+          <span className={cn("font-medium", mutedText)}>{SLOT_LABEL[slot]} · </span>
+          {renderMealLine(mealText)}
+        </div>
+        {hasRecipe && (
+          <ChevronDown
+            className={cn(
+              "h-3.5 w-3.5 mt-0.5 shrink-0 transition-transform opacity-60",
+              mutedText,
+              open && "rotate-180",
+            )}
+          />
+        )}
+      </div>
+
+      {hasRecipe && open && (
+        <div className={cn("rounded-md mt-1 mb-1 px-3 py-2.5 space-y-2.5 border", recipeSurface, introBorder)}>
+          {recipe!.ingredients?.length > 0 && (
+            <div>
+              <div className={cn("flex items-center gap-1 text-[10px] uppercase tracking-wider mb-1.5", subtleText)}>
+                <Carrot className="h-2.5 w-2.5" /> Ingredients
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {recipe!.ingredients.map(ing => {
+                  const excluded = excludeSet.has(ing.toLowerCase().trim().replace(/s$/, ""));
+                  return (
+                    <button
+                      key={ing}
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); toggleWord(ing); }}
+                      className={cn(
+                        "text-[11px] px-2 py-0.5 rounded-full border transition-colors",
+                        excluded
+                          ? "bg-destructive/15 text-destructive border-destructive/40 line-through"
+                          : isDark
+                            ? "bg-white/5 text-white/80 border-white/10 hover:border-destructive/40"
+                            : "bg-black/5 text-black/75 border-black/10 hover:border-destructive/40",
+                      )}
+                    >
+                      {ing}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {recipe!.recipe && (
+            <div>
+              <div className={cn("flex items-center gap-1 text-[10px] uppercase tracking-wider mb-1", subtleText)}>
+                <Utensils className="h-2.5 w-2.5" /> How to make it
+              </div>
+              <p className={cn("text-[11.5px] leading-relaxed", isDark ? "text-white/80" : "text-black/75")}>
+                {recipe!.recipe}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// GroceryListCard — categorized, prettier weekly grocery layout
+// ──────────────────────────────────────────────────────────────────────────
+interface GroceryListCardProps {
+  week: WeekBlock;
+  excludeSet: Set<string>;
+  toggleWord: (raw: string) => void;
+  cardSurface: string;
+  chipMuted: string;
+  mutedText: string;
+  isDark: boolean;
+}
+
+const CATEGORY_RULES: { name: string; emoji: string; match: RegExp }[] = [
+  { name: "Produce", emoji: "🥬", match: /\b(spinach|kale|lettuce|arugula|chard|broccoli|cauliflower|cabbage|carrot|celery|onion|shallot|garlic|leek|tomato|cucumber|pepper|bell pepper|zucchini|squash|sweet potato|potato|beet|radish|mushroom|asparagus|green bean|pea|corn|avocado|lemon|lime|orange|apple|banana|berry|berries|strawberr|blueberr|raspberr|blackberr|grape|melon|peach|plum|pear|pineapple|mango|kiwi|herb|parsley|cilantro|basil|mint|dill|rosemary|thyme|sage|ginger|chili|fennel|artichoke|brussels|eggplant)\b/i },
+  { name: "Protein", emoji: "🍗", match: /\b(chicken|turkey|beef|lamb|pork|bacon|sausage|salmon|tuna|cod|sardine|mackerel|trout|shrimp|prawn|fish|egg|tofu|tempeh|lentil|chickpea|bean|black bean|kidney bean|edamame)\b/i },
+  { name: "Dairy & alternatives", emoji: "🥛", match: /\b(milk|yogurt|cheese|feta|parmesan|cheddar|mozzarella|ricotta|cottage cheese|butter|cream|kefir|almond milk|oat milk|soy milk|coconut milk)\b/i },
+  { name: "Pantry & grains", emoji: "🌾", match: /\b(rice|quinoa|oat|oats|barley|farro|bulgur|couscous|pasta|noodle|bread|tortilla|wrap|cracker|flour|sugar|honey|maple|salt|pepper|spice|cumin|paprika|turmeric|cinnamon|vanilla|baking|yeast|broth|stock|sauce|vinegar|oil|olive oil|tahini|nut butter|peanut butter|almond butter|seed|chia|flax|pumpkin seed|sunflower seed|sesame|walnut|almond|cashew|pecan|pistachio|hazelnut|raisin|date|granola)\b/i },
+];
+
+function categorize(items: string[]) {
+  const buckets = new Map<string, string[]>();
+  const order = [...CATEGORY_RULES.map(r => r.name), "Other"];
+  order.forEach(o => buckets.set(o, []));
+  for (const item of items) {
+    const rule = CATEGORY_RULES.find(r => r.match.test(item));
+    const key = rule?.name ?? "Other";
+    buckets.get(key)!.push(item);
+  }
+  return order
+    .map(name => ({
+      name,
+      emoji: CATEGORY_RULES.find(r => r.name === name)?.emoji ?? "🧂",
+      items: buckets.get(name) ?? [],
+    }))
+    .filter(b => b.items.length > 0);
+}
+
+function GroceryListCard({
+  week, excludeSet, toggleWord, cardSurface, chipMuted, mutedText, isDark,
+}: GroceryListCardProps) {
+  const categories = useMemo(() => categorize(week.grocery_list), [week.grocery_list]);
+  const totalCount = week.grocery_list.length;
+
+  return (
+    <div className={cn("rounded-xl border overflow-hidden", cardSurface)}>
+      <div className={cn(
+        "px-4 py-3 border-b flex items-center justify-between gap-3",
+        isDark ? "bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-white/10" : "bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-black/10",
+      )}>
+        <div className="flex items-center gap-2">
+          <div className={cn(
+            "h-7 w-7 rounded-full flex items-center justify-center",
+            isDark ? "bg-primary/20" : "bg-primary/15",
+          )}>
+            <ShoppingBasket className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <div>
+            <div className="text-sm font-semibold leading-tight">Week {week.week_number} grocery list</div>
+            <div className={cn("text-[10px] uppercase tracking-wider", mutedText)}>
+              {totalCount} item{totalCount === 1 ? "" : "s"} · {categories.length} categor{categories.length === 1 ? "y" : "ies"}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {week.phase_summary && (
+        <p className={cn("text-[11px] italic px-4 pt-3", mutedText)}>{week.phase_summary}</p>
+      )}
+
+      <div className="p-4 space-y-3.5">
+        {categories.map(cat => (
+          <div key={cat.name}>
+            <div className={cn("flex items-center gap-1.5 mb-1.5 text-[10.5px] uppercase tracking-wider font-medium", mutedText)}>
+              <span aria-hidden>{cat.emoji}</span>
+              <span>{cat.name}</span>
+              <span className="opacity-50">· {cat.items.length}</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {cat.items.map(item => {
+                const excluded = excludeSet.has(item.toLowerCase().trim().replace(/s$/, ""));
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => toggleWord(item)}
+                    className={cn(
+                      "text-[11.5px] px-2.5 py-1 rounded-full border transition-all cursor-pointer",
+                      excluded
+                        ? "bg-destructive/15 text-destructive border-destructive/40 line-through"
+                        : cn(chipMuted, "hover:border-primary/50 hover:text-primary"),
+                    )}
+                  >
+                    {item}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
