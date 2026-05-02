@@ -478,6 +478,7 @@ export function MealPlanPreviewDialog({
 // MealRow — collapsible per-meal row showing ingredients + a short recipe
 // ──────────────────────────────────────────────────────────────────────────
 interface MealRowProps {
+  dayNumber: number;
   slot: "breakfast" | "lunch" | "dinner" | "snack";
   mealText: string;
   recipe?: MealRecipe;
@@ -488,6 +489,8 @@ interface MealRowProps {
   mutedText: string;
   subtleText: string;
   introBorder: string;
+  onSwapSuggest?: (req: SwapRequest) => Promise<MealOption[]>;
+  onSwapApply?: (req: ApplySwapRequest) => Promise<void>;
 }
 
 const SLOT_LABEL: Record<MealRowProps["slot"], string> = {
@@ -498,14 +501,94 @@ const SLOT_LABEL: Record<MealRowProps["slot"], string> = {
 };
 
 function MealRow({
-  slot, mealText, recipe, renderMealLine, toggleWord, excludeSet,
-  isDark, mutedText, subtleText, introBorder,
+  dayNumber, slot, mealText, recipe, renderMealLine, toggleWord, excludeSet,
+  isDark, mutedText, subtleText, introBorder, onSwapSuggest, onSwapApply,
 }: MealRowProps) {
   const [open, setOpen] = useState(false);
+  const [swapOpen, setSwapOpen] = useState(false);
+  const [unavailable, setUnavailable] = useState<string[]>([]);
+  const [customInput, setCustomInput] = useState("");
+  const [note, setNote] = useState("");
+  const [loadingOptions, setLoadingOptions] = useState(false);
+  const [options, setOptions] = useState<MealOption[] | null>(null);
+  const [applyingIdx, setApplyingIdx] = useState<number | null>(null);
+  const [appliedIdx, setAppliedIdx] = useState<number | null>(null);
+
   const hasRecipe = !!recipe && (recipe.ingredients?.length || recipe.recipe);
+  const swapEnabled = !!onSwapSuggest && !!onSwapApply;
 
   const headerHover = isDark ? "hover:bg-white/[0.04]" : "hover:bg-black/[0.03]";
   const recipeSurface = isDark ? "bg-white/[0.02]" : "bg-black/[0.02]";
+  const swapSurface = isDark ? "bg-primary/5 border-primary/20" : "bg-primary/5 border-primary/20";
+
+  const toggleUnavailable = (ing: string) => {
+    const norm = ing.toLowerCase().trim();
+    setUnavailable(prev =>
+      prev.some(p => p.toLowerCase().trim() === norm)
+        ? prev.filter(p => p.toLowerCase().trim() !== norm)
+        : [...prev, ing],
+    );
+  };
+
+  const addCustom = () => {
+    const v = customInput.trim();
+    if (!v) return;
+    if (!unavailable.some(u => u.toLowerCase() === v.toLowerCase())) {
+      setUnavailable(prev => [...prev, v]);
+    }
+    setCustomInput("");
+  };
+
+  const findAlternatives = async () => {
+    if (!onSwapSuggest) return;
+    setLoadingOptions(true);
+    setOptions(null);
+    setAppliedIdx(null);
+    try {
+      const res = await onSwapSuggest({
+        dayNumber,
+        slot,
+        unavailable,
+        note,
+      });
+      setOptions(res || []);
+    } catch (err) {
+      console.error("Swap suggest failed:", err);
+      setOptions([]);
+    } finally {
+      setLoadingOptions(false);
+    }
+  };
+
+  const useOption = async (idx: number) => {
+    if (!onSwapApply || !options) return;
+    setApplyingIdx(idx);
+    try {
+      await onSwapApply({ dayNumber, slot, option: options[idx] });
+      setAppliedIdx(idx);
+      // Auto-close after a short beat
+      setTimeout(() => {
+        setSwapOpen(false);
+        setOptions(null);
+        setUnavailable([]);
+        setNote("");
+        setAppliedIdx(null);
+      }, 900);
+    } catch (err) {
+      console.error("Apply swap failed:", err);
+    } finally {
+      setApplyingIdx(null);
+    }
+  };
+
+  const openSwap = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSwapOpen(true);
+    setOpen(true);
+    // Pre-seed unavailable with empty so user starts fresh
+    setUnavailable([]);
+    setOptions(null);
+  };
 
   return (
     <div className={cn("rounded-lg overflow-hidden border-0", hasRecipe && "border")} style={hasRecipe ? { borderColor: "transparent" } : undefined}>
@@ -572,6 +655,219 @@ function MealRow({
               <p className={cn("text-[11.5px] leading-relaxed", isDark ? "text-white/80" : "text-black/75")}>
                 {recipe!.recipe}
               </p>
+            </div>
+          )}
+
+          {/* Swap controls */}
+          {swapEnabled && (
+            <div className="pt-1">
+              {!swapOpen ? (
+                <button
+                  type="button"
+                  onClick={openSwap}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full border transition-colors",
+                    isDark
+                      ? "border-primary/30 text-primary hover:bg-primary/10"
+                      : "border-primary/40 text-primary hover:bg-primary/10",
+                  )}
+                >
+                  <Replace className="h-3 w-3" /> Swap this meal
+                </button>
+              ) : (
+                <div className={cn("rounded-md p-3 space-y-2.5 border", swapSurface)}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className={cn("text-[10px] uppercase tracking-wider font-medium", subtleText)}>
+                      Can't find some ingredients?
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setSwapOpen(false); }}
+                      className={cn("opacity-60 hover:opacity-100", mutedText)}
+                      aria-label="Cancel swap"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+
+                  {/* Tap-to-mark from current ingredients */}
+                  {recipe!.ingredients?.length > 0 && (
+                    <div>
+                      <div className={cn("text-[10px] mb-1.5", subtleText)}>
+                        Tap any ingredient you can't find locally:
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {recipe!.ingredients.map(ing => {
+                          const marked = unavailable.some(u => u.toLowerCase() === ing.toLowerCase());
+                          return (
+                            <button
+                              key={`u-${ing}`}
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); toggleUnavailable(ing); }}
+                              className={cn(
+                                "text-[11px] px-2 py-0.5 rounded-full border transition-colors",
+                                marked
+                                  ? "bg-destructive/20 text-destructive border-destructive/50"
+                                  : isDark
+                                    ? "bg-white/5 text-white/80 border-white/10 hover:border-destructive/40"
+                                    : "bg-black/5 text-black/75 border-black/10 hover:border-destructive/40",
+                              )}
+                            >
+                              {ing}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Custom add */}
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      value={customInput}
+                      onChange={(e) => setCustomInput(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.preventDefault(); addCustom(); }
+                      }}
+                      placeholder="Add another ingredient (e.g. quinoa)"
+                      className={cn(
+                        "flex-1 text-[11px] px-2 py-1 rounded-md border bg-transparent outline-none",
+                        isDark ? "border-white/15 placeholder:text-white/40" : "border-black/15 placeholder:text-black/40",
+                      )}
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); addCustom(); }}
+                      className={cn(
+                        "text-[11px] px-2 py-1 rounded-md border inline-flex items-center gap-1",
+                        isDark ? "border-white/15 hover:bg-white/5" : "border-black/15 hover:bg-black/5",
+                      )}
+                    >
+                      <Plus className="h-3 w-3" /> Add
+                    </button>
+                  </div>
+
+                  {unavailable.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {unavailable.map(u => (
+                        <span
+                          key={`tag-${u}`}
+                          className="text-[10.5px] px-2 py-0.5 rounded-full border border-destructive/40 bg-destructive/10 text-destructive flex items-center gap-1"
+                        >
+                          {u}
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); toggleUnavailable(u); }}
+                            aria-label={`Remove ${u}`}
+                          >
+                            <X className="h-2.5 w-2.5" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Optional note */}
+                  <input
+                    type="text"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    placeholder="Optional: add context (e.g. I'm in Colombia)"
+                    className={cn(
+                      "w-full text-[11px] px-2 py-1 rounded-md border bg-transparent outline-none",
+                      isDark ? "border-white/15 placeholder:text-white/40" : "border-black/15 placeholder:text-black/40",
+                    )}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); findAlternatives(); }}
+                    disabled={loadingOptions || (unavailable.length === 0 && !note.trim())}
+                    className={cn(
+                      "w-full text-[11.5px] px-3 py-1.5 rounded-md font-medium inline-flex items-center justify-center gap-1.5 transition-colors",
+                      "bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed",
+                    )}
+                  >
+                    {loadingOptions ? (
+                      <><Loader2 className="h-3 w-3 animate-spin" /> Finding alternatives…</>
+                    ) : (
+                      <><Sparkles className="h-3 w-3" /> Find alternative meals</>
+                    )}
+                  </button>
+
+                  {/* Options */}
+                  {options && options.length === 0 && !loadingOptions && (
+                    <p className={cn("text-[11px] italic", subtleText)}>
+                      Couldn't find alternatives. Try adjusting your ingredients.
+                    </p>
+                  )}
+
+                  {options && options.length > 0 && (
+                    <div className="space-y-2 pt-1">
+                      <div className={cn("text-[10px] uppercase tracking-wider", subtleText)}>
+                        Pick one to replace this meal:
+                      </div>
+                      {options.map((opt, idx) => {
+                        const isApplying = applyingIdx === idx;
+                        const isApplied = appliedIdx === idx;
+                        return (
+                          <div
+                            key={`${opt.name}-${idx}`}
+                            className={cn(
+                              "rounded-md border p-2.5 space-y-1.5",
+                              isDark ? "bg-white/[0.03] border-white/10" : "bg-white border-black/10",
+                            )}
+                          >
+                            <div className="text-[12px] font-semibold leading-tight">{opt.name}</div>
+                            {opt.ingredients?.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {opt.ingredients.map(i => (
+                                  <span
+                                    key={`${idx}-${i}`}
+                                    className={cn(
+                                      "text-[10.5px] px-1.5 py-0.5 rounded-full border",
+                                      isDark ? "bg-white/5 text-white/70 border-white/10" : "bg-black/5 text-black/70 border-black/10",
+                                    )}
+                                  >
+                                    {i}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {opt.recipe && (
+                              <p className={cn("text-[11px] leading-relaxed", isDark ? "text-white/75" : "text-black/70")}>
+                                {opt.recipe}
+                              </p>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); useOption(idx); }}
+                              disabled={isApplying || appliedIdx !== null}
+                              className={cn(
+                                "text-[11px] px-2.5 py-1 rounded-md font-medium inline-flex items-center gap-1 transition-colors",
+                                isApplied
+                                  ? "bg-primary/15 text-primary border border-primary/30"
+                                  : "bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed",
+                              )}
+                            >
+                              {isApplied ? (
+                                <><Check className="h-3 w-3" /> Saved</>
+                              ) : isApplying ? (
+                                <><Loader2 className="h-3 w-3 animate-spin" /> Saving…</>
+                              ) : (
+                                <>Use this meal</>
+                              )}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
