@@ -267,3 +267,66 @@ Generate 3 alternative ${slot} options.`;
     );
   }
 });
+
+// ---------- Hero image regeneration ----------
+// Mirrors the generation logic in generate-meal-plan/index.ts so a swapped
+// dinner gets a fresh editorial photo matching the new dish.
+async function generateMealHeroImage(args: {
+  supabase: any;
+  lovableApiKey: string;
+  userId: string;
+  resourceId: string;
+  dayNumber: number;
+  mealName: string;
+}): Promise<string | null> {
+  const { supabase, lovableApiKey, userId, resourceId, dayNumber, mealName } = args;
+  try {
+    const prompt = `Editorial overhead food photography of: ${mealName}.
+Beautifully plated on a ceramic plate, on a warm wooden table with soft natural daylight from the side.
+Shallow depth of field, fresh colorful whole-food ingredients visible, rustic minimal styling, magazine cookbook aesthetic.
+No text, no logos, no people, no hands, no cutlery branding. Photorealistic, ultra detailed, soft shadows.`;
+
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [{ role: "user", content: prompt }],
+        modalities: ["image", "text"],
+      }),
+    });
+    if (!resp.ok) {
+      console.warn(`Swap image gen failed for day ${dayNumber}: ${resp.status}`);
+      return null;
+    }
+    const data = await resp.json();
+    const dataUrl: string | undefined =
+      data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    if (!dataUrl?.startsWith("data:image/")) return null;
+
+    const commaIdx = dataUrl.indexOf(",");
+    const b64 = dataUrl.slice(commaIdx + 1);
+    const mimeMatch = dataUrl.slice(0, commaIdx).match(/data:(image\/[a-zA-Z0-9.+-]+)/);
+    const contentType = mimeMatch?.[1] ?? "image/png";
+    const ext = contentType.split("/")[1]?.split("+")[0] ?? "png";
+
+    const binary = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    // Add a timestamp to bust any cached signed URLs from the previous image
+    const path = `${userId}/meal-plans/${resourceId}/day-${dayNumber}-${Date.now()}.${ext}`;
+
+    const { error: upErr } = await supabase.storage
+      .from("resources")
+      .upload(path, binary, { contentType, upsert: true });
+    if (upErr) {
+      console.warn(`Swap image upload failed for day ${dayNumber}: ${upErr.message}`);
+      return null;
+    }
+    return path;
+  } catch (err) {
+    console.warn(`Swap image step crashed for day ${dayNumber}:`, err);
+    return null;
+  }
+}
