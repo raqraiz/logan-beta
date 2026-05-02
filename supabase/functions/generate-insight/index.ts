@@ -593,22 +593,47 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content || "";
 
-  try {
-    const cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
-    const parsed = JSON.parse(cleanContent);
+  // Strip code fences and any leading "json" label the model sometimes prepends
+  const stripped = content
+    .replace(/```json\n?|\n?```/g, "")
+    .replace(/^\s*json\s*/i, "")
+    .trim();
+
+  // Extract the first {...} block to tolerate stray prose around the JSON
+  const firstBrace = stripped.indexOf("{");
+  const lastBrace = stripped.lastIndexOf("}");
+  const jsonSlice = firstBrace !== -1 && lastBrace > firstBrace
+    ? stripped.slice(firstBrace, lastBrace + 1)
+    : stripped;
+
+  const tryParse = (s: string) => {
+    try { return JSON.parse(s); } catch { return null; }
+  };
+
+  let parsed = tryParse(jsonSlice) || tryParse(stripped);
+
+  // Last-ditch: regex out the intro field so users never see raw JSON
+  if (!parsed) {
+    const introMatch = stripped.match(/"intro"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+    if (introMatch) {
+      parsed = { intro: introMatch[1].replace(/\\"/g, '"').replace(/\\n/g, " ") };
+    }
+  }
+
+  if (parsed) {
     return {
       insight: parsed.intro || "How are you feeling today?",
       question: parsed.question || "",
       conversationStarters: parsed.starters || ["Yeah exactly", "Not today", "Tell me more"],
       cheatSheet: parsed.cheat_sheet || null,
     };
-  } catch (e) {
-    console.error("Failed to parse AI response as JSON:", content);
-    return {
-      insight: content || "How are you feeling today?",
-      question: "",
-      conversationStarters: ["Yeah exactly", "Not today", "Tell me more"],
-      cheatSheet: null,
-    };
   }
+
+  console.error("Failed to parse AI response as JSON:", content);
+  return {
+    insight: "How are you feeling today?",
+    question: "",
+    conversationStarters: ["Yeah exactly", "Not today", "Tell me more"],
+    cheatSheet: null,
+  };
 }
