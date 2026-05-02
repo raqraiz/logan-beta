@@ -855,7 +855,10 @@ serve(async (req) => {
       }
     }
 
-    const cycleInfo = participant?.last_period_start && participant?.cycle_length_days
+    // Only compute cycle info for actively cycling users — postpartum/menopause have no
+    // meaningful "current phase" even if a stale last_period_start lingers on the row.
+    const isCycling = (participant?.life_stage || "cycling") === "cycling";
+    const cycleInfo = isCycling && participant?.last_period_start && participant?.cycle_length_days
       ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
       : null;
 
@@ -864,7 +867,12 @@ serve(async (req) => {
     // Runtime hint: if the Menu Builder offer card is about to follow this reply,
     // tell the model to write a short hand-off line instead of promising to build anything.
     if (shouldOfferMealPlan) {
-      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user just asked you to build a meal plan. A "Build my meal plan" card will appear DIRECTLY BELOW your reply — they tap it to open the Menu Builder. Your reply MUST be ONE short sentence: a phase-aware framing that hands off to the card. Do NOT say "I'm building", "I'll drop", "starting on it", "give me a sec", or anything implying you are working on it. Do NOT ask follow-up questions. Example: "Luteal week — magnesium and slow carbs are your friends right now." Then stop.`;
+      const handoffExample = isCycling
+        ? `Example: "Luteal week — magnesium and slow carbs are your friends right now."`
+        : participant?.life_stage === "postpartum"
+          ? `Example: "Postpartum recovery week — collagen and iron-rich meals to rebuild your reserves." Do NOT mention cycle phases.`
+          : `Example: "${participant?.life_stage === "menopause" ? "Menopause" : "This"} week — meals built around stable energy and hormonal balance." Do NOT mention cycle phases.`;
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user just asked you to build a meal plan. A "Build my meal plan" card will appear DIRECTLY BELOW your reply — they tap it to open the Menu Builder. Your reply MUST be ONE short sentence: a phase-aware framing that hands off to the card. Do NOT say "I'm building", "I'll drop", "starting on it", "give me a sec", or anything implying you are working on it. Do NOT ask follow-up questions. ${handoffExample} Then stop.`;
     }
 
     // Smart truncation: keep first 10 (onboarding/profile context) + last 50 (recent conversation)
