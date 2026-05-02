@@ -39,6 +39,25 @@ interface PreviewData {
   weeks?: WeekBlock[];
 }
 
+export interface MealOption {
+  name: string;
+  ingredients: string[];
+  recipe: string;
+}
+
+export interface SwapRequest {
+  dayNumber: number;
+  slot: "breakfast" | "lunch" | "dinner" | "snack";
+  unavailable: string[];
+  note: string;
+}
+
+export interface ApplySwapRequest {
+  dayNumber: number;
+  slot: "breakfast" | "lunch" | "dinner" | "snack";
+  option: MealOption;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -48,6 +67,8 @@ interface Props {
   previewLoading?: boolean;
   onReact?: (reaction: "up" | "down") => Promise<void> | void;
   onRefine?: (args: { excludeIngredients: string[]; feedbackText: string }) => Promise<void> | void;
+  onSwapSuggest?: (req: SwapRequest) => Promise<MealOption[]>;
+  onSwapApply?: (req: ApplySwapRequest) => Promise<void>;
   refining?: boolean;
   initialReaction?: "up" | "down" | null;
 }
