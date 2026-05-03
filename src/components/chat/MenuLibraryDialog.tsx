@@ -168,6 +168,20 @@ export function MenuLibraryDialog({ open, onOpenChange, userId, onCreateNew }: M
           preview={selected.metadata?.preview ?? null}
           previewUrl={null}
           previewLoading={false}
+          onEditPlan={() => { setEditTarget(selected); setEditOpen(true); }}
+        />
+      )}
+      {editTarget && (
+        <MealPlanSetupDialog
+          open={editOpen}
+          onOpenChange={(o) => { setEditOpen(o); if (!o) setEditTarget(null); }}
+          userId={userId}
+          editMode
+          initialValues={{
+            lengthDays: editTarget.metadata?.length_days,
+            style: editTarget.style,
+            dietaryPrefs: (editTarget.metadata?.dietary_prefs ?? null) as any,
+          }}
         />
       )}
     </>
