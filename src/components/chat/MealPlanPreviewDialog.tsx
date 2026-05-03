@@ -69,6 +69,7 @@ interface Props {
   onRefine?: (args: { excludeIngredients: string[]; feedbackText: string }) => Promise<void> | void;
   onSwapSuggest?: (req: SwapRequest) => Promise<MealOption[]>;
   onSwapApply?: (req: ApplySwapRequest) => Promise<void>;
+  onEditPlan?: () => void;
   refining?: boolean;
   initialReaction?: "up" | "down" | null;
 }
