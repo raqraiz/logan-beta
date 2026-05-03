@@ -198,7 +198,7 @@ serve(async (req) => {
     const startingPhase = lifeStage === "cycling"
       ? getPhaseForDay(startCycleDay, cycleLengthDays)
       : (lifeStage === "postpartum" ? "Postpartum" : lifeStage === "menopause" ? "Menopause" : "Cyclical");
-    const lengthLabel = effectiveLengthDays === 3 ? "3-Day" : effectiveLengthDays === 7 ? "1-Week" : effectiveLengthDays === 14 ? "2-Week" : "4-Week";
+    const lengthLabel = effectiveLengthDays === 1 ? "1-Day" : effectiveLengthDays === 3 ? "3-Day" : "1-Week";
     const possessive = firstName ? `${firstName}'${firstName.endsWith("s") ? "" : "s"} ` : "";
     const baseTitle = `${possessive}${lengthLabel} ${startingPhase} Menu`;
     const title = parentResource ? `${baseTitle} (revised)` : baseTitle;
