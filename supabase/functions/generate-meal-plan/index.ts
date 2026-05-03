@@ -165,8 +165,12 @@ serve(async (req) => {
       dietaryPrefs.diet_type ||
       (dietaryPrefs.allergies?.length ?? 0) > 0 ||
       (dietaryPrefs.dislikes?.length ?? 0) > 0 ||
-      (dietaryPrefs.cuisines?.length ?? 0) > 0
+      (dietaryPrefs.cuisines?.length ?? 0) > 0 ||
+      (dietaryPrefs.includes?.length ?? 0) > 0
     ) {
+      const includesNote = dietaryPrefs.includes?.length
+        ? `includes: ${dietaryPrefs.includes.join(", ")}`
+        : null;
       await supabase.from("user_dietary_prefs").upsert(
         {
           user_id: user.id,
@@ -174,6 +178,7 @@ serve(async (req) => {
           allergies: dietaryPrefs.allergies ?? [],
           dislikes: dietaryPrefs.dislikes ?? [],
           cuisines: dietaryPrefs.cuisines ?? [],
+          notes: includesNote,
         },
         { onConflict: "user_id" },
       );
