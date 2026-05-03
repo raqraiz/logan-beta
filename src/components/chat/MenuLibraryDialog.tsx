@@ -29,6 +29,8 @@ export function MenuLibraryDialog({ open, onOpenChange, userId, onCreateNew }: M
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<SavedMenu | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<SavedMenu | null>(null);
 
   useEffect(() => {
     if (!open || !userId) return;
