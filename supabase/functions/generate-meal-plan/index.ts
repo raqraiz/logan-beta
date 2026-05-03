@@ -116,7 +116,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const lengthDays: LengthDays = [1, 3, 7, 14, 28].includes(body.lengthDays)
+    const lengthDays: LengthDays = [1, 3, 7].includes(body.lengthDays)
       ? body.lengthDays
       : 7;
     const style: Style = body.style === "light" ? "light" : "dark";
