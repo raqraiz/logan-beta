@@ -17,7 +17,7 @@ const corsHeaders = {
 };
 
 type Style = "dark" | "light";
-type LengthDays = 1 | 3 | 7 | 14 | 28;
+type LengthDays = 1 | 3 | 7;
 
 interface MealDay {
   day_number: number;
