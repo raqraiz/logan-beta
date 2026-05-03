@@ -86,6 +86,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
   const [previewLoading, setPreviewLoading] = useState(false);
   const [refining, setRefining] = useState(false);
   const [reaction, setReaction] = useState<"up" | "down" | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
