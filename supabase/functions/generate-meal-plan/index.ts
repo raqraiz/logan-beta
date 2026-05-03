@@ -144,7 +144,7 @@ serve(async (req) => {
       if (pr && pr.user_id === user.id) {
         parentResource = pr;
         parentPlan = pr.metadata?.preview ?? null;
-        if ([1, 3, 7, 14, 28].includes(pr.metadata?.length_days)) {
+        if ([1, 3, 7].includes(pr.metadata?.length_days)) {
           revisionLengthDays = pr.metadata.length_days as LengthDays;
         }
       }
