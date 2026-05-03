@@ -325,8 +325,10 @@ async function generateAndUploadPdf(args: {
     const dietBits: string[] = [];
     if (dietaryPrefs.diet_type) dietBits.push(`Diet: ${dietaryPrefs.diet_type}`);
     if (dietaryPrefs.allergies?.length) dietBits.push(`Allergies: ${dietaryPrefs.allergies.join(", ")}`);
-    if (dietaryPrefs.dislikes?.length) dietBits.push(`Dislikes: ${dietaryPrefs.dislikes.join(", ")}`);
-    if (dietaryPrefs.cuisines?.length) dietBits.push(`Cuisine preferences: ${dietaryPrefs.cuisines.join(", ")}`);
+    if (dietaryPrefs.dislikes?.length) dietBits.push(`Dislikes (NEVER use): ${dietaryPrefs.dislikes.join(", ")}`);
+    const focusList = (dietaryPrefs.focus_styles?.length ? dietaryPrefs.focus_styles : dietaryPrefs.cuisines) || [];
+    if (focusList.length) dietBits.push(`Focus styles (weave these throughout): ${focusList.join(", ")}`);
+    if (dietaryPrefs.includes?.length) dietBits.push(`Foods the user wants INCLUDED (use across multiple meals where natural): ${dietaryPrefs.includes.join(", ")}`);
     const dietContext = dietBits.length ? dietBits.join("\n") : "Omnivore, no restrictions";
 
     const isCycling = lifeStage === "cycling";
