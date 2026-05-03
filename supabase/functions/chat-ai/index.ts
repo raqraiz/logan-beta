@@ -510,6 +510,75 @@ serve(async (req) => {
           }
         }
       }
+
+      // Detect "today should be day X" / "I'm on day X" / "today is day X" corrections
+      const cycleDayCorrectionMatch = userMessage.match(
+        /(?:today\s+(?:should\s+be|is)|i['’]?m\s+(?:on|actually\s+on)|i\s+am\s+on|should\s+be)\s+(?:my\s+|on\s+)?(?:cycle\s+)?day\s+(\d{1,2})/i
+      ) || userMessage.match(
+        /\bday\s+(\d{1,2})\s*(?:today|now|,?\s*not\s+day\s+\d{1,2})/i
+      ) || userMessage.match(
+        /\bnot\s+day\s+\d{1,2}[^.?!]{0,40}\bday\s+(\d{1,2})/i
+      );
+
+      if (cycleDayCorrectionMatch) {
+        const targetDay = parseInt(cycleDayCorrectionMatch[1]);
+        if (targetDay >= 1 && targetDay <= (participant.cycle_length_days || 28)) {
+          // Compute new last_period_start = today - (targetDay - 1) days, in user's tz
+          const tz = participant.timezone || "UTC";
+          const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
+          const [ty, tm, td] = todayStr.split("-").map(Number);
+          const todayLocal = new Date(Date.UTC(ty, tm - 1, td, 12, 0, 0));
+          todayLocal.setUTCDate(todayLocal.getUTCDate() - (targetDay - 1));
+          const formattedDate = todayLocal.toISOString().split("T")[0];
+
+          const { error: updateErr } = await supabase
+            .from("participants")
+            .update({ last_period_start: formattedDate })
+            .eq("id", participant.id);
+
+          if (!updateErr) {
+            const { data: refreshed } = await supabase
+              .from("participants").select("*").eq("id", participant.id).single();
+            if (refreshed) participant = refreshed;
+
+            const updatedCycleInfo = calculateCycleInfo(
+              formattedDate,
+              participant.cycle_length_days || 28,
+              tz
+            );
+
+            const msg = `Got it — today is **Day ${updatedCycleInfo.cycleDay}** in your **${updatedCycleInfo.phase}** phase. Updated.`;
+
+            await supabase.from("chat_messages").insert({
+              user_id: user.id,
+              role: "assistant",
+              content: msg,
+              message_type: "text",
+              metadata: {
+                cycle_day: updatedCycleInfo.cycleDay,
+                cycle_phase: updatedCycleInfo.phase,
+                has_cycle_visual: true,
+                visual_type: "cycle_circle",
+                cycle_length_days: participant.cycle_length_days || 28,
+                last_period_start: formattedDate,
+                timezone: tz,
+                period_update: true,
+                new_period_start: formattedDate,
+              }
+            });
+
+            return new Response(
+              JSON.stringify({
+                success: true,
+                message: msg,
+                cycleInfo: updatedCycleInfo,
+                periodUpdated: true,
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+      }
     }
     // --- End cycle edit detection ---
 
