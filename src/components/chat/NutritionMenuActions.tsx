@@ -48,6 +48,12 @@ export function NutritionMenuActions({ userId }: NutritionMenuActionsProps) {
         open={builderOpen}
         onOpenChange={setBuilderOpen}
         userId={userId}
+        onGenerated={() => {
+          toast({
+            title: "Building your menu…",
+            description: "Find it in Menu Library (Plan tab) when it's ready — usually 10–30s.",
+          });
+        }}
       />
     </>
   );
