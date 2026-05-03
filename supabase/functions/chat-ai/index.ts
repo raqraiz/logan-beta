@@ -594,6 +594,12 @@ serve(async (req) => {
         /\b(give me|i want|i'?d like|can you (make|create|build|give|generate))\b[^.?!]{0,40}\b(meal\s*plan|menu|weekly\s+meals?)\b/i,
         /\b(weekly|monthly|cyclical|cycle[- ]synced)\s+(meal\s*plan|menu)\b/i,
         /\b(grocery|shopping)\s+list\b/i,
+        // Broader food / nutrition questions — surface the Menu Builder as a helpful next step
+        /\bwhat\s+(should|do|can)\s+i\s+(eat|cook|make|have)\b/i,
+        /\b(meal|dinner|lunch|breakfast|snack)\s+ideas?\b/i,
+        /\bwhat'?s\s+for\s+(dinner|lunch|breakfast)\b/i,
+        /\b(recipes?|food)\s+(ideas?|suggestions?|for\s+(my\s+)?(phase|cycle|luteal|follicular|ovulation|menstruation|postpartum|menopause))\b/i,
+        /\bhelp\s+me\s+(eat|cook|plan\s+(my\s+)?(meals?|food))\b/i,
       ];
       shouldOfferMealPlan = mealPlanPatterns.some(p => p.test(userMessage));
     }
