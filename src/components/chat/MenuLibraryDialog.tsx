@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, FileText, Eye, Trash2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MealPlanPreviewDialog } from "./MealPlanPreviewDialog";
+import { MealPlanSetupDialog } from "./MealPlanSetupDialog";
 
 interface SavedMenu {
   id: string;
