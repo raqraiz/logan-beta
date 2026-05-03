@@ -17,7 +17,7 @@ const corsHeaders = {
 };
 
 type Style = "dark" | "light";
-type LengthDays = 1 | 3 | 7 | 14 | 28;
+type LengthDays = 1 | 3 | 7;
 
 interface MealDay {
   day_number: number;
@@ -116,7 +116,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const lengthDays: LengthDays = [1, 3, 7, 14, 28].includes(body.lengthDays)
+    const lengthDays: LengthDays = [1, 3, 7].includes(body.lengthDays)
       ? body.lengthDays
       : 7;
     const style: Style = body.style === "light" ? "light" : "dark";
@@ -144,7 +144,7 @@ serve(async (req) => {
       if (pr && pr.user_id === user.id) {
         parentResource = pr;
         parentPlan = pr.metadata?.preview ?? null;
-        if ([1, 3, 7, 14, 28].includes(pr.metadata?.length_days)) {
+        if ([1, 3, 7].includes(pr.metadata?.length_days)) {
           revisionLengthDays = pr.metadata.length_days as LengthDays;
         }
       }
@@ -165,8 +165,12 @@ serve(async (req) => {
       dietaryPrefs.diet_type ||
       (dietaryPrefs.allergies?.length ?? 0) > 0 ||
       (dietaryPrefs.dislikes?.length ?? 0) > 0 ||
-      (dietaryPrefs.cuisines?.length ?? 0) > 0
+      (dietaryPrefs.cuisines?.length ?? 0) > 0 ||
+      (dietaryPrefs.includes?.length ?? 0) > 0
     ) {
+      const includesNote = dietaryPrefs.includes?.length
+        ? `includes: ${dietaryPrefs.includes.join(", ")}`
+        : null;
       await supabase.from("user_dietary_prefs").upsert(
         {
           user_id: user.id,
@@ -174,6 +178,7 @@ serve(async (req) => {
           allergies: dietaryPrefs.allergies ?? [],
           dislikes: dietaryPrefs.dislikes ?? [],
           cuisines: dietaryPrefs.cuisines ?? [],
+          notes: includesNote,
         },
         { onConflict: "user_id" },
       );
@@ -198,7 +203,7 @@ serve(async (req) => {
     const startingPhase = lifeStage === "cycling"
       ? getPhaseForDay(startCycleDay, cycleLengthDays)
       : (lifeStage === "postpartum" ? "Postpartum" : lifeStage === "menopause" ? "Menopause" : "Cyclical");
-    const lengthLabel = effectiveLengthDays === 3 ? "3-Day" : effectiveLengthDays === 7 ? "1-Week" : effectiveLengthDays === 14 ? "2-Week" : "4-Week";
+    const lengthLabel = effectiveLengthDays === 1 ? "1-Day" : effectiveLengthDays === 3 ? "3-Day" : "1-Week";
     const possessive = firstName ? `${firstName}'${firstName.endsWith("s") ? "" : "s"} ` : "";
     const baseTitle = `${possessive}${lengthLabel} ${startingPhase} Menu`;
     const title = parentResource ? `${baseTitle} (revised)` : baseTitle;
@@ -325,8 +330,10 @@ async function generateAndUploadPdf(args: {
     const dietBits: string[] = [];
     if (dietaryPrefs.diet_type) dietBits.push(`Diet: ${dietaryPrefs.diet_type}`);
     if (dietaryPrefs.allergies?.length) dietBits.push(`Allergies: ${dietaryPrefs.allergies.join(", ")}`);
-    if (dietaryPrefs.dislikes?.length) dietBits.push(`Dislikes: ${dietaryPrefs.dislikes.join(", ")}`);
-    if (dietaryPrefs.cuisines?.length) dietBits.push(`Cuisine preferences: ${dietaryPrefs.cuisines.join(", ")}`);
+    if (dietaryPrefs.dislikes?.length) dietBits.push(`Dislikes (NEVER use): ${dietaryPrefs.dislikes.join(", ")}`);
+    const focusList = (dietaryPrefs.focus_styles?.length ? dietaryPrefs.focus_styles : dietaryPrefs.cuisines) || [];
+    if (focusList.length) dietBits.push(`Focus styles (weave these throughout): ${focusList.join(", ")}`);
+    if (dietaryPrefs.includes?.length) dietBits.push(`Foods the user wants INCLUDED (use across multiple meals where natural): ${dietaryPrefs.includes.join(", ")}`);
     const dietContext = dietBits.length ? dietBits.join("\n") : "Omnivore, no restrictions";
 
     const isCycling = lifeStage === "cycling";

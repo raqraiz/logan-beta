@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, FileText, Eye, Trash2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MealPlanPreviewDialog } from "./MealPlanPreviewDialog";
+import { MealPlanSetupDialog } from "./MealPlanSetupDialog";
 
 interface SavedMenu {
   id: string;
@@ -28,6 +29,8 @@ export function MenuLibraryDialog({ open, onOpenChange, userId, onCreateNew }: M
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<SavedMenu | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<SavedMenu | null>(null);
 
   useEffect(() => {
     if (!open || !userId) return;
@@ -165,6 +168,20 @@ export function MenuLibraryDialog({ open, onOpenChange, userId, onCreateNew }: M
           preview={selected.metadata?.preview ?? null}
           previewUrl={null}
           previewLoading={false}
+          onEditPlan={() => { setEditTarget(selected); setEditOpen(true); }}
+        />
+      )}
+      {editTarget && (
+        <MealPlanSetupDialog
+          open={editOpen}
+          onOpenChange={(o) => { setEditOpen(o); if (!o) setEditTarget(null); }}
+          userId={userId}
+          editMode
+          initialValues={{
+            lengthDays: editTarget.metadata?.length_days,
+            style: editTarget.style,
+            dietaryPrefs: (editTarget.metadata?.dietary_prefs ?? null) as any,
+          }}
         />
       )}
     </>

@@ -2,16 +2,12 @@ import { useState } from "react";
 import { Library, Sparkles } from "lucide-react";
 import { MealPlanSetupDialog } from "./MealPlanSetupDialog";
 import { MenuLibraryDialog } from "./MenuLibraryDialog";
+import { toast } from "@/hooks/use-toast";
 
 interface NutritionMenuActionsProps {
   userId: string;
 }
 
-/**
- * Two compact action buttons rendered inside the Nutrition section of the Plan tab:
- * - Menu Library  → list of the user's saved meal plans
- * - Menu Builder  → opens the AI meal-plan setup dialog
- */
 export function NutritionMenuActions({ userId }: NutritionMenuActionsProps) {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [builderOpen, setBuilderOpen] = useState(false);
@@ -52,6 +48,12 @@ export function NutritionMenuActions({ userId }: NutritionMenuActionsProps) {
         open={builderOpen}
         onOpenChange={setBuilderOpen}
         userId={userId}
+        onGenerated={() => {
+          toast({
+            title: "Building your menu…",
+            description: "Find it in Menu Library (Plan tab) when it's ready — usually 10–30s.",
+          });
+        }}
       />
     </>
   );

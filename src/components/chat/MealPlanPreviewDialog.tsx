@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Loader2, ShoppingBasket, Moon, Sun, ThumbsUp, ThumbsDown, Sparkles, X, ChevronDown, Utensils, Carrot, Replace, Check, Plus } from "lucide-react";
+import { Loader2, ShoppingBasket, Moon, Sun, ThumbsUp, ThumbsDown, Sparkles, X, ChevronDown, Utensils, Carrot, Replace, Check, Plus, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -69,6 +69,7 @@ interface Props {
   onRefine?: (args: { excludeIngredients: string[]; feedbackText: string }) => Promise<void> | void;
   onSwapSuggest?: (req: SwapRequest) => Promise<MealOption[]>;
   onSwapApply?: (req: ApplySwapRequest) => Promise<void>;
+  onEditPlan?: () => void;
   refining?: boolean;
   initialReaction?: "up" | "down" | null;
 }
@@ -105,7 +106,7 @@ const normalize = (s: string) => s.toLowerCase().trim().replace(/s$/, "");
 
 export function MealPlanPreviewDialog({
   open, onOpenChange, title, preview, previewUrl, previewLoading,
-  onReact, onRefine, onSwapSuggest, onSwapApply,
+  onReact, onRefine, onSwapSuggest, onSwapApply, onEditPlan,
   refining = false, initialReaction = null,
 }: Props) {
   const [mode, setMode] = useState<"dark" | "light">("dark");
@@ -252,29 +253,40 @@ export function MealPlanPreviewDialog({
                 {preview?.intro || "Tap any ingredient to remove it — your plan updates automatically."}
               </DialogDescription>
             </div>
-            <div className="shrink-0 inline-flex items-center rounded-full border border-border/40 bg-card/40 p-0.5 mr-8">
-              <button
-                type="button"
-                onClick={() => setMode("dark")}
-                className={cn(
-                  "flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
-                  isDark ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground",
-                )}
-                aria-pressed={isDark}
-              >
-                <Moon className="h-3 w-3" /> Dark
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("light")}
-                className={cn(
-                  "flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
-                  !isDark ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground",
-                )}
-                aria-pressed={!isDark}
-              >
-                <Sun className="h-3 w-3" /> Light
-              </button>
+            <div className="shrink-0 flex items-center gap-2 mr-8">
+              {onEditPlan && (
+                <button
+                  type="button"
+                  onClick={() => { onEditPlan(); onOpenChange(false); }}
+                  className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary px-2.5 py-1 text-[11px] font-medium transition-colors"
+                >
+                  <Pencil className="h-3 w-3" /> Edit
+                </button>
+              )}
+              <div className="inline-flex items-center rounded-full border border-border/40 bg-card/40 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setMode("dark")}
+                  className={cn(
+                    "flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+                    isDark ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground",
+                  )}
+                  aria-pressed={isDark}
+                >
+                  <Moon className="h-3 w-3" /> Dark
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("light")}
+                  className={cn(
+                    "flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+                    !isDark ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground",
+                  )}
+                  aria-pressed={!isDark}
+                >
+                  <Sun className="h-3 w-3" /> Light
+                </button>
+              </div>
             </div>
           </div>
         </DialogHeader>

@@ -86,6 +86,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
   const [previewLoading, setPreviewLoading] = useState(false);
   const [refining, setRefining] = useState(false);
   const [reaction, setReaction] = useState<"up" | "down" | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -328,8 +329,20 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
         onRefine={handleRefine}
         onSwapSuggest={handleSwapSuggest}
         onSwapApply={handleSwapApply}
+        onEditPlan={() => setEditOpen(true)}
         refining={refining}
         initialReaction={reaction}
+      />
+      <MealPlanSetupDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        userId={userId}
+        editMode
+        initialValues={{
+          lengthDays: resource.metadata?.length_days,
+          style: resource.style,
+          dietaryPrefs: (resource.metadata?.dietary_prefs ?? null) as any,
+        }}
       />
     </div>
   );
