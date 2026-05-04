@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
 
-import { Send, Loader2, LogOut, ChevronLeft, ChevronRight, ArrowDown, MessageSquarePlus } from "lucide-react";
+import { Send, Loader2, LogOut, ChevronLeft, ChevronRight, ArrowDown, MessageSquarePlus, MessageCircle } from "lucide-react";
 import { FeedbackModal } from "@/components/chat/FeedbackModal";
 import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
 import { format } from "date-fns";
@@ -1038,10 +1038,20 @@ const Chat = () => {
           <div className="flex items-center gap-3">
             {/* Credit balance hidden — free access during alpha */}
             {/* CalendarSubscribe hidden for now */}
-            
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setFeedbackOpen(true)}
+              aria-label="Send feedback"
+              title="Send feedback"
+            >
+              <MessageCircle className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Feedback</span>
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign out
+              <LogOut className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Sign out</span>
             </Button>
           </div>
         </div>
