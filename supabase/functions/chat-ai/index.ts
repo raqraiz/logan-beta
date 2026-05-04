@@ -280,9 +280,16 @@ serve(async (req) => {
         }
       }
 
+      // If user was postpartum and reports a period, transition them to cycling
+      const periodUpdatePayload: Record<string, unknown> = { last_period_start: formattedDate };
+      if (participant.life_stage === "postpartum") {
+        periodUpdatePayload.life_stage = "cycling";
+        periodUpdatePayload.postpartum_start_date = null;
+      }
+
       const { error: updateError } = await supabase
         .from("participants")
-        .update({ last_period_start: formattedDate })
+        .update(periodUpdatePayload)
         .eq("id", participant.id);
 
       if (!updateError) {
@@ -454,9 +461,15 @@ serve(async (req) => {
             }
           }
 
+          const periodDatePayload: Record<string, unknown> = { last_period_start: formattedDate };
+          if (participant.life_stage === "postpartum") {
+            periodDatePayload.life_stage = "cycling";
+            periodDatePayload.postpartum_start_date = null;
+          }
+
           const { error: updateErr } = await supabase
             .from("participants")
-            .update({ last_period_start: formattedDate })
+            .update(periodDatePayload)
             .eq("id", participant.id);
 
           if (!updateErr) {
@@ -531,9 +544,15 @@ serve(async (req) => {
           todayLocal.setUTCDate(todayLocal.getUTCDate() - (targetDay - 1));
           const formattedDate = todayLocal.toISOString().split("T")[0];
 
+          const cycleDayPayload: Record<string, unknown> = { last_period_start: formattedDate };
+          if (participant.life_stage === "postpartum") {
+            cycleDayPayload.life_stage = "cycling";
+            cycleDayPayload.postpartum_start_date = null;
+          }
+
           const { error: updateErr } = await supabase
             .from("participants")
-            .update({ last_period_start: formattedDate })
+            .update(cycleDayPayload)
             .eq("id", participant.id);
 
           if (!updateErr) {
