@@ -773,7 +773,7 @@ const Chat = () => {
         : anchor 
           ? `Anchor symptom: ${anchor}`
           : date
-            ? `Last period: ${format(date, "PPP")}`
+            ? `${lifeStage === "postpartum" ? "Birth date" : "Last period"}: ${format(date, "PPP")}`
             : messageContent;
 
       const { error } = await supabase.from("chat_messages").insert({
