@@ -181,6 +181,11 @@ export const EngagementTab = () => {
         .map(([date, v]) => ({ date: format(parseISO(date), "MMM d"), messages: v.messages, activeUsers: v.users.size }))
         .reverse();
 
+      const totalDailyUsers = daily.reduce((sum, d) => sum + d.activeUsers, 0);
+      const avgDailyUsers = daily.length > 0
+        ? Math.round((totalDailyUsers / daily.length) * 10) / 10
+        : 0;
+
       setUsers(userEngagements);
       setDailyActivity(daily);
       setTotals({
@@ -188,6 +193,7 @@ export const EngagementTab = () => {
         totalMessages: allMessages.length,
         activeToday,
         activeThisWeek,
+        avgDailyUsers,
         avgSessionsPerUser: profiles.length > 0 ? Math.round((totalSessions / profiles.length) * 10) / 10 : 0,
         avgMessagesPerUser: profiles.length > 0 ? Math.round((allMessages.length / profiles.length) * 10) / 10 : 0,
       });
