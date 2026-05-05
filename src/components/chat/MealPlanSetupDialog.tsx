@@ -59,6 +59,13 @@ const FOCUS_STYLES = [
 
 const PRESET_DIETS = ["Omnivore", "Pescatarian", "Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Keto", "Paleo", "Kosher", "Halal"];
 
+const MACRO_PRESETS = [
+  { id: "balanced", label: "Balanced", desc: "~30% P / 40% C / 30% F" },
+  { id: "high_protein", label: "High protein", desc: ">120g protein/day" },
+  { id: "low_carb", label: "Low carb", desc: "<100g carbs/day" },
+  { id: "mediterranean", label: "Mediterranean", desc: "Healthy fats forward" },
+];
+
 export function MealPlanSetupDialog({
   open, onOpenChange, userId, onGenerated, initialValues, editMode = false,
 }: MealPlanSetupDialogProps) {
@@ -71,6 +78,12 @@ export function MealPlanSetupDialog({
   const [dislikes, setDislikes] = useState("");
   const [includes, setIncludes] = useState("");
   const [focusStyles, setFocusStyles] = useState<string[]>([]);
+  const [macroPreset, setMacroPreset] = useState<string>("");
+  const [macroCalories, setMacroCalories] = useState<string>("");
+  const [macroProtein, setMacroProtein] = useState<string>("");
+  const [macroCarbs, setMacroCarbs] = useState<string>("");
+  const [macroFat, setMacroFat] = useState<string>("");
+  const [freeForm, setFreeForm] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [loadingPrefs, setLoadingPrefs] = useState(true);
 
