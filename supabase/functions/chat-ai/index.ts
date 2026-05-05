@@ -464,7 +464,6 @@ serve(async (req) => {
           const periodDatePayload: Record<string, unknown> = { last_period_start: formattedDate };
           if (participant.life_stage === "postpartum") {
             periodDatePayload.life_stage = "cycling";
-            periodDatePayload.postpartum_start_date = null;
           }
 
           const { error: updateErr } = await supabase
