@@ -21,6 +21,9 @@ export interface MealPlanInitialValues {
     cuisines?: string[] | null;        // repurposed: focus styles
     includes?: string[] | null;        // foods to include
     notes?: string | null;
+    macro_preset?: string | null;
+    macro_targets?: { calories?: number | null; protein?: number | null; carbs?: number | null; fat?: number | null } | null;
+    free_form?: string | null;
   } | null;
 }
 
