@@ -265,7 +265,7 @@ export const EngagementTab = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
         <Card>
           <CardContent className="p-4 text-center">
             <Users className="w-5 h-5 mx-auto mb-1 text-primary" />
