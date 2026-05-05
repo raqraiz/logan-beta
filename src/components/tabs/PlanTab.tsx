@@ -961,6 +961,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             onClose={() => {}}
             embedded
             onPeriodUpdate={onPeriodUpdate}
+            postpartumStartDate={cycleData?.postpartumStartDate}
           />
         )}
 
