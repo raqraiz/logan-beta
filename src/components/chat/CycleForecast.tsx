@@ -148,7 +148,7 @@ function EnergyBar({ value, color }: { value: number; color: string }) {
   );
 }
 
-export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStart, anchorSymptom, onClose, embedded = false, onPeriodUpdate }: CycleForecastProps) {
+export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStart, anchorSymptom, onClose, embedded = false, onPeriodUpdate, postpartumStartDate }: CycleForecastProps) {
   useTrackFeature("cycle_forecast");
   const today = useMemo(() => new Date(), []);
   // Parse YYYY-MM-DD as noon UTC to match calculateCycleInfo and avoid timezone off-by-one
