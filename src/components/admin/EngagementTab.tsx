@@ -48,6 +48,7 @@ export const EngagementTab = () => {
     totalMessages: 0,
     activeToday: 0,
     activeThisWeek: 0,
+    avgDailyUsers: 0,
     avgSessionsPerUser: 0,
     avgMessagesPerUser: 0,
   });
