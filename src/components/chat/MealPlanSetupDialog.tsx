@@ -125,6 +125,14 @@ export function MealPlanSetupDialog({
       } else if (data.notes && /^includes:/i.test(data.notes)) {
         setIncludes(data.notes.replace(/^includes:\s*/i, ""));
       }
+      if (data.macro_preset) setMacroPreset(data.macro_preset);
+      if (data.macro_targets) {
+        setMacroCalories(data.macro_targets.calories ? String(data.macro_targets.calories) : "");
+        setMacroProtein(data.macro_targets.protein ? String(data.macro_targets.protein) : "");
+        setMacroCarbs(data.macro_targets.carbs ? String(data.macro_targets.carbs) : "");
+        setMacroFat(data.macro_targets.fat ? String(data.macro_targets.fat) : "");
+      }
+      if (data.free_form) setFreeForm(data.free_form);
     };
 
     if (initialValues) {
