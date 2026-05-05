@@ -266,6 +266,9 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                 {lastPeriodStart && (
                   <> · Last period: <span className="text-foreground/70">{format(periodStart, "MMM d, yyyy")}</span></>
                 )}
+                {postpartumStartDate && (
+                  <> · Baby's birth date: <span className="text-foreground/70">{format(new Date(postpartumStartDate + "T12:00:00Z"), "MMM d, yyyy")}</span></>
+                )}
               </p>
               <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3">
                 {PHASES.map((p) => (
