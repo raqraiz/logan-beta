@@ -405,6 +405,52 @@ export function MealPlanSetupDialog({
               />
             </div>
 
+            {/* Macro targets */}
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">
+                Macro targets <span className="text-muted-foreground/60 normal-case tracking-normal">(optional)</span>
+              </Label>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {MACRO_PRESETS.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => setMacroPreset(prev => prev === p.id ? "" : p.id)}
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs border transition-all",
+                      macroPreset === p.id
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-border/40 bg-card/40 text-muted-foreground hover:text-foreground",
+                    )}
+                    title={p.desc}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                <Input value={macroCalories} onChange={e => setMacroCalories(e.target.value)} placeholder="kcal" className="h-8 text-xs" inputMode="numeric" />
+                <Input value={macroProtein} onChange={e => setMacroProtein(e.target.value)} placeholder="P g" className="h-8 text-xs" inputMode="numeric" />
+                <Input value={macroCarbs} onChange={e => setMacroCarbs(e.target.value)} placeholder="C g" className="h-8 text-xs" inputMode="numeric" />
+                <Input value={macroFat} onChange={e => setMacroFat(e.target.value)} placeholder="F g" className="h-8 text-xs" inputMode="numeric" />
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Daily totals. Leave blank if you don't track these.
+              </p>
+            </div>
+
+            {/* Free-form tweaks */}
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">
+                Anything else?
+              </Label>
+              <Textarea
+                value={freeForm}
+                onChange={e => setFreeForm(e.target.value)}
+                placeholder="e.g. I'm training for a half-marathon, prefer one-pot dinners, breastfeeding so need extra calories..."
+                className="text-sm min-h-[70px]"
+              />
+            </div>
+
             {/* Visual style */}
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">
