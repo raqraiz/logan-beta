@@ -193,6 +193,13 @@ export function MealPlanSetupDialog({
       });
       const resolvedDiet = resolvedParts.length ? resolvedParts.join(", ") : "Omnivore";
 
+      const macroTargets = {
+        calories: macroCalories ? Number(macroCalories) : null,
+        protein: macroProtein ? Number(macroProtein) : null,
+        carbs: macroCarbs ? Number(macroCarbs) : null,
+        fat: macroFat ? Number(macroFat) : null,
+      };
+
       const { data, error } = await supabase.functions.invoke("generate-meal-plan", {
         body: {
           lengthDays: length,
@@ -204,6 +211,9 @@ export function MealPlanSetupDialog({
             cuisines: focusStyles, // server stores into cuisines column
             includes: includeList,
             focus_styles: focusStyles,
+            macro_preset: macroPreset || null,
+            macro_targets: macroTargets,
+            free_form: freeForm.trim() || null,
           },
         },
       });
