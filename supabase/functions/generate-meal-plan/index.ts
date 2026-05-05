@@ -334,6 +334,16 @@ async function generateAndUploadPdf(args: {
     const focusList = (dietaryPrefs.focus_styles?.length ? dietaryPrefs.focus_styles : dietaryPrefs.cuisines) || [];
     if (focusList.length) dietBits.push(`Focus styles (weave these throughout): ${focusList.join(", ")}`);
     if (dietaryPrefs.includes?.length) dietBits.push(`Foods the user wants INCLUDED (use across multiple meals where natural): ${dietaryPrefs.includes.join(", ")}`);
+    if (dietaryPrefs.macro_preset) dietBits.push(`Macro preset: ${dietaryPrefs.macro_preset.replace(/_/g, " ")} — bias every meal toward this profile.`);
+    const mt = dietaryPrefs.macro_targets || {};
+    const macroParts = [
+      mt.calories ? `${mt.calories} kcal` : null,
+      mt.protein ? `${mt.protein}g protein` : null,
+      mt.carbs ? `${mt.carbs}g carbs` : null,
+      mt.fat ? `${mt.fat}g fat` : null,
+    ].filter(Boolean);
+    if (macroParts.length) dietBits.push(`Daily macro targets (aim total day to land near these): ${macroParts.join(", ")}.`);
+    if (dietaryPrefs.free_form) dietBits.push(`Additional user context (honor this): "${dietaryPrefs.free_form}"`);
     const dietContext = dietBits.length ? dietBits.join("\n") : "Omnivore, no restrictions";
 
     const isCycling = lifeStage === "cycling";

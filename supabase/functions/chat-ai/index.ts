@@ -281,10 +281,10 @@ serve(async (req) => {
       }
 
       // If user was postpartum and reports a period, transition them to cycling
+      // Postpartum → cycling: keep postpartum_start_date intact (it's the baby's birth date)
       const periodUpdatePayload: Record<string, unknown> = { last_period_start: formattedDate };
       if (participant.life_stage === "postpartum") {
         periodUpdatePayload.life_stage = "cycling";
-        periodUpdatePayload.postpartum_start_date = null;
       }
 
       const { error: updateError } = await supabase
@@ -464,7 +464,6 @@ serve(async (req) => {
           const periodDatePayload: Record<string, unknown> = { last_period_start: formattedDate };
           if (participant.life_stage === "postpartum") {
             periodDatePayload.life_stage = "cycling";
-            periodDatePayload.postpartum_start_date = null;
           }
 
           const { error: updateErr } = await supabase
@@ -547,7 +546,6 @@ serve(async (req) => {
           const cycleDayPayload: Record<string, unknown> = { last_period_start: formattedDate };
           if (participant.life_stage === "postpartum") {
             cycleDayPayload.life_stage = "cycling";
-            cycleDayPayload.postpartum_start_date = null;
           }
 
           const { error: updateErr } = await supabase

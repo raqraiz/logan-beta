@@ -15,6 +15,7 @@ interface CycleForecastProps {
   onClose: () => void;
   embedded?: boolean;
   onPeriodUpdate?: (date: Date) => Promise<void> | void;
+  postpartumStartDate?: string;
 }
 
 function getPhaseForDay(day: number, cycleLength: number): string {
@@ -147,7 +148,7 @@ function EnergyBar({ value, color }: { value: number; color: string }) {
   );
 }
 
-export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStart, anchorSymptom, onClose, embedded = false, onPeriodUpdate }: CycleForecastProps) {
+export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStart, anchorSymptom, onClose, embedded = false, onPeriodUpdate, postpartumStartDate }: CycleForecastProps) {
   useTrackFeature("cycle_forecast");
   const today = useMemo(() => new Date(), []);
   // Parse YYYY-MM-DD as noon UTC to match calculateCycleInfo and avoid timezone off-by-one
@@ -264,6 +265,9 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                 Tap any date to see insights for that day
                 {lastPeriodStart && (
                   <> · Last period: <span className="text-foreground/70">{format(periodStart, "MMM d, yyyy")}</span></>
+                )}
+                {postpartumStartDate && (
+                  <> · Baby's birth date: <span className="text-foreground/70">{format(new Date(postpartumStartDate + "T12:00:00Z"), "MMM d, yyyy")}</span></>
                 )}
               </p>
               <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3">

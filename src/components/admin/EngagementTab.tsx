@@ -48,6 +48,7 @@ export const EngagementTab = () => {
     totalMessages: 0,
     activeToday: 0,
     activeThisWeek: 0,
+    avgDailyUsers: 0,
     avgSessionsPerUser: 0,
     avgMessagesPerUser: 0,
   });
@@ -180,6 +181,11 @@ export const EngagementTab = () => {
         .map(([date, v]) => ({ date: format(parseISO(date), "MMM d"), messages: v.messages, activeUsers: v.users.size }))
         .reverse();
 
+      const totalDailyUsers = daily.reduce((sum, d) => sum + d.activeUsers, 0);
+      const avgDailyUsers = daily.length > 0
+        ? Math.round((totalDailyUsers / daily.length) * 10) / 10
+        : 0;
+
       setUsers(userEngagements);
       setDailyActivity(daily);
       setTotals({
@@ -187,6 +193,7 @@ export const EngagementTab = () => {
         totalMessages: allMessages.length,
         activeToday,
         activeThisWeek,
+        avgDailyUsers,
         avgSessionsPerUser: profiles.length > 0 ? Math.round((totalSessions / profiles.length) * 10) / 10 : 0,
         avgMessagesPerUser: profiles.length > 0 ? Math.round((allMessages.length / profiles.length) * 10) / 10 : 0,
       });
@@ -258,7 +265,7 @@ export const EngagementTab = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
         <Card>
           <CardContent className="p-4 text-center">
             <Users className="w-5 h-5 mx-auto mb-1 text-primary" />
@@ -301,6 +308,13 @@ export const EngagementTab = () => {
             <UserListPopover userList={activeWeekUsers} label="Active This Week" />
           </PopoverContent>
         </Popover>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <Users className="w-5 h-5 mx-auto mb-1 text-teal-500" />
+            <p className="text-2xl font-bold text-foreground">{totals.avgDailyUsers}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Daily Users</p>
+          </CardContent>
+        </Card>
         <Card>
           <CardContent className="p-4 text-center">
             <Clock className="w-5 h-5 mx-auto mb-1 text-orange-500" />

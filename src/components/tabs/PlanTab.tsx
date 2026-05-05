@@ -17,6 +17,7 @@ interface CycleData {
   cycleLengthDays: number;
   lastPeriodStart?: string;
   lifeStage?: "cycling" | "postpartum" | "menopause";
+  postpartumStartDate?: string;
 }
 
 interface PlanTabProps {
@@ -961,6 +962,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             onClose={() => {}}
             embedded
             onPeriodUpdate={onPeriodUpdate}
+            postpartumStartDate={cycleData?.postpartumStartDate}
           />
         )}
 

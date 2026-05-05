@@ -21,6 +21,9 @@ export interface MealPlanInitialValues {
     cuisines?: string[] | null;        // repurposed: focus styles
     includes?: string[] | null;        // foods to include
     notes?: string | null;
+    macro_preset?: string | null;
+    macro_targets?: { calories?: number | null; protein?: number | null; carbs?: number | null; fat?: number | null } | null;
+    free_form?: string | null;
   } | null;
 }
 
@@ -56,6 +59,13 @@ const FOCUS_STYLES = [
 
 const PRESET_DIETS = ["Omnivore", "Pescatarian", "Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Keto", "Paleo", "Kosher", "Halal"];
 
+const MACRO_PRESETS = [
+  { id: "balanced", label: "Balanced", desc: "~30% P / 40% C / 30% F" },
+  { id: "high_protein", label: "High protein", desc: ">120g protein/day" },
+  { id: "low_carb", label: "Low carb", desc: "<100g carbs/day" },
+  { id: "mediterranean", label: "Mediterranean", desc: "Healthy fats forward" },
+];
+
 export function MealPlanSetupDialog({
   open, onOpenChange, userId, onGenerated, initialValues, editMode = false,
 }: MealPlanSetupDialogProps) {
@@ -68,6 +78,12 @@ export function MealPlanSetupDialog({
   const [dislikes, setDislikes] = useState("");
   const [includes, setIncludes] = useState("");
   const [focusStyles, setFocusStyles] = useState<string[]>([]);
+  const [macroPreset, setMacroPreset] = useState<string>("");
+  const [macroCalories, setMacroCalories] = useState<string>("");
+  const [macroProtein, setMacroProtein] = useState<string>("");
+  const [macroCarbs, setMacroCarbs] = useState<string>("");
+  const [macroFat, setMacroFat] = useState<string>("");
+  const [freeForm, setFreeForm] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [loadingPrefs, setLoadingPrefs] = useState(true);
 
@@ -109,6 +125,14 @@ export function MealPlanSetupDialog({
       } else if (data.notes && /^includes:/i.test(data.notes)) {
         setIncludes(data.notes.replace(/^includes:\s*/i, ""));
       }
+      if (data.macro_preset) setMacroPreset(data.macro_preset);
+      if (data.macro_targets) {
+        setMacroCalories(data.macro_targets.calories ? String(data.macro_targets.calories) : "");
+        setMacroProtein(data.macro_targets.protein ? String(data.macro_targets.protein) : "");
+        setMacroCarbs(data.macro_targets.carbs ? String(data.macro_targets.carbs) : "");
+        setMacroFat(data.macro_targets.fat ? String(data.macro_targets.fat) : "");
+      }
+      if (data.free_form) setFreeForm(data.free_form);
     };
 
     if (initialValues) {
@@ -169,6 +193,13 @@ export function MealPlanSetupDialog({
       });
       const resolvedDiet = resolvedParts.length ? resolvedParts.join(", ") : "Omnivore";
 
+      const macroTargets = {
+        calories: macroCalories ? Number(macroCalories) : null,
+        protein: macroProtein ? Number(macroProtein) : null,
+        carbs: macroCarbs ? Number(macroCarbs) : null,
+        fat: macroFat ? Number(macroFat) : null,
+      };
+
       const { data, error } = await supabase.functions.invoke("generate-meal-plan", {
         body: {
           lengthDays: length,
@@ -180,6 +211,9 @@ export function MealPlanSetupDialog({
             cuisines: focusStyles, // server stores into cuisines column
             includes: includeList,
             focus_styles: focusStyles,
+            macro_preset: macroPreset || null,
+            macro_targets: macroTargets,
+            free_form: freeForm.trim() || null,
           },
         },
       });
@@ -368,6 +402,52 @@ export function MealPlanSetupDialog({
                 onChange={e => setDislikes(e.target.value)}
                 placeholder="e.g. mushrooms, cilantro, liver"
                 className="text-sm min-h-[60px]"
+              />
+            </div>
+
+            {/* Macro targets */}
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">
+                Macro targets <span className="text-muted-foreground/60 normal-case tracking-normal">(optional)</span>
+              </Label>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {MACRO_PRESETS.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => setMacroPreset(prev => prev === p.id ? "" : p.id)}
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs border transition-all",
+                      macroPreset === p.id
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-border/40 bg-card/40 text-muted-foreground hover:text-foreground",
+                    )}
+                    title={p.desc}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                <Input value={macroCalories} onChange={e => setMacroCalories(e.target.value)} placeholder="kcal" className="h-8 text-xs" inputMode="numeric" />
+                <Input value={macroProtein} onChange={e => setMacroProtein(e.target.value)} placeholder="P g" className="h-8 text-xs" inputMode="numeric" />
+                <Input value={macroCarbs} onChange={e => setMacroCarbs(e.target.value)} placeholder="C g" className="h-8 text-xs" inputMode="numeric" />
+                <Input value={macroFat} onChange={e => setMacroFat(e.target.value)} placeholder="F g" className="h-8 text-xs" inputMode="numeric" />
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Daily totals. Leave blank if you don't track these.
+              </p>
+            </div>
+
+            {/* Free-form tweaks */}
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">
+                Anything else?
+              </Label>
+              <Textarea
+                value={freeForm}
+                onChange={e => setFreeForm(e.target.value)}
+                placeholder="e.g. I'm training for a half-marathon, prefer one-pot dinners, breastfeeding so need extra calories..."
+                className="text-sm min-h-[70px]"
               />
             </div>
 

@@ -389,6 +389,7 @@ const Chat = () => {
         cycleLengthDays,
         lastPeriodStart,
         lifeStage: "cycling",
+        postpartumStartDate: postpartumStartDate || undefined,
       });
     }
   }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, participantCycle]);
