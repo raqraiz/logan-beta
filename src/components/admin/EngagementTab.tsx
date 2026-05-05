@@ -310,6 +310,13 @@ export const EngagementTab = () => {
         </Popover>
         <Card>
           <CardContent className="p-4 text-center">
+            <Users className="w-5 h-5 mx-auto mb-1 text-teal-500" />
+            <p className="text-2xl font-bold text-foreground">{totals.avgDailyUsers}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Daily Users</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
             <Clock className="w-5 h-5 mx-auto mb-1 text-orange-500" />
             <p className="text-2xl font-bold text-foreground">{totals.avgSessionsPerUser}</p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Sessions/User</p>
