@@ -15,6 +15,7 @@ interface CycleForecastProps {
   onClose: () => void;
   embedded?: boolean;
   onPeriodUpdate?: (date: Date) => Promise<void> | void;
+  postpartumStartDate?: string;
 }
 
 function getPhaseForDay(day: number, cycleLength: number): string {
