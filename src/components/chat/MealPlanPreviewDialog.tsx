@@ -33,8 +33,26 @@ interface WeekBlock {
   grocery_list: string[];
 }
 
+interface MealIdea {
+  name: string;
+  slot?: string;          // breakfast | lunch | dinner | snack | anytime
+  why?: string;           // 1-line "why this helps" note
+  ingredients?: string[]; // optional ingredient hints
+}
+
+interface PhaseGuide {
+  name: string;            // Menstruation, Follicular, Ovulation, Luteal, Postpartum, Menopause
+  cycle_days?: string;     // e.g. "Days 1-5"
+  focus: string;           // 1-2 sentence what this phase needs nutritionally
+  recommended_foods: string[];
+  avoid_foods?: string[];
+  meal_ideas: MealIdea[];
+}
+
 interface PreviewData {
   intro?: string;
+  phases?: PhaseGuide[];
+  // Legacy (older resources): keep rendering support
   days?: MealDay[];
   weeks?: WeekBlock[];
 }
@@ -112,11 +130,13 @@ export function MealPlanPreviewDialog({
   const [mode, setMode] = useState<"dark" | "light">("dark");
   const [reaction, setReaction] = useState<"up" | "down" | null>(initialReaction);
   const [excludes, setExcludes] = useState<string[]>([]);
+  const [refineText, setRefineText] = useState("");
   const refineTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Reset transient state whenever a new resource is loaded
   useEffect(() => {
     setExcludes([]);
+    setRefineText("");
     setReaction(initialReaction);
     if (refineTimer.current) clearTimeout(refineTimer.current);
   }, [title, initialReaction]);
@@ -127,9 +147,18 @@ export function MealPlanPreviewDialog({
     [excludes],
   );
 
+  const phases = preview?.phases ?? [];
   const days = preview?.days ?? [];
   const weeks = preview?.weeks ?? [];
-  const hasStructuredPreview = days.length > 0;
+  const hasPhaseGuide = phases.length > 0;
+  const hasStructuredPreview = hasPhaseGuide || days.length > 0;
+
+  const submitRefine = () => {
+    const txt = refineText.trim();
+    if (!txt || !onRefine) return;
+    onRefine({ excludeIngredients: excludes, feedbackText: txt });
+    setRefineText("");
+  };
 
   // Resolve signed URLs for each day's hero photo (image_path -> https url)
   const [imageUrls, setImageUrls] = useState<Record<number, string>>({});
@@ -320,7 +349,32 @@ export function MealPlanPreviewDialog({
         )}
 
         <div className="space-y-5 py-2">
-          {hasStructuredPreview ? (
+          {hasPhaseGuide ? (
+            <div className={cn("rounded-xl border p-4 space-y-4 transition-colors", surface)}>
+              {preview?.intro && (
+                <p className={cn("text-xs leading-relaxed pb-3 border-b italic", mutedText, introBorder)}>
+                  {preview.intro}
+                </p>
+              )}
+              <div className="space-y-3">
+                {phases.map(p => (
+                  <PhaseGuideCard
+                    key={p.name}
+                    phase={p}
+                    mode={mode}
+                    cardSurface={cardSurface}
+                    chipMuted={chipMuted}
+                    mutedText={mutedText}
+                    subtleText={subtleText}
+                    introBorder={introBorder}
+                    isDark={isDark}
+                    excludeSet={excludeSet}
+                    toggleWord={toggleWord}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : hasStructuredPreview ? (
             <div className={cn("rounded-xl border p-4 space-y-4 transition-colors", surface)}>
               {preview?.intro && (
                 <p className={cn("text-xs leading-relaxed pb-3 border-b italic", mutedText, introBorder)}>
@@ -472,6 +526,37 @@ export function MealPlanPreviewDialog({
                   <ThumbsDown className="h-3.5 w-3.5" />
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Refine with words */}
+          {hasStructuredPreview && onRefine && (
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="h-3 w-3 text-primary" />
+                <span className="text-[11px] uppercase tracking-wider text-primary font-medium">
+                  Refine with words
+                </span>
+              </div>
+              <textarea
+                value={refineText}
+                onChange={(e) => setRefineText(e.target.value)}
+                placeholder="e.g. more vegetarian options, add quick weeknight dinners, lean Mediterranean…"
+                className="w-full text-xs px-3 py-2 rounded-md border border-border/40 bg-background/60 outline-none focus:border-primary/50 min-h-[60px] resize-none"
+                disabled={refining}
+              />
+              <button
+                type="button"
+                onClick={submitRefine}
+                disabled={refining || !refineText.trim()}
+                className="w-full text-[12px] px-3 py-1.5 rounded-md font-medium inline-flex items-center justify-center gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {refining ? (
+                  <><Loader2 className="h-3 w-3 animate-spin" /> Updating…</>
+                ) : (
+                  <><Sparkles className="h-3 w-3" /> Regenerate with these tweaks</>
+                )}
+              </button>
             </div>
           )}
 
@@ -988,6 +1073,145 @@ function GroceryListCard({
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// PhaseGuideCard — phase-based food guide (foods + meal ideas, no calendar)
+// ──────────────────────────────────────────────────────────────────────────
+interface PhaseGuideCardProps {
+  phase: PhaseGuide;
+  mode: "dark" | "light";
+  cardSurface: string;
+  chipMuted: string;
+  mutedText: string;
+  subtleText: string;
+  introBorder: string;
+  isDark: boolean;
+  excludeSet: Set<string>;
+  toggleWord: (raw: string) => void;
+}
+
+const SLOT_CHIP: Record<string, string> = {
+  breakfast: "🌅 Breakfast",
+  lunch: "🥗 Lunch",
+  dinner: "🍽️ Dinner",
+  snack: "✨ Snack",
+  anytime: "⏰ Anytime",
+};
+
+function PhaseGuideCard({
+  phase, mode, cardSurface, chipMuted, mutedText, subtleText, introBorder, isDark, excludeSet, toggleWord,
+}: PhaseGuideCardProps) {
+  const c = PHASE_CHIP[mode][phase.name] ?? chipMuted;
+
+  const Chip = ({ item, danger }: { item: string; danger?: boolean }) => {
+    const norm = item.toLowerCase().trim().replace(/s$/, "");
+    const excluded = excludeSet.has(norm);
+    return (
+      <button
+        type="button"
+        onClick={() => toggleWord(item)}
+        className={cn(
+          "text-[11.5px] px-2.5 py-1 rounded-full border transition-all cursor-pointer",
+          excluded
+            ? "bg-destructive/15 text-destructive border-destructive/40 line-through"
+            : danger
+              ? cn(chipMuted, "opacity-70 line-through decoration-destructive/40")
+              : cn(chipMuted, "hover:border-primary/50 hover:text-primary"),
+        )}
+      >
+        {item}
+      </button>
+    );
+  };
+
+  return (
+    <div className={cn("rounded-xl border overflow-hidden", cardSurface)}>
+      <div className={cn(
+        "px-4 py-3 border-b flex items-center justify-between gap-3",
+        introBorder,
+      )}>
+        <div className="flex items-center gap-2">
+          <span className={cn("text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border", c)}>
+            {phase.name}
+          </span>
+          {phase.cycle_days && (
+            <span className={cn("text-[10.5px]", subtleText)}>{phase.cycle_days}</span>
+          )}
+        </div>
+      </div>
+
+      <div className="p-4 space-y-3.5">
+        <p className={cn("text-[12px] leading-relaxed italic", mutedText)}>
+          {phase.focus}
+        </p>
+
+        <div>
+          <div className={cn("text-[10.5px] uppercase tracking-wider font-medium mb-1.5", subtleText)}>
+            🟢 Recommended foods
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {phase.recommended_foods.map(f => <Chip key={f} item={f} />)}
+          </div>
+        </div>
+
+        {phase.avoid_foods && phase.avoid_foods.length > 0 && (
+          <div>
+            <div className={cn("text-[10.5px] uppercase tracking-wider font-medium mb-1.5", subtleText)}>
+              ⚠️ Go easy on
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {phase.avoid_foods.map(f => <Chip key={f} item={f} danger />)}
+            </div>
+          </div>
+        )}
+
+        <div>
+          <div className={cn("text-[10.5px] uppercase tracking-wider font-medium mb-1.5", subtleText)}>
+            🍳 Meal ideas
+          </div>
+          <div className="space-y-2">
+            {phase.meal_ideas.map((m, i) => (
+              <div
+                key={`${m.name}-${i}`}
+                className={cn(
+                  "rounded-lg p-2.5 border text-[12px]",
+                  isDark ? "bg-white/[0.02] border-white/10" : "bg-black/[0.02] border-black/10",
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="font-medium leading-snug flex-1">{m.name}</div>
+                  {m.slot && (
+                    <span className={cn("text-[10px] shrink-0", subtleText)}>
+                      {SLOT_CHIP[m.slot.toLowerCase()] ?? m.slot}
+                    </span>
+                  )}
+                </div>
+                {m.why && (
+                  <p className={cn("text-[11px] mt-1 leading-relaxed", mutedText)}>{m.why}</p>
+                )}
+                {m.ingredients && m.ingredients.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {m.ingredients.map(ing => (
+                      <span
+                        key={`${i}-${ing}`}
+                        className={cn(
+                          "text-[10.5px] px-1.5 py-0.5 rounded-full border",
+                          isDark ? "bg-white/5 text-white/70 border-white/10" : "bg-black/5 text-black/70 border-black/10",
+                        )}
+                      >
+                        {ing}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
