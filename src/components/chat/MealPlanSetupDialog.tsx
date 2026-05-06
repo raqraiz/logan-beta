@@ -8,7 +8,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, Sun, Moon, Loader2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Length = 1 | 3 | 7;
 type Style = "dark" | "light";
 
 export interface MealPlanInitialValues {
@@ -69,7 +68,6 @@ const MACRO_PRESETS = [
 export function MealPlanSetupDialog({
   open, onOpenChange, userId, onGenerated, initialValues, editMode = false,
 }: MealPlanSetupDialogProps) {
-  const [length, setLength] = useState<Length>(7);
   const [style, setStyle] = useState<Style>("dark");
   const [dietTypes, setDietTypes] = useState<string[]>(["Omnivore"]);
   const [dietOther, setDietOther] = useState<string>("");
@@ -111,8 +109,7 @@ export function MealPlanSetupDialog({
       setDietTypes(next.length ? next : ["Omnivore"]);
     };
 
-    const applyValues = (data: MealPlanInitialValues["dietaryPrefs"], lengthDays?: number, styleVal?: string | null) => {
-      if (lengthDays && [1, 3, 7].includes(lengthDays)) setLength(lengthDays as Length);
+    const applyValues = (data: MealPlanInitialValues["dietaryPrefs"], _lengthDays?: number, styleVal?: string | null) => {
       if (styleVal === "light" || styleVal === "dark") setStyle(styleVal);
       if (!data) return;
       applyDietType(data.diet_type ?? undefined);
@@ -202,7 +199,6 @@ export function MealPlanSetupDialog({
 
       const { data, error } = await supabase.functions.invoke("generate-meal-plan", {
         body: {
-          lengthDays: length,
           style,
           dietaryPrefs: {
             diet_type: resolvedDiet,
@@ -238,8 +234,8 @@ export function MealPlanSetupDialog({
           </DialogTitle>
           <DialogDescription>
             {editMode
-              ? "Tweak any setting below — we'll regenerate from your changes."
-              : "Each meal will sync to your cycle phase. Takes ~5–20 seconds."}
+              ? "Tweak any setting below — we'll regenerate your guide."
+              : "A phase-by-phase guide of foods + meal ideas that fit your hormones. Takes ~15s."}
           </DialogDescription>
         </DialogHeader>
 
@@ -249,33 +245,6 @@ export function MealPlanSetupDialog({
           </div>
         ) : (
           <div className="space-y-5 py-2">
-            {/* Length */}
-            <div>
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">
-                Plan length
-              </Label>
-              <div className="grid grid-cols-3 gap-2">
-                {LENGTH_OPTIONS.map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setLength(opt.value)}
-                    className={cn(
-                      "rounded-xl border px-3 py-2.5 text-left transition-all",
-                      length === opt.value
-                        ? "border-primary bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary)/0.4)]"
-                        : "border-border/40 bg-card/40 hover:border-border/80",
-                    )}
-                  >
-                    <div className="text-sm font-semibold text-foreground flex items-center justify-between">
-                      {opt.label}
-                      {length === opt.value && <Check className="h-3.5 w-3.5 text-primary" />}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5">{opt.sub}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Diet type */}
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">
