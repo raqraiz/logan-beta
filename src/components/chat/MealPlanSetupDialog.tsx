@@ -36,12 +36,6 @@ interface MealPlanSetupDialogProps {
   editMode?: boolean;
 }
 
-const LENGTH_OPTIONS: { value: Length; label: string; sub: string; eta: string }[] = [
-  { value: 1, label: "1 day", sub: "Just today", eta: "~5s" },
-  { value: 3, label: "3 days", sub: "Quick try", eta: "~10s" },
-  { value: 7, label: "1 week", sub: "Most popular", eta: "~20s" },
-];
-
 const DIET_TYPES = ["Omnivore", "Pescatarian", "Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Keto", "Paleo", "Kosher", "Halal", "Other"];
 const COMMON_ALLERGIES = ["Nuts", "Peanuts", "Shellfish", "Eggs", "Soy", "Gluten", "Dairy"];
 const FOCUS_STYLES = [
