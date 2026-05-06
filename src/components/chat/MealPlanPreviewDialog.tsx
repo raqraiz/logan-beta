@@ -1077,3 +1077,142 @@ function GroceryListCard({
     </div>
   );
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// PhaseGuideCard — phase-based food guide (foods + meal ideas, no calendar)
+// ──────────────────────────────────────────────────────────────────────────
+interface PhaseGuideCardProps {
+  phase: PhaseGuide;
+  mode: "dark" | "light";
+  cardSurface: string;
+  chipMuted: string;
+  mutedText: string;
+  subtleText: string;
+  introBorder: string;
+  isDark: boolean;
+  excludeSet: Set<string>;
+  toggleWord: (raw: string) => void;
+}
+
+const SLOT_CHIP: Record<string, string> = {
+  breakfast: "🌅 Breakfast",
+  lunch: "🥗 Lunch",
+  dinner: "🍽️ Dinner",
+  snack: "✨ Snack",
+  anytime: "⏰ Anytime",
+};
+
+function PhaseGuideCard({
+  phase, mode, cardSurface, chipMuted, mutedText, subtleText, introBorder, isDark, excludeSet, toggleWord,
+}: PhaseGuideCardProps) {
+  const c = PHASE_CHIP[mode][phase.name] ?? chipMuted;
+
+  const Chip = ({ item, danger }: { item: string; danger?: boolean }) => {
+    const norm = item.toLowerCase().trim().replace(/s$/, "");
+    const excluded = excludeSet.has(norm);
+    return (
+      <button
+        type="button"
+        onClick={() => toggleWord(item)}
+        className={cn(
+          "text-[11.5px] px-2.5 py-1 rounded-full border transition-all cursor-pointer",
+          excluded
+            ? "bg-destructive/15 text-destructive border-destructive/40 line-through"
+            : danger
+              ? cn(chipMuted, "opacity-70 line-through decoration-destructive/40")
+              : cn(chipMuted, "hover:border-primary/50 hover:text-primary"),
+        )}
+      >
+        {item}
+      </button>
+    );
+  };
+
+  return (
+    <div className={cn("rounded-xl border overflow-hidden", cardSurface)}>
+      <div className={cn(
+        "px-4 py-3 border-b flex items-center justify-between gap-3",
+        introBorder,
+      )}>
+        <div className="flex items-center gap-2">
+          <span className={cn("text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border", c)}>
+            {phase.name}
+          </span>
+          {phase.cycle_days && (
+            <span className={cn("text-[10.5px]", subtleText)}>{phase.cycle_days}</span>
+          )}
+        </div>
+      </div>
+
+      <div className="p-4 space-y-3.5">
+        <p className={cn("text-[12px] leading-relaxed italic", mutedText)}>
+          {phase.focus}
+        </p>
+
+        <div>
+          <div className={cn("text-[10.5px] uppercase tracking-wider font-medium mb-1.5", subtleText)}>
+            🟢 Recommended foods
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {phase.recommended_foods.map(f => <Chip key={f} item={f} />)}
+          </div>
+        </div>
+
+        {phase.avoid_foods && phase.avoid_foods.length > 0 && (
+          <div>
+            <div className={cn("text-[10.5px] uppercase tracking-wider font-medium mb-1.5", subtleText)}>
+              ⚠️ Go easy on
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {phase.avoid_foods.map(f => <Chip key={f} item={f} danger />)}
+            </div>
+          </div>
+        )}
+
+        <div>
+          <div className={cn("text-[10.5px] uppercase tracking-wider font-medium mb-1.5", subtleText)}>
+            🍳 Meal ideas
+          </div>
+          <div className="space-y-2">
+            {phase.meal_ideas.map((m, i) => (
+              <div
+                key={`${m.name}-${i}`}
+                className={cn(
+                  "rounded-lg p-2.5 border text-[12px]",
+                  isDark ? "bg-white/[0.02] border-white/10" : "bg-black/[0.02] border-black/10",
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="font-medium leading-snug flex-1">{m.name}</div>
+                  {m.slot && (
+                    <span className={cn("text-[10px] shrink-0", subtleText)}>
+                      {SLOT_CHIP[m.slot.toLowerCase()] ?? m.slot}
+                    </span>
+                  )}
+                </div>
+                {m.why && (
+                  <p className={cn("text-[11px] mt-1 leading-relaxed", mutedText)}>{m.why}</p>
+                )}
+                {m.ingredients && m.ingredients.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {m.ingredients.map(ing => (
+                      <span
+                        key={`${i}-${ing}`}
+                        className={cn(
+                          "text-[10.5px] px-1.5 py-0.5 rounded-full border",
+                          isDark ? "bg-white/5 text-white/70 border-white/10" : "bg-black/5 text-black/70 border-black/10",
+                        )}
+                      >
+                        {ing}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
