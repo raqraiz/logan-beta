@@ -17,30 +17,26 @@ const corsHeaders = {
 };
 
 type Style = "dark" | "light";
-type LengthDays = 1 | 3 | 7;
 
-interface MealDay {
-  day_number: number;
-  cycle_day: number;
-  phase: string;
-  breakfast: string;
-  lunch: string;
-  dinner: string;
-  snack: string;
-  hormone_focus: string;
-  image_path?: string | null;
+interface MealIdea {
+  name: string;
+  slot: string;          // breakfast | lunch | dinner | snack | anytime
+  why: string;
+  ingredients: string[];
 }
 
-interface WeekBlock {
-  week_number: number;
-  phase_summary: string;
-  grocery_list: string[];
+interface PhaseGuide {
+  name: string;            // Menstruation | Follicular | Ovulation | Luteal | Postpartum | Menopause
+  cycle_days: string;      // e.g. "Days 1-5" or "" for non-cycling
+  focus: string;
+  recommended_foods: string[];
+  avoid_foods: string[];
+  meal_ideas: MealIdea[];
 }
 
 interface MealPlanData {
   intro: string;
-  weeks: WeekBlock[];
-  days: MealDay[];
+  phases: PhaseGuide[];
 }
 
 // ---------- Cycle helpers (mirrors chat-ai logic) ----------
