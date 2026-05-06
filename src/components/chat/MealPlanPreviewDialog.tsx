@@ -349,7 +349,32 @@ export function MealPlanPreviewDialog({
         )}
 
         <div className="space-y-5 py-2">
-          {hasStructuredPreview ? (
+          {hasPhaseGuide ? (
+            <div className={cn("rounded-xl border p-4 space-y-4 transition-colors", surface)}>
+              {preview?.intro && (
+                <p className={cn("text-xs leading-relaxed pb-3 border-b italic", mutedText, introBorder)}>
+                  {preview.intro}
+                </p>
+              )}
+              <div className="space-y-3">
+                {phases.map(p => (
+                  <PhaseGuideCard
+                    key={p.name}
+                    phase={p}
+                    mode={mode}
+                    cardSurface={cardSurface}
+                    chipMuted={chipMuted}
+                    mutedText={mutedText}
+                    subtleText={subtleText}
+                    introBorder={introBorder}
+                    isDark={isDark}
+                    excludeSet={excludeSet}
+                    toggleWord={toggleWord}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : hasStructuredPreview ? (
             <div className={cn("rounded-xl border p-4 space-y-4 transition-colors", surface)}>
               {preview?.intro && (
                 <p className={cn("text-xs leading-relaxed pb-3 border-b italic", mutedText, introBorder)}>
