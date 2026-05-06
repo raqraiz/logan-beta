@@ -130,11 +130,13 @@ export function MealPlanPreviewDialog({
   const [mode, setMode] = useState<"dark" | "light">("dark");
   const [reaction, setReaction] = useState<"up" | "down" | null>(initialReaction);
   const [excludes, setExcludes] = useState<string[]>([]);
+  const [refineText, setRefineText] = useState("");
   const refineTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Reset transient state whenever a new resource is loaded
   useEffect(() => {
     setExcludes([]);
+    setRefineText("");
     setReaction(initialReaction);
     if (refineTimer.current) clearTimeout(refineTimer.current);
   }, [title, initialReaction]);
@@ -145,9 +147,18 @@ export function MealPlanPreviewDialog({
     [excludes],
   );
 
+  const phases = preview?.phases ?? [];
   const days = preview?.days ?? [];
   const weeks = preview?.weeks ?? [];
-  const hasStructuredPreview = days.length > 0;
+  const hasPhaseGuide = phases.length > 0;
+  const hasStructuredPreview = hasPhaseGuide || days.length > 0;
+
+  const submitRefine = () => {
+    const txt = refineText.trim();
+    if (!txt || !onRefine) return;
+    onRefine({ excludeIngredients: excludes, feedbackText: txt });
+    setRefineText("");
+  };
 
   // Resolve signed URLs for each day's hero photo (image_path -> https url)
   const [imageUrls, setImageUrls] = useState<Record<number, string>>({});
