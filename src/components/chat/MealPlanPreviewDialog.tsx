@@ -33,8 +33,26 @@ interface WeekBlock {
   grocery_list: string[];
 }
 
+interface MealIdea {
+  name: string;
+  slot?: string;          // breakfast | lunch | dinner | snack | anytime
+  why?: string;           // 1-line "why this helps" note
+  ingredients?: string[]; // optional ingredient hints
+}
+
+interface PhaseGuide {
+  name: string;            // Menstruation, Follicular, Ovulation, Luteal, Postpartum, Menopause
+  cycle_days?: string;     // e.g. "Days 1-5"
+  focus: string;           // 1-2 sentence what this phase needs nutritionally
+  recommended_foods: string[];
+  avoid_foods?: string[];
+  meal_ideas: MealIdea[];
+}
+
 interface PreviewData {
   intro?: string;
+  phases?: PhaseGuide[];
+  // Legacy (older resources): keep rendering support
   days?: MealDay[];
   weeks?: WeekBlock[];
 }
