@@ -1,14 +1,7 @@
-// Generate cyclical meal plan resource: AI generation + branded PDF + storage upload.
+// Generate phase-based food guide: AI generation, JSON-only (no PDF).
 // Returns immediately with the resource row so the frontend can poll/subscribe.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import {
-  PDFDocument,
-  StandardFonts,
-  rgb,
-  PDFFont,
-  PDFPage,
-} from "https://esm.sh/pdf-lib@1.17.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
