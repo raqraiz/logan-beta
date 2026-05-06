@@ -529,6 +529,37 @@ export function MealPlanPreviewDialog({
             </div>
           )}
 
+          {/* Refine with words */}
+          {hasStructuredPreview && onRefine && (
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="h-3 w-3 text-primary" />
+                <span className="text-[11px] uppercase tracking-wider text-primary font-medium">
+                  Refine with words
+                </span>
+              </div>
+              <textarea
+                value={refineText}
+                onChange={(e) => setRefineText(e.target.value)}
+                placeholder="e.g. more vegetarian options, add quick weeknight dinners, lean Mediterranean…"
+                className="w-full text-xs px-3 py-2 rounded-md border border-border/40 bg-background/60 outline-none focus:border-primary/50 min-h-[60px] resize-none"
+                disabled={refining}
+              />
+              <button
+                type="button"
+                onClick={submitRefine}
+                disabled={refining || !refineText.trim()}
+                className="w-full text-[12px] px-3 py-1.5 rounded-md font-medium inline-flex items-center justify-center gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {refining ? (
+                  <><Loader2 className="h-3 w-3 animate-spin" /> Updating…</>
+                ) : (
+                  <><Sparkles className="h-3 w-3" /> Regenerate with these tweaks</>
+                )}
+              </button>
+            </div>
+          )}
+
           {!hasStructuredPreview ? null : (
             <p className="text-[10px] text-center text-muted-foreground/70 -mt-2 flex items-center justify-center gap-1">
               <Sparkles className="h-2.5 w-2.5" /> Tap any ingredient to swap it out instantly
