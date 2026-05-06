@@ -277,3 +277,212 @@ serve(async (req) => {
   }
 });
 
+
+// ---------- Background generation: phase-based food guide ----------
+async function generatePhaseGuide(args: {
+  supabase: any;
+  lovableApiKey: string;
+  userId: string;
+  resourceId: string;
+  participant: any;
+  style: Style;
+  dietaryPrefs: any;
+  cycleLengthDays: number;
+  lifeStage: string;
+  title: string;
+  parentPlan?: MealPlanData | null;
+  excludeIngredients?: string[];
+  feedbackText?: string;
+}) {
+  const {
+    supabase, lovableApiKey, resourceId,
+    dietaryPrefs, cycleLengthDays, lifeStage,
+    parentPlan = null, excludeIngredients = [], feedbackText = "",
+  } = args;
+
+  try {
+    const dietBits: string[] = [];
+    if (dietaryPrefs.diet_type) dietBits.push(`Diet: ${dietaryPrefs.diet_type}`);
+    if (dietaryPrefs.allergies?.length) dietBits.push(`Allergies: ${dietaryPrefs.allergies.join(", ")}`);
+    if (dietaryPrefs.dislikes?.length) dietBits.push(`Dislikes (NEVER use): ${dietaryPrefs.dislikes.join(", ")}`);
+    const focusList = (dietaryPrefs.focus_styles?.length ? dietaryPrefs.focus_styles : dietaryPrefs.cuisines) || [];
+    if (focusList.length) dietBits.push(`Focus: ${focusList.join(", ")}`);
+    if (dietaryPrefs.includes?.length) dietBits.push(`Foods to INCLUDE across meals: ${dietaryPrefs.includes.join(", ")}`);
+    if (dietaryPrefs.macro_preset) dietBits.push(`Macro preset: ${dietaryPrefs.macro_preset.replace(/_/g, " ")}`);
+    const mt = dietaryPrefs.macro_targets || {};
+    const macroParts = [
+      mt.calories ? `${mt.calories} kcal` : null,
+      mt.protein ? `${mt.protein}g protein` : null,
+      mt.carbs ? `${mt.carbs}g carbs` : null,
+      mt.fat ? `${mt.fat}g fat` : null,
+    ].filter(Boolean);
+    if (macroParts.length) dietBits.push(`Daily targets: ${macroParts.join(", ")}.`);
+    if (dietaryPrefs.free_form) dietBits.push(`User context: "${dietaryPrefs.free_form}"`);
+    const dietContext = dietBits.length ? dietBits.join("\n") : "Omnivore, no restrictions";
+
+    const isCycling = lifeStage === "cycling";
+
+    const phaseList = isCycling
+      ? [
+          { name: "Menstruation", days: `Days 1–5` },
+          { name: "Follicular", days: `Days 6–${cycleLengthDays - 15}` },
+          { name: "Ovulation", days: `Days ${cycleLengthDays - 14}–${cycleLengthDays - 12}` },
+          { name: "Luteal", days: `Days ${cycleLengthDays - 11}–${cycleLengthDays}` },
+        ]
+      : [{ name: lifeStage === "postpartum" ? "Postpartum" : "Menopause", days: "" }];
+
+    const phaseGuidance = isCycling
+      ? `Build a phase-by-phase food guide for a ${cycleLengthDays}-day cycle. Return EXACTLY 4 phases in this order: Menstruation, Follicular, Ovulation, Luteal.
+
+Per phase:
+- Menstruation: iron-rich (lentils, beef, dark leafy greens), warming, vitamin C for iron absorption, anti-inflammatory (ginger, turmeric, omega-3s).
+- Follicular: light fresh foods, fermented (yogurt, kimchi), leafy greens, sprouted grains, seeds (flax, pumpkin).
+- Ovulation: cruciferous vegetables, B vitamins, antioxidant berries, fiber.
+- Luteal: complex carbs (sweet potato, quinoa, oats) for serotonin, magnesium-rich (dark chocolate, leafy greens), B6, calcium.`
+      : lifeStage === "postpartum"
+        ? `Build ONE phase named "Postpartum". Do NOT mention cycle phases, ovulation, luteal, follicular, or menstruation anywhere. Focus on: collagen-rich foods, iron, healthy fats for hormone production, blood-sugar-stabilizing meals, B-vitamins, omega-3s, easy one-handed meals (10-20 min). Do NOT assume breastfeeding.`
+        : `Build ONE phase named "Menopause". Do NOT mention cycle phases anywhere. Focus on: phytoestrogens (flax, soy, sesame), bone health (calcium, vit D, magnesium), cardiovascular (high fiber, omega-3s, lean protein), blood-sugar stability, cognitive support (berries, fatty fish, nuts).`;
+
+    const systemPrompt = `You are Logan — a knowledgeable, grounded friend who gives food guidance backed by hormonal nutrition science.
+
+Your job: produce a SHORT, SCANNABLE phase-based food guide. NOT a full menu. NOT a calendar. Just smart food choices and meal ideas the user can pull from.
+
+For EACH phase, return:
+- focus: 1-2 sentence plain-English explanation of what the body needs nutritionally during this phase.
+- recommended_foods: 8-14 specific food names (single ingredients or short phrases like "wild salmon", "pumpkin seeds", "dark leafy greens"). No quantities.
+- avoid_foods: 0-5 foods to go easy on during this phase (optional, only when meaningful — e.g. heavy alcohol in luteal). Empty array if nothing.
+- meal_ideas: 5-8 concrete meal ideas with name, slot ("breakfast" | "lunch" | "dinner" | "snack" | "anytime"), why (1 sentence why this meal helps THIS phase), and 4-7 ingredient names.
+
+${phaseGuidance}
+
+User dietary context:
+${dietContext}
+
+Tone: warm, grounded, no fluff, no emojis in any returned text fields. Be specific (e.g. "Sweet potato + black bean bowl" not "Bowl"). Meal names under 70 chars.
+
+Write a 2-sentence intro that explains the guide's logic in Logan's voice.`;
+
+    const revisionBlock: string[] = [];
+    if (parentPlan?.phases?.length) {
+      revisionBlock.push(`This is a REVISION. Keep what worked, change only what the user asked for.\nPrevious phases: ${parentPlan.phases.map(p => p.name).join(", ")}.`);
+    }
+    if (excludeIngredients.length) {
+      revisionBlock.push(`HARD EXCLUSIONS — these must NOT appear anywhere: ${excludeIngredients.join(", ")}.`);
+    }
+    if (feedbackText.trim()) {
+      revisionBlock.push(`USER FEEDBACK to address:\n"${feedbackText.trim()}"`);
+    }
+
+    const userPrompt = `Build the food guide. Phases to cover: ${phaseList.map(p => `${p.name}${p.days ? ` (${p.days})` : ""}`).join(", ")}.\n\n${revisionBlock.join("\n\n")}\n\nReturn structured JSON via the build_food_guide tool.`;
+
+    const aiResponse = await fetch(
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${lovableApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-pro",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "build_food_guide",
+                description: "Return the structured phase-based food guide.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    intro: { type: "string" },
+                    phases: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          name: { type: "string" },
+                          cycle_days: { type: "string" },
+                          focus: { type: "string" },
+                          recommended_foods: { type: "array", items: { type: "string" } },
+                          avoid_foods: { type: "array", items: { type: "string" } },
+                          meal_ideas: {
+                            type: "array",
+                            items: {
+                              type: "object",
+                              properties: {
+                                name: { type: "string" },
+                                slot: { type: "string" },
+                                why: { type: "string" },
+                                ingredients: { type: "array", items: { type: "string" } },
+                              },
+                              required: ["name", "slot", "why", "ingredients"],
+                              additionalProperties: false,
+                            },
+                          },
+                        },
+                        required: ["name", "cycle_days", "focus", "recommended_foods", "avoid_foods", "meal_ideas"],
+                        additionalProperties: false,
+                      },
+                    },
+                  },
+                  required: ["intro", "phases"],
+                  additionalProperties: false,
+                },
+              },
+            },
+          ],
+          tool_choice: { type: "function", function: { name: "build_food_guide" } },
+        }),
+      },
+    );
+
+    if (!aiResponse.ok) {
+      const errText = await aiResponse.text();
+      throw new Error(`AI gateway ${aiResponse.status}: ${errText.slice(0, 200)}`);
+    }
+
+    const aiData = await aiResponse.json();
+    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall?.function?.arguments) {
+      throw new Error("AI did not return structured food guide");
+    }
+
+    const planData: MealPlanData = JSON.parse(toolCall.function.arguments);
+    if (!planData.phases?.length) {
+      throw new Error("AI returned no phases");
+    }
+
+    await supabase
+      .from("user_resources")
+      .update({
+        status: "ready",
+        pdf_path: null,
+        metadata: {
+          life_stage: lifeStage,
+          cycle_length_days: cycleLengthDays,
+          dietary_prefs: dietaryPrefs,
+          intro: planData.intro,
+          preview: {
+            intro: planData.intro,
+            phases: planData.phases,
+          },
+        },
+      })
+      .eq("id", resourceId);
+
+    console.log(`Food guide ${resourceId} ready`);
+  } catch (err) {
+    console.error("Generation failed:", err);
+    await supabase
+      .from("user_resources")
+      .update({
+        status: "failed",
+        error_message: err instanceof Error ? err.message : String(err),
+      })
+      .eq("id", resourceId);
+  }
+}
