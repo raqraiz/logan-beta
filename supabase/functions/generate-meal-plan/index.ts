@@ -185,14 +185,15 @@ serve(async (req) => {
     const startCycleDay = getCycleDay(lastPeriodStart, cycleLengthDays);
     const lifeStage = participant?.life_stage || "cycling";
 
-    // Personalized title — e.g. "Raquella's 3-Day Luteal Menu"
+    // Personalized title — phase-based guide
     const firstName = participant?.full_name?.split(" ")?.[0]?.trim() || null;
-    const startingPhase = lifeStage === "cycling"
-      ? getPhaseForDay(startCycleDay, cycleLengthDays)
-      : (lifeStage === "postpartum" ? "Postpartum" : lifeStage === "menopause" ? "Menopause" : "Cyclical");
-    const lengthLabel = effectiveLengthDays === 1 ? "1-Day" : effectiveLengthDays === 3 ? "3-Day" : "1-Week";
+    const guideKind = lifeStage === "postpartum"
+      ? "Postpartum Food Guide"
+      : lifeStage === "menopause"
+        ? "Menopause Food Guide"
+        : "Cycle Food Guide";
     const possessive = firstName ? `${firstName}'${firstName.endsWith("s") ? "" : "s"} ` : "";
-    const baseTitle = `${possessive}${lengthLabel} ${startingPhase} Menu`;
+    const baseTitle = `${possessive}${guideKind}`;
     const title = parentResource ? `${baseTitle} (revised)` : baseTitle;
 
     // Insert resource row immediately (status: generating)
@@ -205,7 +206,6 @@ serve(async (req) => {
         status: "generating",
         style,
         metadata: {
-          length_days: effectiveLengthDays,
           start_cycle_day: startCycleDay,
           cycle_length_days: cycleLengthDays,
           life_stage: lifeStage,
@@ -230,7 +230,7 @@ serve(async (req) => {
 
     // Drop a chat message that anchors the ResourceCard inline in the chat.
     const chatBlurb = parentResource
-      ? `Reworking your meal plan with your tweaks — new version coming up.`
+      ? `Reworking your food guide with your tweaks — new version coming up.`
       : `Building your ${title.toLowerCase()} now — I'll drop it here when it's ready.`;
     await supabase.from("chat_messages").insert({
       user_id: user.id,
@@ -244,16 +244,14 @@ serve(async (req) => {
     });
 
     // Kick off generation in the background (don't block the response)
-    const generationTask = generateAndUploadPdf({
+    const generationTask = generatePhaseGuide({
       supabase,
       lovableApiKey,
       userId: user.id,
       resourceId: resource.id,
       participant,
-      lengthDays: effectiveLengthDays,
       style,
       dietaryPrefs,
-      startCycleDay,
       cycleLengthDays,
       lifeStage,
       title,
