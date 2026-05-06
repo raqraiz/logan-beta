@@ -112,9 +112,6 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const lengthDays: LengthDays = [1, 3, 7].includes(body.lengthDays)
-      ? body.lengthDays
-      : 7;
     const style: Style = body.style === "light" ? "light" : "dark";
     const dietaryPrefs = body.dietaryPrefs || {};
 
@@ -130,7 +127,6 @@ serve(async (req) => {
     // Load parent plan for revision (ownership enforced by user-scoped client + RLS)
     let parentPlan: MealPlanData | null = null;
     let parentResource: any = null;
-    let revisionLengthDays: LengthDays | null = null;
     if (parentResourceId) {
       const { data: pr } = await userClient
         .from("user_resources")
@@ -140,13 +136,8 @@ serve(async (req) => {
       if (pr && pr.user_id === user.id) {
         parentResource = pr;
         parentPlan = pr.metadata?.preview ?? null;
-        if ([1, 3, 7].includes(pr.metadata?.length_days)) {
-          revisionLengthDays = pr.metadata.length_days as LengthDays;
-        }
       }
     }
-    // When revising, inherit length from the parent so the structure matches
-    const effectiveLengthDays: LengthDays = revisionLengthDays ?? lengthDays;
 
     // Permanently skip excluded ingredients going forward
     if (excludeIngredients.length) {
