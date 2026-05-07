@@ -993,9 +993,7 @@ export function ProfilesTab() {
                     </div>
                   </TabsContent>
                   <TabsContent value="ask" className="mt-0">
-                    <div ref={previewAskScrollRef} className="px-2 pb-4 max-h-[70vh] overflow-y-auto" onLoad={() => {
-                      // noop
-                    }}>
+                    <div ref={previewAskScrollRef} className="px-2 pb-4 max-h-[70vh] overflow-y-auto">
                       {loadingMessages ? (
                         <div className="flex items-center justify-center py-8">
                           <RefreshCw className="w-6 h-6 animate-spin text-primary" />
