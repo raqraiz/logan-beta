@@ -995,8 +995,41 @@ export function ProfilesTab() {
                 postpartumStartDate: participant?.postpartum_start_date || undefined,
               } : null;
 
+              const scrollAskToLastSeen = () => {
+                if (!selectedProfile || chatMessages.length === 0) return;
+                const key = `admin-last-seen-msg:${selectedProfile.id}`;
+                const lastSeenId = localStorage.getItem(key);
+                const latestId = chatMessages[chatMessages.length - 1].id;
+                const seenIndex = lastSeenId ? chatMessages.findIndex((m) => m.id === lastSeenId) : -1;
+                const targetId = (lastSeenId && seenIndex >= 0 && seenIndex < chatMessages.length - 1) ? lastSeenId : latestId;
+
+                const attempt = (tries: number) => {
+                  const target = document.getElementById(`preview-msg-${targetId}`);
+                  if (!target) {
+                    if (tries > 0) setTimeout(() => attempt(tries - 1), 80);
+                    return;
+                  }
+                  // Find the nearest scrollable ancestor
+                  let el: HTMLElement | null = target.parentElement;
+                  while (el && el !== document.body) {
+                    const style = getComputedStyle(el);
+                    const canScroll = /(auto|scroll|overlay)/.test(style.overflowY) && el.scrollHeight > el.clientHeight;
+                    if (canScroll) break;
+                    el = el.parentElement;
+                  }
+                  if (el && el !== document.body) {
+                    const offset = target.offsetTop - el.offsetTop - el.clientHeight / 2 + target.clientHeight / 2;
+                    el.scrollTo({ top: Math.max(0, offset), behavior: "smooth" });
+                  } else {
+                    target.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }
+                  try { localStorage.setItem(key, latestId); } catch {}
+                };
+                requestAnimationFrame(() => attempt(8));
+              };
+
               return (
-                <Tabs defaultValue="home" className="w-full">
+                <Tabs defaultValue="home" className="w-full" onValueChange={(v) => { if (v === "ask") scrollAskToLastSeen(); }}>
                   <TabsList className="grid grid-cols-3 mx-4 mb-2">
                     <TabsTrigger value="home" className="gap-2">
                       <Home className="w-4 h-4" />
