@@ -968,7 +968,7 @@ export type Database = {
           channel?: string | null
           content?: string | null
           created_at?: string | null
-          display_name?: string | null
+          display_name?: never
           id?: string | null
           is_anonymous?: boolean | null
           is_pinned?: boolean | null
@@ -978,7 +978,7 @@ export type Database = {
           channel?: string | null
           content?: string | null
           created_at?: string | null
-          display_name?: string | null
+          display_name?: never
           id?: string | null
           is_anonymous?: boolean | null
           is_pinned?: boolean | null
