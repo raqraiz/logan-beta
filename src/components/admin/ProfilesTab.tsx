@@ -129,6 +129,7 @@ export function ProfilesTab() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const previewAskScrollRef = useRef<HTMLDivElement>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [userFeedback, setUserFeedback] = useState<UserFeedback[]>([]);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
@@ -411,6 +412,35 @@ export function ProfilesTab() {
     const raf = requestAnimationFrame(() => setTimeout(tick, 50));
     return () => cancelAnimationFrame(raf);
   }, [chatMessages, selectedProfile?.id]);
+
+  // Scroll preview "Ask" tab to admin's last-seen message
+  useEffect(() => {
+    if (!showHomePreview || chatMessages.length === 0 || !selectedProfile) return;
+    const key = `admin-last-seen-msg:${selectedProfile.id}`;
+    const lastSeenId = typeof window !== "undefined" ? localStorage.getItem(key) : null;
+    const latestId = chatMessages[chatMessages.length - 1].id;
+
+    const tick = () => {
+      const container = previewAskScrollRef.current;
+      if (!container) return;
+      const seenIndex = lastSeenId ? chatMessages.findIndex((m) => m.id === lastSeenId) : -1;
+      if (lastSeenId && seenIndex >= 0 && seenIndex < chatMessages.length - 1) {
+        const target = document.getElementById(`preview-msg-${lastSeenId}`);
+        if (target && container.contains(target)) {
+          const offset = target.offsetTop - container.offsetTop - container.clientHeight / 2 + target.clientHeight / 2;
+          container.scrollTo({ top: Math.max(0, offset), behavior: "smooth" });
+        } else {
+          container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+        }
+      } else {
+        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+      }
+      try { localStorage.setItem(key, latestId); } catch {}
+    };
+
+    const t = setTimeout(tick, 200);
+    return () => clearTimeout(t);
+  }, [showHomePreview, chatMessages, selectedProfile?.id]);
 
   const getCycleData = (participant: { last_period_start: string | null; cycle_length_days: number | null; timezone?: string | null }) => {
     return calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "Asia/Jerusalem");
@@ -992,7 +1022,7 @@ export function ProfilesTab() {
                     </div>
                   </TabsContent>
                   <TabsContent value="ask" className="mt-0">
-                    <div className="px-2 pb-4 max-h-[70vh] overflow-y-auto">
+                    <div ref={previewAskScrollRef} className="px-2 pb-4 max-h-[70vh] overflow-y-auto">
                       {loadingMessages ? (
                         <div className="flex items-center justify-center py-8">
                           <RefreshCw className="w-6 h-6 animate-spin text-primary" />
@@ -1009,7 +1039,7 @@ export function ProfilesTab() {
                             const metadata = msg.metadata as MessageMetadata | null;
                             const hasCycleVisual = metadata?.has_cycle_visual;
                             return (
-                              <div key={msg.id} className={cn("max-w-[88%]", isAssistant ? "mr-auto" : "ml-auto")}>
+                              <div key={msg.id} id={`preview-msg-${msg.id}`} className={cn("max-w-[88%]", isAssistant ? "mr-auto" : "ml-auto")}>
                                 <div className={cn(
                                   "rounded-2xl p-3",
                                   isAssistant ? "bg-muted text-foreground" : "bg-primary text-primary-foreground"
