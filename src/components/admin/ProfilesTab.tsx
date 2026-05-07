@@ -385,21 +385,31 @@ export function ProfilesTab() {
     const lastSeenId = typeof window !== "undefined" ? localStorage.getItem(key) : null;
     const latestId = chatMessages[chatMessages.length - 1].id;
 
-    requestAnimationFrame(() => {
+    const scrollWithin = (target: HTMLElement | null) => {
+      const end = messagesEndRef.current;
+      const container = end?.parentElement as HTMLElement | null;
+      if (!container) return;
+      if (target && container.contains(target)) {
+        const offset = target.offsetTop - container.offsetTop - container.clientHeight / 2 + target.clientHeight / 2;
+        container.scrollTo({ top: Math.max(0, offset), behavior: "smooth" });
+      } else {
+        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+      }
+    };
+
+    const tick = () => {
       const seenIndex = lastSeenId ? chatMessages.findIndex((m) => m.id === lastSeenId) : -1;
       if (lastSeenId && seenIndex >= 0 && seenIndex < chatMessages.length - 1) {
-        const el = document.getElementById(`admin-msg-${lastSeenId}`);
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
-        } else {
-          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-        }
+        scrollWithin(document.getElementById(`admin-msg-${lastSeenId}`));
       } else {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        scrollWithin(null);
       }
-      // Mark latest as seen now that admin viewed it
       try { localStorage.setItem(key, latestId); } catch {}
-    });
+    };
+
+    // Wait a frame for layout, then scroll
+    const raf = requestAnimationFrame(() => setTimeout(tick, 50));
+    return () => cancelAnimationFrame(raf);
   }, [chatMessages, selectedProfile?.id]);
 
   const getCycleData = (participant: { last_period_start: string | null; cycle_length_days: number | null; timezone?: string | null }) => {
