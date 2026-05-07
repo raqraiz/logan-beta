@@ -413,6 +413,35 @@ export function ProfilesTab() {
     return () => cancelAnimationFrame(raf);
   }, [chatMessages, selectedProfile?.id]);
 
+  // Scroll preview "Ask" tab to admin's last-seen message
+  useEffect(() => {
+    if (!showHomePreview || chatMessages.length === 0 || !selectedProfile) return;
+    const key = `admin-last-seen-msg:${selectedProfile.id}`;
+    const lastSeenId = typeof window !== "undefined" ? localStorage.getItem(key) : null;
+    const latestId = chatMessages[chatMessages.length - 1].id;
+
+    const tick = () => {
+      const container = previewAskScrollRef.current;
+      if (!container) return;
+      const seenIndex = lastSeenId ? chatMessages.findIndex((m) => m.id === lastSeenId) : -1;
+      if (lastSeenId && seenIndex >= 0 && seenIndex < chatMessages.length - 1) {
+        const target = document.getElementById(`preview-msg-${lastSeenId}`);
+        if (target && container.contains(target)) {
+          const offset = target.offsetTop - container.offsetTop - container.clientHeight / 2 + target.clientHeight / 2;
+          container.scrollTo({ top: Math.max(0, offset), behavior: "smooth" });
+        } else {
+          container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+        }
+      } else {
+        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+      }
+      try { localStorage.setItem(key, latestId); } catch {}
+    };
+
+    const t = setTimeout(tick, 200);
+    return () => clearTimeout(t);
+  }, [showHomePreview, chatMessages, selectedProfile?.id]);
+
   const getCycleData = (participant: { last_period_start: string | null; cycle_length_days: number | null; timezone?: string | null }) => {
     return calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "Asia/Jerusalem");
   };
