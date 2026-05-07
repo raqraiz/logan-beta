@@ -378,10 +378,29 @@ export function ProfilesTab() {
     }
   };
 
-  // Auto-scroll to bottom of messages
+  // Scroll to admin's last-seen message for this user (or bottom if none/all seen)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages]);
+    if (chatMessages.length === 0 || !selectedProfile) return;
+    const key = `admin-last-seen-msg:${selectedProfile.id}`;
+    const lastSeenId = typeof window !== "undefined" ? localStorage.getItem(key) : null;
+    const latestId = chatMessages[chatMessages.length - 1].id;
+
+    requestAnimationFrame(() => {
+      const seenIndex = lastSeenId ? chatMessages.findIndex((m) => m.id === lastSeenId) : -1;
+      if (lastSeenId && seenIndex >= 0 && seenIndex < chatMessages.length - 1) {
+        const el = document.getElementById(`admin-msg-${lastSeenId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else {
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }
+      } else {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }
+      // Mark latest as seen now that admin viewed it
+      try { localStorage.setItem(key, latestId); } catch {}
+    });
+  }, [chatMessages, selectedProfile?.id]);
 
   const getCycleData = (participant: { last_period_start: string | null; cycle_length_days: number | null; timezone?: string | null }) => {
     return calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "Asia/Jerusalem");
@@ -747,6 +766,7 @@ export function ProfilesTab() {
                   return (
                     <div
                       key={msg.id}
+                      id={`admin-msg-${msg.id}`}
                       className={cn(
                         "max-w-[85%]",
                         isAssistant ? "ml-auto" : "mr-auto"
