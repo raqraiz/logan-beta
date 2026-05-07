@@ -379,41 +379,7 @@ export function ProfilesTab() {
     }
   };
 
-  // Scroll to admin's last-seen message for this user (or bottom if none/all seen)
-  useEffect(() => {
-    if (chatMessages.length === 0 || !selectedProfile) return;
-    const key = `admin-last-seen-msg:${selectedProfile.id}`;
-    const lastSeenId = typeof window !== "undefined" ? localStorage.getItem(key) : null;
-    const latestId = chatMessages[chatMessages.length - 1].id;
-
-    const scrollWithin = (target: HTMLElement | null) => {
-      const end = messagesEndRef.current;
-      const container = end?.parentElement as HTMLElement | null;
-      if (!container) return;
-      if (target && container.contains(target)) {
-        const offset = target.offsetTop - container.offsetTop - container.clientHeight / 2 + target.clientHeight / 2;
-        container.scrollTo({ top: Math.max(0, offset), behavior: "smooth" });
-      } else {
-        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
-      }
-    };
-
-    const tick = () => {
-      const seenIndex = lastSeenId ? chatMessages.findIndex((m) => m.id === lastSeenId) : -1;
-      if (lastSeenId && seenIndex >= 0 && seenIndex < chatMessages.length - 1) {
-        scrollWithin(document.getElementById(`admin-msg-${lastSeenId}`));
-      } else {
-        scrollWithin(null);
-      }
-      try { localStorage.setItem(key, latestId); } catch {}
-    };
-
-    // Wait a frame for layout, then scroll
-    const raf = requestAnimationFrame(() => setTimeout(tick, 50));
-    return () => cancelAnimationFrame(raf);
-  }, [chatMessages, selectedProfile?.id]);
-
-  // Scroll preview "Ask" tab to admin's last-seen message
+  // Scroll preview "Ask" tab to admin's last-seen message (only when opened via Ask preview)
   useEffect(() => {
     if (!showHomePreview || chatMessages.length === 0 || !selectedProfile) return;
     const key = `admin-last-seen-msg:${selectedProfile.id}`;
