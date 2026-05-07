@@ -766,6 +766,7 @@ export function ProfilesTab() {
                   return (
                     <div
                       key={msg.id}
+                      id={`admin-msg-${msg.id}`}
                       className={cn(
                         "max-w-[85%]",
                         isAssistant ? "ml-auto" : "mr-auto"
