@@ -1010,7 +1010,7 @@ export function ProfilesTab() {
                             const metadata = msg.metadata as MessageMetadata | null;
                             const hasCycleVisual = metadata?.has_cycle_visual;
                             return (
-                              <div key={msg.id} className={cn("max-w-[88%]", isAssistant ? "mr-auto" : "ml-auto")}>
+                              <div key={msg.id} id={`preview-msg-${msg.id}`} className={cn("max-w-[88%]", isAssistant ? "mr-auto" : "ml-auto")}>
                                 <div className={cn(
                                   "rounded-2xl p-3",
                                   isAssistant ? "bg-muted text-foreground" : "bg-primary text-primary-foreground"
