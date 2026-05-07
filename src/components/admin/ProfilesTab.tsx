@@ -129,6 +129,7 @@ export function ProfilesTab() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const previewAskScrollRef = useRef<HTMLDivElement>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [userFeedback, setUserFeedback] = useState<UserFeedback[]>([]);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
