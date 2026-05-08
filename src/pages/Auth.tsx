@@ -283,18 +283,12 @@ const Auth = () => {
               </div>
             )}
 
-            {signupConfirmationSent && view === "signup" && (
-              <div className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
-                Check your inbox for the Logan confirmation link. You can sign in after confirming.
-              </div>
-            )}
-
             <Button 
               type="submit" 
               className="w-full h-14 rounded-xl text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow" 
-              disabled={isLoading || signupConfirmationSent}
+              disabled={isLoading}
             >
-              {signupConfirmationSent ? "Confirmation sent" : getButtonText()}
+              {getButtonText()}
             </Button>
           </form>
 
