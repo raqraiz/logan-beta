@@ -43,6 +43,21 @@ export function CycleCorrelationsWidget({
   const [activeTracker, setActiveTracker] = useState<Tracker | null>(null);
   const [logging, setLogging] = useState<string | null>(null);
 
+  const [logDate, setLogDate] = useState<Date>(() => new Date());
+  const [calendarOpen, setCalendarOpen] = useState(false);
+
+  const isToday = useMemo(() => logDate.toDateString() === new Date().toDateString(), [logDate]);
+
+  const effectiveCycleInfo = useMemo(() => {
+    if (isNonCycling) return { cycleDay: null as number | null, phase: null as string | null };
+    if (isToday) return { cycleDay, phase: cyclePhase };
+    if (lastPeriodStart && cycleLengthDays) {
+      const info = calculateCycleInfo(lastPeriodStart, cycleLengthDays, undefined, logDate);
+      if (info) return { cycleDay: info.cycleDay, phase: info.phase };
+    }
+    return { cycleDay: null, phase: null };
+  }, [isToday, isNonCycling, cycleDay, cyclePhase, lastPeriodStart, cycleLengthDays, logDate]);
+
   const load = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase
@@ -61,18 +76,22 @@ export function CycleCorrelationsWidget({
 
   const quickLog = async (trackerId: string, intensity: number) => {
     setLogging(trackerId);
+    const loggedAt = isToday
+      ? new Date().toISOString()
+      : new Date(Date.UTC(logDate.getFullYear(), logDate.getMonth(), logDate.getDate(), 12, 0, 0)).toISOString();
     const { error } = await supabase.from("tracker_logs").insert({
       user_id: userId,
       tracker_id: trackerId,
       intensity,
-      cycle_phase: isNonCycling ? null : cyclePhase,
-      cycle_day: isNonCycling ? null : cycleDay,
+      cycle_phase: effectiveCycleInfo.phase,
+      cycle_day: effectiveCycleInfo.cycleDay,
+      logged_at: loggedAt,
     });
     setLogging(null);
     if (error) {
       toast.error("Couldn't save log");
     } else {
-      toast.success("Logged");
+      toast.success(isToday ? "Logged" : `Logged for ${format(logDate, "MMM d")}`);
     }
   };
 
