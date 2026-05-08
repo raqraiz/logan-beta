@@ -147,9 +147,16 @@ export function CycleAnalytics({
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Cycle Length</h3>
               <div className="grid grid-cols-3 gap-3">
                 <StatCard label="Current" value={`${currentCycleLength}d`} />
-                <StatCard label="Average" value={avgLength ? `${avgLength}d` : "—"} />
+                <StatCard label="Typical" value={avgLength ? `${avgLength}d` : "—"} />
                 <StatCard label="Variance" value={variance !== null ? `±${variance}d` : "—"} />
               </div>
+              {lengths.length > 0 && (
+                <p className="text-[11px] text-muted-foreground mt-2">
+                  Based on {lengths.length} tracked cycle{lengths.length !== 1 ? "s" : ""}
+                  {minLength !== null && maxLength !== null && minLength !== maxLength ? ` · range ${minLength}–${maxLength}d` : ""}
+                  {excludedCount > 0 ? ` · excluded ${excludedCount} outlier${excludedCount !== 1 ? "s" : ""} (>45d)` : ""}
+                </p>
+              )}
             </div>
 
             <Separator />
