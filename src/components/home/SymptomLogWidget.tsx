@@ -1,12 +1,16 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import { Check, ChevronDown, ChevronUp, Activity, Plus, Sparkles, Pencil, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Activity, Plus, Sparkles, Pencil, Trash2, X, CalendarIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 
 const SYMPTOM_OPTIONS = [
   // Physical
@@ -32,6 +36,9 @@ interface SymptomLogWidgetProps {
   userId: string;
   cycleDay?: number;
   phase?: string;
+  lastPeriodStart?: string;
+  cycleLengthDays?: number;
+  isNonCycling?: boolean;
   onLogged?: () => void;
 }
 
@@ -42,13 +49,15 @@ interface CommunitySymptom {
   created_at: string;
 }
 
-export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomLogWidgetProps) {
+export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cycleLengthDays, isNonCycling, onLogged }: SymptomLogWidgetProps) {
   const [expanded, setExpanded] = useState(true);
   const [selected, setSelected] = useState<SymptomEntry[]>([]);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [todayCount, setTodayCount] = useState(0);
   const [lastLogTime, setLastLogTime] = useState<string | null>(null);
+  const [logDate, setLogDate] = useState<Date>(() => new Date());
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [communitySymptoms, setCommunitySymptoms] = useState<CommunitySymptom[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newSymptom, setNewSymptom] = useState("");
@@ -185,27 +194,54 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
     setSelected(prev => prev.map(s => s.name === name ? { ...s, severity } : s));
   }, []);
 
+  const isToday = useMemo(() => {
+    const t = new Date();
+    return logDate.toDateString() === t.toDateString();
+  }, [logDate]);
+
+  // Recompute cycle day/phase for the selected date when backdating
+  const effectiveCycleInfo = useMemo(() => {
+    if (isNonCycling) return { cycleDay: null as number | null, phase: null as string | null };
+    if (isToday) return { cycleDay: cycleDay ?? null, phase: phase ?? null };
+    if (lastPeriodStart && cycleLengthDays) {
+      const info = calculateCycleInfo(lastPeriodStart, cycleLengthDays, undefined, logDate);
+      if (info) return { cycleDay: info.cycleDay, phase: info.phase };
+    }
+    return { cycleDay: null, phase: null };
+  }, [isToday, isNonCycling, cycleDay, phase, lastPeriodStart, cycleLengthDays, logDate]);
+
   const handleSubmit = async () => {
     if (selected.length === 0 && !notes.trim()) return;
     setSaving(true);
+
+    // Build logged_at: today => now; backdated => noon UTC of selected date
+    const loggedAt = isToday
+      ? new Date().toISOString()
+      : new Date(Date.UTC(logDate.getFullYear(), logDate.getMonth(), logDate.getDate(), 12, 0, 0)).toISOString();
 
     const { error } = await supabase.from("symptom_logs").insert({
       user_id: userId,
       symptoms: selected as any,
       notes: notes.trim() || null,
-      cycle_day: cycleDay || null,
-      cycle_phase: phase || null,
+      cycle_day: effectiveCycleInfo.cycleDay,
+      cycle_phase: effectiveCycleInfo.phase,
+      logged_at: loggedAt,
     });
 
     if (error) {
       toast({ title: "Failed to save", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Symptoms logged", description: `${selected.length} symptom${selected.length !== 1 ? "s" : ""} recorded` });
+      toast({
+        title: isToday ? "Symptoms logged" : `Logged for ${format(logDate, "MMM d")}`,
+        description: `${selected.length} symptom${selected.length !== 1 ? "s" : ""} recorded`,
+      });
       setSelected([]);
       setNotes("");
-      
-      setTodayCount(prev => prev + 1);
-      setLastLogTime(new Date().toISOString());
+      if (isToday) {
+        setTodayCount(prev => prev + 1);
+        setLastLogTime(new Date().toISOString());
+      }
+      setLogDate(new Date());
       onLogged?.();
     }
     setSaving(false);
@@ -234,8 +270,53 @@ export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomL
       </div>
 
       <div className="px-4 pb-4 space-y-3 border-t border-border/20">
+          {/* Date picker — log for today or backdate */}
+          <div className="pt-3 flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50">Logging for</span>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 text-xs px-2.5"
+                >
+                  <CalendarIcon className="w-3 h-3" />
+                  {isToday ? "Today" : format(logDate, "EEE, MMM d")}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={logDate}
+                  onSelect={(d) => {
+                    if (d) {
+                      setLogDate(d);
+                      setCalendarOpen(false);
+                    }
+                  }}
+                  disabled={(d) => d > new Date() || d < new Date(Date.now() - 1000 * 60 * 60 * 24 * 90)}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            {!isToday && (
+              <button
+                onClick={() => setLogDate(new Date())}
+                className="text-[10px] text-muted-foreground/70 hover:text-foreground underline underline-offset-2"
+              >
+                reset
+              </button>
+            )}
+            {!isToday && !isNonCycling && effectiveCycleInfo.cycleDay && (
+              <span className="text-[10px] text-muted-foreground ml-auto">
+                Day {effectiveCycleInfo.cycleDay} · {effectiveCycleInfo.phase}
+              </span>
+            )}
+          </div>
+
           {/* Symptom chips */}
-          <div className="pt-3">
+          <div>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50 mb-2">
               How are you feeling?
             </p>

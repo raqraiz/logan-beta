@@ -434,6 +434,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
                   userId={userId}
                   cycleDay={isNonCycling ? undefined : cycleData.cycleDay}
                   phase={isNonCycling ? stagePhase : cycleData.phase}
+                  lastPeriodStart={cycleData.lastPeriodStart}
+                  cycleLengthDays={cycleData.cycleLengthDays}
+                  isNonCycling={!!isNonCycling}
                 />
               </div>
             </div>

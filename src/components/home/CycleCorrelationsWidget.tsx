@@ -1,10 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, TrendingUp, ChevronRight, Sparkles } from "lucide-react";
+import { Plus, TrendingUp, ChevronRight, Sparkles, CalendarIcon } from "lucide-react";
 import { CycleCorrelationDetail } from "./CycleCorrelationDetail";
 import { AddTrackerDialog } from "./AddTrackerDialog";
 import { toast } from "sonner";
+import { calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface Tracker {
   id: string;
@@ -38,6 +43,21 @@ export function CycleCorrelationsWidget({
   const [activeTracker, setActiveTracker] = useState<Tracker | null>(null);
   const [logging, setLogging] = useState<string | null>(null);
 
+  const [logDate, setLogDate] = useState<Date>(() => new Date());
+  const [calendarOpen, setCalendarOpen] = useState(false);
+
+  const isToday = useMemo(() => logDate.toDateString() === new Date().toDateString(), [logDate]);
+
+  const effectiveCycleInfo = useMemo(() => {
+    if (isNonCycling) return { cycleDay: null as number | null, phase: null as string | null };
+    if (isToday) return { cycleDay, phase: cyclePhase };
+    if (lastPeriodStart && cycleLengthDays) {
+      const info = calculateCycleInfo(lastPeriodStart, cycleLengthDays, undefined, logDate);
+      if (info) return { cycleDay: info.cycleDay, phase: info.phase };
+    }
+    return { cycleDay: null, phase: null };
+  }, [isToday, isNonCycling, cycleDay, cyclePhase, lastPeriodStart, cycleLengthDays, logDate]);
+
   const load = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase
@@ -56,18 +76,22 @@ export function CycleCorrelationsWidget({
 
   const quickLog = async (trackerId: string, intensity: number) => {
     setLogging(trackerId);
+    const loggedAt = isToday
+      ? new Date().toISOString()
+      : new Date(Date.UTC(logDate.getFullYear(), logDate.getMonth(), logDate.getDate(), 12, 0, 0)).toISOString();
     const { error } = await supabase.from("tracker_logs").insert({
       user_id: userId,
       tracker_id: trackerId,
       intensity,
-      cycle_phase: isNonCycling ? null : cyclePhase,
-      cycle_day: isNonCycling ? null : cycleDay,
+      cycle_phase: effectiveCycleInfo.phase,
+      cycle_day: effectiveCycleInfo.cycleDay,
+      logged_at: loggedAt,
     });
     setLogging(null);
     if (error) {
       toast.error("Couldn't save log");
     } else {
-      toast.success("Logged");
+      toast.success(isToday ? "Logged" : `Logged for ${format(logDate, "MMM d")}`);
     }
   };
 
@@ -113,6 +137,40 @@ export function CycleCorrelationsWidget({
           </div>
         ) : (
           <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">Logging for</span>
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs px-2.5">
+                    <CalendarIcon className="w-3 h-3" />
+                    {isToday ? "Today" : format(logDate, "EEE, MMM d")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={logDate}
+                    onSelect={(d) => { if (d) { setLogDate(d); setCalendarOpen(false); } }}
+                    disabled={(d) => d > new Date() || d < new Date(Date.now() - 1000 * 60 * 60 * 24 * 90)}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+              {!isToday && (
+                <button
+                  onClick={() => setLogDate(new Date())}
+                  className="text-[10px] text-muted-foreground/70 hover:text-foreground underline underline-offset-2"
+                >
+                  reset
+                </button>
+              )}
+              {!isToday && !isNonCycling && effectiveCycleInfo.cycleDay && (
+                <span className="text-[10px] text-muted-foreground ml-auto">
+                  Day {effectiveCycleInfo.cycleDay} · {effectiveCycleInfo.phase}
+                </span>
+              )}
+            </div>
             {trackers.map((t) => (
               <div
                 key={t.id}
@@ -129,9 +187,6 @@ export function CycleCorrelationsWidget({
                   <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
                 </button>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-1">
-                    Today
-                  </span>
                   {QUICK_INTENSITIES.map((i) => (
                     <button
                       key={i}
