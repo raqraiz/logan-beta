@@ -78,6 +78,8 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
   const [addingSymptom, setAddingSymptom] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [search, setSearch] = useState("");
+  const [collapsedCats, setCollapsedCats] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!userId) return;
