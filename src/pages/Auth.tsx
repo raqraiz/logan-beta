@@ -33,6 +33,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [signupConfirmationSent, setSignupConfirmationSent] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -71,6 +72,7 @@ const Auth = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (signupConfirmationSent && view === "signup") return;
     setIsLoading(true);
 
     try {
@@ -157,15 +159,21 @@ const Auth = () => {
                 description: "This email is already registered. Try logging in instead.",
                 variant: "destructive",
               });
+            } else if (error.code === "over_email_send_rate_limit" || error.message.toLowerCase().includes("security purposes")) {
+              setSignupConfirmationSent(true);
+              toast({
+                title: "Check your email",
+                description: "Your account request is already in progress. Use the confirmation link when it arrives.",
+              });
             } else {
               throw error;
             }
           } else {
+            setSignupConfirmationSent(true);
             toast({
-              title: "Account created! 🎉",
-              description: "You can now log in to the admin dashboard.",
+              title: "Check your email",
+              description: "I sent your confirmation link.",
             });
-            setView("login");
           }
         }
       }
@@ -238,7 +246,7 @@ const Auth = () => {
                     type="email"
                     placeholder="Email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => { setEmail(e.target.value); setSignupConfirmationSent(false); }}
                     className="h-14 bg-input border-border text-foreground placeholder:text-muted-foreground rounded-xl"
                   />
                 </div>
@@ -285,12 +293,18 @@ const Auth = () => {
               </div>
             )}
 
+            {signupConfirmationSent && view === "signup" && (
+              <div className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
+                Check your inbox for the Logan confirmation link. You can sign in after confirming.
+              </div>
+            )}
+
             <Button 
               type="submit" 
               className="w-full h-14 rounded-xl text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow" 
-              disabled={isLoading}
+              disabled={isLoading || signupConfirmationSent}
             >
-              {getButtonText()}
+              {signupConfirmationSent ? "Confirmation sent" : getButtonText()}
             </Button>
           </form>
 
