@@ -74,8 +74,8 @@ export function SettingsDialog({ open, onOpenChange, userEmail, currentLifeStage
             <label className="flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:bg-accent/30 cursor-pointer">
               <RadioGroupItem value="irregular" id="stage-irregular" className="mt-0.5" />
               <div className="flex-1">
-                <div className="text-sm font-medium">Irregular cycle</div>
-                <div className="text-xs text-muted-foreground">PCOS, hormonal imbalance, or unpredictable cycles. Logan still tracks but adapts predictions.</div>
+                <div className="text-sm font-medium">Irregular cycle or on hormonal birth control</div>
+                <div className="text-xs text-muted-foreground">PCOS, hormonal imbalance, unpredictable cycles, or hormonal BC (pill, IUD, implant, ring, patch). Logan still tracks but adapts predictions.</div>
               </div>
             </label>
             <label className="flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:bg-accent/30 cursor-pointer">
@@ -83,13 +83,6 @@ export function SettingsDialog({ open, onOpenChange, userEmail, currentLifeStage
               <div className="flex-1">
                 <div className="text-sm font-medium">Postpartum</div>
                 <div className="text-xs text-muted-foreground">I recently had a baby. Logan will ask for the birth date.</div>
-              </div>
-            </label>
-            <label className="flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:bg-accent/30 cursor-pointer">
-              <RadioGroupItem value="irregular" id="stage-irregular-bc" className="mt-0.5" />
-              <div className="flex-1">
-                <div className="text-sm font-medium">On hormonal birth control</div>
-                <div className="text-xs text-muted-foreground">Pill, IUD, implant, ring, or patch. Your natural cycle is suppressed — Logan adapts predictions accordingly.</div>
               </div>
             </label>
             <label className="flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:bg-accent/30 cursor-pointer">
