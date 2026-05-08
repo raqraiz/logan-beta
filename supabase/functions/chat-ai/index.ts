@@ -490,16 +490,22 @@ serve(async (req) => {
         if (!isNaN(parsed.getTime()) && parsed <= new Date()) {
           const formattedDate = parsed.toISOString().split("T")[0];
 
-          // Archive previous cycle if applicable
+          // Archive previous cycle. Prefer an explicit "previous date" mentioned in the same
+          // message (e.g. "April 8 and then today"); otherwise fall back to the participant's
+          // current last_period_start.
           let previousCycleLength: number | null = null;
-          if (participant.last_period_start) {
-            const prevStart = new Date(participant.last_period_start);
+          let inferredCycleLength: number | null = null;
+          const explicitPrev = (periodDateMatch as any).__previousDate as string | undefined;
+          const prevSource = explicitPrev || participant.last_period_start;
+          if (prevSource) {
+            const prevStart = new Date(prevSource);
             const diffDays = Math.round((parsed.getTime() - prevStart.getTime()) / (1000 * 60 * 60 * 24));
             if (diffDays >= 15 && diffDays <= 60) {
               previousCycleLength = diffDays;
+              inferredCycleLength = diffDays;
               await supabase.from("cycle_history").insert({
                 participant_id: participant.id,
-                cycle_start_date: participant.last_period_start,
+                cycle_start_date: prevSource,
                 cycle_end_date: formattedDate,
                 cycle_length_days: diffDays,
               });
@@ -507,9 +513,11 @@ serve(async (req) => {
           }
 
           const periodDatePayload: Record<string, unknown> = { last_period_start: formattedDate };
+          if (inferredCycleLength) periodDatePayload.cycle_length_days = inferredCycleLength;
           if (participant.life_stage === "postpartum") {
             periodDatePayload.life_stage = "cycling";
           }
+
 
           const { error: updateErr } = await supabase
             .from("participants")
