@@ -236,7 +236,7 @@ const Auth = () => {
                     type="email"
                     placeholder="Email"
                     value={email}
-                    onChange={(e) => { setEmail(e.target.value); setSignupConfirmationSent(false); }}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="h-14 bg-input border-border text-foreground placeholder:text-muted-foreground rounded-xl"
                   />
                 </div>
