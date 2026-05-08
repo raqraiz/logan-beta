@@ -12,19 +12,33 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 
-const SYMPTOM_OPTIONS = [
-  // Physical
-  "Cramps", "Bloating", "Headache", "Fatigue", "Back pain",
-  "Breast tenderness", "Nausea", "Acne", "Joint pain", "Insomnia",
-  // Emotional
-  "Mood swings", "Anxiety", "Irritability", "Brain fog", "Low motivation",
-  "Sadness", "Restlessness", "Overwhelm",
-  // Energy & performance
-  "High energy", "Low energy", "Sharp focus", "Poor focus",
-  // Other
-  "Cravings", "Hot flashes", "Night sweats", "Spotting",
+const SYMPTOM_CATEGORIES: { label: string; symptoms: string[] }[] = [
+  {
+    label: "Physical",
+    symptoms: [
+      "Acne", "Back pain", "Bloating", "Breast tenderness", "Cramps",
+      "Dehydrated skin", "Dry skin", "Fatigue", "Headache", "Hot flashes",
+      "Insomnia", "Joint pain", "Nausea", "Night sweats", "Spotting", "Thirst",
+    ],
+  },
+  {
+    label: "Emotional",
+    symptoms: [
+      "Anxiety", "Brain fog", "Irritability", "Low motivation", "Mood swings",
+      "Overwhelm", "Restlessness", "Sadness",
+    ],
+  },
+  {
+    label: "Energy & focus",
+    symptoms: ["High energy", "Low energy", "Poor focus", "Sharp focus"],
+  },
+  {
+    label: "Other",
+    symptoms: ["Cravings"],
+  },
 ];
 
+const SYMPTOM_OPTIONS = SYMPTOM_CATEGORIES.flatMap(c => c.symptoms);
 const BUILT_IN_SET = new Set(SYMPTOM_OPTIONS.map(s => s.toLowerCase()));
 
 interface SymptomEntry {
