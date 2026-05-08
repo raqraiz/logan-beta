@@ -1,10 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, TrendingUp, ChevronRight, Sparkles } from "lucide-react";
+import { Plus, TrendingUp, ChevronRight, Sparkles, CalendarIcon } from "lucide-react";
 import { CycleCorrelationDetail } from "./CycleCorrelationDetail";
 import { AddTrackerDialog } from "./AddTrackerDialog";
 import { toast } from "sonner";
+import { calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface Tracker {
   id: string;
