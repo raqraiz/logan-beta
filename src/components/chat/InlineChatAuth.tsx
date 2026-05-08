@@ -98,15 +98,12 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
           if (error.message.includes("already registered")) {
             toast({ title: "Account exists", description: "This email is already registered. Try signing in instead.", variant: "destructive" });
             setView("signin");
-          } else if (error.code === "over_email_send_rate_limit" || error.message.toLowerCase().includes("security purposes")) {
-            setSignupConfirmationSent(true);
-            toast({ title: "Check your email", description: "Your account request is already in progress. Use the confirmation link when it arrives." });
           } else {
             throw error;
           }
         } else {
-          setSignupConfirmationSent(true);
-          toast({ title: "Check your email", description: "I sent your confirmation link." });
+          toast({ title: "Welcome to Logan 🎉" });
+          onAuthSuccess?.();
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
