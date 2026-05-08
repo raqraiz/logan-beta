@@ -1,12 +1,16 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import { Check, ChevronDown, ChevronUp, Activity, Plus, Sparkles, Pencil, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Activity, Plus, Sparkles, Pencil, Trash2, X, CalendarIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 
 const SYMPTOM_OPTIONS = [
   // Physical
