@@ -48,13 +48,21 @@ export function CycleAnalytics({
   const [newEnd, setNewEnd] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const reload = async (pid: string) => {
+    const { data } = await supabase
+      .from("cycle_history")
+      .select("id, cycle_start_date, cycle_end_date, cycle_length_days")
+      .eq("participant_id", pid)
+      .order("cycle_start_date", { ascending: false })
+      .limit(24);
+    setHistory((data as CycleHistoryRow[]) || []);
+  };
+
   useEffect(() => {
     if (!open) return;
     setLoading(true);
 
-    // Look up participant_id from email match or direct id
     (async () => {
-      // Get participant linked to this user
       const { data: profile } = await supabase
         .from("profiles")
         .select("email")
@@ -77,17 +85,96 @@ export function CycleAnalytics({
         return;
       }
 
-      const { data } = await supabase
-        .from("cycle_history")
-        .select("cycle_start_date, cycle_end_date, cycle_length_days")
-        .eq("participant_id", participant.id)
-        .order("cycle_start_date", { ascending: false })
-        .limit(12);
-
-      setHistory(data || []);
+      setParticipantId(participant.id);
+      await reload(participant.id);
       setLoading(false);
     })();
   }, [open, userId]);
+
+  const startEdit = (row: CycleHistoryRow) => {
+    setEditingId(row.id);
+    setEditStart(row.cycle_start_date);
+    setEditEnd(row.cycle_end_date);
+    setAdding(false);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditStart("");
+    setEditEnd("");
+  };
+
+  const validateDates = (start: string, end: string): number | null => {
+    if (!start || !end) {
+      toast({ title: "Pick both dates", variant: "destructive" });
+      return null;
+    }
+    const s = new Date(start);
+    const e = new Date(end);
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) {
+      toast({ title: "Invalid date", variant: "destructive" });
+      return null;
+    }
+    const days = differenceInDays(e, s);
+    if (days < 15 || days > 90) {
+      toast({ title: "Cycle length must be between 15 and 90 days", variant: "destructive" });
+      return null;
+    }
+    return days;
+  };
+
+  const saveEdit = async (row: CycleHistoryRow) => {
+    const days = validateDates(editStart, editEnd);
+    if (days === null || !participantId) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("cycle_history")
+      .update({ cycle_start_date: editStart, cycle_end_date: editEnd, cycle_length_days: days })
+      .eq("id", row.id);
+    setSaving(false);
+    if (error) {
+      toast({ title: "Couldn't update", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Cycle updated" });
+      cancelEdit();
+      await reload(participantId);
+    }
+  };
+
+  const deleteRow = async (row: CycleHistoryRow) => {
+    if (!participantId) return;
+    if (!confirm(`Delete this ${row.cycle_length_days}-day cycle (${row.cycle_start_date} → ${row.cycle_end_date})?`)) return;
+    const { error } = await supabase.from("cycle_history").delete().eq("id", row.id);
+    if (error) {
+      toast({ title: "Couldn't delete", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Cycle deleted" });
+      await reload(participantId);
+    }
+  };
+
+  const addNew = async () => {
+    const days = validateDates(newStart, newEnd);
+    if (days === null || !participantId) return;
+    setSaving(true);
+    const { error } = await supabase.from("cycle_history").insert({
+      participant_id: participantId,
+      cycle_start_date: newStart,
+      cycle_end_date: newEnd,
+      cycle_length_days: days,
+    });
+    setSaving(false);
+    if (error) {
+      toast({ title: "Couldn't add", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Cycle added" });
+      setAdding(false);
+      setNewStart("");
+      setNewEnd("");
+      await reload(participantId);
+    }
+  };
+
 
   // Compute stats — exclude unrealistic outliers (>45d are almost always the
   // onboarding-estimate-to-first-real-reset gap, which inflates the average).
