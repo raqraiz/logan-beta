@@ -137,6 +137,40 @@ export function CycleCorrelationsWidget({
           </div>
         ) : (
           <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">Logging for</span>
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs px-2.5">
+                    <CalendarIcon className="w-3 h-3" />
+                    {isToday ? "Today" : format(logDate, "EEE, MMM d")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={logDate}
+                    onSelect={(d) => { if (d) { setLogDate(d); setCalendarOpen(false); } }}
+                    disabled={(d) => d > new Date() || d < new Date(Date.now() - 1000 * 60 * 60 * 24 * 90)}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+              {!isToday && (
+                <button
+                  onClick={() => setLogDate(new Date())}
+                  className="text-[10px] text-muted-foreground/70 hover:text-foreground underline underline-offset-2"
+                >
+                  reset
+                </button>
+              )}
+              {!isToday && !isNonCycling && effectiveCycleInfo.cycleDay && (
+                <span className="text-[10px] text-muted-foreground ml-auto">
+                  Day {effectiveCycleInfo.cycleDay} · {effectiveCycleInfo.phase}
+                </span>
+              )}
+            </div>
             {trackers.map((t) => (
               <div
                 key={t.id}
@@ -153,9 +187,6 @@ export function CycleCorrelationsWidget({
                   <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
                 </button>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-1">
-                    Today
-                  </span>
                   {QUICK_INTENSITIES.map((i) => (
                     <button
                       key={i}
