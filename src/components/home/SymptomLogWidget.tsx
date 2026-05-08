@@ -270,8 +270,53 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
       </div>
 
       <div className="px-4 pb-4 space-y-3 border-t border-border/20">
+          {/* Date picker — log for today or backdate */}
+          <div className="pt-3 flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50">Logging for</span>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 text-xs px-2.5"
+                >
+                  <CalendarIcon className="w-3 h-3" />
+                  {isToday ? "Today" : format(logDate, "EEE, MMM d")}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={logDate}
+                  onSelect={(d) => {
+                    if (d) {
+                      setLogDate(d);
+                      setCalendarOpen(false);
+                    }
+                  }}
+                  disabled={(d) => d > new Date() || d < new Date(Date.now() - 1000 * 60 * 60 * 24 * 90)}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            {!isToday && (
+              <button
+                onClick={() => setLogDate(new Date())}
+                className="text-[10px] text-muted-foreground/70 hover:text-foreground underline underline-offset-2"
+              >
+                reset
+              </button>
+            )}
+            {!isToday && !isNonCycling && effectiveCycleInfo.cycleDay && (
+              <span className="text-[10px] text-muted-foreground ml-auto">
+                Day {effectiveCycleInfo.cycleDay} · {effectiveCycleInfo.phase}
+              </span>
+            )}
+          </div>
+
           {/* Symptom chips */}
-          <div className="pt-3">
+          <div>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50 mb-2">
               How are you feeling?
             </p>
