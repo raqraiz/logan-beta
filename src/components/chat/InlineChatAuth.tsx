@@ -29,7 +29,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
-  const [signupConfirmationSent, setSignupConfirmationSent] = useState(false);
+  
 
   const isSignUp = view === "signup";
   const isForgotPassword = view === "forgot-password";
@@ -37,7 +37,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (signupConfirmationSent && isSignUp) return;
+    
 
     if (isForgotPassword) {
       if (!z.string().email().safeParse(email).success) {
@@ -98,15 +98,12 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
           if (error.message.includes("already registered")) {
             toast({ title: "Account exists", description: "This email is already registered. Try signing in instead.", variant: "destructive" });
             setView("signin");
-          } else if (error.code === "over_email_send_rate_limit" || error.message.toLowerCase().includes("security purposes")) {
-            setSignupConfirmationSent(true);
-            toast({ title: "Check your email", description: "Your account request is already in progress. Use the confirmation link when it arrives." });
           } else {
             throw error;
           }
         } else {
-          setSignupConfirmationSent(true);
-          toast({ title: "Check your email", description: "I sent your confirmation link." });
+          toast({ title: "Welcome to Logan 🎉" });
+          onAuthSuccess?.();
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -151,11 +148,6 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
           </div>
         )}
 
-        {signupConfirmationSent && isSignUp && !isForgotPassword && (
-          <div className="mb-5 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
-            Check your inbox for the Logan confirmation link. You can close this tab or sign in after confirming.
-          </div>
-        )}
 
         {/* Inline auth form */}
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -184,7 +176,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
               type="email"
               placeholder="you@example.com"
               value={email}
-                onChange={(e) => { setEmail(e.target.value); setSignupConfirmationSent(false); }}
+                onChange={(e) => setEmail(e.target.value)}
               className="h-12 bg-background"
               autoComplete="email"
             />
@@ -255,7 +247,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
             </div>
           )}
 
-          <Button type="submit" disabled={isLoading || signupConfirmationSent || (isSignUp && !isForgotPassword && !consentGiven)} className="w-full h-12">
+          <Button type="submit" disabled={isLoading || (isSignUp && !isForgotPassword && !consentGiven)} className="w-full h-12">
             {isLoading ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : !isForgotPassword ? (
@@ -263,7 +255,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
             ) : null}
             {isLoading
               ? isForgotPassword ? "Sending..." : isSignUp ? "Creating account..." : "Signing in..."
-              : signupConfirmationSent ? "Confirmation sent" : isForgotPassword ? "Send reset link" : isSignUp ? "Start my journey" : "Continue chatting"
+              : isForgotPassword ? "Send reset link" : isSignUp ? "Start my journey" : "Continue chatting"
             }
             {!isLoading && !isForgotPassword && <ArrowRight className="w-4 h-4 ml-2" />}
           </Button>
