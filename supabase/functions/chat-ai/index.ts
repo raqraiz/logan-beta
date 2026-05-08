@@ -695,6 +695,69 @@ serve(async (req) => {
     }
     // --- End symptom logging ---
 
+    // --- Manual life-stage corrections (menopause / cycling) ---
+    if (participant) {
+      const lower = userMessage.toLowerCase();
+
+      // "I'm in menopause", "I'm menopausal", "I'm peri-menopausal", "I went through menopause"
+      const menopauseSignal = /\b(?:i'?m|i\s+am|i'?ve\s+(?:gone|been)\s+through|currently)\s+(?:in\s+)?(?:peri[-\s]?)?menopaus(?:e|al)\b/i.test(userMessage)
+        || /\bi'?m\s+(?:peri[-\s]?)?menopausal\b/i.test(userMessage)
+        || /\b(?:no\s+(?:more\s+)?periods?|stopped\s+(?:getting\s+)?(?:my\s+)?periods?)\b/i.test(userMessage);
+
+      // Cycling correction: "I'm not in menopause", "I still get my period", "I'm actually still cycling"
+      const cyclingSignal = /\b(?:i'?m\s+not|not)\s+(?:in\s+)?(?:peri[-\s]?)?menopaus/i.test(userMessage)
+        || /\b(?:i'?m\s+actually|actually)\s+(?:still\s+)?cycling\b/i.test(userMessage)
+        || /\bi\s+still\s+(?:get|have)\s+(?:my\s+)?periods?\b/i.test(userMessage)
+        || /\b(?:i'?m|i\s+am)\s+(?:still\s+)?cycling\b/i.test(userMessage)
+        || /\bi'?m\s+not\s+postpartum\b/i.test(userMessage);
+
+      // Cycling wins over menopause if both somehow match
+      if (cyclingSignal && participant.life_stage !== "cycling") {
+        await supabase
+          .from("participants")
+          .update({ life_stage: "cycling", postpartum_start_date: null })
+          .eq("id", participant.id);
+        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshed) participant = refreshed;
+
+        const msg = `Got it — switching you to **cycling** mode. When did your last period start? Even an approximate date helps me get your timing right.`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: msg,
+          message_type: "text",
+          metadata: { life_stage_updated: "cycling", awaiting_period_date: true },
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (menopauseSignal && !cyclingSignal && participant.life_stage !== "menopause") {
+        await supabase
+          .from("participants")
+          .update({ life_stage: "menopause", last_period_start: null, postpartum_start_date: null })
+          .eq("id", participant.id);
+        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshed) participant = refreshed;
+
+        const msg = `Got it — switching you to **menopause** mode. I'll stop tracking cycle phases and focus on energy, sleep, and symptom patterns instead.`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: msg,
+          message_type: "text",
+          metadata: { life_stage_updated: "menopause" },
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+    // --- End life-stage corrections ---
+
     // --- Postpartum life-stage / birth-date detection ---
     if (participant) {
       const lowerMsg = userMessage.toLowerCase();
