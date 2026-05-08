@@ -72,7 +72,7 @@ const Auth = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (signupConfirmationSent && view === "signup") return;
+    
     setIsLoading(true);
 
     try {
