@@ -1406,9 +1406,9 @@ const Chat = () => {
                     <div className="mt-3 flex flex-col gap-2 max-w-xs">
                       {[
                         { value: "cycling", label: "I have a regular cycle", desc: "Currently menstruating" },
-                        { value: "irregular", label: "My cycle is irregular", desc: "PCOS, hormonal shifts, or unpredictable" },
+                        { value: "irregular", label: "Irregular or on hormonal BC", desc: "PCOS, unpredictable cycles, or pill/IUD/implant" },
                         { value: "postpartum", label: "Postpartum", desc: "Recently had a baby" },
-                        { value: "menopause", label: "Menopause", desc: "Peri- or post-menopause" },
+                        { value: "menopause", label: "Menopause", desc: "Post-menopause, no active cycle" },
                       ].map((option) => (
                         <button
                           key={option.value}
