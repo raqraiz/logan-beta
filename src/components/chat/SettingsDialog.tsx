@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
-type LifeStage = "cycling" | "postpartum" | "menopause";
+type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -69,6 +69,13 @@ export function SettingsDialog({ open, onOpenChange, userEmail, currentLifeStage
               <div className="flex-1">
                 <div className="text-sm font-medium">Cycling</div>
                 <div className="text-xs text-muted-foreground">I get a regular or semi-regular period.</div>
+              </div>
+            </label>
+            <label className="flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:bg-accent/30 cursor-pointer">
+              <RadioGroupItem value="irregular" id="stage-irregular" className="mt-0.5" />
+              <div className="flex-1">
+                <div className="text-sm font-medium">Irregular cycle</div>
+                <div className="text-xs text-muted-foreground">PCOS, hormonal imbalance, or unpredictable cycles. Logan still tracks but adapts predictions.</div>
               </div>
             </label>
             <label className="flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:bg-accent/30 cursor-pointer">

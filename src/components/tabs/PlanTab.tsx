@@ -16,7 +16,7 @@ interface CycleData {
   phase: string;
   cycleLengthDays: number;
   lastPeriodStart?: string;
-  lifeStage?: "cycling" | "postpartum" | "menopause";
+  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause";
   postpartumStartDate?: string;
 }
 
@@ -553,7 +553,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
     setExpandedSection((prev) => (prev === section ? null : section));
 
   // Non-cycling life stages get tailored content
-  const isNonCycling = cycleData?.lifeStage && cycleData.lifeStage !== "cycling";
+  const isNonCycling = cycleData?.lifeStage === "postpartum" || cycleData?.lifeStage === "menopause";
 
   if (isNonCycling) {
     const stage = cycleData!.lifeStage!;

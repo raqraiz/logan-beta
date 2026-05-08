@@ -328,7 +328,7 @@ interface CycleData {
   phase: string;
   cycleLengthDays: number;
   lastPeriodStart?: string;
-  lifeStage?: "cycling" | "postpartum" | "menopause";
+  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause";
   postpartumStartDate?: string;
 }
 
@@ -369,7 +369,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   }
 
   const visibleWidgets = widgets.filter(w => w.visible);
-  const isNonCycling = cycleData.lifeStage && cycleData.lifeStage !== "cycling";
+  const isNonCycling = cycleData.lifeStage === "postpartum" || cycleData.lifeStage === "menopause";
   const stagePhase = isNonCycling
     ? (cycleData.lifeStage === "postpartum" ? "Postpartum" : "Menopause")
     : cycleData.phase;
