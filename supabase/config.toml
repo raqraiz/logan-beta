@@ -1,22 +1,19 @@
 project_id = "tpohsmxpcqqgxcgectfs"
 
-[functions.chat-ai]
-verify_jwt = false
-
-[functions.add-admin]
-verify_jwt = false
-
-[functions.trial-chat]
-verify_jwt = false
-
-[functions.delete-user]
-verify_jwt = false
-
-[functions.generate-insight]
-verify_jwt = false
-
-[functions.calendar-feed]
-verify_jwt = false
-
-[functions.process-email-queue]
-verify_jwt = true
+[functions]
+  [functions.add-admin]
+    verify_jwt = false
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.calendar-feed]
+    verify_jwt = false
+  [functions.chat-ai]
+    verify_jwt = false
+  [functions.delete-user]
+    verify_jwt = false
+  [functions.generate-insight]
+    verify_jwt = false
+  [functions.process-email-queue]
+    verify_jwt = true
+  [functions.trial-chat]
+    verify_jwt = false
