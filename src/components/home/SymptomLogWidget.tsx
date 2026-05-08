@@ -194,27 +194,54 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
     setSelected(prev => prev.map(s => s.name === name ? { ...s, severity } : s));
   }, []);
 
+  const isToday = useMemo(() => {
+    const t = new Date();
+    return logDate.toDateString() === t.toDateString();
+  }, [logDate]);
+
+  // Recompute cycle day/phase for the selected date when backdating
+  const effectiveCycleInfo = useMemo(() => {
+    if (isNonCycling) return { cycleDay: null as number | null, phase: null as string | null };
+    if (isToday) return { cycleDay: cycleDay ?? null, phase: phase ?? null };
+    if (lastPeriodStart && cycleLengthDays) {
+      const info = calculateCycleInfo(lastPeriodStart, cycleLengthDays, undefined, logDate);
+      if (info) return { cycleDay: info.cycleDay, phase: info.phase };
+    }
+    return { cycleDay: null, phase: null };
+  }, [isToday, isNonCycling, cycleDay, phase, lastPeriodStart, cycleLengthDays, logDate]);
+
   const handleSubmit = async () => {
     if (selected.length === 0 && !notes.trim()) return;
     setSaving(true);
+
+    // Build logged_at: today => now; backdated => noon UTC of selected date
+    const loggedAt = isToday
+      ? new Date().toISOString()
+      : new Date(Date.UTC(logDate.getFullYear(), logDate.getMonth(), logDate.getDate(), 12, 0, 0)).toISOString();
 
     const { error } = await supabase.from("symptom_logs").insert({
       user_id: userId,
       symptoms: selected as any,
       notes: notes.trim() || null,
-      cycle_day: cycleDay || null,
-      cycle_phase: phase || null,
+      cycle_day: effectiveCycleInfo.cycleDay,
+      cycle_phase: effectiveCycleInfo.phase,
+      logged_at: loggedAt,
     });
 
     if (error) {
       toast({ title: "Failed to save", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Symptoms logged", description: `${selected.length} symptom${selected.length !== 1 ? "s" : ""} recorded` });
+      toast({
+        title: isToday ? "Symptoms logged" : `Logged for ${format(logDate, "MMM d")}`,
+        description: `${selected.length} symptom${selected.length !== 1 ? "s" : ""} recorded`,
+      });
       setSelected([]);
       setNotes("");
-      
-      setTodayCount(prev => prev + 1);
-      setLastLogTime(new Date().toISOString());
+      if (isToday) {
+        setTodayCount(prev => prev + 1);
+        setLastLogTime(new Date().toISOString());
+      }
+      setLogDate(new Date());
       onLogged?.();
     }
     setSaving(false);
