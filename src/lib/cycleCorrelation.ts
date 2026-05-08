@@ -97,14 +97,21 @@ export function analyzeCorrelation(logs: LogPoint[], itemName = "this"): Correla
   return { phaseStats, totalLogs, peakPhase, lowestPhase, spread, confidence, insight };
 }
 
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!)
+  );
+}
+
 function buildInsight(
-  item: string,
+  itemRaw: string,
   peak: Phase | null,
   lowest: Phase | null,
   spread: number,
   confidence: CorrelationResult["confidence"],
   totalLogs: number
 ): string {
+  const item = escapeHtml(itemRaw);
   if (totalLogs === 0) {
     return `Start logging ${item} daily to see how it tracks with your cycle.`;
   }

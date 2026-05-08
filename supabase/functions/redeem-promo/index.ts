@@ -61,7 +61,7 @@ serve(async (req) => {
       .select("id")
       .eq("user_id", user.id)
       .eq("promo_code_id", promo.id)
-      .single();
+      .maybeSingle();
 
     if (existingRedemption) {
       return new Response(
@@ -70,12 +70,23 @@ serve(async (req) => {
       );
     }
 
-    // Redeem: add credits, record redemption, decrement uses
+    // Atomic decrement — returns the row only if a use was successfully claimed.
+    const { data: claimed, error: claimErr } = await supabase
+      .rpc("redeem_promo_code_atomic", { _promo_id: promo.id });
+
+    if (claimErr || !claimed) {
+      return new Response(
+        JSON.stringify({ error: "This code has been fully redeemed" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Add credits + record redemption
     const { data: credits } = await supabase
       .from("user_credits")
       .select("paid_credits")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     if (credits) {
       await supabase
@@ -92,11 +103,6 @@ serve(async (req) => {
       user_id: user.id,
       promo_code_id: promo.id,
     });
-
-    await supabase
-      .from("promo_codes")
-      .update({ uses_remaining: promo.uses_remaining - 1 })
-      .eq("id", promo.id);
 
     await supabase.from("credit_transactions").insert({
       user_id: user.id,
