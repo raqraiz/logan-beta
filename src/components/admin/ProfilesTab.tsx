@@ -1153,7 +1153,7 @@ export function ProfilesTab() {
             const cycleData = profile.participant ? getCycleData(profile.participant) : null;
             const cycleDay = cycleData?.cycleDay ?? null;
             const phase = cycleData?.phase ?? null;
-            const lifeStage = (profile.participant?.life_stage || "cycling") as "cycling" | "postpartum" | "menopause";
+            const lifeStage = (profile.participant?.life_stage || "cycling") as "cycling" | "irregular" | "postpartum" | "menopause";
             
             return (
               <Card
@@ -1170,7 +1170,7 @@ export function ProfilesTab() {
                           phase={lifeStage === "postpartum" ? "Postpartum" : "Menopause"}
                           cycleLengthDays={0}
                           size="sm"
-                          lifeStage={lifeStage}
+                          lifeStage={lifeStage as "postpartum" | "menopause"}
                           postpartumStartDate={profile.participant?.postpartum_start_date || undefined}
                         />
                       </div>
