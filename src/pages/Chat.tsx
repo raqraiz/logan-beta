@@ -1617,6 +1617,16 @@ const Chat = () => {
 
     {/* Forecast overlay removed — forecast now lives in Plan tab */}
     <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
+    <SettingsDialog
+      open={settingsOpen}
+      onOpenChange={setSettingsOpen}
+      userEmail={user?.email || undefined}
+      currentLifeStage={lifeStage}
+      onUpdated={(newStage) => {
+        setLifeStage(newStage);
+        if (newStage !== "postpartum") setPostpartumStartDate(null);
+      }}
+    />
     </>
   );
 };
