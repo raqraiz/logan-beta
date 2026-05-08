@@ -326,6 +326,126 @@ export function CycleAnalytics({
                 ))}
               </div>
             </div>
+
+            <Separator />
+
+            {/* Editable cycle history */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Tracked Cycles
+                </h3>
+                {!adding && participantId && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 gap-1 text-[11px] px-2"
+                    onClick={() => { setAdding(true); cancelEdit(); }}
+                  >
+                    <Plus className="w-3 h-3" /> Add
+                  </Button>
+                )}
+              </div>
+
+              {adding && (
+                <div className="rounded-lg border border-border/40 bg-muted/30 p-2 mb-2 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="date"
+                      value={newStart}
+                      onChange={(e) => setNewStart(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                    <span className="text-xs text-muted-foreground">→</span>
+                    <Input
+                      type="date"
+                      value={newEnd}
+                      onChange={(e) => setNewEnd(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-1.5">
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setAdding(false)}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" className="h-7 text-xs" onClick={addNew} disabled={saving}>
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {history.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No cycles tracked yet.</p>
+              ) : (
+                <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                  {history.map((row) => {
+                    const isEditing = editingId === row.id;
+                    const isOutlier = row.cycle_length_days > 45 || row.cycle_length_days < 15;
+                    if (isEditing) {
+                      return (
+                        <div key={row.id} className="rounded-lg border border-primary/40 bg-muted/30 p-2 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="date"
+                              value={editStart}
+                              onChange={(e) => setEditStart(e.target.value)}
+                              className="h-8 text-xs"
+                            />
+                            <span className="text-xs text-muted-foreground">→</span>
+                            <Input
+                              type="date"
+                              value={editEnd}
+                              onChange={(e) => setEditEnd(e.target.value)}
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                          <div className="flex justify-end gap-1.5">
+                            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={cancelEdit}>
+                              <X className="w-3 h-3" />
+                            </Button>
+                            <Button size="sm" className="h-7 text-xs" onClick={() => saveEdit(row)} disabled={saving}>
+                              <Check className="w-3 h-3 mr-1" /> Save
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div
+                        key={row.id}
+                        className="flex items-center justify-between gap-2 rounded-lg border border-border/30 bg-muted/20 px-2.5 py-1.5"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs text-foreground truncate">
+                            {format(new Date(row.cycle_start_date), "MMM d, yyyy")} → {format(new Date(row.cycle_end_date), "MMM d")}
+                          </p>
+                          <p className={`text-[10px] ${isOutlier ? "text-destructive" : "text-muted-foreground"}`}>
+                            {row.cycle_length_days} days{isOutlier ? " · likely inaccurate" : ""}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <button
+                            onClick={() => startEdit(row)}
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
+                            aria-label="Edit cycle"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => deleteRow(row)}
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            aria-label="Delete cycle"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </DialogContent>
