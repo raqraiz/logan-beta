@@ -369,7 +369,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   }
 
   const visibleWidgets = widgets.filter(w => w.visible);
-  const isNonCycling = cycleData.lifeStage && cycleData.lifeStage !== "cycling";
+  const isNonCycling = cycleData.lifeStage && cycleData.(lifeStage === "postpartum" || lifeStage === "menopause");
   const stagePhase = isNonCycling
     ? (cycleData.lifeStage === "postpartum" ? "Postpartum" : "Menopause")
     : cycleData.phase;

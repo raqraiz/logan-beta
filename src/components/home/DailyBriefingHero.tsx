@@ -104,7 +104,7 @@ export function DailyBriefingHero({
   postpartumStartDate,
   onCircleClick,
 }: DailyBriefingHeroProps) {
-  const isNonCycling = lifeStage && lifeStage !== "cycling";
+  const isNonCycling = lifeStage && (lifeStage === "postpartum" || lifeStage === "menopause");
   const phaseText = PHASE_TEXT[phase] || "text-primary";
   const phaseBg = PHASE_BG[phase] || "bg-primary/15";
   const phaseAccent = PHASE_ACCENT[phase] || "from-primary/10 via-transparent to-transparent";
