@@ -37,7 +37,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (signupConfirmationSent && isSignUp) return;
+    
 
     if (isForgotPassword) {
       if (!z.string().email().safeParse(email).success) {
@@ -176,7 +176,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
               type="email"
               placeholder="you@example.com"
               value={email}
-                onChange={(e) => { setEmail(e.target.value); setSignupConfirmationSent(false); }}
+                onChange={(e) => setEmail(e.target.value)}
               className="h-12 bg-background"
               autoComplete="email"
             />
@@ -247,7 +247,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
             </div>
           )}
 
-          <Button type="submit" disabled={isLoading || signupConfirmationSent || (isSignUp && !isForgotPassword && !consentGiven)} className="w-full h-12">
+          <Button type="submit" disabled={isLoading || (isSignUp && !isForgotPassword && !consentGiven)} className="w-full h-12">
             {isLoading ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : !isForgotPassword ? (
@@ -255,7 +255,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
             ) : null}
             {isLoading
               ? isForgotPassword ? "Sending..." : isSignUp ? "Creating account..." : "Signing in..."
-              : signupConfirmationSent ? "Confirmation sent" : isForgotPassword ? "Send reset link" : isSignUp ? "Start my journey" : "Continue chatting"
+              : isForgotPassword ? "Send reset link" : isSignUp ? "Start my journey" : "Continue chatting"
             }
             {!isLoading && !isForgotPassword && <ArrowRight className="w-4 h-4 ml-2" />}
           </Button>
