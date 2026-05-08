@@ -7,6 +7,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Pencil, Trash2, Check, X, Plus } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { format, differenceInDays } from "date-fns";
 
 interface CycleAnalyticsProps {
   open: boolean;
@@ -18,6 +23,7 @@ interface CycleAnalyticsProps {
 }
 
 interface CycleHistoryRow {
+  id: string;
   cycle_start_date: string;
   cycle_end_date: string;
   cycle_length_days: number;
@@ -33,14 +39,30 @@ export function CycleAnalytics({
 }: CycleAnalyticsProps) {
   const [history, setHistory] = useState<CycleHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [participantId, setParticipantId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editStart, setEditStart] = useState("");
+  const [editEnd, setEditEnd] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [newStart, setNewStart] = useState("");
+  const [newEnd, setNewEnd] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const reload = async (pid: string) => {
+    const { data } = await supabase
+      .from("cycle_history")
+      .select("id, cycle_start_date, cycle_end_date, cycle_length_days")
+      .eq("participant_id", pid)
+      .order("cycle_start_date", { ascending: false })
+      .limit(24);
+    setHistory((data as CycleHistoryRow[]) || []);
+  };
 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
 
-    // Look up participant_id from email match or direct id
     (async () => {
-      // Get participant linked to this user
       const { data: profile } = await supabase
         .from("profiles")
         .select("email")
@@ -63,17 +85,96 @@ export function CycleAnalytics({
         return;
       }
 
-      const { data } = await supabase
-        .from("cycle_history")
-        .select("cycle_start_date, cycle_end_date, cycle_length_days")
-        .eq("participant_id", participant.id)
-        .order("cycle_start_date", { ascending: false })
-        .limit(12);
-
-      setHistory(data || []);
+      setParticipantId(participant.id);
+      await reload(participant.id);
       setLoading(false);
     })();
   }, [open, userId]);
+
+  const startEdit = (row: CycleHistoryRow) => {
+    setEditingId(row.id);
+    setEditStart(row.cycle_start_date);
+    setEditEnd(row.cycle_end_date);
+    setAdding(false);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditStart("");
+    setEditEnd("");
+  };
+
+  const validateDates = (start: string, end: string): number | null => {
+    if (!start || !end) {
+      toast({ title: "Pick both dates", variant: "destructive" });
+      return null;
+    }
+    const s = new Date(start);
+    const e = new Date(end);
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) {
+      toast({ title: "Invalid date", variant: "destructive" });
+      return null;
+    }
+    const days = differenceInDays(e, s);
+    if (days < 15 || days > 90) {
+      toast({ title: "Cycle length must be between 15 and 90 days", variant: "destructive" });
+      return null;
+    }
+    return days;
+  };
+
+  const saveEdit = async (row: CycleHistoryRow) => {
+    const days = validateDates(editStart, editEnd);
+    if (days === null || !participantId) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("cycle_history")
+      .update({ cycle_start_date: editStart, cycle_end_date: editEnd, cycle_length_days: days })
+      .eq("id", row.id);
+    setSaving(false);
+    if (error) {
+      toast({ title: "Couldn't update", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Cycle updated" });
+      cancelEdit();
+      await reload(participantId);
+    }
+  };
+
+  const deleteRow = async (row: CycleHistoryRow) => {
+    if (!participantId) return;
+    if (!confirm(`Delete this ${row.cycle_length_days}-day cycle (${row.cycle_start_date} → ${row.cycle_end_date})?`)) return;
+    const { error } = await supabase.from("cycle_history").delete().eq("id", row.id);
+    if (error) {
+      toast({ title: "Couldn't delete", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Cycle deleted" });
+      await reload(participantId);
+    }
+  };
+
+  const addNew = async () => {
+    const days = validateDates(newStart, newEnd);
+    if (days === null || !participantId) return;
+    setSaving(true);
+    const { error } = await supabase.from("cycle_history").insert({
+      participant_id: participantId,
+      cycle_start_date: newStart,
+      cycle_end_date: newEnd,
+      cycle_length_days: days,
+    });
+    setSaving(false);
+    if (error) {
+      toast({ title: "Couldn't add", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Cycle added" });
+      setAdding(false);
+      setNewStart("");
+      setNewEnd("");
+      await reload(participantId);
+    }
+  };
+
 
   // Compute stats — exclude unrealistic outliers (>45d are almost always the
   // onboarding-estimate-to-first-real-reset gap, which inflates the average).
@@ -224,6 +325,126 @@ export function CycleAnalytics({
                   </div>
                 ))}
               </div>
+            </div>
+
+            <Separator />
+
+            {/* Editable cycle history */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Tracked Cycles
+                </h3>
+                {!adding && participantId && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 gap-1 text-[11px] px-2"
+                    onClick={() => { setAdding(true); cancelEdit(); }}
+                  >
+                    <Plus className="w-3 h-3" /> Add
+                  </Button>
+                )}
+              </div>
+
+              {adding && (
+                <div className="rounded-lg border border-border/40 bg-muted/30 p-2 mb-2 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="date"
+                      value={newStart}
+                      onChange={(e) => setNewStart(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                    <span className="text-xs text-muted-foreground">→</span>
+                    <Input
+                      type="date"
+                      value={newEnd}
+                      onChange={(e) => setNewEnd(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-1.5">
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setAdding(false)}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" className="h-7 text-xs" onClick={addNew} disabled={saving}>
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {history.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No cycles tracked yet.</p>
+              ) : (
+                <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                  {history.map((row) => {
+                    const isEditing = editingId === row.id;
+                    const isOutlier = row.cycle_length_days > 45 || row.cycle_length_days < 15;
+                    if (isEditing) {
+                      return (
+                        <div key={row.id} className="rounded-lg border border-primary/40 bg-muted/30 p-2 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="date"
+                              value={editStart}
+                              onChange={(e) => setEditStart(e.target.value)}
+                              className="h-8 text-xs"
+                            />
+                            <span className="text-xs text-muted-foreground">→</span>
+                            <Input
+                              type="date"
+                              value={editEnd}
+                              onChange={(e) => setEditEnd(e.target.value)}
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                          <div className="flex justify-end gap-1.5">
+                            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={cancelEdit}>
+                              <X className="w-3 h-3" />
+                            </Button>
+                            <Button size="sm" className="h-7 text-xs" onClick={() => saveEdit(row)} disabled={saving}>
+                              <Check className="w-3 h-3 mr-1" /> Save
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div
+                        key={row.id}
+                        className="flex items-center justify-between gap-2 rounded-lg border border-border/30 bg-muted/20 px-2.5 py-1.5"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs text-foreground truncate">
+                            {format(new Date(row.cycle_start_date), "MMM d, yyyy")} → {format(new Date(row.cycle_end_date), "MMM d")}
+                          </p>
+                          <p className={`text-[10px] ${isOutlier ? "text-destructive" : "text-muted-foreground"}`}>
+                            {row.cycle_length_days} days{isOutlier ? " · likely inaccurate" : ""}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <button
+                            onClick={() => startEdit(row)}
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
+                            aria-label="Edit cycle"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => deleteRow(row)}
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            aria-label="Delete cycle"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}
