@@ -86,10 +86,17 @@ export function SettingsDialog({ open, onOpenChange, userEmail, currentLifeStage
               </div>
             </label>
             <label className="flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:bg-accent/30 cursor-pointer">
+              <RadioGroupItem value="irregular" id="stage-irregular-bc" className="mt-0.5" />
+              <div className="flex-1">
+                <div className="text-sm font-medium">On hormonal birth control</div>
+                <div className="text-xs text-muted-foreground">Pill, IUD, implant, ring, or patch. Your natural cycle is suppressed — Logan adapts predictions accordingly.</div>
+              </div>
+            </label>
+            <label className="flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:bg-accent/30 cursor-pointer">
               <RadioGroupItem value="menopause" id="stage-menopause" className="mt-0.5" />
               <div className="flex-1">
                 <div className="text-sm font-medium">Menopause</div>
-                <div className="text-xs text-muted-foreground">Peri- or post-menopause. No active cycle tracking.</div>
+                <div className="text-xs text-muted-foreground">Post-menopause. No active cycle tracking.</div>
               </div>
             </label>
           </RadioGroup>
