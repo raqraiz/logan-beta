@@ -29,7 +29,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
-  const [signupConfirmationSent, setSignupConfirmationSent] = useState(false);
+  
 
   const isSignUp = view === "signup";
   const isForgotPassword = view === "forgot-password";
