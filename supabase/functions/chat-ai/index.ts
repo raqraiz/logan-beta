@@ -378,12 +378,57 @@ serve(async (req) => {
         /cycle\s*(?:length)?\s*(?:to)\s*(\d{2,})\s*days?/i
       );
 
-      // Detect period date change: "my period started on March 15", "change my period date to April 2"
-      const periodDateMatch = userMessage.match(
-        /(?:period|last period|period date)\s+(?:started|began|was|start)\s+(?:on\s+)?(?:the\s+)?(\w+\s+\d{1,2}(?:,?\s*\d{4})?)/i
-      ) || userMessage.match(
-        /(?:change|set|update)\s+(?:my\s+)?(?:period|period date|last period)\s+(?:to|date to)\s+(\w+\s+\d{1,2}(?:,?\s*\d{4})?)/i
-      );
+      // Detect period date change. Captures phrasings like:
+      // "my period started on March 15", "change my period date to April 2",
+      // "I got a bleed day 1 on April 8", "Day 1 was April 8",
+      // "first day of my period was April 8", "bleed started April 8",
+      // "got my period on April 8". When multiple dates appear (e.g. "April 8 and then today"),
+      // use the LATEST one.
+      const periodDateRegexes: RegExp[] = [
+        /(?:period|last period|period date|bleed|cycle)\s+(?:started|began|was|start|came|arrived)\s+(?:on\s+)?(?:the\s+)?(\w+\s+\d{1,2}(?:,?\s*\d{4})?|today|yesterday)/i,
+        /(?:change|set|update)\s+(?:my\s+)?(?:period|period date|last period)\s+(?:to|date to)\s+(\w+\s+\d{1,2}(?:,?\s*\d{4})?|today|yesterday)/i,
+        /\b(?:i\s+)?(?:got|had)\s+(?:my\s+|a\s+)?(?:period|bleed)(?:\s+day\s*1)?\s+(?:on\s+)?(?:the\s+)?(\w+\s+\d{1,2}(?:,?\s*\d{4})?|today|yesterday)/i,
+        /\b(?:day\s*1|first\s+day(?:\s+of\s+(?:my\s+)?(?:period|bleed|cycle))?)\s+(?:was|started|on|=|is)\s+(?:on\s+)?(?:the\s+)?(\w+\s+\d{1,2}(?:,?\s*\d{4})?|today|yesterday)/i,
+        /\bbleed\s+(?:on|started|began)\s+(?:on\s+)?(?:the\s+)?(\w+\s+\d{1,2}(?:,?\s*\d{4})?|today|yesterday)/i,
+      ];
+      // Find ALL matches across all patterns and pick the LATEST date
+      let periodDateMatch: RegExpMatchArray | null = null;
+      {
+        const allDates: { token: string; date: Date; match: RegExpMatchArray }[] = [];
+        for (const rx of periodDateRegexes) {
+          const globalRx = new RegExp(rx.source, rx.flags.includes("g") ? rx.flags : rx.flags + "g");
+          let m: RegExpExecArray | null;
+          while ((m = globalRx.exec(userMessage)) !== null) {
+            const token = m[1];
+            let d: Date | null = null;
+            if (/^today$/i.test(token)) d = new Date();
+            else if (/^yesterday$/i.test(token)) { d = new Date(); d.setDate(d.getDate() - 1); }
+            else {
+              const parsed = new Date(token);
+              if (!isNaN(parsed.getTime())) d = parsed;
+            }
+            if (d && d <= new Date()) allDates.push({ token, date: d, match: m as unknown as RegExpMatchArray });
+          }
+        }
+        // Also catch a trailing "and (then )?today" / "and (then )?yesterday" that often pairs with a prior date
+        if (/\band\s+(?:then\s+)?today\b/i.test(userMessage)) {
+          allDates.push({ token: "today", date: new Date(), match: ["today", "today"] as unknown as RegExpMatchArray });
+        } else if (/\band\s+(?:then\s+)?yesterday\b/i.test(userMessage)) {
+          const y = new Date(); y.setDate(y.getDate() - 1);
+          allDates.push({ token: "yesterday", date: y, match: ["yesterday", "yesterday"] as unknown as RegExpMatchArray });
+        }
+        if (allDates.length > 0) {
+          allDates.sort((a, b) => b.date.getTime() - a.date.getTime());
+          periodDateMatch = allDates[0].match;
+          // Override the captured token with the resolved date string for downstream parsing
+          (periodDateMatch as any)[1] = allDates[0].date.toISOString().split("T")[0];
+          // Keep the second-newest as a candidate for "previous cycle" archiving
+          if (allDates.length > 1) {
+            (periodDateMatch as any).__previousDate = allDates[1].date.toISOString().split("T")[0];
+          }
+        }
+      }
+
 
       if (cycleLengthMatch) {
         const newLength = parseInt(cycleLengthMatch[1]);
