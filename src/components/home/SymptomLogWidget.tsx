@@ -36,6 +36,9 @@ interface SymptomLogWidgetProps {
   userId: string;
   cycleDay?: number;
   phase?: string;
+  lastPeriodStart?: string;
+  cycleLengthDays?: number;
+  isNonCycling?: boolean;
   onLogged?: () => void;
 }
 
@@ -46,13 +49,15 @@ interface CommunitySymptom {
   created_at: string;
 }
 
-export function SymptomLogWidget({ userId, cycleDay, phase, onLogged }: SymptomLogWidgetProps) {
+export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cycleLengthDays, isNonCycling, onLogged }: SymptomLogWidgetProps) {
   const [expanded, setExpanded] = useState(true);
   const [selected, setSelected] = useState<SymptomEntry[]>([]);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [todayCount, setTodayCount] = useState(0);
   const [lastLogTime, setLastLogTime] = useState<string | null>(null);
+  const [logDate, setLogDate] = useState<Date>(() => new Date());
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [communitySymptoms, setCommunitySymptoms] = useState<CommunitySymptom[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newSymptom, setNewSymptom] = useState("");
