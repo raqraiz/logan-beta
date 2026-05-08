@@ -333,11 +333,43 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
 
           {/* Symptom chips */}
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50 mb-2">
-              How are you feeling?
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {SYMPTOM_OPTIONS.map(name => {
+            <div className="flex items-center justify-between mb-2 gap-2">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50">
+                How are you feeling?
+              </p>
+              <Input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search symptoms…"
+                className="h-7 text-xs max-w-[180px]"
+              />
+            </div>
+
+            {/* Selected pinned chips */}
+            {selected.length > 0 && (
+              <div className="mb-3 pb-2 border-b border-border/20">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground/40 mb-1.5">
+                  Selected · {selected.length}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {selected.map(s => (
+                    <button
+                      key={s.name}
+                      onClick={() => toggleSymptom(s.name)}
+                      className="px-2.5 py-1 text-xs rounded-full border bg-primary text-primary-foreground border-primary inline-flex items-center gap-1"
+                    >
+                      {s.name}
+                      <X className="w-3 h-3 opacity-70" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Categorized built-in symptoms (alphabetical within group) */}
+            {(() => {
+              const q = search.trim().toLowerCase();
+              const renderBuiltInChip = (name: string) => {
                 const isSelected = selected.some(s => s.name === name);
                 return (
                   <button
@@ -353,110 +385,156 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                     {name}
                   </button>
                 );
-              })}
-              {communitySymptoms.map(cs => {
-                const isSelected = selected.some(s => s.name === cs.name);
-                const isMine = cs.added_by === userId;
-                const isRecent = Date.now() - new Date(cs.created_at).getTime() < 1000 * 60 * 60 * 24 * 14;
-                const isEditing = editingId === cs.id;
+              };
 
-                if (isEditing) {
-                  return (
-                    <div key={cs.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-primary/50 bg-card">
-                      <Input
-                        autoFocus
-                        value={editValue}
-                        onChange={e => setEditValue(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === "Enter") handleSaveEdit(cs);
-                          if (e.key === "Escape") cancelEdit();
-                        }}
-                        maxLength={50}
-                        className="h-6 text-xs w-32 px-2"
-                      />
+              return (
+                <div className="space-y-2.5">
+                  {SYMPTOM_CATEGORIES.map(cat => {
+                    const sorted = [...cat.symptoms].sort((a, b) => a.localeCompare(b));
+                    const filtered = q ? sorted.filter(n => n.toLowerCase().includes(q)) : sorted;
+                    if (filtered.length === 0) return null;
+                    const isCollapsed = !q && collapsedCats[cat.label];
+                    return (
+                      <div key={cat.label}>
+                        <button
+                          onClick={() => setCollapsedCats(prev => ({ ...prev, [cat.label]: !prev[cat.label] }))}
+                          className="w-full flex items-center justify-between mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/60 hover:text-foreground/80"
+                        >
+                          <span>{cat.label} · {filtered.length}</span>
+                          {isCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+                        </button>
+                        {!isCollapsed && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {filtered.map(renderBuiltInChip)}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Community section */}
+                  {(() => {
+                    const sortedCs = [...communitySymptoms].sort((a, b) => a.name.localeCompare(b.name));
+                    const filteredCs = q ? sortedCs.filter(c => c.name.toLowerCase().includes(q)) : sortedCs;
+                    if (filteredCs.length === 0 && !showAddForm && q) return null;
+                    const isCollapsed = !q && collapsedCats["__community"];
+                    return (
+                      <div>
+                        <button
+                          onClick={() => setCollapsedCats(prev => ({ ...prev, __community: !prev.__community }))}
+                          className="w-full flex items-center justify-between mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/60 hover:text-foreground/80"
+                        >
+                          <span>Community · {filteredCs.length}</span>
+                          {isCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+                        </button>
+                        {!isCollapsed && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {filteredCs.map(cs => {
+                              const isSelected = selected.some(s => s.name === cs.name);
+                              const isMine = cs.added_by === userId;
+                              const isRecent = Date.now() - new Date(cs.created_at).getTime() < 1000 * 60 * 60 * 24 * 14;
+                              const isEditing = editingId === cs.id;
+
+                              if (isEditing) {
+                                return (
+                                  <div key={cs.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-primary/50 bg-card">
+                                    <Input
+                                      autoFocus
+                                      value={editValue}
+                                      onChange={e => setEditValue(e.target.value)}
+                                      onKeyDown={e => {
+                                        if (e.key === "Enter") handleSaveEdit(cs);
+                                        if (e.key === "Escape") cancelEdit();
+                                      }}
+                                      maxLength={50}
+                                      className="h-6 text-xs w-32 px-2"
+                                    />
+                                    <button onClick={() => handleSaveEdit(cs)} className="p-1 rounded-full text-primary hover:bg-primary/10" title="Save">
+                                      <Check className="w-3 h-3" />
+                                    </button>
+                                    <button onClick={cancelEdit} className="p-1 rounded-full text-muted-foreground hover:bg-muted" title="Cancel">
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                );
+                              }
+
+                              return (
+                                <div
+                                  key={cs.id}
+                                  className={cn(
+                                    "inline-flex items-center rounded-full border transition-all overflow-hidden",
+                                    isSelected
+                                      ? "bg-primary text-primary-foreground border-primary"
+                                      : "bg-card/60 border-border/40 hover:border-primary/40 text-foreground/70"
+                                  )}
+                                  title={isMine ? "You added this" : "Added by the community"}
+                                >
+                                  <button onClick={() => toggleSymptom(cs.name)} className="px-2.5 py-1 text-xs inline-flex items-center gap-1.5">
+                                    {cs.name}
+                                    {isRecent && (
+                                      <span className={cn(
+                                        "inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider px-1 py-0.5 rounded-full",
+                                        isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-accent/40 text-accent-foreground/80"
+                                      )}>
+                                        <Sparkles className="w-2 h-2" />
+                                        new
+                                      </span>
+                                    )}
+                                  </button>
+                                  {isMine && (
+                                    <>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); startEdit(cs); }}
+                                        className={cn("px-1.5 py-1 hover:bg-black/10", isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-foreground")}
+                                        title="Edit"
+                                      >
+                                        <Pencil className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleDeleteSymptom(cs); }}
+                                        className={cn("px-1.5 py-1 hover:bg-destructive/20", isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-destructive")}
+                                        title="Delete"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            })}
+                            {!showAddForm && (
+                              <button
+                                onClick={() => setShowAddForm(true)}
+                                className="px-2.5 py-1 text-xs rounded-full border border-dashed border-primary/40 text-primary/80 hover:bg-primary/5 transition-all inline-flex items-center gap-1"
+                              >
+                                <Plus className="w-3 h-3" />
+                                Add yours
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Empty search state */}
+                  {q && SYMPTOM_CATEGORIES.every(c => !c.symptoms.some(n => n.toLowerCase().includes(q)))
+                    && !communitySymptoms.some(c => c.name.toLowerCase().includes(q)) && (
+                    <div className="py-3 text-center">
+                      <p className="text-xs text-muted-foreground mb-2">No matches for "{search}"</p>
                       <button
-                        onClick={() => handleSaveEdit(cs)}
-                        className="p-1 rounded-full text-primary hover:bg-primary/10"
-                        title="Save"
+                        onClick={() => { setNewSymptom(search); setShowAddForm(true); setSearch(""); }}
+                        className="text-xs text-primary hover:underline inline-flex items-center gap-1"
                       >
-                        <Check className="w-3 h-3" />
-                      </button>
-                      <button
-                        onClick={cancelEdit}
-                        className="p-1 rounded-full text-muted-foreground hover:bg-muted"
-                        title="Cancel"
-                      >
-                        <X className="w-3 h-3" />
+                        <Plus className="w-3 h-3" />
+                        Add "{search}" as a new symptom
                       </button>
                     </div>
-                  );
-                }
-
-                return (
-                  <div
-                    key={cs.id}
-                    className={cn(
-                      "inline-flex items-center rounded-full border transition-all overflow-hidden",
-                      isSelected
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-card/60 border-border/40 hover:border-primary/40 text-foreground/70"
-                    )}
-                    title={isMine ? "You added this" : "Added by the community"}
-                  >
-                    <button
-                      onClick={() => toggleSymptom(cs.name)}
-                      className="px-2.5 py-1 text-xs inline-flex items-center gap-1.5"
-                    >
-                      {cs.name}
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider px-1 py-0.5 rounded-full",
-                          isSelected
-                            ? "bg-primary-foreground/20 text-primary-foreground"
-                            : "bg-accent/40 text-accent-foreground/80"
-                        )}
-                      >
-                        <Sparkles className="w-2 h-2" />
-                        {isRecent ? "new" : "community"}
-                      </span>
-                    </button>
-                    {isMine && (
-                      <>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); startEdit(cs); }}
-                          className={cn(
-                            "px-1.5 py-1 hover:bg-black/10",
-                            isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-foreground"
-                          )}
-                          title="Edit"
-                        >
-                          <Pencil className="w-3 h-3" />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDeleteSymptom(cs); }}
-                          className={cn(
-                            "px-1.5 py-1 hover:bg-destructive/20",
-                            isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-destructive"
-                          )}
-                          title="Delete"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-              {!showAddForm && (
-                <button
-                  onClick={() => setShowAddForm(true)}
-                  className="px-2.5 py-1 text-xs rounded-full border border-dashed border-primary/40 text-primary/80 hover:bg-primary/5 transition-all inline-flex items-center gap-1"
-                >
-                  <Plus className="w-3 h-3" />
-                  Add yours
-                </button>
-              )}
-            </div>
+                  )}
+                </div>
+              );
+            })()}
             {showAddForm && (
               <div className="mt-2 flex items-center gap-2">
                 <Input
