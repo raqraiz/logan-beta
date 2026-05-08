@@ -142,21 +142,21 @@ export function CycleAnalytics({
           </div>
         ) : (
           <div className="space-y-5">
-            {/* Cycle Length */}
+            {/* Cycle Length — sourced from your chat tracker */}
             <div>
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Cycle Length</h3>
-              <div className="grid grid-cols-3 gap-3">
-                <StatCard label="Current" value={`${currentCycleLength}d`} />
-                <StatCard label="Typical" value={avgLength ? `${avgLength}d` : "—"} />
+              <div className="grid grid-cols-2 gap-3">
+                <StatCard label="Your tracker" value={`${currentCycleLength}d`} />
                 <StatCard label="Variance" value={variance !== null ? `±${variance}d` : "—"} />
               </div>
-              {lengths.length > 0 && (
-                <p className="text-[11px] text-muted-foreground mt-2">
-                  Based on {lengths.length} tracked cycle{lengths.length !== 1 ? "s" : ""}
-                  {minLength !== null && maxLength !== null && minLength !== maxLength ? ` · range ${minLength}–${maxLength}d` : ""}
-                  {excludedCount > 0 ? ` · excluded ${excludedCount} outlier${excludedCount !== 1 ? "s" : ""} (>45d)` : ""}
-                </p>
-              )}
+              <p className="text-[11px] text-muted-foreground mt-2">
+                Synced from your Ask Logan tracker.
+                {avgLength !== null && lengths.length > 0 && (
+                  <> History: median <span className="text-foreground/80">{avgLength}d</span> over {lengths.length} cycle{lengths.length !== 1 ? "s" : ""}
+                  {minLength !== null && maxLength !== null && minLength !== maxLength ? `, range ${minLength}–${maxLength}d` : ""}
+                  {excludedCount > 0 ? ` (excluded ${excludedCount} outlier${excludedCount !== 1 ? "s" : ""} >45d)` : ""}.</>
+                )}
+              </p>
             </div>
 
             <Separator />
