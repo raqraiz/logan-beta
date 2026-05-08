@@ -75,11 +75,26 @@ export function CycleAnalytics({
     })();
   }, [open, userId]);
 
-  // Compute stats
-  const lengths = history.map((h) => h.cycle_length_days);
-  const avgLength = lengths.length > 0 ? Math.round(lengths.reduce((a, b) => a + b, 0) / lengths.length) : null;
+  // Compute stats — exclude unrealistic outliers (>45d are almost always the
+  // onboarding-estimate-to-first-real-reset gap, which inflates the average).
+  const allLengths = history.map((h) => h.cycle_length_days);
+  const lengths = allLengths.filter((l) => l >= 15 && l <= 45);
+  const excludedCount = allLengths.length - lengths.length;
+
+  const sortedLengths = [...lengths].sort((a, b) => a - b);
+  const medianLength = sortedLengths.length > 0
+    ? sortedLengths.length % 2 === 1
+      ? sortedLengths[Math.floor(sortedLengths.length / 2)]
+      : Math.round((sortedLengths[sortedLengths.length / 2 - 1] + sortedLengths[sortedLengths.length / 2]) / 2)
+    : null;
+
+  const avgLength = medianLength; // headline = median (more robust)
+  const minLength = sortedLengths[0] ?? null;
+  const maxLength = sortedLengths[sortedLengths.length - 1] ?? null;
+
+  const meanForVariance = lengths.length > 0 ? lengths.reduce((a, b) => a + b, 0) / lengths.length : 0;
   const variance = lengths.length > 1
-    ? Math.round(Math.sqrt(lengths.reduce((sum, l) => sum + Math.pow(l - (avgLength || 0), 2), 0) / (lengths.length - 1)) * 10) / 10
+    ? Math.round(Math.sqrt(lengths.reduce((sum, l) => sum + Math.pow(l - meanForVariance, 2), 0) / (lengths.length - 1)) * 10) / 10
     : null;
 
   // Estimated period length (menstruation = 5 days by default; could be refined)
@@ -132,9 +147,16 @@ export function CycleAnalytics({
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Cycle Length</h3>
               <div className="grid grid-cols-3 gap-3">
                 <StatCard label="Current" value={`${currentCycleLength}d`} />
-                <StatCard label="Average" value={avgLength ? `${avgLength}d` : "—"} />
+                <StatCard label="Typical" value={avgLength ? `${avgLength}d` : "—"} />
                 <StatCard label="Variance" value={variance !== null ? `±${variance}d` : "—"} />
               </div>
+              {lengths.length > 0 && (
+                <p className="text-[11px] text-muted-foreground mt-2">
+                  Based on {lengths.length} tracked cycle{lengths.length !== 1 ? "s" : ""}
+                  {minLength !== null && maxLength !== null && minLength !== maxLength ? ` · range ${minLength}–${maxLength}d` : ""}
+                  {excludedCount > 0 ? ` · excluded ${excludedCount} outlier${excludedCount !== 1 ? "s" : ""} (>45d)` : ""}
+                </p>
+              )}
             </div>
 
             <Separator />
