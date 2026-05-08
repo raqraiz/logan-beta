@@ -1052,6 +1052,15 @@ const Chat = () => {
               <MessageCircle className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Feedback</span>
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Settings"
+              title="Settings"
+            >
+              <SettingsIcon className="w-4 h-4" />
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Sign out</span>
