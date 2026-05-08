@@ -218,7 +218,7 @@ export function CycleCorrelationDetail({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-2xl">
+      <DialogContent className="max-w-md rounded-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle asChild>
             <div className="flex items-center gap-2 pr-8">

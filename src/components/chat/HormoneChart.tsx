@@ -194,7 +194,7 @@ export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartP
       </div>
 
       <Dialog open={expanded} onOpenChange={setExpanded}>
-        <DialogContent className="max-w-lg bg-[hsl(var(--logan-graphite))] border-border/30 p-4">
+        <DialogContent className="max-w-lg bg-[hsl(var(--logan-graphite))] border-border/30 p-4 max-h-[90vh] overflow-y-auto">
           <div className="space-y-3">
             <HormoneChartSVG cycleDay={cycleDay} phase={phase} cycleLengthDays={cycleLengthDays} w={500} h={260} />
             <p className="text-sm text-muted-foreground leading-relaxed px-1">

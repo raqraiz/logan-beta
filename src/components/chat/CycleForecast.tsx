@@ -199,7 +199,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
 
   const editPeriodDialog = onPeriodUpdate ? (
     <Dialog open={showEditPeriod} onOpenChange={setShowEditPeriod}>
-      <DialogContent className="max-w-sm rounded-2xl">
+      <DialogContent className="max-w-sm rounded-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>When did your last period start?</DialogTitle>
           <DialogDescription>
