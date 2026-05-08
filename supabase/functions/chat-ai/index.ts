@@ -378,12 +378,57 @@ serve(async (req) => {
         /cycle\s*(?:length)?\s*(?:to)\s*(\d{2,})\s*days?/i
       );
 
-      // Detect period date change: "my period started on March 15", "change my period date to April 2"
-      const periodDateMatch = userMessage.match(
-        /(?:period|last period|period date)\s+(?:started|began|was|start)\s+(?:on\s+)?(?:the\s+)?(\w+\s+\d{1,2}(?:,?\s*\d{4})?)/i
-      ) || userMessage.match(
-        /(?:change|set|update)\s+(?:my\s+)?(?:period|period date|last period)\s+(?:to|date to)\s+(\w+\s+\d{1,2}(?:,?\s*\d{4})?)/i
-      );
+      // Detect period date change. Captures phrasings like:
+      // "my period started on March 15", "change my period date to April 2",
+      // "I got a bleed day 1 on April 8", "Day 1 was April 8",
+      // "first day of my period was April 8", "bleed started April 8",
+      // "got my period on April 8". When multiple dates appear (e.g. "April 8 and then today"),
+      // use the LATEST one.
+      const periodDateRegexes: RegExp[] = [
+        /(?:period|last period|period date|bleed|cycle)\s+(?:started|began|was|start|came|arrived)\s+(?:on\s+)?(?:the\s+)?(\w+\s+\d{1,2}(?:,?\s*\d{4})?|today|yesterday)/i,
+        /(?:change|set|update)\s+(?:my\s+)?(?:period|period date|last period)\s+(?:to|date to)\s+(\w+\s+\d{1,2}(?:,?\s*\d{4})?|today|yesterday)/i,
+        /\b(?:i\s+)?(?:got|had)\s+(?:my\s+|a\s+)?(?:period|bleed)(?:\s+day\s*1)?\s+(?:on\s+)?(?:the\s+)?(\w+\s+\d{1,2}(?:,?\s*\d{4})?|today|yesterday)/i,
+        /\b(?:day\s*1|first\s+day(?:\s+of\s+(?:my\s+)?(?:period|bleed|cycle))?)\s+(?:was|started|on|=|is)\s+(?:on\s+)?(?:the\s+)?(\w+\s+\d{1,2}(?:,?\s*\d{4})?|today|yesterday)/i,
+        /\bbleed\s+(?:on|started|began)\s+(?:on\s+)?(?:the\s+)?(\w+\s+\d{1,2}(?:,?\s*\d{4})?|today|yesterday)/i,
+      ];
+      // Find ALL matches across all patterns and pick the LATEST date
+      let periodDateMatch: RegExpMatchArray | null = null;
+      {
+        const allDates: { token: string; date: Date; match: RegExpMatchArray }[] = [];
+        for (const rx of periodDateRegexes) {
+          const globalRx = new RegExp(rx.source, rx.flags.includes("g") ? rx.flags : rx.flags + "g");
+          let m: RegExpExecArray | null;
+          while ((m = globalRx.exec(userMessage)) !== null) {
+            const token = m[1];
+            let d: Date | null = null;
+            if (/^today$/i.test(token)) d = new Date();
+            else if (/^yesterday$/i.test(token)) { d = new Date(); d.setDate(d.getDate() - 1); }
+            else {
+              const parsed = new Date(token);
+              if (!isNaN(parsed.getTime())) d = parsed;
+            }
+            if (d && d <= new Date()) allDates.push({ token, date: d, match: m as unknown as RegExpMatchArray });
+          }
+        }
+        // Also catch a trailing "and (then )?today" / "and (then )?yesterday" that often pairs with a prior date
+        if (/\band\s+(?:then\s+)?today\b/i.test(userMessage)) {
+          allDates.push({ token: "today", date: new Date(), match: ["today", "today"] as unknown as RegExpMatchArray });
+        } else if (/\band\s+(?:then\s+)?yesterday\b/i.test(userMessage)) {
+          const y = new Date(); y.setDate(y.getDate() - 1);
+          allDates.push({ token: "yesterday", date: y, match: ["yesterday", "yesterday"] as unknown as RegExpMatchArray });
+        }
+        if (allDates.length > 0) {
+          allDates.sort((a, b) => b.date.getTime() - a.date.getTime());
+          periodDateMatch = allDates[0].match;
+          // Override the captured token with the resolved date string for downstream parsing
+          (periodDateMatch as any)[1] = allDates[0].date.toISOString().split("T")[0];
+          // Keep the second-newest as a candidate for "previous cycle" archiving
+          if (allDates.length > 1) {
+            (periodDateMatch as any).__previousDate = allDates[1].date.toISOString().split("T")[0];
+          }
+        }
+      }
+
 
       if (cycleLengthMatch) {
         const newLength = parseInt(cycleLengthMatch[1]);
@@ -445,16 +490,22 @@ serve(async (req) => {
         if (!isNaN(parsed.getTime()) && parsed <= new Date()) {
           const formattedDate = parsed.toISOString().split("T")[0];
 
-          // Archive previous cycle if applicable
+          // Archive previous cycle. Prefer an explicit "previous date" mentioned in the same
+          // message (e.g. "April 8 and then today"); otherwise fall back to the participant's
+          // current last_period_start.
           let previousCycleLength: number | null = null;
-          if (participant.last_period_start) {
-            const prevStart = new Date(participant.last_period_start);
+          let inferredCycleLength: number | null = null;
+          const explicitPrev = (periodDateMatch as any).__previousDate as string | undefined;
+          const prevSource = explicitPrev || participant.last_period_start;
+          if (prevSource) {
+            const prevStart = new Date(prevSource);
             const diffDays = Math.round((parsed.getTime() - prevStart.getTime()) / (1000 * 60 * 60 * 24));
             if (diffDays >= 15 && diffDays <= 60) {
               previousCycleLength = diffDays;
+              inferredCycleLength = diffDays;
               await supabase.from("cycle_history").insert({
                 participant_id: participant.id,
-                cycle_start_date: participant.last_period_start,
+                cycle_start_date: prevSource,
                 cycle_end_date: formattedDate,
                 cycle_length_days: diffDays,
               });
@@ -462,9 +513,11 @@ serve(async (req) => {
           }
 
           const periodDatePayload: Record<string, unknown> = { last_period_start: formattedDate };
+          if (inferredCycleLength) periodDatePayload.cycle_length_days = inferredCycleLength;
           if (participant.life_stage === "postpartum") {
             periodDatePayload.life_stage = "cycling";
           }
+
 
           const { error: updateErr } = await supabase
             .from("participants")
@@ -1289,8 +1342,9 @@ MEAL PLANS / MENUS — STRICT RULES:
     const topics = participant.goals?.length ? participant.goals.join(", ") : null;
     const stageLabel = userLifeStage === "postpartum" ? "Postpartum" : "Menopause";
     
-    // Calculate postpartum timeline
+    // Calculate postpartum timeline + stage-specific guidance bucket
     let ppTimeline = "";
+    let ppPhaseGuidance = "";
     if (userLifeStage === "postpartum" && participant.postpartum_start_date) {
       const birthDate = new Date(participant.postpartum_start_date + "T12:00:00Z");
       const now = new Date();
@@ -1302,11 +1356,27 @@ MEAL PLANS / MENUS — STRICT RULES:
       } else {
         ppTimeline = `\n- Postpartum timeline: ${weeks} week${weeks !== 1 ? "s" : ""} postpartum (baby born ${birthDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})`;
       }
+
+      // Bucket guidance — DO NOT default to "early postpartum healing" for everyone
+      if (diffDays <= 42) {
+        ppPhaseGuidance = `\nPOSTPARTUM PHASE — ACUTE RECOVERY (0-6 weeks): Focus on bleeding, perineal/c-section healing, sleep fragmentation, milk supply if user mentions it, baby blues vs PPD signals. Movement = walking and pelvic floor only.`;
+      } else if (diffDays <= 84) {
+        ppPhaseGuidance = `\nPOSTPARTUM PHASE — EARLY RECOVERY (6-12 weeks): Focus on tissue healing finishing up, hormone crash plateau, mood stabilization, return to gentle strength work, scar mobility, identity shifts.`;
+      } else if (months <= 6) {
+        ppPhaseGuidance = `\nPOSTPARTUM PHASE — REBUILDING (3-6 months): Focus on rebuilding core/pelvic floor strength, addressing diastasis if relevant, sleep regression cycles, hair shedding, returning libido, slow reintroduction of moderate exercise. NOT acute healing anymore.`;
+      } else if (months <= 12) {
+        ppPhaseGuidance = `\nPOSTPARTUM PHASE — LATE POSTPARTUM (6-12 months): Focus on regaining athletic capacity, progressive overload, sleep quality (not just quantity), return of cycle (or continued absence), thyroid checks, identity integration. This is NOT early postpartum — do not center "healing" or "recovery" framing. Treat them as a near-pre-pregnancy adult who happens to have a baby. If their cycle has returned, they should be treated like a cycling user.`;
+      } else if (months <= 24) {
+        ppPhaseGuidance = `\nPOSTPARTUM PHASE — EXTENDED POSTPARTUM (12-24 months): Hormones are largely re-stabilized. Cycle has typically returned. Focus on full athletic capacity, performance, long-term pelvic floor function, parental burnout vs hormonal symptoms. Do NOT use "healing" or "recovery" framing — this user is an athlete-in-life-stage, not a recovering patient.`;
+      } else {
+        ppPhaseGuidance = `\nPOSTPARTUM PHASE — BEYOND 2 YEARS: Treat as cycling adult with parenting context. Hormones fully recalibrated. Symptoms are unlikely to be "postpartum" — investigate cycle, thyroid, sleep, stress instead.`;
+      }
     }
 
     const stageContext = userLifeStage === "postpartum"
-      ? `This user is POSTPARTUM — they do not have a regular cycle right now. Their hormones are recalibrating after pregnancy. Focus on: recovery, sleep deprivation, mood shifts, identity adjustments, physical healing, hormonal recalibration. Do NOT assume whether the user is breastfeeding or not — only reference breastfeeding if the USER brings it up first. If they mention having multiple children, do NOT assume they are breastfeeding all of them. Do NOT reference cycle phases, cycle days, or ovulation. Instead, center guidance on where they are in postpartum recovery.`
+      ? `This user is POSTPARTUM — they do not have a regular cycle right now (unless they say it has returned). Their hormones are recalibrating after pregnancy, but the SPECIFIC focus depends heavily on how far postpartum they are. ${ppPhaseGuidance}\n\nGENERAL POSTPARTUM RULES: Do NOT assume whether the user is breastfeeding or not — only reference breastfeeding if the USER brings it up first. If they mention having multiple children, do NOT assume they are breastfeeding all of them. Do NOT reference cycle phases, cycle days, or ovulation unless the user has confirmed their cycle returned. NEVER default to generic "early postpartum healing/recovery" language for users past 6 months postpartum.`
       : `This user is in MENOPAUSE — their cycle may be irregular or has stopped. Their estrogen and progesterone are declining. Focus on: hot flashes, sleep disruption, mood changes, bone health, energy management, cognitive shifts, weight changes. Do NOT reference specific cycle days or ovulation windows. Instead, provide guidance relevant to hormonal transition and thriving through it.`;
+
 
     let userContext = `\n\nUSER CONTEXT:\n- Life stage: ${stageLabel}\n- Age: ${age || "unknown"}${ppTimeline}\n- Anchor symptom: ${participant.anchor_symptom || "not specified"}\n- Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}\n${topics ? `- Focus areas: ${topics}` : ""}\n\n${stageContext}${symptomContext}`;
     

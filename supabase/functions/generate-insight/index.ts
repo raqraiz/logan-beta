@@ -485,6 +485,7 @@ function buildNonCyclingInsightPrompt(
   const topics = participant.goals || [];
 
   let timelineContext = "";
+  let ppPhaseGuidance = "";
   if (lifeStage === "postpartum" && participant.postpartum_start_date) {
     const birthDate = new Date(participant.postpartum_start_date + "T12:00:00Z");
     const now = new Date();
@@ -494,11 +495,25 @@ function buildNonCyclingInsightPrompt(
     timelineContext = months >= 3
       ? `${months} months postpartum`
       : `${weeks} weeks postpartum (Day ${diffDays})`;
+
+    if (diffDays <= 42) {
+      ppPhaseGuidance = "ACUTE RECOVERY (0-6 weeks): bleeding, healing tissue, sleep fragmentation, baby-blues. Centre on rest, fluids, gentle pelvic floor.";
+    } else if (diffDays <= 84) {
+      ppPhaseGuidance = "EARLY RECOVERY (6-12 weeks): hormone crash plateau, mood stabilization, gentle return to movement. Tissue mostly healed.";
+    } else if (months <= 6) {
+      ppPhaseGuidance = "REBUILDING (3-6 months): rebuild core/pelvic floor, sleep regressions, hair shedding, libido returning. NOT acute healing.";
+    } else if (months <= 12) {
+      ppPhaseGuidance = "LATE POSTPARTUM (6-12 months): regaining athletic capacity, progressive overload, sleep quality, identity integration. DO NOT default to early-postpartum 'healing/recovery' framing — she's an athlete-in-life-stage now.";
+    } else if (months <= 24) {
+      ppPhaseGuidance = "EXTENDED POSTPARTUM (12-24 months): hormones largely re-stabilized, often cycling again. Treat as full athletic adult with parenting context. NEVER use 'healing/recovery' framing.";
+    } else {
+      ppPhaseGuidance = "BEYOND 2 YEARS: treat as cycling adult. Symptoms unlikely to be 'postpartum' — investigate cycle, thyroid, sleep, stress.";
+    }
   }
 
   const stageLabel = lifeStage === "postpartum" ? "Postpartum" : "Menopause";
   const stageContext = lifeStage === "postpartum"
-    ? `${firstName} is in the postpartum stage${timelineContext ? ` — ${timelineContext}` : ""}. Her body is healing and hormones are recalibrating. Focus on recovery, energy management, and emotional resilience. Do NOT assume whether she is breastfeeding — only mention it if she has brought it up. If she has multiple children, do NOT assume she is breastfeeding all of them.`
+    ? `${firstName} is in the postpartum stage${timelineContext ? ` — ${timelineContext}` : ""}. Phase-specific guidance: ${ppPhaseGuidance} Focus appropriately for this exact phase — do NOT use generic "healing and recovery" language for users past 6 months. Do NOT assume she is breastfeeding — only mention it if she brought it up. If she has multiple children, do NOT assume she is breastfeeding all of them.`
     : `${firstName} is navigating menopause. Estrogen and progesterone are declining. Focus on bone health, sleep quality, mood stability, and managing symptoms like hot flashes or brain fog.`;
 
   return `You are Logan. You're ${firstName}'s companion through her ${stageLabel.toLowerCase()} journey. You're not clinical — you're the friend who just gets it.
