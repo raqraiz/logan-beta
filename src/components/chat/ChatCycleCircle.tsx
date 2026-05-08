@@ -257,7 +257,8 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
 export function calculateCycleInfo(
   lastPeriodStart: string | null,
   cycleLengthDays: number | null,
-  timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone
+  timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone,
+  forDate?: Date | string | null
 ): { cycleDay: number; phase: string } | null {
   if (!lastPeriodStart || !cycleLengthDays) return null;
 
@@ -270,10 +271,21 @@ export function calculateCycleInfo(
     periodStart = new Date(lastPeriodStart);
   }
 
-  // Get today's date in the user's timezone for accurate day calculation
-  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: timezone }); // YYYY-MM-DD
-  const [ty, tm, td] = todayStr.split("-").map(Number);
-  const today = new Date(Date.UTC(ty, tm - 1, td, 12, 0, 0));
+  // Reference date — defaults to today in the user's timezone
+  let today: Date;
+  if (forDate) {
+    if (typeof forDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(forDate)) {
+      const [y, m, d] = forDate.split("-").map(Number);
+      today = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+    } else {
+      const d = forDate instanceof Date ? forDate : new Date(forDate);
+      today = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0));
+    }
+  } else {
+    const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: timezone });
+    const [ty, tm, td] = todayStr.split("-").map(Number);
+    today = new Date(Date.UTC(ty, tm - 1, td, 12, 0, 0));
+  }
 
   const diffTime = today.getTime() - periodStart.getTime();
   const daysSinceStart = Math.round(diffTime / (1000 * 60 * 60 * 24));
