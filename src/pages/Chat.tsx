@@ -104,7 +104,7 @@ interface CycleData {
   phase: string;
   cycleLengthDays: number;
   lastPeriodStart?: string;
-  lifeStage?: "cycling" | "postpartum" | "menopause";
+  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause";
   postpartumStartDate?: string;
 }
 
@@ -122,7 +122,7 @@ const Chat = () => {
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
-  const [lifeStage, setLifeStage] = useState<"cycling" | "postpartum" | "menopause">("cycling");
+  const [lifeStage, setLifeStage] = useState<"cycling" | "irregular" | "postpartum" | "menopause">("cycling");
   const [postpartumStartDate, setPostpartumStartDate] = useState<string | null>(null);
   // Authoritative cycle data from `participants` table — wins over chat metadata
   const [participantCycle, setParticipantCycle] = useState<{
@@ -305,7 +305,7 @@ const Chat = () => {
             timezone: row.timezone ?? null,
           });
           if (row.life_stage) {
-            setLifeStage(row.life_stage as "cycling" | "postpartum" | "menopause");
+            setLifeStage(row.life_stage as "cycling" | "irregular" | "postpartum" | "menopause");
           }
           if (row.postpartum_start_date !== undefined) {
             setPostpartumStartDate(row.postpartum_start_date ?? null);
@@ -326,8 +326,9 @@ const Chat = () => {
       return;
     }
 
-    // For non-cycling users, provide a minimal CycleData with life stage info
-    if (lifeStage !== "cycling") {
+    // For postpartum/menopause users, provide a minimal CycleData with life stage info.
+    // Irregular users still get full cycle tracking (they have cycles, just unpredictable).
+    if (lifeStage === "postpartum" || lifeStage === "menopause") {
       setCycleData({
         cycleDay: 0,
         phase: lifeStage === "postpartum" ? "Postpartum" : "Menopause",
@@ -377,7 +378,7 @@ const Chat = () => {
           cycleDay: metadata.cycle_day,
           phase: metadata.cycle_phase || "Unknown",
           cycleLengthDays: metadata.cycle_length_days,
-          lifeStage: "cycling",
+          lifeStage: lifeStage === "irregular" ? "irregular" : "cycling",
         });
       }
       return;
@@ -390,7 +391,7 @@ const Chat = () => {
         phase: liveInfo.phase,
         cycleLengthDays,
         lastPeriodStart,
-        lifeStage: "cycling",
+        lifeStage: lifeStage === "irregular" ? "irregular" : "cycling",
         postpartumStartDate: postpartumStartDate || undefined,
       });
     }
@@ -536,7 +537,7 @@ const Chat = () => {
         .eq("email", user.email)
         .single();
       if (data?.life_stage) {
-        setLifeStage(data.life_stage as "cycling" | "postpartum" | "menopause");
+        setLifeStage(data.life_stage as "cycling" | "irregular" | "postpartum" | "menopause");
       }
       if (data?.postpartum_start_date) {
         setPostpartumStartDate(data.postpartum_start_date);
@@ -1405,16 +1406,15 @@ const Chat = () => {
                     <div className="mt-3 flex flex-col gap-2 max-w-xs">
                       {[
                         { value: "cycling", label: "I have a regular cycle", desc: "Currently menstruating" },
+                        { value: "irregular", label: "My cycle is irregular", desc: "PCOS, hormonal shifts, or unpredictable" },
                         { value: "postpartum", label: "Postpartum", desc: "Recently had a baby" },
-                        { value: "menopause", label: "Menopause", desc: "Cycle is irregular or stopped" },
+                        { value: "menopause", label: "Menopause", desc: "Peri- or post-menopause" },
                       ].map((option) => (
                         <button
                           key={option.value}
                           onClick={() => {
                             sendOnboardingResponse(option.value);
-                            if (option.value !== "cycling") {
-                              setLifeStage(option.value as "postpartum" | "menopause");
-                            }
+                            setLifeStage(option.value as "cycling" | "irregular" | "postpartum" | "menopause");
                           }}
                           disabled={isSending}
                           className="text-left px-4 py-3 rounded-xl border border-border/40 bg-card/60 hover:bg-card/90 transition-all active:scale-[0.98]"
