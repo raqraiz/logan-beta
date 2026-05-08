@@ -1,5 +1,5 @@
 
-type LifeStage = "cycling" | "postpartum" | "menopause";
+type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause";
 
 interface ChatCycleCircleProps {
   cycleDay: number;
@@ -204,8 +204,8 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "
 }
 
 export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling", postpartumStartDate }: ChatCycleCircleProps) {
-  // Non-cycling users get a static badge
-  if (lifeStage !== "cycling") {
+  // Postpartum/menopause users get a static badge. Irregular users still see the cycle circle.
+  if (lifeStage === "postpartum" || lifeStage === "menopause") {
     return <LifeStageBadge lifeStage={lifeStage} size={size} postpartumStartDate={postpartumStartDate} />;
   }
 
