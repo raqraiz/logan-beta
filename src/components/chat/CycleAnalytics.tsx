@@ -7,6 +7,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Pencil, Trash2, Check, X, Plus } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { format, differenceInDays } from "date-fns";
 
 interface CycleAnalyticsProps {
   open: boolean;
@@ -18,6 +23,7 @@ interface CycleAnalyticsProps {
 }
 
 interface CycleHistoryRow {
+  id: string;
   cycle_start_date: string;
   cycle_end_date: string;
   cycle_length_days: number;
@@ -33,6 +39,14 @@ export function CycleAnalytics({
 }: CycleAnalyticsProps) {
   const [history, setHistory] = useState<CycleHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [participantId, setParticipantId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editStart, setEditStart] = useState("");
+  const [editEnd, setEditEnd] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [newStart, setNewStart] = useState("");
+  const [newEnd, setNewEnd] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
