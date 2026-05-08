@@ -74,8 +74,8 @@ export function SettingsDialog({ open, onOpenChange, userEmail, currentLifeStage
             <label className="flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:bg-accent/30 cursor-pointer">
               <RadioGroupItem value="irregular" id="stage-irregular" className="mt-0.5" />
               <div className="flex-1">
-                <div className="text-sm font-medium">Irregular cycle</div>
-                <div className="text-xs text-muted-foreground">PCOS, hormonal imbalance, or unpredictable cycles. Logan still tracks but adapts predictions.</div>
+                <div className="text-sm font-medium">Irregular cycle or on hormonal birth control</div>
+                <div className="text-xs text-muted-foreground">PCOS, hormonal imbalance, unpredictable cycles, or hormonal BC (pill, IUD, implant, ring, patch). Logan still tracks but adapts predictions.</div>
               </div>
             </label>
             <label className="flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:bg-accent/30 cursor-pointer">
@@ -89,7 +89,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, currentLifeStage
               <RadioGroupItem value="menopause" id="stage-menopause" className="mt-0.5" />
               <div className="flex-1">
                 <div className="text-sm font-medium">Menopause</div>
-                <div className="text-xs text-muted-foreground">Peri- or post-menopause. No active cycle tracking.</div>
+                <div className="text-xs text-muted-foreground">Post-menopause. No active cycle tracking.</div>
               </div>
             </label>
           </RadioGroup>
