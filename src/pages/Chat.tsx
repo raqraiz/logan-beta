@@ -8,8 +8,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
 
-import { Send, Loader2, LogOut, ChevronLeft, ChevronRight, ArrowDown, MessageSquarePlus, MessageCircle } from "lucide-react";
+import { Send, Loader2, LogOut, ChevronLeft, ChevronRight, ArrowDown, MessageSquarePlus, MessageCircle, Settings as SettingsIcon } from "lucide-react";
 import { FeedbackModal } from "@/components/chat/FeedbackModal";
+import { SettingsDialog } from "@/components/chat/SettingsDialog";
 import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
 import { format } from "date-fns";
 import { SymptomPicker } from "@/components/chat/SymptomPicker";
@@ -135,6 +136,7 @@ const Chat = () => {
   const [creditBalance, setCreditBalance] = useState<{ free: number; paid: number; total: number; hoursUntilReset?: number } | null>(null);
   const [outOfCredits, setOutOfCredits] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [showTopicPrompt, setShowTopicPrompt] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("ask");
   
@@ -1050,6 +1052,15 @@ const Chat = () => {
               <MessageCircle className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Feedback</span>
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Settings"
+              title="Settings"
+            >
+              <SettingsIcon className="w-4 h-4" />
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Sign out</span>
@@ -1606,6 +1617,16 @@ const Chat = () => {
 
     {/* Forecast overlay removed — forecast now lives in Plan tab */}
     <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
+    <SettingsDialog
+      open={settingsOpen}
+      onOpenChange={setSettingsOpen}
+      userEmail={user?.email || undefined}
+      currentLifeStage={lifeStage}
+      onUpdated={(newStage) => {
+        setLifeStage(newStage);
+        if (newStage !== "postpartum") setPostpartumStartDate(null);
+      }}
+    />
     </>
   );
 };
