@@ -1149,7 +1149,7 @@ export function ProfilesTab() {
       ) : (
         <div className="grid gap-3">
           {filtered.map((profile) => {
-            const isNonCycling = profile.participant?.life_stage && profile.(participant.life_stage === "postpartum" || participant.life_stage === "menopause");
+            const isNonCycling = profile.participant?.life_stage === "postpartum" || profile.participant?.life_stage === "menopause";
             const cycleData = profile.participant ? getCycleData(profile.participant) : null;
             const cycleDay = cycleData?.cycleDay ?? null;
             const phase = cycleData?.phase ?? null;
