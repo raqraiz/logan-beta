@@ -148,11 +148,6 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
           </div>
         )}
 
-        {signupConfirmationSent && isSignUp && !isForgotPassword && (
-          <div className="mb-5 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
-            Check your inbox for the Logan confirmation link. You can close this tab or sign in after confirming.
-          </div>
-        )}
 
         {/* Inline auth form */}
         <form onSubmit={handleSubmit} className="space-y-4">
