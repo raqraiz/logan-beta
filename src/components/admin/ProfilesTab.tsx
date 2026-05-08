@@ -547,7 +547,7 @@ export function ProfilesTab() {
                   <Download className="w-4 h-4 mr-2" />
                   Download
                 </Button>
-                {(cycleData || participant?.life_stage !== "cycling") && (
+                {(cycleData || (participant?.life_stage === "postpartum" || participant?.life_stage === "menopause")) && (
                   <Button variant="outline" size="sm" onClick={() => setShowHomePreview(true)}>
                     <Home className="w-4 h-4 mr-2" />
                     View as user
@@ -655,7 +655,7 @@ export function ProfilesTab() {
               {participant ? (
                 <div className="space-y-4">
                   {/* Cycle Circle Visualization */}
-                  {participant.life_stage && participant.life_stage !== "cycling" ? (
+                  {participant.life_stage && (participant.life_stage === "postpartum" || participant.life_stage === "menopause") ? (
                     <div className="flex justify-center py-2">
                       <ChatCycleCircle
                         cycleDay={0}
@@ -987,7 +987,7 @@ export function ProfilesTab() {
                 lastPeriodStart: participant?.last_period_start || undefined,
                 lifeStage: (participant?.life_stage as any) || "cycling",
                 postpartumStartDate: participant?.postpartum_start_date || undefined,
-              } : participant?.life_stage && participant.life_stage !== "cycling" ? {
+              } : participant?.life_stage && (participant.life_stage === "postpartum" || participant.life_stage === "menopause") ? {
                 cycleDay: 0,
                 phase: participant.life_stage === "postpartum" ? "Postpartum" : "Menopause",
                 cycleLengthDays: 0,
@@ -1149,7 +1149,7 @@ export function ProfilesTab() {
       ) : (
         <div className="grid gap-3">
           {filtered.map((profile) => {
-            const isNonCycling = profile.participant?.life_stage && profile.participant.life_stage !== "cycling";
+            const isNonCycling = profile.participant?.life_stage && profile.(participant.life_stage === "postpartum" || participant.life_stage === "menopause");
             const cycleData = profile.participant ? getCycleData(profile.participant) : null;
             const cycleDay = cycleData?.cycleDay ?? null;
             const phase = cycleData?.phase ?? null;
