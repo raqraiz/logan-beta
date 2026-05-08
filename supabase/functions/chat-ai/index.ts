@@ -706,6 +706,9 @@ serve(async (req) => {
         { name: "Hot flashes", patterns: [/\bhot flash(es)?\b/i, /\bhot flush(es)?\b/i] },
         { name: "Night sweats", patterns: [/\bnight sweats?\b/i, /\bsweating at night\b/i] },
         { name: "Spotting", patterns: [/\bspotting\b/i, /\blight bleeding\b/i] },
+        { name: "Dehydrated skin", patterns: [/\bdehydrated skin\b/i, /\bskin (feels |is )?dehydrated\b/i] },
+        { name: "Dry skin", patterns: [/\bdry skin\b/i, /\bskin (feels |is )?(really |very )?dry\b/i, /\bflaky skin\b/i] },
+        { name: "Thirst", patterns: [/\bvery thirsty\b/i, /\bso thirsty\b/i, /\bcan'?t stop drinking\b/i] },
       ];
 
       // Loose intent: user is reporting how they feel (not asking a generic question)
