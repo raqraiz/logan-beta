@@ -996,6 +996,24 @@ export type Database = {
         }
         Returns: boolean
       }
+      redeem_promo_code_atomic: {
+        Args: { _promo_id: string }
+        Returns: {
+          code: string
+          created_at: string
+          credits_per_use: number
+          id: string
+          is_active: boolean
+          max_uses: number
+          uses_remaining: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "promo_codes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       app_role: "admin" | "user"
