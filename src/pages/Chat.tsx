@@ -136,6 +136,7 @@ const Chat = () => {
   const [creditBalance, setCreditBalance] = useState<{ free: number; paid: number; total: number; hoursUntilReset?: number } | null>(null);
   const [outOfCredits, setOutOfCredits] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [showTopicPrompt, setShowTopicPrompt] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("ask");
   
