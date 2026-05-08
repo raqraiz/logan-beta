@@ -713,32 +713,6 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
           </p>
         </div>
 
-        {/* ── Heads-up alerts ── */}
-        {alerts.length > 0 && (
-          <div className="space-y-2">
-            {alerts.map((alert, i) => (
-              <div
-                key={i}
-                className={cn(
-                  "flex items-start gap-2.5 rounded-xl px-3.5 py-3 border",
-                  alert.type === "warning"
-                    ? "border-phase-menstruation/20 bg-phase-menstruation/5"
-                    : "border-phase-follicular/20 bg-phase-follicular/5"
-                )}
-              >
-                {alert.type === "warning" ? (
-                  <AlertTriangle className="w-4 h-4 text-phase-menstruation shrink-0 mt-0.5" />
-                ) : (
-                  <Zap className="w-4 h-4 text-phase-follicular shrink-0 mt-0.5" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs font-semibold text-foreground">{alert.day}</span>
-                  <p className="text-xs text-muted-foreground mt-0.5">{alert.message}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
 
 
 
