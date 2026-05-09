@@ -576,18 +576,22 @@ serve(async (req) => {
         }
       }
 
-      // Detect "today should be day X" / "I'm on day X" / "today is day X" corrections
+      // Detect "today should be day X" / "I'm on day X" / "today is day X" corrections.
+      // Let the current cycle run past the typical length until the user confirms a bleed.
       const cycleDayCorrectionMatch = userMessage.match(
         /(?:today\s+(?:should\s+be|is)|i['’]?m\s+(?:on|actually\s+on)|i\s+am\s+on|should\s+be)\s+(?:my\s+|on\s+)?(?:cycle\s+)?day\s+(\d{1,2})/i
       ) || userMessage.match(
         /\bday\s+(\d{1,2})\s*(?:today|now|,?\s*not\s+day\s+\d{1,2})/i
       ) || userMessage.match(
         /\bnot\s+day\s+\d{1,2}[^.?!]{0,40}\bday\s+(\d{1,2})/i
+      ) || (/(?:sorry|actually|correction|i meant)/i.test(userMessage) ? userMessage.match(
+        /^\s*(?:day\s*)?(\d{1,2})\s*(?:sorry|actually|correction|i meant)?\s*$/i
+      ) : null
       );
 
       if (cycleDayCorrectionMatch) {
         const targetDay = parseInt(cycleDayCorrectionMatch[1]);
-        if (targetDay >= 1 && targetDay <= (participant.cycle_length_days || 28)) {
+        if (targetDay >= 1 && targetDay <= 60) {
           // Compute new last_period_start = today - (targetDay - 1) days, in user's tz
           const tz = participant.timezone || "UTC";
           const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
@@ -617,7 +621,7 @@ serve(async (req) => {
               tz
             );
 
-            const msg = `Got it — today is **Day ${updatedCycleInfo.cycleDay}** in your **${updatedCycleInfo.phase}** phase. Updated.`;
+            const msg = `Got it — today is **Day ${updatedCycleInfo.cycleDay}** in your **${updatedCycleInfo.phase}** phase. Updated everywhere.`;
 
             await supabase.from("chat_messages").insert({
               user_id: user.id,
