@@ -365,13 +365,30 @@ async function generateAndUploadPdf(args: {
 - Ovulation: cruciferous vegetables (broccoli, cauliflower) for healthy estrogen clearance, B vitamins, antioxidant-rich berries, fiber.
 - Luteal: complex carbs (sweet potato, quinoa, oats) to support serotonin, magnesium-rich (dark chocolate, leafy greens, sunflower/sesame seeds), B6, calcium.`;
 
-    const postpartumPrinciples = `Postpartum nutrition principles (this user is POSTPARTUM — they do NOT have a regular cycle right now, so do NOT reference cycle days, phases, ovulation, luteal, follicular, or menstruation anywhere in the meals, intros, or summaries):
-- Recovery & repair: collagen-rich foods (bone broth, slow-cooked meats), iron (red meat, lentils, dark leafy greens) to rebuild blood stores.
-- Hormonal recalibration: healthy fats (avocado, olive oil, nuts, seeds, oily fish) for steroid hormone production; cruciferous vegetables for estrogen metabolism.
-- Energy & sleep deprivation: stable blood sugar via complex carbs + protein at every meal; magnesium (leafy greens, pumpkin seeds, dark chocolate) to support nervous system.
-- Mood & nervous system: B-vitamins (eggs, whole grains, legumes), omega-3s (salmon, sardines, walnuts, flax) for mood regulation.
-- Easy & one-handed: meals must be doable while caring for a baby — minimal prep, ideally 10-20 min, batch-friendly.
-- Do NOT assume breastfeeding — only optimize for breastfeeding if the user explicitly mentioned it in their dietary notes.`;
+    const postpartumEarly = `Postpartum nutrition — EARLY RECOVERY (0-6 weeks). Do NOT reference cycle phases. Priorities:
+- Tissue repair: collagen + protein at every meal (bone broth, slow-cooked meats, eggs, Greek yogurt).
+- Replenish blood stores: iron-rich (red meat, lentils, dark leafy greens) + vitamin C to absorb.
+- Warming, soft, easy-to-digest foods. Stews, congee, oatmeal, soups. Minimal raw/cold.
+- Hydration is non-negotiable.
+- One-handed, 5-15 min, batch-friendly. Assume zero cooking capacity.
+- Do NOT assume breastfeeding — only optimize for it if she mentioned it in dietary notes.`;
+
+    const postpartumMid = `Postpartum nutrition — REBUILDING (6 weeks-6 months). Do NOT reference cycle phases. Priorities:
+- Hormonal recalibration: healthy fats (avocado, olive oil, nuts, seeds, oily fish), cruciferous vegetables for estrogen metabolism.
+- Stable blood sugar through sleep deprivation: complex carbs + protein at every meal; magnesium (leafy greens, pumpkin seeds, dark chocolate).
+- Mood + nervous system: B-vitamins (eggs, whole grains, legumes), omega-3s (salmon, sardines, walnuts, flax).
+- Hair shedding window: zinc, biotin, protein, iron.
+- Meals 10-20 min, batch-friendly, still doable while caring for a baby.
+- Do NOT assume breastfeeding.`;
+
+    const postpartumLate = `Postpartum nutrition — RECLAIMING CAPACITY (6+ months). Do NOT reference cycle phases unless she's explicitly cycling again. Treat her as a full athletic adult in a parenting context — NOT as someone "healing." Priorities:
+- Performance + muscle: protein-forward meals (30-40g/meal), creatine-friendly foods, post-workout carbs.
+- Sustained energy + cognition: complex carbs, omega-3s, leafy greens, berries.
+- Bone + joint: calcium, vitamin D, magnesium, anti-inflammatory spices.
+- Normal prep times (15-30 min) — she has more bandwidth now.
+- Do NOT use "healing/recovery" framing. Do NOT assume breastfeeding.`;
+
+    const postpartumPrinciples = ppWindow === "early" ? postpartumEarly : ppWindow === "late" ? postpartumLate : postpartumMid;
 
     const menopausePrinciples = `Menopause nutrition principles (this user is in MENOPAUSE — they do NOT have a regular cycle, so do NOT reference cycle days, phases, ovulation, luteal, follicular, or menstruation anywhere):
 - Hot flashes & sleep: phytoestrogen-rich foods (flax, soy, sesame), tryptophan-rich (turkey, oats, nuts) for evening meals.
