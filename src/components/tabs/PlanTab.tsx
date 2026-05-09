@@ -562,35 +562,92 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
     const stageBgFaint = stage === "postpartum" ? "bg-pink-400/15" : "bg-amber-400/15";
     const stageBorder = stage === "postpartum" ? "border-pink-400/20" : "border-amber-400/20";
 
-    const PP_WORKOUT = {
-      suggestion: "Your body is healing. Focus on pelvic floor recovery, gentle walks, and rebuilding core strength gradually. No rushing.",
-      examples: ["Pelvic floor exercises", "Short walks", "Gentle stretching", "Postnatal yoga"],
-      trainingNote: "Avoid high-impact and heavy lifts until cleared by your provider. Core stability before intensity.",
+    // Postpartum timeline window: early (0-6w), mid (6w-6mo), late (6mo+)
+    type PPWin = "early" | "mid" | "late";
+    const ppStart = cycleData?.postpartumStartDate;
+    const ppDays = ppStart ? Math.floor((Date.now() - new Date(ppStart + "T12:00:00Z").getTime()) / 86400000) : 0;
+    const ppWin: PPWin = ppDays < 42 ? "early" : ppDays < 180 ? "mid" : "late";
+    const ppLabel = ppWin === "early" ? "Early recovery (0-6 weeks)" : ppWin === "mid" ? "Rebuilding (6 wks - 6 mo)" : "Reclaiming capacity (6+ months)";
+
+    const PP_WORKOUTS: Record<PPWin, { suggestion: string; examples: string[]; trainingNote: string }> = {
+      early: {
+        suggestion: "You are healing. The work right now is breath, pelvic floor reconnection, and walking when you feel up to it. Nothing more.",
+        examples: ["Diaphragmatic breathing", "Pelvic floor activations", "Short slow walks", "Gentle stretching"],
+        trainingNote: "No high-impact, no heavy lifts, no abs work until cleared. Bleeding heavier or pelvic heaviness = back off and rest.",
+      },
+      mid: {
+        suggestion: "Rebuild the foundation: glutes, deep core, posture, low-impact strength. Consistency beats intensity right now.",
+        examples: ["Bodyweight squats", "Glute bridges", "Dead bugs", "Stroller walks", "Postnatal Pilates"],
+        trainingNote: "Add load gradually. If you leak, feel pelvic heaviness, or get coning in your abs — scale back and see a pelvic floor PT.",
+      },
+      late: {
+        suggestion: "Train like an athlete again. Progressive overload, real strength work, and conditioning are back on the menu.",
+        examples: ["Heavy compound lifts", "Running / intervals", "Plyometrics (if PF is solid)", "Sport-specific work"],
+        trainingNote: "You are not fragile. Push intensity, track recovery, and treat any lingering pelvic floor symptoms with a specialist — don't just back off forever.",
+      },
     };
     const MENO_WORKOUT = {
       suggestion: "Strength training protects bone density and manages symptoms. Consistency matters more than intensity.",
       examples: ["Weight training", "Resistance bands", "Walking", "Swimming"],
       trainingNote: "Prioritize compound movements. Bone density and muscle mass preservation are your main goals.",
     };
-    const PP_NUTRITION = {
-      focus: "Support healing & energy",
-      foods: ["Iron-rich foods (red meat, lentils)", "Omega-3s (salmon, walnuts)", "Bone broth & warm meals", "Hydrate — especially if nursing"],
-      avoid: "Extreme calorie restriction — your body needs fuel to heal",
+
+    const PP_NUTRITIONS: Record<PPWin, { focus: string; foods: string[]; avoid: string }> = {
+      early: {
+        focus: "Heal tissue, replenish iron, stabilize blood sugar",
+        foods: ["Iron-rich foods (red meat, lentils, liver if you tolerate it)", "Bone broth and warm cooked meals", "Healthy fats (avocado, olive oil, eggs)", "Hydrate constantly — especially if nursing"],
+        avoid: "Cold raw salads as your main meal, restrictive diets, and skipping meals because you're tired.",
+      },
+      mid: {
+        focus: "Rebuild muscle, support hair regrowth, steady mood",
+        foods: ["Protein at every meal (30g+)", "Omega-3s (salmon, sardines, walnuts)", "Iron + vitamin C pairing", "Complex carbs for steady energy and milk supply if nursing"],
+        avoid: "Underfueling. Hair shedding, persistent fatigue and low mood often track back to under-eating, not 'just postpartum'.",
+      },
+      late: {
+        focus: "Athletic recovery, hormone re-regulation, return-of-cycle support",
+        foods: ["High protein (1.6-2g/kg)", "Cruciferous veg for estrogen metabolism", "Magnesium-rich foods", "Carbs around training, not feared"],
+        avoid: "Treating yourself like you're still in 'recovery mode' food-wise if you're training hard — you need fuel.",
+      },
     };
     const MENO_NUTRITION = {
       focus: "Bone health & hormone balance",
       foods: ["Calcium-rich foods (dairy, leafy greens)", "Vitamin D sources", "Phytoestrogens (soy, flaxseed)", "Magnesium (nuts, seeds)"],
       avoid: "Excess alcohol and caffeine — they can worsen hot flashes and sleep disruption",
     };
-    const PP_MOOD = {
-      outlook: "Recovery — be patient with yourself",
-      headsUp: "Hormones are recalibrating after pregnancy. Mood swings, tearfulness, and anxiety are common — not a sign of weakness.",
-      selfCare: "Ask for help. Sleep when you can. One good meal and one short walk can shift your entire day.",
-      relationships: {
-        people: "You may feel isolated or overwhelmed. One honest conversation with someone you trust goes further than pretending you're fine.",
-        withPartner: "Tell them specifically what helps — they can't read your mind and they want to support you.",
-        withKids: "Older kids may need reassurance. Simple routines and predictable rhythms help everyone adjust.",
-        strategy: "This phase is temporary. Your hormones will stabilize. Give yourself the grace you'd give a friend.",
+
+    const PP_MOODS: Record<PPWin, { outlook: string; headsUp: string; selfCare: string; relationships: { people: string; withPartner: string; withKids: string; strategy: string } }> = {
+      early: {
+        outlook: "Survival mode — that is the assignment",
+        headsUp: "The crash after birth is hormonal whiplash. Crying at nothing, feeling flat, intense overwhelm — all common. Past 2 weeks of low mood = call your provider.",
+        selfCare: "Sleep is medicine. One warm meal, 5 minutes of daylight, one shower. That is a full successful day.",
+        relationships: {
+          people: "Tell one person the truth about how you're doing. Pretending you're fine is the fastest way to spiral.",
+          withPartner: "Be specific about what helps. 'Take the 4am feed,' not 'help more.'",
+          withKids: "Older kids feel the shift. Short, consistent rituals (one book, one song) reassure them more than perfection.",
+          strategy: "This is the hardest hormonal window of your life. You don't have to optimize it — you just have to get through it.",
+        },
+      },
+      mid: {
+        outlook: "Rebuilding — one rep at a time",
+        headsUp: "By now sleep is improving but the mental load is loud. If you still feel underwater, that's worth a real conversation with your doctor — not a 'wait it out' moment.",
+        selfCare: "Get one solo block per week — 60-90 minutes that's just yours. It's not a luxury, it's how you stay you.",
+        relationships: {
+          people: "Re-engage one friendship. A 10 minute call counts. Isolation is the silent postpartum tax.",
+          withPartner: "Audit the invisible load together. Pick one thing they own start to finish — not 'help with'.",
+          withKids: "Predictable rhythms beat perfect activities. Boring + consistent wins right now.",
+          strategy: "You're not behind. You're rebuilding from the inside out. Keep showing up — capacity comes back faster than you think.",
+        },
+      },
+      late: {
+        outlook: "Reclaiming yourself",
+        headsUp: "If your cycle is back, expect symptoms to feel louder than before — your body is recalibrating. Track them like real data.",
+        selfCare: "Treat yourself like the person you were becoming before all this — not someone in permanent recovery. Big goals are allowed.",
+        relationships: {
+          people: "Reconnect with the parts of your life that aren't about the baby. Friendships, work, hobbies — they're allowed to matter.",
+          withPartner: "Renegotiate the load now that the early window has closed. 'It worked for then' doesn't mean it works for now.",
+          withKids: "Model ambition and self-care openly. They learn what a full life looks like by watching yours.",
+          strategy: "You're not 'getting back to normal' — you're building a new normal that includes more of you, not less.",
+        },
       },
     };
     const MENO_MOOD = {
@@ -605,9 +662,10 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
       },
     };
 
-    const workout = stage === "postpartum" ? PP_WORKOUT : MENO_WORKOUT;
-    const nutrition = stage === "postpartum" ? PP_NUTRITION : MENO_NUTRITION;
-    const moodGuide = stage === "postpartum" ? PP_MOOD : MENO_MOOD;
+    const workout = stage === "postpartum" ? PP_WORKOUTS[ppWin] : MENO_WORKOUT;
+    const nutrition = stage === "postpartum" ? PP_NUTRITIONS[ppWin] : MENO_NUTRITION;
+    const moodGuide = stage === "postpartum" ? PP_MOODS[ppWin] : MENO_MOOD;
+
 
     return (
       <div className="flex-1 overflow-y-auto pb-20">
