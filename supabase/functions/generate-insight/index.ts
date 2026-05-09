@@ -540,7 +540,7 @@ ${checkinMessages.length > 0 ? checkinMessages.map(m => {
 
 RULES:
 - Lead with empathy and validation. ${stageLabel} is not a deficit — it's a transition with its own strengths.
-- For postpartum: focus on healing milestones, energy windows, and emotional honesty. Never prescribe. Never guilt.
+- For postpartum: match the EXACT phase guidance above. Acute/early phases = healing, rest, gentle pelvic floor. Rebuilding+ = strength, capacity, identity — NOT "healing/recovery" framing. Never prescribe. Never guilt.
 - For menopause: focus on adaptation, strength preservation, and reframing the narrative.
 - NEVER reference cycle phases, ovulation, or period timing for non-cycling users.
 - NEVER assume breastfeeding status unless the user has explicitly mentioned it.
