@@ -576,18 +576,30 @@ serve(async (req) => {
         }
       }
 
-      // Detect "today should be day X" / "I'm on day X" / "today is day X" corrections.
-      // Let the current cycle run past the typical length until the user confirms a bleed.
+      // Detect cycle-day corrections in many phrasings:
+      //   "today is day 23", "I'm on day 23", "actually day 23", "day 23 today",
+      //   "not day 24, day 23", "23 sorry", "i meant 23", "make it day 23",
+      //   bare "day 23" or just "23" when the prior assistant turn explicitly mentioned a cycle day.
+      const lastAssistantMentionedDay = !!(lastAssistantMsg?.metadata as any)?.cycle_day
+        || /\bday\s+\d{1,2}\b/i.test(((lastAssistantMsg as any)?.content as string) || "");
+      const isCorrectionContext = /(?:sorry|actually|correction|i meant|my mistake|oops|nope|no\s*,|wait\s*,)/i.test(userMessage);
       const cycleDayCorrectionMatch = userMessage.match(
-        /(?:today\s+(?:should\s+be|is)|i['’]?m\s+(?:on|actually\s+on)|i\s+am\s+on|should\s+be)\s+(?:my\s+|on\s+)?(?:cycle\s+)?day\s+(\d{1,2})/i
+        /(?:today\s+(?:should\s+be|is)|i['’]?m\s+(?:on|actually\s+on)|i\s+am\s+on|should\s+be|make\s+it|set\s+(?:it|me|cycle)?\s*to|change\s+(?:it|me)?\s*to|put\s+me\s+(?:on|at))\s+(?:my\s+|on\s+|at\s+)?(?:cycle\s+)?day\s*(\d{1,2})/i
       ) || userMessage.match(
-        /\bday\s+(\d{1,2})\s*(?:today|now|,?\s*not\s+day\s+\d{1,2})/i
+        /\bday\s*(\d{1,2})\s*(?:today|now|,?\s*not\s+day\s*\d{1,2})/i
       ) || userMessage.match(
-        /\bnot\s+day\s+\d{1,2}[^.?!]{0,40}\bday\s+(\d{1,2})/i
-      ) || (/(?:sorry|actually|correction|i meant)/i.test(userMessage) ? userMessage.match(
-        /^\s*(?:day\s*)?(\d{1,2})\s*(?:sorry|actually|correction|i meant)?\s*$/i
-      ) : null
-      );
+        /\bnot\s+day\s*\d{1,2}[^.?!]{0,40}\bday\s*(\d{1,2})/i
+      ) || (isCorrectionContext ? userMessage.match(
+        /^\s*(?:day\s*)?(\d{1,2})\s*(?:sorry|actually|correction|i meant|my mistake|oops|nope)?\s*[.!]?\s*$/i
+      ) || userMessage.match(
+        /(?:sorry|actually|correction|i meant|my mistake|nope|wait)[^.?!\d]{0,30}(?:day\s*)?(\d{1,2})/i
+      ) || userMessage.match(
+        /(?:day\s*)?(\d{1,2})[^.?!\d]{0,15}(?:sorry|actually|correction|i meant|my mistake|nope)/i
+      ) : null) || (lastAssistantMentionedDay ? userMessage.match(
+        /^\s*(?:day\s*)?(\d{1,2})\s*[.!?]?\s*$/i
+      ) : null);
+
+      console.log("[chat-ai] cycleDayCorrectionMatch:", !!cycleDayCorrectionMatch, "isCorrectionContext:", isCorrectionContext, "lastAssistantMentionedDay:", lastAssistantMentionedDay, "msg:", userMessage.substring(0, 60));
 
       if (cycleDayCorrectionMatch) {
         const targetDay = parseInt(cycleDayCorrectionMatch[1]);
