@@ -35,7 +35,7 @@ export function MiniPhaseArc({
   const cx = size / 2;
   const cy = size / 2;
   const circumference = 2 * Math.PI * r;
-  const progress = cycleDay / cycleLengthDays;
+  const progress = Math.min(cycleDay / cycleLengthDays, 1);
   const dashOffset = circumference * (1 - progress);
 
   return (

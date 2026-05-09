@@ -70,6 +70,7 @@ function getCycleDay(lastPeriodStart: string, cycleLengthDays: number): number {
   const diff = Math.floor(
     (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
   );
+  if (diff >= 0) return diff + 1;
   const day = (diff % cycleLengthDays) + 1;
   return day < 1 ? day + cycleLengthDays : day;
 }

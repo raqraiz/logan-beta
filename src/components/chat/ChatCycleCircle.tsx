@@ -48,7 +48,7 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
   ringSize: string; fontSize: string; labelSize: string; showPhase?: boolean;
 }) {
   const styles = PHASE_STYLES[phase] || PHASE_STYLES.Follicular;
-  const progress = (cycleDay / cycleLengthDays) * 100;
+  const progress = Math.min(cycleDay / cycleLengthDays, 1) * 100;
   const radius = 42;
   const trackWidth = 3;
   const arcWidth = 3;
@@ -213,7 +213,7 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
 
   if (isSmall) {
     const styles = PHASE_STYLES[phase] || PHASE_STYLES.Follicular;
-    const progress = (cycleDay / cycleLengthDays) * 100;
+    const progress = Math.min(cycleDay / cycleLengthDays, 1) * 100;
     const radius = 42;
     const circumference = 2 * Math.PI * radius;
     const strokeDashoffset = circumference - (progress / 100) * circumference;
@@ -290,8 +290,10 @@ export function calculateCycleInfo(
   const diffTime = today.getTime() - periodStart.getTime();
   const daysSinceStart = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-  // Calculate current day in cycle (1-indexed, wrapping around)
-  const cycleDay = ((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
+  // Calculate current day in cycle. Don't wrap overdue cycles to Day 1 until a period is confirmed.
+  const cycleDay = daysSinceStart >= 0
+    ? daysSinceStart + 1
+    : ((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
 
   // Determine phase using biological model
   const menstruationEnd = 5;
