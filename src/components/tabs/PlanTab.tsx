@@ -674,7 +674,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             <h2 className="font-display font-semibold text-lg text-foreground">Your Week</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               <span className={cn("font-medium", stageColor)}>{stageLabel}</span>
-              {" · "}Tailored guidance for your stage
+              {stage === "postpartum" ? <> · {ppLabel}</> : <> · Tailored guidance for your stage</>}
             </p>
           </div>
 
