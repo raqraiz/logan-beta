@@ -233,6 +233,7 @@ serve(async (req) => {
           start_cycle_day: startCycleDay,
           cycle_length_days: cycleLengthDays,
           life_stage: lifeStage,
+          postpartum_window: ppWindow,
           dietary_prefs: dietaryPrefs,
           ...(parentResource ? {
             parent_resource_id: parentResource.id,
@@ -640,6 +641,7 @@ ${introGuidance}`;
           start_cycle_day: startCycleDay,
           cycle_length_days: cycleLengthDays,
           life_stage: lifeStage,
+          postpartum_window: ppWindow,
           dietary_prefs: dietaryPrefs,
           intro: planData.intro,
           num_days: planData.days.length,
