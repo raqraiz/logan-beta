@@ -484,16 +484,28 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     : cycleData.phase;
 
   // Helper to get life-stage-aware tips
+  const ppWindow = getPostpartumWindow(cycleData.postpartumStartDate);
   const getTipsHer = (widgetId: string): string[] => {
-    if (cycleData.lifeStage === "postpartum") return POSTPARTUM_HER;
-    if (cycleData.lifeStage === "menopause") return MENOPAUSE_HER;
-    return widgetId.startsWith("succeed") ? (SUCCEED_HER[cycleData.phase] || []) : (DONT_MESS_UP_HER[cycleData.phase] || []);
+    const isSucceed = widgetId.startsWith("succeed");
+    if (cycleData.lifeStage === "postpartum") {
+      return isSucceed ? POSTPARTUM_SUCCEED_HER[ppWindow] : POSTPARTUM_DONTMESS_HER[ppWindow];
+    }
+    if (cycleData.lifeStage === "menopause") {
+      return isSucceed ? MENOPAUSE_SUCCEED_HER : MENOPAUSE_DONTMESS_HER;
+    }
+    return isSucceed ? (SUCCEED_HER[cycleData.phase] || []) : (DONT_MESS_UP_HER[cycleData.phase] || []);
   };
   const getTipsHim = (widgetId: string): string[] => {
-    if (cycleData.lifeStage === "postpartum") return POSTPARTUM_HIM;
-    if (cycleData.lifeStage === "menopause") return MENOPAUSE_HIM;
-    return widgetId.startsWith("succeed") ? (SUCCEED_HIM[cycleData.phase] || []) : (DONT_MESS_UP_HIM[cycleData.phase] || []);
+    const isSucceed = widgetId.startsWith("succeed");
+    if (cycleData.lifeStage === "postpartum") {
+      return isSucceed ? POSTPARTUM_SUCCEED_HIM[ppWindow] : POSTPARTUM_DONTMESS_HIM[ppWindow];
+    }
+    if (cycleData.lifeStage === "menopause") {
+      return isSucceed ? MENOPAUSE_SUCCEED_HIM : MENOPAUSE_DONTMESS_HIM;
+    }
+    return isSucceed ? (SUCCEED_HIM[cycleData.phase] || []) : (DONT_MESS_UP_HIM[cycleData.phase] || []);
   };
+
 
   const renderWidget = (widget: typeof widgets[number]) => {
     const id = widget.id;
