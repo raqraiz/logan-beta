@@ -156,38 +156,147 @@ const SUCCEED_HIM: Record<string, string[]> = {
 // ── Phase styling ─────────────────────────────────────────
 
 // ── Postpartum & Menopause tips ──────────────────────────
+// Postpartum lists are split into three timeline windows so the home widgets
+// stop telling a 9-month-postpartum athlete to "rest gently".
+type PPWindow = "early" | "mid" | "late";
 
-const POSTPARTUM_HER: string[] = [
-  "Rest is not laziness — it's how your body heals. Protect your sleep fiercely.",
-  "Your hormones are recalibrating. Mood swings are normal, not weakness.",
-  "Eat nutrient-dense meals. Your body is rebuilding — feed it like it matters.",
-  "Accept help without guilt. You don't get extra points for doing it all alone.",
-  "Move gently when you're ready — a short walk counts as a win.",
+function getPostpartumWindow(birthDate?: string): PPWindow {
+  if (!birthDate) return "early";
+  const start = new Date(birthDate + "T12:00:00Z");
+  const days = Math.floor((Date.now() - start.getTime()) / 86400000);
+  if (days < 42) return "early";   // 0-6 weeks: acute recovery
+  if (days < 180) return "mid";    // 6 weeks - 6 months: rebuilding
+  return "late";                   // 6+ months: reclaiming capacity
+}
+
+const POSTPARTUM_SUCCEED_HER: Record<PPWindow, string[]> = {
+  early: [
+    "Sleep when the baby sleeps — even 20 minutes counts. This is healing, not laziness.",
+    "Eat one warm, protein-rich meal a day. Bone broth, eggs, oats — anything cooked.",
+    "Step outside for 5 minutes of daylight. It resets your hormones and mood.",
+    "Let one person help today. Texting a friend 'can you bring food?' is a win.",
+    "Do nothing performative. Survival is the goal — anything else is bonus.",
+  ],
+  mid: [
+    "Add one short walk a day. 10 minutes is plenty — you're rebuilding stamina.",
+    "Reintroduce strength training gently — bodyweight squats, glute bridges, breathwork.",
+    "Schedule a friend visit or video call. Isolation is the silent postpartum killer.",
+    "Eat protein at every meal — your muscles and hair are still rebuilding.",
+    "Reclaim 20 minutes for yourself daily. A shower, a book, anything that's just yours.",
+  ],
+  late: [
+    "Train like an athlete again — progressive overload, real lifts, real intensity.",
+    "Set a goal that has nothing to do with motherhood. A race, a class, a project.",
+    "Reconnect with the parts of yourself that existed before the baby. They're still there.",
+    "Plan something just for you this month — solo trip, big workout block, deep work day.",
+    "Mentor a newer mom. You know things now that would have saved you months.",
+  ],
+};
+
+const POSTPARTUM_DONTMESS_HER: Record<PPWindow, string[]> = {
+  early: [
+    "Don't try to 'bounce back' anything. Your body just built and birthed a human.",
+    "Don't restrict food. Your body needs fuel to heal and (if nursing) feed.",
+    "Don't compare your recovery to anyone on the internet. Their highlight reel isn't real.",
+    "Don't ignore mood symptoms past two weeks — call your provider. PPD/PPA is medical, not weakness.",
+    "Don't make big life decisions right now. Sleep deprivation isn't a strategist.",
+  ],
+  mid: [
+    "Don't add intensity faster than your pelvic floor allows. Leaking or heaviness = back off.",
+    "Don't skip protein because you're 'too busy'. Hair loss and fatigue compound when you do.",
+    "Don't compare your timeline to other moms. Bodies heal at wildly different rates.",
+    "Don't bury the mood stuff. If you still feel underwater at 4 months, that's worth a check-in.",
+    "Don't say yes to everything just to feel normal. Capacity is still rebuilding.",
+  ],
+  late: [
+    "Don't keep treating yourself like you're fragile if you're not. You can train hard now.",
+    "Don't write off symptoms as 'just postpartum' past 1 year — investigate cycle, thyroid, sleep.",
+    "Don't skip strength work — bone density and metabolic health depend on it.",
+    "Don't lose yourself in the parent identity. The other parts of you still need attention.",
+    "Don't ignore returning cycle symptoms — your hormones are speaking again, listen.",
+  ],
+};
+
+const POSTPARTUM_SUCCEED_HIM: Record<PPWindow, string[]> = {
+  early: [
+    "Take a night feed without being asked. One unbroken sleep cycle changes her week.",
+    "Bring food without commentary. Hot, salty, easy to eat one-handed wins.",
+    "Handle one chore she'd normally do — laundry, dishes, the dog. Just one, fully.",
+    "Tell her she's doing an amazing job. She doesn't believe it yet — say it anyway.",
+    "Protect her sleep window like it's sacred. Field visitors, calls, everything.",
+  ],
+  mid: [
+    "Give her a 90-minute solo block this week. Walk, gym, coffee — whatever she picks.",
+    "Notice the invisible work and pick one thing up permanently. Bottles, daycare bag, doctor visits.",
+    "Plan a date — even at home after bedtime. She needs to be a person, not just a parent.",
+    "Compliment something specific that isn't her body. Patience, ideas, how she handles hard moments.",
+    "Ask 'what would actually help this week?' and then do it without follow-up questions.",
+  ],
+  late: [
+    "Match her ambition again — back her workouts, her work goals, her solo time.",
+    "Stop asking if she's 'okay to' do hard things. She is. Trust her body.",
+    "Plan something big together — a trip, a goal, a project. Reconnect as partners.",
+    "Carry your half of the mental load permanently. Schedules, school, social — own a real chunk.",
+    "Notice how much she's done. Say it out loud. She's been keeping score even if you haven't.",
+  ],
+};
+
+const POSTPARTUM_DONTMESS_HIM: Record<PPWindow, string[]> = {
+  early: [
+    "Don't comment on her body — not size, not weight, not 'when you're back'. Don't.",
+    "Don't ask 'what can I do?' — look around and just do it.",
+    "Don't disappear into work. Showing up at home is the assignment right now.",
+    "Don't minimize her exhaustion or pain. It's worse than you can imagine.",
+    "Don't take her irritability personally. She's running on broken sleep and hormone whiplash.",
+  ],
+  mid: [
+    "Don't assume she's 'back to normal' just because the baby sleeps better. She's not.",
+    "Don't keep score on chores. Whoever sees it, does it.",
+    "Don't push for sex or intimacy on your timeline. Closeness rebuilds in many ways.",
+    "Don't joke about 'mom brain'. Cognitive load is real and she's already self-conscious.",
+    "Don't forget she's still a person with her own ambitions. Ask about them.",
+  ],
+  late: [
+    "Don't keep using 'she just had a baby' as an excuse for uneven load. That window closed.",
+    "Don't be threatened by her getting strong, ambitious, or social again. Cheer for it.",
+    "Don't let date night die. Schedule it like a meeting.",
+    "Don't dismiss returning cycle symptoms. Her hormones are loud again — believe her.",
+    "Don't assume anything about her body or capacity. Ask, listen, adjust.",
+  ],
+};
+
+const MENOPAUSE_SUCCEED_HER: string[] = [
+  "Lift heavy 2-3x a week. Strength training is your bone and brain insurance now.",
+  "Protect sleep aggressively — cool room, no late alcohol, consistent bedtime.",
+  "Eat protein at every meal (30g+) — muscle preservation is your top priority.",
+  "Track hot flashes and triggers for one week. Patterns lead to control.",
+  "Invest in this chapter — many women describe it as their most powerful, free, and clear.",
 ];
 
-const POSTPARTUM_HIM: string[] = [
-  "She's recovering from the most physically intense thing a body can do. Act accordingly.",
-  "Don't wait to be asked — look around and handle what needs handling.",
-  "Tell her she's doing an amazing job. She won't believe it, but she needs to hear it.",
-  "Take the night shift or the early morning. One unbroken sleep cycle changes everything.",
-  "Her body changed to create life. Don't comment on it. Just love her louder.",
+const MENOPAUSE_DONTMESS_HER: string[] = [
+  "Don't push through symptoms alone. HRT and other tools exist — talk to a menopause-trained doctor.",
+  "Don't drop protein or strength work. Sarcopenia accelerates fast in this window.",
+  "Don't assume brain fog is permanent. Sleep, protein, and movement move the needle.",
+  "Don't dismiss anxiety or mood shifts as 'just stress' — estrogen drop is real.",
+  "Don't believe the story that this is the end. It's a transition, not a verdict.",
 ];
 
-const MENOPAUSE_HER: string[] = [
-  "Hot flashes are your body adjusting, not breaking. They will pass.",
-  "Strength training protects your bones now more than ever. Start or keep going.",
-  "Brain fog is hormonal, not permanent. Write things down and give yourself grace.",
-  "Prioritize calcium, vitamin D, and magnesium. Your skeleton is counting on you.",
-  "This isn't an ending — it's a reinvention. Many women feel their most free after menopause.",
+const MENOPAUSE_SUCCEED_HIM: string[] = [
+  "Adjust the thermostat without comment. Be the climate control, not the critic.",
+  "Cheer her strength training — it's not vanity, it's longevity.",
+  "Plan low-stress activity together — walks, weekend trips, shared hobbies.",
+  "Listen when she names what's hard. You don't need to solve — just witness.",
+  "Show up for the new chapter. Many couples report their best years after this transition.",
 ];
 
-const MENOPAUSE_HIM: string[] = [
-  "She can't control the hot flashes. Don't joke about them. Just adjust the thermostat.",
-  "Her mood shifts aren't about you. Show up with patience, not defensiveness.",
-  "Ask how she's feeling — and actually listen without trying to fix it.",
-  "Encourage her interests and goals. This chapter has enormous potential.",
-  "Physical affection matters even when intimacy changes. Hold her hand. Hug her longer.",
+const MENOPAUSE_DONTMESS_HIM: string[] = [
+  "Don't joke about hot flashes, mood, or 'the change'. Ever.",
+  "Don't take mood shifts personally — declining estrogen rewires the nervous system.",
+  "Don't assume intimacy works the same. Ask, adapt, stay close in other ways.",
+  "Don't expect her to push through symptoms alone. Encourage real medical support.",
+  "Don't write off her ambitions because she's 'in menopause'. She's not done — she's reloading.",
 ];
+
 
 // ── Widget-specific color schemes for visual variety ────
 // Each widget category has its own identity, independent of cycle phase
@@ -375,16 +484,28 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     : cycleData.phase;
 
   // Helper to get life-stage-aware tips
+  const ppWindow = getPostpartumWindow(cycleData.postpartumStartDate);
   const getTipsHer = (widgetId: string): string[] => {
-    if (cycleData.lifeStage === "postpartum") return POSTPARTUM_HER;
-    if (cycleData.lifeStage === "menopause") return MENOPAUSE_HER;
-    return widgetId.startsWith("succeed") ? (SUCCEED_HER[cycleData.phase] || []) : (DONT_MESS_UP_HER[cycleData.phase] || []);
+    const isSucceed = widgetId.startsWith("succeed");
+    if (cycleData.lifeStage === "postpartum") {
+      return isSucceed ? POSTPARTUM_SUCCEED_HER[ppWindow] : POSTPARTUM_DONTMESS_HER[ppWindow];
+    }
+    if (cycleData.lifeStage === "menopause") {
+      return isSucceed ? MENOPAUSE_SUCCEED_HER : MENOPAUSE_DONTMESS_HER;
+    }
+    return isSucceed ? (SUCCEED_HER[cycleData.phase] || []) : (DONT_MESS_UP_HER[cycleData.phase] || []);
   };
   const getTipsHim = (widgetId: string): string[] => {
-    if (cycleData.lifeStage === "postpartum") return POSTPARTUM_HIM;
-    if (cycleData.lifeStage === "menopause") return MENOPAUSE_HIM;
-    return widgetId.startsWith("succeed") ? (SUCCEED_HIM[cycleData.phase] || []) : (DONT_MESS_UP_HIM[cycleData.phase] || []);
+    const isSucceed = widgetId.startsWith("succeed");
+    if (cycleData.lifeStage === "postpartum") {
+      return isSucceed ? POSTPARTUM_SUCCEED_HIM[ppWindow] : POSTPARTUM_DONTMESS_HIM[ppWindow];
+    }
+    if (cycleData.lifeStage === "menopause") {
+      return isSucceed ? MENOPAUSE_SUCCEED_HIM : MENOPAUSE_DONTMESS_HIM;
+    }
+    return isSucceed ? (SUCCEED_HIM[cycleData.phase] || []) : (DONT_MESS_UP_HIM[cycleData.phase] || []);
   };
+
 
   const renderWidget = (widget: typeof widgets[number]) => {
     const id = widget.id;
