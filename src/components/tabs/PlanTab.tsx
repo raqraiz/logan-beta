@@ -10,6 +10,13 @@ import { format, addDays } from "date-fns";
 import { CycleForecast } from "@/components/chat/CycleForecast";
 import { calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
 import { NutritionMenuActions } from "@/components/chat/NutritionMenuActions";
+import {
+  getPostpartumPhase,
+  PP_META,
+  PP_WORKOUTS,
+  PP_NUTRITIONS,
+  PP_MOODS,
+} from "@/lib/postpartumPhases";
 
 interface CycleData {
   cycleDay: number;
