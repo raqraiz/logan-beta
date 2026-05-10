@@ -498,18 +498,20 @@ function buildNonCyclingInsightPrompt(
       ? `${months} months postpartum`
       : `${weeks} weeks postpartum (Day ${diffDays})`;
 
-    if (diffDays <= 42) {
-      ppPhaseGuidance = "ACUTE RECOVERY (0-6 weeks): bleeding, healing tissue, sleep fragmentation, baby-blues. Centre on rest, fluids, gentle pelvic floor.";
-    } else if (diffDays <= 84) {
-      ppPhaseGuidance = "EARLY RECOVERY (6-12 weeks): hormone crash plateau, mood stabilization, gentle return to movement. Tissue mostly healed.";
-    } else if (months <= 6) {
-      ppPhaseGuidance = "REBUILDING (3-6 months): rebuild core/pelvic floor, sleep regressions, hair shedding, libido returning. NOT acute healing.";
-    } else if (months <= 12) {
-      ppPhaseGuidance = "LATE POSTPARTUM (6-12 months): regaining athletic capacity, progressive overload, sleep quality, identity integration. DO NOT default to early-postpartum 'healing/recovery' framing — she's an athlete-in-life-stage now.";
-    } else if (months <= 24) {
-      ppPhaseGuidance = "EXTENDED POSTPARTUM (12-24 months): hormones largely re-stabilized, often cycling again. Treat as full athletic adult with parenting context. NEVER use 'healing/recovery' framing.";
+    if (diffDays < 14) {
+      ppPhaseGuidance = "ACUTE RECOVERY (0-2 weeks): hormonal cliff (estrogen + progesterone crashed, prolactin/oxytocin surging), lochia, raw tissue. Center on rest, fluids, warm protein-rich meals, ZERO performance framing. Watch for intrusive thoughts.";
+    } else if (diffDays < 42) {
+      ppPhaseGuidance = "EARLY RECOVERY (2-6 weeks): baby-blues window closing. Hormones still finding baseline, thyroid can swing. Steady blood sugar, gentle daily walks once cleared, name PPD/PPA risk if mood not lifting by week 3.";
+    } else if (diffDays < 84) {
+      ppPhaseGuidance = "TISSUE CLOSING (6-12 weeks): tissue mostly healed, sleep debt at peak, identity shock peaking. Reintroduce breath-to-pelvic-floor work and very gentle strength. Cognitive fog is real but not permanent.";
+    } else if (months < 6) {
+      ppPhaseGuidance = "REBUILDING (3-6 months): hair shedding peaks, hormones re-regulating, cycle may return or hormones may mimic ovulation pre-period. Add light load training, protein 1.4-1.8g/kg, watch for 'PMS-like' moods even pre-cycle.";
+    } else if (months < 12) {
+      ppPhaseGuidance = "RECLAIMING CAPACITY (6-12 months): cycle often returns, thyroid worth rechecking. Train like an athlete with progressive overload. DO NOT use early-postpartum 'healing/recovery' framing — treat her as an adult athlete with a baby.";
+    } else if (months < 24) {
+      ppPhaseGuidance = "EXTENDED POSTPARTUM (12-24 months): hormones largely recalibrated, usually cycling again. Train for performance and longevity. Symptoms now usually trace to cycle/thyroid/sleep/stress — not 'postpartum'. NEVER use 'healing' framing.";
     } else {
-      ppPhaseGuidance = "BEYOND 2 YEARS: treat as cycling adult. Symptoms unlikely to be 'postpartum' — investigate cycle, thyroid, sleep, stress.";
+      ppPhaseGuidance = "BEYOND 2 YEARS: treat as cycling adult with parenting context. Investigate cycle, iron, ferritin, thyroid panel, vitamin D, B12 before blaming postpartum for anything.";
     }
   }
 
