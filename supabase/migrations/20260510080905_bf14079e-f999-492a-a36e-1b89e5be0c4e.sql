@@ -1,0 +1,2 @@
+UPDATE public.participants SET last_period_start = '2026-04-18', cycle_length_days = 28 WHERE email = 'sarachertoff@gmail.com';
+DELETE FROM public.cycle_history WHERE id = '3d5a2351-a8f6-4103-99cf-6a4dd3440cce';
