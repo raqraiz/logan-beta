@@ -199,14 +199,17 @@ serve(async (req) => {
     const startCycleDay = getCycleDay(lastPeriodStart, cycleLengthDays);
     const lifeStage = participant?.life_stage || "cycling";
 
-    // Postpartum window: early (0-6w), mid (6w-6mo), late (6mo+)
-    let ppWindow: "early" | "mid" | "late" | null = null;
+    // Postpartum 6-phase model (mirrors src/lib/postpartumPhases.ts)
+    let ppWindow: "acute" | "early" | "healing" | "rebuilding" | "late" | "extended" | null = null;
     let ppWindowLabel = "";
     if (lifeStage === "postpartum" && participant?.postpartum_start_date) {
       const days = Math.floor((Date.now() - new Date(participant.postpartum_start_date + "T12:00:00Z").getTime()) / 86400000);
-      if (days < 42) { ppWindow = "early"; ppWindowLabel = "Early recovery (0-6 weeks)"; }
-      else if (days < 180) { ppWindow = "mid"; ppWindowLabel = "Rebuilding (6 weeks-6 months)"; }
-      else { ppWindow = "late"; ppWindowLabel = "Reclaiming capacity (6+ months)"; }
+      if (days < 14) { ppWindow = "acute"; ppWindowLabel = "Acute recovery (0-2 weeks)"; }
+      else if (days < 42) { ppWindow = "early"; ppWindowLabel = "Early recovery (2-6 weeks)"; }
+      else if (days < 84) { ppWindow = "healing"; ppWindowLabel = "Tissue closing (6-12 weeks)"; }
+      else if (days < 180) { ppWindow = "rebuilding"; ppWindowLabel = "Rebuilding (3-6 months)"; }
+      else if (days < 365) { ppWindow = "late"; ppWindowLabel = "Reclaiming capacity (6-12 months)"; }
+      else { ppWindow = "extended"; ppWindowLabel = "Extended postpartum (12+ months)"; }
     }
 
     // Personalized title — e.g. "Raquella's 3-Day Luteal Menu"
