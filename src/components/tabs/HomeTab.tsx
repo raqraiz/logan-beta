@@ -384,11 +384,11 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     : cycleData.phase;
 
   // Helper to get life-stage-aware tips
-  const ppWindow = getPostpartumWindow(cycleData.postpartumStartDate);
+  const ppPhase = getPostpartumPhase(cycleData.postpartumStartDate);
   const getTipsHer = (widgetId: string): string[] => {
     const isSucceed = widgetId.startsWith("succeed");
     if (cycleData.lifeStage === "postpartum") {
-      return isSucceed ? POSTPARTUM_SUCCEED_HER[ppWindow] : POSTPARTUM_DONTMESS_HER[ppWindow];
+      return isSucceed ? PP_SUCCEED_HER[ppPhase] : PP_DONTMESS_HER[ppPhase];
     }
     if (cycleData.lifeStage === "menopause") {
       return isSucceed ? MENOPAUSE_SUCCEED_HER : MENOPAUSE_DONTMESS_HER;
@@ -398,7 +398,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   const getTipsHim = (widgetId: string): string[] => {
     const isSucceed = widgetId.startsWith("succeed");
     if (cycleData.lifeStage === "postpartum") {
-      return isSucceed ? POSTPARTUM_SUCCEED_HIM[ppWindow] : POSTPARTUM_DONTMESS_HIM[ppWindow];
+      return isSucceed ? PP_SUCCEED_HIM[ppPhase] : PP_DONTMESS_HIM[ppPhase];
     }
     if (cycleData.lifeStage === "menopause") {
       return isSucceed ? MENOPAUSE_SUCCEED_HIM : MENOPAUSE_DONTMESS_HIM;
