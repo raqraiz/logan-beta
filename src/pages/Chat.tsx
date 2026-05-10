@@ -139,6 +139,8 @@ const Chat = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showTopicPrompt, setShowTopicPrompt] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("ask");
+  const [visibleStarters, setVisibleStarters] = useState<string[]>([]);
+  const [usedStarters, setUsedStarters] = useState<string[]>([]);
   
   const { user, loading: authLoading, signOut } = useAuth();
   usePresence(user?.id, user?.email || undefined, user?.user_metadata?.full_name);
@@ -1454,37 +1456,65 @@ const Chat = () => {
                     </div>
           )}
 
-                  {/* Conversation starters — rotate sets so each message gets fresh prompts */}
+                  {/* Conversation starters — persist until used; only swap the selected one */}
                   {isLastMessage && 
                    message.role === "assistant" && 
                    !isOnboarding && (() => {
-                    const cyclingStarterSets = [
-                      ["I just need to vent", "Why do I feel off today?", "What's my energy like today?"],
-                      ["What can I expect tomorrow?", "How should I plan my week?", "Tell me what's normal right now"],
-                      ["What phase am I in right now?", "Any workout tips for today?", "How's my mood likely to shift?"],
-                      ["I'm having a hard day", "What should I eat this week?", "How can I sleep better tonight?"],
-                      ["What's coming up in my cycle?", "How do I make the most of today?", "Why do I feel this way?"],
+                    const cyclingPool = [
+                      "I just need to vent", "Why do I feel off today?", "What's my energy like today?",
+                      "What can I expect tomorrow?", "How should I plan my week?", "Tell me what's normal right now",
+                      "What phase am I in right now?", "Any workout tips for today?", "How's my mood likely to shift?",
+                      "I'm having a hard day", "What should I eat this week?", "How can I sleep better tonight?",
+                      "What's coming up in my cycle?", "How do I make the most of today?", "Why do I feel this way?",
                     ];
-                    const menopauseStarterSets = [
-                      ["I just need to vent", "Why is my mood shifting?", "Tell me what's normal right now"],
-                      ["How can I sleep better tonight?", "What helps hot flashes?", "Why am I so tired?"],
-                      ["What should I focus on today?", "How do I protect bone health?", "I'm having a hard day"],
-                      ["Any strength training tips?", "How can I reduce brain fog?", "What should I eat this week?"],
-                      ["Why do I feel this way?", "How do I manage stress better?", "What patterns should I track?"],
+                    const menopausePool = [
+                      "I just need to vent", "Why is my mood shifting?", "Tell me what's normal right now",
+                      "How can I sleep better tonight?", "What helps hot flashes?", "Why am I so tired?",
+                      "What should I focus on today?", "How do I protect bone health?", "I'm having a hard day",
+                      "Any strength training tips?", "How can I reduce brain fog?", "What should I eat this week?",
+                      "Why do I feel this way?", "How do I manage stress better?", "What patterns should I track?",
                     ];
-                    const starterSets = lifeStage === "menopause" ? menopauseStarterSets : cyclingStarterSets;
-                    const assistantCount = messages.filter(m => m.role === "assistant" && !m.metadata?.onboarding_step).length;
-                    const setIndex = (assistantCount - 1) % starterSets.length;
-                    const starters =
-                      message.metadata?.conversation_starters && message.metadata.conversation_starters.length > 0
-                        ? message.metadata.conversation_starters
-                        : starterSets[setIndex];
+                    const pool = lifeStage === "menopause" ? menopausePool : cyclingPool;
+
+                    // AI-suggested starters (per-message) take precedence and behave as before
+                    const aiStarters = message.metadata?.conversation_starters;
+                    if (aiStarters && aiStarters.length > 0) {
+                      return (
+                        <ConversationStarters
+                          starters={aiStarters}
+                          onSelect={(starter) => {
+                            setInputValue(starter);
+                            sendAIMessage(starter);
+                          }}
+                          disabled={isSending}
+                        />
+                      );
+                    }
+
+                    // Initialize persistent starters once
+                    if (visibleStarters.length === 0) {
+                      const initial = pool.filter(s => !usedStarters.includes(s)).slice(0, 3);
+                      if (initial.length > 0) {
+                        setTimeout(() => setVisibleStarters(initial), 0);
+                      }
+                      return null;
+                    }
+
                     return (
                       <ConversationStarters
-                        starters={starters}
+                        starters={visibleStarters}
                         onSelect={(starter) => {
                           setInputValue(starter);
                           sendAIMessage(starter);
+                          const newUsed = [...usedStarters, starter];
+                          setUsedStarters(newUsed);
+                          const taken = new Set([...newUsed, ...visibleStarters]);
+                          const next = pool.find(s => !taken.has(s));
+                          setVisibleStarters(prev =>
+                            prev
+                              .map(s => (s === starter ? (next || "") : s))
+                              .filter(Boolean)
+                          );
                         }}
                         disabled={isSending}
                       />
