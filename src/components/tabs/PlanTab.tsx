@@ -630,6 +630,10 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
               </div>
               {expandedSection === "mood" && (
                 <div className="px-4 pb-4 space-y-3 border-t border-border/15 pt-3" onClick={(e) => e.stopPropagation()}>
+                  <div className="rounded-lg px-3 py-2.5 border border-border/20 bg-muted/30">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">🧬 Hormonal shift</p>
+                    <p className="text-xs text-muted-foreground">{moodGuide.hormonalShift}</p>
+                  </div>
                   <div className={cn("rounded-lg px-3 py-2.5 border", stageBgFaint, stageBorder)}>
                     <p className={cn("text-xs font-medium mb-1", stageColor)}>⚡ Heads up</p>
                     <p className="text-xs text-muted-foreground">{moodGuide.headsUp}</p>
