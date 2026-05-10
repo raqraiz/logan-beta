@@ -139,6 +139,8 @@ const Chat = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showTopicPrompt, setShowTopicPrompt] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("ask");
+  const [visibleStarters, setVisibleStarters] = useState<string[]>([]);
+  const [usedStarters, setUsedStarters] = useState<string[]>([]);
   
   const { user, loading: authLoading, signOut } = useAuth();
   usePresence(user?.id, user?.email || undefined, user?.user_metadata?.full_name);
