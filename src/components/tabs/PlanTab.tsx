@@ -569,96 +569,26 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
     const stageBgFaint = stage === "postpartum" ? "bg-pink-400/15" : "bg-amber-400/15";
     const stageBorder = stage === "postpartum" ? "border-pink-400/20" : "border-amber-400/20";
 
-    // Postpartum timeline window: early (0-6w), mid (6w-6mo), late (6mo+)
-    type PPWin = "early" | "mid" | "late";
+    // Postpartum: 6-phase model from src/lib/postpartumPhases.ts
     const ppStart = cycleData?.postpartumStartDate;
-    const ppDays = ppStart ? Math.floor((Date.now() - new Date(ppStart + "T12:00:00Z").getTime()) / 86400000) : 0;
-    const ppWin: PPWin = ppDays < 42 ? "early" : ppDays < 180 ? "mid" : "late";
-    const ppLabel = ppWin === "early" ? "Early recovery (0-6 weeks)" : ppWin === "mid" ? "Rebuilding (6 wks - 6 mo)" : "Reclaiming capacity (6+ months)";
+    const ppPhase = getPostpartumPhase(ppStart);
+    const ppLabel = PP_META[ppPhase].label;
 
-    const PP_WORKOUTS: Record<PPWin, { suggestion: string; examples: string[]; trainingNote: string }> = {
-      early: {
-        suggestion: "You are healing. The work right now is breath, pelvic floor reconnection, and walking when you feel up to it. Nothing more.",
-        examples: ["Diaphragmatic breathing", "Pelvic floor activations", "Short slow walks", "Gentle stretching"],
-        trainingNote: "No high-impact, no heavy lifts, no abs work until cleared. Bleeding heavier or pelvic heaviness = back off and rest.",
-      },
-      mid: {
-        suggestion: "Rebuild the foundation: glutes, deep core, posture, low-impact strength. Consistency beats intensity right now.",
-        examples: ["Bodyweight squats", "Glute bridges", "Dead bugs", "Stroller walks", "Postnatal Pilates"],
-        trainingNote: "Add load gradually. If you leak, feel pelvic heaviness, or get coning in your abs — scale back and see a pelvic floor PT.",
-      },
-      late: {
-        suggestion: "Train like an athlete again. Progressive overload, real strength work, and conditioning are back on the menu.",
-        examples: ["Heavy compound lifts", "Running / intervals", "Plyometrics (if PF is solid)", "Sport-specific work"],
-        trainingNote: "You are not fragile. Push intensity, track recovery, and treat any lingering pelvic floor symptoms with a specialist — don't just back off forever.",
-      },
-    };
     const MENO_WORKOUT = {
       suggestion: "Strength training protects bone density and manages symptoms. Consistency matters more than intensity.",
       examples: ["Weight training", "Resistance bands", "Walking", "Swimming"],
       trainingNote: "Prioritize compound movements. Bone density and muscle mass preservation are your main goals.",
     };
 
-    const PP_NUTRITIONS: Record<PPWin, { focus: string; foods: string[]; avoid: string }> = {
-      early: {
-        focus: "Heal tissue, replenish iron, stabilize blood sugar",
-        foods: ["Iron-rich foods (red meat, lentils, liver if you tolerate it)", "Bone broth and warm cooked meals", "Healthy fats (avocado, olive oil, eggs)", "Hydrate constantly — especially if nursing"],
-        avoid: "Cold raw salads as your main meal, restrictive diets, and skipping meals because you're tired.",
-      },
-      mid: {
-        focus: "Rebuild muscle, support hair regrowth, steady mood",
-        foods: ["Protein at every meal (30g+)", "Omega-3s (salmon, sardines, walnuts)", "Iron + vitamin C pairing", "Complex carbs for steady energy and milk supply if nursing"],
-        avoid: "Underfueling. Hair shedding, persistent fatigue and low mood often track back to under-eating, not 'just postpartum'.",
-      },
-      late: {
-        focus: "Athletic recovery, hormone re-regulation, return-of-cycle support",
-        foods: ["High protein (1.6-2g/kg)", "Cruciferous veg for estrogen metabolism", "Magnesium-rich foods", "Carbs around training, not feared"],
-        avoid: "Treating yourself like you're still in 'recovery mode' food-wise if you're training hard — you need fuel.",
-      },
-    };
     const MENO_NUTRITION = {
       focus: "Bone health & hormone balance",
       foods: ["Calcium-rich foods (dairy, leafy greens)", "Vitamin D sources", "Phytoestrogens (soy, flaxseed)", "Magnesium (nuts, seeds)"],
       avoid: "Excess alcohol and caffeine — they can worsen hot flashes and sleep disruption",
     };
 
-    const PP_MOODS: Record<PPWin, { outlook: string; headsUp: string; selfCare: string; relationships: { people: string; withPartner: string; withKids: string; strategy: string } }> = {
-      early: {
-        outlook: "Survival mode — that is the assignment",
-        headsUp: "The crash after birth is hormonal whiplash. Crying at nothing, feeling flat, intense overwhelm — all common. Past 2 weeks of low mood = call your provider.",
-        selfCare: "Sleep is medicine. One warm meal, 5 minutes of daylight, one shower. That is a full successful day.",
-        relationships: {
-          people: "Tell one person the truth about how you're doing. Pretending you're fine is the fastest way to spiral.",
-          withPartner: "Be specific about what helps. 'Take the 4am feed,' not 'help more.'",
-          withKids: "Older kids feel the shift. Short, consistent rituals (one book, one song) reassure them more than perfection.",
-          strategy: "This is the hardest hormonal window of your life. You don't have to optimize it — you just have to get through it.",
-        },
-      },
-      mid: {
-        outlook: "Rebuilding — one rep at a time",
-        headsUp: "By now sleep is improving but the mental load is loud. If you still feel underwater, that's worth a real conversation with your doctor — not a 'wait it out' moment.",
-        selfCare: "Get one solo block per week — 60-90 minutes that's just yours. It's not a luxury, it's how you stay you.",
-        relationships: {
-          people: "Re-engage one friendship. A 10 minute call counts. Isolation is the silent postpartum tax.",
-          withPartner: "Audit the invisible load together. Pick one thing they own start to finish — not 'help with'.",
-          withKids: "Predictable rhythms beat perfect activities. Boring + consistent wins right now.",
-          strategy: "You're not behind. You're rebuilding from the inside out. Keep showing up — capacity comes back faster than you think.",
-        },
-      },
-      late: {
-        outlook: "Reclaiming yourself",
-        headsUp: "If your cycle is back, expect symptoms to feel louder than before — your body is recalibrating. Track them like real data.",
-        selfCare: "Treat yourself like the person you were becoming before all this — not someone in permanent recovery. Big goals are allowed.",
-        relationships: {
-          people: "Reconnect with the parts of your life that aren't about the baby. Friendships, work, hobbies — they're allowed to matter.",
-          withPartner: "Renegotiate the load now that the early window has closed. 'It worked for then' doesn't mean it works for now.",
-          withKids: "Model ambition and self-care openly. They learn what a full life looks like by watching yours.",
-          strategy: "You're not 'getting back to normal' — you're building a new normal that includes more of you, not less.",
-        },
-      },
-    };
     const MENO_MOOD = {
       outlook: "Transition — embrace the change",
+      hormonalShift: "Estrogen and progesterone are declining for good. The brain, bones, and metabolism all respond — this is system-wide, not 'just hormones'.",
       headsUp: "Declining estrogen affects mood, sleep, and cognitive function. Brain fog, irritability, and anxiety are hormonal — not personal failings.",
       selfCare: "Protect your sleep aggressively. Stress management isn't optional now — it's medicine.",
       relationships: {
@@ -669,9 +599,9 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
       },
     };
 
-    const workout = stage === "postpartum" ? PP_WORKOUTS[ppWin] : MENO_WORKOUT;
-    const nutrition = stage === "postpartum" ? PP_NUTRITIONS[ppWin] : MENO_NUTRITION;
-    const moodGuide = stage === "postpartum" ? PP_MOODS[ppWin] : MENO_MOOD;
+    const workout = stage === "postpartum" ? PP_WORKOUTS[ppPhase] : MENO_WORKOUT;
+    const nutrition = stage === "postpartum" ? PP_NUTRITIONS[ppPhase] : MENO_NUTRITION;
+    const moodGuide = stage === "postpartum" ? PP_MOODS[ppPhase] : MENO_MOOD;
 
 
     return (
