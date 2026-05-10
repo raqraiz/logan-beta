@@ -13,6 +13,13 @@ import { CycleCorrelationsWidget } from "@/components/home/CycleCorrelationsWidg
 import { MiniPhaseArc, getWidgetGraphic } from "@/components/home/WidgetGraphics";
 import { DailyBriefingHero } from "@/components/home/DailyBriefingHero";
 import { useWidgetPreferences, getWidgetLabel } from "@/hooks/useWidgetPreferences";
+import {
+  getPostpartumPhase,
+  PP_SUCCEED_HER,
+  PP_DONTMESS_HER,
+  PP_SUCCEED_HIM,
+  PP_DONTMESS_HIM,
+} from "@/lib/postpartumPhases";
 import { format } from "date-fns";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
 import { X, Pencil, Check, Shield, Users, Sparkles, Heart } from "lucide-react";
