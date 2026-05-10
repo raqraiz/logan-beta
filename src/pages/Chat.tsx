@@ -1510,11 +1510,10 @@ const Chat = () => {
                           setUsedStarters(newUsed);
                           const taken = new Set([...newUsed, ...visibleStarters]);
                           const next = pool.find(s => !taken.has(s));
-                          setVisibleStarters(prev =>
-                            prev
-                              .map(s => (s === starter ? (next || "") : s))
-                              .filter(Boolean)
-                          );
+                          setVisibleStarters(prev => {
+                            const remaining = prev.filter(s => s !== starter);
+                            return next ? [...remaining, next] : remaining;
+                          });
                         }}
                         disabled={isSending}
                       />
