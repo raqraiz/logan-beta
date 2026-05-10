@@ -176,12 +176,27 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   const calEnd = endOfWeek(monthEnd);
   const calendarDays = eachDayOfInterval({ start: calStart, end: calEnd });
 
-  // Map a calendar date to cycle day (wrapping across cycles).
-  // Period start day == cycle day 1 (matches calculateCycleInfo).
+  // Map a calendar date to cycle day. Matches calculateCycleInfo: don't wrap an
+  // overdue cycle to Day 1 until the next period is actually logged. Predict the
+  // next period from today (one day from now if already overdue, otherwise
+  // periodStart + cycleLength) and only wrap dates on/after that.
+  const todayDiff = differenceInCalendarDays(today, periodStart);
+  const currentCycleDayUnwrapped = todayDiff + 1;
+  const nextPeriodStart =
+    currentCycleDayUnwrapped > cycleLengthDays
+      ? addDays(today, 1)
+      : addDays(periodStart, cycleLengthDays);
+
   function getCycleDayForDate(date: Date): number {
-    const diff = differenceInCalendarDays(date, periodStart);
-    if (!Number.isFinite(diff)) return cycleDay;
-    const mod = ((diff % cycleLengthDays) + cycleLengthDays) % cycleLengthDays;
+    const diffFromNext = differenceInCalendarDays(date, nextPeriodStart);
+    if (diffFromNext < 0) {
+      const diffFromCurrent = differenceInCalendarDays(date, periodStart);
+      if (!Number.isFinite(diffFromCurrent)) return cycleDay;
+      if (diffFromCurrent >= 0) return diffFromCurrent + 1;
+      const mod = ((diffFromCurrent % cycleLengthDays) + cycleLengthDays) % cycleLengthDays;
+      return mod + 1;
+    }
+    const mod = ((diffFromNext % cycleLengthDays) + cycleLengthDays) % cycleLengthDays;
     return mod + 1;
   }
 
