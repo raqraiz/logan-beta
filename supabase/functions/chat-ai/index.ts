@@ -1183,18 +1183,66 @@ serve(async (req) => {
     const aiData = await aiResponse.json();
     const assistantMessage = aiData.choices?.[0]?.message?.content || "I'm not sure how to respond to that. Could you try rephrasing?";
 
+    // Generate 3 contextual conversation starters that respond to what was just said
+    let conversationStarters: string[] = [];
+    try {
+      const mainAnswer = assistantMessage.split("\n---\n")[0].trim();
+      const starterRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${lovableApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-lite",
+          messages: [
+            {
+              role: "system",
+              content: `You generate 3 short follow-up replies a user might tap to continue a chat with Logan (a women's health friend-AI). Rules:
+- Each reply is 2-6 words, written from the USER'S perspective (first person, casual, like texting back).
+- They MUST directly respond to or extend Logan's last message — not generic prompts.
+- Mix: one that agrees/digs deeper ("Yeah that's me"), one that pushes back or adds context ("Actually I slept fine"), one that opens a related angle ("What about workouts?").
+- No questions ending in "?" unless natural. No emojis. No quotes.
+- Return ONLY a JSON array of 3 strings, nothing else. Example: ["Yeah exactly","Not really though","Tell me more"]`
+            },
+            { role: "user", content: `User just said: "${userMessage}"\n\nLogan replied: "${mainAnswer}"\n\nGenerate 3 follow-up replies.` }
+          ],
+          temperature: 0.8,
+          max_tokens: 120,
+        }),
+      });
+      if (starterRes.ok) {
+        const sData = await starterRes.json();
+        const raw = sData.choices?.[0]?.message?.content || "";
+        const match = raw.match(/\[[\s\S]*\]/);
+        if (match) {
+          const parsed = JSON.parse(match[0]);
+          if (Array.isArray(parsed)) {
+            conversationStarters = parsed.filter((s) => typeof s === "string" && s.trim().length > 0).slice(0, 3);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Starter generation failed:", e);
+    }
+
+    const baseMeta: Record<string, unknown> = cycleInfo ? {
+      cycle_day: cycleInfo.cycleDay,
+      cycle_phase: cycleInfo.phase,
+      cycle_length_days: participant?.cycle_length_days || 28,
+      last_period_start: participant?.last_period_start || null,
+      timezone: participant?.timezone || "UTC",
+    } : {};
+    if (conversationStarters.length > 0) {
+      baseMeta.conversation_starters = conversationStarters;
+    }
+
     const { error: insertError } = await supabase.from("chat_messages").insert({
       user_id: user.id,
       role: "assistant",
       content: assistantMessage,
       message_type: "text",
-      metadata: cycleInfo ? {
-        cycle_day: cycleInfo.cycleDay,
-        cycle_phase: cycleInfo.phase,
-        cycle_length_days: participant?.cycle_length_days || 28,
-        last_period_start: participant?.last_period_start || null,
-        timezone: participant?.timezone || "UTC",
-      } : {}
+      metadata: baseMeta,
     });
 
     if (insertError) {
@@ -1340,6 +1388,13 @@ CORE KNOWLEDGE (internal reference — do NOT dump this on the user):
 - Ovulation (Around Day 14): Peak confidence, verbal fluency, and power output. Load capacity ~95%. Schedule PRs and competitions here. ACL risk elevated.
 - Luteal (Days 15-28): Progesterone dominant, lower stress tolerance. Load capacity drops from ~50% to ~25%. Core temp elevated, perceived effort increases. Front-load intensity early, taper late.
 Use this to inform your answers. Do NOT recite phase details unless directly asked.
+
+EXTERNAL FACTORS — DO NOT BLAME EVERYTHING ON HORMONES:
+- Symptoms are not always cyclical. Sleep debt, stress, illness, travel, alcohol, caffeine, dehydration, under-eating, new medications, big life events, grief, work pressure, and relationship stuff all show up as fatigue, mood swings, brain fog, low libido, headaches, bloating, breakouts, or anxiety.
+- Before defaulting to "it's your luteal phase / your hormones," briefly consider whether something external could be driving it. If the timing or intensity doesn't fit the phase, name that — gently ask one question (e.g. "Did you sleep badly this week?", "Anything stressful going on?") OR acknowledge the external factor if she already mentioned one.
+- When an external factor is likely the bigger driver, say so plainly — then layer in how her current phase is amplifying or buffering it. Both can be true.
+- Still offer ONE concrete suggestion that helps with the hormonal piece (e.g. magnesium for luteal anxiety, protein-forward breakfast for follicular energy, electrolytes during menstruation) — but frame it as support, not a fix-all.
+- Never make her feel like her hormones are broken or that everything wrong is "just her cycle." Real life is messy and overlapping.
 
 ATHLETIC & TRAINING CONTEXT:
 - When users ask about workouts, training, or exercise: translate cycle phase into practical load/intensity decisions.
