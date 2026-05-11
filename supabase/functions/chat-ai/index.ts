@@ -601,7 +601,11 @@ serve(async (req) => {
 
       console.log("[chat-ai] cycleDayCorrectionMatch:", !!cycleDayCorrectionMatch, "isCorrectionContext:", isCorrectionContext, "lastAssistantMentionedDay:", lastAssistantMentionedDay, "msg:", userMessage.substring(0, 60));
 
-      if (cycleDayCorrectionMatch) {
+      // Skip if the user is speaking hypothetically / about expectations rather than asserting today's day
+      // e.g. "I thought I'd be day 2 today", "I expected to be on day 2", "should have been day 2", "wish I was day 2"
+      const isHypothetical = /\b(?:thought|think|expected|expect|hoped|hope|wish|wished|wonder(?:ed|ing)?|figured|assumed|guess(?:ed|ing)?|supposed\s+to|would\s+(?:be|have)|should\s+(?:be|have)|might\s+be|maybe|imagined?)\b/i.test(userMessage);
+
+      if (cycleDayCorrectionMatch && !isHypothetical) {
         const targetDay = parseInt(cycleDayCorrectionMatch[1]);
         if (targetDay >= 1 && targetDay <= 60) {
           // Compute new last_period_start = today - (targetDay - 1) days, in user's tz
@@ -772,9 +776,10 @@ serve(async (req) => {
       const lower = userMessage.toLowerCase();
 
       // "I'm in menopause", "I'm menopausal", "I'm peri-menopausal", "I went through menopause"
+      // Note: do NOT match "no period" / "stopped getting periods" alone — that's also true for
+      // postpartum users and would incorrectly switch them to menopause.
       const menopauseSignal = /\b(?:i'?m|i\s+am|i'?ve\s+(?:gone|been)\s+through|currently)\s+(?:in\s+)?(?:peri[-\s]?)?menopaus(?:e|al)\b/i.test(userMessage)
-        || /\bi'?m\s+(?:peri[-\s]?)?menopausal\b/i.test(userMessage)
-        || /\b(?:no\s+(?:more\s+)?periods?|stopped\s+(?:getting\s+)?(?:my\s+)?periods?)\b/i.test(userMessage);
+        || /\bi'?m\s+(?:peri[-\s]?)?menopausal\b/i.test(userMessage);
 
       // Cycling correction: "I'm not in menopause", "I still get my period", "I'm actually still cycling"
       const cyclingSignal = /\b(?:i'?m\s+not|not)\s+(?:in\s+)?(?:peri[-\s]?)?menopaus/i.test(userMessage)
@@ -846,9 +851,11 @@ serve(async (req) => {
         /(?:gave\s+birth|had\s+(?:my\s+)?baby|baby\s+(?:was\s+)?born|delivered)\s+(?:on\s+)?(?:the\s+)?(\w+\s+\d{1,2}(?:,?\s*\d{4})?)/i
       );
 
-      // Bare "I'm postpartum" mention with no duration/date
-      const ppBareMention = /\b(?:i'?m|i\s+am|currently)\s+postpartum\b/i.test(userMessage)
-        || /\bjust\s+had\s+(?:a\s+)?baby\b/i.test(userMessage);
+      // Bare "I'm postpartum" mention with no duration/date, plus explicit switch-back commands
+      const ppBareMention = /\b(?:i'?m|i\s+am|currently)\s+(?:still\s+)?postpartum\b/i.test(userMessage)
+        || /\bjust\s+had\s+(?:a\s+)?baby\b/i.test(userMessage)
+        || /\b(?:switch|change|set|put|move)\s+(?:me\s+)?(?:back\s+)?(?:to|in(?:to)?)\s+postpartum\b/i.test(userMessage)
+        || /\bback\s+to\s+postpartum\b/i.test(userMessage);
 
       const isPostpartumSignal = ppDurationMatch || ppDateMatch || ppBareMention;
 
