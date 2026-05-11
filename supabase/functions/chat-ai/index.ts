@@ -903,9 +903,14 @@ serve(async (req) => {
             if (refreshed) participant = refreshed;
 
             let msg = "";
-            if (computedStartDate) {
+            if (computedStartDate && !askForDate) {
+              // User gave an explicit date — just confirm, don't ask again.
               const friendlyDate = new Date(computedStartDate + "T12:00:00Z").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-              msg = `Got it — switching you over to **postpartum** mode. I've set your baby's birth around **${friendlyDate}** based on what you shared.\n\nIf that's not exact, what's the actual birth date? Even a rough one helps me track your recovery timeline more accurately.`;
+              msg = `Got it — switching you over to **postpartum** mode and locking in **${friendlyDate}** as your baby's birth date. Your recovery timeline is now tracked from there.`;
+            } else if (computedStartDate) {
+              // We inferred a date from a duration ("3 months postpartum") — confirm the approximation and offer to refine.
+              const friendlyDate = new Date(computedStartDate + "T12:00:00Z").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+              msg = `Got it — switching you over to **postpartum** mode. Based on what you shared, I've estimated your baby's birth around **${friendlyDate}**.\n\nIf you have the exact date, share it and I'll update — otherwise this is close enough to track your recovery timeline.`;
             } else {
               msg = `Got it — switching you over to **postpartum** mode. To track your recovery timeline accurately, what's your baby's birth date? An approximate one is fine.`;
             }
