@@ -776,9 +776,10 @@ serve(async (req) => {
       const lower = userMessage.toLowerCase();
 
       // "I'm in menopause", "I'm menopausal", "I'm peri-menopausal", "I went through menopause"
+      // Note: do NOT match "no period" / "stopped getting periods" alone — that's also true for
+      // postpartum users and would incorrectly switch them to menopause.
       const menopauseSignal = /\b(?:i'?m|i\s+am|i'?ve\s+(?:gone|been)\s+through|currently)\s+(?:in\s+)?(?:peri[-\s]?)?menopaus(?:e|al)\b/i.test(userMessage)
-        || /\bi'?m\s+(?:peri[-\s]?)?menopausal\b/i.test(userMessage)
-        || /\b(?:no\s+(?:more\s+)?periods?|stopped\s+(?:getting\s+)?(?:my\s+)?periods?)\b/i.test(userMessage);
+        || /\bi'?m\s+(?:peri[-\s]?)?menopausal\b/i.test(userMessage);
 
       // Cycling correction: "I'm not in menopause", "I still get my period", "I'm actually still cycling"
       const cyclingSignal = /\b(?:i'?m\s+not|not)\s+(?:in\s+)?(?:peri[-\s]?)?menopaus/i.test(userMessage)
