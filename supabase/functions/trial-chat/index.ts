@@ -106,13 +106,43 @@ Each one changes how you **think, move, and handle stress**. Which part do you s
 
 }
 
+// In-memory per-IP rate limit (best-effort; resets on cold start)
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 20;
+const ipHits = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = ipHits.get(ip);
+  if (!entry || entry.resetAt < now) {
+    ipHits.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count++;
+  return true;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const { messages } = await req.json();
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("cf-connecting-ip") ||
+      "unknown";
+
+    if (!checkRateLimit(ip)) {
+      return new Response(JSON.stringify({ error: "Too many requests" }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const { messages } = body;
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "Messages array required" }), {
@@ -121,9 +151,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    const typed = messages as TrialMsg[];
+    if (messages.length > 20) {
+      return new Response(JSON.stringify({ error: "Too many messages" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const typed = (messages as TrialMsg[]).map((m) => ({
+      role: m.role,
+      content: typeof m.content === "string" ? m.content.slice(0, 2000) : "",
+    }));
     const lastUser = [...typed].reverse().find((m) => m.role === "user");
-    const lastUserContent = lastUser?.content?.toString?.() ?? "";
+    const lastUserContent = lastUser?.content ?? "";
 
     const response = pickResponse(lastUserContent);
 
