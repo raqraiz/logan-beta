@@ -56,7 +56,13 @@ export function HistoryImportDialog({
   };
 
   const handleResult = (data: { counts: { cycles: number; symptom_days: number; tracker_logs: number }; recap: string }) => {
-    setResult({ counts: data.counts, recap: data.recap });
+    setResult({ kind: "history", counts: data.counts, recap: data.recap });
+    setPhase("done");
+    onImported?.();
+  };
+
+  const handleLabResult = (data: { marker_count: number; flagged_count: number; taken_on: string | null; recap: string }) => {
+    setResult({ kind: "lab", marker_count: data.marker_count, flagged_count: data.flagged_count, taken_on: data.taken_on, recap: data.recap });
     setPhase("done");
     onImported?.();
   };
