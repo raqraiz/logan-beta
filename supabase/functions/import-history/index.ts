@@ -288,9 +288,24 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const storagePath: string = String(body.storage_path ?? "").trim();
     const sourceHint: string = String(body.source_hint ?? "csv").trim();
-    if (!storagePath || !storagePath.startsWith(`${userId}/`)) {
+    const pastedText: string = typeof body.pasted_text === "string" ? body.pasted_text : "";
+    const imagePaths: string[] = Array.isArray(body.image_paths)
+      ? body.image_paths.filter((p: unknown) => typeof p === "string" && (p as string).startsWith(`${userId}/`)).slice(0, 6)
+      : [];
+    const mode: "paste" | "screenshot" | "file" = pastedText
+      ? "paste"
+      : imagePaths.length
+      ? "screenshot"
+      : "file";
+
+    if (mode === "file" && (!storagePath || !storagePath.startsWith(`${userId}/`))) {
       return new Response(JSON.stringify({ error: "Invalid storage path" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (mode === "paste" && pastedText.length > 500_000) {
+      return new Response(JSON.stringify({ error: "Pasted text is too large (max ~500KB)." }), {
+        status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
