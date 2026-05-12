@@ -312,8 +312,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
         userId={userId}
         editMode
         initialValues={{
-          lengthDays: resource.metadata?.length_days,
-          style: resource.style,
+          mode: resource.metadata?.mode ?? resource.metadata?.preview?.mode ?? "ideas",
           dietaryPrefs: (resource.metadata?.dietary_prefs ?? null) as any,
         }}
       />
