@@ -658,7 +658,8 @@ serve(async (req) => {
     });
 
     // Best-effort cleanup of uploaded file
-    admin.storage.from("history-imports").remove([storagePath]).catch(() => {});
+    const toRemove = mode === "screenshot" ? imagePaths : storagePath ? [storagePath] : [];
+    if (toRemove.length) admin.storage.from("history-imports").remove(toRemove).catch(() => {});
 
     return new Response(
       JSON.stringify({
