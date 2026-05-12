@@ -123,23 +123,8 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
     };
   }, [resourceId]);
 
-  const handlePreview = async () => {
+  const handlePreview = () => {
     setPreviewOpen(true);
-    if (resource?.metadata?.preview?.days?.length || !resource?.pdf_path) return;
-    // Always regenerate to avoid stale/expired signed URLs
-    setPreviewUrl(null);
-    setPreviewLoading(true);
-    try {
-      const { data, error } = await supabase.storage
-        .from("resources")
-        .createSignedUrl(resource.pdf_path, 60 * 60);
-      if (error || !data?.signedUrl) throw error;
-      setPreviewUrl(data.signedUrl);
-    } catch (err) {
-      console.error("Preview failed:", err);
-    } finally {
-      setPreviewLoading(false);
-    }
   };
 
   const handleReact = async (next: "up" | "down") => {
