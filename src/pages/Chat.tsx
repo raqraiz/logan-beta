@@ -138,6 +138,7 @@ const Chat = () => {
   const [outOfCredits, setOutOfCredits] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [showTopicPrompt, setShowTopicPrompt] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("ask");
   const [visibleStarters, setVisibleStarters] = useState<string[]>([]);
