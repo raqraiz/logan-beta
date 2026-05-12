@@ -23,10 +23,13 @@ const IntegrationCallback = () => {
 
   useEffect(() => {
     if (status !== "ok") return;
+    toast.success(`${providerName} connected`, {
+      description: "Logan is pulling your data now. You'll see it in your insights and correlations soon.",
+    });
     const t = setInterval(() => setCount((c) => c - 1), 1000);
     const r = setTimeout(() => navigate("/", { replace: true }), 3000);
     return () => { clearInterval(t); clearTimeout(r); };
-  }, [status, navigate]);
+  }, [status, navigate, providerName]);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
