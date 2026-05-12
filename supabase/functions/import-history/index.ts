@@ -256,6 +256,114 @@ function cycleStartsToCycles(starts: string[]): { start: string; end: string; le
   return out;
 }
 
+// ---- Screenshot vision extraction ----
+async function extractFromScreenshots(
+  admin: ReturnType<typeof createClient>,
+  paths: string[],
+): Promise<{
+  cycleStarts: string[];
+  symptomsByDay: Map<string, Map<string, number>>;
+  earliest: string | null;
+  latest: string | null;
+} | null> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) return null;
+
+  const imageParts: { type: "image_url"; image_url: { url: string } }[] = [];
+  for (const p of paths) {
+    const { data: blob } = await admin.storage.from("history-imports").download(p);
+    if (!blob) continue;
+    if (blob.size > 8 * 1024 * 1024) continue; // 8MB cap per image
+    const buf = new Uint8Array(await blob.arrayBuffer());
+    let bin = "";
+    for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+    const b64 = btoa(bin);
+    const mime = blob.type || "image/png";
+    imageParts.push({ type: "image_url", image_url: { url: `data:${mime};base64,${b64}` } });
+  }
+  if (!imageParts.length) return null;
+
+  const systemPrompt = `You extract menstrual cycle data from screenshots of period-tracker apps (Clue, Flo, Apple Cycle Tracking, Natural Cycles, Stardust, etc.) or hand-written calendars. Read every visible date and return STRICT JSON only — no prose, no markdown.
+
+Schema:
+{
+  "period_start_dates": ["YYYY-MM-DD", ...],   // first day of each period you can identify
+  "symptom_logs": [
+    { "date": "YYYY-MM-DD", "symptom": "cramps|bloating|headache|fatigue|mood swings|acne|breast tenderness|back pain|nausea|insomnia|anxiety|cravings|hot flashes|night sweats", "intensity": 1 }
+  ]
+}
+
+Rules:
+- Dates MUST be ISO YYYY-MM-DD. Infer the year from screenshot context (current year if unclear).
+- Intensity 1=mild, 3=moderate, 5=severe. If unknown use 3.
+- Only include symptoms you actually see marked.
+- If you can't read a screenshot, return empty arrays.
+- Output JSON only, nothing else.`;
+
+  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Extract cycle and symptom data from these screenshots. Return JSON only." },
+            ...imageParts,
+          ],
+        },
+      ],
+    }),
+  });
+
+  if (!resp.ok) {
+    console.error("vision API error", resp.status, await resp.text());
+    return null;
+  }
+  const json = await resp.json();
+  const raw: string = json.choices?.[0]?.message?.content ?? "";
+  const match = raw.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  let parsed: { period_start_dates?: string[]; symptom_logs?: { date: string; symptom: string; intensity?: number }[] };
+  try {
+    parsed = JSON.parse(match[0]);
+  } catch {
+    return null;
+  }
+
+  const cycleStarts: string[] = [];
+  const symptomsByDay = new Map<string, Map<string, number>>();
+  let earliest: string | null = null;
+  let latest: string | null = null;
+  const track = (d: string) => {
+    if (!earliest || d < earliest) earliest = d;
+    if (!latest || d > latest) latest = d;
+  };
+
+  for (const d of parsed.period_start_dates ?? []) {
+    const day = parseDateOnly(d);
+    if (!day) continue;
+    cycleStarts.push(day);
+    track(day);
+  }
+  for (const s of parsed.symptom_logs ?? []) {
+    const day = parseDateOnly(s.date);
+    if (!day || !s.symptom) continue;
+    const intensity = Math.min(5, Math.max(1, Math.round(s.intensity ?? 3)));
+    const map = symptomsByDay.get(day) ?? new Map<string, number>();
+    map.set(s.symptom.toLowerCase(), Math.max(map.get(s.symptom.toLowerCase()) ?? 0, intensity));
+    symptomsByDay.set(day, map);
+    track(day);
+  }
+  cycleStarts.sort();
+  return { cycleStarts: Array.from(new Set(cycleStarts)), symptomsByDay, earliest, latest };
+}
+
 // ---- Main ----
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
