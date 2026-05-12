@@ -22,15 +22,6 @@ interface HistoryImportDialogProps {
 
 type Phase = "idle" | "uploading" | "processing" | "done" | "error";
 
-const TEMPLATE_CSV = `date,period,cramps,bloating,mood,fatigue,sleep,energy
-2025-01-01,1,3,2,2,3,3,2
-2025-01-02,1,2,1,2,2,3,2
-2025-01-03,1,1,0,3,2,4,3
-2025-01-15,0,0,0,4,1,4,5
-2025-01-22,0,0,2,2,3,3,2
-2025-01-29,1,3,3,2,4,2,1
-`;
-
 const MAX_SCREENSHOTS = 6;
 
 export function HistoryImportDialog({
@@ -199,26 +190,6 @@ export function HistoryImportDialog({
     handleResult(data);
   };
 
-  const downloadTemplate = () => {
-    try {
-      const blob = new Blob([TEMPLATE_CSV], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "logan-history-template.csv";
-      a.rel = "noopener";
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 100);
-      toast({ title: "Template downloaded" });
-    } catch (e) {
-      console.error("Template download failed", e);
-      toast({ title: "Could not download template", variant: "destructive" });
-    }
-  };
 
   return (
     <Dialog
@@ -328,8 +299,16 @@ export function HistoryImportDialog({
 
             <TabsContent value="template" className="text-sm text-muted-foreground space-y-3 mt-3">
               <p>Download Logan's template, fill it in from any source, and upload it back as CSV.</p>
-              <Button variant="outline" size="sm" onClick={downloadTemplate}>
-                <Download className="w-4 h-4 mr-2" /> Download template
+              <Button variant="outline" size="sm" asChild>
+                <a
+                  href="/logan-history-template.csv"
+                  download="logan-history-template.csv"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => toast({ title: "Template downloaded" })}
+                >
+                  <Download className="w-4 h-4 mr-2" /> Download template
+                </a>
               </Button>
             </TabsContent>
 
