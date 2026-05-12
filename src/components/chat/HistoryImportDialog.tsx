@@ -201,6 +201,61 @@ export function HistoryImportDialog({
   };
 
 
+  const addLabImages = (files: FileList | null) => {
+    if (!files) return;
+    const next = [...labImages];
+    for (const f of Array.from(files)) {
+      if (!f.type.startsWith("image/")) continue;
+      if (f.size > 8 * 1024 * 1024) {
+        toast({ title: `${f.name} is too large`, description: "Max 8 MB per image.", variant: "destructive" });
+        continue;
+      }
+      if (next.length >= MAX_SCREENSHOTS) break;
+      next.push(f);
+    }
+    setLabImages(next);
+  };
+
+  const handleLabSubmit = async () => {
+    if (!userId) {
+      toast({ title: "Sign in first", variant: "destructive" });
+      return;
+    }
+    if (!labImages.length) {
+      toast({ title: "Add at least one photo of your blood test", variant: "destructive" });
+      return;
+    }
+    setPhase("uploading");
+    setProgress(`Uploading ${labImages.length} image${labImages.length === 1 ? "" : "s"}…`);
+
+    const paths: string[] = [];
+    for (const f of labImages) {
+      const ext = (f.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext || "png"}`;
+      const { error: upErr } = await supabase.storage
+        .from("history-imports")
+        .upload(path, f, { upsert: false, contentType: f.type || "image/png" });
+      if (upErr) {
+        setPhase("error");
+        setError(upErr.message);
+        return;
+      }
+      paths.push(path);
+    }
+
+    setPhase("processing");
+    setProgress("Logan is reading your lab results…");
+    const { data, error: fnErr } = await supabase.functions.invoke("import-blood-test", {
+      body: { image_paths: paths },
+    });
+    if (fnErr || (data as { error?: string })?.error) {
+      setPhase("error");
+      setError((data as { error?: string })?.error || fnErr?.message || "Import failed");
+      return;
+    }
+    handleLabResult(data);
+  };
+
   return (
     <Dialog
       open={open}
