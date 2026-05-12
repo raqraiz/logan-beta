@@ -39,8 +39,10 @@ export function HistoryImportDialog({
   const [error, setError] = useState<string | null>(null);
   const [pasted, setPasted] = useState("");
   const [screenshots, setScreenshots] = useState<File[]>([]);
+  const [labImages, setLabImages] = useState<File[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const screenshotsRef = useRef<HTMLInputElement>(null);
+  const labImagesRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
     setPhase("idle");
@@ -49,6 +51,7 @@ export function HistoryImportDialog({
     setError(null);
     setPasted("");
     setScreenshots([]);
+    setLabImages([]);
   };
 
   const handleResult = (data: { counts: { cycles: number; symptom_days: number; tracker_logs: number }; recap: string }) => {
