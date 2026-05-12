@@ -8,25 +8,14 @@ import { cn } from "@/lib/utils";
 
 type ResourceMetadata = {
   preview?: {
+    mode?: "ideas" | "mix";
     intro?: string;
-    days?: Array<{
-      day_number: number;
-      cycle_day: number;
-      phase: string;
-      breakfast: string;
-      lunch: string;
-      dinner: string;
-      snack: string;
-      hormone_focus?: string;
-      image_path?: string | null;
-    }>;
-    weeks?: Array<{
-      week_number: number;
-      phase_summary: string;
-      grocery_list: string[];
-    }>;
+    phase?: string;
+    cycle_day?: number | null;
+    life_stage?: string;
+    [key: string]: unknown;
   } | null;
-  length_days?: number;
+  mode?: "ideas" | "mix";
   dietary_prefs?: Record<string, unknown>;
 };
 
