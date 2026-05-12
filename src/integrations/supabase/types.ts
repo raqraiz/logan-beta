@@ -462,6 +462,54 @@ export type Database = {
           },
         ]
       }
+      history_imports: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          cycles_imported: number
+          date_range_end: string | null
+          date_range_start: string | null
+          error_message: string | null
+          id: string
+          source: string
+          status: string
+          storage_path: string | null
+          symptom_days_imported: number
+          tracker_logs_imported: number
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          cycles_imported?: number
+          date_range_end?: string | null
+          date_range_start?: string | null
+          error_message?: string | null
+          id?: string
+          source: string
+          status?: string
+          storage_path?: string | null
+          symptom_days_imported?: number
+          tracker_logs_imported?: number
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          cycles_imported?: number
+          date_range_end?: string | null
+          date_range_start?: string | null
+          error_message?: string | null
+          id?: string
+          source?: string
+          status?: string
+          storage_path?: string | null
+          symptom_days_imported?: number
+          tracker_logs_imported?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       home_widget_preferences: {
         Row: {
           created_at: string
