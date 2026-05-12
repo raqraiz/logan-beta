@@ -325,9 +325,10 @@ serve(async (req) => {
     }
 
     // Create import row
+    const initialSource = mode === "paste" ? "pasted" : mode === "screenshot" ? "screenshot" : sourceHint;
     const { data: importRow, error: importErr } = await admin
       .from("history_imports")
-      .insert({ user_id: userId, source: sourceHint, status: "processing", storage_path: storagePath })
+      .insert({ user_id: userId, source: initialSource, status: "processing", storage_path: storagePath || (imagePaths[0] ?? null) })
       .select()
       .single();
     if (importErr) throw importErr;
@@ -340,21 +341,6 @@ serve(async (req) => {
       }).eq("id", importId);
     };
 
-    // Download file
-    const { data: fileBlob, error: dlErr } = await admin.storage.from("history-imports").download(storagePath);
-    if (dlErr || !fileBlob) {
-      await finalize({ status: "failed", error_message: "Download failed" });
-      return new Response(JSON.stringify({ error: "Could not read uploaded file" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (fileBlob.size > MAX_BYTES) {
-      await finalize({ status: "failed", error_message: "File too large" });
-      return new Response(JSON.stringify({ error: "File is too large (max 60 MB). Try a shorter date range." }), {
-        status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     // Look up participant
     const { data: participant } = await admin
       .from("participants")
@@ -362,58 +348,100 @@ serve(async (req) => {
       .eq("email", userEmail ?? "")
       .maybeSingle();
 
-    const lower = storagePath.toLowerCase();
-    const isZip = lower.endsWith(".zip");
-    const isXml = lower.endsWith(".xml");
-    const isCsv = lower.endsWith(".csv");
-
     let cycles: { start: string; end: string; length: number }[] = [];
     let symptomsByDay = new Map<string, Map<string, number>>();
     let sleepByDay = new Map<string, number>();
     let workoutsByDay = new Map<string, number>();
     let earliest: string | null = null;
     let latest: string | null = null;
-    let detectedSource = sourceHint;
+    let detectedSource = initialSource;
 
-    if (isZip || isXml) {
-      detectedSource = "apple_health";
-      let xml = "";
-      if (isZip) {
-        const reader = new ZipReader(new BlobReader(fileBlob));
-        const entries = await reader.getEntries();
-        const exportEntry = entries.find((e) => /export\.xml$/i.test(e.filename) && !e.filename.includes("export_cda"));
-        if (!exportEntry?.getData) {
-          await reader.close();
-          await finalize({ status: "failed", error_message: "No export.xml in zip" });
-          return new Response(JSON.stringify({ error: "Couldn't find export.xml inside the zip." }), {
-            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        xml = await exportEntry.getData(new TextWriter());
-        await reader.close();
-      } else {
-        xml = await fileBlob.text();
+    if (mode === "file") {
+      // Download file
+      const { data: fileBlob, error: dlErr } = await admin.storage.from("history-imports").download(storagePath);
+      if (dlErr || !fileBlob) {
+        await finalize({ status: "failed", error_message: "Download failed" });
+        return new Response(JSON.stringify({ error: "Could not read uploaded file" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
-      const parsed = parseAppleHealthXml(xml);
-      cycles = periodDaysToCycles(parsed.periodDays);
-      symptomsByDay = parsed.symptomsByDay;
-      sleepByDay = parsed.sleepByDay;
-      workoutsByDay = parsed.workoutsByDay;
-      earliest = parsed.earliest;
-      latest = parsed.latest;
-    } else if (isCsv) {
-      detectedSource = "csv";
-      const text = await fileBlob.text();
-      const parsed = parseGenericCsv(text);
+      if (fileBlob.size > MAX_BYTES) {
+        await finalize({ status: "failed", error_message: "File too large" });
+        return new Response(JSON.stringify({ error: "File is too large (max 60 MB). Try a shorter date range." }), {
+          status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const lower = storagePath.toLowerCase();
+      const isZip = lower.endsWith(".zip");
+      const isXml = lower.endsWith(".xml");
+      const isCsv = lower.endsWith(".csv");
+
+      if (isZip || isXml) {
+        detectedSource = "apple_health";
+        let xml = "";
+        if (isZip) {
+          const reader = new ZipReader(new BlobReader(fileBlob));
+          const entries = await reader.getEntries();
+          const exportEntry = entries.find((e) => /export\.xml$/i.test(e.filename) && !e.filename.includes("export_cda"));
+          if (!exportEntry?.getData) {
+            await reader.close();
+            await finalize({ status: "failed", error_message: "No export.xml in zip" });
+            return new Response(JSON.stringify({ error: "Couldn't find export.xml inside the zip." }), {
+              status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          xml = await exportEntry.getData(new TextWriter());
+          await reader.close();
+        } else {
+          xml = await fileBlob.text();
+        }
+        const parsed = parseAppleHealthXml(xml);
+        cycles = periodDaysToCycles(parsed.periodDays);
+        symptomsByDay = parsed.symptomsByDay;
+        sleepByDay = parsed.sleepByDay;
+        workoutsByDay = parsed.workoutsByDay;
+        earliest = parsed.earliest;
+        latest = parsed.latest;
+      } else if (isCsv) {
+        detectedSource = "csv";
+        const text = await fileBlob.text();
+        const parsed = parseGenericCsv(text);
+        cycles = cycleStartsToCycles(parsed.cycleStarts);
+        symptomsByDay = parsed.symptomsByDay;
+        earliest = parsed.earliest;
+        latest = parsed.latest;
+      } else {
+        await finalize({ status: "failed", error_message: "Unsupported file" });
+        return new Response(JSON.stringify({ error: "Unsupported file type. Upload .zip, .xml, or .csv." }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else if (mode === "paste") {
+      detectedSource = "pasted";
+      // Normalize tabs → commas so spreadsheet pastes work
+      const normalized = pastedText.includes("\t") && !pastedText.includes(",")
+        ? pastedText.replace(/\t/g, ",")
+        : pastedText;
+      const parsed = parseGenericCsv(normalized);
       cycles = cycleStartsToCycles(parsed.cycleStarts);
       symptomsByDay = parsed.symptomsByDay;
       earliest = parsed.earliest;
       latest = parsed.latest;
     } else {
-      await finalize({ status: "failed", error_message: "Unsupported file" });
-      return new Response(JSON.stringify({ error: "Unsupported file type. Upload .zip, .xml, or .csv." }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // screenshot mode — use Gemini vision
+      detectedSource = "screenshot";
+      const extracted = await extractFromScreenshots(admin, imagePaths);
+      if (!extracted) {
+        await finalize({ status: "failed", error_message: "Vision extraction failed" });
+        return new Response(JSON.stringify({ error: "Couldn't read those screenshots. Try clearer images or fewer per upload." }), {
+          status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      cycles = cycleStartsToCycles(extracted.cycleStarts);
+      symptomsByDay = extracted.symptomsByDay;
+      earliest = extracted.earliest;
+      latest = extracted.latest;
     }
 
     // ---- Insert cycles ----
