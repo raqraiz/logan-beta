@@ -1590,7 +1590,21 @@ const Chat = () => {
             )}
           </div>
           <form onSubmit={sendMessage} className="max-w-3xl mx-auto px-4 py-4">
-            <div className="flex gap-3">
+            <div className="flex gap-2">
+              {!isOnboarding && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-12 w-12 shrink-0"
+                  onClick={() => setImportOpen(true)}
+                  disabled={isSending}
+                  aria-label="Import history or blood test"
+                  title="Import history or blood test"
+                >
+                  <Paperclip className="w-5 h-5" />
+                </Button>
+              )}
               <Input
                 ref={inputRef}
                 value={inputValue}
