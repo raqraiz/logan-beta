@@ -296,20 +296,6 @@ export function HistoryImportDialog({
               </p>
             </TabsContent>
 
-            <TabsContent value="template" className="text-sm text-muted-foreground space-y-3 mt-3">
-              <p>Download Logan's template, fill it in from any source, and upload it back as CSV.</p>
-              <Button variant="outline" size="sm" asChild>
-                <a
-                  href="/logan-history-template.csv"
-                  download="logan-history-template.csv"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => toast({ title: "Template downloaded" })}
-                >
-                  <Download className="w-4 h-4 mr-2" /> Download template
-                </a>
-              </Button>
-            </TabsContent>
 
             <input
               ref={fileRef}
