@@ -5,24 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Sun, Moon, Loader2, Check } from "lucide-react";
+import { Sparkles, Loader2, Check, Lightbulb, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Length = 1 | 3 | 7;
-type Style = "dark" | "light";
+type Mode = "ideas" | "mix";
 
 export interface MealPlanInitialValues {
+  mode?: Mode;
+  // legacy fields preserved (ignored)
   lengthDays?: number;
   style?: string | null;
   dietaryPrefs?: {
     diet_type?: string | null;
     allergies?: string[] | null;
     dislikes?: string[] | null;
-    cuisines?: string[] | null;        // repurposed: focus styles
-    includes?: string[] | null;        // foods to include
+    cuisines?: string[] | null;
+    includes?: string[] | null;
     notes?: string | null;
     macro_preset?: string | null;
-    macro_targets?: { calories?: number | null; protein?: number | null; carbs?: number | null; fat?: number | null } | null;
     free_form?: string | null;
   } | null;
 }
@@ -33,44 +33,26 @@ interface MealPlanSetupDialogProps {
   userId: string;
   onGenerated?: (resourceId: string) => void;
   initialValues?: MealPlanInitialValues | null;
-  /** When true, button label/title says "Update" instead of "Generate". */
   editMode?: boolean;
 }
 
-const LENGTH_OPTIONS: { value: Length; label: string; sub: string; eta: string }[] = [
-  { value: 1, label: "1 day", sub: "Just today", eta: "~5s" },
-  { value: 3, label: "3 days", sub: "Quick try", eta: "~10s" },
-  { value: 7, label: "1 week", sub: "Most popular", eta: "~20s" },
+const MODE_OPTIONS: { value: Mode; label: string; sub: string; icon: typeof Lightbulb }[] = [
+  { value: "ideas", label: "Ideas", sub: "Foods + meal ideas, no schedule", icon: Lightbulb },
+  { value: "mix", label: "Mix", sub: "3 anchor meals + flexible swaps", icon: Layers },
 ];
 
 const DIET_TYPES = ["Omnivore", "Pescatarian", "Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Keto", "Paleo", "Kosher", "Halal", "Other"];
 const COMMON_ALLERGIES = ["Nuts", "Peanuts", "Shellfish", "Eggs", "Soy", "Gluten", "Dairy"];
 const FOCUS_STYLES = [
-  "High protein",
-  "Anti-inflammatory",
-  "Gut-friendly",
-  "Hormone-balancing",
-  "Low-carb",
-  "Low-sugar",
-  "Iron-rich",
-  "Mediterranean",
-  "Quick & simple",
+  "High protein", "Anti-inflammatory", "Gut-friendly", "Hormone-balancing",
+  "Low-carb", "Low-sugar", "Iron-rich", "Mediterranean", "Quick & simple",
 ];
-
 const PRESET_DIETS = ["Omnivore", "Pescatarian", "Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Keto", "Paleo", "Kosher", "Halal"];
-
-const MACRO_PRESETS = [
-  { id: "balanced", label: "Balanced", desc: "~30% P / 40% C / 30% F" },
-  { id: "high_protein", label: "High protein", desc: ">120g protein/day" },
-  { id: "low_carb", label: "Low carb", desc: "<100g carbs/day" },
-  { id: "mediterranean", label: "Mediterranean", desc: "Healthy fats forward" },
-];
 
 export function MealPlanSetupDialog({
   open, onOpenChange, userId, onGenerated, initialValues, editMode = false,
 }: MealPlanSetupDialogProps) {
-  const [length, setLength] = useState<Length>(7);
-  const [style, setStyle] = useState<Style>("dark");
+  const [mode, setMode] = useState<Mode>("ideas");
   const [dietTypes, setDietTypes] = useState<string[]>(["Omnivore"]);
   const [dietOther, setDietOther] = useState<string>("");
   const [allergies, setAllergies] = useState<string[]>([]);
@@ -78,16 +60,10 @@ export function MealPlanSetupDialog({
   const [dislikes, setDislikes] = useState("");
   const [includes, setIncludes] = useState("");
   const [focusStyles, setFocusStyles] = useState<string[]>([]);
-  const [macroPreset, setMacroPreset] = useState<string>("");
-  const [macroCalories, setMacroCalories] = useState<string>("");
-  const [macroProtein, setMacroProtein] = useState<string>("");
-  const [macroCarbs, setMacroCarbs] = useState<string>("");
-  const [macroFat, setMacroFat] = useState<string>("");
   const [freeForm, setFreeForm] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [loadingPrefs, setLoadingPrefs] = useState(true);
 
-  // Apply provided initial values, otherwise fall back to user_dietary_prefs
   useEffect(() => {
     if (!open || !userId) return;
     setLoadingPrefs(true);
@@ -111,32 +87,23 @@ export function MealPlanSetupDialog({
       setDietTypes(next.length ? next : ["Omnivore"]);
     };
 
-    const applyValues = (data: MealPlanInitialValues["dietaryPrefs"], lengthDays?: number, styleVal?: string | null) => {
-      if (lengthDays && [1, 3, 7].includes(lengthDays)) setLength(lengthDays as Length);
-      if (styleVal === "light" || styleVal === "dark") setStyle(styleVal);
+    const applyValues = (data: MealPlanInitialValues["dietaryPrefs"], modeVal?: Mode) => {
+      if (modeVal === "ideas" || modeVal === "mix") setMode(modeVal);
       if (!data) return;
       applyDietType(data.diet_type ?? undefined);
       if (data.allergies?.length) setAllergies(data.allergies);
       if (data.dislikes?.length) setDislikes(data.dislikes.join(", "));
       if (data.cuisines?.length) setFocusStyles(data.cuisines);
-      // includes can come from explicit field or from notes (legacy)
       if (data.includes?.length) {
         setIncludes(data.includes.join(", "));
       } else if (data.notes && /^includes:/i.test(data.notes)) {
         setIncludes(data.notes.replace(/^includes:\s*/i, ""));
       }
-      if (data.macro_preset) setMacroPreset(data.macro_preset);
-      if (data.macro_targets) {
-        setMacroCalories(data.macro_targets.calories ? String(data.macro_targets.calories) : "");
-        setMacroProtein(data.macro_targets.protein ? String(data.macro_targets.protein) : "");
-        setMacroCarbs(data.macro_targets.carbs ? String(data.macro_targets.carbs) : "");
-        setMacroFat(data.macro_targets.fat ? String(data.macro_targets.fat) : "");
-      }
       if (data.free_form) setFreeForm(data.free_form);
     };
 
     if (initialValues) {
-      applyValues(initialValues.dietaryPrefs ?? null, initialValues.lengthDays, initialValues.style);
+      applyValues(initialValues.dietaryPrefs ?? null, initialValues.mode);
       setLoadingPrefs(false);
       return;
     }
@@ -193,26 +160,16 @@ export function MealPlanSetupDialog({
       });
       const resolvedDiet = resolvedParts.length ? resolvedParts.join(", ") : "Omnivore";
 
-      const macroTargets = {
-        calories: macroCalories ? Number(macroCalories) : null,
-        protein: macroProtein ? Number(macroProtein) : null,
-        carbs: macroCarbs ? Number(macroCarbs) : null,
-        fat: macroFat ? Number(macroFat) : null,
-      };
-
       const { data, error } = await supabase.functions.invoke("generate-meal-plan", {
         body: {
-          lengthDays: length,
-          style,
+          mode,
           dietaryPrefs: {
             diet_type: resolvedDiet,
             allergies,
             dislikes: dislikeList,
-            cuisines: focusStyles, // server stores into cuisines column
+            cuisines: focusStyles,
             includes: includeList,
             focus_styles: focusStyles,
-            macro_preset: macroPreset || null,
-            macro_targets: macroTargets,
             free_form: freeForm.trim() || null,
           },
         },
@@ -222,7 +179,7 @@ export function MealPlanSetupDialog({
       if (data?.resource?.id) onGenerated?.(data.resource.id);
       onOpenChange(false);
     } catch (err) {
-      console.error("Failed to start meal plan generation:", err);
+      console.error("Failed to start menu generation:", err);
     } finally {
       setSubmitting(false);
     }
@@ -234,12 +191,12 @@ export function MealPlanSetupDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
-            {editMode ? "Edit your meal plan" : "Build your meal plan"}
+            {editMode ? "Edit your menu" : "Build your menu"}
           </DialogTitle>
           <DialogDescription>
             {editMode
               ? "Tweak any setting below — we'll regenerate from your changes."
-              : "Each meal will sync to your cycle phase. Takes ~5–20 seconds."}
+              : "Tailored to where you are right now in your cycle. Takes a few seconds."}
           </DialogDescription>
         </DialogHeader>
 
@@ -249,30 +206,35 @@ export function MealPlanSetupDialog({
           </div>
         ) : (
           <div className="space-y-5 py-2">
-            {/* Length */}
+            {/* Mode */}
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">
-                Plan length
+                What do you want?
               </Label>
-              <div className="grid grid-cols-3 gap-2">
-                {LENGTH_OPTIONS.map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setLength(opt.value)}
-                    className={cn(
-                      "rounded-xl border px-3 py-2.5 text-left transition-all",
-                      length === opt.value
-                        ? "border-primary bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary)/0.4)]"
-                        : "border-border/40 bg-card/40 hover:border-border/80",
-                    )}
-                  >
-                    <div className="text-sm font-semibold text-foreground flex items-center justify-between">
-                      {opt.label}
-                      {length === opt.value && <Check className="h-3.5 w-3.5 text-primary" />}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5">{opt.sub}</div>
-                  </button>
-                ))}
+              <div className="grid grid-cols-2 gap-2">
+                {MODE_OPTIONS.map(opt => {
+                  const Icon = opt.icon;
+                  const active = mode === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => setMode(opt.value)}
+                      className={cn(
+                        "rounded-xl border px-3 py-3 text-left transition-all",
+                        active
+                          ? "border-primary bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary)/0.4)]"
+                          : "border-border/40 bg-card/40 hover:border-border/80",
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <Icon className={cn("h-3.5 w-3.5", active ? "text-primary" : "text-muted-foreground")} />
+                        {active && <Check className="h-3.5 w-3.5 text-primary" />}
+                      </div>
+                      <div className="text-sm font-semibold text-foreground">{opt.label}</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{opt.sub}</div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -388,7 +350,7 @@ export function MealPlanSetupDialog({
                 className="text-sm min-h-[60px]"
               />
               <p className="text-[10px] text-muted-foreground mt-1">
-                Comma-separated. Logan will work these into the plan.
+                Comma-separated. Logan will work these in where natural.
               </p>
             </div>
 
@@ -405,40 +367,7 @@ export function MealPlanSetupDialog({
               />
             </div>
 
-            {/* Macro targets */}
-            <div>
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">
-                Macro targets <span className="text-muted-foreground/60 normal-case tracking-normal">(optional)</span>
-              </Label>
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {MACRO_PRESETS.map(p => (
-                  <button
-                    key={p.id}
-                    onClick={() => setMacroPreset(prev => prev === p.id ? "" : p.id)}
-                    className={cn(
-                      "rounded-full px-3 py-1 text-xs border transition-all",
-                      macroPreset === p.id
-                        ? "border-primary bg-primary/15 text-primary"
-                        : "border-border/40 bg-card/40 text-muted-foreground hover:text-foreground",
-                    )}
-                    title={p.desc}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                <Input value={macroCalories} onChange={e => setMacroCalories(e.target.value)} placeholder="kcal" className="h-8 text-xs" inputMode="numeric" />
-                <Input value={macroProtein} onChange={e => setMacroProtein(e.target.value)} placeholder="P g" className="h-8 text-xs" inputMode="numeric" />
-                <Input value={macroCarbs} onChange={e => setMacroCarbs(e.target.value)} placeholder="C g" className="h-8 text-xs" inputMode="numeric" />
-                <Input value={macroFat} onChange={e => setMacroFat(e.target.value)} placeholder="F g" className="h-8 text-xs" inputMode="numeric" />
-              </div>
-              <p className="text-[10px] text-muted-foreground mt-1">
-                Daily totals. Leave blank if you don't track these.
-              </p>
-            </div>
-
-            {/* Free-form tweaks */}
+            {/* Free-form */}
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">
                 Anything else?
@@ -446,40 +375,9 @@ export function MealPlanSetupDialog({
               <Textarea
                 value={freeForm}
                 onChange={e => setFreeForm(e.target.value)}
-                placeholder="e.g. I'm training for a half-marathon, prefer one-pot dinners, breastfeeding so need extra calories..."
+                placeholder="e.g. training for a half-marathon, prefer one-pot dinners, breastfeeding..."
                 className="text-sm min-h-[70px]"
               />
-            </div>
-
-            {/* Visual style */}
-            <div>
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">
-                Visual style
-              </Label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setStyle("dark")}
-                  className={cn(
-                    "rounded-xl border px-3 py-3 flex flex-col items-center gap-1.5 transition-all",
-                    style === "dark" ? "border-primary bg-primary/10" : "border-border/40 bg-card/40 hover:border-border/80",
-                  )}
-                >
-                  <Moon className="h-4 w-4 text-foreground" />
-                  <div className="text-xs font-medium">Dark</div>
-                  <div className="text-[10px] text-muted-foreground">Premium look</div>
-                </button>
-                <button
-                  onClick={() => setStyle("light")}
-                  className={cn(
-                    "rounded-xl border px-3 py-3 flex flex-col items-center gap-1.5 transition-all",
-                    style === "light" ? "border-primary bg-primary/10" : "border-border/40 bg-card/40 hover:border-border/80",
-                  )}
-                >
-                  <Sun className="h-4 w-4 text-foreground" />
-                  <div className="text-xs font-medium">Light</div>
-                  <div className="text-[10px] text-muted-foreground">Bright & airy</div>
-                </button>
-              </div>
             </div>
 
             <Button
@@ -491,7 +389,7 @@ export function MealPlanSetupDialog({
               {submitting ? (
                 <><Loader2 className="h-4 w-4 animate-spin" /> Starting…</>
               ) : (
-                <><Sparkles className="h-4 w-4" /> {editMode ? "Update my meal plan" : "Generate my meal plan"}</>
+                <><Sparkles className="h-4 w-4" /> {editMode ? "Update my menu" : "Generate my menu"}</>
               )}
             </Button>
           </div>
