@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { CheckCircle2, ImagePlus, Loader2, Upload, X } from "lucide-react";
+import { CheckCircle2, FlaskConical, ImagePlus, Loader2, Upload, X } from "lucide-react";
 
 interface HistoryImportDialogProps {
   open: boolean;
@@ -32,15 +32,18 @@ export function HistoryImportDialog({
 }: HistoryImportDialogProps) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [progress, setProgress] = useState("");
-  const [result, setResult] = useState<{
-    counts: { cycles: number; symptom_days: number; tracker_logs: number };
-    recap: string;
-  } | null>(null);
+  const [result, setResult] = useState<
+    | { kind: "history"; counts: { cycles: number; symptom_days: number; tracker_logs: number }; recap: string }
+    | { kind: "lab"; marker_count: number; flagged_count: number; taken_on: string | null; recap: string }
+    | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const [pasted, setPasted] = useState("");
   const [screenshots, setScreenshots] = useState<File[]>([]);
+  const [labImages, setLabImages] = useState<File[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const screenshotsRef = useRef<HTMLInputElement>(null);
+  const labImagesRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
     setPhase("idle");
@@ -49,10 +52,17 @@ export function HistoryImportDialog({
     setError(null);
     setPasted("");
     setScreenshots([]);
+    setLabImages([]);
   };
 
   const handleResult = (data: { counts: { cycles: number; symptom_days: number; tracker_logs: number }; recap: string }) => {
-    setResult({ counts: data.counts, recap: data.recap });
+    setResult({ kind: "history", counts: data.counts, recap: data.recap });
+    setPhase("done");
+    onImported?.();
+  };
+
+  const handleLabResult = (data: { marker_count: number; flagged_count: number; taken_on: string | null; recap: string }) => {
+    setResult({ kind: "lab", marker_count: data.marker_count, flagged_count: data.flagged_count, taken_on: data.taken_on, recap: data.recap });
     setPhase("done");
     onImported?.();
   };
@@ -191,6 +201,61 @@ export function HistoryImportDialog({
   };
 
 
+  const addLabImages = (files: FileList | null) => {
+    if (!files) return;
+    const next = [...labImages];
+    for (const f of Array.from(files)) {
+      if (!f.type.startsWith("image/")) continue;
+      if (f.size > 8 * 1024 * 1024) {
+        toast({ title: `${f.name} is too large`, description: "Max 8 MB per image.", variant: "destructive" });
+        continue;
+      }
+      if (next.length >= MAX_SCREENSHOTS) break;
+      next.push(f);
+    }
+    setLabImages(next);
+  };
+
+  const handleLabSubmit = async () => {
+    if (!userId) {
+      toast({ title: "Sign in first", variant: "destructive" });
+      return;
+    }
+    if (!labImages.length) {
+      toast({ title: "Add at least one photo of your blood test", variant: "destructive" });
+      return;
+    }
+    setPhase("uploading");
+    setProgress(`Uploading ${labImages.length} image${labImages.length === 1 ? "" : "s"}…`);
+
+    const paths: string[] = [];
+    for (const f of labImages) {
+      const ext = (f.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext || "png"}`;
+      const { error: upErr } = await supabase.storage
+        .from("history-imports")
+        .upload(path, f, { upsert: false, contentType: f.type || "image/png" });
+      if (upErr) {
+        setPhase("error");
+        setError(upErr.message);
+        return;
+      }
+      paths.push(path);
+    }
+
+    setPhase("processing");
+    setProgress("Logan is reading your lab results…");
+    const { data, error: fnErr } = await supabase.functions.invoke("import-blood-test", {
+      body: { image_paths: paths },
+    });
+    if (fnErr || (data as { error?: string })?.error) {
+      setPhase("error");
+      setError((data as { error?: string })?.error || fnErr?.message || "Import failed");
+      return;
+    }
+    handleLabResult(data);
+  };
+
   return (
     <Dialog
       open={open}
@@ -203,18 +268,19 @@ export function HistoryImportDialog({
         <DialogHeader>
           <DialogTitle>Import your history</DialogTitle>
           <DialogDescription>
-            Bring months of cycle, symptom, sleep, and workout data from another app.
+            Bring months of cycle, symptom, sleep, workout, and blood test data from anywhere.
             Logan uses it instantly for analytics, predictions, and chat memory.
           </DialogDescription>
         </DialogHeader>
 
         {phase === "idle" && (
           <Tabs defaultValue="apple" className="mt-2">
-            <TabsList className="grid grid-cols-4 w-full">
+            <TabsList className="grid grid-cols-5 w-full">
               <TabsTrigger value="apple" className="text-xs">Apple Health</TabsTrigger>
               <TabsTrigger value="csv" className="text-xs">CSV</TabsTrigger>
               <TabsTrigger value="paste" className="text-xs">Paste</TabsTrigger>
               <TabsTrigger value="screenshot" className="text-xs">Screenshot</TabsTrigger>
+              <TabsTrigger value="bloodtest" className="text-xs">Blood test</TabsTrigger>
             </TabsList>
 
             <TabsContent value="apple" className="text-sm text-muted-foreground space-y-3 mt-3">
@@ -296,6 +362,53 @@ export function HistoryImportDialog({
               </p>
             </TabsContent>
 
+            <TabsContent value="bloodtest" className="text-sm text-muted-foreground space-y-3 mt-3">
+              <p>Snap or screenshot your lab results (Labcorp, Quest, hospital portal, anything). Logan reads markers like ferritin, vitamin D, thyroid (TSH/T3/T4), sex hormones, HbA1c, lipids — up to {MAX_SCREENSHOTS} pages at a time — and references them in chat.</p>
+              {labImages.length > 0 && (
+                <div className="grid grid-cols-3 gap-2">
+                  {labImages.map((f, i) => (
+                    <div key={i} className="relative group rounded-md overflow-hidden border border-border/50 aspect-square">
+                      <img src={URL.createObjectURL(f)} alt={f.name} className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => setLabImages(labImages.filter((_, j) => j !== i))}
+                        className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 rounded-full p-0.5"
+                        aria-label="Remove"
+                      >
+                        <X className="w-3 h-3 text-white" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <input
+                ref={labImagesRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  addLabImages(e.target.files);
+                  e.currentTarget.value = "";
+                }}
+              />
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => labImagesRef.current?.click()}
+                  disabled={labImages.length >= MAX_SCREENSHOTS}
+                >
+                  <ImagePlus className="w-4 h-4 mr-2" />
+                  {labImages.length ? `Add more (${labImages.length}/${MAX_SCREENSHOTS})` : "Add lab photos"}
+                </Button>
+                <Button className="flex-1" onClick={handleLabSubmit} disabled={!labImages.length}>
+                  <FlaskConical className="w-4 h-4 mr-2" /> Extract
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground/80">
+                Best with the results table fully in frame and in focus. Logan won't diagnose — it surfaces patterns to bring to your clinician.
+              </p>
+            </TabsContent>
 
             <input
               ref={fileRef}
@@ -328,7 +441,9 @@ export function HistoryImportDialog({
               <div>
                 <p className="text-sm font-medium">Import complete</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {result.counts.cycles} cycles · {result.counts.symptom_days} symptom days · {result.counts.tracker_logs} tracker entries
+                  {result.kind === "history"
+                    ? `${result.counts.cycles} cycles · ${result.counts.symptom_days} symptom days · ${result.counts.tracker_logs} tracker entries`
+                    : `${result.marker_count} markers · ${result.flagged_count} flagged${result.taken_on ? ` · ${result.taken_on}` : ""}`}
                 </p>
               </div>
             </div>

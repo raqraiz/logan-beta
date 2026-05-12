@@ -590,6 +590,95 @@ export type Database = {
           },
         ]
       }
+      lab_markers: {
+        Row: {
+          category: string | null
+          created_at: string
+          flag: string | null
+          id: string
+          marker_key: string | null
+          name: string
+          panel_id: string
+          ref_high: number | null
+          ref_low: number | null
+          unit: string | null
+          user_id: string
+          value_numeric: number | null
+          value_text: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          flag?: string | null
+          id?: string
+          marker_key?: string | null
+          name: string
+          panel_id: string
+          ref_high?: number | null
+          ref_low?: number | null
+          unit?: string | null
+          user_id: string
+          value_numeric?: number | null
+          value_text?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          flag?: string | null
+          id?: string
+          marker_key?: string | null
+          name?: string
+          panel_id?: string
+          ref_high?: number | null
+          ref_low?: number | null
+          unit?: string | null
+          user_id?: string
+          value_numeric?: number | null
+          value_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_markers_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "lab_panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_panels: {
+        Row: {
+          created_at: string
+          id: string
+          lab_name: string | null
+          notes: string | null
+          source: string
+          storage_path: string | null
+          taken_on: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lab_name?: string | null
+          notes?: string | null
+          source?: string
+          storage_path?: string | null
+          taken_on?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lab_name?: string | null
+          notes?: string | null
+          source?: string
+          storage_path?: string | null
+          taken_on?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       notification_preferences: {
         Row: {
           created_at: string
