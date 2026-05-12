@@ -205,9 +205,16 @@ export function HistoryImportDialog({
     if (!files) return;
     const next = [...labImages];
     for (const f of Array.from(files)) {
-      if (!f.type.startsWith("image/")) continue;
-      if (f.size > 8 * 1024 * 1024) {
-        toast({ title: `${f.name} is too large`, description: "Max 8 MB per image.", variant: "destructive" });
+      const isPdf = f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf");
+      const isImage = f.type.startsWith("image/");
+      if (!isPdf && !isImage) continue;
+      const limit = isPdf ? 20 * 1024 * 1024 : 8 * 1024 * 1024;
+      if (f.size > limit) {
+        toast({
+          title: `${f.name} is too large`,
+          description: isPdf ? "Max 20 MB per PDF." : "Max 8 MB per image.",
+          variant: "destructive",
+        });
         continue;
       }
       if (next.length >= MAX_SCREENSHOTS) break;
