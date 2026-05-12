@@ -60,7 +60,7 @@ export function HistoryImportDialog({
     setScreenshots([]);
   };
 
-  const handleResult = (data: { counts: typeof result extends null ? never : { cycles: number; symptom_days: number; tracker_logs: number }; recap: string }) => {
+  const handleResult = (data: { counts: { cycles: number; symptom_days: number; tracker_logs: number }; recap: string }) => {
     setResult({ counts: data.counts, recap: data.recap });
     setPhase("done");
     onImported?.();
