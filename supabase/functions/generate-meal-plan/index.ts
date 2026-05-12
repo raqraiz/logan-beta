@@ -1,14 +1,8 @@
-// Generate cyclical meal plan resource: AI generation + branded PDF + storage upload.
-// Returns immediately with the resource row so the frontend can poll/subscribe.
+// Generate phase-aware meal ideas or anchor meals + flexible swaps.
+// Lightweight: no PDF, no hero images, gemini-2.5-flash-lite.
+// Always tailored to the user's current cycle phase / life stage at generation time.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import {
-  PDFDocument,
-  StandardFonts,
-  rgb,
-  PDFFont,
-  PDFPage,
-} from "https://esm.sh/pdf-lib@1.17.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,46 +10,40 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-type Style = "dark" | "light";
-type LengthDays = 1 | 3 | 7;
+type Mode = "ideas" | "mix";
 
-interface MealDay {
-  day_number: number;
-  cycle_day: number;
-  phase: string;
-  breakfast: string;
-  lunch: string;
-  dinner: string;
-  snack: string;
-  hormone_focus: string;
-  image_path?: string | null;
+interface RecommendedCategory {
+  category: string;
+  foods: string[];
+}
+interface MealIdea {
+  name: string;
+  why: string;
+}
+interface AnchorMeal {
+  slot: "breakfast" | "lunch" | "dinner";
+  name: string;
+  why: string;
+  ingredients: string[];
+}
+interface FlexibleSwap {
+  name: string;
+  why: string;
 }
 
-interface WeekBlock {
-  week_number: number;
-  phase_summary: string;
-  grocery_list: string[];
-}
-
-interface MealPlanData {
+interface PreviewData {
+  mode: Mode;
   intro: string;
-  weeks: WeekBlock[];
-  days: MealDay[];
+  phase: string;
+  cycle_day?: number | null;
+  life_stage: string;
+  recommended_foods?: RecommendedCategory[];
+  meal_ideas?: MealIdea[];
+  anchor_meals?: AnchorMeal[];
+  flexible_swaps?: FlexibleSwap[];
 }
 
-// ---------- Cycle helpers (mirrors chat-ai logic) ----------
-const PHASE_HEX = {
-  Menstruation: { dark: [0.878, 0.322, 0.384], light: [0.878, 0.322, 0.384] },
-  Follicular:   { dark: [0.239, 0.749, 0.541], light: [0.239, 0.749, 0.541] },
-  Ovulation:    { dark: [0.910, 0.659, 0.188], light: [0.910, 0.659, 0.188] },
-  Luteal:       { dark: [0.608, 0.427, 0.843], light: [0.608, 0.427, 0.843] },
-} as const;
-
-function phaseColor(phase: string, style: Style): [number, number, number] {
-  const c = (PHASE_HEX as any)[phase]?.[style] ?? [0.082, 0.722, 0.549];
-  return [c[0], c[1], c[2]];
-}
-
+// ---------- Cycle helpers ----------
 function getPhaseForDay(cycleDay: number, cycleLengthDays: number): string {
   const ovDay = cycleLengthDays - 14;
   if (cycleDay <= 5) return "Menstruation";
@@ -67,15 +55,12 @@ function getPhaseForDay(cycleDay: number, cycleLengthDays: number): string {
 function getCycleDay(lastPeriodStart: string, cycleLengthDays: number): number {
   const start = new Date(lastPeriodStart + "T12:00:00Z");
   const now = new Date();
-  const diff = Math.floor(
-    (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
-  );
+  const diff = Math.floor((now.getTime() - start.getTime()) / 86400000);
   if (diff >= 0) return diff + 1;
   const day = (diff % cycleLengthDays) + 1;
   return day < 1 ? day + cycleLengthDays : day;
 }
 
-// ---------- Main handler ----------
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -89,71 +74,40 @@ serve(async (req) => {
 
     if (!lovableApiKey) {
       return new Response(JSON.stringify({ error: "AI service not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "No authorization header" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-
     const { data: { user }, error: authError } = await userClient.auth.getUser();
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const lengthDays: LengthDays = [1, 3, 7].includes(body.lengthDays)
-      ? body.lengthDays
-      : 7;
-    const style: Style = body.style === "light" ? "light" : "dark";
+    const mode: Mode = body.mode === "mix" ? "mix" : "ideas";
     const dietaryPrefs = body.dietaryPrefs || {};
 
-    // Optional revision context — when refining an existing plan
+    // Refinement context
     const parentResourceId: string | null = typeof body.parentResourceId === "string" ? body.parentResourceId : null;
     const excludeIngredients: string[] = Array.isArray(body.excludeIngredients)
       ? body.excludeIngredients.map((s: any) => String(s).trim()).filter(Boolean).slice(0, 30)
       : [];
-    const feedbackText: string = typeof body.feedbackText === "string"
-      ? body.feedbackText.slice(0, 500)
-      : "";
+    const feedbackText: string = typeof body.feedbackText === "string" ? body.feedbackText.slice(0, 500) : "";
 
-    // Load parent plan for revision (ownership enforced by user-scoped client + RLS)
-    let parentPlan: MealPlanData | null = null;
-    let parentResource: any = null;
-    let revisionLengthDays: LengthDays | null = null;
-    if (parentResourceId) {
-      const { data: pr } = await userClient
-        .from("user_resources")
-        .select("*")
-        .eq("id", parentResourceId)
-        .maybeSingle();
-      if (pr && pr.user_id === user.id) {
-        parentResource = pr;
-        parentPlan = pr.metadata?.preview ?? null;
-        if ([1, 3, 7].includes(pr.metadata?.length_days)) {
-          revisionLengthDays = pr.metadata.length_days as LengthDays;
-        }
-      }
-    }
-    // When revising, inherit length from the parent so the structure matches
-    const effectiveLengthDays: LengthDays = revisionLengthDays ?? lengthDays;
-
-    // Permanently skip excluded ingredients going forward
     if (excludeIngredients.length) {
       dietaryPrefs.dislikes = Array.from(new Set([
         ...(dietaryPrefs.dislikes ?? []),
@@ -161,7 +115,7 @@ serve(async (req) => {
       ]));
     }
 
-    // Save dietary prefs for re-use
+    // Persist dietary prefs for re-use
     if (
       dietaryPrefs.diet_type ||
       (dietaryPrefs.allergies?.length ?? 0) > 0 ||
@@ -170,22 +124,18 @@ serve(async (req) => {
       (dietaryPrefs.includes?.length ?? 0) > 0
     ) {
       const includesNote = dietaryPrefs.includes?.length
-        ? `includes: ${dietaryPrefs.includes.join(", ")}`
-        : null;
-      await supabase.from("user_dietary_prefs").upsert(
-        {
-          user_id: user.id,
-          diet_type: dietaryPrefs.diet_type ?? null,
-          allergies: dietaryPrefs.allergies ?? [],
-          dislikes: dietaryPrefs.dislikes ?? [],
-          cuisines: dietaryPrefs.cuisines ?? [],
-          notes: includesNote,
-        },
-        { onConflict: "user_id" },
-      );
+        ? `includes: ${dietaryPrefs.includes.join(", ")}` : null;
+      await supabase.from("user_dietary_prefs").upsert({
+        user_id: user.id,
+        diet_type: dietaryPrefs.diet_type ?? null,
+        allergies: dietaryPrefs.allergies ?? [],
+        dislikes: dietaryPrefs.dislikes ?? [],
+        cuisines: dietaryPrefs.cuisines ?? [],
+        notes: includesNote,
+      }, { onConflict: "user_id" });
     }
 
-    // Pull participant for cycle context
+    // Pull participant for current cycle/life-stage context (live, not stored)
     const { data: participant } = await supabase
       .from("participants")
       .select("*")
@@ -193,36 +143,35 @@ serve(async (req) => {
       .single();
 
     const cycleLengthDays = participant?.cycle_length_days || 28;
-    const lastPeriodStart =
-      participant?.last_period_start ||
-      new Date().toISOString().split("T")[0];
-    const startCycleDay = getCycleDay(lastPeriodStart, cycleLengthDays);
+    const lastPeriodStart = participant?.last_period_start || new Date().toISOString().split("T")[0];
+    const cycleDay = getCycleDay(lastPeriodStart, cycleLengthDays);
     const lifeStage = participant?.life_stage || "cycling";
 
-    // Postpartum 6-phase model (mirrors src/lib/postpartumPhases.ts)
-    let ppWindow: "acute" | "early" | "healing" | "rebuilding" | "late" | "extended" | null = null;
-    let ppWindowLabel = "";
+    let ppWindow: string | null = null;
     if (lifeStage === "postpartum" && participant?.postpartum_start_date) {
       const days = Math.floor((Date.now() - new Date(participant.postpartum_start_date + "T12:00:00Z").getTime()) / 86400000);
-      if (days < 14) { ppWindow = "acute"; ppWindowLabel = "Acute recovery (0-2 weeks)"; }
-      else if (days < 42) { ppWindow = "early"; ppWindowLabel = "Early recovery (2-6 weeks)"; }
-      else if (days < 84) { ppWindow = "healing"; ppWindowLabel = "Tissue closing (6-12 weeks)"; }
-      else if (days < 180) { ppWindow = "rebuilding"; ppWindowLabel = "Rebuilding (3-6 months)"; }
-      else if (days < 365) { ppWindow = "late"; ppWindowLabel = "Reclaiming capacity (6-12 months)"; }
-      else { ppWindow = "extended"; ppWindowLabel = "Extended postpartum (12+ months)"; }
+      if (days < 14) ppWindow = "Acute recovery (0-2 weeks)";
+      else if (days < 42) ppWindow = "Early recovery (2-6 weeks)";
+      else if (days < 84) ppWindow = "Tissue closing (6-12 weeks)";
+      else if (days < 180) ppWindow = "Rebuilding (3-6 months)";
+      else if (days < 365) ppWindow = "Reclaiming capacity (6-12 months)";
+      else ppWindow = "Extended postpartum (12+ months)";
     }
 
-    // Personalized title — e.g. "Raquella's 3-Day Luteal Menu"
-    const firstName = participant?.full_name?.split(" ")?.[0]?.trim() || null;
-    const startingPhase = lifeStage === "cycling"
-      ? getPhaseForDay(startCycleDay, cycleLengthDays)
-      : (lifeStage === "postpartum" ? (ppWindowLabel ? `Postpartum · ${ppWindowLabel}` : "Postpartum") : lifeStage === "menopause" ? "Menopause" : "Cyclical");
-    const lengthLabel = effectiveLengthDays === 1 ? "1-Day" : effectiveLengthDays === 3 ? "3-Day" : "1-Week";
-    const possessive = firstName ? `${firstName}'${firstName.endsWith("s") ? "" : "s"} ` : "";
-    const baseTitle = `${possessive}${lengthLabel} ${startingPhase} Menu`;
-    const title = parentResource ? `${baseTitle} (revised)` : baseTitle;
+    const phase = lifeStage === "cycling"
+      ? getPhaseForDay(cycleDay, cycleLengthDays)
+      : lifeStage === "postpartum"
+        ? (ppWindow ? `Postpartum · ${ppWindow}` : "Postpartum")
+        : lifeStage === "menopause" ? "Menopause" : "Cyclical";
 
-    // Insert resource row immediately (status: generating)
+    const firstName = participant?.full_name?.split(" ")?.[0]?.trim() || null;
+    const possessive = firstName ? `${firstName}'${firstName.endsWith("s") ? "" : "s"} ` : "";
+    const modeLabel = mode === "ideas" ? "Ideas" : "Mix";
+    const phaseLabel = lifeStage === "cycling" ? `${phase} · Day ${cycleDay}` : phase;
+    const baseTitle = `${possessive}${phaseLabel} ${modeLabel}`;
+    const title = parentResourceId ? `${baseTitle} (revised)` : baseTitle;
+
+    // Insert resource row
     const { data: resource, error: insertError } = await supabase
       .from("user_resources")
       .insert({
@@ -230,19 +179,14 @@ serve(async (req) => {
         type: "meal_plan",
         title,
         status: "generating",
-        style,
+        style: "dark",
         metadata: {
-          length_days: effectiveLengthDays,
-          start_cycle_day: startCycleDay,
-          cycle_length_days: cycleLengthDays,
+          mode,
+          phase,
+          cycle_day: lifeStage === "cycling" ? cycleDay : null,
           life_stage: lifeStage,
-          postpartum_window: ppWindow,
           dietary_prefs: dietaryPrefs,
-          ...(parentResource ? {
-            parent_resource_id: parentResource.id,
-            revision_excludes: excludeIngredients,
-            revision_feedback: feedbackText,
-          } : {}),
+          ...(parentResourceId ? { parent_resource_id: parentResourceId } : {}),
         },
       })
       .select()
@@ -251,357 +195,222 @@ serve(async (req) => {
     if (insertError || !resource) {
       console.error("Insert error:", insertError);
       return new Response(JSON.stringify({ error: "Failed to create resource" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Drop a chat message that anchors the ResourceCard inline in the chat.
-    const chatBlurb = parentResource
-      ? `Reworking your meal plan with your tweaks — new version coming up.`
-      : `Building your ${title.toLowerCase()} now — I'll drop it here when it's ready.`;
+    // Anchor in chat
+    const chatBlurb = parentResourceId
+      ? `Reworking your menu with your tweaks — give me a few seconds.`
+      : `Putting together your ${title.toLowerCase()} — back in a few seconds.`;
     await supabase.from("chat_messages").insert({
       user_id: user.id,
       role: "assistant",
       content: chatBlurb,
       message_type: "resource",
-      metadata: {
-        resource_id: resource.id,
-        resource_type: "meal_plan",
-      },
+      metadata: { resource_id: resource.id, resource_type: "meal_plan" },
     });
 
-    // Kick off generation in the background (don't block the response)
-    const generationTask = generateAndUploadPdf({
-      supabase,
-      lovableApiKey,
-      userId: user.id,
-      resourceId: resource.id,
-      participant,
-      lengthDays: effectiveLengthDays,
-      style,
-      dietaryPrefs,
-      startCycleDay,
-      cycleLengthDays,
-      lifeStage,
-      title,
-      parentPlan,
-      excludeIngredients,
-      feedbackText,
+    // Background generation
+    const task = generatePreview({
+      supabase, lovableApiKey, resourceId: resource.id,
+      mode, dietaryPrefs, phase, cycleDay, lifeStage, ppWindow, feedbackText, excludeIngredients,
     });
-
-    // @ts-ignore: Deno background task
-    EdgeRuntime?.waitUntil?.(generationTask) ?? generationTask.catch(console.error);
+    // @ts-ignore
+    EdgeRuntime?.waitUntil?.(task) ?? task.catch(console.error);
 
     return new Response(JSON.stringify({ success: true, resource }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("generate-meal-plan error:", error);
-    return new Response(
-      JSON.stringify({ error: "An internal error occurred" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "An internal error occurred" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
 
 // ---------- Background generation ----------
-async function generateAndUploadPdf(args: {
+async function generatePreview(args: {
   supabase: any;
   lovableApiKey: string;
-  userId: string;
   resourceId: string;
-  participant: any;
-  lengthDays: LengthDays;
-  style: Style;
+  mode: Mode;
   dietaryPrefs: any;
-  startCycleDay: number;
-  cycleLengthDays: number;
+  phase: string;
+  cycleDay: number;
   lifeStage: string;
-  title: string;
-  parentPlan?: MealPlanData | null;
-  excludeIngredients?: string[];
-  feedbackText?: string;
+  ppWindow: string | null;
+  feedbackText: string;
+  excludeIngredients: string[];
 }) {
   const {
-    supabase, lovableApiKey, userId, resourceId, participant,
-    lengthDays, style, dietaryPrefs, startCycleDay, cycleLengthDays,
-    lifeStage, title,
-    parentPlan = null, excludeIngredients = [], feedbackText = "",
+    supabase, lovableApiKey, resourceId, mode, dietaryPrefs,
+    phase, cycleDay, lifeStage, ppWindow, feedbackText, excludeIngredients,
   } = args;
 
   try {
-    // Build day-by-day phase scaffold to give the AI exact targets
-    const dayScaffold: { day_number: number; cycle_day: number; phase: string }[] = [];
-    for (let i = 0; i < lengthDays; i++) {
-      const cd = ((startCycleDay - 1 + i) % cycleLengthDays) + 1;
-      const phase = lifeStage === "cycling" ? getPhaseForDay(cd, cycleLengthDays) : lifeStage;
-      dayScaffold.push({ day_number: i + 1, cycle_day: cd, phase });
-    }
-
-    const numWeeks = Math.ceil(lengthDays / 7);
     const dietBits: string[] = [];
     if (dietaryPrefs.diet_type) dietBits.push(`Diet: ${dietaryPrefs.diet_type}`);
-    if (dietaryPrefs.allergies?.length) dietBits.push(`Allergies: ${dietaryPrefs.allergies.join(", ")}`);
+    if (dietaryPrefs.allergies?.length) dietBits.push(`Allergies (NEVER use): ${dietaryPrefs.allergies.join(", ")}`);
     if (dietaryPrefs.dislikes?.length) dietBits.push(`Dislikes (NEVER use): ${dietaryPrefs.dislikes.join(", ")}`);
     const focusList = (dietaryPrefs.focus_styles?.length ? dietaryPrefs.focus_styles : dietaryPrefs.cuisines) || [];
-    if (focusList.length) dietBits.push(`Focus styles (weave these throughout): ${focusList.join(", ")}`);
-    if (dietaryPrefs.includes?.length) dietBits.push(`Foods the user wants INCLUDED (use across multiple meals where natural): ${dietaryPrefs.includes.join(", ")}`);
-    if (dietaryPrefs.macro_preset) dietBits.push(`Macro preset: ${dietaryPrefs.macro_preset.replace(/_/g, " ")} — bias every meal toward this profile.`);
-    const mt = dietaryPrefs.macro_targets || {};
-    const macroParts = [
-      mt.calories ? `${mt.calories} kcal` : null,
-      mt.protein ? `${mt.protein}g protein` : null,
-      mt.carbs ? `${mt.carbs}g carbs` : null,
-      mt.fat ? `${mt.fat}g fat` : null,
-    ].filter(Boolean);
-    if (macroParts.length) dietBits.push(`Daily macro targets (aim total day to land near these): ${macroParts.join(", ")}.`);
-    if (dietaryPrefs.free_form) dietBits.push(`Additional user context (honor this): "${dietaryPrefs.free_form}"`);
-    const dietContext = dietBits.length ? dietBits.join("\n") : "Omnivore, no restrictions";
+    if (focusList.length) dietBits.push(`Focus styles: ${focusList.join(", ")}`);
+    if (dietaryPrefs.includes?.length) dietBits.push(`Foods to include where natural: ${dietaryPrefs.includes.join(", ")}`);
+    if (dietaryPrefs.macro_preset) dietBits.push(`Macro preset: ${String(dietaryPrefs.macro_preset).replace(/_/g, " ")}`);
+    if (dietaryPrefs.free_form) dietBits.push(`Extra context: "${dietaryPrefs.free_form}"`);
+    const dietContext = dietBits.length ? dietBits.join("\n") : "Omnivore, no restrictions.";
 
     const isCycling = lifeStage === "cycling";
+    const phaseHeader = isCycling
+      ? `User is on cycle day ${cycleDay} — ${phase} phase.`
+      : lifeStage === "postpartum"
+        ? `User is postpartum${ppWindow ? ` — ${ppWindow}` : ""}. Do NOT reference cycle phases.`
+        : lifeStage === "menopause"
+          ? `User is in menopause — no regular cycle. Do NOT reference cycle phases, ovulation, luteal, follicular, or menstruation.`
+          : `User stage: ${lifeStage}.`;
 
-    const cyclingPrinciples = `Phase nutrition principles:
-- Menstruation: iron-rich (lentils, beef, dark leafy greens), warming foods, vitamin C to aid iron absorption, anti-inflammatory (ginger, turmeric, omega-3s).
-- Follicular: light fresh foods, fermented foods (yogurt, kimchi) for estrogen metabolism, leafy greens, sprouted grains, seeds (flax, pumpkin).
-- Ovulation: cruciferous vegetables (broccoli, cauliflower) for healthy estrogen clearance, B vitamins, antioxidant-rich berries, fiber.
-- Luteal: complex carbs (sweet potato, quinoa, oats) to support serotonin, magnesium-rich (dark chocolate, leafy greens, sunflower/sesame seeds), B6, calcium.`;
+    const phasePrinciples = isCycling ? ({
+      Menstruation: "Iron-rich (lentils, beef, dark leafy greens), warming foods, vitamin C to aid iron absorption, anti-inflammatory (ginger, turmeric, omega-3).",
+      Follicular: "Light fresh foods, fermented foods for estrogen metabolism, leafy greens, sprouted grains, seeds (flax, pumpkin).",
+      Ovulation: "Cruciferous vegetables for healthy estrogen clearance, B vitamins, antioxidant-rich berries, fiber.",
+      Luteal: "Complex carbs (sweet potato, quinoa, oats) for serotonin, magnesium-rich foods (dark chocolate, leafy greens, sunflower/sesame), B6, calcium.",
+    } as Record<string, string>)[phase] || ""
+      : lifeStage === "postpartum"
+        ? "Protein + healthy fat at every meal, iron + vitamin C together, warm/easy-to-digest foods, aggressive hydration. Do not assume breastfeeding."
+        : lifeStage === "menopause"
+          ? "Phytoestrogens (flax, soy, sesame), bone support (calcium, vit D, magnesium, K2), high fiber, omega-3, lean protein at every meal, anti-inflammatory spices."
+          : "Whole foods, balanced macros, anti-inflammatory.";
 
-    const postpartumAcute = `Postpartum nutrition — ACUTE RECOVERY (0-2 weeks). Hormones just crashed off a cliff, lochia is heavy, sleep is fragmented. Do NOT reference cycle phases. Priorities:
-- Iron + vitamin C together at most meals (red meat + peppers, lentils + citrus, liver if tolerated).
-- Bone broth, slow-cooked stews, congee, oatmeal — warm, soft, easy to digest.
-- Protein + healthy fat at every meal to stabilize blood sugar between feeds.
-- Aggressive hydration (3L+/day if nursing).
-- One-handed, 5-15 min prep, batch-friendly. Assume zero cooking capacity.
-- Do NOT assume breastfeeding — only optimize for it if she mentioned it.`;
+    const modeInstruction = mode === "ideas"
+      ? `Return TWO things:
+1. recommended_foods — exactly 3 categories (e.g. "Power foods", "Hydration & teas", "Easy snacks") tuned to the user's CURRENT phase/stage. 5-8 specific food names per category.
+2. meal_ideas — 8 untimed meal ideas (no breakfast/lunch/dinner labels). Each: name (under 60 chars) + why (1 sentence on the hormonal/stage benefit).`
+      : `Return TWO things:
+1. anchor_meals — 3 structured meals for TODAY (breakfast, lunch, dinner). Each: name (under 60 chars) + why (1 sentence) + 4-8 ingredient names (no quantities).
+2. flexible_swaps — 6 lighter "if you don't feel like cooking" alternatives. Each: name (under 50 chars) + why (1 sentence).`;
 
-    const postpartumEarly = `Postpartum nutrition — EARLY RECOVERY (2-6 weeks). Baby blues window closing, thyroid can swing. Do NOT reference cycle phases. Priorities:
-- Steady blood sugar through erratic sleep: protein 25-30g + complex carbs at every meal.
-- Tissue healing: collagen, glycine, zinc, vitamin C.
-- Easy snacks within arm's reach: nuts, cheese, fruit, yogurt, jerky.
-- Omega-3s 3-4x/week (salmon, sardines, walnuts) for mood + tissue.
-- Caffeine before noon only if nursing or wired-tired.
-- Still 5-15 min prep. Do NOT assume breastfeeding.`;
+    const refinementBlock: string[] = [];
+    if (excludeIngredients.length) {
+      refinementBlock.push(`HARD EXCLUSIONS — these ingredients must NOT appear anywhere: ${excludeIngredients.join(", ")}.`);
+    }
+    if (feedbackText.trim()) {
+      refinementBlock.push(`USER FEEDBACK to address:\n"${feedbackText.trim()}"`);
+    }
 
-    const postpartumHealing = `Postpartum nutrition — TISSUE CLOSING (6-12 weeks). Sleep debt at peak, identity shock peaking, tissue mostly closed. Do NOT reference cycle phases. Priorities:
-- Protein 1.2-1.6g/kg bodyweight to rebuild lean mass.
-- Iron 3-4x/week — stores still rebuilding.
-- Choline (eggs, liver) for brain recovery from sleep deprivation.
-- Magnesium-rich foods at night (pumpkin seeds, dark chocolate, leafy greens) to support sleep.
-- Meals 10-20 min, batch-friendly. Do NOT assume breastfeeding.`;
+    const systemPrompt = `You are Logan — a knowledgeable, grounded friend who gives food guidance backed by hormonal nutrition science. Warm, casual, no fluff, no emojis, no medical jargon.
 
-    const postpartumRebuilding = `Postpartum nutrition — REBUILDING (3-6 months). Hair shedding peaks, hormones re-regulating, cycle may return. Do NOT reference cycle phases unless she's confirmed cycling again. Priorities:
-- Protein 1.4-1.8g/kg bodyweight.
-- Carbs around training, NOT feared.
-- Cruciferous veg most days for estrogen metabolism kicking back in.
-- Healthy fats for hormone production (olive oil, nuts, full-fat dairy, oily fish).
-- Iron, zinc, biotin for hair regrowth.
-- Meals 10-25 min. Do NOT assume breastfeeding.`;
+${phaseHeader}
 
-    const postpartumLate = `Postpartum nutrition — RECLAIMING CAPACITY (6-12 months). Cycle often returning, thyroid worth re-checking. Treat her as a full athletic adult — NOT as someone "healing." Do NOT reference cycle phases unless she's confirmed cycling. Priorities:
-- High protein (1.6-2g/kg).
-- Iron + B12 if cycle has returned.
-- Carbs matched to training load.
-- Magnesium and omega-3s for cycle symptoms.
-- Normal prep times (15-30 min). Do NOT use "healing/recovery" framing.`;
-
-    const postpartumExtended = `Postpartum nutrition — EXTENDED (12+ months). Hormones largely recalibrated, usually cycling again. Treat her as a full athletic adult; symptoms now usually trace to cycle/thyroid/sleep — NOT postpartum. Priorities:
-- Protein 1.6-2g/kg, phase-aware carbs if cycling.
-- Bone-supportive nutrients (calcium, vitamin D, K2).
-- Plenty of fiber + fermented foods.
-- Performance + longevity framing. Never "recovery."`;
-
-    const postpartumPrinciples =
-      ppWindow === "acute" ? postpartumAcute :
-      ppWindow === "early" ? postpartumEarly :
-      ppWindow === "healing" ? postpartumHealing :
-      ppWindow === "rebuilding" ? postpartumRebuilding :
-      ppWindow === "late" ? postpartumLate :
-      ppWindow === "extended" ? postpartumExtended :
-      postpartumRebuilding;
-
-    const menopausePrinciples = `Menopause nutrition principles (this user is in MENOPAUSE — they do NOT have a regular cycle, so do NOT reference cycle days, phases, ovulation, luteal, follicular, or menstruation anywhere):
-- Hot flashes & sleep: phytoestrogen-rich foods (flax, soy, sesame), tryptophan-rich (turkey, oats, nuts) for evening meals.
-- Bone health: calcium (dairy, leafy greens, sardines), vitamin D, magnesium, vitamin K (cruciferous, fermented foods).
-- Cardiovascular & metabolic: high fiber, omega-3s, plenty of plants, lean protein at every meal to preserve muscle mass.
-- Blood sugar & weight: complex carbs over refined, protein-forward meals, anti-inflammatory spices (turmeric, ginger).
-- Cognitive support: berries, leafy greens, fatty fish, nuts.`;
-
-    const principles = lifeStage === "postpartum" ? postpartumPrinciples : lifeStage === "menopause" ? menopausePrinciples : cyclingPrinciples;
-
-    const buildIntent = isCycling
-      ? `Build a ${lengthDays}-day meal plan that aligns each day's meals with the user's exact cycle phase.`
-      : `Build a ${lengthDays}-day meal plan tailored to where this user is in their ${lifeStage} journey. All meals serve the same hormonal goals — there is no cycle phase variation.`;
-
-    const mealQualifier = isCycling ? "Hormonally optimized for that day's phase" : `Aligned with ${lifeStage} nutritional needs`;
-
-    const summaryGuidance = isCycling
-      ? `For each WEEK, also produce a phase_summary (1-2 sentences explaining what hormonal goals this week's meals serve) and a grocery_list (15-25 items consolidated from that week's meals — no quantities, just ingredient names).`
-      : `For each WEEK, also produce a phase_summary (1-2 sentences explaining what ${lifeStage} goals this week's meals serve — do NOT mention cycle phases) and a grocery_list (15-25 items consolidated from that week's meals — no quantities, just ingredient names).`;
-
-    const introGuidance = isCycling
-      ? `Write a 2-sentence intro that explains the plan's logic in Logan's voice (warm, grounded, no fluff, no emojis).`
-      : `Write a 2-sentence intro that explains the plan's logic in Logan's voice (warm, grounded, no fluff, no emojis). Do NOT mention cycle phases, luteal, follicular, ovulation, or menstruation — frame it around ${lifeStage} recovery / transition.`;
-
-    const systemPrompt = `You are Logan — a knowledgeable, grounded friend who builds meal plans backed by hormonal nutrition science.
-
-${buildIntent} Every meal must be:
-- Realistic and easy to prepare (15-30 min)
-- Made with whole, accessible ingredients
-- ${mealQualifier}
-
-${principles}
+Phase/stage nutrition focus:
+${phasePrinciples}
 
 User dietary context:
 ${dietContext}
 
-Return ONE meal per slot per day — no "or" options. Be specific (e.g. "Smoked salmon avocado toast on rye" not "Toast"). Each meal name must be concise (under 80 chars).
+${modeInstruction}
 
-For EVERY meal (breakfast, lunch, dinner, snack on every day), you MUST also return a "recipes" object containing:
-- ingredients: 4-10 ingredient names (just names, no quantities, no measurements — these feed the per-meal shopping view)
-- recipe: a 2-4 sentence plain-English recipe describing how to make it. Warm, casual, no numbered steps, no headings, no emojis.
+Always be specific (e.g. "Smoked salmon avocado toast on rye" not "Toast"). Tailor every suggestion to the phase/stage above — this is NOT a generic template.`;
 
-${summaryGuidance}
+    const userPrompt = `Generate the ${mode === "ideas" ? "ideas pack" : "mix pack"} for today.
 
-${introGuidance}`;
+${refinementBlock.join("\n\n")}
 
-    const revisionBlock: string[] = [];
-    if (parentPlan?.days?.length) {
-      const parentSummary = parentPlan.days.map(d =>
-        `Day ${d.day_number} (${d.phase}${isCycling ? `, cycle day ${d.cycle_day}` : ""}): B="${d.breakfast}" | L="${d.lunch}" | D="${d.dinner}" | S="${d.snack}"`
-      ).join("\n");
-      revisionBlock.push(`This is a REVISION of an existing plan. Keep the same overall structure${isCycling ? ", phase logic" : ""} and any meals the user didn't complain about. Only change what's necessary to address the feedback below.\n\nPREVIOUS PLAN:\n${parentSummary}`);
-    }
-    if (excludeIngredients.length) {
-      revisionBlock.push(`HARD EXCLUSIONS — these ingredients must NOT appear anywhere in the new plan, including grocery lists or meal names: ${excludeIngredients.join(", ")}.`);
-    }
-    if (feedbackText.trim()) {
-      revisionBlock.push(`USER FEEDBACK to address:\n"${feedbackText.trim()}"`);
-    }
+Also write a 1-2 sentence intro in Logan's voice that names the user's current phase/stage and what these picks are designed to do.
 
-    const userPrompt = isCycling
-      ? `Build the ${lengthDays}-day plan starting on cycle day ${startCycleDay} of a ${cycleLengthDays}-day cycle. Day-to-phase mapping:\n${dayScaffold.map(d => `Day ${d.day_number}: cycle day ${d.cycle_day} (${d.phase})`).join("\n")}\n\n${revisionBlock.join("\n\n")}\n\nReturn structured JSON via the build_meal_plan tool.`
-      : `Build a ${lengthDays}-day ${lifeStage} meal plan. Every day's "phase" field must be exactly "${lifeStage}" — there is no cycle phase variation. Do NOT mention cycle days, luteal, follicular, ovulation, or menstruation anywhere.\n\n${revisionBlock.join("\n\n")}\n\nReturn structured JSON via the build_meal_plan tool.`;
+Return structured JSON via the build_menu tool.`;
 
-    const aiResponse = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${lovableApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          tools: [
-            {
-              type: "function",
-              function: {
-                name: "build_meal_plan",
-                description: "Return the structured cyclical meal plan.",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    intro: { type: "string" },
-                    weeks: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        properties: {
-                          week_number: { type: "number" },
-                          phase_summary: { type: "string" },
-                          grocery_list: {
-                            type: "array",
-                            items: { type: "string" },
-                          },
-                        },
-                        required: ["week_number", "phase_summary", "grocery_list"],
-                        additionalProperties: false,
-                      },
-                    },
-                    days: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        properties: {
-                          day_number: { type: "number" },
-                          cycle_day: { type: "number" },
-                          phase: { type: "string" },
-                          breakfast: { type: "string" },
-                          lunch: { type: "string" },
-                          dinner: { type: "string" },
-                          snack: { type: "string" },
-                          hormone_focus: { type: "string" },
-                          recipes: {
-                            type: "object",
-                            description: "Per-meal ingredient lists and short recipes. Each meal must have 4-10 ingredients (just names, no quantities) and a 2-4 sentence recipe.",
-                            properties: {
-                              breakfast: {
-                                type: "object",
-                                properties: {
-                                  ingredients: { type: "array", items: { type: "string" } },
-                                  recipe: { type: "string" },
-                                },
-                                required: ["ingredients", "recipe"],
-                                additionalProperties: false,
-                              },
-                              lunch: {
-                                type: "object",
-                                properties: {
-                                  ingredients: { type: "array", items: { type: "string" } },
-                                  recipe: { type: "string" },
-                                },
-                                required: ["ingredients", "recipe"],
-                                additionalProperties: false,
-                              },
-                              dinner: {
-                                type: "object",
-                                properties: {
-                                  ingredients: { type: "array", items: { type: "string" } },
-                                  recipe: { type: "string" },
-                                },
-                                required: ["ingredients", "recipe"],
-                                additionalProperties: false,
-                              },
-                              snack: {
-                                type: "object",
-                                properties: {
-                                  ingredients: { type: "array", items: { type: "string" } },
-                                  recipe: { type: "string" },
-                                },
-                                required: ["ingredients", "recipe"],
-                                additionalProperties: false,
-                              },
-                            },
-                            required: ["breakfast", "lunch", "dinner", "snack"],
-                            additionalProperties: false,
-                          },
-                        },
-                        required: [
-                          "day_number", "cycle_day", "phase",
-                          "breakfast", "lunch", "dinner", "snack", "hormone_focus", "recipes",
-                        ],
-                        additionalProperties: false,
-                      },
-                    },
-                  },
-                  required: ["intro", "weeks", "days"],
-                  additionalProperties: false,
+    const toolParameters = mode === "ideas"
+      ? {
+          type: "object",
+          properties: {
+            intro: { type: "string" },
+            recommended_foods: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  category: { type: "string" },
+                  foods: { type: "array", items: { type: "string" } },
                 },
+                required: ["category", "foods"],
+                additionalProperties: false,
               },
             },
-          ],
-          tool_choice: {
-            type: "function",
-            function: { name: "build_meal_plan" },
+            meal_ideas: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  why: { type: "string" },
+                },
+                required: ["name", "why"],
+                additionalProperties: false,
+              },
+            },
           },
-        }),
+          required: ["intro", "recommended_foods", "meal_ideas"],
+          additionalProperties: false,
+        }
+      : {
+          type: "object",
+          properties: {
+            intro: { type: "string" },
+            anchor_meals: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  slot: { type: "string", enum: ["breakfast", "lunch", "dinner"] },
+                  name: { type: "string" },
+                  why: { type: "string" },
+                  ingredients: { type: "array", items: { type: "string" } },
+                },
+                required: ["slot", "name", "why", "ingredients"],
+                additionalProperties: false,
+              },
+            },
+            flexible_swaps: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  why: { type: "string" },
+                },
+                required: ["name", "why"],
+                additionalProperties: false,
+              },
+            },
+          },
+          required: ["intro", "anchor_meals", "flexible_swaps"],
+          additionalProperties: false,
+        };
+
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableApiKey}`,
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        tools: [{
+          type: "function",
+          function: {
+            name: "build_menu",
+            description: "Return the structured menu pack.",
+            parameters: toolParameters,
+          },
+        }],
+        tool_choice: { type: "function", function: { name: "build_menu" } },
+      }),
+    });
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
@@ -610,80 +419,44 @@ ${introGuidance}`;
 
     const aiData = await aiResponse.json();
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall?.function?.arguments) {
-      throw new Error("AI did not return structured meal plan");
-    }
+    if (!toolCall?.function?.arguments) throw new Error("AI did not return structured menu");
 
-    const planData: MealPlanData = JSON.parse(toolCall.function.arguments);
-    if (!planData.days?.length || planData.days.length < lengthDays) {
-      throw new Error("AI returned incomplete meal plan");
-    }
+    const planData = JSON.parse(toolCall.function.arguments);
 
-    // ---------- Generate hero photos for each day (parallel, best-effort) ----------
-    // We pick the dinner as the photographed meal — the most "shareable" plate.
-    // If image gen fails for any day we just skip — the rest of the flow continues.
-    const imagePaths = await generateDayHeroImages({
-      supabase,
-      lovableApiKey,
-      userId,
-      resourceId,
-      days: planData.days,
-    });
-    // Attach image_path to each day in the plan data for the preview metadata
-    const daysWithImages = planData.days.map((d, i) => ({
-      ...d,
-      image_path: imagePaths[i] ?? null,
-    }));
-    planData.days = daysWithImages as MealDay[];
+    const preview: PreviewData = {
+      mode,
+      intro: planData.intro,
+      phase,
+      cycle_day: lifeStage === "cycling" ? cycleDay : null,
+      life_stage: lifeStage,
+      ...(mode === "ideas"
+        ? {
+            recommended_foods: planData.recommended_foods ?? [],
+            meal_ideas: planData.meal_ideas ?? [],
+          }
+        : {
+            anchor_meals: planData.anchor_meals ?? [],
+            flexible_swaps: planData.flexible_swaps ?? [],
+          }),
+    };
 
-    // Render PDF
-    const pdfBytes = await renderMealPlanPdf({
-      planData,
-      title,
-      style,
-      lengthDays,
-      participantName: participant?.full_name?.split(" ")?.[0] || null,
-      numWeeks,
-    });
-
-    // Upload to storage
-    const filePath = `${userId}/meal-plans/${resourceId}.pdf`;
-    const { error: uploadError } = await supabase.storage
-      .from("resources")
-      .upload(filePath, pdfBytes, {
-        contentType: "application/pdf",
-        upsert: true,
-      });
-
-    if (uploadError) {
-      throw new Error(`Upload failed: ${uploadError.message}`);
-    }
-
-    // Mark ready
     await supabase
       .from("user_resources")
       .update({
         status: "ready",
-        pdf_path: filePath,
         metadata: {
-          length_days: lengthDays,
-          start_cycle_day: startCycleDay,
-          cycle_length_days: cycleLengthDays,
+          mode,
+          phase,
+          cycle_day: lifeStage === "cycling" ? cycleDay : null,
           life_stage: lifeStage,
-          postpartum_window: ppWindow,
           dietary_prefs: dietaryPrefs,
-          intro: planData.intro,
-          num_days: planData.days.length,
-          preview: {
-            intro: planData.intro,
-            days: planData.days,
-            weeks: planData.weeks,
-          },
+          intro: preview.intro,
+          preview,
         },
       })
       .eq("id", resourceId);
 
-    console.log(`Meal plan ${resourceId} ready for user ${userId}`);
+    console.log(`Menu ${resourceId} ready (mode=${mode})`);
   } catch (err) {
     console.error("Generation failed:", err);
     await supabase
@@ -693,471 +466,5 @@ ${introGuidance}`;
         error_message: err instanceof Error ? err.message : String(err),
       })
       .eq("id", resourceId);
-  }
-}
-
-
-// ---------- Hero image generation ----------
-// Generates one editorial-style food photo per day from the dinner description.
-// Runs in parallel batches; any failures fall back to null so the plan still ships.
-async function generateDayHeroImages(args: {
-  supabase: any;
-  lovableApiKey: string;
-  userId: string;
-  resourceId: string;
-  days: MealDay[];
-}): Promise<(string | null)[]> {
-  const { supabase, lovableApiKey, userId, resourceId, days } = args;
-
-  // Cap at 14 photos per generation to keep edge function within time budget.
-  const MAX_IMAGES = 14;
-  const targets = days.slice(0, MAX_IMAGES);
-
-  const generateOne = async (day: MealDay, index: number): Promise<string | null> => {
-    try {
-      // Pick the most photogenic meal of the day — dinner usually wins, fall back to lunch
-      const meal = day.dinner || day.lunch || day.breakfast;
-      if (!meal) return null;
-
-      const prompt = `Editorial overhead food photography of: ${meal}.
-Beautifully plated on a ceramic plate, on a warm wooden table with soft natural daylight from the side.
-Shallow depth of field, fresh colorful whole-food ingredients visible, rustic minimal styling, magazine cookbook aesthetic.
-No text, no logos, no people, no hands, no cutlery branding. Photorealistic, ultra detailed, soft shadows.`;
-
-      const resp = await fetch(
-        "https://ai.gateway.lovable.dev/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${lovableApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash-image",
-            messages: [{ role: "user", content: prompt }],
-            modalities: ["image", "text"],
-          }),
-        },
-      );
-
-      if (!resp.ok) {
-        console.warn(`Image gen failed for day ${day.day_number}: ${resp.status}`);
-        return null;
-      }
-
-      const data = await resp.json();
-      const dataUrl: string | undefined =
-        data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-      if (!dataUrl?.startsWith("data:image/")) return null;
-
-      // Strip the data URL prefix and decode
-      const commaIdx = dataUrl.indexOf(",");
-      const b64 = dataUrl.slice(commaIdx + 1);
-      const mimeMatch = dataUrl.slice(0, commaIdx).match(/data:(image\/[a-zA-Z0-9.+-]+)/);
-      const contentType = mimeMatch?.[1] ?? "image/png";
-      const ext = contentType.split("/")[1]?.split("+")[0] ?? "png";
-
-      const binary = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-      const path = `${userId}/meal-plans/${resourceId}/day-${day.day_number}.${ext}`;
-
-      const { error: upErr } = await supabase.storage
-        .from("resources")
-        .upload(path, binary, { contentType, upsert: true });
-      if (upErr) {
-        console.warn(`Image upload failed for day ${day.day_number}: ${upErr.message}`);
-        return null;
-      }
-      return path;
-    } catch (err) {
-      console.warn(`Image step crashed for day ${day.day_number}:`, err);
-      return null;
-    }
-  };
-
-  // Run in batches of 4 to balance speed vs gateway concurrency
-  const BATCH = 4;
-  const results: (string | null)[] = new Array(targets.length).fill(null);
-  for (let i = 0; i < targets.length; i += BATCH) {
-    const slice = targets.slice(i, i + BATCH);
-    const settled = await Promise.allSettled(
-      slice.map((d, j) => generateOne(d, i + j)),
-    );
-    settled.forEach((r, j) => {
-      results[i + j] = r.status === "fulfilled" ? r.value : null;
-    });
-  }
-
-  // Pad with nulls for any days beyond the cap
-  while (results.length < days.length) results.push(null);
-  return results;
-}
-
-// ---------- PDF rendering ----------
-async function renderMealPlanPdf(args: {
-  planData: MealPlanData;
-  title: string;
-  style: Style;
-  lengthDays: LengthDays;
-  participantName: string | null;
-  numWeeks: number;
-}): Promise<Uint8Array> {
-  const { planData, title, style, lengthDays, participantName, numWeeks } = args;
-  const isDark = style === "dark";
-
-  const bg: [number, number, number] = isDark ? [0.04, 0.07, 0.10] : [1, 1, 1];
-  const surface: [number, number, number] = isDark ? [0.08, 0.12, 0.16] : [0.97, 0.97, 0.96];
-  const fg: [number, number, number] = isDark ? [0.96, 0.97, 0.98] : [0.10, 0.12, 0.15];
-  const muted: [number, number, number] = isDark ? [0.62, 0.66, 0.72] : [0.42, 0.45, 0.50];
-  const accent: [number, number, number] = [0.082, 0.722, 0.549]; // teal #15B88C
-  const divider: [number, number, number] = isDark ? [0.16, 0.20, 0.25] : [0.88, 0.88, 0.86];
-
-  const pdfDoc = await PDFDocument.create();
-  const helv = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const helvBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const helvOblique = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
-
-  const pageW = 612; // US Letter
-  const pageH = 792;
-  const margin = 48;
-  const contentW = pageW - margin * 2;
-
-  // ---- Cover page ----
-  const cover = pdfDoc.addPage([pageW, pageH]);
-  cover.drawRectangle({
-    x: 0, y: 0, width: pageW, height: pageH,
-    color: rgb(bg[0], bg[1], bg[2]),
-  });
-
-  // Accent gradient bar (faked with stacked rectangles)
-  for (let i = 0; i < 6; i++) {
-    cover.drawRectangle({
-      x: 0, y: pageH - 6 - i, width: pageW, height: 1,
-      color: rgb(accent[0], accent[1], accent[2]),
-      opacity: 1 - i * 0.15,
-    });
-  }
-
-  // Brand
-  cover.drawText("LOGAN", {
-    x: margin, y: pageH - 90,
-    size: 14, font: helvBold,
-    color: rgb(accent[0], accent[1], accent[2]),
-  });
-  cover.drawText("Cycle-synced nutrition", {
-    x: margin, y: pageH - 108,
-    size: 10, font: helv,
-    color: rgb(muted[0], muted[1], muted[2]),
-  });
-
-  // Title block (vertically centered-ish)
-  const titleY = pageH / 2 + 80;
-  drawWrappedText(cover, title, {
-    x: margin, y: titleY, width: contentW,
-    size: 36, lineHeight: 42, font: helvBold,
-    color: fg,
-  });
-
-  if (participantName) {
-    cover.drawText(`Built for ${participantName}`, {
-      x: margin, y: titleY - 70,
-      size: 13, font: helvOblique,
-      color: rgb(muted[0], muted[1], muted[2]),
-    });
-  }
-
-  // Intro
-  drawWrappedText(cover, planData.intro, {
-    x: margin, y: titleY - 110, width: contentW,
-    size: 12, lineHeight: 18, font: helv,
-    color: fg,
-  });
-
-  // Phase legend
-  const legendY = 180;
-  cover.drawText("Phases in this plan", {
-    x: margin, y: legendY + 28,
-    size: 10, font: helvBold,
-    color: rgb(muted[0], muted[1], muted[2]),
-  });
-  const phasesUsed = Array.from(new Set(planData.days.map(d => d.phase)));
-  let lx = margin;
-  for (const ph of phasesUsed) {
-    const c = phaseColor(ph, style);
-    cover.drawCircle({
-      x: lx + 5, y: legendY + 5, size: 5,
-      color: rgb(c[0], c[1], c[2]),
-    });
-    cover.drawText(ph, {
-      x: lx + 14, y: legendY + 1,
-      size: 10, font: helv, color: rgb(fg[0], fg[1], fg[2]),
-    });
-    lx += helv.widthOfTextAtSize(ph, 10) + 36;
-  }
-
-  // Footer
-  cover.drawText("Generated by asklogan.ai", {
-    x: margin, y: 36,
-    size: 9, font: helv,
-    color: rgb(muted[0], muted[1], muted[2]),
-  });
-  cover.drawText(new Date().toLocaleDateString("en-US", {
-    year: "numeric", month: "long", day: "numeric",
-  }), {
-    x: pageW - margin - 90, y: 36,
-    size: 9, font: helv,
-    color: rgb(muted[0], muted[1], muted[2]),
-  });
-
-  // ---- Daily pages: group days into weekly chunks (one page per week) ----
-  const daysPerPage = 7;
-  for (let w = 0; w < numWeeks; w++) {
-    const weekDays = planData.days.slice(w * daysPerPage, (w + 1) * daysPerPage);
-    if (weekDays.length === 0) break;
-    const weekBlock = planData.weeks.find(wk => wk.week_number === w + 1);
-    drawWeekPage({
-      pdfDoc, pageW, pageH, margin,
-      bg, surface, fg, muted, accent, divider,
-      helv, helvBold, helvOblique,
-      style, weekDays, weekBlock,
-      weekIndex: w + 1, totalWeeks: numWeeks,
-      planTitle: title,
-    });
-  }
-
-  // ---- Grocery list pages (one per week) ----
-  for (const wk of planData.weeks) {
-    drawGroceryPage({
-      pdfDoc, pageW, pageH, margin,
-      bg, surface, fg, muted, accent, divider,
-      helv, helvBold,
-      week: wk, totalWeeks: numWeeks, planTitle: title,
-    });
-  }
-
-  return await pdfDoc.save();
-}
-
-function drawWeekPage(opts: any) {
-  const {
-    pdfDoc, pageW, pageH, margin,
-    bg, surface, fg, muted, accent, divider,
-    helv, helvBold, helvOblique,
-    style, weekDays, weekBlock,
-    weekIndex, totalWeeks, planTitle,
-  } = opts;
-
-  const page = pdfDoc.addPage([pageW, pageH]);
-  page.drawRectangle({
-    x: 0, y: 0, width: pageW, height: pageH,
-    color: rgb(bg[0], bg[1], bg[2]),
-  });
-
-  // Header
-  page.drawText(planTitle.toUpperCase(), {
-    x: margin, y: pageH - 48,
-    size: 9, font: helvBold,
-    color: rgb(accent[0], accent[1], accent[2]),
-  });
-  const weekLabel = totalWeeks > 1 ? `Week ${weekIndex} of ${totalWeeks}` : "Your week";
-  page.drawText(weekLabel, {
-    x: margin, y: pageH - 72,
-    size: 22, font: helvBold,
-    color: rgb(fg[0], fg[1], fg[2]),
-  });
-
-  if (weekBlock?.phase_summary) {
-    drawWrappedText(page, weekBlock.phase_summary, {
-      x: margin, y: pageH - 96, width: pageW - margin * 2,
-      size: 10, lineHeight: 14, font: helvOblique,
-      color: muted,
-    });
-  }
-
-  // Day cards
-  const cardTop = pageH - 140;
-  const cardH = (cardTop - 60) / Math.max(weekDays.length, 1);
-  const cardSpacing = 6;
-  const actualCardH = cardH - cardSpacing;
-
-  for (let i = 0; i < weekDays.length; i++) {
-    const d = weekDays[i];
-    const yTop = cardTop - i * cardH;
-    const yBottom = yTop - actualCardH;
-    const c = phaseColor(d.phase, style);
-
-    // Card background
-    page.drawRectangle({
-      x: margin, y: yBottom,
-      width: pageW - margin * 2, height: actualCardH,
-      color: rgb(surface[0], surface[1], surface[2]),
-    });
-    // Phase accent bar
-    page.drawRectangle({
-      x: margin, y: yBottom,
-      width: 3, height: actualCardH,
-      color: rgb(c[0], c[1], c[2]),
-    });
-
-    // Day header
-    page.drawText(`Day ${d.day_number}`, {
-      x: margin + 14, y: yTop - 16,
-      size: 11, font: helvBold,
-      color: rgb(fg[0], fg[1], fg[2]),
-    });
-    page.drawText(`${d.phase} · cycle day ${d.cycle_day}`, {
-      x: margin + 14 + 50, y: yTop - 16,
-      size: 9, font: helv,
-      color: rgb(c[0], c[1], c[2]),
-    });
-
-    // 4 meals in 2x2 grid
-    const meals = [
-      ["Breakfast", d.breakfast],
-      ["Lunch", d.lunch],
-      ["Dinner", d.dinner],
-      ["Snack", d.snack],
-    ];
-    const colW = (pageW - margin * 2 - 28) / 2;
-    const rowH = (actualCardH - 28) / 2;
-    for (let m = 0; m < 4; m++) {
-      const col = m % 2;
-      const row = Math.floor(m / 2);
-      const mx = margin + 14 + col * colW;
-      const my = yTop - 30 - row * rowH;
-      page.drawText(meals[m][0].toUpperCase(), {
-        x: mx, y: my,
-        size: 7, font: helvBold,
-        color: rgb(muted[0], muted[1], muted[2]),
-      });
-      drawWrappedText(page, meals[m][1], {
-        x: mx, y: my - 11, width: colW - 8,
-        size: 9, lineHeight: 11, font: helv,
-        color: fg, maxLines: 2,
-      });
-    }
-  }
-
-  // Footer
-  page.drawRectangle({
-    x: margin, y: 48, width: pageW - margin * 2, height: 0.5,
-    color: rgb(divider[0], divider[1], divider[2]),
-  });
-  page.drawText("LOGAN · asklogan.ai", {
-    x: margin, y: 32,
-    size: 8, font: helv,
-    color: rgb(muted[0], muted[1], muted[2]),
-  });
-  page.drawText(`${weekIndex} / ${totalWeeks}`, {
-    x: pageW - margin - 30, y: 32,
-    size: 8, font: helv,
-    color: rgb(muted[0], muted[1], muted[2]),
-  });
-}
-
-function drawGroceryPage(opts: any) {
-  const {
-    pdfDoc, pageW, pageH, margin,
-    bg, surface, fg, muted, accent, divider,
-    helv, helvBold,
-    week, totalWeeks, planTitle,
-  } = opts;
-
-  const page = pdfDoc.addPage([pageW, pageH]);
-  page.drawRectangle({
-    x: 0, y: 0, width: pageW, height: pageH,
-    color: rgb(bg[0], bg[1], bg[2]),
-  });
-
-  page.drawText(planTitle.toUpperCase(), {
-    x: margin, y: pageH - 48,
-    size: 9, font: helvBold,
-    color: rgb(accent[0], accent[1], accent[2]),
-  });
-  const heading = totalWeeks > 1
-    ? `Grocery list — Week ${week.week_number}`
-    : "Grocery list";
-  page.drawText(heading, {
-    x: margin, y: pageH - 72,
-    size: 22, font: helvBold,
-    color: rgb(fg[0], fg[1], fg[2]),
-  });
-
-  // 2 columns of items with checkboxes
-  const items = week.grocery_list || [];
-  const cols = 2;
-  const colW = (pageW - margin * 2 - 24) / cols;
-  const itemsPerCol = Math.ceil(items.length / cols);
-  const rowH = 22;
-  const startY = pageH - 110;
-
-  for (let i = 0; i < items.length; i++) {
-    const col = Math.floor(i / itemsPerCol);
-    const row = i % itemsPerCol;
-    const x = margin + col * (colW + 24);
-    const y = startY - row * rowH;
-    // Checkbox
-    page.drawRectangle({
-      x, y: y - 2, width: 9, height: 9,
-      borderColor: rgb(muted[0], muted[1], muted[2]),
-      borderWidth: 0.7,
-    });
-    drawWrappedText(page, items[i], {
-      x: x + 16, y: y + 5, width: colW - 16,
-      size: 10, lineHeight: 12, font: helv,
-      color: fg, maxLines: 1,
-    });
-  }
-
-  page.drawRectangle({
-    x: margin, y: 48, width: pageW - margin * 2, height: 0.5,
-    color: rgb(divider[0], divider[1], divider[2]),
-  });
-  page.drawText("LOGAN · asklogan.ai", {
-    x: margin, y: 32,
-    size: 8, font: helv,
-    color: rgb(muted[0], muted[1], muted[2]),
-  });
-}
-
-// ---------- Text wrapping helper ----------
-function drawWrappedText(
-  page: PDFPage,
-  text: string,
-  opts: {
-    x: number; y: number; width: number;
-    size: number; lineHeight: number;
-    font: PDFFont;
-    color: [number, number, number];
-    maxLines?: number;
-  },
-) {
-  const words = (text || "").split(/\s+/).filter(Boolean);
-  const lines: string[] = [];
-  let line = "";
-  for (const w of words) {
-    const test = line ? `${line} ${w}` : w;
-    const widthAt = opts.font.widthOfTextAtSize(test, opts.size);
-    if (widthAt > opts.width && line) {
-      lines.push(line);
-      line = w;
-      if (opts.maxLines && lines.length >= opts.maxLines) break;
-    } else {
-      line = test;
-    }
-  }
-  if (line && (!opts.maxLines || lines.length < opts.maxLines)) lines.push(line);
-  if (opts.maxLines && lines.length === opts.maxLines) {
-    const last = lines[lines.length - 1];
-    const ellipsis = opts.font.widthOfTextAtSize(last + "…", opts.size) > opts.width
-      ? last.replace(/\s+\S+$/, "") + "…"
-      : last + (words.length > lines.flatMap(l => l.split(/\s+/)).length ? "…" : "");
-    lines[lines.length - 1] = ellipsis;
-  }
-  for (let i = 0; i < lines.length; i++) {
-    page.drawText(lines[i], {
-      x: opts.x, y: opts.y - i * opts.lineHeight,
-      size: opts.size, font: opts.font,
-      color: rgb(opts.color[0], opts.color[1], opts.color[2]),
-    });
   }
 }
