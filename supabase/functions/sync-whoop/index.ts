@@ -123,12 +123,20 @@ async function syncOne(
   const end = new Date().toISOString();
   const start = new Date(Date.now() - backfillDays * 86400_000).toISOString();
 
-  const [recoveryT, sleepScoreT, sleepHoursT, hrvT, restingHrT, workoutsT] = await Promise.all([
+  const [
+    recoveryT, sleepScoreT, sleepHoursT, sleepEffT, hrvT, restingHrT,
+    skinTempT, respRateT, spo2T, strainT, workoutsT,
+  ] = await Promise.all([
     getOrCreateTracker(admin, integ.user_id, "Recovery", "🔋"),
     getOrCreateTracker(admin, integ.user_id, "Sleep score", "😴"),
     getOrCreateTracker(admin, integ.user_id, "Sleep hours", "🛌"),
+    getOrCreateTracker(admin, integ.user_id, "Sleep efficiency", "💤"),
     getOrCreateTracker(admin, integ.user_id, "HRV", "💗"),
     getOrCreateTracker(admin, integ.user_id, "Resting HR", "❤️"),
+    getOrCreateTracker(admin, integ.user_id, "Skin temperature", "🌡️"),
+    getOrCreateTracker(admin, integ.user_id, "Respiratory rate", "🫁"),
+    getOrCreateTracker(admin, integ.user_id, "SpO2", "🩸"),
+    getOrCreateTracker(admin, integ.user_id, "Day strain", "⚡"),
     getOrCreateTracker(admin, integ.user_id, "Workouts", "🏋️"),
   ]);
 
@@ -138,56 +146,79 @@ async function syncOne(
   };
   const rows: LogRow[] = [];
 
-  // Recovery (includes HRV + resting HR)
+  // Recovery (HRV, resting HR, skin temp, SpO2)
   const recoveries = await fetchAllPages(`${WHOOP_API}/recovery`, token, start, end);
   for (const r of recoveries) {
     const score = r.score ?? {};
     const at = r.created_at ?? r.updated_at ?? new Date().toISOString();
+    const cid = r.cycle_id ?? at;
     if (typeof score.recovery_score === "number") {
-      rows.push({
-        user_id: integ.user_id, tracker_id: recoveryT,
+      rows.push({ user_id: integ.user_id, tracker_id: recoveryT,
         intensity: clamp1to5(score.recovery_score, 0, 100),
-        logged_at: at, notes: `whoop:recovery:${r.cycle_id ?? at}`,
-      });
+        logged_at: at, notes: `whoop:recovery:${cid}|raw=${score.recovery_score}` });
     }
     if (typeof score.hrv_rmssd_milli === "number") {
-      rows.push({
-        user_id: integ.user_id, tracker_id: hrvT,
+      rows.push({ user_id: integ.user_id, tracker_id: hrvT,
         intensity: clamp1to5(score.hrv_rmssd_milli, 20, 100),
-        logged_at: at, notes: `whoop:hrv:${r.cycle_id ?? at}|raw=${score.hrv_rmssd_milli}`,
-      });
+        logged_at: at, notes: `whoop:hrv:${cid}|raw=${score.hrv_rmssd_milli}` });
     }
     if (typeof score.resting_heart_rate === "number") {
-      rows.push({
-        user_id: integ.user_id, tracker_id: restingHrT,
-        intensity: clamp1to5(80 - score.resting_heart_rate, 20, 60), // lower is better
-        logged_at: at, notes: `whoop:rhr:${r.cycle_id ?? at}|raw=${score.resting_heart_rate}`,
-      });
+      rows.push({ user_id: integ.user_id, tracker_id: restingHrT,
+        intensity: clamp1to5(80 - score.resting_heart_rate, 20, 60),
+        logged_at: at, notes: `whoop:rhr:${cid}|raw=${score.resting_heart_rate}` });
+    }
+    if (typeof score.skin_temp_celsius === "number") {
+      // scale around typical 33-35C; we keep raw for analyzer
+      rows.push({ user_id: integ.user_id, tracker_id: skinTempT,
+        intensity: clamp1to5(score.skin_temp_celsius, 32, 36),
+        logged_at: at, notes: `whoop:skin_temp:${cid}|raw=${score.skin_temp_celsius}` });
+    }
+    if (typeof score.spo2_percentage === "number") {
+      rows.push({ user_id: integ.user_id, tracker_id: spo2T,
+        intensity: clamp1to5(score.spo2_percentage, 92, 100),
+        logged_at: at, notes: `whoop:spo2:${cid}|raw=${score.spo2_percentage}` });
     }
   }
 
-  // Sleep
+  // Sleep (score, hours, efficiency, respiratory rate)
   const sleeps = await fetchAllPages(`${WHOOP_API}/activity/sleep`, token, start, end);
   for (const s of sleeps) {
     const score = s.score ?? {};
     const at = s.end ?? s.start ?? new Date().toISOString();
     if (typeof score.sleep_performance_percentage === "number") {
-      rows.push({
-        user_id: integ.user_id, tracker_id: sleepScoreT,
+      rows.push({ user_id: integ.user_id, tracker_id: sleepScoreT,
         intensity: clamp1to5(score.sleep_performance_percentage, 0, 100),
-        logged_at: at, notes: `whoop:sleep_score:${s.id}`,
-      });
+        logged_at: at, notes: `whoop:sleep_score:${s.id}|raw=${score.sleep_performance_percentage}` });
+    }
+    if (typeof score.sleep_efficiency_percentage === "number") {
+      rows.push({ user_id: integ.user_id, tracker_id: sleepEffT,
+        intensity: clamp1to5(score.sleep_efficiency_percentage, 70, 100),
+        logged_at: at, notes: `whoop:sleep_eff:${s.id}|raw=${score.sleep_efficiency_percentage}` });
+    }
+    if (typeof score.respiratory_rate === "number") {
+      rows.push({ user_id: integ.user_id, tracker_id: respRateT,
+        intensity: clamp1to5(score.respiratory_rate, 12, 20),
+        logged_at: at, notes: `whoop:resp_rate:${s.id}|raw=${score.respiratory_rate}` });
     }
     const stage = score.stage_summary ?? {};
-    const totalMs = (stage.total_in_bed_time_milli ?? 0)
-      - (stage.total_awake_time_milli ?? 0);
+    const totalMs = (stage.total_in_bed_time_milli ?? 0) - (stage.total_awake_time_milli ?? 0);
     if (totalMs > 0) {
       const hours = totalMs / 3_600_000;
-      rows.push({
-        user_id: integ.user_id, tracker_id: sleepHoursT,
+      rows.push({ user_id: integ.user_id, tracker_id: sleepHoursT,
         intensity: clamp1to5(hours, 4, 9),
-        logged_at: at, notes: `whoop:sleep_hours:${s.id}|raw=${hours.toFixed(2)}`,
-      });
+        logged_at: at, notes: `whoop:sleep_hours:${s.id}|raw=${hours.toFixed(2)}` });
+    }
+  }
+
+  // Cycles (day strain, avg/max HR)
+  const cycles = await fetchAllPages(`${WHOOP_API}/cycle`, token, start, end);
+  for (const c of cycles) {
+    const at = c.end ?? c.start ?? new Date().toISOString();
+    const strain = c.score?.strain;
+    if (typeof strain === "number") {
+      rows.push({ user_id: integ.user_id, tracker_id: strainT,
+        intensity: clamp1to5(strain, 0, 21),
+        logged_at: at, notes: `whoop:day_strain:${c.id}|raw=${strain.toFixed(2)}` });
     }
   }
 
@@ -196,17 +227,13 @@ async function syncOne(
   for (const w of workouts) {
     const at = w.end ?? w.start ?? new Date().toISOString();
     const strain = w.score?.strain;
-    rows.push({
-      user_id: integ.user_id, tracker_id: workoutsT,
+    rows.push({ user_id: integ.user_id, tracker_id: workoutsT,
       intensity: typeof strain === "number" ? clamp1to5(strain, 0, 21) : 3,
-      logged_at: at,
-      notes: `whoop:workout:${w.id}${strain ? `|strain=${strain.toFixed(1)}` : ""}`,
-    });
+      logged_at: at, notes: `whoop:workout:${w.id}${strain ? `|strain=${strain.toFixed(1)}` : ""}` });
   }
 
-  // Dedupe against existing rows by notes tag (used as external_id marker)
-  const tags = rows.map((r) => r.notes!).filter(Boolean);
-  const tagPrefixes = Array.from(new Set(tags.map((t) => t.split("|")[0])));
+  // Dedupe against existing rows by notes prefix
+  const tagPrefixes = Array.from(new Set(rows.map((r) => r.notes!.split("|")[0])));
   const existingTags = new Set<string>();
   for (let i = 0; i < tagPrefixes.length; i += 100) {
     const batch = tagPrefixes.slice(i, i + 100);
@@ -214,31 +241,20 @@ async function syncOne(
       .from("tracker_logs")
       .select("notes")
       .eq("user_id", integ.user_id)
-      .in("notes", batch);
+      .or(batch.map((t) => `notes.like.${t}%`).join(","));
     for (const row of data ?? []) {
-      if (row.notes) existingTags.add(row.notes as string);
+      if (row.notes) existingTags.add((row.notes as string).split("|")[0]);
     }
   }
-  // also handle notes that include |raw=... suffix
-  const fresh = rows.filter((r) => {
-    if (!r.notes) return true;
-    if (existingTags.has(r.notes)) return false;
-    // also check by prefix
-    const prefix = r.notes.split("|")[0];
-    if (existingTags.has(prefix)) return false;
-    return true;
-  });
+  const fresh = rows.filter((r) => !existingTags.has(r.notes!.split("|")[0]));
 
   let inserted = 0;
   if (fresh.length > 0) {
     for (let i = 0; i < fresh.length; i += 200) {
       const batch = fresh.slice(i, i + 200);
       const { error } = await admin.from("tracker_logs").insert(batch);
-      if (error) {
-        console.error("Insert tracker_logs failed", error);
-      } else {
-        inserted += batch.length;
-      }
+      if (error) console.error("Insert tracker_logs failed", error);
+      else inserted += batch.length;
     }
   }
 
@@ -246,7 +262,18 @@ async function syncOne(
     .update({ last_synced_at: new Date().toISOString() })
     .eq("user_id", integ.user_id).eq("provider", "whoop");
 
-  return { user_id: integ.user_id, inserted, recoveries: recoveries.length, sleeps: sleeps.length, workouts: workouts.length };
+  // Trigger cycle analyzer (fire and forget) — only when we got fresh data
+  if (inserted > 0) {
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    fetch(`${SUPABASE_URL}/functions/v1/analyze-whoop-cycle`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_KEY}` },
+      body: JSON.stringify({ user_id: integ.user_id }),
+    }).catch((e) => console.error("Analyzer trigger failed", e));
+  }
+
+  return { user_id: integ.user_id, inserted, recoveries: recoveries.length, sleeps: sleeps.length, workouts: workouts.length, cycles: cycles.length };
 }
 
 Deno.serve(async (req) => {
