@@ -10,6 +10,7 @@ import { CustomAIWidget } from "@/components/home/CustomAIWidget";
 import { SymptomLogWidget } from "@/components/home/SymptomLogWidget";
 import { SymptomHistory } from "@/components/home/SymptomHistory";
 import { CycleCorrelationsWidget } from "@/components/home/CycleCorrelationsWidget";
+import { LabResultsWidget } from "@/components/home/LabResultsWidget";
 import { MiniPhaseArc, getWidgetGraphic } from "@/components/home/WidgetGraphics";
 import { DailyBriefingHero } from "@/components/home/DailyBriefingHero";
 import { useWidgetPreferences, getWidgetLabel } from "@/hooks/useWidgetPreferences";
@@ -470,6 +471,12 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           </div>
         ) : null;
       }
+      case "lab_results":
+        return userId ? (
+          <div className="w-full" key={id}>
+            <LabResultsWidget userId={userId} />
+          </div>
+        ) : null;
       case "cycle_correlations":
         return userId ? (
           <div className="w-full" key={id}>
