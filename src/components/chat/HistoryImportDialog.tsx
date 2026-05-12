@@ -200,13 +200,24 @@ export function HistoryImportDialog({
   };
 
   const downloadTemplate = () => {
-    const blob = new Blob([TEMPLATE_CSV], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "logan-history-template.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const blob = new Blob([TEMPLATE_CSV], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "logan-history-template.csv";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+      toast({ title: "Template downloaded" });
+    } catch (e) {
+      console.error("Template download failed", e);
+      toast({ title: "Could not download template", variant: "destructive" });
+    }
   };
 
   return (
