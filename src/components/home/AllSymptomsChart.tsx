@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -9,9 +9,12 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Cell,
+  ReferenceLine,
 } from "recharts";
 import { getPhaseForDate, PHASES } from "@/lib/cycleCorrelation";
-import { getHormoneValue } from "@/lib/hormoneCurves";
+import { getHormoneValue, avg } from "@/lib/hormoneCurves";
+import { Sparkles } from "lucide-react";
 
 interface SymptomEntry {
   name: string;
@@ -33,27 +36,34 @@ interface Props {
 }
 
 const SYMPTOM_PALETTE = [
-  "hsl(173, 80%, 50%)",
-  "hsl(355, 75%, 65%)",
-  "hsl(40, 85%, 60%)",
-  "hsl(140, 60%, 55%)",
-  "hsl(195, 85%, 60%)",
+  "hsl(173, 80%, 55%)",
+  "hsl(355, 75%, 68%)",
+  "hsl(40, 90%, 62%)",
+  "hsl(140, 60%, 58%)",
+  "hsl(195, 85%, 62%)",
   "hsl(20, 85%, 65%)",
-  "hsl(310, 60%, 70%)",
-  "hsl(85, 65%, 55%)",
+  "hsl(310, 65%, 72%)",
+  "hsl(85, 65%, 58%)",
 ];
 
 const HORMONES = [
-  { key: "estrogen", label: "Estrogen", color: "hsl(187, 100%, 42%)" },
-  { key: "progesterone", label: "Progesterone", color: "hsl(270, 60%, 65%)" },
-  { key: "fsh", label: "FSH", color: "hsl(40, 85%, 55%)" },
-  { key: "lh", label: "LH", color: "hsl(355, 75%, 60%)" },
+  { key: "estrogen", label: "Estrogen", color: "hsl(187, 100%, 60%)" },
+  { key: "progesterone", label: "Progesterone", color: "hsl(270, 70%, 75%)" },
+  { key: "fsh", label: "FSH", color: "hsl(40, 90%, 65%)" },
+  { key: "lh", label: "LH", color: "hsl(355, 80%, 70%)" },
 ] as const;
 
-const PHASE_FULL: Record<string, string> = {
-  Menstruation: "Menstruation",
-  Follicular: "Follicular",
-  Ovulation: "Ovulation",
+const PHASE_COLORS: Record<string, string> = {
+  Menstruation: "hsl(var(--phase-menstruation))",
+  Follicular: "hsl(var(--phase-follicular))",
+  Ovulation: "hsl(var(--phase-ovulation))",
+  Luteal: "hsl(var(--phase-luteal))",
+};
+
+const PHASE_SHORT: Record<string, string> = {
+  Menstruation: "Period",
+  Follicular: "Follic.",
+  Ovulation: "Ovul.",
   Luteal: "Luteal",
 };
 
@@ -64,7 +74,9 @@ export function AllSymptomsChart({
   cycleLengthDays,
   isNonCycling,
 }: Props) {
-  const { chartData, phaseMidDays } = useMemo(() => {
+  const [showHormones, setShowHormones] = useState(false);
+
+  const { perPhase, hormoneByPhase } = useMemo(() => {
     const len = cycleLengthDays || 28;
     const menEnd = 5;
     const ovDay = len - 14;
@@ -78,13 +90,7 @@ export function AllSymptomsChart({
       Luteal: [ovEnd + 1, len],
     };
 
-    const midDays: Record<string, number> = {};
-    for (const phase of PHASES) {
-      const [s, e] = phaseRanges[phase];
-      midDays[phase] = Math.round((s + e) / 2);
-    }
-
-    // Bucket symptom logs per phase
+    // Bucket symptom values per phase
     const buckets: Record<string, Record<string, number[]>> = {};
     for (const phase of PHASES) {
       buckets[phase] = {};
@@ -105,55 +111,65 @@ export function AllSymptomsChart({
         buckets[phase][s.name].push(s.severity);
       }
     }
-    const symAvgByPhase: Record<string, Record<string, number | undefined>> = {};
-    for (const phase of PHASES) {
-      symAvgByPhase[phase] = {};
+
+    const perPhase = PHASES.map((phase) => {
+      const items: { name: string; avg: number; count: number }[] = [];
+      let total = 0;
+      let total_n = 0;
       for (const name of symptomNames) {
         const v = buckets[phase][name];
         if (v.length > 0) {
-          symAvgByPhase[phase][name] = Number(
-            (v.reduce((a, b) => a + b, 0) / v.length).toFixed(2)
-          );
+          const a = v.reduce((x, y) => x + y, 0) / v.length;
+          items.push({ name, avg: Number(a.toFixed(2)), count: v.length });
+          total += a;
+          total_n += 1;
         }
       }
+      items.sort((a, b) => b.avg - a.avg);
+      return {
+        phase,
+        items,
+        load: total_n > 0 ? Number((total / total_n).toFixed(2)) : 0,
+        symptomCount: total_n,
+      };
+    });
+
+    // Hormone avg per phase (for chart overlay)
+    const hormoneByPhase: Record<string, Record<string, number>> = {};
+    for (const phase of PHASES) {
+      const [s, e] = phaseRanges[phase];
+      const vals: Record<string, number[]> = { estrogen: [], progesterone: [], fsh: [], lh: [] };
+      for (let d = s; d <= e; d++) {
+        vals.estrogen.push(getHormoneValue("estrogen", d, len, menEnd, ovDay, ovStart, ovEnd));
+        vals.progesterone.push(getHormoneValue("progesterone", d, len, menEnd, ovDay, ovStart, ovEnd));
+        vals.fsh.push(getHormoneValue("fsh", d, len, menEnd, ovDay, ovStart, ovEnd));
+        vals.lh.push(getHormoneValue("lh", d, len, menEnd, ovDay, ovStart, ovEnd));
+      }
+      hormoneByPhase[phase] = {
+        estrogen: avg(vals.estrogen) * 5,
+        progesterone: avg(vals.progesterone) * 5,
+        fsh: avg(vals.fsh) * 5,
+        lh: avg(vals.lh) * 5,
+      };
     }
 
-    // Build per-day rows for smooth hormone curves
-    const data: Record<string, number | string | undefined>[] = [];
-    for (let d = 1; d <= len; d++) {
-      const row: Record<string, number | string | undefined> = { day: d };
-      row.estrogen = Number(
-        (getHormoneValue("estrogen", d, len, menEnd, ovDay, ovStart, ovEnd) * 5).toFixed(2)
-      );
-      row.progesterone = Number(
-        (getHormoneValue("progesterone", d, len, menEnd, ovDay, ovStart, ovEnd) * 5).toFixed(2)
-      );
-      row.fsh = Number(
-        (getHormoneValue("fsh", d, len, menEnd, ovDay, ovStart, ovEnd) * 5).toFixed(2)
-      );
-      row.lh = Number(
-        (getHormoneValue("lh", d, len, menEnd, ovDay, ovStart, ovEnd) * 5).toFixed(2)
-      );
-
-      // Attach symptom bars only at phase midpoints
-      let phaseAtDay: string | null = null;
-      for (const phase of PHASES) {
-        if (midDays[phase] === d) {
-          phaseAtDay = phase;
-          break;
-        }
-      }
-      if (phaseAtDay) {
-        for (const name of symptomNames) {
-          const v = symAvgByPhase[phaseAtDay][name];
-          if (typeof v === "number") row[name] = v;
-        }
-      }
-      data.push(row);
-    }
-
-    return { chartData: data, phaseMidDays: midDays };
+    return { perPhase, hormoneByPhase };
   }, [logs, symptomNames, lastPeriodStart, cycleLengthDays, isNonCycling]);
+
+  const peakPhase = useMemo(() => {
+    const withData = perPhase.filter((p) => p.symptomCount > 0);
+    if (!withData.length) return null;
+    return withData.reduce((a, b) => (b.load > a.load ? b : a));
+  }, [perPhase]);
+
+  const insight = useMemo(() => {
+    if (!peakPhase || peakPhase.items.length === 0) return null;
+    const top = peakPhase.items.slice(0, 2).map((i) => i.name);
+    if (top.length === 2) {
+      return `Your hardest stretch is **${peakPhase.phase}** — **${top[0]}** and **${top[1]}** lead the pattern.`;
+    }
+    return `Your hardest stretch is **${peakPhase.phase}** — **${top[0]}** leads the pattern.`;
+  }, [peakPhase]);
 
   if (isNonCycling) {
     return (
@@ -163,9 +179,7 @@ export function AllSymptomsChart({
     );
   }
 
-  const hasAnyData = chartData.some((row) =>
-    symptomNames.some((n) => typeof row[n] === "number")
-  );
+  const hasAnyData = perPhase.some((p) => p.symptomCount > 0);
   if (!hasAnyData) {
     return (
       <p className="text-[11px] text-muted-foreground/70 px-1 py-3">
@@ -174,158 +188,283 @@ export function AllSymptomsChart({
     );
   }
 
-  const phaseTicks = PHASES.map((p) => phaseMidDays[p]);
+  // Symptom-name → palette color map (used in detail rows)
+  const colorFor = (name: string) =>
+    SYMPTOM_PALETTE[symptomNames.indexOf(name) % SYMPTOM_PALETTE.length];
+
+  const chartData = perPhase.map((p) => ({
+    phase: PHASE_SHORT[p.phase],
+    fullPhase: p.phase,
+    load: p.load,
+    isPeak: peakPhase?.phase === p.phase,
+    estrogen: Number(hormoneByPhase[p.phase].estrogen.toFixed(2)),
+    progesterone: Number(hormoneByPhase[p.phase].progesterone.toFixed(2)),
+    fsh: Number(hormoneByPhase[p.phase].fsh.toFixed(2)),
+    lh: Number(hormoneByPhase[p.phase].lh.toFixed(2)),
+    topSymptom: perPhase.find((x) => x.phase === p.phase)?.items[0]?.name,
+  }));
 
   return (
-    <div className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/10 backdrop-blur-xl p-3 space-y-2.5">
-      <div className="flex items-center justify-between px-1">
-        <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 font-medium">
-          All symptoms × Hormones
-        </p>
-        <p className="text-[9px] text-muted-foreground/50">avg per phase</p>
+    <div className="relative rounded-2xl bg-gradient-to-b from-white/[0.06] to-white/[0.01] border border-white/10 backdrop-blur-xl overflow-hidden">
+      {peakPhase && (
+        <div
+          className="absolute inset-x-0 top-0 h-px opacity-60"
+          style={{
+            background: `linear-gradient(90deg, transparent, ${PHASE_COLORS[peakPhase.phase]}, transparent)`,
+          }}
+        />
+      )}
+
+      {/* Hero insight */}
+      <div className="px-4 pt-4 pb-3 space-y-2.5">
+        <div className="flex items-center gap-1.5">
+          <Sparkles className="w-3 h-3 text-teal-400" strokeWidth={2.25} />
+          <span className="text-[10px] uppercase tracking-[0.14em] text-teal-400/90 font-semibold">
+            Your phase pattern
+          </span>
+        </div>
+        {insight && (
+          <p
+            className="text-[13px] text-foreground leading-relaxed font-medium"
+            dangerouslySetInnerHTML={{
+              __html: insight.replace(
+                /\*\*(.+?)\*\*/g,
+                '<strong class="text-teal-300 font-semibold">$1</strong>'
+              ),
+            }}
+          />
+        )}
       </div>
 
-      <div className="h-56 w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: -28, bottom: 0 }}>
-            <defs>
-              {HORMONES.map((h) => (
-                <linearGradient
-                  key={h.key}
-                  id={`allHormFill-${h.key}`}
-                  x1="0" y1="0" x2="0" y2="1"
-                >
-                  <stop offset="0%" stopColor={h.color} stopOpacity={0.18} />
-                  <stop offset="100%" stopColor={h.color} stopOpacity={0} />
-                </linearGradient>
-              ))}
-            </defs>
-            <CartesianGrid
-              strokeDasharray="2 4"
-              stroke="hsl(var(--border))"
-              strokeOpacity={0.18}
-              vertical={false}
-            />
-            <XAxis
-              dataKey="day"
-              type="category"
-              ticks={phaseTicks.map(String)}
-              tickFormatter={(d: string) => {
-                const phase = PHASES.find((p) => String(phaseMidDays[p]) === String(d));
-                return phase ? PHASE_FULL[phase] : "";
-              }}
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-              axisLine={false}
-              tickLine={false}
-              dy={4}
-              interval={0}
-            />
-            <YAxis
-              domain={[0, 5]}
-              tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
-              axisLine={false}
-              tickLine={false}
-              width={28}
-            />
-            <Tooltip
-              cursor={{ stroke: "hsl(var(--foreground) / 0.1)" }}
-              contentStyle={{
-                background: "hsl(var(--card) / 0.95)",
-                backdropFilter: "blur(12px)",
-                border: "1px solid hsl(var(--border) / 0.5)",
-                borderRadius: 12,
-                fontSize: 11,
-                padding: "8px 10px",
-                boxShadow: "0 8px 24px hsl(0 0% 0% / 0.4)",
-              }}
-              labelStyle={{
-                fontSize: 10,
-                color: "hsl(var(--muted-foreground))",
-                marginBottom: 4,
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-              }}
-              labelFormatter={(d: number | string) => {
-                const phase = PHASES.find((p) => String(phaseMidDays[p]) === String(d));
-                return phase ? phase : `Day ${d}`;
-              }}
-              formatter={(value: number, name: string) => [value.toFixed(2), name]}
-            />
-
-            {/* Hormone areas + smooth lines */}
-            {HORMONES.map((h) => (
-              <Area
-                key={`area-${h.key}`}
-                type="monotone"
-                dataKey={h.key}
-                stroke="none"
-                fill={`url(#allHormFill-${h.key})`}
-                isAnimationActive={false}
-                legendType="none"
-                tooltipType="none"
+      {/* Phase-load chart: one chunky bar per phase */}
+      <div className="px-2">
+        <div className="flex items-center justify-between px-3 pb-1">
+          <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 font-medium">
+            Symptom load by phase
+          </p>
+          <p className="text-[9px] text-muted-foreground/50">avg intensity</p>
+        </div>
+        <div className="h-44 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: -24, bottom: 0 }}>
+              <defs>
+                {PHASES.map((p) => (
+                  <linearGradient key={p} id={`allBar-${p}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={PHASE_COLORS[p]} stopOpacity={0.95} />
+                    <stop offset="100%" stopColor={PHASE_COLORS[p]} stopOpacity={0.4} />
+                  </linearGradient>
+                ))}
+                {HORMONES.map((h) => (
+                  <linearGradient
+                    key={h.key}
+                    id={`allHormFill-${h.key}`}
+                    x1="0" y1="0" x2="0" y2="1"
+                  >
+                    <stop offset="0%" stopColor={h.color} stopOpacity={0.14} />
+                    <stop offset="100%" stopColor={h.color} stopOpacity={0} />
+                  </linearGradient>
+                ))}
+              </defs>
+              <CartesianGrid
+                strokeDasharray="2 6"
+                stroke="hsl(var(--border))"
+                strokeOpacity={0.12}
+                vertical={false}
               />
-            ))}
-            {HORMONES.map((h) => (
-              <Line
-                key={`hline-${h.key}`}
-                type="monotone"
-                dataKey={h.key}
-                name={h.label}
-                stroke={h.color}
-                strokeWidth={2}
-                strokeLinecap="round"
-                dot={false}
-                activeDot={{ r: 3, strokeWidth: 0, fill: h.color }}
-                isAnimationActive={false}
-                opacity={0.95}
+              <XAxis
+                dataKey="phase"
+                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))", fontWeight: 500 }}
+                axisLine={false}
+                tickLine={false}
+                dy={6}
+                interval={0}
               />
-            ))}
-
-            {/* Symptom bars at phase midpoints (grouped) */}
-            {symptomNames.map((name, i) => (
+              <YAxis
+                domain={[0, 5]}
+                ticks={[0, 2.5, 5]}
+                tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground) / 0.6)" }}
+                axisLine={false}
+                tickLine={false}
+                width={24}
+              />
+              <ReferenceLine y={2.5} stroke="hsl(var(--border))" strokeOpacity={0.15} strokeDasharray="3 4" />
+              <Tooltip
+                cursor={{ fill: "hsl(var(--foreground) / 0.04)" }}
+                contentStyle={{
+                  background: "hsl(var(--card) / 0.96)",
+                  backdropFilter: "blur(12px)",
+                  border: "1px solid hsl(var(--border) / 0.5)",
+                  borderRadius: 12,
+                  fontSize: 11,
+                  padding: "8px 10px",
+                  boxShadow: "0 8px 24px hsl(0 0% 0% / 0.4)",
+                }}
+                labelFormatter={(_, p: any) => p?.[0]?.payload?.fullPhase || ""}
+                labelStyle={{
+                  fontSize: 10,
+                  color: "hsl(var(--muted-foreground))",
+                  marginBottom: 4,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                }}
+                formatter={(value: number, name: string, p: any) => {
+                  if (name === "Load") {
+                    const top = p.payload.topSymptom;
+                    return [top ? `${value}/5 · top: ${top}` : `${value}/5`, "Load"];
+                  }
+                  return [value.toFixed(1), name];
+                }}
+              />
               <Bar
-                key={name}
-                dataKey={name}
-                name={name}
-                fill={SYMPTOM_PALETTE[i % SYMPTOM_PALETTE.length]}
-                radius={[4, 4, 1, 1]}
-                maxBarSize={12}
-                isAnimationActive={false}
-              />
+                dataKey="load"
+                name="Load"
+                radius={[10, 10, 4, 4]}
+                barSize={42}
+                fillOpacity={showHormones ? 0.75 : 1}
+              >
+                {chartData.map((entry) => (
+                  <Cell
+                    key={entry.fullPhase}
+                    fill={`url(#allBar-${entry.fullPhase})`}
+                    stroke={entry.isPeak ? PHASE_COLORS[entry.fullPhase] : "transparent"}
+                    strokeWidth={entry.isPeak ? 1.5 : 0}
+                  />
+                ))}
+              </Bar>
+              {showHormones &&
+                HORMONES.map((h) => (
+                  <Area
+                    key={`area-${h.key}`}
+                    type="monotone"
+                    dataKey={h.key}
+                    stroke="none"
+                    fill={`url(#allHormFill-${h.key})`}
+                    isAnimationActive={false}
+                    legendType="none"
+                    tooltipType="none"
+                  />
+                ))}
+              {showHormones &&
+                HORMONES.map((h) => (
+                  <Line
+                    key={`hline-${h.key}`}
+                    type="monotone"
+                    dataKey={h.key}
+                    name={h.label}
+                    stroke={h.color}
+                    strokeWidth={1.75}
+                    strokeLinecap="round"
+                    dot={false}
+                    activeDot={{ r: 3, strokeWidth: 0, fill: h.color }}
+                    isAnimationActive={false}
+                    opacity={0.85}
+                  />
+                ))}
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Per-phase top symptoms */}
+      <div className="px-3 pt-2 pb-3 space-y-2">
+        <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 font-medium px-1">
+          Top symptoms per phase
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {perPhase.map((p) => {
+            const color = PHASE_COLORS[p.phase];
+            const top = p.items.slice(0, 3);
+            return (
+              <div
+                key={p.phase}
+                className={`rounded-xl border p-2.5 space-y-1.5 ${
+                  peakPhase?.phase === p.phase
+                    ? "bg-white/[0.04] border-white/15"
+                    : "bg-white/[0.02] border-white/8"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ background: color, boxShadow: `0 0 6px ${color}` }}
+                    />
+                    <span className="text-[11px] font-semibold" style={{ color }}>
+                      {p.phase}
+                    </span>
+                  </div>
+                  <span className="text-[9px] text-muted-foreground/55 tabular-nums">
+                    {p.load > 0 ? `${p.load.toFixed(1)}/5` : "—"}
+                  </span>
+                </div>
+                {top.length === 0 ? (
+                  <p className="text-[10px] text-muted-foreground/50 italic">No logs yet</p>
+                ) : (
+                  <div className="space-y-1">
+                    {top.map((s) => (
+                      <div key={s.name} className="flex items-center gap-2">
+                        <span
+                          className="text-[10.5px] text-foreground/85 truncate flex-1"
+                          title={s.name}
+                        >
+                          {s.name}
+                        </span>
+                        <div className="w-12 h-1 rounded-full bg-white/5 overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${(s.avg / 5) * 100}%`,
+                              background: colorFor(s.name),
+                            }}
+                          />
+                        </div>
+                        <span className="text-[9.5px] text-muted-foreground/70 tabular-nums w-6 text-right">
+                          {s.avg.toFixed(1)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Hormone toggle */}
+      <div className="px-4 pb-3 pt-1 border-t border-white/5 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => setShowHormones((v) => !v)}
+          className="text-[10.5px] text-muted-foreground/80 hover:text-foreground transition-colors flex items-center gap-1.5"
+        >
+          <span
+            className={`w-7 h-3.5 rounded-full relative transition-colors ${
+              showHormones ? "bg-teal-500/60" : "bg-white/10"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white transition-all ${
+                showHormones ? "left-[14px]" : "left-0.5"
+              }`}
+            />
+          </span>
+          {showHormones ? "Hide hormones" : "Compare with hormones"}
+        </button>
+        {showHormones && (
+          <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
+            {HORMONES.map((h) => (
+              <div key={h.key} className="flex items-center gap-1">
+                <span
+                  className="w-2.5 h-[2px] rounded-full"
+                  style={{ background: h.color, boxShadow: `0 0 4px ${h.color}40` }}
+                />
+                <span className="text-[9px] text-foreground/60">{h.label}</span>
+              </div>
             ))}
-          </ComposedChart>
-        </ResponsiveContainer>
+          </div>
+        )}
       </div>
-
-      {/* Legend */}
-      <div className="space-y-1.5 pt-1 border-t border-white/5">
-        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-1.5">
-          {symptomNames.map((name, i) => (
-            <div key={name} className="flex items-center gap-1.5">
-              <span
-                className="w-2.5 h-2.5 rounded-sm"
-                style={{ background: SYMPTOM_PALETTE[i % SYMPTOM_PALETTE.length] }}
-              />
-              <span className="text-[10px] text-foreground/70">{name}</span>
-            </div>
-          ))}
-        </div>
-        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-          {HORMONES.map((h) => (
-            <div key={h.key} className="flex items-center gap-1.5">
-              <span
-                className="w-3.5 h-[2px] rounded-full"
-                style={{ background: h.color, boxShadow: `0 0 6px ${h.color}40` }}
-              />
-              <span className="text-[10px] text-muted-foreground/70">{h.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <p className="text-[10px] text-muted-foreground/55 text-center leading-snug px-2">
-        Typical hormone curves overlaid on your logged intensity per phase — see which hormones may be driving each pattern.
-      </p>
     </div>
   );
 }
