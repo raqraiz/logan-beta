@@ -245,7 +245,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-1">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">
-              Meal plan · {resource.style === "light" ? "Light" : "Dark"} PDF
+              Menu · {(resource.metadata?.mode ?? resource.metadata?.preview?.mode) === "mix" ? "Mix" : "Ideas"}
             </span>
           </div>
           <h3 className="text-sm font-semibold text-foreground leading-tight">{resource.title}</h3>
@@ -254,7 +254,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
             <div className="mt-2 flex items-center gap-2">
               <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
               <span className="text-xs text-muted-foreground">
-                Building your plan… this takes ~10–60 seconds.
+                Tailoring it to today… a few seconds.
               </span>
             </div>
           )}
