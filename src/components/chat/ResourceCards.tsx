@@ -158,8 +158,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
       await supabase.functions.invoke("generate-meal-plan", {
         body: {
           parentResourceId: resourceId,
-          style: resource.style,
-          lengthDays: resource.metadata?.length_days,
+          mode: resource.metadata?.mode ?? resource.metadata?.preview?.mode ?? "ideas",
           excludeIngredients,
           feedbackText,
           dietaryPrefs: resource.metadata?.dietary_prefs ?? {},
