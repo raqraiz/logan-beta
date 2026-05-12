@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { CheckCircle2, Download, ImagePlus, Loader2, Upload, X } from "lucide-react";
+import { CheckCircle2, ImagePlus, Loader2, Upload, X } from "lucide-react";
 
 interface HistoryImportDialogProps {
   open: boolean;
@@ -210,12 +210,11 @@ export function HistoryImportDialog({
 
         {phase === "idle" && (
           <Tabs defaultValue="apple" className="mt-2">
-            <TabsList className="grid grid-cols-5 w-full">
+            <TabsList className="grid grid-cols-4 w-full">
               <TabsTrigger value="apple" className="text-xs">Apple Health</TabsTrigger>
               <TabsTrigger value="csv" className="text-xs">CSV</TabsTrigger>
               <TabsTrigger value="paste" className="text-xs">Paste</TabsTrigger>
               <TabsTrigger value="screenshot" className="text-xs">Screenshot</TabsTrigger>
-              <TabsTrigger value="template" className="text-xs">Template</TabsTrigger>
             </TabsList>
 
             <TabsContent value="apple" className="text-sm text-muted-foreground space-y-3 mt-3">
@@ -297,20 +296,6 @@ export function HistoryImportDialog({
               </p>
             </TabsContent>
 
-            <TabsContent value="template" className="text-sm text-muted-foreground space-y-3 mt-3">
-              <p>Download Logan's template, fill it in from any source, and upload it back as CSV.</p>
-              <Button variant="outline" size="sm" asChild>
-                <a
-                  href="/logan-history-template.csv"
-                  download="logan-history-template.csv"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => toast({ title: "Template downloaded" })}
-                >
-                  <Download className="w-4 h-4 mr-2" /> Download template
-                </a>
-              </Button>
-            </TabsContent>
 
             <input
               ref={fileRef}
