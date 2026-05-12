@@ -1139,6 +1139,54 @@ export type Database = {
         }
         Relationships: []
       }
+      user_integrations: {
+        Row: {
+          access_token: string
+          connected_at: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          last_synced_at: string | null
+          provider: string
+          provider_user_id: string | null
+          refresh_token: string | null
+          scopes: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          connected_at?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          last_synced_at?: string | null
+          provider: string
+          provider_user_id?: string | null
+          refresh_token?: string | null
+          scopes?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          connected_at?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          last_synced_at?: string | null
+          provider?: string
+          provider_user_id?: string | null
+          refresh_token?: string | null
+          scopes?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_resources: {
         Row: {
           created_at: string

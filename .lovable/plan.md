@@ -1,106 +1,108 @@
+## Goal
 
-# History Importer
+Let each user connect their own Whoop and/or Fitbit account so Logan auto-imports sleep, recovery/HRV, workouts, and resting heart rate — feeding the same widgets and chat insights as the existing history importer, but continuously instead of one-shot.
 
-Let users bring months of cycle, symptom, sleep, and workout history from Apple Health or any period-tracker CSV (Clue, Flo, Natural Cycles, etc.) into Logan in one upload — then have Logan post a "here's what I just learned about you" message in chat.
+## Why per-user OAuth (not a Lovable connector)
+
+Lovable's built-in connectors authenticate the workspace owner's account (good for "post to *our* Slack"). Whoop and Fitbit data is personal — every Logan user must grant access to *their own* account. That means we register Logan as an OAuth app with each provider and run the flow per user.
+
+Neither Whoop nor Fitbit is in the Lovable connector catalog, so this is the only path either way.
 
 ## What the user sees
 
-- A new **"Import your history"** button in the chat Settings dialog (gear icon, top right of chat). Also linked from the Aha Moment after onboarding so new users can backfill immediately.
-- A dialog that explains what's supported, lets them pick a file, and shows a progress + summary state:
-  - File picker accepting `.zip` (Apple Health export), `.xml` (extracted Apple Health), or `.csv`.
-  - Inline help tabs: "From Apple Health" (with screenshots-style instructions), "From Clue / Flo / Natural Cycles", "Generic CSV template" (download link to Logan's template).
-  - After upload: "Importing 8 months of history…" with a spinner, then a green check + counts ("Imported 9 cycles · 142 symptom days · 68 workouts").
-- Once import succeeds, Logan posts an assistant message in chat:
-  > "I just went through 8 months of your history. Here's what stands out: your cycles run **29 days** on average, your toughest stretch is **days 24–28** (sleep + irritability), and you're sharpest **days 10–14**. I'll use this from now on."
-- Cycle Analytics, Cycle Forecast, and Symptom widgets pick up the new data automatically because they read from the same tables.
+- **Settings → Connected devices** (new section): two cards, "Whoop" and "Fitbit", each with a Connect button.
+- Tapping Connect opens the provider's auth page in a new tab. After approval they land back in Logan with a green check + "Pulling your last 30 days…".
+- A new **`Recovery`** widget on Home showing today's HRV, resting HR, sleep score, and a phase-correlation insight ("Your HRV dips ~12% in luteal — track this").
+- Chat picks it up: "Your recovery is low today and you're entering luteal — want a lighter plan?"
+- Disconnect button revokes the token and stops syncing (kept data stays).
 
-## Supported sources
+## Provider setup (one-time, by you)
 
-1. **Apple Health export** — user exports from iPhone Health app → Share → Export All Health Data → Logan accepts the resulting `export.zip` or extracted `export.xml`.
-   - Periods → `MenstrualFlow` records → cycle_history rows.
-   - Symptoms → records like `Headache`, `MoodChanges`, `Fatigue`, `AbdominalCramps`, `Bloating`, `Acne`, `BreastPain`, `LowerBackPain`, `Nausea`, `Insomnia`, etc. → symptom_logs.
-   - Sleep → `SleepAnalysis` aggregated per day → tracker_logs under an auto-created "Sleep hours" tracker.
-   - Workouts → `Workout` records (count or duration per day) → tracker_logs under "Workouts".
-2. **Period-tracker CSV** (Clue, Flo, Natural Cycles, generic). We auto-detect columns:
-   - Required: a date column + at least one of `period`, `flow`, `cycle_day`, or symptom columns.
-   - Cycle starts → cycle_history. Symptom intensity (0–5 scale or boolean) → symptom_logs.
+| Provider | Where | What we need |
+|---|---|---|
+| Whoop | developer.whoop.com → create app | Client ID + Secret, redirect URI `https://asklogan.ai/integrations/whoop/callback`, scopes: `read:recovery read:sleep read:workout read:cycles read:profile offline` |
+| Fitbit | dev.fitbit.com → register app (type: Server) | Client ID + Secret, redirect URI `https://asklogan.ai/integrations/fitbit/callback`, scopes: `activity heartrate sleep profile`, OAuth 2.0 + PKCE |
 
-## Data model
+Both also need the same redirect for the preview domain during testing.
 
-Reuses existing tables — no schema changes needed for the data itself:
-- `cycle_history(participant_id, cycle_start_date, cycle_end_date, cycle_length_days)`
-- `symptom_logs(user_id, symptoms jsonb, logged_at, cycle_day, cycle_phase, notes)`
-- `custom_trackers` + `tracker_logs(intensity 1–5, logged_at)` for sleep / workouts.
+Secrets to store in Lovable Cloud: `WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET`, `FITBIT_CLIENT_ID`, `FITBIT_CLIENT_SECRET`.
 
-One small new table to make imports idempotent and visible in admin:
+## Architecture
 
 ```text
-public.history_imports
-  id uuid pk
-  user_id uuid              -- auth.uid()
-  source text               -- 'apple_health' | 'csv'
-  status text               -- 'processing' | 'completed' | 'failed'
-  cycles_imported int
-  symptom_days_imported int
-  tracker_logs_imported int
-  date_range_start date
-  date_range_end date
-  error_message text
-  created_at, completed_at
+User → Logan UI → /integrations/{provider}/connect (edge fn)
+                       ↓ redirect with state
+                 Provider auth page
+                       ↓
+           /integrations/{provider}/callback (edge fn)
+              - exchange code → access+refresh token
+              - store encrypted in user_integrations
+              - kick off initial backfill (last 30d)
+                       ↓
+             sync-{provider} edge fn (cron, hourly)
+              - refresh token if needed
+              - pull deltas → tracker_logs / cycle_history
+              - update last_synced_at
 ```
-RLS: users can SELECT/INSERT their own; admins can view all. Used to (a) prevent double-import, (b) drive the UI summary, (c) feed the recap message.
 
-## Backend
+### New table
 
-New private storage bucket `history-imports` with per-user folder RLS (`auth.uid()` is folder name; INSERT + SELECT + DELETE for owner). Files auto-deleted after processing.
+`public.user_integrations`
+- `user_id`, `provider` (`'whoop'|'fitbit'`), `access_token`, `refresh_token`, `expires_at`, `provider_user_id`, `scopes`, `last_synced_at`, `status`
+- Unique on (`user_id`, `provider`). RLS: user reads/deletes own; service role writes.
 
-New edge function `import-history`:
-1. Auth check (Bearer token → `auth.getUser`).
-2. Reads `{ storage_path, source_hint }` from body.
-3. Downloads the file from `history-imports` via service-role client.
-4. **If `.zip`**: stream-unzip with `jsr:@zip-js/zip-js`, find `apple_health_export/export.xml`.
-5. **Parse**:
-   - Apple Health: streaming XML parser (`jsr:@libs/xml` or sax). Walk `<Record>` elements, bucket by type. For periods, group consecutive `MenstrualFlow` days into cycles (start date = first day, end date = day before next start, length = diff).
-   - CSV: `papaparse` (already in deps if present, otherwise `jsr:@std/csv`). Header sniffing maps common column names to canonical fields.
-6. Look up the user's `participants.id` by email.
-7. Batch insert into `cycle_history` (skip duplicates on `(participant_id, cycle_start_date)`), `symptom_logs`, and `tracker_logs` (creating "Sleep hours" / "Workouts" trackers if missing). Use service role to bypass RLS for bulk insert.
-8. Update `history_imports` row with counts + status.
-9. Compute a summary (avg cycle length, top 3 luteal symptoms, top 3 follicular symptoms, sleep average) and pass it to a second AI call that writes the recap message in Logan's voice (2–4 sentences, no bullets — per project memory).
-10. Insert that recap as an assistant message into `chat_messages` so it shows up in chat next time the user opens it (and via realtime if subscribed).
-11. Delete the storage file.
-12. Return `{ summary, counts, date_range }` so the dialog can show the green-check state.
+### Data mapping (reuses existing tables)
 
-Edge function gets `verify_jwt = false` (validated in code) and is added to `supabase/config.toml`.
+| Provider field | Logan destination |
+|---|---|
+| Sleep duration / score | `tracker_logs` under "Sleep hours" + new "Sleep score" tracker |
+| HRV (RMSSD) | new "HRV" tracker |
+| Resting HR | new "Resting HR" tracker |
+| Workouts (count, strain) | `tracker_logs` under "Workouts" |
+| Recovery score (Whoop) | new "Recovery" tracker |
 
-## Frontend
+All scaled to 1–5 where needed so existing phase-correlation logic works automatically.
 
-- New `src/components/chat/HistoryImportDialog.tsx` — handles file selection, upload to storage (`supabase.storage.from('history-imports').upload(...)`), invokes `import-history` edge function, shows progress + result. Uses Tailwind tokens, dark glassmorphism per design system.
-- New `src/lib/historyImport.ts` — small helpers (file type detection, byte size formatting, friendly error mapping).
-- Hook into `SettingsDialog.tsx`: add "Import your history" row that opens the dialog.
-- Hook into `OnboardingEducation.tsx` / Aha Moment: a soft prompt "Have history from another app? Import it →" that opens the same dialog.
-- `Chat.tsx`: after a successful import, refresh the chat message list so the new assistant recap appears immediately.
+### Edge functions
+
+- `oauth-whoop-start`, `oauth-whoop-callback`, `sync-whoop`
+- `oauth-fitbit-start`, `oauth-fitbit-callback`, `sync-fitbit`
+- One scheduled cron (pg_cron) calls each `sync-*` hourly for active users.
+
+## Frontend changes
+
+- `SettingsDialog.tsx` — add "Connected devices" section with two `ProviderConnectCard` components.
+- `src/components/settings/ProviderConnectCard.tsx` — new, shows status (Not connected / Connected since X / Last sync Y), Connect/Disconnect buttons.
+- `src/pages/IntegrationCallback.tsx` — new route `/integrations/:provider/callback`, shows spinner, calls callback edge fn, then closes/redirects.
+- New `RecoveryWidget` on Home feeding off the new trackers.
 
 ## Limits & guardrails
 
-- Max upload 50 MB (Apple Health exports for ~1 year are typically 5–30 MB; Logan rejects bigger with a friendly message asking them to export a shorter range).
-- Per-user rate limit: max 3 imports per 24h (enforced via `history_imports` row count).
-- Imports are de-duplicated by `(participant_id, cycle_start_date)` for cycles and by `(user_id, logged_at::date, symptom_name)` for symptoms — re-running the same file is safe.
-- All AI calls use `google/gemini-2.5-flash-lite` for the parsing summary and `google/gemini-2.5-flash` for the recap message (cheap + on-brand).
+- Rate limits: Whoop 100 req/min, Fitbit 150 req/hr per user. Hourly cron + delta sync stays well under.
+- Token refresh handled in `sync-*` before each pull; failed refresh → mark `status='reauth_required'` and prompt in Settings.
+- Idempotent inserts (dedupe by `(user_id, provider, external_id)`) so re-syncs are safe.
+- Disconnect revokes token at the provider, deletes the row, keeps imported data.
 
-## Out of scope (for this first pass)
+## Phasing suggestion
 
-- Live API integrations (HealthKit OAuth, Fitbit, Garmin) — file import only.
-- Editing imported data inline — users still edit via chat ("change my last period to Apr 3").
-- Importing from screenshots / photos.
+1. **Phase 1** — Fitbit only (simpler OAuth, larger user base). Sleep + HRV + workouts + resting HR.
+2. **Phase 2** — Whoop (adds recovery score + strain).
+3. **Phase 3** — Apple Health auto-sync via the iOS shortcut pattern (still file-based but scheduled).
 
 ## Files added or changed
 
-- `supabase/migrations/...` — `history_imports` table + RLS, `history-imports` storage bucket + policies.
-- `supabase/functions/import-history/index.ts` — new.
-- `supabase/config.toml` — register the new function.
-- `src/components/chat/HistoryImportDialog.tsx` — new.
-- `src/lib/historyImport.ts` — new.
-- `src/components/chat/SettingsDialog.tsx` — add entry point.
-- `src/components/chat/OnboardingEducation.tsx` (or wherever Aha Moment lives) — add soft prompt.
-- `mem://features/history-import` + index update — new memory file documenting the importer.
+- `supabase/migrations/...` — `user_integrations` table + RLS, new tracker seed.
+- `supabase/functions/oauth-{whoop,fitbit}-start/index.ts` — new.
+- `supabase/functions/oauth-{whoop,fitbit}-callback/index.ts` — new.
+- `supabase/functions/sync-{whoop,fitbit}/index.ts` — new.
+- `supabase/config.toml` — register the 6 new functions.
+- `src/components/chat/SettingsDialog.tsx` — add Connected devices section.
+- `src/components/settings/ProviderConnectCard.tsx` — new.
+- `src/pages/IntegrationCallback.tsx` + route in `App.tsx` — new.
+- `src/components/home/RecoveryWidget.tsx` — new Home widget.
 
+## What I need from you to start
+
+1. Confirm we go **Fitbit first**, then Whoop (or both at once).
+2. You register the OAuth apps at dev.fitbit.com / developer.whoop.com and share Client IDs + Secrets when ready — I'll request them via the secrets tool.
+3. Confirm the callback URL `https://asklogan.ai/integrations/{provider}/callback` is fine (we'll also whitelist the preview URL).
