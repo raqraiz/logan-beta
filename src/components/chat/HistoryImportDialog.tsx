@@ -8,9 +8,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { CheckCircle2, Download, Loader2, Upload } from "lucide-react";
+import { CheckCircle2, Download, ImagePlus, Loader2, Upload, X } from "lucide-react";
 
 interface HistoryImportDialogProps {
   open: boolean;
@@ -30,6 +31,8 @@ const TEMPLATE_CSV = `date,period,cramps,bloating,mood,fatigue,sleep,energy
 2025-01-29,1,3,3,2,4,2,1
 `;
 
+const MAX_SCREENSHOTS = 6;
+
 export function HistoryImportDialog({
   open,
   onOpenChange,
@@ -43,13 +46,24 @@ export function HistoryImportDialog({
     recap: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pasted, setPasted] = useState("");
+  const [screenshots, setScreenshots] = useState<File[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+  const screenshotsRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
     setPhase("idle");
     setProgress("");
     setResult(null);
     setError(null);
+    setPasted("");
+    setScreenshots([]);
+  };
+
+  const handleResult = (data: { counts: typeof result extends null ? never : { cycles: number; symptom_days: number; tracker_logs: number }; recap: string }) => {
+    setResult({ counts: data.counts, recap: data.recap });
+    setPhase("done");
+    onImported?.();
   };
 
   const handleFile = async (file: File) => {
@@ -104,13 +118,85 @@ export function HistoryImportDialog({
       setError((data as { error?: string })?.error || fnErr?.message || "Import failed");
       return;
     }
+    handleResult(data);
+  };
 
-    setResult({
-      counts: data.counts,
-      recap: data.recap,
+  const handlePasteSubmit = async () => {
+    if (!userId) {
+      toast({ title: "Sign in first", variant: "destructive" });
+      return;
+    }
+    const text = pasted.trim();
+    if (text.length < 10) {
+      toast({ title: "Add some data", description: "Paste at least a few rows.", variant: "destructive" });
+      return;
+    }
+    setPhase("processing");
+    setProgress("Reading your data…");
+    const { data, error: fnErr } = await supabase.functions.invoke("import-history", {
+      body: { pasted_text: text, source_hint: "pasted" },
     });
-    setPhase("done");
-    onImported?.();
+    if (fnErr || (data as { error?: string })?.error) {
+      setPhase("error");
+      setError((data as { error?: string })?.error || fnErr?.message || "Import failed");
+      return;
+    }
+    handleResult(data);
+  };
+
+  const addScreenshots = (files: FileList | null) => {
+    if (!files) return;
+    const next = [...screenshots];
+    for (const f of Array.from(files)) {
+      if (!f.type.startsWith("image/")) continue;
+      if (f.size > 8 * 1024 * 1024) {
+        toast({ title: `${f.name} is too large`, description: "Max 8 MB per image.", variant: "destructive" });
+        continue;
+      }
+      if (next.length >= MAX_SCREENSHOTS) break;
+      next.push(f);
+    }
+    setScreenshots(next);
+  };
+
+  const handleScreenshotsSubmit = async () => {
+    if (!userId) {
+      toast({ title: "Sign in first", variant: "destructive" });
+      return;
+    }
+    if (!screenshots.length) {
+      toast({ title: "Add at least one screenshot", variant: "destructive" });
+      return;
+    }
+    setPhase("uploading");
+    setProgress(`Uploading ${screenshots.length} image${screenshots.length === 1 ? "" : "s"}…`);
+
+    const paths: string[] = [];
+    for (const f of screenshots) {
+      const ext = (f.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext || "png"}`;
+      const { error: upErr } = await supabase.storage
+        .from("history-imports")
+        .upload(path, f, { upsert: false, contentType: f.type || "image/png" });
+      if (upErr) {
+        setPhase("error");
+        setError(upErr.message);
+        return;
+      }
+      paths.push(path);
+    }
+
+    setPhase("processing");
+    setProgress("Logan is reading your screenshots…");
+    const { data, error: fnErr } = await supabase.functions.invoke("import-history", {
+      body: { image_paths: paths, source_hint: "screenshot" },
+    });
+    if (fnErr || (data as { error?: string })?.error) {
+      setPhase("error");
+      setError((data as { error?: string })?.error || fnErr?.message || "Import failed");
+      return;
+    }
+    handleResult(data);
   };
 
   const downloadTemplate = () => {
@@ -141,48 +227,116 @@ export function HistoryImportDialog({
         </DialogHeader>
 
         {phase === "idle" && (
-          <>
-            <Tabs defaultValue="apple" className="mt-2">
-              <TabsList className="grid grid-cols-3 w-full">
-                <TabsTrigger value="apple">Apple Health</TabsTrigger>
-                <TabsTrigger value="csv">Period app CSV</TabsTrigger>
-                <TabsTrigger value="template">Generic CSV</TabsTrigger>
-              </TabsList>
-              <TabsContent value="apple" className="text-sm text-muted-foreground space-y-2 mt-3">
-                <p>On your iPhone, open the <strong>Health</strong> app → tap your photo top-right → scroll down → <strong>Export All Health Data</strong>. AirDrop or email the resulting <code className="text-xs">export.zip</code> to yourself, then upload it here.</p>
-                <p>Cycles, symptoms (cramps, mood, sleep, headaches…), sleep hours, and workouts will all import.</p>
-              </TabsContent>
-              <TabsContent value="csv" className="text-sm text-muted-foreground space-y-2 mt-3">
-                <p>Most period trackers (Clue, Flo, Natural Cycles, Stardust, Apple Cycle Tracking) let you export a CSV from settings. Upload it as-is — Logan auto-detects the columns.</p>
-              </TabsContent>
-              <TabsContent value="template" className="text-sm text-muted-foreground space-y-3 mt-3">
-                <p>Download Logan's template, fill it in from any source, and upload.</p>
-                <Button variant="outline" size="sm" onClick={downloadTemplate}>
-                  <Download className="w-4 h-4 mr-2" /> Download template
-                </Button>
-              </TabsContent>
-            </Tabs>
+          <Tabs defaultValue="apple" className="mt-2">
+            <TabsList className="grid grid-cols-5 w-full">
+              <TabsTrigger value="apple" className="text-xs">Apple Health</TabsTrigger>
+              <TabsTrigger value="csv" className="text-xs">CSV</TabsTrigger>
+              <TabsTrigger value="paste" className="text-xs">Paste</TabsTrigger>
+              <TabsTrigger value="screenshot" className="text-xs">Screenshot</TabsTrigger>
+              <TabsTrigger value="template" className="text-xs">Template</TabsTrigger>
+            </TabsList>
 
-            <div className="mt-4">
+            <TabsContent value="apple" className="text-sm text-muted-foreground space-y-3 mt-3">
+              <p>On your iPhone, open the <strong>Health</strong> app → tap your photo top-right → scroll down → <strong>Export All Health Data</strong>. AirDrop or email the resulting <code className="text-xs">export.zip</code> to yourself, then upload it here.</p>
+              <p>Cycles, symptoms (cramps, mood, sleep, headaches…), sleep hours, and workouts will all import.</p>
+              <Button className="w-full" onClick={() => fileRef.current?.click()}>
+                <Upload className="w-4 h-4 mr-2" /> Choose .zip or .xml
+              </Button>
+            </TabsContent>
+
+            <TabsContent value="csv" className="text-sm text-muted-foreground space-y-3 mt-3">
+              <p>Most period trackers (Clue, Flo, Natural Cycles, Stardust, Apple Cycle Tracking) let you export a CSV from settings. Upload it as-is — Logan auto-detects the columns.</p>
+              <Button className="w-full" onClick={() => fileRef.current?.click()}>
+                <Upload className="w-4 h-4 mr-2" /> Choose .csv
+              </Button>
+            </TabsContent>
+
+            <TabsContent value="paste" className="text-sm text-muted-foreground space-y-3 mt-3">
+              <p>Copy rows directly from Excel, Google Sheets, Numbers, or Notes — Logan reads commas or tabs.</p>
+              <Textarea
+                value={pasted}
+                onChange={(e) => setPasted(e.target.value)}
+                placeholder={"date,period,cramps,mood,sleep\n2025-01-01,1,3,2,3\n2025-01-15,0,0,4,4\n2025-01-29,1,2,2,3"}
+                className="min-h-[180px] font-mono text-xs"
+              />
+              <p className="text-[11px] text-muted-foreground/80">
+                Include a header row with at least a <code>date</code> column. Period column can be 1/0 or true/false. Symptom columns can be 0–5 or words like mild/moderate/severe.
+              </p>
+              <Button className="w-full" onClick={handlePasteSubmit} disabled={!pasted.trim()}>
+                Import pasted data
+              </Button>
+            </TabsContent>
+
+            <TabsContent value="screenshot" className="text-sm text-muted-foreground space-y-3 mt-3">
+              <p>Upload up to {MAX_SCREENSHOTS} screenshots of your period-tracker calendar. Logan will read the dates and symptoms with AI.</p>
+              {screenshots.length > 0 && (
+                <div className="grid grid-cols-3 gap-2">
+                  {screenshots.map((f, i) => (
+                    <div key={i} className="relative group rounded-md overflow-hidden border border-border/50 aspect-square">
+                      <img src={URL.createObjectURL(f)} alt={f.name} className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => setScreenshots(screenshots.filter((_, j) => j !== i))}
+                        className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 rounded-full p-0.5"
+                        aria-label="Remove"
+                      >
+                        <X className="w-3 h-3 text-white" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <input
-                ref={fileRef}
+                ref={screenshotsRef}
                 type="file"
-                accept=".zip,.xml,.csv"
+                accept="image/*"
+                multiple
                 className="hidden"
                 onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleFile(f);
+                  addScreenshots(e.target.files);
                   e.currentTarget.value = "";
                 }}
               />
-              <Button className="w-full" onClick={() => fileRef.current?.click()}>
-                <Upload className="w-4 h-4 mr-2" /> Choose file (.zip, .xml, .csv)
-              </Button>
-              <p className="text-[11px] text-muted-foreground/80 mt-2 text-center">
-                Files are processed and deleted right after. Max 60 MB. Up to 3 imports per day.
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => screenshotsRef.current?.click()}
+                  disabled={screenshots.length >= MAX_SCREENSHOTS}
+                >
+                  <ImagePlus className="w-4 h-4 mr-2" />
+                  {screenshots.length ? `Add more (${screenshots.length}/${MAX_SCREENSHOTS})` : "Add screenshots"}
+                </Button>
+                <Button className="flex-1" onClick={handleScreenshotsSubmit} disabled={!screenshots.length}>
+                  Import
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground/80">
+                Clearer screenshots = better extraction. AI may miss data on cluttered or low-resolution images.
               </p>
-            </div>
-          </>
+            </TabsContent>
+
+            <TabsContent value="template" className="text-sm text-muted-foreground space-y-3 mt-3">
+              <p>Download Logan's template, fill it in from any source, and upload it back as CSV.</p>
+              <Button variant="outline" size="sm" onClick={downloadTemplate}>
+                <Download className="w-4 h-4 mr-2" /> Download template
+              </Button>
+            </TabsContent>
+
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".zip,.xml,.csv"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleFile(f);
+                e.currentTarget.value = "";
+              }}
+            />
+            <p className="text-[11px] text-muted-foreground/80 mt-3 text-center">
+              Files and screenshots are processed and deleted right after. Up to 3 imports per day.
+            </p>
+          </Tabs>
         )}
 
         {(phase === "uploading" || phase === "processing") && (
