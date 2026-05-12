@@ -22,15 +22,6 @@ interface HistoryImportDialogProps {
 
 type Phase = "idle" | "uploading" | "processing" | "done" | "error";
 
-const TEMPLATE_CSV = `date,period,cramps,bloating,mood,fatigue,sleep,energy
-2025-01-01,1,3,2,2,3,3,2
-2025-01-02,1,2,1,2,2,3,2
-2025-01-03,1,1,0,3,2,4,3
-2025-01-15,0,0,0,4,1,4,5
-2025-01-22,0,0,2,2,3,3,2
-2025-01-29,1,3,3,2,4,2,1
-`;
-
 const MAX_SCREENSHOTS = 6;
 
 export function HistoryImportDialog({
@@ -199,8 +190,6 @@ export function HistoryImportDialog({
     handleResult(data);
   };
 
-  const templateDownloadHref = `data:text/csv;charset=utf-8,${encodeURIComponent(TEMPLATE_CSV)}`;
-
 
   return (
     <Dialog
@@ -312,8 +301,10 @@ export function HistoryImportDialog({
               <p>Download Logan's template, fill it in from any source, and upload it back as CSV.</p>
               <Button variant="outline" size="sm" asChild>
                 <a
-                  href={templateDownloadHref}
+                  href="/logan-history-template.csv"
                   download="logan-history-template.csv"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   onClick={() => toast({ title: "Template downloaded" })}
                 >
                   <Download className="w-4 h-4 mr-2" /> Download template
