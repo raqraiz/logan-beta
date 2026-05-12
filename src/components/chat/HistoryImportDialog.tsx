@@ -338,7 +338,9 @@ export function HistoryImportDialog({
               <div>
                 <p className="text-sm font-medium">Import complete</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {result.counts.cycles} cycles · {result.counts.symptom_days} symptom days · {result.counts.tracker_logs} tracker entries
+                  {result.kind === "history"
+                    ? `${result.counts.cycles} cycles · ${result.counts.symptom_days} symptom days · ${result.counts.tracker_logs} tracker entries`
+                    : `${result.marker_count} markers · ${result.flagged_count} flagged${result.taken_on ? ` · ${result.taken_on}` : ""}`}
                 </p>
               </div>
             </div>
