@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Upload } from "lucide-react";
 import { HistoryImportDialog } from "./HistoryImportDialog";
+import { ProviderConnectCard } from "@/components/settings/ProviderConnectCard";
 
 type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause";
 
@@ -110,6 +111,14 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
           <Button variant="outline" className="w-full" onClick={() => setImporterOpen(true)}>
             <Upload className="w-4 h-4 mr-2" /> Import from another app
           </Button>
+        </div>
+
+        <div className="border-t border-border/50 pt-4">
+          <Label className="text-sm font-medium mb-2 block">Connected devices</Label>
+          <p className="text-xs text-muted-foreground mb-3">
+            Auto-sync sleep, recovery, HRV, and workouts so Logan adapts in real time.
+          </p>
+          <ProviderConnectCard provider="whoop" userId={userId} />
         </div>
 
         <DialogFooter>

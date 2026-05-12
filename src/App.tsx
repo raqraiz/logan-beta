@@ -12,6 +12,7 @@ import AuthCallback from "./pages/AuthCallback";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import Community from "./pages/Community";
+import IntegrationCallback from "./pages/IntegrationCallback";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/admin" element={<Admin />} />
             <Route path="/consent" element={<Consent />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/integrations/:provider/callback" element={<IntegrationCallback />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
