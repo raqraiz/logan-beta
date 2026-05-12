@@ -210,12 +210,11 @@ export function HistoryImportDialog({
 
         {phase === "idle" && (
           <Tabs defaultValue="apple" className="mt-2">
-            <TabsList className="grid grid-cols-5 w-full">
+            <TabsList className="grid grid-cols-4 w-full">
               <TabsTrigger value="apple" className="text-xs">Apple Health</TabsTrigger>
               <TabsTrigger value="csv" className="text-xs">CSV</TabsTrigger>
               <TabsTrigger value="paste" className="text-xs">Paste</TabsTrigger>
               <TabsTrigger value="screenshot" className="text-xs">Screenshot</TabsTrigger>
-              <TabsTrigger value="template" className="text-xs">Template</TabsTrigger>
             </TabsList>
 
             <TabsContent value="apple" className="text-sm text-muted-foreground space-y-3 mt-3">
