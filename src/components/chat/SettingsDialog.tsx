@@ -120,6 +120,12 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
           </Button>
         </DialogFooter>
       </DialogContent>
+      <HistoryImportDialog
+        open={importerOpen}
+        onOpenChange={setImporterOpen}
+        userId={userId}
+        onImported={onHistoryImported}
+      />
     </Dialog>
   );
 }
