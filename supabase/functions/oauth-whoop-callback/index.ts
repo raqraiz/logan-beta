@@ -106,6 +106,19 @@ Deno.serve(async (req) => {
       return redirect("error", "Could not save connection");
     }
 
+    // Send Logan's welcome brief
+    try {
+      await admin.from("chat_messages").insert({
+        user_id: userId,
+        role: "assistant",
+        content: "Your Whoop is connected. I'm pulling your last 30 days of recovery, sleep, and strain data so my guidance can adapt to how your body actually responds.",
+        message_type: "text",
+        metadata: { source: "whoop_welcome" },
+      });
+    } catch (msgErr) {
+      console.error("Welcome message insert failed", msgErr);
+    }
+
     // Kick off initial sync (fire and forget)
     fetch(`${SUPABASE_URL}/functions/v1/sync-whoop`, {
       method: "POST",
