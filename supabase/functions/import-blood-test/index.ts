@@ -9,6 +9,7 @@ const corsHeaders = {
 
 const MAX_IMAGES = 6;
 const PER_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
+const PER_PDF_MAX_BYTES = 20 * 1024 * 1024;
 
 type Marker = {
   name: string;
