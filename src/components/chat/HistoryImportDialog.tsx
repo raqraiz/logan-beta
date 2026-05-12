@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { CheckCircle2, FlaskConical, ImagePlus, Loader2, Upload, X } from "lucide-react";
+import { CheckCircle2, FileText, FlaskConical, ImagePlus, Loader2, Upload, X } from "lucide-react";
 
 interface HistoryImportDialogProps {
   open: boolean;
