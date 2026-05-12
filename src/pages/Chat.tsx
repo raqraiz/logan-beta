@@ -1650,10 +1650,15 @@ const Chat = () => {
       open={settingsOpen}
       onOpenChange={setSettingsOpen}
       userEmail={user?.email || undefined}
+      userId={user?.id}
       currentLifeStage={lifeStage}
       onUpdated={(newStage) => {
         setLifeStage(newStage);
         if (newStage !== "postpartum") setPostpartumStartDate(null);
+      }}
+      onHistoryImported={() => {
+        // Reload to surface the new assistant recap message + refreshed analytics
+        window.location.reload();
       }}
     />
     </>

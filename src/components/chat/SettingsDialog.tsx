@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
+import { HistoryImportDialog } from "./HistoryImportDialog";
 
 type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause";
 
@@ -13,13 +14,16 @@ interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userEmail: string | undefined;
+  userId?: string;
   currentLifeStage: LifeStage;
   onUpdated?: (newStage: LifeStage) => void;
+  onHistoryImported?: () => void;
 }
 
-export function SettingsDialog({ open, onOpenChange, userEmail, currentLifeStage, onUpdated }: SettingsDialogProps) {
+export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentLifeStage, onUpdated, onHistoryImported }: SettingsDialogProps) {
   const [stage, setStage] = useState<LifeStage>(currentLifeStage);
   const [saving, setSaving] = useState(false);
+  const [importerOpen, setImporterOpen] = useState(false);
 
   useEffect(() => {
     if (open) setStage(currentLifeStage);
@@ -98,6 +102,16 @@ export function SettingsDialog({ open, onOpenChange, userEmail, currentLifeStage
           </p>
         </div>
 
+        <div className="border-t border-border/50 pt-4">
+          <Label className="text-sm font-medium mb-2 block">Import history</Label>
+          <p className="text-xs text-muted-foreground mb-3">
+            Pull months of cycles, symptoms, sleep, and workouts from Apple Health or any period tracker (Clue, Flo, Natural Cycles).
+          </p>
+          <Button variant="outline" className="w-full" onClick={() => setImporterOpen(true)}>
+            <Upload className="w-4 h-4 mr-2" /> Import from another app
+          </Button>
+        </div>
+
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving}>
@@ -106,6 +120,12 @@ export function SettingsDialog({ open, onOpenChange, userEmail, currentLifeStage
           </Button>
         </DialogFooter>
       </DialogContent>
+      <HistoryImportDialog
+        open={importerOpen}
+        onOpenChange={setImporterOpen}
+        userId={userId}
+        onImported={onHistoryImported}
+      />
     </Dialog>
   );
 }
