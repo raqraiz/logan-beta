@@ -8,9 +8,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
 
-import { Send, Loader2, LogOut, ChevronLeft, ChevronRight, ArrowDown, MessageSquarePlus, MessageCircle, Settings as SettingsIcon } from "lucide-react";
+import { Send, Loader2, LogOut, ChevronLeft, ChevronRight, ArrowDown, MessageSquarePlus, MessageCircle, Settings as SettingsIcon, Paperclip } from "lucide-react";
 import { FeedbackModal } from "@/components/chat/FeedbackModal";
 import { SettingsDialog } from "@/components/chat/SettingsDialog";
+import { HistoryImportDialog } from "@/components/chat/HistoryImportDialog";
 import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
 import { format } from "date-fns";
 import { SymptomPicker } from "@/components/chat/SymptomPicker";
