@@ -268,7 +268,7 @@ export function HistoryImportDialog({
         <DialogHeader>
           <DialogTitle>Import your history</DialogTitle>
           <DialogDescription>
-            Bring months of cycle, symptom, sleep, and workout data from another app.
+            Bring months of cycle, symptom, sleep, workout, and blood test data from anywhere.
             Logan uses it instantly for analytics, predictions, and chat memory.
           </DialogDescription>
         </DialogHeader>
