@@ -32,10 +32,11 @@ export function HistoryImportDialog({
 }: HistoryImportDialogProps) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [progress, setProgress] = useState("");
-  const [result, setResult] = useState<{
-    counts: { cycles: number; symptom_days: number; tracker_logs: number };
-    recap: string;
-  } | null>(null);
+  const [result, setResult] = useState<
+    | { kind: "history"; counts: { cycles: number; symptom_days: number; tracker_logs: number }; recap: string }
+    | { kind: "lab"; marker_count: number; flagged_count: number; taken_on: string | null; recap: string }
+    | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const [pasted, setPasted] = useState("");
   const [screenshots, setScreenshots] = useState<File[]>([]);
