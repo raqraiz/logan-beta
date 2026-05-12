@@ -30,13 +30,51 @@ serve(async (req) => {
       });
     }
 
-    const { prompt, phase, cycleDay, cycleLengthDays } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const promptRaw = typeof body.prompt === "string" ? body.prompt : "";
+    const prompt = promptRaw.trim().slice(0, 500);
 
-    if (!prompt || !phase) {
-      return new Response(JSON.stringify({ error: "Missing prompt or phase" }), {
+    if (!prompt) {
+      return new Response(JSON.stringify({ error: "Missing prompt" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Fetch authoritative cycle data server-side from participants
+    const supabaseService = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    const userEmail = userData.user.email;
+    let phase = "Follicular";
+    let cycleDay = 1;
+    let cycleLengthDays = 28;
+
+    if (userEmail) {
+      const { data: participant } = await supabaseService
+        .from("participants")
+        .select("cycle_length_days, last_period_start, life_stage")
+        .eq("email", userEmail)
+        .maybeSingle();
+
+      if (participant?.cycle_length_days) {
+        const len = Number(participant.cycle_length_days);
+        if (Number.isFinite(len)) cycleLengthDays = Math.min(45, Math.max(18, len));
+      }
+      if (participant?.last_period_start) {
+        const start = new Date(participant.last_period_start + "T12:00:00Z");
+        const now = new Date();
+        const diffDays = Math.floor((now.getTime() - start.getTime()) / 86400000);
+        const day = ((diffDays % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
+        cycleDay = Math.min(60, Math.max(1, day));
+        const ovulationDay = cycleLengthDays - 14;
+        if (cycleDay <= 5) phase = "Menstruation";
+        else if (cycleDay < ovulationDay - 1) phase = "Follicular";
+        else if (cycleDay <= ovulationDay + 1) phase = "Ovulation";
+        else phase = "Luteal";
+      }
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
