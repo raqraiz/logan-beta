@@ -362,6 +362,53 @@ export function HistoryImportDialog({
               </p>
             </TabsContent>
 
+            <TabsContent value="bloodtest" className="text-sm text-muted-foreground space-y-3 mt-3">
+              <p>Snap or screenshot your lab results (Labcorp, Quest, hospital portal, anything). Logan reads markers like ferritin, vitamin D, thyroid (TSH/T3/T4), sex hormones, HbA1c, lipids — up to {MAX_SCREENSHOTS} pages at a time — and references them in chat.</p>
+              {labImages.length > 0 && (
+                <div className="grid grid-cols-3 gap-2">
+                  {labImages.map((f, i) => (
+                    <div key={i} className="relative group rounded-md overflow-hidden border border-border/50 aspect-square">
+                      <img src={URL.createObjectURL(f)} alt={f.name} className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => setLabImages(labImages.filter((_, j) => j !== i))}
+                        className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 rounded-full p-0.5"
+                        aria-label="Remove"
+                      >
+                        <X className="w-3 h-3 text-white" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <input
+                ref={labImagesRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  addLabImages(e.target.files);
+                  e.currentTarget.value = "";
+                }}
+              />
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => labImagesRef.current?.click()}
+                  disabled={labImages.length >= MAX_SCREENSHOTS}
+                >
+                  <ImagePlus className="w-4 h-4 mr-2" />
+                  {labImages.length ? `Add more (${labImages.length}/${MAX_SCREENSHOTS})` : "Add lab photos"}
+                </Button>
+                <Button className="flex-1" onClick={handleLabSubmit} disabled={!labImages.length}>
+                  <FlaskConical className="w-4 h-4 mr-2" /> Extract
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground/80">
+                Best with the results table fully in frame and in focus. Logan won't diagnose — it surfaces patterns to bring to your clinician.
+              </p>
+            </TabsContent>
 
             <input
               ref={fileRef}
