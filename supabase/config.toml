@@ -15,6 +15,12 @@ project_id = "tpohsmxpcqqgxcgectfs"
     verify_jwt = false
   [functions.import-history]
     verify_jwt = false
+  [functions.oauth-whoop-start]
+    verify_jwt = false
+  [functions.oauth-whoop-callback]
+    verify_jwt = false
+  [functions.sync-whoop]
+    verify_jwt = false
   [functions.process-email-queue]
     verify_jwt = true
   [functions.trial-chat]
