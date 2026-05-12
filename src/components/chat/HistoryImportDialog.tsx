@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { CheckCircle2, FlaskConical, ImagePlus, Loader2, Upload, X } from "lucide-react";
+import { CheckCircle2, FileText, FlaskConical, ImagePlus, Loader2, Upload, X } from "lucide-react";
 
 interface HistoryImportDialogProps {
   open: boolean;
@@ -205,9 +205,16 @@ export function HistoryImportDialog({
     if (!files) return;
     const next = [...labImages];
     for (const f of Array.from(files)) {
-      if (!f.type.startsWith("image/")) continue;
-      if (f.size > 8 * 1024 * 1024) {
-        toast({ title: `${f.name} is too large`, description: "Max 8 MB per image.", variant: "destructive" });
+      const isPdf = f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf");
+      const isImage = f.type.startsWith("image/");
+      if (!isPdf && !isImage) continue;
+      const limit = isPdf ? 20 * 1024 * 1024 : 8 * 1024 * 1024;
+      if (f.size > limit) {
+        toast({
+          title: `${f.name} is too large`,
+          description: isPdf ? "Max 20 MB per PDF." : "Max 8 MB per image.",
+          variant: "destructive",
+        });
         continue;
       }
       if (next.length >= MAX_SCREENSHOTS) break;
@@ -363,27 +370,38 @@ export function HistoryImportDialog({
             </TabsContent>
 
             <TabsContent value="bloodtest" className="text-sm text-muted-foreground space-y-3 mt-3">
-              <p>Snap or screenshot your lab results (Labcorp, Quest, hospital portal, anything). Logan reads markers like ferritin, vitamin D, thyroid (TSH/T3/T4), sex hormones, HbA1c, lipids — up to {MAX_SCREENSHOTS} pages at a time — and references them in chat.</p>
+              <p>Upload a PDF report or snap photos/screenshots of your lab results (Labcorp, Quest, hospital portal, anything). Logan reads markers like ferritin, vitamin D, thyroid (TSH/T3/T4), sex hormones, HbA1c, lipids — up to {MAX_SCREENSHOTS} files at a time — and references them in chat.</p>
               {labImages.length > 0 && (
                 <div className="grid grid-cols-3 gap-2">
-                  {labImages.map((f, i) => (
-                    <div key={i} className="relative group rounded-md overflow-hidden border border-border/50 aspect-square">
-                      <img src={URL.createObjectURL(f)} alt={f.name} className="w-full h-full object-cover" />
-                      <button
-                        onClick={() => setLabImages(labImages.filter((_, j) => j !== i))}
-                        className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 rounded-full p-0.5"
-                        aria-label="Remove"
-                      >
-                        <X className="w-3 h-3 text-white" />
-                      </button>
-                    </div>
-                  ))}
+                  {labImages.map((f, i) => {
+                    const isPdf = f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf");
+                    return (
+                      <div key={i} className="relative group rounded-md overflow-hidden border border-border/50 aspect-square">
+                        {isPdf ? (
+                          <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-muted/30 px-2 text-center">
+                            <FileText className="w-6 h-6 text-primary" />
+                            <span className="text-[10px] text-foreground/80 truncate w-full" title={f.name}>{f.name}</span>
+                            <span className="text-[9px] text-muted-foreground">{(f.size / 1024 / 1024).toFixed(1)} MB</span>
+                          </div>
+                        ) : (
+                          <img src={URL.createObjectURL(f)} alt={f.name} className="w-full h-full object-cover" />
+                        )}
+                        <button
+                          onClick={() => setLabImages(labImages.filter((_, j) => j !== i))}
+                          className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 rounded-full p-0.5"
+                          aria-label="Remove"
+                        >
+                          <X className="w-3 h-3 text-white" />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
               <input
                 ref={labImagesRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,application/pdf,.pdf"
                 multiple
                 className="hidden"
                 onChange={(e) => {
@@ -399,14 +417,14 @@ export function HistoryImportDialog({
                   disabled={labImages.length >= MAX_SCREENSHOTS}
                 >
                   <ImagePlus className="w-4 h-4 mr-2" />
-                  {labImages.length ? `Add more (${labImages.length}/${MAX_SCREENSHOTS})` : "Add lab photos"}
+                  {labImages.length ? `Add more (${labImages.length}/${MAX_SCREENSHOTS})` : "Add PDF or photos"}
                 </Button>
                 <Button className="flex-1" onClick={handleLabSubmit} disabled={!labImages.length}>
                   <FlaskConical className="w-4 h-4 mr-2" /> Extract
                 </Button>
               </div>
               <p className="text-[11px] text-muted-foreground/80">
-                Best with the results table fully in frame and in focus. Logan won't diagnose — it surfaces patterns to bring to your clinician.
+                PDFs work best (up to 20 MB). For photos: results table fully in frame and in focus. Logan won't diagnose — it surfaces patterns to bring to your clinician.
               </p>
             </TabsContent>
 

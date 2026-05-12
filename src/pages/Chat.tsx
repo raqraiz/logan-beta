@@ -8,9 +8,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
 
-import { Send, Loader2, LogOut, ChevronLeft, ChevronRight, ArrowDown, MessageSquarePlus, MessageCircle, Settings as SettingsIcon } from "lucide-react";
+import { Send, Loader2, LogOut, ChevronLeft, ChevronRight, ArrowDown, MessageSquarePlus, MessageCircle, Settings as SettingsIcon, Paperclip } from "lucide-react";
 import { FeedbackModal } from "@/components/chat/FeedbackModal";
 import { SettingsDialog } from "@/components/chat/SettingsDialog";
+import { HistoryImportDialog } from "@/components/chat/HistoryImportDialog";
 import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
 import { format } from "date-fns";
 import { SymptomPicker } from "@/components/chat/SymptomPicker";
@@ -137,6 +138,7 @@ const Chat = () => {
   const [outOfCredits, setOutOfCredits] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [showTopicPrompt, setShowTopicPrompt] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("ask");
   const [visibleStarters, setVisibleStarters] = useState<string[]>([]);
@@ -1588,7 +1590,21 @@ const Chat = () => {
             )}
           </div>
           <form onSubmit={sendMessage} className="max-w-3xl mx-auto px-4 py-4">
-            <div className="flex gap-3">
+            <div className="flex gap-2">
+              {!isOnboarding && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-12 w-12 shrink-0"
+                  onClick={() => setImportOpen(true)}
+                  disabled={isSending}
+                  aria-label="Import history or blood test"
+                  title="Import history or blood test"
+                >
+                  <Paperclip className="w-5 h-5" />
+                </Button>
+              )}
               <Input
                 ref={inputRef}
                 value={inputValue}
@@ -1658,6 +1674,15 @@ const Chat = () => {
       }}
       onHistoryImported={() => {
         // Reload to surface the new assistant recap message + refreshed analytics
+        window.location.reload();
+      }}
+    />
+    <HistoryImportDialog
+      open={importOpen}
+      onOpenChange={setImportOpen}
+      userId={user?.id}
+      onImported={() => {
+        // Surface new recap message + refreshed analytics
         window.location.reload();
       }}
     />

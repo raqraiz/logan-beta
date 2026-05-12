@@ -9,6 +9,7 @@ const corsHeaders = {
 
 const MAX_IMAGES = 6;
 const PER_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
+const PER_PDF_MAX_BYTES = 20 * 1024 * 1024;
 
 type Marker = {
   name: string;
@@ -129,21 +130,26 @@ serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // Build image parts
+    // Build image / pdf parts
     const imageParts: { type: "image_url"; image_url: { url: string } }[] = [];
     for (const p of imagePaths) {
       const { data: blob } = await admin.storage.from("history-imports").download(p);
       if (!blob) continue;
-      if (blob.size > PER_IMAGE_MAX_BYTES) continue;
+      const isPdf = (blob.type || "").includes("pdf") || p.toLowerCase().endsWith(".pdf");
+      const limit = isPdf ? PER_PDF_MAX_BYTES : PER_IMAGE_MAX_BYTES;
+      if (blob.size > limit) continue;
       const buf = new Uint8Array(await blob.arrayBuffer());
       let bin = "";
-      for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+      const CHUNK = 0x8000;
+      for (let i = 0; i < buf.length; i += CHUNK) {
+        bin += String.fromCharCode.apply(null, buf.subarray(i, i + CHUNK) as unknown as number[]);
+      }
       const b64 = btoa(bin);
-      const mime = blob.type || "image/png";
+      const mime = isPdf ? "application/pdf" : (blob.type || "image/png");
       imageParts.push({ type: "image_url", image_url: { url: `data:${mime};base64,${b64}` } });
     }
     if (!imageParts.length) {
-      return new Response(JSON.stringify({ error: "Could not read those images." }), {
+      return new Response(JSON.stringify({ error: "Could not read those files." }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
