@@ -178,8 +178,7 @@ export function MenuLibraryDialog({ open, onOpenChange, userId, onCreateNew }: M
           userId={userId}
           editMode
           initialValues={{
-            lengthDays: editTarget.metadata?.length_days,
-            style: editTarget.style,
+            mode: editTarget.metadata?.mode ?? editTarget.metadata?.preview?.mode ?? "ideas",
             dietaryPrefs: (editTarget.metadata?.dietary_prefs ?? null) as any,
           }}
         />

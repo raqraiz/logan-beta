@@ -8,25 +8,14 @@ import { cn } from "@/lib/utils";
 
 type ResourceMetadata = {
   preview?: {
+    mode?: "ideas" | "mix";
     intro?: string;
-    days?: Array<{
-      day_number: number;
-      cycle_day: number;
-      phase: string;
-      breakfast: string;
-      lunch: string;
-      dinner: string;
-      snack: string;
-      hormone_focus?: string;
-      image_path?: string | null;
-    }>;
-    weeks?: Array<{
-      week_number: number;
-      phase_summary: string;
-      grocery_list: string[];
-    }>;
+    phase?: string;
+    cycle_day?: number | null;
+    life_stage?: string;
+    [key: string]: unknown;
   } | null;
-  length_days?: number;
+  mode?: "ideas" | "mix";
   dietary_prefs?: Record<string, unknown>;
 };
 
@@ -61,9 +50,9 @@ export function ResourceOfferCard({ userId, resourceType }: { userId: string; re
               Free during alpha
             </span>
           </div>
-          <h3 className="text-base font-semibold text-foreground mb-1">Cyclical meal plan</h3>
+          <h3 className="text-base font-semibold text-foreground mb-1">Phase-tailored menu</h3>
           <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-            Each meal aligned to your phase. Includes a grocery list and preview.
+            Meal ideas + foods picked for where you are right now.
           </p>
           <Button onClick={() => setOpen(true)} variant="premium" size="sm" className="w-full">
             <Sparkles className="h-3.5 w-3.5" /> Build it
@@ -134,23 +123,8 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
     };
   }, [resourceId]);
 
-  const handlePreview = async () => {
+  const handlePreview = () => {
     setPreviewOpen(true);
-    if (resource?.metadata?.preview?.days?.length || !resource?.pdf_path) return;
-    // Always regenerate to avoid stale/expired signed URLs
-    setPreviewUrl(null);
-    setPreviewLoading(true);
-    try {
-      const { data, error } = await supabase.storage
-        .from("resources")
-        .createSignedUrl(resource.pdf_path, 60 * 60);
-      if (error || !data?.signedUrl) throw error;
-      setPreviewUrl(data.signedUrl);
-    } catch (err) {
-      console.error("Preview failed:", err);
-    } finally {
-      setPreviewLoading(false);
-    }
   };
 
   const handleReact = async (next: "up" | "down") => {
@@ -184,8 +158,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
       await supabase.functions.invoke("generate-meal-plan", {
         body: {
           parentResourceId: resourceId,
-          style: resource.style,
-          lengthDays: resource.metadata?.length_days,
+          mode: resource.metadata?.mode ?? resource.metadata?.preview?.mode ?? "ideas",
           excludeIngredients,
           feedbackText,
           dietaryPrefs: resource.metadata?.dietary_prefs ?? {},
@@ -272,7 +245,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-1">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">
-              Meal plan · {resource.style === "light" ? "Light" : "Dark"} PDF
+              Menu · {(resource.metadata?.mode ?? resource.metadata?.preview?.mode) === "mix" ? "Mix" : "Ideas"}
             </span>
           </div>
           <h3 className="text-sm font-semibold text-foreground leading-tight">{resource.title}</h3>
@@ -281,7 +254,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
             <div className="mt-2 flex items-center gap-2">
               <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
               <span className="text-xs text-muted-foreground">
-                Building your plan… this takes ~10–60 seconds.
+                Tailoring it to today… a few seconds.
               </span>
             </div>
           )}
@@ -339,8 +312,7 @@ export function ResourceCard({ resourceId, userId }: { resourceId: string; userI
         userId={userId}
         editMode
         initialValues={{
-          lengthDays: resource.metadata?.length_days,
-          style: resource.style,
+          mode: resource.metadata?.mode ?? resource.metadata?.preview?.mode ?? "ideas",
           dietaryPrefs: (resource.metadata?.dietary_prefs ?? null) as any,
         }}
       />
