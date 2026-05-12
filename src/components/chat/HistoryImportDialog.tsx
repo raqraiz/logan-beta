@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { CheckCircle2, Download, ImagePlus, Loader2, Upload, X } from "lucide-react";
 
 interface HistoryImportDialogProps {
@@ -213,10 +213,10 @@ export function HistoryImportDialog({
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       }, 100);
-      toast.success("Template downloaded");
+      toast({ title: "Template downloaded" });
     } catch (e) {
       console.error("Template download failed", e);
-      toast.error("Could not download template");
+      toast({ title: "Could not download template", variant: "destructive" });
     }
   };
 
