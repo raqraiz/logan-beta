@@ -50,9 +50,9 @@ export function ResourceOfferCard({ userId, resourceType }: { userId: string; re
               Free during alpha
             </span>
           </div>
-          <h3 className="text-base font-semibold text-foreground mb-1">Cyclical meal plan</h3>
+          <h3 className="text-base font-semibold text-foreground mb-1">Phase-tailored menu</h3>
           <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-            Each meal aligned to your phase. Includes a grocery list and preview.
+            Meal ideas + foods picked for where you are right now.
           </p>
           <Button onClick={() => setOpen(true)} variant="premium" size="sm" className="w-full">
             <Sparkles className="h-3.5 w-3.5" /> Build it
