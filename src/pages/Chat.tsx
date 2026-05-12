@@ -1677,6 +1677,15 @@ const Chat = () => {
         window.location.reload();
       }}
     />
+    <HistoryImportDialog
+      open={importOpen}
+      onOpenChange={setImportOpen}
+      userId={user?.id}
+      onImported={() => {
+        // Surface new recap message + refreshed analytics
+        window.location.reload();
+      }}
+    />
     </>
   );
 };
