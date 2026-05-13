@@ -1615,7 +1615,7 @@ const Chat = () => {
                     e.target.scrollIntoView({ block: "center", behavior: "smooth" });
                   }, 300);
                 }}
-                placeholder={isOnboarding ? "Type your answer..." : "Ask me anything — or just vent..."}
+                placeholder={isOnboarding ? "Type your answer..." : "Ask me anything..."}
                 className="flex-1 h-12"
                 disabled={isSending}
               />
