@@ -839,6 +839,35 @@ serve(async (req) => {
     if (participant) {
       const lowerMsg = userMessage.toLowerCase();
 
+      // User asks to fix/correct/update their account, postpartum/birth date, but provides NO date.
+      // We must NOT silently confirm — instead ask for the actual date and set awaiting flag.
+      const fixAccountIntent =
+        /\b(fix|correct|update|change|edit)\b.*\b(account|profile|postpartum|birth\s*date|baby'?s?\s*birth|baby'?s?\s*date|date|status|stage)\b/i.test(userMessage)
+        || /\bthat'?s?\s+wrong\b/i.test(userMessage)
+        || /\b(?:i'?m\s+not|i\s+am\s+not)\s+\d+\s*(?:weeks?|months?|years?)\s*(?:postpartum|pp)\b/i.test(userMessage)
+        || /\bwhy\s+(?:do\s+you\s+think|does\s+it\s+say)\b.*\b(?:postpartum|pp|weeks?|months?)\b/i.test(userMessage)
+        || /\bstill\s+says?\b.*\b(?:weeks?|months?|postpartum)\b/i.test(userMessage);
+
+      const hasExplicitDateInMsg =
+        /\b(?:gave\s+birth|had\s+(?:my\s+)?baby|baby\s+(?:was\s+)?born|delivered)\s+(?:on\s+)?(?:the\s+)?\w+\s+\d{1,2}/i.test(userMessage)
+        || /\b\w+\s+\d{1,2},?\s*(?:19|20)\d{2}\b/.test(userMessage)
+        || /\b(?:19|20)\d{2}-\d{2}-\d{2}\b/.test(userMessage);
+
+      if (fixAccountIntent && !hasExplicitDateInMsg && participant.life_stage === "postpartum") {
+        const msg = `You're right — I can't fix it without the actual date. What's your baby's birth date (month, day, year is perfect)? Once you tell me, I'll lock it in and the timeline will be accurate everywhere.`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: msg,
+          message_type: "text",
+          metadata: { awaiting_birth_date: true },
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, awaitingBirthDate: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       // Patterns for "X months/weeks/days postpartum" or "X months/weeks after giving birth"
       const ppDurationMatch = userMessage.match(
         /(\d{1,2})\s*(month|months|week|weeks|day|days)\s*(?:postpartum|pp|after\s+(?:giving\s+)?birth|after\s+(?:my\s+)?baby|since\s+(?:i\s+)?(?:gave\s+birth|had\s+(?:my\s+)?baby))/i
@@ -1314,6 +1343,7 @@ VOICE — THIS IS EVERYTHING:
 - USE **bold** for key terms only.
 - ABSOLUTELY NO bullet-point lists, numbered lists, or headers/subheadings. Ever. Write in flowing short sentences only.
 - NEVER claim you "added", "logged", "tracked", or "saved" something to her tracker, symptom log, or any list. Symptom logging happens automatically when she describes how she feels — you do not control it. If she asks you to track something new, say she can add it from the Home tab's symptom widget, or just acknowledge what she shared without pretending to file it anywhere.
+- NEVER claim you "updated", "fixed", "changed", or "corrected" anything in her account, profile, life stage, postpartum date, period date, or cycle settings. The system handles those updates automatically and you will only see the result on the next turn. If she asks you to fix something and the system has not already confirmed it in your context, ASK HER for the specific value (e.g. the actual baby's birth date) instead of pretending you did it. Saying "Done, I've updated your account" when nothing changed is a hallucination — never do this.
 - HARD LIMIT for MAIN ANSWER: 2-4 short sentences. Total. Not per section — total for the main answer. If it has more than 4 sentences, delete until it doesn't.
 - ONE idea per main answer. Never explain two things at once. The user can ask follow-ups.
 - Never dump context in the main answer. Never explain "why" unless asked. Just give the answer.
@@ -1438,25 +1468,31 @@ MEAL PLANS / MENUS — STRICT RULES:
       const diffDays = Math.floor((now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
       const weeks = Math.floor(diffDays / 7);
       const months = Math.floor(diffDays / 30);
-      if (months >= 1) {
-        ppTimeline = `\n- Postpartum timeline: ${months} month${months > 1 ? "s" : ""} postpartum (baby born ${birthDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})`;
-      } else {
-        ppTimeline = `\n- Postpartum timeline: ${weeks} week${weeks !== 1 ? "s" : ""} postpartum (baby born ${birthDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})`;
-      }
 
-      // Bucket guidance — DO NOT default to "early postpartum healing" for everyone
-      if (diffDays <= 42) {
-        ppPhaseGuidance = `\nPOSTPARTUM PHASE — ACUTE RECOVERY (0-6 weeks): Focus on bleeding, perineal/c-section healing, sleep fragmentation, milk supply if user mentions it, baby blues vs PPD signals. Movement = walking and pelvic floor only.`;
-      } else if (diffDays <= 84) {
-        ppPhaseGuidance = `\nPOSTPARTUM PHASE — EARLY RECOVERY (6-12 weeks): Focus on tissue healing finishing up, hormone crash plateau, mood stabilization, return to gentle strength work, scar mobility, identity shifts.`;
-      } else if (months <= 6) {
-        ppPhaseGuidance = `\nPOSTPARTUM PHASE — REBUILDING (3-6 months): Focus on rebuilding core/pelvic floor strength, addressing diastasis if relevant, sleep regression cycles, hair shedding, returning libido, slow reintroduction of moderate exercise. NOT acute healing anymore.`;
-      } else if (months <= 12) {
-        ppPhaseGuidance = `\nPOSTPARTUM PHASE — LATE POSTPARTUM (6-12 months): Focus on regaining athletic capacity, progressive overload, sleep quality (not just quantity), return of cycle (or continued absence), thyroid checks, identity integration. This is NOT early postpartum — do not center "healing" or "recovery" framing. Treat them as a near-pre-pregnancy adult who happens to have a baby. If their cycle has returned, they should be treated like a cycling user.`;
-      } else if (months <= 24) {
-        ppPhaseGuidance = `\nPOSTPARTUM PHASE — EXTENDED POSTPARTUM (12-24 months): Hormones are largely re-stabilized. Cycle has typically returned. Focus on full athletic capacity, performance, long-term pelvic floor function, parental burnout vs hormonal symptoms. Do NOT use "healing" or "recovery" framing — this user is an athlete-in-life-stage, not a recovering patient.`;
+      // Sanity: anything older than ~3 years (1095 days) is almost certainly stale/wrong data.
+      // Do NOT inject a misleading "302 months postpartum" timeline. Tell the model to ask for the real date.
+      if (diffDays > 1095 || diffDays < 0) {
+        ppTimeline = `\n- Postpartum timeline: UNKNOWN — the stored birth date (${participant.postpartum_start_date}) looks invalid or stale. Do NOT cite weeks/months postpartum. In your reply, ask the user for her baby's actual birth date so the timeline can be corrected. Do NOT claim you have updated anything.`;
+        ppPhaseGuidance = `\nPOSTPARTUM PHASE — UNKNOWN: The stored date is unreliable. Ask the user for the correct baby birth date. Avoid phase-specific framing until corrected.`;
       } else {
-        ppPhaseGuidance = `\nPOSTPARTUM PHASE — BEYOND 2 YEARS: Treat as cycling adult with parenting context. Hormones fully recalibrated. Symptoms are unlikely to be "postpartum" — investigate cycle, thyroid, sleep, stress instead.`;
+        if (months >= 1) {
+          ppTimeline = `\n- Postpartum timeline: ${months} month${months > 1 ? "s" : ""} postpartum (baby born ${birthDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})`;
+        } else {
+          ppTimeline = `\n- Postpartum timeline: ${weeks} week${weeks !== 1 ? "s" : ""} postpartum (baby born ${birthDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})`;
+        }
+
+        // Bucket guidance — DO NOT default to "early postpartum healing" for everyone
+        if (diffDays <= 42) {
+          ppPhaseGuidance = `\nPOSTPARTUM PHASE — ACUTE RECOVERY (0-6 weeks): Focus on bleeding, perineal/c-section healing, sleep fragmentation, milk supply if user mentions it, baby blues vs PPD signals. Movement = walking and pelvic floor only.`;
+        } else if (diffDays <= 84) {
+          ppPhaseGuidance = `\nPOSTPARTUM PHASE — EARLY RECOVERY (6-12 weeks): Focus on tissue healing finishing up, hormone crash plateau, mood stabilization, return to gentle strength work, scar mobility, identity shifts.`;
+        } else if (months <= 6) {
+          ppPhaseGuidance = `\nPOSTPARTUM PHASE — REBUILDING (3-6 months): Focus on rebuilding core/pelvic floor strength, addressing diastasis if relevant, sleep regression cycles, hair shedding, returning libido, slow reintroduction of moderate exercise. NOT acute healing anymore.`;
+        } else if (months <= 12) {
+          ppPhaseGuidance = `\nPOSTPARTUM PHASE — LATE POSTPARTUM (6-12 months): Focus on regaining athletic capacity, progressive overload, sleep quality (not just quantity), return of cycle (or continued absence), thyroid checks, identity integration. This is NOT early postpartum — do not center "healing" or "recovery" framing. Treat them as a near-pre-pregnancy adult who happens to have a baby. If their cycle has returned, they should be treated like a cycling user.`;
+        } else {
+          ppPhaseGuidance = `\nPOSTPARTUM PHASE — EXTENDED POSTPARTUM (12-24 months): Hormones are largely re-stabilized. Cycle has typically returned. Focus on full athletic capacity, performance, long-term pelvic floor function, parental burnout vs hormonal symptoms. Do NOT use "healing" or "recovery" framing — this user is an athlete-in-life-stage, not a recovering patient.`;
+        }
       }
     }
 
