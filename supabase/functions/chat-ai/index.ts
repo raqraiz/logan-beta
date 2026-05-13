@@ -839,6 +839,35 @@ serve(async (req) => {
     if (participant) {
       const lowerMsg = userMessage.toLowerCase();
 
+      // User asks to fix/correct/update their account, postpartum/birth date, but provides NO date.
+      // We must NOT silently confirm — instead ask for the actual date and set awaiting flag.
+      const fixAccountIntent =
+        /\b(fix|correct|update|change|edit)\b.*\b(account|profile|postpartum|birth\s*date|baby'?s?\s*birth|baby'?s?\s*date|date|status|stage)\b/i.test(userMessage)
+        || /\bthat'?s?\s+wrong\b/i.test(userMessage)
+        || /\b(?:i'?m\s+not|i\s+am\s+not)\s+\d+\s*(?:weeks?|months?|years?)\s*(?:postpartum|pp)\b/i.test(userMessage)
+        || /\bwhy\s+(?:do\s+you\s+think|does\s+it\s+say)\b.*\b(?:postpartum|pp|weeks?|months?)\b/i.test(userMessage)
+        || /\bstill\s+says?\b.*\b(?:weeks?|months?|postpartum)\b/i.test(userMessage);
+
+      const hasExplicitDateInMsg =
+        /\b(?:gave\s+birth|had\s+(?:my\s+)?baby|baby\s+(?:was\s+)?born|delivered)\s+(?:on\s+)?(?:the\s+)?\w+\s+\d{1,2}/i.test(userMessage)
+        || /\b\w+\s+\d{1,2},?\s*(?:19|20)\d{2}\b/.test(userMessage)
+        || /\b(?:19|20)\d{2}-\d{2}-\d{2}\b/.test(userMessage);
+
+      if (fixAccountIntent && !hasExplicitDateInMsg && participant.life_stage === "postpartum") {
+        const msg = `You're right — I can't fix it without the actual date. What's your baby's birth date (month, day, year is perfect)? Once you tell me, I'll lock it in and the timeline will be accurate everywhere.`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: msg,
+          message_type: "text",
+          metadata: { awaiting_birth_date: true },
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, awaitingBirthDate: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       // Patterns for "X months/weeks/days postpartum" or "X months/weeks after giving birth"
       const ppDurationMatch = userMessage.match(
         /(\d{1,2})\s*(month|months|week|weeks|day|days)\s*(?:postpartum|pp|after\s+(?:giving\s+)?birth|after\s+(?:my\s+)?baby|since\s+(?:i\s+)?(?:gave\s+birth|had\s+(?:my\s+)?baby))/i
