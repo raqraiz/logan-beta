@@ -1468,25 +1468,31 @@ MEAL PLANS / MENUS — STRICT RULES:
       const diffDays = Math.floor((now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
       const weeks = Math.floor(diffDays / 7);
       const months = Math.floor(diffDays / 30);
-      if (months >= 1) {
-        ppTimeline = `\n- Postpartum timeline: ${months} month${months > 1 ? "s" : ""} postpartum (baby born ${birthDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})`;
-      } else {
-        ppTimeline = `\n- Postpartum timeline: ${weeks} week${weeks !== 1 ? "s" : ""} postpartum (baby born ${birthDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})`;
-      }
 
-      // Bucket guidance — DO NOT default to "early postpartum healing" for everyone
-      if (diffDays <= 42) {
-        ppPhaseGuidance = `\nPOSTPARTUM PHASE — ACUTE RECOVERY (0-6 weeks): Focus on bleeding, perineal/c-section healing, sleep fragmentation, milk supply if user mentions it, baby blues vs PPD signals. Movement = walking and pelvic floor only.`;
-      } else if (diffDays <= 84) {
-        ppPhaseGuidance = `\nPOSTPARTUM PHASE — EARLY RECOVERY (6-12 weeks): Focus on tissue healing finishing up, hormone crash plateau, mood stabilization, return to gentle strength work, scar mobility, identity shifts.`;
-      } else if (months <= 6) {
-        ppPhaseGuidance = `\nPOSTPARTUM PHASE — REBUILDING (3-6 months): Focus on rebuilding core/pelvic floor strength, addressing diastasis if relevant, sleep regression cycles, hair shedding, returning libido, slow reintroduction of moderate exercise. NOT acute healing anymore.`;
-      } else if (months <= 12) {
-        ppPhaseGuidance = `\nPOSTPARTUM PHASE — LATE POSTPARTUM (6-12 months): Focus on regaining athletic capacity, progressive overload, sleep quality (not just quantity), return of cycle (or continued absence), thyroid checks, identity integration. This is NOT early postpartum — do not center "healing" or "recovery" framing. Treat them as a near-pre-pregnancy adult who happens to have a baby. If their cycle has returned, they should be treated like a cycling user.`;
-      } else if (months <= 24) {
-        ppPhaseGuidance = `\nPOSTPARTUM PHASE — EXTENDED POSTPARTUM (12-24 months): Hormones are largely re-stabilized. Cycle has typically returned. Focus on full athletic capacity, performance, long-term pelvic floor function, parental burnout vs hormonal symptoms. Do NOT use "healing" or "recovery" framing — this user is an athlete-in-life-stage, not a recovering patient.`;
+      // Sanity: anything older than ~3 years (1095 days) is almost certainly stale/wrong data.
+      // Do NOT inject a misleading "302 months postpartum" timeline. Tell the model to ask for the real date.
+      if (diffDays > 1095 || diffDays < 0) {
+        ppTimeline = `\n- Postpartum timeline: UNKNOWN — the stored birth date (${participant.postpartum_start_date}) looks invalid or stale. Do NOT cite weeks/months postpartum. In your reply, ask the user for her baby's actual birth date so the timeline can be corrected. Do NOT claim you have updated anything.`;
+        ppPhaseGuidance = `\nPOSTPARTUM PHASE — UNKNOWN: The stored date is unreliable. Ask the user for the correct baby birth date. Avoid phase-specific framing until corrected.`;
       } else {
-        ppPhaseGuidance = `\nPOSTPARTUM PHASE — BEYOND 2 YEARS: Treat as cycling adult with parenting context. Hormones fully recalibrated. Symptoms are unlikely to be "postpartum" — investigate cycle, thyroid, sleep, stress instead.`;
+        if (months >= 1) {
+          ppTimeline = `\n- Postpartum timeline: ${months} month${months > 1 ? "s" : ""} postpartum (baby born ${birthDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})`;
+        } else {
+          ppTimeline = `\n- Postpartum timeline: ${weeks} week${weeks !== 1 ? "s" : ""} postpartum (baby born ${birthDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})`;
+        }
+
+        // Bucket guidance — DO NOT default to "early postpartum healing" for everyone
+        if (diffDays <= 42) {
+          ppPhaseGuidance = `\nPOSTPARTUM PHASE — ACUTE RECOVERY (0-6 weeks): Focus on bleeding, perineal/c-section healing, sleep fragmentation, milk supply if user mentions it, baby blues vs PPD signals. Movement = walking and pelvic floor only.`;
+        } else if (diffDays <= 84) {
+          ppPhaseGuidance = `\nPOSTPARTUM PHASE — EARLY RECOVERY (6-12 weeks): Focus on tissue healing finishing up, hormone crash plateau, mood stabilization, return to gentle strength work, scar mobility, identity shifts.`;
+        } else if (months <= 6) {
+          ppPhaseGuidance = `\nPOSTPARTUM PHASE — REBUILDING (3-6 months): Focus on rebuilding core/pelvic floor strength, addressing diastasis if relevant, sleep regression cycles, hair shedding, returning libido, slow reintroduction of moderate exercise. NOT acute healing anymore.`;
+        } else if (months <= 12) {
+          ppPhaseGuidance = `\nPOSTPARTUM PHASE — LATE POSTPARTUM (6-12 months): Focus on regaining athletic capacity, progressive overload, sleep quality (not just quantity), return of cycle (or continued absence), thyroid checks, identity integration. This is NOT early postpartum — do not center "healing" or "recovery" framing. Treat them as a near-pre-pregnancy adult who happens to have a baby. If their cycle has returned, they should be treated like a cycling user.`;
+        } else {
+          ppPhaseGuidance = `\nPOSTPARTUM PHASE — EXTENDED POSTPARTUM (12-24 months): Hormones are largely re-stabilized. Cycle has typically returned. Focus on full athletic capacity, performance, long-term pelvic floor function, parental burnout vs hormonal symptoms. Do NOT use "healing" or "recovery" framing — this user is an athlete-in-life-stage, not a recovering patient.`;
+        }
       }
     }
 
