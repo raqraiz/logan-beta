@@ -316,6 +316,9 @@ const Chat = () => {
           if (row.postpartum_start_date !== undefined) {
             setPostpartumStartDate(row.postpartum_start_date ?? null);
           }
+          if (row.postpartum_active !== undefined) {
+            setPostpartumActive(!!row.postpartum_active);
+          }
         }
       )
       .subscribe();
