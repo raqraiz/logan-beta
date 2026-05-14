@@ -735,6 +735,7 @@ export type Database = {
           is_active: boolean | null
           last_period_start: string | null
           life_stage: string
+          postpartum_active: boolean
           postpartum_start_date: string | null
           preferred_channel: string | null
           telegram_chat_id: string | null
@@ -759,6 +760,7 @@ export type Database = {
           is_active?: boolean | null
           last_period_start?: string | null
           life_stage?: string
+          postpartum_active?: boolean
           postpartum_start_date?: string | null
           preferred_channel?: string | null
           telegram_chat_id?: string | null
@@ -783,6 +785,7 @@ export type Database = {
           is_active?: boolean | null
           last_period_start?: string | null
           life_stage?: string
+          postpartum_active?: boolean
           postpartum_start_date?: string | null
           preferred_channel?: string | null
           telegram_chat_id?: string | null
