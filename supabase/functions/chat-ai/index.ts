@@ -285,6 +285,8 @@ serve(async (req) => {
       const periodUpdatePayload: Record<string, unknown> = { last_period_start: formattedDate };
       if (participant.life_stage === "postpartum") {
         periodUpdatePayload.life_stage = "cycling";
+        // Preserve postpartum recovery context as a secondary state (dual-state).
+        periodUpdatePayload.postpartum_active = true;
       }
 
       const { error: updateError } = await supabase
