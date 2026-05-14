@@ -241,12 +241,13 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "
   );
 }
 
-export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling", postpartumStartDate }: ChatCycleCircleProps) {
+export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling", postpartumStartDate, postpartumActive = false }: ChatCycleCircleProps) {
   // Postpartum/menopause users get a static badge. Irregular users still see the cycle circle.
   if (lifeStage === "postpartum" || lifeStage === "menopause") {
     return <LifeStageBadge lifeStage={lifeStage} size={size} postpartumStartDate={postpartumStartDate} />;
   }
 
+  const showPpBadge = postpartumActive && !!postpartumStartDate;
   const isSmall = size === "sm";
 
   if (isSmall) {
@@ -271,6 +272,7 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
           <span className={`text-xs font-bold ${styles.color}`}>{cycleDay}</span>
         </div>
+        {showPpBadge && <PpBadgeOverlay postpartumStartDate={postpartumStartDate} size="sm" />}
       </div>
     );
   }
@@ -278,15 +280,18 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
   // Large centered circle
   return (
     <div className="flex items-center justify-center py-4">
-      <CycleRing
-        cycleDay={cycleDay}
-        phase={phase}
-        cycleLengthDays={cycleLengthDays}
-        ringSize="w-56 h-56"
-        fontSize="text-5xl"
-        labelSize="text-sm"
-        showPhase
-      />
+      <div className="relative">
+        <CycleRing
+          cycleDay={cycleDay}
+          phase={phase}
+          cycleLengthDays={cycleLengthDays}
+          ringSize="w-56 h-56"
+          fontSize="text-5xl"
+          labelSize="text-sm"
+          showPhase
+        />
+        {showPpBadge && <PpBadgeOverlay postpartumStartDate={postpartumStartDate} size="md" />}
+      </div>
     </div>
   );
 }
