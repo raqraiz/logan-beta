@@ -133,6 +133,33 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
           <p className="text-[11px] text-muted-foreground/80 mt-3">
             Tip: you can also just tell Logan in chat — e.g. "I'm actually still cycling" — and it'll switch automatically.
           </p>
+
+          {(stage === "cycling" || stage === "irregular") && (
+            <div className="mt-4 p-3 rounded-lg border border-pink-400/30 bg-pink-400/5 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <div className="text-sm font-medium">Also recovering postpartum</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    Cycling again after a baby? Logan will layer recovery context (sleep debt, iron, pelvic floor) on top of phase guidance.
+                  </div>
+                </div>
+                <Switch checked={postpartumActive} onCheckedChange={setPostpartumActive} />
+              </div>
+              {postpartumActive && (
+                <div>
+                  <Label htmlFor="pp-date" className="text-xs text-muted-foreground">Baby's birth date</Label>
+                  <Input
+                    id="pp-date"
+                    type="date"
+                    value={postpartumStartDate}
+                    onChange={(e) => setPostpartumStartDate(e.target.value)}
+                    max={new Date().toISOString().slice(0, 10)}
+                    className="mt-1"
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="border-t border-border/50 pt-4">
