@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -25,21 +27,51 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
   const [stage, setStage] = useState<LifeStage>(currentLifeStage);
   const [saving, setSaving] = useState(false);
   const [importerOpen, setImporterOpen] = useState(false);
+  const [postpartumActive, setPostpartumActive] = useState(false);
+  const [postpartumStartDate, setPostpartumStartDate] = useState<string>("");
 
+  // Load current postpartum_active + postpartum_start_date when dialog opens
   useEffect(() => {
-    if (open) setStage(currentLifeStage);
-  }, [open, currentLifeStage]);
+    if (!open || !userEmail) return;
+    setStage(currentLifeStage);
+    (async () => {
+      const { data } = await supabase
+        .from("participants")
+        .select("postpartum_active, postpartum_start_date")
+        .eq("email", userEmail)
+        .maybeSingle();
+      if (data) {
+        setPostpartumActive(!!(data as any).postpartum_active);
+        setPostpartumStartDate((data as any).postpartum_start_date ?? "");
+      }
+    })();
+  }, [open, userEmail, currentLifeStage]);
 
   const handleSave = async () => {
-    if (!userEmail || stage === currentLifeStage) {
+    if (!userEmail) {
       onOpenChange(false);
       return;
     }
     setSaving(true);
     const payload: Record<string, unknown> = { life_stage: stage };
-    // Clear stage-specific fields when switching away
-    if (stage !== "postpartum") payload.postpartum_start_date = null;
-    if (stage === "menopause") payload.last_period_start = null;
+
+    if (stage === "postpartum") {
+      // Postpartum mode owns the date; postpartum_active flag is irrelevant here.
+      payload.postpartum_active = false;
+      if (postpartumStartDate) payload.postpartum_start_date = postpartumStartDate;
+    } else if (stage === "cycling" || stage === "irregular") {
+      // Cycling user may also be in postpartum recovery — preserve the dual state.
+      payload.postpartum_active = postpartumActive;
+      if (postpartumActive && postpartumStartDate) {
+        payload.postpartum_start_date = postpartumStartDate;
+      } else if (!postpartumActive) {
+        payload.postpartum_start_date = null;
+      }
+    } else if (stage === "menopause") {
+      payload.last_period_start = null;
+      payload.postpartum_start_date = null;
+      payload.postpartum_active = false;
+    }
 
     const { error } = await supabase
       .from("participants")
@@ -51,7 +83,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
       toast({ title: "Couldn't update", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Updated", description: `Life stage set to ${stage}.` });
+    toast({ title: "Updated", description: `Life stage saved.` });
     onUpdated?.(stage);
     onOpenChange(false);
   };
