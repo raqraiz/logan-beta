@@ -622,6 +622,7 @@ serve(async (req) => {
           const cycleDayPayload: Record<string, unknown> = { last_period_start: formattedDate };
           if (participant.life_stage === "postpartum") {
             cycleDayPayload.life_stage = "cycling";
+            cycleDayPayload.postpartum_active = true;
           }
 
           const { error: updateErr } = await supabase
