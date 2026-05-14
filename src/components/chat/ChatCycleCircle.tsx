@@ -8,6 +8,44 @@ interface ChatCycleCircleProps {
   size?: "sm" | "md";
   lifeStage?: LifeStage;
   postpartumStartDate?: string;
+  /** When true (and lifeStage='cycling'), overlay a small postpartum recovery badge */
+  postpartumActive?: boolean;
+}
+
+function formatPpShort(postpartumStartDate?: string): string | null {
+  if (!postpartumStartDate) return null;
+  const start = new Date(postpartumStartDate + "T12:00:00Z");
+  const diffDays = Math.floor((Date.now() - start.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0 || diffDays > 1095) return null;
+  if (diffDays < 7) return `${diffDays + 1}d`;
+  const weeks = Math.floor(diffDays / 7);
+  if (weeks < 12) return `${weeks}w`;
+  const months = Math.floor(diffDays / 30);
+  return `${months}mo`;
+}
+
+function PpBadgeOverlay({ postpartumStartDate, size }: { postpartumStartDate?: string; size: "sm" | "md" }) {
+  const label = formatPpShort(postpartumStartDate);
+  if (!label) return null;
+  if (size === "sm") {
+    return (
+      <div
+        className="absolute -top-0.5 -right-0.5 z-30 px-1 min-w-[14px] h-[14px] rounded-full bg-pink-400 text-[8px] font-bold text-black flex items-center justify-center leading-none shadow-md"
+        title={`${label} postpartum`}
+      >
+        {label}
+      </div>
+    );
+  }
+  return (
+    <div
+      className="absolute top-1 right-1 z-30 px-2 py-0.5 rounded-full bg-pink-400/90 text-[10px] font-bold text-black flex items-center gap-1 leading-none shadow-md backdrop-blur-sm"
+      title={`${label} postpartum`}
+    >
+      <span className="opacity-80">PP</span>
+      <span>{label}</span>
+    </div>
+  );
 }
 
 const PHASE_STYLES: Record<string, { color: string; ringColor: string; hex: string }> = {
