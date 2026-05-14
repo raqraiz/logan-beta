@@ -1525,6 +1525,28 @@ MEAL PLANS / MENUS — STRICT RULES:
     lengthGuidance = "\n\nRESPONSE LENGTH: Keep responses concise — 3-4 sentences. Be direct and casual.";
   }
 
+  // Reconciliation: cycling user who is also actively recovering postpartum
+  let dualStateContext = "";
+  if ((participant as any).postpartum_active && participant.postpartum_start_date) {
+    const birthDate = new Date(participant.postpartum_start_date + "T12:00:00Z");
+    const diffDays = Math.floor((Date.now() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays >= 0 && diffDays <= 1095) {
+      const months = Math.floor(diffDays / 30);
+      const weeks = Math.floor(diffDays / 7);
+      const ppLabel = months >= 1 ? `${months} month${months > 1 ? "s" : ""}` : `${weeks} week${weeks !== 1 ? "s" : ""}`;
+      dualStateContext = `
+
+DUAL STATE — POSTPARTUM + CYCLING:
+This user's cycle has returned, AND she is ${ppLabel} postpartum (baby born ${birthDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}). Both are true at the same time. You MUST reconcile both:
+- Cycle phase guidance still applies (her hormones are cycling), but her baseline recovery capacity is reduced.
+- Sleep debt from a baby compounds luteal symptoms (mood, energy, cravings) — name that explicitly when relevant.
+- Iron stores may still be rebuilding from birth — factor that into menstruation-week guidance.
+- Pelvic floor and core capacity are still re-developing — factor into ovulation/follicular training advice.
+- Do NOT treat her as a fresh-postpartum recovery patient (no "early healing" framing). Do NOT treat her as a pre-baby athlete either. She is both.
+- Only mention breastfeeding if she brings it up first.`;
+    }
+  }
+
   const userContext = `
 
 USER CONTEXT:
@@ -1534,7 +1556,7 @@ USER CONTEXT:
 - Age: ${age || "unknown"}
 - Anchor symptom (most disruptive): ${participant.anchor_symptom || "not specified"}
 - Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}
-${topics ? `- Focus areas: ${topics}. Weave relevant tips from these areas into responses when naturally fitting.` : ""}${cycleHistoryContext}${symptomContext}${lengthGuidance}
+${topics ? `- Focus areas: ${topics}. Weave relevant tips from these areas into responses when naturally fitting.` : ""}${cycleHistoryContext}${symptomContext}${lengthGuidance}${dualStateContext}
 
 Use this context to make your responses personally relevant. Reference their current phase and how it might affect their request. If they mention their anchor symptom, acknowledge it and provide phase-appropriate guidance. When users ask about their cycle length or patterns, use the cycle history data to provide specific insights. When symptom log data is available, reference their actual reported symptoms and patterns — this is more accurate than textbook generalizations.`;
 
