@@ -402,9 +402,10 @@ const Chat = () => {
         lastPeriodStart,
         lifeStage: lifeStage === "irregular" ? "irregular" : "cycling",
         postpartumStartDate: postpartumStartDate || undefined,
+        postpartumActive: postpartumActive && !!postpartumStartDate,
       });
     }
-  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, participantCycle]);
+  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, postpartumActive, participantCycle]);
 
   // Scroll to bottom on initial load
   const hasScrolledToBottom = useRef(false);
