@@ -107,6 +107,7 @@ interface CycleData {
   lastPeriodStart?: string;
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause";
   postpartumStartDate?: string;
+  postpartumActive?: boolean;
 }
 
 const MESSAGES_PER_PAGE = 100;
@@ -125,6 +126,7 @@ const Chat = () => {
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
   const [lifeStage, setLifeStage] = useState<"cycling" | "irregular" | "postpartum" | "menopause">("cycling");
   const [postpartumStartDate, setPostpartumStartDate] = useState<string | null>(null);
+  const [postpartumActive, setPostpartumActive] = useState<boolean>(false);
   // Authoritative cycle data from `participants` table — wins over chat metadata
   const [participantCycle, setParticipantCycle] = useState<{
     lastPeriodStart: string | null;
@@ -314,6 +316,9 @@ const Chat = () => {
           if (row.postpartum_start_date !== undefined) {
             setPostpartumStartDate(row.postpartum_start_date ?? null);
           }
+          if (row.postpartum_active !== undefined) {
+            setPostpartumActive(!!row.postpartum_active);
+          }
         }
       )
       .subscribe();
@@ -397,9 +402,10 @@ const Chat = () => {
         lastPeriodStart,
         lifeStage: lifeStage === "irregular" ? "irregular" : "cycling",
         postpartumStartDate: postpartumStartDate || undefined,
+        postpartumActive: postpartumActive && !!postpartumStartDate,
       });
     }
-  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, participantCycle]);
+  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, postpartumActive, participantCycle]);
 
   // Scroll to bottom on initial load
   const hasScrolledToBottom = useRef(false);
@@ -537,7 +543,7 @@ const Chat = () => {
     try {
       const { data } = await supabase
         .from("participants")
-        .select("life_stage, postpartum_start_date, last_period_start, cycle_length_days, timezone")
+        .select("life_stage, postpartum_start_date, postpartum_active, last_period_start, cycle_length_days, timezone")
         .eq("email", user.email)
         .single();
       if (data?.life_stage) {
@@ -545,6 +551,9 @@ const Chat = () => {
       }
       if (data?.postpartum_start_date) {
         setPostpartumStartDate(data.postpartum_start_date);
+      }
+      if ((data as any)?.postpartum_active !== undefined) {
+        setPostpartumActive(!!(data as any).postpartum_active);
       }
       if (data) {
         setParticipantCycle({
@@ -1032,6 +1041,7 @@ const Chat = () => {
                   size="sm"
                   lifeStage={cycleData.lifeStage}
                   postpartumStartDate={cycleData.postpartumStartDate}
+                  postpartumActive={cycleData.postpartumActive}
                 />
              ) : (
                <LoganLogo size="sm" />
@@ -1256,6 +1266,9 @@ const Chat = () => {
                               cycleDay={message.metadata.cycle_day}
                               phase={message.metadata.cycle_phase}
                               cycleLengthDays={message.metadata.cycle_length_days || 28}
+                              lifeStage={lifeStage === "irregular" ? "irregular" : "cycling"}
+                              postpartumStartDate={postpartumStartDate || undefined}
+                              postpartumActive={postpartumActive && !!postpartumStartDate}
                             />
                           ) : null}
                         </div>
