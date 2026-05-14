@@ -518,6 +518,7 @@ serve(async (req) => {
           if (inferredCycleLength) periodDatePayload.cycle_length_days = inferredCycleLength;
           if (participant.life_stage === "postpartum") {
             periodDatePayload.life_stage = "cycling";
+            periodDatePayload.postpartum_active = true;
           }
 
 
