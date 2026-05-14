@@ -880,13 +880,18 @@ serve(async (req) => {
         /(?:gave\s+birth|had\s+(?:my\s+)?baby|baby\s+(?:was\s+)?born|delivered)\s+(?:on\s+)?(?:the\s+)?(\w+\s+\d{1,2}(?:,?\s*\d{4})?)/i
       );
 
-      // Bare "I'm postpartum" mention with no duration/date, plus explicit switch-back commands
-      const ppBareMention = /\b(?:i'?m|i\s+am|currently)\s+(?:still\s+)?postpartum\b/i.test(userMessage)
-        || /\bjust\s+had\s+(?:a\s+)?baby\b/i.test(userMessage)
-        || /\b(?:switch|change|set|put|move)\s+(?:me\s+)?(?:back\s+)?(?:to|in(?:to)?)\s+postpartum\b/i.test(userMessage)
-        || /\bback\s+to\s+postpartum\b/i.test(userMessage);
+      // EXPLICIT switch intent only — sharing context like "I had a baby 12 weeks ago"
+      // must NOT auto-flip life stage. Require an explicit "switch me to postpartum" or
+      // a present-tense self-identification ("I'm postpartum", "I just had a baby").
+      const explicitSwitchIntent = /\b(?:switch|change|set|put|move)\s+(?:me\s+)?(?:back\s+)?(?:to|in(?:to)?)\s+postpartum\b/i.test(userMessage)
+        || /\bback\s+to\s+postpartum\b/i.test(userMessage)
+        || /\b(?:i'?m|i\s+am|currently)\s+(?:still\s+)?postpartum\b/i.test(userMessage)
+        || /\bjust\s+had\s+(?:a\s+)?baby\b/i.test(userMessage);
 
-      const isPostpartumSignal = ppDurationMatch || ppDateMatch || ppBareMention;
+      // Already-postpartum users mentioning a duration/date are just refining their birth date.
+      const refiningExistingPostpartum = participant.life_stage === "postpartum" && (ppDurationMatch || ppDateMatch);
+
+      const isPostpartumSignal = explicitSwitchIntent || refiningExistingPostpartum;
 
       if (isPostpartumSignal) {
         let computedStartDate: string | null = null;
