@@ -52,6 +52,15 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
       onOpenChange(false);
       return;
     }
+    // Validate: postpartum recovery toggle requires a birth date
+    if ((stage === "cycling" || stage === "irregular") && postpartumActive && !postpartumStartDate) {
+      toast({
+        title: "Add baby's birth date",
+        description: "Logan needs the birth date to track recovery weeks.",
+        variant: "destructive",
+      });
+      return;
+    }
     setSaving(true);
     const payload: Record<string, unknown> = { life_stage: stage };
 
