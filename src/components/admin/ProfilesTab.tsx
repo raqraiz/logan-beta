@@ -66,6 +66,7 @@ interface Participant {
   created_at: string;
   life_stage: string | null;
   postpartum_start_date: string | null;
+  postpartum_active?: boolean | null;
 }
 
 
@@ -137,7 +138,7 @@ export function ProfilesTab() {
     full_name: "", email: "", phone: "",
     cycle_length_days: "28", cycle_regularity: "", last_period_start: "",
     anchor_symptom: "", typical_symptoms: "", goals: "", timezone: "Asia/Jerusalem",
-    life_stage: "cycling", postpartum_start_date: "",
+    life_stage: "cycling", postpartum_start_date: "", postpartum_active: false,
   });
   const [saving, setSaving] = useState(false);
   const [showHomePreview, setShowHomePreview] = useState(false);
@@ -289,6 +290,7 @@ export function ProfilesTab() {
       timezone: p?.timezone || "Asia/Jerusalem",
       life_stage: (p as any)?.life_stage || "cycling",
       postpartum_start_date: p?.postpartum_start_date || "",
+      postpartum_active: !!(p as any)?.postpartum_active,
     });
     setEditOpen(true);
   };
@@ -333,6 +335,12 @@ export function ProfilesTab() {
             timezone: editForm.timezone.trim() || "Asia/Jerusalem",
             life_stage: editForm.life_stage,
             postpartum_start_date: editForm.postpartum_start_date || null,
+            postpartum_active:
+              editForm.life_stage === "postpartum"
+                ? false
+                : (editForm.life_stage === "cycling" || editForm.life_stage === "irregular")
+                ? !!editForm.postpartum_active
+                : false,
           } as any)
           .eq("id", selectedProfile.participant.id);
 
@@ -671,9 +679,18 @@ export function ProfilesTab() {
                         cycleDay={cycleDay}
                         phase={phase}
                         cycleLengthDays={participant.cycle_length_days || 28}
+                        postpartumActive={!!(participant as any).postpartum_active}
+                        postpartumStartDate={participant.postpartum_start_date || undefined}
                       />
                     </div>
                   ) : null}
+                  {(participant as any).postpartum_active && (
+                    <div className="flex justify-center">
+                      <Badge variant="secondary" className="bg-pink-400/15 text-pink-300 border-pink-400/30">
+                        Also recovering postpartum
+                      </Badge>
+                    </div>
+                  )}
                   
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
@@ -950,6 +967,24 @@ export function ProfilesTab() {
                         <Input id="edit-birth-date" type="date" value={editForm.postpartum_start_date} onChange={(e) => setEditForm(f => ({ ...f, postpartum_start_date: e.target.value }))} />
                       </div>
                     )}
+                    {(editForm.life_stage === "cycling" || editForm.life_stage === "irregular") && (
+                      <div className="space-y-1.5 p-3 rounded-lg border border-pink-400/30 bg-pink-400/5">
+                        <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={!!editForm.postpartum_active}
+                            onChange={(e) => setEditForm(f => ({ ...f, postpartum_active: e.target.checked }))}
+                          />
+                          Also recovering postpartum
+                        </label>
+                        {editForm.postpartum_active && (
+                          <div>
+                            <Label htmlFor="edit-pp-date" className="text-xs text-muted-foreground">Baby's birth date</Label>
+                            <Input id="edit-pp-date" type="date" value={editForm.postpartum_start_date} onChange={(e) => setEditForm(f => ({ ...f, postpartum_start_date: e.target.value }))} />
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="space-y-1.5">
                       <Label htmlFor="edit-tz">Timezone</Label>
                       <Input id="edit-tz" value={editForm.timezone} onChange={(e) => setEditForm(f => ({ ...f, timezone: e.target.value }))} />
@@ -1181,6 +1216,8 @@ export function ProfilesTab() {
                           phase={phase}
                           cycleLengthDays={profile.participant?.cycle_length_days || 28}
                           size="sm"
+                          postpartumActive={!!(profile.participant as any)?.postpartum_active}
+                          postpartumStartDate={profile.participant?.postpartum_start_date || undefined}
                         />
                       </div>
                     ) : (
