@@ -271,7 +271,7 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
           <span className={`text-xs font-bold ${styles.color}`}>{cycleDay}</span>
         </div>
-        {showPpBadge && <PpBadgeOverlay postpartumStartDate={postpartumStartDate} size="sm" />}
+        {showPpBadge && <PpBadgeInside postpartumStartDate={postpartumStartDate} size="sm" />}
       </div>
     );
   }
@@ -289,7 +289,7 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
           labelSize="text-sm"
           showPhase
         />
-        {showPpBadge && <PpBadgeOverlay postpartumStartDate={postpartumStartDate} size="md" />}
+        {showPpBadge && <PpBadgeInside postpartumStartDate={postpartumStartDate} size="md" />}
       </div>
     </div>
   );
