@@ -24,26 +24,25 @@ function formatPpShort(postpartumStartDate?: string): string | null {
   return `${months}mo`;
 }
 
-function PpBadgeOverlay({ postpartumStartDate, size }: { postpartumStartDate?: string; size: "sm" | "md" }) {
+function PpBadgeInside({ postpartumStartDate, size }: { postpartumStartDate?: string; size: "sm" | "md" }) {
   const label = formatPpShort(postpartumStartDate);
   if (!label) return null;
   if (size === "sm") {
+    // Tiny pink dot at bottom of ring for compact size
     return (
       <div
-        className="absolute -top-0.5 -right-0.5 z-30 px-1 min-w-[14px] h-[14px] rounded-full bg-pink-400 text-[8px] font-bold text-black flex items-center justify-center leading-none shadow-md"
+        className="absolute bottom-[2px] left-1/2 -translate-x-1/2 z-30 w-1.5 h-1.5 rounded-full bg-pink-400 shadow-[0_0_6px_rgba(244,114,182,0.8)]"
         title={`${label} postpartum`}
-      >
-        {label}
-      </div>
+      />
     );
   }
   return (
     <div
-      className="absolute top-1 right-1 z-30 px-2 py-0.5 rounded-full bg-pink-400/90 text-[10px] font-bold text-black flex items-center gap-1 leading-none shadow-md backdrop-blur-sm"
+      className="absolute bottom-[18%] left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 px-2 py-[3px] rounded-full bg-pink-400/10 border border-pink-400/30 backdrop-blur-md"
       title={`${label} postpartum`}
     >
-      <span className="opacity-80">PP</span>
-      <span>{label}</span>
+      <span className="w-1.5 h-1.5 rounded-full bg-pink-400 shadow-[0_0_4px_rgba(244,114,182,0.9)]" />
+      <span className="text-[9px] font-medium tracking-wider text-pink-300 uppercase leading-none">{label} pp</span>
     </div>
   );
 }
