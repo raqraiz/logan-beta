@@ -1489,7 +1489,18 @@ const Chat = () => {
                       "Any strength training tips?", "How can I reduce brain fog?", "What should I eat this week?",
                       "Why do I feel this way?", "How do I manage stress better?", "What patterns should I track?",
                     ];
-                    const pool = lifeStage === "menopause" ? menopausePool : cyclingPool;
+                    const postpartumPool = [
+                      "I just need to vent", "Why am I so exhausted?", "Tell me what's normal right now",
+                      "How can I sleep better tonight?", "Why does my mood swing so much?", "What should I eat this week?",
+                      "When will my period come back?", "How do I rebuild strength safely?", "I'm having a hard day",
+                      "Why is my hair falling out?", "How do I handle the mental load?", "What's happening with my hormones?",
+                      "Why do I feel like a different person?", "How can I get more energy?", "What patterns should I track?",
+                    ];
+                    const pool = lifeStage === "menopause"
+                      ? menopausePool
+                      : lifeStage === "postpartum"
+                        ? postpartumPool
+                        : cyclingPool;
 
                     // AI-suggested starters (per-message) take precedence and behave as before
                     const aiStarters = message.metadata?.conversation_starters;
