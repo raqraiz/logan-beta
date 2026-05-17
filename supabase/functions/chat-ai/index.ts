@@ -6,6 +6,66 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function parseExplicitCalendarDate(dateStr: string, referenceDate = new Date()): Date | null {
+  const raw = dateStr.trim().replace(/\s+/g, " ");
+  if (!raw) return null;
+
+  if (/^today$/i.test(raw)) return new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), referenceDate.getUTCDate(), 12));
+  if (/^yesterday$/i.test(raw)) {
+    const d = new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), referenceDate.getUTCDate(), 12));
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d;
+  }
+
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) {
+    const result = new Date(Date.UTC(+iso[1], +iso[2] - 1, +iso[3], 12));
+    return result.getUTCFullYear() === +iso[1] && result.getUTCMonth() === +iso[2] - 1 && result.getUTCDate() === +iso[3]
+      ? result
+      : null;
+  }
+
+  const dmy = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (dmy) {
+    const day = +dmy[1];
+    const month = +dmy[2];
+    let year = +dmy[3];
+    if (year < 100) year += 2000;
+    const result = new Date(Date.UTC(year, month - 1, day, 12));
+    return result.getUTCFullYear() === year && result.getUTCMonth() === month - 1 && result.getUTCDate() === day
+      ? result
+      : null;
+  }
+
+  const monthMap: Record<string, number> = {
+    jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2, apr: 3, april: 3,
+    may: 4, jun: 5, june: 5, jul: 6, july: 6, aug: 7, august: 7, sep: 8, sept: 8, september: 8,
+    oct: 9, october: 9, nov: 10, november: 10, dec: 11, december: 11,
+  };
+  const mdy = raw.match(/^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:,?\s*(\d{2,4}))?$/i);
+  if (mdy) {
+    const month = monthMap[mdy[1].toLowerCase()];
+    const day = +mdy[2];
+    let year = mdy[3] ? +mdy[3] : referenceDate.getUTCFullYear();
+    if (year < 100) year += 2000;
+    let result = new Date(Date.UTC(year, month, day, 12));
+    if (!mdy[3] && result.getTime() > referenceDate.getTime()) {
+      result = new Date(Date.UTC(year - 1, month, day, 12));
+    }
+    return result.getUTCMonth() === month && result.getUTCDate() === day ? result : null;
+  }
+
+  return null;
+}
+
+function dateOnly(date: Date): string {
+  return date.toISOString().split("T")[0];
+}
+
+function parseDateOnly(dateStr: string): Date | null {
+  return parseExplicitCalendarDate(dateStr);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -264,9 +324,9 @@ serve(async (req) => {
 
       let previousCycleLength: number | null = null;
       if (participant.last_period_start) {
-        const prevStart = new Date(participant.last_period_start);
-        const newStart = new Date(formattedDate);
-        const diffDays = Math.round((newStart.getTime() - prevStart.getTime()) / (1000 * 60 * 60 * 24));
+        const prevStart = parseDateOnly(participant.last_period_start);
+        const newStart = parseDateOnly(formattedDate);
+        const diffDays = prevStart && newStart ? Math.round((newStart.getTime() - prevStart.getTime()) / (1000 * 60 * 60 * 24)) : 0;
         if (diffDays >= 15 && diffDays <= 60) {
           previousCycleLength = diffDays;
           await supabase
@@ -406,8 +466,7 @@ serve(async (req) => {
             if (/^today$/i.test(token)) d = new Date();
             else if (/^yesterday$/i.test(token)) { d = new Date(); d.setDate(d.getDate() - 1); }
             else {
-              const parsed = new Date(token);
-              if (!isNaN(parsed.getTime())) d = parsed;
+              d = parseExplicitCalendarDate(token);
             }
             if (d && d <= new Date()) allDates.push({ token, date: d, match: m as unknown as RegExpMatchArray });
           }
@@ -488,9 +547,9 @@ serve(async (req) => {
 
       if (periodDateMatch) {
         const dateStr = periodDateMatch[1];
-        const parsed = new Date(dateStr);
-        if (!isNaN(parsed.getTime()) && parsed <= new Date()) {
-          const formattedDate = parsed.toISOString().split("T")[0];
+        const parsed = parseExplicitCalendarDate(dateStr);
+        if (parsed && parsed <= new Date()) {
+          const formattedDate = dateOnly(parsed);
 
           // Archive previous cycle. Prefer an explicit "previous date" mentioned in the same
           // message (e.g. "April 8 and then today"); otherwise fall back to the participant's
@@ -500,8 +559,8 @@ serve(async (req) => {
           const explicitPrev = (periodDateMatch as any).__previousDate as string | undefined;
           const prevSource = explicitPrev || participant.last_period_start;
           if (prevSource) {
-            const prevStart = new Date(prevSource);
-            const diffDays = Math.round((parsed.getTime() - prevStart.getTime()) / (1000 * 60 * 60 * 24));
+            const prevStart = parseDateOnly(prevSource);
+            const diffDays = prevStart ? Math.round((parsed.getTime() - prevStart.getTime()) / (1000 * 60 * 60 * 24)) : 0;
             if (diffDays >= 15 && diffDays <= 60) {
               previousCycleLength = diffDays;
               inferredCycleLength = diffDays;
@@ -902,9 +961,9 @@ serve(async (req) => {
         let askForDate = false;
 
         if (ppDateMatch) {
-          const parsed = new Date(ppDateMatch[1]);
-          if (!isNaN(parsed.getTime()) && parsed <= new Date()) {
-            computedStartDate = parsed.toISOString().split("T")[0];
+          const parsed = parseExplicitCalendarDate(ppDateMatch[1]);
+          if (parsed && parsed <= new Date()) {
+            computedStartDate = dateOnly(parsed);
           }
         } else if (ppDurationMatch) {
           const n = parseInt(ppDurationMatch[1]);
@@ -986,9 +1045,9 @@ serve(async (req) => {
       if (wasAwaitingBirthDate && participant.life_stage === "postpartum") {
         const dateOnlyMatch = userMessage.match(/\b(\w+\s+\d{1,2}(?:,?\s*\d{4})?)\b/);
         if (dateOnlyMatch) {
-          const parsed = new Date(dateOnlyMatch[1]);
-          if (!isNaN(parsed.getTime()) && parsed <= new Date()) {
-            const formattedDate = parsed.toISOString().split("T")[0];
+          const parsed = parseExplicitCalendarDate(dateOnlyMatch[1]);
+          if (parsed && parsed <= new Date()) {
+            const formattedDate = dateOnly(parsed);
             await supabase
               .from("participants")
               .update({ postpartum_start_date: formattedDate })
@@ -1420,6 +1479,12 @@ FOOD & NUTRITION:
 - Good: "Dark chocolate counts as magnesium, by the way."
 - Bad: A paragraph listing foods by phase with explanations.
 - You know the phase-specific nutrition science — use it to give ONE sharp, relevant tip when the moment calls for it.
+
+CALENDAR DATE RULES:
+- Treat dates as actual calendar dates only when the user gives a real calendar anchor: Month Day, Month Day Year, YYYY-MM-DD, DD/MM/YYYY, today, yesterday, or a named weekday in an explicit period-start sentence.
+- Do NOT treat loose language like "start of my workday", "at the start", "day started", "morning", "next week", or casual references to "dates" as cycle dates or birth dates.
+- If the user asks for encouragement at the start of a workday, respond to the workday context only; do not infer or update a period, cycle, postpartum, or birth date.
+- If a date matters and the calendar date is ambiguous, ask for the exact calendar date instead of guessing.
 
 CORE KNOWLEDGE (internal reference — do NOT dump this on the user):
 - Menstruation (Days 1-5): Low energy, inflammation peaks. Load capacity ~25%. Deload window.

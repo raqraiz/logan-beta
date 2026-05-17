@@ -340,6 +340,7 @@ interface CycleData {
   lastPeriodStart?: string;
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause";
   postpartumStartDate?: string;
+  postpartumActive?: boolean;
 }
 
 interface HomeTabProps {
@@ -379,6 +380,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   }
 
   const visibleWidgets = widgets.filter(w => w.visible);
+  const hasPostpartumContext = cycleData.lifeStage === "postpartum" || !!cycleData.postpartumActive;
   const isNonCycling = cycleData.lifeStage === "postpartum" || cycleData.lifeStage === "menopause";
   const stagePhase = isNonCycling
     ? (cycleData.lifeStage === "postpartum" ? "Postpartum" : "Menopause")
@@ -388,7 +390,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   const ppPhase = getPostpartumPhase(cycleData.postpartumStartDate);
   const getTipsHer = (widgetId: string): string[] => {
     const isSucceed = widgetId.startsWith("succeed");
-    if (cycleData.lifeStage === "postpartum") {
+    if (hasPostpartumContext) {
       return isSucceed ? PP_SUCCEED_HER[ppPhase] : PP_DONTMESS_HER[ppPhase];
     }
     if (cycleData.lifeStage === "menopause") {
@@ -398,7 +400,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   };
   const getTipsHim = (widgetId: string): string[] => {
     const isSucceed = widgetId.startsWith("succeed");
-    if (cycleData.lifeStage === "postpartum") {
+    if (hasPostpartumContext) {
       return isSucceed ? PP_SUCCEED_HIM[ppPhase] : PP_DONTMESS_HIM[ppPhase];
     }
     if (cycleData.lifeStage === "menopause") {
@@ -417,10 +419,11 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           <div className="w-full flex flex-col items-center" key={id}>
             <DailyBriefingHero
               cycleDay={cycleData.cycleDay}
-              phase={cycleData.phase}
+              phase={stagePhase}
               cycleLengthDays={cycleData.cycleLengthDays}
               lifeStage={cycleData.lifeStage}
               postpartumStartDate={cycleData.postpartumStartDate}
+              postpartumActive={cycleData.postpartumActive}
               onCircleClick={isNonCycling ? undefined : () => setShowAnalytics(true)}
             />
             {!isNonCycling && !dismissed && (
@@ -544,9 +547,13 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
               <CustomAIWidget
                 title={label}
                 prompt={widget.prompt}
-                phase={cycleData.phase}
-                cycleDay={cycleData.cycleDay}
+                phase={stagePhase}
+                cycleDay={isNonCycling ? 0 : cycleData.cycleDay}
                 cycleLengthDays={cycleData.cycleLengthDays}
+                targetUserId={userId}
+                lifeStage={cycleData.lifeStage}
+                postpartumStartDate={cycleData.postpartumStartDate}
+                postpartumActive={cycleData.postpartumActive}
               />
             </div>
           );

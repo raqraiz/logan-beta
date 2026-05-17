@@ -110,7 +110,7 @@ export const PP_WORKOUTS: Record<PPPhase, { suggestion: string; examples: string
     trainingNote: "Progressive overload is back on the table — slowly. Sleep and fueling determine recovery more than the program does right now.",
   },
   late: {
-    suggestion: "Train like an athlete again — real lifts, real intensity, sport-specific work. Plyometrics if pelvic floor is solid.",
+    suggestion: "Build strength with clear progression — real resistance, measured intensity, and pelvic-floor-aware impact if symptoms are quiet.",
     examples: ["Heavy compound lifts", "Running / intervals", "Plyometrics", "Sport-specific training"],
     trainingNote: "You are not fragile. Lingering symptoms (leaking, prolapse feel, diastasis) deserve a specialist — not permanent backing-off.",
   },
@@ -298,7 +298,7 @@ export const PP_SUCCEED_HER: Record<PPPhase, string[]> = {
     "Take one full solo hour this week. Non-negotiable.",
   ],
   late: [
-    "Train like an athlete again — progressive overload, real lifts, real intensity.",
+    "Build strength with intention — progressive overload, real resistance, and recovery that matches your actual sleep.",
     "Re-check thyroid if you feel off. Postpartum thyroiditis is missed constantly around 6-9 months.",
     "Set a goal that has nothing to do with motherhood. A race, a class, a project.",
     "If your cycle is back, treat symptoms as data, not noise.",

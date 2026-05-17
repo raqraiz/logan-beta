@@ -9,9 +9,23 @@ interface CustomAIWidgetProps {
   phase: string;
   cycleDay: number;
   cycleLengthDays: number;
+  targetUserId?: string;
+  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause";
+  postpartumStartDate?: string;
+  postpartumActive?: boolean;
 }
 
-export function CustomAIWidget({ title, prompt, phase, cycleDay, cycleLengthDays }: CustomAIWidgetProps) {
+export function CustomAIWidget({
+  title,
+  prompt,
+  phase,
+  cycleDay,
+  cycleLengthDays,
+  targetUserId,
+  lifeStage,
+  postpartumStartDate,
+  postpartumActive,
+}: CustomAIWidgetProps) {
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +35,7 @@ export function CustomAIWidget({ title, prompt, phase, cycleDay, cycleLengthDays
     setError(null);
     try {
       const { data, error: fnError } = await supabase.functions.invoke("generate-widget", {
-        body: { prompt, phase, cycleDay, cycleLengthDays },
+        body: { prompt, phase, cycleDay, cycleLengthDays, targetUserId, lifeStage, postpartumStartDate, postpartumActive },
       });
       if (fnError) throw fnError;
       setContent(data?.content || "No insight available.");
@@ -31,7 +45,7 @@ export function CustomAIWidget({ title, prompt, phase, cycleDay, cycleLengthDays
     } finally {
       setLoading(false);
     }
-  }, [prompt, phase, cycleDay, cycleLengthDays]);
+  }, [prompt, phase, cycleDay, cycleLengthDays, targetUserId, lifeStage, postpartumStartDate, postpartumActive]);
 
   useEffect(() => {
     generate();
