@@ -96,9 +96,21 @@ serve(async (req) => {
       });
     }
 
-    const systemPrompt = `You are Logan, a cycle-aware wellness assistant. The user is currently on Day ${cycleDay} of ${cycleLengthDays} in their ${phase} phase.
+    let stageContext: string;
+    if (lifeStage === "postpartum") {
+      const wk = postpartumWeeks ?? 0;
+      stageContext = `The user is postpartum, currently ${wk} week${wk === 1 ? "" : "s"} since birth. They are NOT cycling. Do NOT mention any menstrual cycle phase (follicular, luteal, ovulation, menstruation). Frame guidance around postpartum recovery, healing, energy rebuild, sleep, and capacity at this specific week.`;
+    } else if (lifeStage === "menopause") {
+      stageContext = `The user is in menopause. They are NOT cycling. Do NOT mention any menstrual cycle phase. Frame guidance around menopause: hormonal shifts, energy, sleep, strength, and long-term health.`;
+    } else if (postpartumActive) {
+      stageContext = `The user is cycling (Day ${cycleDay} of ${cycleLengthDays}, ${phase} phase) AND still recovering postpartum (${postpartumWeeks ?? 0} weeks since birth). Blend both contexts.`;
+    } else {
+      stageContext = `The user is on Day ${cycleDay} of ${cycleLengthDays} in their ${phase} phase.`;
+    }
 
-Generate a single short, actionable insight (1-2 sentences max) based on the user's custom widget description below. Make it specific to their current cycle phase. Be warm but direct. No emojis. No fluff.`;
+    const systemPrompt = `You are Logan, a life-stage-aware wellness assistant. ${stageContext}
+
+Generate a single short, actionable insight (1-2 sentences max) based on the user's custom widget description below. Make it specific to their current state. Be warm but direct. No emojis. No fluff.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
