@@ -340,6 +340,7 @@ interface CycleData {
   lastPeriodStart?: string;
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause";
   postpartumStartDate?: string;
+  postpartumActive?: boolean;
 }
 
 interface HomeTabProps {
@@ -417,7 +418,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           <div className="w-full flex flex-col items-center" key={id}>
             <DailyBriefingHero
               cycleDay={cycleData.cycleDay}
-              phase={cycleData.phase}
+              phase={stagePhase}
               cycleLengthDays={cycleData.cycleLengthDays}
               lifeStage={cycleData.lifeStage}
               postpartumStartDate={cycleData.postpartumStartDate}
@@ -544,9 +545,13 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
               <CustomAIWidget
                 title={label}
                 prompt={widget.prompt}
-                phase={cycleData.phase}
-                cycleDay={cycleData.cycleDay}
+                phase={stagePhase}
+                cycleDay={isNonCycling ? 0 : cycleData.cycleDay}
                 cycleLengthDays={cycleData.cycleLengthDays}
+                targetUserId={userId}
+                lifeStage={cycleData.lifeStage}
+                postpartumStartDate={cycleData.postpartumStartDate}
+                postpartumActive={cycleData.postpartumActive}
               />
             </div>
           );
