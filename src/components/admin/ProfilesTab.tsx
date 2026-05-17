@@ -1022,12 +1022,14 @@ export function ProfilesTab() {
                 lastPeriodStart: participant?.last_period_start || undefined,
                 lifeStage: (participant?.life_stage as any) || "cycling",
                 postpartumStartDate: participant?.postpartum_start_date || undefined,
+                postpartumActive: !!(participant as any)?.postpartum_active,
               } : participant?.life_stage && (participant.life_stage === "postpartum" || participant.life_stage === "menopause") ? {
                 cycleDay: 0,
                 phase: participant.life_stage === "postpartum" ? "Postpartum" : "Menopause",
                 cycleLengthDays: 0,
                 lifeStage: participant.life_stage as "postpartum" | "menopause",
                 postpartumStartDate: participant?.postpartum_start_date || undefined,
+                postpartumActive: !!(participant as any)?.postpartum_active,
               } : null;
 
               const scrollAskToLastSeen = () => {
