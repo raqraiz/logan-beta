@@ -51,19 +51,30 @@ serve(async (req) => {
     let phase = "Follicular";
     let cycleDay = 1;
     let cycleLengthDays = 28;
+    let lifeStage: string = "cycling";
+    let postpartumWeeks: number | null = null;
+    let postpartumActive = false;
 
     if (userEmail) {
       const { data: participant } = await supabaseService
         .from("participants")
-        .select("cycle_length_days, last_period_start, life_stage")
+        .select("cycle_length_days, last_period_start, life_stage, postpartum_start_date, postpartum_active")
         .eq("email", userEmail)
         .maybeSingle();
+
+      if (participant?.life_stage) lifeStage = participant.life_stage;
+      postpartumActive = !!participant?.postpartum_active;
 
       if (participant?.cycle_length_days) {
         const len = Number(participant.cycle_length_days);
         if (Number.isFinite(len)) cycleLengthDays = Math.min(45, Math.max(18, len));
       }
-      if (participant?.last_period_start) {
+      if (participant?.postpartum_start_date) {
+        const start = new Date(participant.postpartum_start_date + "T12:00:00Z");
+        const now = new Date();
+        postpartumWeeks = Math.max(0, Math.floor((now.getTime() - start.getTime()) / (86400000 * 7)));
+      }
+      if (participant?.last_period_start && lifeStage !== "postpartum" && lifeStage !== "menopause") {
         const start = new Date(participant.last_period_start + "T12:00:00Z");
         const now = new Date();
         const diffDays = Math.floor((now.getTime() - start.getTime()) / 86400000);
