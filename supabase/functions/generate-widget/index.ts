@@ -51,19 +51,30 @@ serve(async (req) => {
     let phase = "Follicular";
     let cycleDay = 1;
     let cycleLengthDays = 28;
+    let lifeStage: string = "cycling";
+    let postpartumWeeks: number | null = null;
+    let postpartumActive = false;
 
     if (userEmail) {
       const { data: participant } = await supabaseService
         .from("participants")
-        .select("cycle_length_days, last_period_start, life_stage")
+        .select("cycle_length_days, last_period_start, life_stage, postpartum_start_date, postpartum_active")
         .eq("email", userEmail)
         .maybeSingle();
+
+      if (participant?.life_stage) lifeStage = participant.life_stage;
+      postpartumActive = !!participant?.postpartum_active;
 
       if (participant?.cycle_length_days) {
         const len = Number(participant.cycle_length_days);
         if (Number.isFinite(len)) cycleLengthDays = Math.min(45, Math.max(18, len));
       }
-      if (participant?.last_period_start) {
+      if (participant?.postpartum_start_date) {
+        const start = new Date(participant.postpartum_start_date + "T12:00:00Z");
+        const now = new Date();
+        postpartumWeeks = Math.max(0, Math.floor((now.getTime() - start.getTime()) / (86400000 * 7)));
+      }
+      if (participant?.last_period_start && lifeStage !== "postpartum" && lifeStage !== "menopause") {
         const start = new Date(participant.last_period_start + "T12:00:00Z");
         const now = new Date();
         const diffDays = Math.floor((now.getTime() - start.getTime()) / 86400000);
@@ -85,9 +96,21 @@ serve(async (req) => {
       });
     }
 
-    const systemPrompt = `You are Logan, a cycle-aware wellness assistant. The user is currently on Day ${cycleDay} of ${cycleLengthDays} in their ${phase} phase.
+    let stageContext: string;
+    if (lifeStage === "postpartum") {
+      const wk = postpartumWeeks ?? 0;
+      stageContext = `The user is postpartum, currently ${wk} week${wk === 1 ? "" : "s"} since birth. They are NOT cycling. Do NOT mention any menstrual cycle phase (follicular, luteal, ovulation, menstruation). Frame guidance around postpartum recovery, healing, energy rebuild, sleep, and capacity at this specific week.`;
+    } else if (lifeStage === "menopause") {
+      stageContext = `The user is in menopause. They are NOT cycling. Do NOT mention any menstrual cycle phase. Frame guidance around menopause: hormonal shifts, energy, sleep, strength, and long-term health.`;
+    } else if (postpartumActive) {
+      stageContext = `The user is cycling (Day ${cycleDay} of ${cycleLengthDays}, ${phase} phase) AND still recovering postpartum (${postpartumWeeks ?? 0} weeks since birth). Blend both contexts.`;
+    } else {
+      stageContext = `The user is on Day ${cycleDay} of ${cycleLengthDays} in their ${phase} phase.`;
+    }
 
-Generate a single short, actionable insight (1-2 sentences max) based on the user's custom widget description below. Make it specific to their current cycle phase. Be warm but direct. No emojis. No fluff.`;
+    const systemPrompt = `You are Logan, a life-stage-aware wellness assistant. ${stageContext}
+
+Generate a single short, actionable insight (1-2 sentences max) based on the user's custom widget description below. Make it specific to their current state. Be warm but direct. No emojis. No fluff.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
