@@ -6,6 +6,66 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function parseExplicitCalendarDate(dateStr: string, referenceDate = new Date()): Date | null {
+  const raw = dateStr.trim().replace(/\s+/g, " ");
+  if (!raw) return null;
+
+  if (/^today$/i.test(raw)) return new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), referenceDate.getUTCDate(), 12));
+  if (/^yesterday$/i.test(raw)) {
+    const d = new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), referenceDate.getUTCDate(), 12));
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d;
+  }
+
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) {
+    const result = new Date(Date.UTC(+iso[1], +iso[2] - 1, +iso[3], 12));
+    return result.getUTCFullYear() === +iso[1] && result.getUTCMonth() === +iso[2] - 1 && result.getUTCDate() === +iso[3]
+      ? result
+      : null;
+  }
+
+  const dmy = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (dmy) {
+    const day = +dmy[1];
+    const month = +dmy[2];
+    let year = +dmy[3];
+    if (year < 100) year += 2000;
+    const result = new Date(Date.UTC(year, month - 1, day, 12));
+    return result.getUTCFullYear() === year && result.getUTCMonth() === month - 1 && result.getUTCDate() === day
+      ? result
+      : null;
+  }
+
+  const monthMap: Record<string, number> = {
+    jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2, apr: 3, april: 3,
+    may: 4, jun: 5, june: 5, jul: 6, july: 6, aug: 7, august: 7, sep: 8, sept: 8, september: 8,
+    oct: 9, october: 9, nov: 10, november: 10, dec: 11, december: 11,
+  };
+  const mdy = raw.match(/^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:,?\s*(\d{2,4}))?$/i);
+  if (mdy) {
+    const month = monthMap[mdy[1].toLowerCase()];
+    const day = +mdy[2];
+    let year = mdy[3] ? +mdy[3] : referenceDate.getUTCFullYear();
+    if (year < 100) year += 2000;
+    let result = new Date(Date.UTC(year, month, day, 12));
+    if (!mdy[3] && result.getTime() > referenceDate.getTime()) {
+      result = new Date(Date.UTC(year - 1, month, day, 12));
+    }
+    return result.getUTCMonth() === month && result.getUTCDate() === day ? result : null;
+  }
+
+  return null;
+}
+
+function dateOnly(date: Date): string {
+  return date.toISOString().split("T")[0];
+}
+
+function parseDateOnly(dateStr: string): Date | null {
+  return parseExplicitCalendarDate(dateStr);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
