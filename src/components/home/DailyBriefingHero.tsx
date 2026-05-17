@@ -8,6 +8,7 @@ interface DailyBriefingHeroProps {
   cycleLengthDays: number;
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause";
   postpartumStartDate?: string;
+  postpartumActive?: boolean;
   onCircleClick?: () => void;
 }
 
@@ -102,6 +103,7 @@ export function DailyBriefingHero({
   cycleLengthDays,
   lifeStage,
   postpartumStartDate,
+  postpartumActive,
   onCircleClick,
 }: DailyBriefingHeroProps) {
   const isNonCycling = lifeStage && (lifeStage === "postpartum" || lifeStage === "menopause");
@@ -141,6 +143,7 @@ export function DailyBriefingHero({
                 size="md"
                 lifeStage={lifeStage}
                 postpartumStartDate={postpartumStartDate}
+                postpartumActive={postpartumActive}
               />
             </button>
 
