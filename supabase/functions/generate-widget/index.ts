@@ -33,6 +33,7 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const promptRaw = typeof body.prompt === "string" ? body.prompt : "";
     const prompt = promptRaw.trim().slice(0, 500);
+    const targetUserId = typeof body.targetUserId === "string" ? body.targetUserId : null;
 
     if (!prompt) {
       return new Response(JSON.stringify({ error: "Missing prompt" }), {
@@ -47,7 +48,29 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const userEmail = userData.user.email;
+    let userEmail = userData.user.email;
+    if (targetUserId && targetUserId !== userData.user.id) {
+      const { data: role } = await supabaseService
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", userData.user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      if (!role) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: targetProfile } = await supabaseService
+        .from("profiles")
+        .select("email")
+        .eq("id", targetUserId)
+        .maybeSingle();
+      userEmail = targetProfile?.email || userEmail;
+    }
     let phase = "Follicular";
     let cycleDay = 1;
     let cycleLengthDays = 28;
