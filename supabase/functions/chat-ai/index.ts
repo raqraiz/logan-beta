@@ -324,9 +324,9 @@ serve(async (req) => {
 
       let previousCycleLength: number | null = null;
       if (participant.last_period_start) {
-        const prevStart = new Date(participant.last_period_start);
-        const newStart = new Date(formattedDate);
-        const diffDays = Math.round((newStart.getTime() - prevStart.getTime()) / (1000 * 60 * 60 * 24));
+        const prevStart = parseDateOnly(participant.last_period_start);
+        const newStart = parseDateOnly(formattedDate);
+        const diffDays = prevStart && newStart ? Math.round((newStart.getTime() - prevStart.getTime()) / (1000 * 60 * 60 * 24)) : 0;
         if (diffDays >= 15 && diffDays <= 60) {
           previousCycleLength = diffDays;
           await supabase
@@ -466,8 +466,7 @@ serve(async (req) => {
             if (/^today$/i.test(token)) d = new Date();
             else if (/^yesterday$/i.test(token)) { d = new Date(); d.setDate(d.getDate() - 1); }
             else {
-              const parsed = new Date(token);
-              if (!isNaN(parsed.getTime())) d = parsed;
+              d = parseExplicitCalendarDate(token);
             }
             if (d && d <= new Date()) allDates.push({ token, date: d, match: m as unknown as RegExpMatchArray });
           }
@@ -548,9 +547,9 @@ serve(async (req) => {
 
       if (periodDateMatch) {
         const dateStr = periodDateMatch[1];
-        const parsed = new Date(dateStr);
-        if (!isNaN(parsed.getTime()) && parsed <= new Date()) {
-          const formattedDate = parsed.toISOString().split("T")[0];
+        const parsed = parseExplicitCalendarDate(dateStr);
+        if (parsed && parsed <= new Date()) {
+          const formattedDate = dateOnly(parsed);
 
           // Archive previous cycle. Prefer an explicit "previous date" mentioned in the same
           // message (e.g. "April 8 and then today"); otherwise fall back to the participant's
@@ -560,8 +559,8 @@ serve(async (req) => {
           const explicitPrev = (periodDateMatch as any).__previousDate as string | undefined;
           const prevSource = explicitPrev || participant.last_period_start;
           if (prevSource) {
-            const prevStart = new Date(prevSource);
-            const diffDays = Math.round((parsed.getTime() - prevStart.getTime()) / (1000 * 60 * 60 * 24));
+            const prevStart = parseDateOnly(prevSource);
+            const diffDays = prevStart ? Math.round((parsed.getTime() - prevStart.getTime()) / (1000 * 60 * 60 * 24)) : 0;
             if (diffDays >= 15 && diffDays <= 60) {
               previousCycleLength = diffDays;
               inferredCycleLength = diffDays;
