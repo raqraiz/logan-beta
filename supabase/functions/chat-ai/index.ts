@@ -961,9 +961,9 @@ serve(async (req) => {
         let askForDate = false;
 
         if (ppDateMatch) {
-          const parsed = new Date(ppDateMatch[1]);
-          if (!isNaN(parsed.getTime()) && parsed <= new Date()) {
-            computedStartDate = parsed.toISOString().split("T")[0];
+          const parsed = parseExplicitCalendarDate(ppDateMatch[1]);
+          if (parsed && parsed <= new Date()) {
+            computedStartDate = dateOnly(parsed);
           }
         } else if (ppDurationMatch) {
           const n = parseInt(ppDurationMatch[1]);
@@ -1045,9 +1045,9 @@ serve(async (req) => {
       if (wasAwaitingBirthDate && participant.life_stage === "postpartum") {
         const dateOnlyMatch = userMessage.match(/\b(\w+\s+\d{1,2}(?:,?\s*\d{4})?)\b/);
         if (dateOnlyMatch) {
-          const parsed = new Date(dateOnlyMatch[1]);
-          if (!isNaN(parsed.getTime()) && parsed <= new Date()) {
-            const formattedDate = parsed.toISOString().split("T")[0];
+          const parsed = parseExplicitCalendarDate(dateOnlyMatch[1]);
+          if (parsed && parsed <= new Date()) {
+            const formattedDate = dateOnly(parsed);
             await supabase
               .from("participants")
               .update({ postpartum_start_date: formattedDate })
@@ -1479,6 +1479,12 @@ FOOD & NUTRITION:
 - Good: "Dark chocolate counts as magnesium, by the way."
 - Bad: A paragraph listing foods by phase with explanations.
 - You know the phase-specific nutrition science — use it to give ONE sharp, relevant tip when the moment calls for it.
+
+CALENDAR DATE RULES:
+- Treat dates as actual calendar dates only when the user gives a real calendar anchor: Month Day, Month Day Year, YYYY-MM-DD, DD/MM/YYYY, today, yesterday, or a named weekday in an explicit period-start sentence.
+- Do NOT treat loose language like "start of my workday", "at the start", "day started", "morning", "next week", or casual references to "dates" as cycle dates or birth dates.
+- If the user asks for encouragement at the start of a workday, respond to the workday context only; do not infer or update a period, cycle, postpartum, or birth date.
+- If a date matters and the calendar date is ambiguous, ask for the exact calendar date instead of guessing.
 
 CORE KNOWLEDGE (internal reference — do NOT dump this on the user):
 - Menstruation (Days 1-5): Low energy, inflammation peaks. Load capacity ~25%. Deload window.
