@@ -663,11 +663,13 @@ serve(async (req) => {
 
       console.log("[chat-ai] cycleDayCorrectionMatch:", !!cycleDayCorrectionMatch, "isCorrectionContext:", isCorrectionContext, "lastAssistantMentionedDay:", lastAssistantMentionedDay, "msg:", userMessage.substring(0, 60));
 
-      // Skip if the user is speaking hypothetically / about expectations rather than asserting today's day
-      // e.g. "I thought I'd be day 2 today", "I expected to be on day 2", "should have been day 2", "wish I was day 2"
-      const isHypothetical = /\b(?:thought|think|expected|expect|hoped|hope|wish|wished|wonder(?:ed|ing)?|figured|assumed|guess(?:ed|ing)?|supposed\s+to|would\s+(?:be|have)|should\s+(?:be|have)|might\s+be|maybe|imagined?)\b/i.test(userMessage);
+      // Skip if the user is speaking hypothetically / rhetorically / about expectations rather than asserting today's day
+      // e.g. "I thought I'd be day 2 today", "would mean I'm on day 36", "how can that be?", "if I'm on day 5"
+      const isHypothetical = /\b(?:thought|think|expected|expect|hoped|hope|wish|wished|wonder(?:ed|ing)?|figured|assumed|guess(?:ed|ing)?|supposed\s+to|would\s+(?:be|have|mean|put|make)|that\s+would|that\s+means?|means?\s+(?:i|that)|should\s+(?:be|have)|might\s+be|maybe|imagined?|if\s+i|how\s+can|how\s+is|how\s+could|why\s+(?:am|would|is)|does\s+that\s+mean|doesn'?t\s+that\s+mean)\b/i.test(userMessage);
+      // Also skip when the message is a question — corrections are statements, not questions
+      const isQuestion = /\?/.test(userMessage);
 
-      if (cycleDayCorrectionMatch && !isHypothetical) {
+      if (cycleDayCorrectionMatch && !isHypothetical && !isQuestion) {
         const targetDay = parseInt(cycleDayCorrectionMatch[1]);
         if (targetDay >= 1 && targetDay <= 60) {
           // Compute new last_period_start = today - (targetDay - 1) days, in user's tz
