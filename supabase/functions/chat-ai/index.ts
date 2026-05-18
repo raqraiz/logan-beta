@@ -1576,6 +1576,97 @@ MEAL PLANS / MENUS — STRICT RULES:
       ? `This user is POSTPARTUM — they do not have a regular cycle right now (unless they say it has returned). Their hormones are recalibrating after pregnancy, but the SPECIFIC focus depends heavily on how far postpartum they are. ${ppPhaseGuidance}\n\nGENERAL POSTPARTUM RULES: Do NOT assume whether the user is breastfeeding or not — only reference breastfeeding if the USER brings it up first. If they mention having multiple children, do NOT assume they are breastfeeding all of them. Do NOT reference cycle phases, cycle days, or ovulation unless the user has confirmed their cycle returned. NEVER default to generic "early postpartum healing/recovery" language for users past 6 months postpartum.`
       : `This user is in MENOPAUSE — their cycle may be irregular or has stopped. Their estrogen and progesterone are declining. Focus on: hot flashes, sleep disruption, mood changes, bone health, energy management, cognitive shifts, weight changes. Do NOT reference specific cycle days or ovulation windows. Instead, provide guidance relevant to hormonal transition and thriving through it.`;
 
+    // Fetch recent Whoop metrics so Logan cites ACTUAL numbers (sleep, recovery, HRV, RHR, strain)
+    // instead of inventing them. Raw values are encoded in tracker_logs.notes as
+    // `whoop:<metric>:<id>|raw=<value>`.
+    let whoopContext = "";
+    {
+      const { data: integ } = await supabase
+        .from("user_integrations")
+        .select("status, last_synced_at")
+        .eq("user_id", user.id)
+        .eq("provider", "whoop")
+        .maybeSingle();
+
+      if (integ) {
+        const since = new Date(Date.now() - 14 * 86400_000).toISOString();
+        const { data: wLogs } = await supabase
+          .from("tracker_logs")
+          .select("notes, logged_at")
+          .eq("user_id", user.id)
+          .like("notes", "whoop:%")
+          .gte("logged_at", since)
+          .order("logged_at", { ascending: false })
+          .limit(400);
+
+        type Row = { metric: string; raw: number; at: string };
+        const parsed: Row[] = [];
+        for (const r of wLogs ?? []) {
+          const n = (r as any).notes as string;
+          const m = n?.match(/^whoop:([a-z_0-9]+):[^|]*\|raw=([\d.\-]+)/i);
+          if (m) parsed.push({ metric: m[1], raw: parseFloat(m[2]), at: (r as any).logged_at });
+        }
+
+        if (parsed.length > 0) {
+          // Group by metric: latest value + 7-day avg
+          const byMetric: Record<string, Row[]> = {};
+          for (const p of parsed) (byMetric[p.metric] ||= []).push(p);
+
+          const labels: Record<string, { label: string; unit: string; decimals?: number }> = {
+            recovery: { label: "Recovery", unit: "%" },
+            hrv: { label: "HRV", unit: "ms", decimals: 0 },
+            rhr: { label: "Resting HR", unit: "bpm", decimals: 0 },
+            sleep_score: { label: "Sleep score", unit: "%" },
+            sleep_hours: { label: "Sleep", unit: "h", decimals: 1 },
+            sleep_eff: { label: "Sleep efficiency", unit: "%" },
+            day_strain: { label: "Day strain", unit: "/21", decimals: 1 },
+            resp_rate: { label: "Respiratory rate", unit: "bpm", decimals: 1 },
+            skin_temp: { label: "Skin temp", unit: "°C", decimals: 1 },
+            spo2: { label: "SpO2", unit: "%" },
+          };
+
+          const sevenDayCutoff = Date.now() - 7 * 86400_000;
+          const fmt = (v: number, d = 0) => (Number.isFinite(v) ? v.toFixed(d) : "—");
+          const lines: string[] = [];
+          for (const [metric, rows] of Object.entries(byMetric)) {
+            const cfg = labels[metric];
+            if (!cfg) continue;
+            rows.sort((a, b) => b.at.localeCompare(a.at));
+            const latest = rows[0];
+            const recent = rows.filter((r) => Date.parse(r.at) >= sevenDayCutoff);
+            const avg = recent.length
+              ? recent.reduce((s, r) => s + r.raw, 0) / recent.length
+              : null;
+            const latestDate = new Date(latest.at).toISOString().split("T")[0];
+            const d = cfg.decimals ?? 0;
+            const avgPart = avg !== null && recent.length >= 2
+              ? `, 7d avg ${fmt(avg, d)}${cfg.unit} (n=${recent.length})`
+              : "";
+            lines.push(`  • ${cfg.label}: ${fmt(latest.raw, d)}${cfg.unit} on ${latestDate}${avgPart}`);
+          }
+
+          const lastSync = integ.last_synced_at
+            ? new Date(integ.last_synced_at as string)
+            : null;
+          const staleDays = lastSync
+            ? Math.floor((Date.now() - lastSync.getTime()) / 86400_000)
+            : null;
+          const stalenessNote = staleDays !== null && staleDays >= 2
+            ? `\nNote: Whoop last synced ${staleDays} days ago — values may be outdated. If she asks about today/last night and you only have older data, acknowledge that openly.`
+            : "";
+          const reauthNote = (integ as any).status === "reauth_required"
+            ? `\nNote: Whoop connection needs reauthorization — let her know if she asks why data looks off.`
+            : "";
+
+          whoopContext = `\n\nWHOOP DATA (real measurements from her wearable — CITE these numbers exactly, never invent sleep/HRV/recovery/strain values):\n${lines.join("\n")}${stalenessNote}${reauthNote}\nIf she asks about sleep, recovery, HRV, resting HR, or strain, ground your answer in these actual values. If a specific metric she asks about isn't listed above, say you don't have that reading rather than guessing.`;
+        } else if ((integ as any).status === "reauth_required") {
+          whoopContext = `\n\nWHOOP: connection needs reauthorization — no recent data available. If she references sleep/recovery/HRV/strain, say her Whoop needs reconnecting and don't invent numbers.`;
+        } else {
+          whoopContext = `\n\nWHOOP: connected but no recent readings synced. Do NOT cite specific sleep/HRV/recovery numbers — say you don't have a current reading if asked.`;
+        }
+      }
+    }
+
 
     let userContext = `\n\nUSER CONTEXT:\n- Life stage: ${stageLabel}\n- Age: ${age || "unknown"}${ppTimeline}\n- Anchor symptom: ${participant.anchor_symptom || "not specified"}\n- Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}\n${topics ? `- Focus areas: ${topics}` : ""}\n\n${stageContext}${symptomContext}`;
     
