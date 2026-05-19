@@ -188,9 +188,13 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: 
   const radius = 42;
   const circumference = 2 * Math.PI * radius;
 
+  // For steady/irregular, draw a smooth continuous ring (no dashes — nothing is cycling)
+  const dashAttr = showGlyph ? undefined : "12 8";
+  const dashAttrLg = showGlyph ? undefined : "14 10";
+
   if (size === "sm") {
     return (
-      <div className="relative w-10 h-10 flex-shrink-0">
+      <div className="relative w-10 h-10 flex-shrink-0" title={`${label}${subLabel ? ` · ${subLabel}` : ""}`}>
         <div className="absolute inset-0 rounded-full opacity-20 blur-xl" style={{ backgroundColor: styles.hex }} />
         <div className="absolute inset-[3px] rounded-full bg-[hsl(220,10%,8%)]" />
         <svg className="w-full h-full relative z-10" viewBox="0 0 100 100">
@@ -207,15 +211,19 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: 
             strokeWidth="2.5"
             strokeLinecap="round"
             stroke={styles.hex}
-            strokeDasharray="12 8"
+            strokeDasharray={dashAttr}
             opacity="0.95"
             style={{ filter: `drop-shadow(0 0 3px ${styles.hex}80)` }}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-          <span className="text-[11px] font-bold leading-none" style={{ color: styles.hex }}>
-            {displayNumber}
-          </span>
+          {showGlyph ? (
+            <span className="text-[14px] leading-none" aria-hidden>💊</span>
+          ) : (
+            <span className="text-[11px] font-bold leading-none" style={{ color: styles.hex }}>
+              {displayNumber}
+            </span>
+          )}
         </div>
       </div>
     );
@@ -240,16 +248,20 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: 
             strokeWidth="3"
             strokeLinecap="round"
             stroke={styles.hex}
-            strokeDasharray="14 10"
+            strokeDasharray={dashAttrLg}
             opacity="0.9"
             style={{ filter: `drop-shadow(0 0 6px ${styles.hex}80)` }}
           />
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-          <span className="text-4xl font-bold leading-none" style={{ color: styles.hex }}>
-            {displayNumber}
-          </span>
-          <span className="text-xs text-muted-foreground mt-1">{subLabel}</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 px-4 text-center">
+          {showGlyph ? (
+            <span className="text-4xl leading-none" aria-hidden>💊</span>
+          ) : (
+            <span className="text-4xl font-bold leading-none" style={{ color: styles.hex }}>
+              {displayNumber}
+            </span>
+          )}
+          <span className="text-xs text-muted-foreground mt-2">{subLabel}</span>
           <span className="text-sm font-semibold mt-0.5" style={{ color: styles.hex }}>{label}</span>
         </div>
       </div>
