@@ -198,6 +198,36 @@ const MENOPAUSE_DONTMESS_HIM: string[] = [
   "Don't write off her ambitions because she's 'in menopause'. She's not done — she's reloading.",
 ];
 
+// Irregular / hormonal birth control — phase prediction doesn't apply.
+const IRREGULAR_SUCCEED_HER: string[] = [
+  "Hormonal BC flattens your cycle — your daily levers are sleep, protein, and stress, not phase timing.",
+  "Strength train 2-3x a week. Steady hormones still need steady muscle work.",
+  "Track sleep quality and mood for two weeks — patterns matter more than calendar days for you.",
+  "Hydrate and prioritize iron-rich meals — the pill can deplete B6, B12, magnesium, and zinc.",
+  "Notice your own rhythms — energy, focus, libido shifts still exist, they're just not phase-locked.",
+];
+const IRREGULAR_DONTMESS_HER: string[] = [
+  "Don't expect 'phase-based' advice to map cleanly — your hormones are externally set, not cycling.",
+  "Don't skip blood work. Hormonal BC can mask underlying issues worth knowing about.",
+  "Don't ignore persistent low mood or low libido — they're worth raising with your doctor.",
+  "Don't assume you can't get pregnant if you miss doses or change formulations — confirm with your provider.",
+  "Don't compare your day to a cycling friend's — your baseline is different, not worse.",
+];
+const IRREGULAR_SUCCEED_HIM: string[] = [
+  "Don't ask 'what phase are you in?' — she's on hormonal BC, the rhythm is steady.",
+  "Notice her actual mood and energy day-to-day instead of guessing from a calendar.",
+  "Support consistent sleep and meals — those move her needle more than any phase strategy.",
+  "If she's exploring coming off BC, ask how you can help — it can take months to recalibrate.",
+];
+const IRREGULAR_DONTMESS_HIM: string[] = [
+  "Don't tell her 'it's just the pill' if she names a real symptom.",
+  "Don't make jokes about hormones — her chemistry is being managed, not malfunctioning.",
+  "Don't pressure her on contraception choices — it's her body, her call.",
+  "Don't assume libido shifts are about you. BC affects desire for many women.",
+];
+
+
+
 
 // ── Widget-specific color schemes for visual variety ────
 // Each widget category has its own identity, independent of cycle phase
@@ -381,9 +411,17 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
 
   const visibleWidgets = widgets.filter(w => w.visible);
   const hasPostpartumContext = cycleData.lifeStage === "postpartum" || !!cycleData.postpartumActive;
-  const isNonCycling = cycleData.lifeStage === "postpartum" || cycleData.lifeStage === "menopause";
+  const isStaleCycle = cycleData.lifeStage === "cycling" && cycleData.cycleLengthDays > 0 && cycleData.cycleDay > cycleData.cycleLengthDays + 14;
+  const isIrregular = cycleData.lifeStage === "irregular";
+  const isNonCycling = cycleData.lifeStage === "postpartum" || cycleData.lifeStage === "menopause" || isIrregular || isStaleCycle;
   const stagePhase = isNonCycling
-    ? (cycleData.lifeStage === "postpartum" ? "Postpartum" : "Menopause")
+    ? (cycleData.lifeStage === "postpartum"
+        ? "Postpartum"
+        : cycleData.lifeStage === "menopause"
+          ? "Menopause"
+          : isIrregular
+            ? "Steady"
+            : "Steady")
     : cycleData.phase;
 
   // Helper to get life-stage-aware tips
@@ -396,6 +434,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     if (cycleData.lifeStage === "menopause") {
       return isSucceed ? MENOPAUSE_SUCCEED_HER : MENOPAUSE_DONTMESS_HER;
     }
+    if (isIrregular || isStaleCycle) {
+      return isSucceed ? IRREGULAR_SUCCEED_HER : IRREGULAR_DONTMESS_HER;
+    }
     return isSucceed ? (SUCCEED_HER[cycleData.phase] || []) : (DONT_MESS_UP_HER[cycleData.phase] || []);
   };
   const getTipsHim = (widgetId: string): string[] => {
@@ -405,6 +446,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     }
     if (cycleData.lifeStage === "menopause") {
       return isSucceed ? MENOPAUSE_SUCCEED_HIM : MENOPAUSE_DONTMESS_HIM;
+    }
+    if (isIrregular || isStaleCycle) {
+      return isSucceed ? IRREGULAR_SUCCEED_HIM : IRREGULAR_DONTMESS_HIM;
     }
     return isSucceed ? (SUCCEED_HIM[cycleData.phase] || []) : (DONT_MESS_UP_HIM[cycleData.phase] || []);
   };

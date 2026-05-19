@@ -138,15 +138,30 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
   );
 }
 
-// Static badge for non-cycling life stages — now with week number like cycling users
-function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "postpartum" | "menopause"; size: "sm" | "md"; postpartumStartDate?: string }) {
-  const stageKey = lifeStage === "postpartum" ? "Postpartum" : "Menopause";
-  const styles = PHASE_STYLES[stageKey];
-  const label = lifeStage === "postpartum" ? "Postpartum" : "Menopause";
+// Static badge for non-cycling/steady life stages (postpartum, menopause, irregular/on-the-pill, or stale cycling)
+function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: { lifeStage: "postpartum" | "menopause" | "irregular" | "steady"; size: "sm" | "md"; postpartumStartDate?: string; steadyReason?: "pill" | "stale" }) {
+  const stageKey =
+    lifeStage === "postpartum" ? "Postpartum" :
+    lifeStage === "menopause" ? "Menopause" :
+    "Follicular"; // reuse a calm teal-ish for irregular/steady
+  const styles = lifeStage === "irregular" || lifeStage === "steady"
+    ? { color: "text-primary", ringColor: "stroke-primary", hex: "#15B88C" }
+    : PHASE_STYLES[stageKey];
+  const label =
+    lifeStage === "postpartum" ? "Postpartum" :
+    lifeStage === "menopause" ? "Menopause" :
+    lifeStage === "steady" ? "Steady" :
+    "Steady";
 
-  // Calculate weeks postpartum (or a default number for menopause)
+  // Calculate weeks postpartum (or a default number for menopause/irregular)
   let displayNumber = "—";
-  let subLabel = lifeStage === "postpartum" ? "Recovery" : "Transition";
+  let subLabel = lifeStage === "postpartum" ? "Recovery" : lifeStage === "menopause" ? "Transition" : "Hormonal BC";
+  if (lifeStage === "steady") {
+    subLabel = steadyReason === "stale" ? "Period overdue" : "Hormonal BC";
+  }
+  if (lifeStage === "irregular") {
+    subLabel = "On the pill / irregular";
+  }
   if (lifeStage === "postpartum" && postpartumStartDate) {
     const start = new Date(postpartumStartDate + "T12:00:00Z");
     const now = new Date();
@@ -166,14 +181,20 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "
     displayNumber = "—";
     subLabel = "Week";
   }
+  // Irregular / on-the-pill / steady: no day number, show a pill glyph instead
+  const showGlyph = lifeStage === "irregular" || lifeStage === "steady";
 
   // Perforated (dashed) ring style
   const radius = 42;
   const circumference = 2 * Math.PI * radius;
 
+  // For steady/irregular, draw a smooth continuous ring (no dashes — nothing is cycling)
+  const dashAttr = showGlyph ? undefined : "12 8";
+  const dashAttrLg = showGlyph ? undefined : "14 10";
+
   if (size === "sm") {
     return (
-      <div className="relative w-10 h-10 flex-shrink-0">
+      <div className="relative w-10 h-10 flex-shrink-0" title={`${label}${subLabel ? ` · ${subLabel}` : ""}`}>
         <div className="absolute inset-0 rounded-full opacity-20 blur-xl" style={{ backgroundColor: styles.hex }} />
         <div className="absolute inset-[3px] rounded-full bg-[hsl(220,10%,8%)]" />
         <svg className="w-full h-full relative z-10" viewBox="0 0 100 100">
@@ -190,15 +211,19 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "
             strokeWidth="2.5"
             strokeLinecap="round"
             stroke={styles.hex}
-            strokeDasharray="12 8"
+            strokeDasharray={dashAttr}
             opacity="0.95"
             style={{ filter: `drop-shadow(0 0 3px ${styles.hex}80)` }}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-          <span className="text-[11px] font-bold leading-none" style={{ color: styles.hex }}>
-            {displayNumber}
-          </span>
+          {showGlyph ? (
+            <span className="text-[14px] leading-none" aria-hidden>💊</span>
+          ) : (
+            <span className="text-[11px] font-bold leading-none" style={{ color: styles.hex }}>
+              {displayNumber}
+            </span>
+          )}
         </div>
       </div>
     );
@@ -223,16 +248,20 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "
             strokeWidth="3"
             strokeLinecap="round"
             stroke={styles.hex}
-            strokeDasharray="14 10"
+            strokeDasharray={dashAttrLg}
             opacity="0.9"
             style={{ filter: `drop-shadow(0 0 6px ${styles.hex}80)` }}
           />
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-          <span className="text-4xl font-bold leading-none" style={{ color: styles.hex }}>
-            {displayNumber}
-          </span>
-          <span className="text-xs text-muted-foreground mt-1">{subLabel}</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 px-4 text-center">
+          {showGlyph ? (
+            <span className="text-4xl leading-none" aria-hidden>💊</span>
+          ) : (
+            <span className="text-4xl font-bold leading-none" style={{ color: styles.hex }}>
+              {displayNumber}
+            </span>
+          )}
+          <span className="text-xs text-muted-foreground mt-2">{subLabel}</span>
           <span className="text-sm font-semibold mt-0.5" style={{ color: styles.hex }}>{label}</span>
         </div>
       </div>
@@ -241,9 +270,17 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "
 }
 
 export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling", postpartumStartDate, postpartumActive = false }: ChatCycleCircleProps) {
-  // Postpartum/menopause users get a static badge. Irregular users still see the cycle circle.
+  // Postpartum/menopause/irregular users get a static badge.
   if (lifeStage === "postpartum" || lifeStage === "menopause") {
     return <LifeStageBadge lifeStage={lifeStage} size={size} postpartumStartDate={postpartumStartDate} />;
+  }
+  if (lifeStage === "irregular") {
+    return <LifeStageBadge lifeStage="irregular" size={size} />;
+  }
+  // Cycling user but cycle has gone stale (period overdue by > 14 days past expected length)
+  // — stop pretending Day 81 / Luteal makes sense, show a calm "Steady — period overdue" badge.
+  if (lifeStage === "cycling" && cycleLengthDays > 0 && cycleDay > cycleLengthDays + 14) {
+    return <LifeStageBadge lifeStage="steady" size={size} steadyReason="stale" />;
   }
 
   const showPpBadge = postpartumActive && !!postpartumStartDate;
