@@ -65,6 +65,7 @@ export function CycleCorrelationsWidget({
       .select("id, name, emoji, description")
       .eq("user_id", userId)
       .eq("is_active", true)
+      .eq("source", "user")
       .order("created_at", { ascending: true });
     setTrackers((data as Tracker[]) || []);
     setLoading(false);
