@@ -1631,7 +1631,11 @@ MEAL PLANS / MENUS — STRICT RULES:
   if (userLifeStage !== "cycling") {
     const age = participant.age || null;
     const topics = participant.goals?.length ? participant.goals.join(", ") : null;
-    const stageLabel = userLifeStage === "postpartum" ? "Postpartum" : "Menopause";
+    const stageLabel =
+      userLifeStage === "postpartum" ? "Postpartum" :
+      userLifeStage === "menopause" ? "Menopause" :
+      userLifeStage === "irregular" ? "Irregular / hormonal birth control" :
+      "Cycling";
     
     // Calculate postpartum timeline + stage-specific guidance bucket
     let ppTimeline = "";
