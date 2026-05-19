@@ -97,7 +97,7 @@ serve(async (req) => {
         const now = new Date();
         postpartumWeeks = Math.max(0, Math.floor((now.getTime() - start.getTime()) / (86400000 * 7)));
       }
-      if (participant?.last_period_start && lifeStage !== "postpartum" && lifeStage !== "menopause") {
+      if (participant?.last_period_start && lifeStage !== "postpartum" && lifeStage !== "menopause" && lifeStage !== "irregular") {
         const start = new Date(participant.last_period_start + "T12:00:00Z");
         const now = new Date();
         const diffDays = Math.floor((now.getTime() - start.getTime()) / 86400000);
@@ -109,6 +109,14 @@ serve(async (req) => {
         else if (cycleDay <= ovulationDay + 1) phase = "Ovulation";
         else phase = "Luteal";
       }
+    }
+
+    // Detect stale cycling (period overdue by > 14 days past expected length) — don't pretend to know a phase.
+    let isStaleCycle = false;
+    if (lifeStage === "cycling" && cycleLengthDays > 0) {
+      // Recompute true days-since-start (unclamped) to detect overdue
+      // Note: cycleDay above is clamped to 60 — we already know overdue if cycleDay >= cycleLengthDays + 14 OR if clamped at 60.
+      if (cycleDay >= Math.min(60, cycleLengthDays + 14)) isStaleCycle = true;
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -125,6 +133,10 @@ serve(async (req) => {
       stageContext = `The user is postpartum, currently ${wk} week${wk === 1 ? "" : "s"} since birth. They are NOT cycling. Do NOT mention any menstrual cycle phase (follicular, luteal, ovulation, menstruation). Frame guidance around postpartum recovery, healing, energy rebuild, sleep, and capacity at this specific week.`;
     } else if (lifeStage === "menopause") {
       stageContext = `The user is in menopause. They are NOT cycling. Do NOT mention any menstrual cycle phase. Frame guidance around menopause: hormonal shifts, energy, sleep, strength, and long-term health.`;
+    } else if (lifeStage === "irregular") {
+      stageContext = `The user is on hormonal birth control or has an irregular cycle. They are NOT naturally cycling — their hormones are externally regulated (or unpredictable). Do NOT mention any menstrual cycle phase (follicular, luteal, ovulation, menstruation), do NOT reference a cycle day number, and do NOT invent estrogen/progesterone-rising language. Frame guidance around steady-state levers: sleep, protein, strength training, stress, hydration, and micronutrients.`;
+    } else if (isStaleCycle) {
+      stageContext = `The user's tracked period is overdue (more than two weeks past their expected cycle length of ${cycleLengthDays} days). We do NOT know what phase they are in right now. Do NOT name a phase or day number. Frame guidance around general well-being and suggest they update their last period date when it starts.`;
     } else if (postpartumActive) {
       stageContext = `The user is cycling (Day ${cycleDay} of ${cycleLengthDays}, ${phase} phase) AND still recovering postpartum (${postpartumWeeks ?? 0} weeks since birth). Blend both contexts.`;
     } else {
