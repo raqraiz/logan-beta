@@ -411,9 +411,17 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
 
   const visibleWidgets = widgets.filter(w => w.visible);
   const hasPostpartumContext = cycleData.lifeStage === "postpartum" || !!cycleData.postpartumActive;
-  const isNonCycling = cycleData.lifeStage === "postpartum" || cycleData.lifeStage === "menopause";
+  const isStaleCycle = cycleData.lifeStage === "cycling" && cycleData.cycleLengthDays > 0 && cycleData.cycleDay > cycleData.cycleLengthDays + 14;
+  const isIrregular = cycleData.lifeStage === "irregular";
+  const isNonCycling = cycleData.lifeStage === "postpartum" || cycleData.lifeStage === "menopause" || isIrregular || isStaleCycle;
   const stagePhase = isNonCycling
-    ? (cycleData.lifeStage === "postpartum" ? "Postpartum" : "Menopause")
+    ? (cycleData.lifeStage === "postpartum"
+        ? "Postpartum"
+        : cycleData.lifeStage === "menopause"
+          ? "Menopause"
+          : isIrregular
+            ? "Steady"
+            : "Steady")
     : cycleData.phase;
 
   // Helper to get life-stage-aware tips
