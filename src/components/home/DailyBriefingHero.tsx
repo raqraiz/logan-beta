@@ -156,7 +156,15 @@ export function DailyBriefingHero({
             <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${phaseBg}`}>
               <span className={`w-1.5 h-1.5 rounded-full bg-current ${phaseText}`} />
               <span className={`text-[11px] font-semibold uppercase tracking-wider ${phaseText}`}>
-                {isNonCycling ? (lifeStage === "postpartum" ? "Postpartum" : "Menopause") : phase}
+                {isNonCycling
+                  ? (lifeStage === "postpartum"
+                      ? "Postpartum"
+                      : lifeStage === "menopause"
+                        ? "Menopause"
+                        : isSteadyByPill
+                          ? "On the pill"
+                          : "Period overdue")
+                  : phase}
               </span>
             </div>
 
