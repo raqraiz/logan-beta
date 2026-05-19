@@ -106,11 +106,17 @@ export function DailyBriefingHero({
   postpartumActive,
   onCircleClick,
 }: DailyBriefingHeroProps) {
-  const isNonCycling = lifeStage && (lifeStage === "postpartum" || lifeStage === "menopause");
+  const isSteadyByPill = lifeStage === "irregular";
+  const isStaleCycle = lifeStage === "cycling" && cycleLengthDays > 0 && cycleDay > cycleLengthDays + 14;
+  const isNonCycling = (lifeStage && (lifeStage === "postpartum" || lifeStage === "menopause")) || isSteadyByPill || isStaleCycle;
   const phaseText = PHASE_TEXT[phase] || "text-primary";
   const phaseBg = PHASE_BG[phase] || "bg-primary/15";
   const phaseAccent = PHASE_ACCENT[phase] || "from-primary/10 via-transparent to-transparent";
-  const headline = PHASE_HEADLINE[phase] || "Your day, your rhythm.";
+  const headline = isSteadyByPill
+    ? "Hormonal birth control evens out your cycle. Let's focus on sleep, energy, and stress today."
+    : isStaleCycle
+      ? "Your period is overdue — let's not guess a phase. Update your last period when it starts so I can recalibrate."
+      : (PHASE_HEADLINE[phase] || "Your day, your rhythm.");
   const metrics = !isNonCycling ? getDayMetrics(cycleDay, cycleLengthDays) : null;
 
   return (
