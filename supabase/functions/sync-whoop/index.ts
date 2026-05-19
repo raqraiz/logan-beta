@@ -72,7 +72,7 @@ async function getOrCreateTracker(
   if (existing?.id) return existing.id as string;
   const { data, error } = await admin
     .from("custom_trackers")
-    .insert({ user_id: userId, name, emoji, description: "Auto-synced from Whoop" })
+    .insert({ user_id: userId, name, emoji, description: "Auto-synced from Whoop", source: "whoop" })
     .select("id")
     .single();
   if (error) throw error;
