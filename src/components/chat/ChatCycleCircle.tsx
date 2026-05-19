@@ -138,15 +138,30 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
   );
 }
 
-// Static badge for non-cycling life stages — now with week number like cycling users
-function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "postpartum" | "menopause"; size: "sm" | "md"; postpartumStartDate?: string }) {
-  const stageKey = lifeStage === "postpartum" ? "Postpartum" : "Menopause";
-  const styles = PHASE_STYLES[stageKey];
-  const label = lifeStage === "postpartum" ? "Postpartum" : "Menopause";
+// Static badge for non-cycling/steady life stages (postpartum, menopause, irregular/on-the-pill, or stale cycling)
+function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: { lifeStage: "postpartum" | "menopause" | "irregular" | "steady"; size: "sm" | "md"; postpartumStartDate?: string; steadyReason?: "pill" | "stale" }) {
+  const stageKey =
+    lifeStage === "postpartum" ? "Postpartum" :
+    lifeStage === "menopause" ? "Menopause" :
+    "Follicular"; // reuse a calm teal-ish for irregular/steady
+  const styles = lifeStage === "irregular" || lifeStage === "steady"
+    ? { color: "text-primary", ringColor: "stroke-primary", hex: "#15B88C" }
+    : PHASE_STYLES[stageKey];
+  const label =
+    lifeStage === "postpartum" ? "Postpartum" :
+    lifeStage === "menopause" ? "Menopause" :
+    lifeStage === "steady" ? "Steady" :
+    "Steady";
 
-  // Calculate weeks postpartum (or a default number for menopause)
+  // Calculate weeks postpartum (or a default number for menopause/irregular)
   let displayNumber = "—";
-  let subLabel = lifeStage === "postpartum" ? "Recovery" : "Transition";
+  let subLabel = lifeStage === "postpartum" ? "Recovery" : lifeStage === "menopause" ? "Transition" : "Hormonal BC";
+  if (lifeStage === "steady") {
+    subLabel = steadyReason === "stale" ? "Period overdue" : "Hormonal BC";
+  }
+  if (lifeStage === "irregular") {
+    subLabel = "On the pill / irregular";
+  }
   if (lifeStage === "postpartum" && postpartumStartDate) {
     const start = new Date(postpartumStartDate + "T12:00:00Z");
     const now = new Date();
@@ -166,6 +181,8 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate }: { lifeStage: "
     displayNumber = "—";
     subLabel = "Week";
   }
+  // Irregular / on-the-pill / steady: no day number, show a pill glyph instead
+  const showGlyph = lifeStage === "irregular" || lifeStage === "steady";
 
   // Perforated (dashed) ring style
   const radius = 42;
