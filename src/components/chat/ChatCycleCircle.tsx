@@ -270,9 +270,17 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: 
 }
 
 export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling", postpartumStartDate, postpartumActive = false }: ChatCycleCircleProps) {
-  // Postpartum/menopause users get a static badge. Irregular users still see the cycle circle.
+  // Postpartum/menopause/irregular users get a static badge.
   if (lifeStage === "postpartum" || lifeStage === "menopause") {
     return <LifeStageBadge lifeStage={lifeStage} size={size} postpartumStartDate={postpartumStartDate} />;
+  }
+  if (lifeStage === "irregular") {
+    return <LifeStageBadge lifeStage="irregular" size={size} />;
+  }
+  // Cycling user but cycle has gone stale (period overdue by > 14 days past expected length)
+  // — stop pretending Day 81 / Luteal makes sense, show a calm "Steady — period overdue" badge.
+  if (lifeStage === "cycling" && cycleLengthDays > 0 && cycleDay > cycleLengthDays + 14) {
+    return <LifeStageBadge lifeStage="steady" size={size} steadyReason="stale" />;
   }
 
   const showPpBadge = postpartumActive && !!postpartumStartDate;
