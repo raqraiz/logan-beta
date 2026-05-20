@@ -281,11 +281,8 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
   if (lifeStage === "irregular") {
     return <LifeStageBadge lifeStage="irregular" size={size} />;
   }
-  // Cycling user but cycle has gone stale (period overdue by > 14 days past expected length)
-  // — stop pretending Day 81 / Luteal makes sense, show a calm "Steady — period overdue" badge.
-  if (lifeStage === "cycling" && cycleLengthDays > 0 && cycleDay > cycleLengthDays + 14) {
-    return <LifeStageBadge lifeStage="steady" size={size} steadyReason="stale" />;
-  }
+  // Cycling users always wrap to their input cycle length — no "overdue" pseudo-state.
+  // Proactive check-in messages before the assumed day 1 confirm whether the cycle has shifted.
 
   const showPpBadge = postpartumActive && !!postpartumStartDate;
   const isSmall = size === "sm";
@@ -373,10 +370,9 @@ export function calculateCycleInfo(
   const diffTime = today.getTime() - periodStart.getTime();
   const daysSinceStart = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-  // Calculate current day in cycle. Don't wrap overdue cycles to Day 1 until a period is confirmed.
-  const cycleDay = daysSinceStart >= 0
-    ? daysSinceStart + 1
-    : ((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
+  // Always wrap to the user's input cycle length. If they're actually late, they'll tell us;
+  // proactive check-ins handle confirming day 1 a few days before the assumed start.
+  const cycleDay = (((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays) + 1;
 
   // Determine phase using biological model
   const menstruationEnd = 5;

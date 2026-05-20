@@ -411,17 +411,14 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
 
   const visibleWidgets = widgets.filter(w => w.visible);
   const hasPostpartumContext = cycleData.lifeStage === "postpartum" || !!cycleData.postpartumActive;
-  const isStaleCycle = cycleData.lifeStage === "cycling" && cycleData.cycleLengthDays > 0 && cycleData.cycleDay > cycleData.cycleLengthDays + 14;
   const isIrregular = cycleData.lifeStage === "irregular";
-  const isNonCycling = cycleData.lifeStage === "postpartum" || cycleData.lifeStage === "menopause" || isIrregular || isStaleCycle;
+  const isNonCycling = cycleData.lifeStage === "postpartum" || cycleData.lifeStage === "menopause" || isIrregular;
   const stagePhase = isNonCycling
     ? (cycleData.lifeStage === "postpartum"
         ? "Postpartum"
         : cycleData.lifeStage === "menopause"
           ? "Menopause"
-          : isIrregular
-            ? "Steady"
-            : "Steady")
+          : "Steady")
     : cycleData.phase;
 
   // Helper to get life-stage-aware tips
@@ -434,7 +431,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     if (cycleData.lifeStage === "menopause") {
       return isSucceed ? MENOPAUSE_SUCCEED_HER : MENOPAUSE_DONTMESS_HER;
     }
-    if (isIrregular || isStaleCycle) {
+    if (isIrregular) {
       return isSucceed ? IRREGULAR_SUCCEED_HER : IRREGULAR_DONTMESS_HER;
     }
     return isSucceed ? (SUCCEED_HER[cycleData.phase] || []) : (DONT_MESS_UP_HER[cycleData.phase] || []);
@@ -447,7 +444,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     if (cycleData.lifeStage === "menopause") {
       return isSucceed ? MENOPAUSE_SUCCEED_HIM : MENOPAUSE_DONTMESS_HIM;
     }
-    if (isIrregular || isStaleCycle) {
+    if (isIrregular) {
       return isSucceed ? IRREGULAR_SUCCEED_HIM : IRREGULAR_DONTMESS_HIM;
     }
     return isSucceed ? (SUCCEED_HIM[cycleData.phase] || []) : (DONT_MESS_UP_HIM[cycleData.phase] || []);
