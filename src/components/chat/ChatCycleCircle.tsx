@@ -373,10 +373,9 @@ export function calculateCycleInfo(
   const diffTime = today.getTime() - periodStart.getTime();
   const daysSinceStart = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-  // Calculate current day in cycle. Don't wrap overdue cycles to Day 1 until a period is confirmed.
-  const cycleDay = daysSinceStart >= 0
-    ? daysSinceStart + 1
-    : ((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
+  // Always wrap to the user's input cycle length. If they're actually late, they'll tell us;
+  // proactive check-ins handle confirming day 1 a few days before the assumed start.
+  const cycleDay = (((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays) + 1;
 
   // Determine phase using biological model
   const menstruationEnd = 5;
