@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, MessageSquare, Users2, Calendar, ThumbsUp, Ticket, TrendingUp, Home, Eye, CheckCircle, BookOpen, ClipboardList } from "lucide-react";
+import { RefreshCw, MessageSquare, Users2, Calendar, ThumbsUp, Ticket, TrendingUp, Home, Eye, CheckCircle, BookOpen, ClipboardList, MessageCircle, ChefHat } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { format, subDays, eachWeekOfInterval } from "date-fns";
 import {
@@ -79,6 +80,8 @@ export const FeaturesTab = () => {
   const [topChatUsers, setTopChatUsers] = useState<TopUser[]>([]);
   const [topCommunityUsers, setTopCommunityUsers] = useState<TopUser[]>([]);
   const [onboardingStats, setOnboardingStats] = useState({ completed: 0, total: 0, rate: 0 });
+  const [feedbackItems, setFeedbackItems] = useState<{ id: string; name: string; email: string; category: string; message: string; created_at: string }[]>([]);
+  const [menuItems, setMenuItems] = useState<{ id: string; name: string; email: string; title: string; status: string; created_at: string }[]>([]);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -96,6 +99,47 @@ export const FeaturesTab = () => {
         fetchAllRows("user_feedback", "user_id, created_at"),
         fetchAllRows("promo_redemptions", "user_id, created_at"),
       ]);
+
+      // Feedback list (with author)
+      const { data: feedbackFull } = await supabase
+        .from("user_feedback")
+        .select("id, user_id, category, message, created_at")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      setFeedbackItems(
+        (feedbackFull ?? []).map((f: any) => {
+          const p = profileMap.get(f.user_id);
+          return {
+            id: f.id,
+            name: p?.full_name || "Unknown",
+            email: p?.email || "",
+            category: f.category,
+            message: f.message,
+            created_at: f.created_at,
+          };
+        })
+      );
+
+      // Menu builder usage
+      const { data: menuFull } = await supabase
+        .from("user_resources")
+        .select("id, user_id, title, status, created_at")
+        .eq("type", "meal_plan")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      setMenuItems(
+        (menuFull ?? []).map((m: any) => {
+          const p = profileMap.get(m.user_id);
+          return {
+            id: m.id,
+            name: p?.full_name || "Unknown",
+            email: p?.email || "",
+            title: m.title || "Untitled menu",
+            status: m.status,
+            created_at: m.created_at,
+          };
+        })
+      );
 
       // Fetch feature events (home_tab, cycle_forecast)
       let allEvents: { user_id: string; feature_name: string; created_at: string }[] = [];
@@ -269,6 +313,81 @@ export const FeaturesTab = () => {
           <RefreshCw className="w-4 h-4 mr-2" /> Refresh
         </Button>
       </div>
+
+      {/* User Feedback */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <MessageCircle className="w-4 h-4 text-primary" />
+            User Feedback
+            <Badge variant="outline" className="ml-1 text-[10px]">{feedbackItems.length}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {feedbackItems.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-4 text-center">No feedback yet.</p>
+          ) : (
+            <ScrollArea className="h-[320px] pr-3">
+              <div className="space-y-3">
+                {feedbackItems.map((f) => (
+                  <div key={f.id} className="border border-border/40 rounded-lg p-3 bg-card/40">
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-foreground truncate">{f.name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{f.email}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-0.5 shrink-0">
+                        <Badge variant="outline" className="text-[9px] capitalize">{f.category}</Badge>
+                        <p className="text-[9px] text-muted-foreground">{format(new Date(f.created_at), "MMM d, p")}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-foreground/90 whitespace-pre-wrap break-words">{f.message}</p>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Menu Builder Usage */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <ChefHat className="w-4 h-4 text-primary" />
+            Menu Builder
+            <Badge variant="outline" className="ml-1 text-[10px]">{menuItems.length}</Badge>
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">Who used the menu builder and what they built</p>
+        </CardHeader>
+        <CardContent>
+          {menuItems.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-4 text-center">No menus built yet.</p>
+          ) : (
+            <ScrollArea className="h-[320px] pr-3">
+              <div className="space-y-2">
+                {menuItems.map((m) => (
+                  <div key={m.id} className="border border-border/40 rounded-lg p-3 bg-card/40 flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-foreground truncate">{m.title}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{m.name} · {m.email}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-0.5 shrink-0">
+                      <Badge
+                        variant="outline"
+                        className={`text-[9px] capitalize ${m.status === "ready" ? "border-primary/40 text-primary" : ""}`}
+                      >
+                        {m.status}
+                      </Badge>
+                      <p className="text-[9px] text-muted-foreground">{format(new Date(m.created_at), "MMM d, p")}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Onboarding Completion */}
       <Card>
