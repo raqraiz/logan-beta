@@ -150,7 +150,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: 
   const label =
     lifeStage === "postpartum" ? "Postpartum" :
     lifeStage === "menopause" ? "Menopause" :
-    lifeStage === "steady" ? "Steady" :
+    lifeStage === "steady" ? (steadyReason === "stale" ? "Overdue" : "Steady") :
     "Steady";
 
   // Calculate weeks postpartum (or a default number for menopause/irregular)
