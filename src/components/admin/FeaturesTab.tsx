@@ -100,6 +100,47 @@ export const FeaturesTab = () => {
         fetchAllRows("promo_redemptions", "user_id, created_at"),
       ]);
 
+      // Feedback list (with author)
+      const { data: feedbackFull } = await supabase
+        .from("user_feedback")
+        .select("id, user_id, category, message, created_at")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      setFeedbackItems(
+        (feedbackFull ?? []).map((f: any) => {
+          const p = profileMap.get(f.user_id);
+          return {
+            id: f.id,
+            name: p?.full_name || "Unknown",
+            email: p?.email || "",
+            category: f.category,
+            message: f.message,
+            created_at: f.created_at,
+          };
+        })
+      );
+
+      // Menu builder usage
+      const { data: menuFull } = await supabase
+        .from("user_resources")
+        .select("id, user_id, title, status, created_at")
+        .eq("type", "meal_plan")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      setMenuItems(
+        (menuFull ?? []).map((m: any) => {
+          const p = profileMap.get(m.user_id);
+          return {
+            id: m.id,
+            name: p?.full_name || "Unknown",
+            email: p?.email || "",
+            title: m.title || "Untitled menu",
+            status: m.status,
+            created_at: m.created_at,
+          };
+        })
+      );
+
       // Fetch feature events (home_tab, cycle_forecast)
       let allEvents: { user_id: string; feature_name: string; created_at: string }[] = [];
       let evFrom = 0;
