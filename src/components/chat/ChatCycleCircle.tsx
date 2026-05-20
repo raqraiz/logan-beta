@@ -181,8 +181,12 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: 
     displayNumber = "—";
     subLabel = "Week";
   }
-  // Irregular / on-the-pill / steady: no day number, show a pill glyph instead
+  // Irregular / on-the-pill / steady: no day number, show a glyph instead.
+  // Pill 💊 only for irregular (BC) users; hourglass ⏳ for stale/overdue cycles.
   const showGlyph = lifeStage === "irregular" || lifeStage === "steady";
+  const glyph = lifeStage === "irregular"
+    ? "💊"
+    : (steadyReason === "stale" ? "⏳" : "•");
 
   // Perforated (dashed) ring style
   const radius = 42;
