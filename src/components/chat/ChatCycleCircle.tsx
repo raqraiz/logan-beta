@@ -281,11 +281,8 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
   if (lifeStage === "irregular") {
     return <LifeStageBadge lifeStage="irregular" size={size} />;
   }
-  // Cycling user but cycle has gone stale (period overdue by > 14 days past expected length)
-  // — stop pretending Day 81 / Luteal makes sense, show a calm "Steady — period overdue" badge.
-  if (lifeStage === "cycling" && cycleLengthDays > 0 && cycleDay > cycleLengthDays + 14) {
-    return <LifeStageBadge lifeStage="steady" size={size} steadyReason="stale" />;
-  }
+  // Cycling users always wrap to their input cycle length — no "overdue" pseudo-state.
+  // Proactive check-in messages before the assumed day 1 confirm whether the cycle has shifted.
 
   const showPpBadge = postpartumActive && !!postpartumStartDate;
   const isSmall = size === "sm";
