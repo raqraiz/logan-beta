@@ -314,6 +314,81 @@ export const FeaturesTab = () => {
         </Button>
       </div>
 
+      {/* User Feedback */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <MessageCircle className="w-4 h-4 text-primary" />
+            User Feedback
+            <Badge variant="outline" className="ml-1 text-[10px]">{feedbackItems.length}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {feedbackItems.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-4 text-center">No feedback yet.</p>
+          ) : (
+            <ScrollArea className="h-[320px] pr-3">
+              <div className="space-y-3">
+                {feedbackItems.map((f) => (
+                  <div key={f.id} className="border border-border/40 rounded-lg p-3 bg-card/40">
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-foreground truncate">{f.name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{f.email}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-0.5 shrink-0">
+                        <Badge variant="outline" className="text-[9px] capitalize">{f.category}</Badge>
+                        <p className="text-[9px] text-muted-foreground">{format(new Date(f.created_at), "MMM d, p")}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-foreground/90 whitespace-pre-wrap break-words">{f.message}</p>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Menu Builder Usage */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <ChefHat className="w-4 h-4 text-primary" />
+            Menu Builder
+            <Badge variant="outline" className="ml-1 text-[10px]">{menuItems.length}</Badge>
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">Who used the menu builder and what they built</p>
+        </CardHeader>
+        <CardContent>
+          {menuItems.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-4 text-center">No menus built yet.</p>
+          ) : (
+            <ScrollArea className="h-[320px] pr-3">
+              <div className="space-y-2">
+                {menuItems.map((m) => (
+                  <div key={m.id} className="border border-border/40 rounded-lg p-3 bg-card/40 flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-foreground truncate">{m.title}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{m.name} · {m.email}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-0.5 shrink-0">
+                      <Badge
+                        variant="outline"
+                        className={`text-[9px] capitalize ${m.status === "ready" ? "border-primary/40 text-primary" : ""}`}
+                      >
+                        {m.status}
+                      </Badge>
+                      <p className="text-[9px] text-muted-foreground">{format(new Date(m.created_at), "MMM d, p")}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Onboarding Completion */}
       <Card>
         <CardContent className="p-4">
