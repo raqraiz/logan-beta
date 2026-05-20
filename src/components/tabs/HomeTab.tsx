@@ -431,7 +431,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     if (cycleData.lifeStage === "menopause") {
       return isSucceed ? MENOPAUSE_SUCCEED_HER : MENOPAUSE_DONTMESS_HER;
     }
-    if (isIrregular || isStaleCycle) {
+    if (isIrregular) {
       return isSucceed ? IRREGULAR_SUCCEED_HER : IRREGULAR_DONTMESS_HER;
     }
     return isSucceed ? (SUCCEED_HER[cycleData.phase] || []) : (DONT_MESS_UP_HER[cycleData.phase] || []);
