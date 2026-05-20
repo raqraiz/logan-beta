@@ -80,6 +80,8 @@ export const FeaturesTab = () => {
   const [topChatUsers, setTopChatUsers] = useState<TopUser[]>([]);
   const [topCommunityUsers, setTopCommunityUsers] = useState<TopUser[]>([]);
   const [onboardingStats, setOnboardingStats] = useState({ completed: 0, total: 0, rate: 0 });
+  const [feedbackItems, setFeedbackItems] = useState<{ id: string; name: string; email: string; category: string; message: string; created_at: string }[]>([]);
+  const [menuItems, setMenuItems] = useState<{ id: string; name: string; email: string; title: string; status: string; created_at: string }[]>([]);
 
   const fetchAll = async () => {
     setLoading(true);
