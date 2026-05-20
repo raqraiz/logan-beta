@@ -222,7 +222,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: 
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
           {showGlyph ? (
-            <span className="text-[14px] leading-none" aria-hidden>💊</span>
+            <span className="text-[14px] leading-none" aria-hidden>{glyph}</span>
           ) : (
             <span className="text-[11px] font-bold leading-none" style={{ color: styles.hex }}>
               {displayNumber}
