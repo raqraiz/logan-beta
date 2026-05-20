@@ -158,9 +158,7 @@ export function DailyBriefingHero({
                       ? "Postpartum"
                       : lifeStage === "menopause"
                         ? "Menopause"
-                        : isSteadyByPill
-                          ? "On the pill"
-                          : "Period overdue")
+                        : "On the pill")
                   : phase}
               </span>
             </div>
