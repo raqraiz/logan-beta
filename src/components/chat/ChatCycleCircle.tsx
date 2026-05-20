@@ -150,7 +150,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: 
   const label =
     lifeStage === "postpartum" ? "Postpartum" :
     lifeStage === "menopause" ? "Menopause" :
-    lifeStage === "steady" ? "Steady" :
+    lifeStage === "steady" ? (steadyReason === "stale" ? "Overdue" : "Steady") :
     "Steady";
 
   // Calculate weeks postpartum (or a default number for menopause/irregular)
@@ -181,8 +181,12 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: 
     displayNumber = "—";
     subLabel = "Week";
   }
-  // Irregular / on-the-pill / steady: no day number, show a pill glyph instead
+  // Irregular / on-the-pill / steady: no day number, show a glyph instead.
+  // Pill 💊 only for irregular (BC) users; hourglass ⏳ for stale/overdue cycles.
   const showGlyph = lifeStage === "irregular" || lifeStage === "steady";
+  const glyph = lifeStage === "irregular"
+    ? "💊"
+    : (steadyReason === "stale" ? "⏳" : "•");
 
   // Perforated (dashed) ring style
   const radius = 42;
@@ -218,7 +222,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: 
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
           {showGlyph ? (
-            <span className="text-[14px] leading-none" aria-hidden>💊</span>
+            <span className="text-[14px] leading-none" aria-hidden>{glyph}</span>
           ) : (
             <span className="text-[11px] font-bold leading-none" style={{ color: styles.hex }}>
               {displayNumber}
@@ -255,7 +259,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: 
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 px-4 text-center">
           {showGlyph ? (
-            <span className="text-4xl leading-none" aria-hidden>💊</span>
+            <span className="text-4xl leading-none" aria-hidden>{glyph}</span>
           ) : (
             <span className="text-4xl font-bold leading-none" style={{ color: styles.hex }}>
               {displayNumber}
