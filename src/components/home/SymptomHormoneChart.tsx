@@ -71,7 +71,7 @@ export function SymptomHormoneChart({
 }: Props) {
   const [logs, setLogs] = useState<SymptomLogRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showHormones, setShowHormones] = useState(false);
+  const showHormones = true;
 
   useEffect(() => {
     let cancelled = false;
