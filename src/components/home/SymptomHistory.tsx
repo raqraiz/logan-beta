@@ -9,6 +9,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { format, subDays } from "date-fns";
 import { AllSymptomsChart } from "./AllSymptomsChart";
+import { SymptomHormoneChart } from "./SymptomHormoneChart";
+import { ChevronDown } from "lucide-react";
 
 interface SymptomEntry {
   name: string;
