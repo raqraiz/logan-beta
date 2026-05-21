@@ -9,6 +9,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { format, subDays } from "date-fns";
 import { AllSymptomsChart } from "./AllSymptomsChart";
+import { SymptomHormoneChart } from "./SymptomHormoneChart";
+import { ChevronDown } from "lucide-react";
 
 interface SymptomEntry {
   name: string;
@@ -55,6 +57,7 @@ export function SymptomHistory({
   const [logs, setLogs] = useState<SymptomLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [topSymptoms, setTopSymptoms] = useState<{ name: string; count: number; avgSeverity: number }[]>([]);
+  const [expandedSymptom, setExpandedSymptom] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !userId) return;
@@ -133,20 +136,43 @@ export function SymptomHistory({
                   Your Top Patterns (90 days)
                 </h3>
                 <div className="space-y-1.5 mb-3">
-                  {topSymptoms.map(s => (
-                    <div
-                      key={s.name}
-                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-border/30 bg-muted/30"
-                    >
-                      <div className={`w-2 h-2 rounded-full ${SEVERITY_COLORS[Math.round(s.avgSeverity)] || "bg-muted-foreground/30"}`} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium text-foreground truncate">{s.name}</p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {s.count}× · avg {SEVERITY_LABELS[Math.round(s.avgSeverity)] || s.avgSeverity}
-                        </p>
+                  {topSymptoms.map(s => {
+                    const isOpen = expandedSymptom === s.name;
+                    return (
+                      <div
+                        key={s.name}
+                        className="rounded-xl border border-border/30 bg-muted/30 overflow-hidden"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setExpandedSymptom(isOpen ? null : s.name)}
+                          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-muted/40 transition-colors"
+                        >
+                          <div className={`w-2 h-2 rounded-full ${SEVERITY_COLORS[Math.round(s.avgSeverity)] || "bg-muted-foreground/30"}`} />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium text-foreground truncate">{s.name}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {s.count}× · avg {SEVERITY_LABELS[Math.round(s.avgSeverity)] || s.avgSeverity}
+                            </p>
+                          </div>
+                          <ChevronDown
+                            className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
+                          />
+                        </button>
+                        {isOpen && (
+                          <div className="px-2 pb-2 pt-1">
+                            <SymptomHormoneChart
+                              userId={userId}
+                              symptomName={s.name}
+                              lastPeriodStart={lastPeriodStart}
+                              cycleLengthDays={cycleLengthDays}
+                              isNonCycling={isNonCycling}
+                            />
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 <AllSymptomsChart
                   logs={logs}
