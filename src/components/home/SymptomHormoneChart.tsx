@@ -71,7 +71,7 @@ export function SymptomHormoneChart({
 }: Props) {
   const [logs, setLogs] = useState<SymptomLogRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showHormones, setShowHormones] = useState(false);
+  const showHormones = true;
 
   useEffect(() => {
     let cancelled = false;
@@ -377,39 +377,17 @@ export function SymptomHormoneChart({
         </div>
       </div>
 
-      {/* Hormone toggle */}
-      <div className="px-4 pb-3 pt-1 border-t border-white/5 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => setShowHormones((v) => !v)}
-          className="text-[10.5px] text-muted-foreground/80 hover:text-foreground transition-colors flex items-center gap-1.5"
-        >
-          <span
-            className={`w-7 h-3.5 rounded-full relative transition-colors ${
-              showHormones ? "bg-teal-500/60" : "bg-white/10"
-            }`}
-          >
+      {/* Hormone legend */}
+      <div className="px-4 pb-3 pt-1 border-t border-white/5 flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
+        {HORMONES.map((h) => (
+          <div key={h.key} className="flex items-center gap-1">
             <span
-              className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white transition-all ${
-                showHormones ? "left-[14px]" : "left-0.5"
-              }`}
+              className="w-2.5 h-[2px] rounded-full"
+              style={{ background: h.color, boxShadow: `0 0 4px ${h.color}40` }}
             />
-          </span>
-          {showHormones ? "Hide hormones" : "Compare with hormones"}
-        </button>
-        {showHormones && (
-          <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
-            {HORMONES.map((h) => (
-              <div key={h.key} className="flex items-center gap-1">
-                <span
-                  className="w-2.5 h-[2px] rounded-full"
-                  style={{ background: h.color, boxShadow: `0 0 4px ${h.color}40` }}
-                />
-                <span className="text-[9px] text-foreground/60">{h.label}</span>
-              </div>
-            ))}
+            <span className="text-[9px] text-foreground/60">{h.label}</span>
           </div>
-        )}
+        ))}
       </div>
     </div>
   );
