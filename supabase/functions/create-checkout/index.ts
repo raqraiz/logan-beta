@@ -33,10 +33,9 @@ serve(async (req) => {
         status: 401,
       });
     }
-    const token = authHeader.replace("Bearer ", "");
-    const { data } = await supabaseClient.auth.getUser(token);
-
+    const user = data.user;
     if (!user?.email) throw new Error("User not authenticated");
+
 
     const { priceKey } = await req.json();
     const price = PRICES[priceKey];
