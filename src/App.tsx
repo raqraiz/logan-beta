@@ -13,6 +13,7 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import Community from "./pages/Community";
 import IntegrationCallback from "./pages/IntegrationCallback";
+import { Seo } from "@/components/Seo";
 
 const queryClient = new QueryClient();
 
@@ -23,18 +24,21 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Chat />} />
-            <Route path="/community" element={<Community />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/logan-admin-access" element={<Auth />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/consent" element={<Consent />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/integrations/:provider/callback" element={<IntegrationCallback />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <Seo />
+          <main>
+            <Routes>
+              <Route path="/" element={<Chat />} />
+              <Route path="/community" element={<Community />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/logan-admin-access" element={<Auth />} />
+              <Route path="/admin" element={<Admin />} />
+              <Route path="/consent" element={<Consent />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/integrations/:provider/callback" element={<IntegrationCallback />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </main>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
