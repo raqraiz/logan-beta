@@ -119,6 +119,13 @@ serve(async (req) => {
       );
     }
 
+    if (userMessage.length > 4000) {
+      return new Response(
+        JSON.stringify({ error: "Message too long (max 4000 characters)" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     console.log("Chat AI request from user:", user.id, "message:", userMessage.substring(0, 50));
 
     // --- Credit check (DISABLED — free access during alpha) ---

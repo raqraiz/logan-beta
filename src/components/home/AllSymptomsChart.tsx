@@ -164,11 +164,16 @@ export function AllSymptomsChart({
 
   const insight = useMemo(() => {
     if (!peakPhase || peakPhase.items.length === 0) return null;
-    const top = peakPhase.items.slice(0, 2).map((i) => i.name);
+    const esc = (s: string) =>
+      s.replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!)
+      );
+    const top = peakPhase.items.slice(0, 2).map((i) => esc(i.name));
+    const phase = esc(peakPhase.phase);
     if (top.length === 2) {
-      return `Your hardest stretch is **${peakPhase.phase}** — **${top[0]}** and **${top[1]}** lead the pattern.`;
+      return `Your hardest stretch is **${phase}** — **${top[0]}** and **${top[1]}** lead the pattern.`;
     }
-    return `Your hardest stretch is **${peakPhase.phase}** — **${top[0]}** leads the pattern.`;
+    return `Your hardest stretch is **${phase}** — **${top[0]}** leads the pattern.`;
   }, [peakPhase]);
 
   if (isNonCycling) {
