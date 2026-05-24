@@ -1,0 +1,10 @@
+# Logan
+
+> Logan is an AI-powered cycle companion for women. It delivers personalized, phase-aware guidance on energy, focus, nutrition, training, and recovery — turning the menstrual cycle into a predictive control system rather than a surprise.
+
+Logan adapts to a user's life stage (cycling, postpartum, or menopause), tracks symptoms, correlates them with cycle phase, and surfaces grounded, non-judgmental insights inspired by a "knowledgeable friend." The product is delivered as a chat-first web app with a customizable home dashboard and integrations such as Apple Health and Whoop.
+
+## Pages
+
+- [Home](/): Chat-based cycle guidance, daily briefing, and personalized insights.
+- [Community](/community): Share feedback, ideas, and questions with other Logan users.
