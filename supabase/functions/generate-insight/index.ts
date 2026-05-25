@@ -63,13 +63,22 @@ serve(async (req) => {
 
     const { data: recentInsights } = await supabase
       .from("chat_messages")
-      .select("id, created_at, metadata")
+      .select("id, content, created_at, metadata")
       .eq("user_id", user.id)
       .eq("role", "assistant")
       .gte("created_at", todayStart.toISOString());
 
+    const stalePlaceholderIds = (recentInsights || [])
+      .filter((m: any) => m.metadata?.insight_type === "proactive" && m.metadata?.placeholder === true)
+      .filter((m: any) => new Date(m.created_at).getTime() < Date.now() - 60_000)
+      .map((m: any) => m.id);
+
+    if (stalePlaceholderIds.length > 0) {
+      await supabase.from("chat_messages").delete().in("id", stalePlaceholderIds);
+    }
+
     const alreadySentToday = recentInsights?.some(
-      (m: any) => m.metadata?.insight_type === "proactive"
+      (m: any) => m.metadata?.insight_type === "proactive" && m.metadata?.placeholder !== true && m.content !== "..."
     );
 
     if (alreadySentToday) {
