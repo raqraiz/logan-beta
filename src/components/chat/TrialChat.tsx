@@ -351,18 +351,29 @@ export const TrialChat = () => {
           <form onSubmit={handleSend} className="max-w-3xl mx-auto px-4 py-5">
             <div className="flex gap-3">
               <div className="relative flex-1">
-                <Input
+                <Textarea
                   ref={inputRef}
                   value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
+                  onChange={(e) => {
+                    setInputValue(e.target.value);
+                    const el = e.target as HTMLTextAreaElement;
+                    el.style.height = "auto";
+                    el.style.height = Math.min(el.scrollHeight, 200) + "px";
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      (e.currentTarget.form as HTMLFormElement | null)?.requestSubmit();
+                    }
+                  }}
                   onFocus={(e) => {
-                    // Ensure input is visible when mobile keyboard opens
                     setTimeout(() => {
                       e.target.scrollIntoView({ block: "center", behavior: "smooth" });
                     }, 300);
                   }}
+                  rows={1}
                   placeholder="Ask Logan anything..."
-                  className="h-13 pl-5 pr-4 bg-muted/50 border-border/50 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300"
+                  className="min-h-[52px] max-h-[200px] resize-none pl-5 pr-4 py-3.5 bg-muted/50 border-border/50 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 text-base"
                   disabled={isTyping}
                 />
               </div>
