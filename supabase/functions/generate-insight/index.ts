@@ -122,6 +122,9 @@ serve(async (req) => {
     }
 
     const placeholderId = placeholder.id;
+    const removePlaceholder = async () => {
+      await supabase.from("chat_messages").delete().eq("id", placeholderId);
+    };
 
     // Get participant data
     const { data: participant } = await supabase
@@ -131,6 +134,7 @@ serve(async (req) => {
       .single();
 
     if (!participant) {
+      await removePlaceholder();
       return new Response(
         JSON.stringify({ success: true, skipped: true, reason: "no_participant" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -174,7 +178,25 @@ serve(async (req) => {
         checkinMessages || []
       );
 
-      const { insight, question, conversationStarters, cheatSheet } = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt);
+      let aiResult;
+      try {
+        aiResult = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt);
+      } catch (aiErr) {
+        const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
+        console.error("AI insight generation failed, removing placeholder:", msg);
+        await removePlaceholder();
+        const isBilling = /\b402\b|payment_required|Not enough credits/i.test(msg);
+        const isRate = /\b429\b|rate limit/i.test(msg);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            skipped: true,
+            reason: isBilling ? "ai_credits_exhausted" : isRate ? "ai_rate_limited" : "ai_unavailable",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const { insight, question, conversationStarters, cheatSheet } = aiResult;
 
       await supabase.from("chat_messages").update({
         content: insight,
@@ -202,6 +224,7 @@ serve(async (req) => {
     );
 
     if (!cycleInfo) {
+      await removePlaceholder();
       return new Response(
         JSON.stringify({ success: true, skipped: true, reason: "no_cycle_data" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
