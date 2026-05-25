@@ -64,7 +64,7 @@ export const TrialChat = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-scroll only when messages change (not when auth UI appears)
   useEffect(() => {
