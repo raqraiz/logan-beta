@@ -6,6 +6,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+type InsightMetadata = {
+  onboarding_complete?: boolean;
+  insight_type?: string;
+  placeholder?: boolean;
+};
+
+type RecentInsightRow = {
+  id: string;
+  content: string | null;
+  created_at: string;
+  metadata: InsightMetadata | null;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -47,7 +60,7 @@ serve(async (req) => {
       .not("metadata", "is", null);
 
     const onboardingComplete = messages?.some(
-      (m: any) => m.metadata?.onboarding_complete === true
+      (m: { metadata: InsightMetadata | null }) => m.metadata?.onboarding_complete === true
     );
 
     if (!onboardingComplete) {
@@ -68,17 +81,17 @@ serve(async (req) => {
       .eq("role", "assistant")
       .gte("created_at", todayStart.toISOString());
 
-    const stalePlaceholderIds = (recentInsights || [])
-      .filter((m: any) => m.metadata?.insight_type === "proactive" && m.metadata?.placeholder === true)
-      .filter((m: any) => new Date(m.created_at).getTime() < Date.now() - 60_000)
-      .map((m: any) => m.id);
+    const stalePlaceholderIds = ((recentInsights || []) as RecentInsightRow[])
+      .filter((m) => m.metadata?.insight_type === "proactive" && m.metadata?.placeholder === true)
+      .filter((m) => new Date(m.created_at).getTime() < Date.now() - 60_000)
+      .map((m) => m.id);
 
     if (stalePlaceholderIds.length > 0) {
       await supabase.from("chat_messages").delete().in("id", stalePlaceholderIds);
     }
 
-    const alreadySentToday = recentInsights?.some(
-      (m: any) => m.metadata?.insight_type === "proactive" && m.metadata?.placeholder !== true && m.content !== "..."
+    const alreadySentToday = ((recentInsights || []) as RecentInsightRow[]).some(
+      (m) => m.metadata?.insight_type === "proactive" && m.metadata?.placeholder !== true && m.content !== "..."
     );
 
     if (alreadySentToday) {
