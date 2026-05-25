@@ -249,34 +249,45 @@ const Chat = () => {
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "chat_messages",
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          const newMessage = payload.new as ChatMessage;
+          if (payload.eventType === "DELETE") {
+            const deletedMessage = payload.old as Partial<ChatMessage>;
+            setMessages((prev) => prev.filter((m) => m.id !== deletedMessage.id));
+            return;
+          }
+
+          const incomingMessage = payload.new as ChatMessage;
           setMessages((prev) => {
-            if (prev.some((m) => m.id === newMessage.id)) return prev;
-
-            const fallbackIdx = prev.findIndex(
-              (m) => m.id.startsWith("fallback-") && m.role === newMessage.role && m.content === newMessage.content
-            );
-            if (fallbackIdx !== -1) {
-              const updated = [...prev];
-              updated[fallbackIdx] = newMessage;
-              return updated;
-            }
-
-            if (newMessage.metadata?.onboarding_complete) {
+            if (incomingMessage.metadata?.onboarding_complete) {
               setIsOnboarding(false);
             }
 
-            if (newMessage.metadata?.onboarding_step !== undefined) {
-              setOnboardingStep(newMessage.metadata.onboarding_step);
+            if (incomingMessage.metadata?.onboarding_step !== undefined) {
+              setOnboardingStep(incomingMessage.metadata.onboarding_step);
             }
 
-            return [...prev, newMessage];
+            const existingIdx = prev.findIndex((m) => m.id === incomingMessage.id);
+            if (existingIdx !== -1) {
+              const updated = [...prev];
+              updated[existingIdx] = incomingMessage;
+              return updated;
+            }
+
+            const fallbackIdx = prev.findIndex(
+              (m) => m.id.startsWith("fallback-") && m.role === incomingMessage.role && m.content === incomingMessage.content
+            );
+            if (fallbackIdx !== -1) {
+              const updated = [...prev];
+              updated[fallbackIdx] = incomingMessage;
+              return updated;
+            }
+
+            return [...prev, incomingMessage];
           });
         }
       )

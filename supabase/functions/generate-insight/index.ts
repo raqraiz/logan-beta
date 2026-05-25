@@ -6,6 +6,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+type InsightMetadata = {
+  onboarding_complete?: boolean;
+  insight_type?: string;
+  placeholder?: boolean;
+};
+
+type RecentInsightRow = {
+  id: string;
+  content: string | null;
+  created_at: string;
+  metadata: InsightMetadata | null;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -47,7 +60,7 @@ serve(async (req) => {
       .not("metadata", "is", null);
 
     const onboardingComplete = messages?.some(
-      (m: any) => m.metadata?.onboarding_complete === true
+      (m: { metadata: InsightMetadata | null }) => m.metadata?.onboarding_complete === true
     );
 
     if (!onboardingComplete) {
@@ -63,13 +76,22 @@ serve(async (req) => {
 
     const { data: recentInsights } = await supabase
       .from("chat_messages")
-      .select("id, created_at, metadata")
+      .select("id, content, created_at, metadata")
       .eq("user_id", user.id)
       .eq("role", "assistant")
       .gte("created_at", todayStart.toISOString());
 
-    const alreadySentToday = recentInsights?.some(
-      (m: any) => m.metadata?.insight_type === "proactive"
+    const stalePlaceholderIds = ((recentInsights || []) as RecentInsightRow[])
+      .filter((m) => m.metadata?.insight_type === "proactive" && m.metadata?.placeholder === true)
+      .filter((m) => new Date(m.created_at).getTime() < Date.now() - 60_000)
+      .map((m) => m.id);
+
+    if (stalePlaceholderIds.length > 0) {
+      await supabase.from("chat_messages").delete().in("id", stalePlaceholderIds);
+    }
+
+    const alreadySentToday = ((recentInsights || []) as RecentInsightRow[]).some(
+      (m) => m.metadata?.insight_type === "proactive" && m.metadata?.placeholder !== true && m.content !== "..."
     );
 
     if (alreadySentToday) {
@@ -122,6 +144,9 @@ serve(async (req) => {
     }
 
     const placeholderId = placeholder.id;
+    const removePlaceholder = async () => {
+      await supabase.from("chat_messages").delete().eq("id", placeholderId);
+    };
 
     // Get participant data
     const { data: participant } = await supabase
@@ -131,6 +156,7 @@ serve(async (req) => {
       .single();
 
     if (!participant) {
+      await removePlaceholder();
       return new Response(
         JSON.stringify({ success: true, skipped: true, reason: "no_participant" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -174,7 +200,25 @@ serve(async (req) => {
         checkinMessages || []
       );
 
-      const { insight, question, conversationStarters, cheatSheet } = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt);
+      let aiResult;
+      try {
+        aiResult = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt);
+      } catch (aiErr) {
+        const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
+        console.error("AI insight generation failed, removing placeholder:", msg);
+        await removePlaceholder();
+        const isBilling = /\b402\b|payment_required|Not enough credits/i.test(msg);
+        const isRate = /\b429\b|rate limit/i.test(msg);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            skipped: true,
+            reason: isBilling ? "ai_credits_exhausted" : isRate ? "ai_rate_limited" : "ai_unavailable",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const { insight, question, conversationStarters, cheatSheet } = aiResult;
 
       await supabase.from("chat_messages").update({
         content: insight,
@@ -202,6 +246,7 @@ serve(async (req) => {
     );
 
     if (!cycleInfo) {
+      await removePlaceholder();
       return new Response(
         JSON.stringify({ success: true, skipped: true, reason: "no_cycle_data" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
