@@ -364,27 +364,36 @@ const Chat = () => {
     let cycleLengthDays: number | null = participantCycle?.cycleLengthDays ?? null;
     let userTimezone: string | null = participantCycle?.timezone ?? null;
 
-    // 2) Fallback to most recent values from chat metadata
-    if (!lastPeriodStart || !cycleLengthDays || !userTimezone) {
+    // 1b) Prefer a more recent period start from chat metadata (e.g., user just
+    // told Logan "I'm on day 38" → chat-ai writes new_period_start). The
+    // participants table can lag behind realtime chat updates by a tick.
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const metadata = messages[i].metadata as any;
+      if (!metadata) continue;
+      const candidate = metadata.new_period_start || metadata.last_period_start;
+      if (candidate) {
+        if (!lastPeriodStart || candidate > lastPeriodStart) {
+          lastPeriodStart = candidate;
+        }
+        break;
+      }
+    }
+
+    // 2) Fallback to most recent values from chat metadata for missing fields
+    if (!cycleLengthDays || !userTimezone) {
       for (let i = messages.length - 1; i >= 0; i--) {
         const metadata = messages[i].metadata as any;
         if (!metadata) continue;
-
-        if (metadata.new_period_start && !lastPeriodStart) {
-          lastPeriodStart = metadata.new_period_start;
-        }
-        if (metadata.last_period_start && !lastPeriodStart) {
-          lastPeriodStart = metadata.last_period_start;
-        }
         if (metadata.cycle_length_days && !cycleLengthDays) {
           cycleLengthDays = metadata.cycle_length_days;
         }
         if (metadata.timezone && !userTimezone) {
           userTimezone = metadata.timezone;
         }
-        if (lastPeriodStart && cycleLengthDays && userTimezone) break;
+        if (cycleLengthDays && userTimezone) break;
       }
     }
+
 
     const timezone = userTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
 
