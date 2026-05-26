@@ -1765,6 +1765,9 @@ function calculateCycleInfo(
   const diffTime = today.getTime() - periodStart.getTime();
   const daysSinceStart = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
+  // Don't wrap when she's past her expected cycle length — show the running
+  // count (Day 38, 39, ...) so we can prompt her to confirm day 1. Only wrap
+  // for negative (future-dated) edge cases.
   const cycleDay = daysSinceStart >= 0
     ? daysSinceStart + 1
     : ((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
