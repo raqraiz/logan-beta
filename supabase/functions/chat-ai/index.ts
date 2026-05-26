@@ -1765,9 +1765,10 @@ function calculateCycleInfo(
   const diffTime = today.getTime() - periodStart.getTime();
   const daysSinceStart = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-  const cycleDay = daysSinceStart >= 0
-    ? daysSinceStart + 1
-    : ((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
+  // Always wrap to the user's input cycle length — mirrors the frontend's
+  // calculateCycleInfo so the Ask tab and Home agree. Proactive check-ins handle
+  // confirming day 1 when she's actually late.
+  const cycleDay = (((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays) + 1;
 
   const menstruationEnd = 5;
   const ovulationDay = cycleLengthDays - 14;
