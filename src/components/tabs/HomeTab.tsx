@@ -7,9 +7,8 @@ import { LoganLogo } from "@/components/LoganLogo";
 import { WidgetEditMode } from "@/components/home/WidgetEditMode";
 import { AddCustomWidgetDialog } from "@/components/home/AddCustomWidgetDialog";
 import { CustomAIWidget } from "@/components/home/CustomAIWidget";
-import { SymptomLogWidget } from "@/components/home/SymptomLogWidget";
+import { TrackWidget } from "@/components/home/TrackWidget";
 import { SymptomHistory } from "@/components/home/SymptomHistory";
-import { CycleCorrelationsWidget } from "@/components/home/CycleCorrelationsWidget";
 import { LabResultsWidget } from "@/components/home/LabResultsWidget";
 import { MiniPhaseArc, getWidgetGraphic } from "@/components/home/WidgetGraphics";
 import { DailyBriefingHero } from "@/components/home/DailyBriefingHero";
@@ -487,51 +486,26 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           </div>
         );
       }
-      case "symptom_tracker": {
-        const colors = WIDGET_COLORS.symptom_tracker;
-        return userId ? (
-          <div className="w-full flex flex-col gap-2" key={id}>
-            <div
-              className={`w-full rounded-2xl border border-border/40 ${colors.border} border-l-[3px] bg-card/50 backdrop-blur-md overflow-hidden relative`}
-            >
-              <div className={`absolute inset-0 bg-gradient-to-br ${colors.bgGradient} pointer-events-none`} />
-              <div className="relative">
-                <SymptomLogWidget
-                  userId={userId}
-                  cycleDay={isNonCycling ? undefined : cycleData.cycleDay}
-                  phase={isNonCycling ? stagePhase : cycleData.phase}
-                  lastPeriodStart={cycleData.lastPeriodStart}
-                  cycleLengthDays={cycleData.cycleLengthDays}
-                  isNonCycling={!!isNonCycling}
-                />
-              </div>
-            </div>
-            <button
-              onClick={() => setShowSymptomHistory(true)}
-              className="text-[11px] text-muted-foreground/70 hover:text-foreground transition-colors underline underline-offset-2 self-center"
-            >
-              View symptom history & patterns
-            </button>
-          </div>
-        ) : null;
-      }
-      case "lab_results":
-        return userId ? (
-          <div className="w-full" key={id}>
-            <LabResultsWidget userId={userId} />
-          </div>
-        ) : null;
+      case "track":
+      case "symptom_tracker":
       case "cycle_correlations":
         return userId ? (
           <div className="w-full" key={id}>
-            <CycleCorrelationsWidget
+            <TrackWidget
               userId={userId}
               cyclePhase={cycleData.phase}
               cycleDay={cycleData.cycleDay}
               lastPeriodStart={cycleData.lastPeriodStart}
               cycleLengthDays={cycleData.cycleLengthDays}
               isNonCycling={!!isNonCycling}
+              onOpenHistory={() => setShowSymptomHistory(true)}
             />
+          </div>
+        ) : null;
+      case "lab_results":
+        return userId ? (
+          <div className="w-full" key={id}>
+            <LabResultsWidget userId={userId} />
           </div>
         ) : null;
       case "succeed_you":

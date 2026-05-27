@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, TrendingUp, ChevronRight, Sparkles, CalendarIcon } from "lucide-react";
-import { CycleCorrelationDetail } from "./CycleCorrelationDetail";
+import { Plus, TrendingUp, ChevronRight, CalendarIcon } from "lucide-react";
+import { TrackerDetail } from "./TrackerDetail";
 import { AddTrackerDialog } from "./AddTrackerDialog";
 import { toast } from "sonner";
 import { calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
@@ -11,11 +11,15 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
-interface Tracker {
+export interface Tracker {
   id: string;
   name: string;
   emoji: string;
   description: string | null;
+  tracker_type: "scale_0_5" | "single_choice";
+  options: string[] | null;
+  is_fam: boolean;
+  is_builtin: boolean;
 }
 
 interface Props {
@@ -25,17 +29,19 @@ interface Props {
   lastPeriodStart?: string;
   cycleLengthDays: number;
   isNonCycling: boolean;
+  onOpenHistory?: () => void;
 }
 
 const QUICK_INTENSITIES = [0, 1, 2, 3, 4, 5];
 
-export function CycleCorrelationsWidget({
+export function TrackWidget({
   userId,
   cyclePhase,
   cycleDay,
   lastPeriodStart,
   cycleLengthDays,
   isNonCycling,
+  onOpenHistory,
 }: Props) {
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,12 +68,12 @@ export function CycleCorrelationsWidget({
     setLoading(true);
     const { data } = await supabase
       .from("custom_trackers")
-      .select("id, name, emoji, description")
+      .select("id, name, emoji, description, tracker_type, options, is_fam, is_builtin")
       .eq("user_id", userId)
       .eq("is_active", true)
-      .eq("source", "user")
+      .order("is_fam", { ascending: false })
       .order("created_at", { ascending: true });
-    setTrackers((data as Tracker[]) || []);
+    setTrackers(((data as unknown) as Tracker[]) || []);
     setLoading(false);
   }, [userId]);
 
@@ -75,25 +81,42 @@ export function CycleCorrelationsWidget({
     if (userId) load();
   }, [userId, load]);
 
-  const quickLog = async (trackerId: string, intensity: number) => {
-    setLogging(trackerId);
-    const loggedAt = isToday
+  const buildLoggedAt = () =>
+    isToday
       ? new Date().toISOString()
-      : new Date(Date.UTC(logDate.getFullYear(), logDate.getMonth(), logDate.getDate(), 12, 0, 0)).toISOString();
+      : new Date(
+          Date.UTC(logDate.getFullYear(), logDate.getMonth(), logDate.getDate(), 12, 0, 0)
+        ).toISOString();
+
+  const quickLogScale = async (trackerId: string, intensity: number) => {
+    setLogging(trackerId);
     const { error } = await supabase.from("tracker_logs").insert({
       user_id: userId,
       tracker_id: trackerId,
       intensity,
       cycle_phase: effectiveCycleInfo.phase,
       cycle_day: effectiveCycleInfo.cycleDay,
-      logged_at: loggedAt,
+      logged_at: buildLoggedAt(),
     });
     setLogging(null);
-    if (error) {
-      toast.error("Couldn't save log");
-    } else {
-      toast.success(isToday ? "Logged" : `Logged for ${format(logDate, "MMM d")}`);
-    }
+    if (error) toast.error("Couldn't save log");
+    else toast.success(isToday ? "Logged" : `Logged for ${format(logDate, "MMM d")}`);
+  };
+
+  const quickLogChoice = async (trackerId: string, option: string) => {
+    setLogging(trackerId);
+    const { error } = await supabase.from("tracker_logs").insert({
+      user_id: userId,
+      tracker_id: trackerId,
+      option_value: option,
+      intensity: null,
+      cycle_phase: effectiveCycleInfo.phase,
+      cycle_day: effectiveCycleInfo.cycleDay,
+      logged_at: buildLoggedAt(),
+    });
+    setLogging(null);
+    if (error) toast.error("Couldn't save log");
+    else toast.success(isToday ? `Logged: ${option}` : `Logged for ${format(logDate, "MMM d")}`);
   };
 
   const handleAdded = () => {
@@ -109,13 +132,23 @@ export function CycleCorrelationsWidget({
       <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 via-teal-500/5 to-transparent pointer-events-none" />
 
       <div className="relative px-5 py-4">
-        <div className="flex items-center gap-2.5 mb-3">
-          <div className="w-7 h-7 rounded-lg bg-teal-500/15 flex items-center justify-center">
-            <TrendingUp className="w-4 h-4 text-teal-400" />
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-teal-500/15 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4 text-teal-400" />
+            </div>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-teal-400/80">
+              Track
+            </span>
           </div>
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-teal-400/80">
-            Cycle Correlations
-          </span>
+          {onOpenHistory && trackers.length > 0 && (
+            <button
+              onClick={onOpenHistory}
+              className="text-[10px] text-muted-foreground/70 hover:text-foreground transition-colors underline underline-offset-2"
+            >
+              History & patterns
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -123,22 +156,15 @@ export function CycleCorrelationsWidget({
         ) : trackers.length === 0 ? (
           <div className="space-y-3">
             <p className="text-sm text-foreground/80 leading-snug">
-              Wondering if something — surfing, mood, focus, loneliness — is tied to your cycle?
-              Track it daily and Logan will show you the pattern.
+              Track anything — symptoms, mood, surfing, cervical fluid — on a 0-5 scale or with your own options. Logan will show you what tracks with your cycle.
             </p>
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5"
-              onClick={() => setShowAdd(true)}
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Track something
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowAdd(true)}>
+              <Plus className="w-3.5 h-3.5" /> Add a tracker
             </Button>
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">Logging for</span>
               <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                 <PopoverTrigger asChild>
@@ -172,6 +198,7 @@ export function CycleCorrelationsWidget({
                 </span>
               )}
             </div>
+
             {trackers.map((t) => (
               <div
                 key={t.id}
@@ -184,24 +211,45 @@ export function CycleCorrelationsWidget({
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-base">{t.emoji}</span>
                     <span className="text-sm font-medium text-foreground truncate">{t.name}</span>
+                    {t.is_fam && (
+                      <span className="text-[9px] uppercase tracking-wider text-teal-400/70 px-1.5 py-0.5 rounded bg-teal-500/10 shrink-0">FAM</span>
+                    )}
                   </div>
                   <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
                 </button>
-                <div className="flex items-center gap-1.5">
-                  {QUICK_INTENSITIES.map((i) => (
-                    <button
-                      key={i}
-                      onClick={() => quickLog(t.id, i)}
-                      disabled={logging === t.id}
-                      className="flex-1 h-7 rounded-md border border-border/40 bg-background/60
-                        hover:bg-teal-500/10 hover:border-teal-500/40 transition-colors
-                        text-xs text-foreground/80 disabled:opacity-50"
-                      aria-label={`Rate ${i} (0 = none, 5 = max)`}
-                    >
-                      {i}
-                    </button>
-                  ))}
-                </div>
+
+                {t.tracker_type === "scale_0_5" ? (
+                  <div className="flex items-center gap-1.5">
+                    {QUICK_INTENSITIES.map((i) => (
+                      <button
+                        key={i}
+                        onClick={() => quickLogScale(t.id, i)}
+                        disabled={logging === t.id}
+                        className="flex-1 h-7 rounded-md border border-border/40 bg-background/60
+                          hover:bg-teal-500/10 hover:border-teal-500/40 transition-colors
+                          text-xs text-foreground/80 disabled:opacity-50"
+                        aria-label={`Rate ${i} (0 = none, 5 = max)`}
+                      >
+                        {i}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {(t.options || []).map((opt) => (
+                      <button
+                        key={opt}
+                        onClick={() => quickLogChoice(t.id, opt)}
+                        disabled={logging === t.id}
+                        className="px-2.5 py-1 rounded-full border border-border/40 bg-background/60
+                          hover:bg-teal-500/10 hover:border-teal-500/40 transition-colors
+                          text-xs text-foreground/80 disabled:opacity-50"
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
             <Button
@@ -225,7 +273,7 @@ export function CycleCorrelationsWidget({
       />
 
       {activeTracker && (
-        <CycleCorrelationDetail
+        <TrackerDetail
           tracker={activeTracker}
           userId={userId}
           lastPeriodStart={lastPeriodStart}
