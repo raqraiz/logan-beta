@@ -195,8 +195,12 @@ export type Database = {
           emoji: string | null
           id: string
           is_active: boolean
+          is_builtin: boolean
+          is_fam: boolean
           name: string
+          options: Json | null
           source: string
+          tracker_type: string
           updated_at: string
           user_id: string
         }
@@ -206,8 +210,12 @@ export type Database = {
           emoji?: string | null
           id?: string
           is_active?: boolean
+          is_builtin?: boolean
+          is_fam?: boolean
           name: string
+          options?: Json | null
           source?: string
+          tracker_type?: string
           updated_at?: string
           user_id: string
         }
@@ -217,8 +225,12 @@ export type Database = {
           emoji?: string | null
           id?: string
           is_active?: boolean
+          is_builtin?: boolean
+          is_fam?: boolean
           name?: string
+          options?: Json | null
           source?: string
+          tracker_type?: string
           updated_at?: string
           user_id?: string
         }
@@ -981,9 +993,10 @@ export type Database = {
           cycle_day: number | null
           cycle_phase: string | null
           id: string
-          intensity: number
+          intensity: number | null
           logged_at: string
           notes: string | null
+          option_value: string | null
           tracker_id: string
           user_id: string
         }
@@ -992,9 +1005,10 @@ export type Database = {
           cycle_day?: number | null
           cycle_phase?: string | null
           id?: string
-          intensity: number
+          intensity?: number | null
           logged_at?: string
           notes?: string | null
+          option_value?: string | null
           tracker_id: string
           user_id: string
         }
@@ -1003,9 +1017,10 @@ export type Database = {
           cycle_day?: number | null
           cycle_phase?: string | null
           id?: string
-          intensity?: number
+          intensity?: number | null
           logged_at?: string
           notes?: string | null
+          option_value?: string | null
           tracker_id?: string
           user_id?: string
         }
