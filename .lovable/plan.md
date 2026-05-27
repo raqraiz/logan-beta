@@ -1,108 +1,57 @@
-## Goal
+# Unified Tracking Surface
 
-Let each user connect their own Whoop and/or Fitbit account so Logan auto-imports sleep, recovery/HRV, workouts, and resting heart rate — feeding the same widgets and chat insights as the existing history importer, but continuously instead of one-shot.
+## What changes for the user
 
-## Why per-user OAuth (not a Lovable connector)
+Today the Home tab has two separate widgets (Symptom Tracker, Cycle Correlations). They overlap, so users duplicate entries to test which one is "right," and rich phase-pattern analytics only exist on the symptom side.
 
-Lovable's built-in connectors authenticate the workspace owner's account (good for "post to *our* Slack"). Whoop and Fitbit data is personal — every Logan user must grant access to *their own* account. That means we register Logan as an OAuth app with each provider and run the flow per user.
+After this change there is **one widget — "Track"** on Home. Every signal a user cares about (cramps, mood, surfing, loneliness, cervical fluid, cervix position, BBT…) lives in the same list, with the same logging UI, and feeds the same phase-correlation engine that powers Symptom History today.
 
-Neither Whoop nor Fitbit is in the Lovable connector catalog, so this is the only path either way.
+New abilities:
+- **Categorical (nominal) trackers** — e.g. discharge type (dry / sticky / creamy / egg-white / watery). Logan correlates each option to phase.
+- **Logan-suggested presets** — when a user names a tracker, Logan proposes sensible options (Billings for discharge, low/mid/high + firm/soft + closed/open for cervix, etc.). User can edit before saving.
+- **One-tap "Enable FAM tracking"** — adds Cervical Fluid, Cervix Position, Cervix Texture, Cervix Opening, BBT as pre-built trackers.
 
-## What the user sees
+Old data is preserved: existing symptom logs become a built-in tracker type and continue to show up in history + correlations.
 
-- **Settings → Connected devices** (new section): two cards, "Whoop" and "Fitbit", each with a Connect button.
-- Tapping Connect opens the provider's auth page in a new tab. After approval they land back in Logan with a green check + "Pulling your last 30 days…".
-- A new **`Recovery`** widget on Home showing today's HRV, resting HR, sleep score, and a phase-correlation insight ("Your HRV dips ~12% in luteal — track this").
-- Chat picks it up: "Your recovery is low today and you're entering luteal — want a lighter plan?"
-- Disconnect button revokes the token and stops syncing (kept data stays).
+## Build phases
 
-## Provider setup (one-time, by you)
+### 1. Schema (one migration)
+- `custom_trackers`: add `tracker_type` (`scale_0_5` | `single_choice`, default `scale_0_5`), `options` (jsonb array of strings, null for scale), `is_fam` (bool, default false), `is_builtin` (bool, default false).
+- `tracker_logs`: add `option_value` (text, null for scale logs). Keep `intensity` for scale type.
+- Backfill existing custom_trackers as `scale_0_5`.
+- Backfill: for each distinct symptom name in `symptom_logs` per user, create a `custom_trackers` row (`source = 'symptom'`, type `scale_0_5`, `is_builtin = true`) and migrate the per-symptom severity entries into `tracker_logs`. Keep `symptom_logs` table around for read-only fallback (no destructive drop in this pass).
 
-| Provider | Where | What we need |
-|---|---|---|
-| Whoop | developer.whoop.com → create app | Client ID + Secret, redirect URI `https://asklogan.ai/integrations/whoop/callback`, scopes: `read:recovery read:sleep read:workout read:cycles read:profile offline` |
-| Fitbit | dev.fitbit.com → register app (type: Server) | Client ID + Secret, redirect URI `https://asklogan.ai/integrations/fitbit/callback`, scopes: `activity heartrate sleep profile`, OAuth 2.0 + PKCE |
+### 2. New unified widget `TrackWidget`
+Replaces both `SymptomLogWidget` and `CycleCorrelationsWidget` in HomeTab + widget preferences. Same date picker. Per-tracker row renders either the 0–5 chip strip (existing) or a horizontal option-pill row for nominal trackers. "Track something else" opens the upgraded `AddTrackerDialog`.
 
-Both also need the same redirect for the preview domain during testing.
+### 3. `AddTrackerDialog` upgrade
+- Type toggle (Scale 0–5 / Choose one).
+- When type = Choose one, an editable options list.
+- "Suggest options" button → calls a small edge function `suggest-tracker-options` (Lovable AI Gateway, Gemini Flash) with the tracker name + (optional) description and returns a JSON option array the user can accept / edit.
+- "Enable FAM tracking" CTA at the top: inserts the 5 FAM trackers in one batch if not already present.
 
-Secrets to store in Lovable Cloud: `WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET`, `FITBIT_CLIENT_ID`, `FITBIT_CLIENT_SECRET`.
+### 4. Unified analytics
+- Extend `cycleCorrelation.ts` with a `analyzeNominalCorrelation` that, per option value, computes phase distribution (which phase each option appears in most) and surfaces the strongest signal (e.g. "Egg-white discharge peaks in Ovulation").
+- `CycleCorrelationDetail` gains a nominal mode: shows a phase × option heatmap instead of a bar chart.
+- `SymptomHistory` (renamed "Tracking History" in copy) reads from `tracker_logs` (unified) so symptoms + custom trackers + FAM all appear in one timeline + phase pattern view.
 
-## Architecture
+### 5. Chat awareness
+`chat-ai` context builder pulls recent tracker logs (already does for symptoms) including option-typed entries, so Logan can reference "your fluid has been creamy for 3 days" naturally.
 
-```text
-User → Logan UI → /integrations/{provider}/connect (edge fn)
-                       ↓ redirect with state
-                 Provider auth page
-                       ↓
-           /integrations/{provider}/callback (edge fn)
-              - exchange code → access+refresh token
-              - store encrypted in user_integrations
-              - kick off initial backfill (last 30d)
-                       ↓
-             sync-{provider} edge fn (cron, hourly)
-              - refresh token if needed
-              - pull deltas → tracker_logs / cycle_history
-              - update last_synced_at
-```
+### 6. Cleanup
+- Remove `SymptomLogWidget` and `CycleCorrelationsWidget` from `WIDGET_TYPES` and migrate any existing `home_widget_preferences.widget_order` entries to the new `track` id at load time (defensive map in `useWidgetPreferences`).
+- Update memory: replace `mem://features/symptom-tracking` and `mem://features/cycle-correlations` with a single `mem://features/track-widget`.
 
-### New table
+## What I will not touch
+- Lab Results, Daily Briefing, Cycle Forecast widgets.
+- Chat layout, onboarding flow, monetization.
+- The biological-model phase math.
 
-`public.user_integrations`
-- `user_id`, `provider` (`'whoop'|'fitbit'`), `access_token`, `refresh_token`, `expires_at`, `provider_user_id`, `scopes`, `last_synced_at`, `status`
-- Unique on (`user_id`, `provider`). RLS: user reads/deletes own; service role writes.
+## Technical notes
+- One Supabase migration with all schema + backfill in a single transaction.
+- New edge function `suggest-tracker-options` (verify_jwt = false; reads JWT in code; no secrets needed beyond `LOVABLE_API_KEY`).
+- Frontend: 1 new component (`TrackWidget`), 1 rewritten dialog (`AddTrackerDialog`), 1 extended detail view (`CycleCorrelationDetail` → `TrackerDetail`), shared analytics module updated.
+- Old `symptom_logs` reads remain functional during transition; new writes go to `tracker_logs`.
 
-### Data mapping (reuses existing tables)
-
-| Provider field | Logan destination |
-|---|---|
-| Sleep duration / score | `tracker_logs` under "Sleep hours" + new "Sleep score" tracker |
-| HRV (RMSSD) | new "HRV" tracker |
-| Resting HR | new "Resting HR" tracker |
-| Workouts (count, strain) | `tracker_logs` under "Workouts" |
-| Recovery score (Whoop) | new "Recovery" tracker |
-
-All scaled to 1–5 where needed so existing phase-correlation logic works automatically.
-
-### Edge functions
-
-- `oauth-whoop-start`, `oauth-whoop-callback`, `sync-whoop`
-- `oauth-fitbit-start`, `oauth-fitbit-callback`, `sync-fitbit`
-- One scheduled cron (pg_cron) calls each `sync-*` hourly for active users.
-
-## Frontend changes
-
-- `SettingsDialog.tsx` — add "Connected devices" section with two `ProviderConnectCard` components.
-- `src/components/settings/ProviderConnectCard.tsx` — new, shows status (Not connected / Connected since X / Last sync Y), Connect/Disconnect buttons.
-- `src/pages/IntegrationCallback.tsx` — new route `/integrations/:provider/callback`, shows spinner, calls callback edge fn, then closes/redirects.
-- New `RecoveryWidget` on Home feeding off the new trackers.
-
-## Limits & guardrails
-
-- Rate limits: Whoop 100 req/min, Fitbit 150 req/hr per user. Hourly cron + delta sync stays well under.
-- Token refresh handled in `sync-*` before each pull; failed refresh → mark `status='reauth_required'` and prompt in Settings.
-- Idempotent inserts (dedupe by `(user_id, provider, external_id)`) so re-syncs are safe.
-- Disconnect revokes token at the provider, deletes the row, keeps imported data.
-
-## Phasing suggestion
-
-1. **Phase 1** — Fitbit only (simpler OAuth, larger user base). Sleep + HRV + workouts + resting HR.
-2. **Phase 2** — Whoop (adds recovery score + strain).
-3. **Phase 3** — Apple Health auto-sync via the iOS shortcut pattern (still file-based but scheduled).
-
-## Files added or changed
-
-- `supabase/migrations/...` — `user_integrations` table + RLS, new tracker seed.
-- `supabase/functions/oauth-{whoop,fitbit}-start/index.ts` — new.
-- `supabase/functions/oauth-{whoop,fitbit}-callback/index.ts` — new.
-- `supabase/functions/sync-{whoop,fitbit}/index.ts` — new.
-- `supabase/config.toml` — register the 6 new functions.
-- `src/components/chat/SettingsDialog.tsx` — add Connected devices section.
-- `src/components/settings/ProviderConnectCard.tsx` — new.
-- `src/pages/IntegrationCallback.tsx` + route in `App.tsx` — new.
-- `src/components/home/RecoveryWidget.tsx` — new Home widget.
-
-## What I need from you to start
-
-1. Confirm we go **Fitbit first**, then Whoop (or both at once).
-2. You register the OAuth apps at dev.fitbit.com / developer.whoop.com and share Client IDs + Secrets when ready — I'll request them via the secrets tool.
-3. Confirm the callback URL `https://asklogan.ai/integrations/{provider}/callback` is fine (we'll also whitelist the preview URL).
+## Open question I'll resolve while building, unless you object
+Whether to **delete** the legacy `SymptomLogWidget` / `CycleCorrelationsWidget` files immediately or leave them as dead code for one release. Default: delete — they're confusing if they linger.
