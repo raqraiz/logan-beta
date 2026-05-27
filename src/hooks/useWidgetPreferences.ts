@@ -11,7 +11,8 @@ export interface WidgetConfig {
 
 const DEFAULT_WIDGETS: WidgetConfig[] = [
   { id: "cycle_circle", visible: true, type: "built-in" },
-  { id: "track", visible: true, type: "built-in" },
+  { id: "symptom_tracker", visible: true, type: "built-in" },
+  { id: "cycle_correlations", visible: true, type: "built-in" },
   { id: "lab_results", visible: true, type: "built-in" },
   { id: "succeed_you", visible: true, type: "built-in" },
   { id: "succeed_him", visible: true, type: "built-in" },
@@ -23,7 +24,8 @@ const DEFAULT_WIDGETS: WidgetConfig[] = [
 
 export const DEFAULT_WIDGET_LABELS: Record<string, string> = {
   cycle_circle: "Cycle Circle",
-  track: "Track",
+  symptom_tracker: "Symptom Tracker",
+  cycle_correlations: "Cycle Correlations",
   lab_results: "Lab Results",
   succeed_you: "Succeed Today — For You",
   succeed_him: "Succeed Today — For Him",
@@ -31,11 +33,6 @@ export const DEFAULT_WIDGET_LABELS: Record<string, string> = {
   dontmessup_him: "Don't Mess Up — For Him",
   hormone_chart: "Hormone Chart",
   symptom_map: "Symptom Map",
-};
-
-const LEGACY_ID_MAP: Record<string, string> = {
-  symptom_tracker: "track",
-  cycle_correlations: "track",
 };
 
 export function getWidgetLabel(widget: WidgetConfig): string {
@@ -58,15 +55,7 @@ export function useWidgetPreferences(userId?: string) {
         .maybeSingle();
 
       if (data?.widget_order && Array.isArray(data.widget_order)) {
-        const rawSaved = (data.widget_order as unknown) as WidgetConfig[];
-        const seen = new Set<string>();
-        const saved: WidgetConfig[] = [];
-        for (const w of rawSaved) {
-          const mapped = LEGACY_ID_MAP[w.id] || w.id;
-          if (seen.has(mapped)) continue;
-          seen.add(mapped);
-          saved.push({ ...w, id: mapped });
-        }
+        const saved = (data.widget_order as unknown) as WidgetConfig[];
         const savedIds = new Set(saved.map(w => w.id));
         const merged = [
           ...saved,
