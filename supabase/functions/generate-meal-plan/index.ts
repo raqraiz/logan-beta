@@ -46,19 +46,29 @@ interface PreviewData {
 // ---------- Cycle helpers ----------
 function getPhaseForDay(cycleDay: number, cycleLengthDays: number): string {
   const ovDay = cycleLengthDays - 14;
+  const ovStart = ovDay - 1;
+  const ovEnd = ovDay + 2;
   if (cycleDay <= 5) return "Menstruation";
-  if (cycleDay < ovDay - 1) return "Follicular";
-  if (cycleDay <= ovDay + 1) return "Ovulation";
+  if (cycleDay < ovStart) return "Follicular";
+  if (cycleDay <= ovEnd) return "Ovulation";
   return "Luteal";
 }
 
-function getCycleDay(lastPeriodStart: string, cycleLengthDays: number): number {
-  const start = new Date(lastPeriodStart + "T12:00:00Z");
-  const now = new Date();
-  const diff = Math.floor((now.getTime() - start.getTime()) / 86400000);
+function getCycleDay(lastPeriodStart: string, cycleLengthDays: number, timezone = "UTC"): number {
+  let start: Date;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodStart)) {
+    const [year, month, day] = lastPeriodStart.split("-").map(Number);
+    start = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  } else {
+    start = new Date(lastPeriodStart);
+  }
+
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: timezone });
+  const [ty, tm, td] = todayStr.split("-").map(Number);
+  const today = new Date(Date.UTC(ty, tm - 1, td, 12, 0, 0));
+  const diff = Math.round((today.getTime() - start.getTime()) / 86400000);
   if (diff >= 0) return diff + 1;
-  const day = (diff % cycleLengthDays) + 1;
-  return day < 1 ? day + cycleLengthDays : day;
+  return (((diff % cycleLengthDays) + cycleLengthDays) % cycleLengthDays) + 1;
 }
 
 serve(async (req) => {
@@ -144,7 +154,7 @@ serve(async (req) => {
 
     const cycleLengthDays = participant?.cycle_length_days || 28;
     const lastPeriodStart = participant?.last_period_start || new Date().toISOString().split("T")[0];
-    const cycleDay = getCycleDay(lastPeriodStart, cycleLengthDays);
+    const cycleDay = getCycleDay(lastPeriodStart, cycleLengthDays, participant?.timezone || "UTC");
     const lifeStage = participant?.life_stage || "cycling";
 
     let ppWindow: string | null = null;
