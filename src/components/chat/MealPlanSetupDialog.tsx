@@ -12,6 +12,13 @@ type Mode = "ideas" | "mix";
 
 export interface MealPlanInitialValues {
   mode?: Mode;
+  cycleContext?: {
+    cycleDay?: number | null;
+    phase?: string | null;
+    cycleLengthDays?: number | null;
+    lastPeriodStart?: string | null;
+    timezone?: string | null;
+  } | null;
   // legacy fields preserved (ignored)
   lengthDays?: number;
   style?: string | null;
@@ -102,7 +109,7 @@ export function MealPlanSetupDialog({
       if (data.free_form) setFreeForm(data.free_form);
     };
 
-    if (initialValues) {
+    if (initialValues?.dietaryPrefs || initialValues?.mode) {
       applyValues(initialValues.dietaryPrefs ?? null, initialValues.mode);
       setLoadingPrefs(false);
       return;
@@ -163,6 +170,7 @@ export function MealPlanSetupDialog({
       const { data, error } = await supabase.functions.invoke("generate-meal-plan", {
         body: {
           mode,
+          cycleContext: initialValues?.cycleContext ?? null,
           dietaryPrefs: {
             diet_type: resolvedDiet,
             allergies,

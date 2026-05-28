@@ -71,6 +71,7 @@ interface ChatMessage {
     cycle_day?: number;
     cycle_phase?: string;
     cycle_length_days?: number;
+    timezone?: string | null;
     insight_type?: string;
     validated_symptoms?: string[];
     anchor_symptom?: string;
@@ -1375,6 +1376,13 @@ const Chat = () => {
                         <ResourceOfferCard
                           userId={user.id}
                           resourceType={message.metadata.resource_type as string}
+                          cycleContext={{
+                            cycleDay: message.metadata.cycle_day ?? cycleData?.cycleDay ?? null,
+                            phase: message.metadata.cycle_phase ?? cycleData?.phase ?? null,
+                            cycleLengthDays: message.metadata.cycle_length_days ?? cycleData?.cycleLengthDays ?? null,
+                            lastPeriodStart: cycleData?.lastPeriodStart ?? null,
+                            timezone: message.metadata.timezone ?? null,
+                          }}
                         />
                       )}
 

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sparkles, FileText, Loader2, AlertCircle, RefreshCw, Eye } from "lucide-react";
-import { MealPlanSetupDialog } from "./MealPlanSetupDialog";
+import { MealPlanSetupDialog, type MealPlanInitialValues } from "./MealPlanSetupDialog";
 import { MealPlanPreviewDialog } from "./MealPlanPreviewDialog";
 import { cn } from "@/lib/utils";
 
@@ -35,7 +35,15 @@ const asMealPlanResource = (value: unknown) => value as MealPlanResource;
  * Card shown in chat when Logan offers a meal plan resource.
  * Tapping "Build it" opens the setup dialog.
  */
-export function ResourceOfferCard({ userId, resourceType }: { userId: string; resourceType: string }) {
+export function ResourceOfferCard({
+  userId,
+  resourceType,
+  cycleContext,
+}: {
+  userId: string;
+  resourceType: string;
+  cycleContext?: MealPlanInitialValues["cycleContext"];
+}) {
   const [open, setOpen] = useState(false);
   if (resourceType !== "meal_plan") return null;
 
@@ -59,7 +67,12 @@ export function ResourceOfferCard({ userId, resourceType }: { userId: string; re
           </Button>
         </div>
       </div>
-      <MealPlanSetupDialog open={open} onOpenChange={setOpen} userId={userId} />
+      <MealPlanSetupDialog
+        open={open}
+        onOpenChange={setOpen}
+        userId={userId}
+        initialValues={cycleContext ? { cycleContext } : null}
+      />
     </>
   );
 }
