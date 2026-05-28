@@ -109,7 +109,7 @@ export function MealPlanSetupDialog({
       if (data.free_form) setFreeForm(data.free_form);
     };
 
-    if (initialValues) {
+    if (initialValues?.dietaryPrefs || initialValues?.mode) {
       applyValues(initialValues.dietaryPrefs ?? null, initialValues.mode);
       setLoadingPrefs(false);
       return;
