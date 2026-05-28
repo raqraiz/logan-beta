@@ -1375,6 +1375,13 @@ const Chat = () => {
                         <ResourceOfferCard
                           userId={user.id}
                           resourceType={message.metadata.resource_type as string}
+                          cycleContext={{
+                            cycleDay: message.metadata.cycle_day ?? cycleData?.cycleDay ?? null,
+                            phase: message.metadata.cycle_phase ?? cycleData?.phase ?? null,
+                            cycleLengthDays: message.metadata.cycle_length_days ?? cycleData?.cycleLengthDays ?? null,
+                            lastPeriodStart: cycleData?.lastPeriodStart ?? null,
+                            timezone: (message.metadata as any)?.timezone ?? null,
+                          }}
                         />
                       )}
 
