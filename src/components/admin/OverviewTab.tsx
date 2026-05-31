@@ -298,10 +298,12 @@ export const OverviewTab = () => {
   const profilesPromiseRef = useRef<Promise<any[]> | null>(null);
   const getProfiles = useCallback(() => {
     if (!profilesPromiseRef.current) {
-      profilesPromiseRef.current = supabase
-        .from("profiles")
-        .select("id, email, full_name, created_at")
-        .then(r => r.data || []);
+      profilesPromiseRef.current = Promise.resolve(
+        supabase
+          .from("profiles")
+          .select("id, email, full_name, created_at")
+      ).then((r: any) => r.data || []);
+
     }
     return profilesPromiseRef.current;
   }, []);
