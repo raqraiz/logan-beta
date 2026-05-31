@@ -110,7 +110,8 @@ serve(async (req) => {
     const body = await req.json();
     const mode: Mode = body.mode === "mix" ? "mix" : "ideas";
     const dietaryPrefs = body.dietaryPrefs || {};
-    const cycleContext = body.cycleContext && typeof body.cycleContext === "object" ? body.cycleContext : null;
+    // SECURITY: cycle context (day/phase/lastPeriodStart) is NEVER trusted from the client.
+    // Always re-derived server-side below from the participants row.
 
     // Refinement context
     const parentResourceId: string | null = typeof body.parentResourceId === "string" ? body.parentResourceId : null;
