@@ -816,6 +816,96 @@ export const OverviewTab = () => {
         </CardContent>
       </Card>
 
+      {/* All Sessions */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            All Sessions ({allSessions.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-8"></TableHead>
+                <TableHead>User</TableHead>
+                <TableHead>When</TableHead>
+                <TableHead className="text-right">Duration</TableHead>
+                <TableHead className="text-right">Messages</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedSessions.map((s, i) => {
+                const globalIdx = page * ITEMS_PER_PAGE + i;
+                const isExpanded = expandedIdx === globalIdx;
+                return (
+                  <>
+                    <TableRow
+                      key={globalIdx}
+                      className="cursor-pointer hover:bg-muted/30 transition-colors"
+                      onClick={() => setExpandedIdx(isExpanded ? null : globalIdx)}
+                    >
+                      <TableCell className="w-8 pr-0">
+                        {isExpanded ? (
+                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium text-sm">{s.fullName}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {format(new Date(s.startTime), "MMM d, h:mm a")}
+                      </TableCell>
+                      <TableCell className="text-right text-sm">{s.durationMin}m</TableCell>
+                      <TableCell className="text-right text-sm">{s.messageCount}</TableCell>
+                    </TableRow>
+                    {isExpanded && (
+                      <TableRow key={`${globalIdx}-detail`}>
+                        <TableCell colSpan={5} className="p-0 bg-muted/10 border-t border-border/20">
+                          <SessionDetail session={s} />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </>
+                );
+              })}
+              {allSessions.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-4">
+                    No sessions found
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4">
+              <p className="text-xs text-muted-foreground">Page {page + 1} of {totalPages}</p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 0}
+                  onClick={() => { setPage(p => p - 1); setExpandedIdx(null); }}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => { setPage(p => p + 1); setExpandedIdx(null); }}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Daily Activity (Last 30 Days) */}
       <Card>
         <CardHeader className="pb-2">
@@ -835,33 +925,15 @@ export const OverviewTab = () => {
         </CardContent>
       </Card>
 
-      {/* Avg Session Duration */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Avg Session Duration (min)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={sessionChartConfig} className="h-[200px] w-full">
-            <LineChart data={dailyStats}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} interval={4} className="text-muted-foreground" />
-              <YAxis tick={{ fontSize: 10 }} className="text-muted-foreground" />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Line type="monotone" dataKey="avgDuration" stroke="var(--color-avgDuration)" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ChartContainer>
-        </CardContent>
-      </Card>
-
       {/* Leaderboard */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium">User Engagement Leaderboard</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {users.map((u, i) => (
+          {paginatedLeaderboard.map((u, i) => (
             <div key={u.userId} className="flex items-center gap-3">
-              <span className="text-xs font-mono text-muted-foreground w-5 text-right">{i + 1}</span>
+              <span className="text-xs font-mono text-muted-foreground w-5 text-right">{leaderboardPage * ITEMS_PER_PAGE + i + 1}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm font-medium text-foreground truncate">{u.fullName}</span>
@@ -883,6 +955,47 @@ export const OverviewTab = () => {
           {users.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-4">No users found</p>
           )}
+          {leaderboardTotalPages > 1 && (
+            <div className="flex items-center justify-between pt-2 border-t border-border/30">
+              <p className="text-xs text-muted-foreground">Page {leaderboardPage + 1} of {leaderboardTotalPages}</p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={leaderboardPage === 0}
+                  onClick={() => setLeaderboardPage(p => p - 1)}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={leaderboardPage >= leaderboardTotalPages - 1}
+                  onClick={() => setLeaderboardPage(p => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Avg Session Duration */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">Avg Session Duration (min)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={sessionChartConfig} className="h-[200px] w-full">
+            <LineChart data={dailyStats}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+              <XAxis dataKey="date" tick={{ fontSize: 10 }} interval={4} className="text-muted-foreground" />
+              <YAxis tick={{ fontSize: 10 }} className="text-muted-foreground" />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Line type="monotone" dataKey="avgDuration" stroke="var(--color-avgDuration)" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ChartContainer>
         </CardContent>
       </Card>
 
@@ -982,96 +1095,6 @@ export const OverviewTab = () => {
                 ))}
               </div>
             </ScrollArea>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* All Sessions */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <MessageSquare className="w-4 h-4" />
-            All Sessions ({allSessions.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-8"></TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>When</TableHead>
-                <TableHead className="text-right">Duration</TableHead>
-                <TableHead className="text-right">Messages</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedSessions.map((s, i) => {
-                const globalIdx = page * ITEMS_PER_PAGE + i;
-                const isExpanded = expandedIdx === globalIdx;
-                return (
-                  <>
-                    <TableRow
-                      key={globalIdx}
-                      className="cursor-pointer hover:bg-muted/30 transition-colors"
-                      onClick={() => setExpandedIdx(isExpanded ? null : globalIdx)}
-                    >
-                      <TableCell className="w-8 pr-0">
-                        {isExpanded ? (
-                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                        )}
-                      </TableCell>
-                      <TableCell className="font-medium text-sm">{s.fullName}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {format(new Date(s.startTime), "MMM d, h:mm a")}
-                      </TableCell>
-                      <TableCell className="text-right text-sm">{s.durationMin}m</TableCell>
-                      <TableCell className="text-right text-sm">{s.messageCount}</TableCell>
-                    </TableRow>
-                    {isExpanded && (
-                      <TableRow key={`${globalIdx}-detail`}>
-                        <TableCell colSpan={5} className="p-0 bg-muted/10 border-t border-border/20">
-                          <SessionDetail session={s} />
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </>
-                );
-              })}
-              {allSessions.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-4">
-                    No sessions found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between pt-4">
-              <p className="text-xs text-muted-foreground">Page {page + 1} of {totalPages}</p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === 0}
-                  onClick={() => { setPage(p => p - 1); setExpandedIdx(null); }}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages - 1}
-                  onClick={() => { setPage(p => p + 1); setExpandedIdx(null); }}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
           )}
         </CardContent>
       </Card>
