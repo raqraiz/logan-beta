@@ -1036,9 +1036,16 @@ export const OverviewTab = () => {
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <TrendingUp className="w-4 h-4" />
             Cumulative Feature Adoption (12 Weeks)
+            {adoptionLoading && <RefreshCw className="w-3 h-3 animate-spin text-muted-foreground ml-1" />}
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {adoptionLoading && weeklyAdoption.length === 0 ? (
+            <div className="h-[280px] flex items-center justify-center text-xs text-muted-foreground">
+              Loading adoption data…
+            </div>
+          ) : (
+
           <ChartContainer config={adoptionChartConfig} className="h-[280px] w-full">
             <AreaChart data={weeklyAdoption}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
