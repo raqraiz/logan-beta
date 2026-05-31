@@ -650,15 +650,39 @@ export const OverviewTab = () => {
     }
   }, [getProfiles]);
 
-  const refreshAll = useCallback(() => {
+  // Instant top-stats prefetch — cheap HEAD count queries so the stats row
+  // shows numbers immediately, before the heavy row-by-row loaders finish.
+  const loadFastCounts = useCallback(async () => {
+    const thirtyDaysAgoIso = subDays(new Date(), 30).toISOString();
+    const [usersRes, msgsRes, recentActivityRes] = await Promise.all([
+      supabase.from("profiles").select("*", { count: "exact", head: true }),
+      supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("role", "user"),
+      supabase.from("user_activity_events").select("*", { count: "exact", head: true })
+        .gte("created_at", thirtyDaysAgoIso),
+    ]);
+    setTotals(t => ({
+      ...t,
+      totalUsers: usersRes.count ?? t.totalUsers,
+      totalMessages: msgsRes.count ?? t.totalMessages,
+    }));
+    // Rough proxy for "activity in the last 30d" until the real session loader finishes.
+    if (recentActivityRes.count != null) {
+      setSessionTotals(s => s.totalSessions > 0 ? s : { ...s, totalSessions: recentActivityRes.count ?? 0 });
+    }
+  }, []);
+
+  const refreshAll = useCallback(async () => {
     profilesPromiseRef.current = null;
-    // Fire all loaders in parallel — each renders independently as it finishes
-    loadEngagement();
-    loadSessions();
+    // 1) Instant counts so the top stats row paints immediately
+    loadFastCounts();
+    // 2) Fast/light loaders in parallel
     loadFeedback();
     loadMenu();
+    // 3) Main heavy loaders — render top stats + sessions before adoption
+    await Promise.all([loadEngagement(), loadSessions()]);
+    // 4) Defer the slowest query (feature_events scan) so it stops competing
     loadAdoption();
-  }, [loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
+  }, [loadFastCounts, loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
 
   useEffect(() => { refreshAll(); }, [refreshAll]);
 
