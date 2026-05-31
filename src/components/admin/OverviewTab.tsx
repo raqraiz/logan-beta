@@ -1007,7 +1007,7 @@ export const OverviewTab = () => {
             </TableHeader>
             <TableBody>
               {paginatedSessions.map((s, i) => {
-                const globalIdx = page * SESSIONS_PER_PAGE + i;
+                const globalIdx = page * ITEMS_PER_PAGE + i;
                 const isExpanded = expandedIdx === globalIdx;
                 return (
                   <>
