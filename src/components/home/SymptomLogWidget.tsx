@@ -137,7 +137,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
     } else if (data) {
       setCommunitySymptoms(prev => [data as CommunitySymptom, ...prev]);
       setSelected(prev => [...prev, { name: data.name, severity: 0 }]);
-      toast({ title: "Added to the community list", description: "Others can see this too 💜" });
+      toast({ title: "Added to the shared list", description: "Other users can see this too 💜" });
       setNewSymptom("");
       setShowAddForm(false);
     }
@@ -184,7 +184,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
   };
 
   const handleDeleteSymptom = async (cs: CommunitySymptom) => {
-    if (!confirm(`Remove "${cs.name}" from the community list?`)) return;
+    if (!confirm(`Remove "${cs.name}" from the shared list?`)) return;
     const { error } = await supabase
       .from("community_symptoms")
       .delete()
@@ -424,7 +424,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                           onClick={() => setCollapsedCats(prev => ({ ...prev, __community: !prev.__community }))}
                           className="w-full flex items-center justify-between mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/60 hover:text-foreground/80"
                         >
-                          <span>Community · {filteredCs.length}</span>
+                          <span>Shared · {filteredCs.length}</span>
                           {isCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
                         </button>
                         {!isCollapsed && (
@@ -468,7 +468,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                                       ? "bg-primary text-primary-foreground border-primary"
                                       : "bg-card/60 border-border/40 hover:border-primary/40 text-foreground/70"
                                   )}
-                                  title={isMine ? "You added this" : "Added by the community"}
+                                  title={isMine ? "You added this" : "Added by another user"}
                                 >
                                   <button onClick={() => toggleSymptom(cs.name)} className="px-2.5 py-1 text-xs inline-flex items-center gap-1.5">
                                     {cs.name}
@@ -568,7 +568,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
               </div>
             )}
             <p className="text-[10px] text-muted-foreground/60 mt-2">
-              Symptoms you add are shared with the community (no personal info attached).
+              Symptoms you add are shared with other users (no personal info attached).
             </p>
           </div>
 
