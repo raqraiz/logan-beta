@@ -258,378 +258,331 @@ export const OverviewTab = () => {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  const fetchEngagement = async () => {
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, email, full_name, created_at");
-    if (!profiles) return;
-
-    const pageSize = 1000;
-    let allMessages: { user_id: string; created_at: string; role: string }[] = [];
-    let from = 0;
-    while (true) {
-      const { data: batch } = await supabase
-        .from("chat_messages")
-        .select("user_id, created_at, role")
-        .eq("role", "user")
-        .order("created_at", { ascending: true })
-        .range(from, from + pageSize - 1);
-      if (!batch || batch.length === 0) break;
-      allMessages = allMessages.concat(batch);
-      if (batch.length < pageSize) break;
-      from += pageSize;
-    }
-
-    let allActivity: { user_id: string; created_at: string }[] = [];
-    let actFrom = 0;
-    while (true) {
-      const { data: batch } = await supabase
-        .from("user_activity_events")
-        .select("user_id, created_at")
-        .order("created_at", { ascending: true })
-        .range(actFrom, actFrom + pageSize - 1);
-      if (!batch || batch.length === 0) break;
-      allActivity = allActivity.concat(batch);
-      if (batch.length < pageSize) break;
-      actFrom += pageSize;
-    }
-
-    const messagesByUser = new Map<string, string[]>();
-    for (const m of allMessages) {
-      if (!messagesByUser.has(m.user_id)) messagesByUser.set(m.user_id, []);
-      messagesByUser.get(m.user_id)!.push(m.created_at);
-    }
-    const allByUser = new Map<string, string[]>();
-    for (const m of allMessages) {
-      if (!allByUser.has(m.user_id)) allByUser.set(m.user_id, []);
-      allByUser.get(m.user_id)!.push(m.created_at);
-    }
-    for (const e of allActivity) {
-      if (!allByUser.has(e.user_id)) allByUser.set(e.user_id, []);
-      allByUser.get(e.user_id)!.push(e.created_at);
-    }
-
-    const now = new Date();
-    const todayStart = startOfDay(now);
-    const weekAgo = subDays(now, 7);
-    let activeToday = 0;
-    let activeThisWeek = 0;
-    let totalSessions = 0;
-
-    const engagements: UserEngagement[] = profiles.map((p) => {
-      const msgTs = (messagesByUser.get(p.id) || []).map((t) => new Date(t).getTime()).sort();
-      const totalMessages = msgTs.length;
-      const allTs = (allByUser.get(p.id) || []).map((t) => new Date(t).getTime()).sort();
-      let sessions = 0;
-      if (allTs.length > 0) {
-        sessions = 1;
-        for (let i = 1; i < allTs.length; i++) {
-          if (allTs[i] - allTs[i - 1] > SESSION_GAP_MS) sessions++;
-        }
+  // Generic helper: fetch all rows from a table, parallelizing page requests
+  // after probing the count. Falls back to sequential paging if count fails.
+  const fetchAllRows = useCallback(async <T,>(
+    build: (from: number, to: number) => any,
+    countQuery: () => any,
+    pageSize = 1000,
+  ): Promise<T[]> => {
+    const { count } = await countQuery();
+    if (count == null) {
+      // Sequential fallback
+      const all: T[] = [];
+      let from = 0;
+      while (true) {
+        const { data } = await build(from, from + pageSize - 1);
+        if (!data || data.length === 0) break;
+        all.push(...data);
+        if (data.length < pageSize) break;
+        from += pageSize;
       }
-      totalSessions += sessions;
-      const lastActive = allTs.length > 0 ? new Date(allTs[allTs.length - 1]).toISOString() : null;
-      if (lastActive && new Date(lastActive) >= todayStart) activeToday++;
-      if (lastActive && new Date(lastActive) >= weekAgo) activeThisWeek++;
-      return {
-        userId: p.id,
-        email: p.email,
-        fullName: p.full_name,
-        totalMessages,
-        lastActive,
-        sessions,
-        avgMessagesPerSession: sessions > 0 ? Math.round((totalMessages / sessions) * 10) / 10 : 0,
-        joinedAt: p.created_at,
-      };
-    });
-    engagements.sort((a, b) => b.totalMessages - a.totalMessages);
-
-    const days = 30;
-    const dailyMap = new Map<string, { messages: number; users: Set<string> }>();
-    for (let i = 0; i < days; i++) {
-      const d = format(subDays(now, i), "yyyy-MM-dd");
-      dailyMap.set(d, { messages: 0, users: new Set() });
+      return all;
     }
-    for (const m of allMessages) {
-      const d = format(new Date(m.created_at), "yyyy-MM-dd");
-      if (dailyMap.has(d)) {
-        dailyMap.get(d)!.messages++;
-        dailyMap.get(d)!.users.add(m.user_id);
-      }
-    }
-    for (const e of allActivity) {
-      const d = format(new Date(e.created_at), "yyyy-MM-dd");
-      if (dailyMap.has(d)) dailyMap.get(d)!.users.add(e.user_id);
-    }
-    const daily: DailyActivity[] = Array.from(dailyMap.entries())
-      .map(([date, v]) => ({ date: format(parseISO(date), "MMM d"), messages: v.messages, activeUsers: v.users.size }))
-      .reverse();
-
-    const totalDailyUsers = daily.reduce((s, d) => s + d.activeUsers, 0);
-    const avgDailyUsers = daily.length > 0 ? Math.round((totalDailyUsers / daily.length) * 10) / 10 : 0;
-
-    setUsers(engagements);
-    setDailyActivity(daily);
-    setTotals({
-      totalUsers: profiles.length,
-      totalMessages: allMessages.length,
-      activeToday,
-      activeThisWeek,
-      avgDailyUsers,
-      avgSessionsPerUser: profiles.length > 0 ? Math.round((totalSessions / profiles.length) * 10) / 10 : 0,
-      avgMessagesPerUser: profiles.length > 0 ? Math.round((allMessages.length / profiles.length) * 10) / 10 : 0,
-    });
-  };
-
-  const fetchSessions = async () => {
-    const now = new Date();
-    const thirtyDaysAgo = subDays(now, 30);
-    const { data: profiles } = await supabase.from("profiles").select("id, email, full_name");
-    if (!profiles) return;
-    const profileMap = new Map(profiles.map((p) => [p.id, p]));
-
-    const pageSize = 1000;
-    let allTs: { user_id: string; created_at: string }[] = [];
-    let from = 0;
-    while (true) {
-      const { data: batch } = await supabase
-        .from("chat_messages")
-        .select("user_id, created_at")
-        .eq("role", "user")
-        .gte("created_at", thirtyDaysAgo.toISOString())
-        .order("created_at", { ascending: true })
-        .range(from, from + pageSize - 1);
-      if (!batch || batch.length === 0) break;
-      allTs = allTs.concat(batch);
-      if (batch.length < pageSize) break;
-      from += pageSize;
-    }
-    let actFrom = 0;
-    while (true) {
-      const { data: batch } = await supabase
-        .from("user_activity_events")
-        .select("user_id, created_at")
-        .gte("created_at", thirtyDaysAgo.toISOString())
-        .order("created_at", { ascending: true })
-        .range(actFrom, actFrom + pageSize - 1);
-      if (!batch || batch.length === 0) break;
-      allTs = allTs.concat(batch);
-      if (batch.length < pageSize) break;
-      actFrom += pageSize;
-    }
-
-    const tsByUser = new Map<string, string[]>();
-    for (const e of allTs) {
-      if (!tsByUser.has(e.user_id)) tsByUser.set(e.user_id, []);
-      tsByUser.get(e.user_id)!.push(e.created_at);
-    }
-
-    const sessions: SessionRecord[] = [];
-    const hourCounts = new Array(24).fill(0);
-
-    for (const [userId, timestamps] of tsByUser.entries()) {
-      const sorted = timestamps.map((t) => new Date(t).getTime()).sort();
-      const profile = profileMap.get(userId);
-      let sessionStart = sorted[0];
-      let sessionEnd = sorted[0];
-      let msgCount = 1;
-      for (let i = 1; i < sorted.length; i++) {
-        if (sorted[i] - sorted[i - 1] > SESSION_GAP_MS) {
-          const dur = Math.max(1, Math.round(differenceInMinutes(new Date(sessionEnd), new Date(sessionStart))));
-          sessions.push({
-            userId,
-            email: profile?.email || "Unknown",
-            fullName: profile?.full_name || "Unknown",
-            startTime: new Date(sessionStart).toISOString(),
-            endTime: new Date(sessionEnd).toISOString(),
-            durationMin: dur,
-            messageCount: msgCount,
-          });
-          hourCounts[new Date(sessionStart).getHours()]++;
-          sessionStart = sorted[i];
-          sessionEnd = sorted[i];
-          msgCount = 1;
-        } else {
-          sessionEnd = sorted[i];
-          msgCount++;
-        }
-      }
-      const dur = Math.max(1, Math.round(differenceInMinutes(new Date(sessionEnd), new Date(sessionStart))));
-      sessions.push({
-        userId,
-        email: profile?.email || "Unknown",
-        fullName: profile?.full_name || "Unknown",
-        startTime: new Date(sessionStart).toISOString(),
-        endTime: new Date(sessionEnd).toISOString(),
-        durationMin: dur,
-        messageCount: msgCount,
-      });
-      hourCounts[new Date(sessionStart).getHours()]++;
-    }
-    sessions.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
-
-    const dailyMap = new Map<string, { sessions: number; totalDuration: number }>();
-    for (let i = 0; i < 30; i++) {
-      const d = format(subDays(now, i), "yyyy-MM-dd");
-      dailyMap.set(d, { sessions: 0, totalDuration: 0 });
-    }
-    for (const s of sessions) {
-      const d = format(new Date(s.startTime), "yyyy-MM-dd");
-      if (dailyMap.has(d)) {
-        dailyMap.get(d)!.sessions++;
-        dailyMap.get(d)!.totalDuration += s.durationMin;
-      }
-    }
-    const daily: DailySessionStats[] = Array.from(dailyMap.entries())
-      .map(([date, v]) => ({
-        date: format(new Date(date), "MMM d"),
-        sessions: v.sessions,
-        avgDuration: v.sessions > 0 ? Math.round(v.totalDuration / v.sessions) : 0,
-      }))
-      .reverse();
-
-    const peakHourIdx = hourCounts.indexOf(Math.max(...hourCounts));
-    const peakHour = `${peakHourIdx.toString().padStart(2, "0")}:00`;
-    const totalDuration = sessions.reduce((a, s) => a + s.durationMin, 0);
-    const longestSession = sessions.length > 0 ? Math.max(...sessions.map((s) => s.durationMin)) : 0;
-    const longestRecord = sessions.find((s) => s.durationMin === longestSession);
-
-    setAllSessions(sessions);
-    setPage(0);
-    setLeaderboardPage(0);
-    setExpandedIdx(null);
-    setDailyStats(daily);
-    setSessionTotals({
-      totalSessions: sessions.length,
-      avgDuration: sessions.length > 0 ? Math.round(totalDuration / sessions.length) : 0,
-      longestSession,
-      longestSessionUser: longestRecord?.fullName || "",
-      peakHour,
-    });
-  };
-
-  const fetchFeatures = async () => {
-    const { data: profiles } = await supabase.from("profiles").select("id, email, full_name");
-    if (!profiles) return;
-    const profileMap = new Map(profiles.map((p) => [p.id, p]));
-
-    // Feedback
-    const { data: feedbackFull } = await supabase
-      .from("user_feedback")
-      .select("id, user_id, category, message, created_at")
-      .order("created_at", { ascending: false })
-      .limit(200);
-    setFeedbackItems((feedbackFull ?? []).map((f: any) => {
-      const p = profileMap.get(f.user_id);
-      return {
-        id: f.id,
-        name: p?.full_name || "Unknown",
-        email: p?.email || "",
-        category: f.category,
-        message: f.message,
-        created_at: f.created_at,
-      };
-    }));
-
-    // Menu Builder
-    const { data: menuFull } = await supabase
-      .from("user_resources")
-      .select("id, user_id, title, status, created_at")
-      .eq("type", "meal_plan")
-      .order("created_at", { ascending: false })
-      .limit(200);
-    setMenuItems((menuFull ?? []).map((m: any) => {
-      const p = profileMap.get(m.user_id);
-      return {
-        id: m.id,
-        name: p?.full_name || "Unknown",
-        email: p?.email || "",
-        title: m.title || "Untitled menu",
-        status: m.status,
-        created_at: m.created_at,
-      };
-    }));
-
-    // Adoption curve
-    const pageSize = 1000;
-    let chatMsgs: { user_id: string; created_at: string }[] = [];
-    let from = 0;
-    while (true) {
-      const { data } = await supabase
-        .from("chat_messages")
-        .select("user_id, created_at")
-        .eq("role", "user")
-        .order("created_at", { ascending: true })
-        .range(from, from + pageSize - 1);
-      if (!data || data.length === 0) break;
-      chatMsgs = chatMsgs.concat(data);
-      if (data.length < pageSize) break;
-      from += pageSize;
-    }
-
-    let allEvents: { user_id: string; feature_name: string; created_at: string }[] = [];
-    let evFrom = 0;
-    while (true) {
-      const { data } = await (supabase.from("feature_events" as any)
-        .select("user_id, feature_name, created_at")
-        .order("created_at", { ascending: true })
-        .range(evFrom, evFrom + 999) as any);
-      if (!data || data.length === 0) break;
-      allEvents = allEvents.concat(data);
-      if (data.length < 1000) break;
-      evFrom += 1000;
-    }
-    const homeEvents = allEvents.filter((e) => e.feature_name === "home_tab");
-    const forecastEvents = allEvents.filter((e) => e.feature_name === "cycle_forecast");
-    const planEvents = allEvents.filter((e) => e.feature_name === "plan_tab");
-    const cheatSheetEvents = allEvents.filter((e) => e.feature_name === "phase_cheat_sheet");
-
-    const now = new Date();
-    const twelveWeeksAgo = subDays(now, 84);
-    const weeks = eachWeekOfInterval({ start: twelveWeeksAgo, end: now }, { weekStartsOn: 1 });
-    const firstUse = (rows: { user_id: string; created_at: string }[]) => {
-      const first = new Map<string, Date>();
-      for (const r of rows) {
-        const d = new Date(r.created_at);
-        if (!first.has(r.user_id) || d < first.get(r.user_id)!) first.set(r.user_id, d);
-      }
-      return first;
-    };
-    const chatFirst = firstUse(chatMsgs);
-    const homeFirst = firstUse(homeEvents);
-    const forecastFirst = firstUse(forecastEvents);
-    const planFirst = firstUse(planEvents);
-    const cheatSheetFirst = firstUse(cheatSheetEvents);
-    const cumulative = (firstMap: Map<string, Date>, weekEnd: Date) => {
-      let count = 0;
-      firstMap.forEach((d) => { if (d <= weekEnd) count++; });
-      return count;
-    };
-    setWeeklyAdoption(weeks.map((w) => {
-      const weekEnd = new Date(w.getTime() + 7 * 24 * 60 * 60 * 1000);
-      return {
-        week: format(w, "MMM d"),
-        chat: cumulative(chatFirst, weekEnd),
-        home: cumulative(homeFirst, weekEnd),
-        forecast: cumulative(forecastFirst, weekEnd),
-        plan: cumulative(planFirst, weekEnd),
-        cheatSheet: cumulative(cheatSheetFirst, weekEnd),
-      };
-    }));
-  };
+    if (count === 0) return [];
+    const pages = Math.ceil(count / pageSize);
+    const reqs = Array.from({ length: pages }, (_, i) =>
+      build(i * pageSize, i * pageSize + pageSize - 1).then((r: any) => (r.data as T[]) || []),
+    );
+    const results = await Promise.all(reqs);
+    return results.flat();
+  }, []);
 
   const refreshAll = useCallback(async () => {
     setLoading(true);
     try {
-      await Promise.all([fetchEngagement(), fetchSessions(), fetchFeatures()]);
+      const now = new Date();
+      const thirtyDaysAgo = subDays(now, 30);
+      const thirtyDaysAgoIso = thirtyDaysAgo.toISOString();
+
+      // Kick off all top-level fetches in parallel
+      const [profiles, allChatMsgs, allActivity, allFeatureEvents, feedbackRes, menuRes] = await Promise.all([
+        supabase.from("profiles").select("id, email, full_name, created_at").then(r => r.data || []),
+        fetchAllRows<{ user_id: string; created_at: string }>(
+          (from, to) => supabase.from("chat_messages")
+            .select("user_id, created_at")
+            .eq("role", "user")
+            .order("created_at", { ascending: true })
+            .range(from, to),
+          () => supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("role", "user"),
+        ),
+        fetchAllRows<{ user_id: string; created_at: string }>(
+          (from, to) => supabase.from("user_activity_events")
+            .select("user_id, created_at")
+            .order("created_at", { ascending: true })
+            .range(from, to),
+          () => supabase.from("user_activity_events").select("*", { count: "exact", head: true }),
+        ),
+        fetchAllRows<{ user_id: string; feature_name: string; created_at: string }>(
+          (from, to) => (supabase.from("feature_events" as any)
+            .select("user_id, feature_name, created_at")
+            .order("created_at", { ascending: true })
+            .range(from, to) as any),
+          () => (supabase.from("feature_events" as any).select("*", { count: "exact", head: true }) as any),
+        ),
+        supabase.from("user_feedback")
+          .select("id, user_id, category, message, created_at")
+          .order("created_at", { ascending: false })
+          .limit(200),
+        supabase.from("user_resources")
+          .select("id, user_id, title, status, created_at")
+          .eq("type", "meal_plan")
+          .order("created_at", { ascending: false })
+          .limit(200),
+      ]);
+
+      if (!profiles.length) {
+        setLoading(false);
+        return;
+      }
+      const profileMap = new Map(profiles.map((p: any) => [p.id, p]));
+
+      // ============ ENGAGEMENT (uses all-time chat msgs + activity) ============
+      const messagesByUser = new Map<string, string[]>();
+      for (const m of allChatMsgs) {
+        if (!messagesByUser.has(m.user_id)) messagesByUser.set(m.user_id, []);
+        messagesByUser.get(m.user_id)!.push(m.created_at);
+      }
+      const allByUser = new Map<string, string[]>();
+      for (const m of allChatMsgs) {
+        if (!allByUser.has(m.user_id)) allByUser.set(m.user_id, []);
+        allByUser.get(m.user_id)!.push(m.created_at);
+      }
+      for (const e of allActivity) {
+        if (!allByUser.has(e.user_id)) allByUser.set(e.user_id, []);
+        allByUser.get(e.user_id)!.push(e.created_at);
+      }
+
+      const todayStart = startOfDay(now);
+      const weekAgo = subDays(now, 7);
+      let activeToday = 0;
+      let activeThisWeek = 0;
+      let totalSessionsAllTime = 0;
+
+      const engagements: UserEngagement[] = profiles.map((p: any) => {
+        const msgTs = (messagesByUser.get(p.id) || []).map(t => new Date(t).getTime()).sort();
+        const totalMessages = msgTs.length;
+        const allTs = (allByUser.get(p.id) || []).map(t => new Date(t).getTime()).sort();
+        let sessions = 0;
+        if (allTs.length > 0) {
+          sessions = 1;
+          for (let i = 1; i < allTs.length; i++) {
+            if (allTs[i] - allTs[i - 1] > SESSION_GAP_MS) sessions++;
+          }
+        }
+        totalSessionsAllTime += sessions;
+        const lastActive = allTs.length > 0 ? new Date(allTs[allTs.length - 1]).toISOString() : null;
+        if (lastActive && new Date(lastActive) >= todayStart) activeToday++;
+        if (lastActive && new Date(lastActive) >= weekAgo) activeThisWeek++;
+        return {
+          userId: p.id,
+          email: p.email,
+          fullName: p.full_name,
+          totalMessages,
+          lastActive,
+          sessions,
+          avgMessagesPerSession: sessions > 0 ? Math.round((totalMessages / sessions) * 10) / 10 : 0,
+          joinedAt: p.created_at,
+        };
+      });
+      engagements.sort((a, b) => b.totalMessages - a.totalMessages);
+
+      const days = 30;
+      const dailyMap = new Map<string, { messages: number; users: Set<string> }>();
+      for (let i = 0; i < days; i++) {
+        const d = format(subDays(now, i), "yyyy-MM-dd");
+        dailyMap.set(d, { messages: 0, users: new Set() });
+      }
+      for (const m of allChatMsgs) {
+        const d = format(new Date(m.created_at), "yyyy-MM-dd");
+        if (dailyMap.has(d)) {
+          dailyMap.get(d)!.messages++;
+          dailyMap.get(d)!.users.add(m.user_id);
+        }
+      }
+      for (const e of allActivity) {
+        const d = format(new Date(e.created_at), "yyyy-MM-dd");
+        if (dailyMap.has(d)) dailyMap.get(d)!.users.add(e.user_id);
+      }
+      const daily: DailyActivity[] = Array.from(dailyMap.entries())
+        .map(([date, v]) => ({ date: format(parseISO(date), "MMM d"), messages: v.messages, activeUsers: v.users.size }))
+        .reverse();
+      const totalDailyUsers = daily.reduce((s, d) => s + d.activeUsers, 0);
+      const avgDailyUsers = daily.length > 0 ? Math.round((totalDailyUsers / daily.length) * 10) / 10 : 0;
+
+      setUsers(engagements);
+      setDailyActivity(daily);
+      setTotals({
+        totalUsers: profiles.length,
+        totalMessages: allChatMsgs.length,
+        activeToday,
+        activeThisWeek,
+        avgDailyUsers,
+        avgSessionsPerUser: profiles.length > 0 ? Math.round((totalSessionsAllTime / profiles.length) * 10) / 10 : 0,
+        avgMessagesPerUser: profiles.length > 0 ? Math.round((allChatMsgs.length / profiles.length) * 10) / 10 : 0,
+      });
+
+      // ============ SESSIONS (last 30 days only) ============
+      const recentTs = [
+        ...allChatMsgs.filter(m => m.created_at >= thirtyDaysAgoIso),
+        ...allActivity.filter(e => e.created_at >= thirtyDaysAgoIso),
+      ];
+      const tsByUser = new Map<string, string[]>();
+      for (const e of recentTs) {
+        if (!tsByUser.has(e.user_id)) tsByUser.set(e.user_id, []);
+        tsByUser.get(e.user_id)!.push(e.created_at);
+      }
+      const sessions: SessionRecord[] = [];
+      const hourCounts = new Array(24).fill(0);
+      for (const [userId, timestamps] of tsByUser.entries()) {
+        const sorted = timestamps.map(t => new Date(t).getTime()).sort();
+        const profile: any = profileMap.get(userId);
+        let sessionStart = sorted[0];
+        let sessionEnd = sorted[0];
+        let msgCount = 1;
+        for (let i = 1; i < sorted.length; i++) {
+          if (sorted[i] - sorted[i - 1] > SESSION_GAP_MS) {
+            const dur = Math.max(1, Math.round(differenceInMinutes(new Date(sessionEnd), new Date(sessionStart))));
+            sessions.push({
+              userId,
+              email: profile?.email || "Unknown",
+              fullName: profile?.full_name || "Unknown",
+              startTime: new Date(sessionStart).toISOString(),
+              endTime: new Date(sessionEnd).toISOString(),
+              durationMin: dur,
+              messageCount: msgCount,
+            });
+            hourCounts[new Date(sessionStart).getHours()]++;
+            sessionStart = sorted[i];
+            sessionEnd = sorted[i];
+            msgCount = 1;
+          } else {
+            sessionEnd = sorted[i];
+            msgCount++;
+          }
+        }
+        const dur = Math.max(1, Math.round(differenceInMinutes(new Date(sessionEnd), new Date(sessionStart))));
+        sessions.push({
+          userId,
+          email: profile?.email || "Unknown",
+          fullName: profile?.full_name || "Unknown",
+          startTime: new Date(sessionStart).toISOString(),
+          endTime: new Date(sessionEnd).toISOString(),
+          durationMin: dur,
+          messageCount: msgCount,
+        });
+        hourCounts[new Date(sessionStart).getHours()]++;
+      }
+      sessions.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+
+      const sessionDailyMap = new Map<string, { sessions: number; totalDuration: number }>();
+      for (let i = 0; i < 30; i++) {
+        const d = format(subDays(now, i), "yyyy-MM-dd");
+        sessionDailyMap.set(d, { sessions: 0, totalDuration: 0 });
+      }
+      for (const s of sessions) {
+        const d = format(new Date(s.startTime), "yyyy-MM-dd");
+        if (sessionDailyMap.has(d)) {
+          sessionDailyMap.get(d)!.sessions++;
+          sessionDailyMap.get(d)!.totalDuration += s.durationMin;
+        }
+      }
+      const sessionDaily: DailySessionStats[] = Array.from(sessionDailyMap.entries())
+        .map(([date, v]) => ({
+          date: format(new Date(date), "MMM d"),
+          sessions: v.sessions,
+          avgDuration: v.sessions > 0 ? Math.round(v.totalDuration / v.sessions) : 0,
+        }))
+        .reverse();
+
+      const peakHourIdx = hourCounts.indexOf(Math.max(...hourCounts));
+      const peakHour = `${peakHourIdx.toString().padStart(2, "0")}:00`;
+      const totalDuration = sessions.reduce((a, s) => a + s.durationMin, 0);
+      const longestSession = sessions.length > 0 ? Math.max(...sessions.map(s => s.durationMin)) : 0;
+      const longestRecord = sessions.find(s => s.durationMin === longestSession);
+
+      setAllSessions(sessions);
+      setPage(0);
+      setLeaderboardPage(0);
+      setExpandedIdx(null);
+      setDailyStats(sessionDaily);
+      setSessionTotals({
+        totalSessions: sessions.length,
+        avgDuration: sessions.length > 0 ? Math.round(totalDuration / sessions.length) : 0,
+        longestSession,
+        longestSessionUser: longestRecord?.fullName || "",
+        peakHour,
+      });
+
+      // ============ FEATURES ============
+      setFeedbackItems((feedbackRes.data ?? []).map((f: any) => {
+        const p: any = profileMap.get(f.user_id);
+        return {
+          id: f.id,
+          name: p?.full_name || "Unknown",
+          email: p?.email || "",
+          category: f.category,
+          message: f.message,
+          created_at: f.created_at,
+        };
+      }));
+      setMenuItems((menuRes.data ?? []).map((m: any) => {
+        const p: any = profileMap.get(m.user_id);
+        return {
+          id: m.id,
+          name: p?.full_name || "Unknown",
+          email: p?.email || "",
+          title: m.title || "Untitled menu",
+          status: m.status,
+          created_at: m.created_at,
+        };
+      }));
+
+      const homeEvents = allFeatureEvents.filter(e => e.feature_name === "home_tab");
+      const forecastEvents = allFeatureEvents.filter(e => e.feature_name === "cycle_forecast");
+      const planEvents = allFeatureEvents.filter(e => e.feature_name === "plan_tab");
+      const cheatSheetEvents = allFeatureEvents.filter(e => e.feature_name === "phase_cheat_sheet");
+
+      const twelveWeeksAgo = subDays(now, 84);
+      const weeks = eachWeekOfInterval({ start: twelveWeeksAgo, end: now }, { weekStartsOn: 1 });
+      const firstUse = (rows: { user_id: string; created_at: string }[]) => {
+        const first = new Map<string, Date>();
+        for (const r of rows) {
+          const d = new Date(r.created_at);
+          if (!first.has(r.user_id) || d < first.get(r.user_id)!) first.set(r.user_id, d);
+        }
+        return first;
+      };
+      const chatFirst = firstUse(allChatMsgs);
+      const homeFirst = firstUse(homeEvents);
+      const forecastFirst = firstUse(forecastEvents);
+      const planFirst = firstUse(planEvents);
+      const cheatSheetFirst = firstUse(cheatSheetEvents);
+      const cumulative = (firstMap: Map<string, Date>, weekEnd: Date) => {
+        let count = 0;
+        firstMap.forEach(d => { if (d <= weekEnd) count++; });
+        return count;
+      };
+      setWeeklyAdoption(weeks.map(w => {
+        const weekEnd = new Date(w.getTime() + 7 * 24 * 60 * 60 * 1000);
+        return {
+          week: format(w, "MMM d"),
+          chat: cumulative(chatFirst, weekEnd),
+          home: cumulative(homeFirst, weekEnd),
+          forecast: cumulative(forecastFirst, weekEnd),
+          plan: cumulative(planFirst, weekEnd),
+          cheatSheet: cumulative(cheatSheetFirst, weekEnd),
+        };
+      }));
     } catch (err) {
       console.error("Error refreshing overview:", err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchAllRows]);
 
   useEffect(() => { refreshAll(); }, [refreshAll]);
+
 
   const activeTodayUsers = useMemo(() => {
     const start = startOfDay(new Date());
