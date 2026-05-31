@@ -702,14 +702,20 @@ export const OverviewTab = () => {
     </div>
   );
 
+  const anyLoading = engagementLoading || sessionsLoading || adoptionLoading || feedbackLoading || menuLoading;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-foreground">Overview</h2>
-        <Button variant="ghost" size="sm" onClick={refreshAll}>
-          <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+        <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          Overview
+          {anyLoading && <RefreshCw className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
+        </h2>
+        <Button variant="ghost" size="sm" onClick={refreshAll} disabled={anyLoading}>
+          <RefreshCw className={`w-4 h-4 mr-2 ${anyLoading ? "animate-spin" : ""}`} /> Refresh
         </Button>
       </div>
+
 
       {/* Top stats: 7 engagement + 4 session = 11 cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6 gap-3">
