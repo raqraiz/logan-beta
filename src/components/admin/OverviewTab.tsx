@@ -1059,7 +1059,9 @@ export const OverviewTab = () => {
               <Area type="monotone" dataKey="cheatSheet" fill="var(--color-cheatSheet)" stroke="var(--color-cheatSheet)" fillOpacity={0.2} />
             </AreaChart>
           </ChartContainer>
+          )}
         </CardContent>
+
       </Card>
 
       {/* User Feedback */}
