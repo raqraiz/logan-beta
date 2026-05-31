@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     if (!tokenRes.ok) {
       const t = await tokenRes.text();
       console.error("Whoop token exchange failed", tokenRes.status, t);
-      return redirect("error", `Token exchange failed (${tokenRes.status})`);
+      return redirect("error", "token_exchange_failed");
     }
     const tok = await tokenRes.json();
     // tok: { access_token, refresh_token, expires_in, scope, token_type }
