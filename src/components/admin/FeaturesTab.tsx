@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, MessageSquare, Users2, Calendar, ThumbsUp, Ticket, TrendingUp, Home, Eye, CheckCircle, BookOpen, ClipboardList, MessageCircle, ChefHat } from "lucide-react";
+import { RefreshCw, MessageSquare, TrendingUp, Home, Eye, CheckCircle, BookOpen, ClipboardList, MessageCircle, ChefHat } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { format, subDays, eachWeekOfInterval } from "date-fns";
@@ -30,8 +30,6 @@ interface FeatureStats {
 interface WeeklyAdoption {
   week: string;
   chat: number;
-  community: number;
-  calendar: number;
   home: number;
   forecast: number;
   plan: number;
@@ -46,15 +44,13 @@ interface TopUser {
 
 const chartConfig = {
   chat: { label: "Chat", color: "hsl(var(--primary))" },
-  community: { label: "Community", color: "hsl(262, 60%, 55%)" },
-  calendar: { label: "Calendar", color: "hsl(200, 70%, 50%)" },
   home: { label: "Home", color: "hsl(30, 80%, 55%)" },
   forecast: { label: "Forecast", color: "hsl(142, 60%, 45%)" },
   plan: { label: "Plan", color: "hsl(340, 65%, 50%)" },
   cheatSheet: { label: "Cheat Sheet", color: "hsl(50, 70%, 45%)" },
 } satisfies ChartConfig;
 
-type TableName = "chat_messages" | "community_messages" | "calendar_tokens" | "user_feedback" | "promo_redemptions";
+type TableName = "chat_messages" | "user_feedback";
 
 const fetchAllRows = async (table: TableName, columns: string, filters?: { col: string; val: string }[]) => {
   let all: any[] = [];
@@ -78,7 +74,6 @@ export const FeaturesTab = () => {
   const [weeklyAdoption, setWeeklyAdoption] = useState<WeeklyAdoption[]>([]);
   const [chatDepth, setChatDepth] = useState<{ bucket: string; count: number }[]>([]);
   const [topChatUsers, setTopChatUsers] = useState<TopUser[]>([]);
-  const [topCommunityUsers, setTopCommunityUsers] = useState<TopUser[]>([]);
   const [onboardingStats, setOnboardingStats] = useState({ completed: 0, total: 0, rate: 0 });
   const [feedbackItems, setFeedbackItems] = useState<{ id: string; name: string; email: string; category: string; message: string; created_at: string }[]>([]);
   const [menuItems, setMenuItems] = useState<{ id: string; name: string; email: string; title: string; status: string; created_at: string }[]>([]);
@@ -92,13 +87,11 @@ export const FeaturesTab = () => {
       const profileMap = new Map(profiles.map((p) => [p.id, p]));
 
       // Fetch all data in parallel
-      const [chatMsgs, communityMsgs, calendarTokens, feedbackRows, promoRows] = await Promise.all([
+      const [chatMsgs, feedbackRows] = await Promise.all([
         fetchAllRows("chat_messages", "user_id, created_at, role, message_type, metadata", [{ col: "role", val: "user" }]),
-        fetchAllRows("community_messages", "user_id, created_at"),
-        fetchAllRows("calendar_tokens", "user_id, created_at"),
         fetchAllRows("user_feedback", "user_id, created_at"),
-        fetchAllRows("promo_redemptions", "user_id, created_at"),
       ]);
+      void feedbackRows;
 
       // Feedback list (with author)
       const { data: feedbackFull } = await supabase
@@ -160,10 +153,6 @@ export const FeaturesTab = () => {
       // Unique users per feature
       const uniqueUsers = (rows: { user_id: string }[]) => new Set(rows.map((r) => r.user_id));
       const chatUsers = uniqueUsers(chatMsgs);
-      const communityUsers = uniqueUsers(communityMsgs);
-      const calendarUsers = uniqueUsers(calendarTokens);
-      const feedbackUsers = uniqueUsers(feedbackRows);
-      const promoUsers = uniqueUsers(promoRows);
       const homeUsers = uniqueUsers(homeEvents);
       const forecastUsers = uniqueUsers(forecastEvents);
       const planUsers = uniqueUsers(planEvents);
@@ -193,10 +182,6 @@ export const FeaturesTab = () => {
         makeFeature("Plan Tab", <ClipboardList className="w-5 h-5" />, planUsers, planEvents.length),
         makeFeature("Cycle Forecast", <Eye className="w-5 h-5" />, forecastUsers, forecastEvents.length),
         makeFeature("Phase Cheat Sheet", <BookOpen className="w-5 h-5" />, cheatSheetUsers, cheatSheetEvents.length),
-        { name: "Community", icon: <Users2 className="w-5 h-5" />, totalUsers: 0, totalActions: 0, adoptionRate: 0, avgPerUser: 0, comingSoon: true },
-        { name: "Calendar Sync", icon: <Calendar className="w-5 h-5" />, totalUsers: 0, totalActions: 0, adoptionRate: 0, avgPerUser: 0, comingSoon: true },
-        { name: "Feedback", icon: <ThumbsUp className="w-5 h-5" />, totalUsers: 0, totalActions: 0, adoptionRate: 0, avgPerUser: 0, comingSoon: true },
-        { name: "Promo Codes", icon: <Ticket className="w-5 h-5" />, totalUsers: 0, totalActions: 0, adoptionRate: 0, avgPerUser: 0, comingSoon: true },
       ]);
 
       // Onboarding completion: check for onboarding_complete in chat_messages metadata
@@ -230,8 +215,6 @@ export const FeaturesTab = () => {
       };
 
       const chatFirst = firstUse(chatMsgs);
-      const communityFirst = firstUse(communityMsgs);
-      const calendarFirst = firstUse(calendarTokens);
       const homeFirst = firstUse(homeEvents);
       const forecastFirst = firstUse(forecastEvents);
       const planFirst = firstUse(planEvents);
@@ -249,8 +232,6 @@ export const FeaturesTab = () => {
           return {
             week: format(w, "MMM d"),
             chat: cumulative(chatFirst, weekEnd),
-            community: cumulative(communityFirst, weekEnd),
-            calendar: cumulative(calendarFirst, weekEnd),
             home: cumulative(homeFirst, weekEnd),
             forecast: cumulative(forecastFirst, weekEnd),
             plan: cumulative(planFirst, weekEnd),
@@ -287,7 +268,6 @@ export const FeaturesTab = () => {
           });
       };
       setTopChatUsers(topN(chatMsgs, 5));
-      setTopCommunityUsers(topN(communityMsgs, 5));
     } catch (err) {
       console.error("Error fetching feature analytics:", err);
     } finally {
@@ -484,8 +464,6 @@ export const FeaturesTab = () => {
               <Area type="monotone" dataKey="chat" fill="var(--color-chat)" stroke="var(--color-chat)" fillOpacity={0.2} />
               <Area type="monotone" dataKey="home" fill="var(--color-home)" stroke="var(--color-home)" fillOpacity={0.2} />
               <Area type="monotone" dataKey="forecast" fill="var(--color-forecast)" stroke="var(--color-forecast)" fillOpacity={0.2} />
-              <Area type="monotone" dataKey="community" fill="var(--color-community)" stroke="var(--color-community)" fillOpacity={0.2} />
-              <Area type="monotone" dataKey="calendar" fill="var(--color-calendar)" stroke="var(--color-calendar)" fillOpacity={0.2} />
               <Area type="monotone" dataKey="plan" fill="var(--color-plan)" stroke="var(--color-plan)" fillOpacity={0.2} />
               <Area type="monotone" dataKey="cheatSheet" fill="var(--color-cheatSheet)" stroke="var(--color-cheatSheet)" fillOpacity={0.2} />
             </AreaChart>
@@ -512,47 +490,26 @@ export const FeaturesTab = () => {
         </CardContent>
       </Card>
 
-      {/* Top Users */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <MessageSquare className="w-4 h-4" /> Top Chat Users
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {topChatUsers.map((u, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-xs font-mono text-muted-foreground w-4">{i + 1}</span>
-                  <span className="text-sm text-foreground truncate">{u.name}</span>
-                </div>
-                <Badge variant="secondary" className="text-[10px] shrink-0">{u.value} msgs</Badge>
+      {/* Top Chat Users */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" /> Top Chat Users
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {topChatUsers.map((u, i) => (
+            <div key={i} className="flex items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xs font-mono text-muted-foreground w-4">{i + 1}</span>
+                <span className="text-sm text-foreground truncate">{u.name}</span>
               </div>
-            ))}
-            {topChatUsers.length === 0 && <p className="text-sm text-muted-foreground text-center py-2">No data</p>}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Users2 className="w-4 h-4" /> Top Community Users
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {topCommunityUsers.map((u, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-xs font-mono text-muted-foreground w-4">{i + 1}</span>
-                  <span className="text-sm text-foreground truncate">{u.name}</span>
-                </div>
-                <Badge variant="secondary" className="text-[10px] shrink-0">{u.value} posts</Badge>
-              </div>
-            ))}
-            {topCommunityUsers.length === 0 && <p className="text-sm text-muted-foreground text-center py-2">No data</p>}
-          </CardContent>
-        </Card>
-      </div>
+              <Badge variant="secondary" className="text-[10px] shrink-0">{u.value} msgs</Badge>
+            </div>
+          ))}
+          {topChatUsers.length === 0 && <p className="text-sm text-muted-foreground text-center py-2">No data</p>}
+        </CardContent>
+      </Card>
     </div>
   );
 };
