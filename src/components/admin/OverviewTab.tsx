@@ -227,6 +227,7 @@ export const OverviewTab = () => {
   const [dailyStats, setDailyStats] = useState<DailySessionStats[]>([]);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [page, setPage] = useState(0);
+  const [leaderboardPage, setLeaderboardPage] = useState(0);
   const [sessionTotals, setSessionTotals] = useState({
     totalSessions: 0,
     avgDuration: 0,
@@ -495,6 +496,7 @@ export const OverviewTab = () => {
 
     setAllSessions(sessions);
     setPage(0);
+    setLeaderboardPage(0);
     setExpandedIdx(null);
     setDailyStats(daily);
     setSessionTotals({
@@ -652,8 +654,10 @@ export const OverviewTab = () => {
   }
 
   const maxMessages = Math.max(...users.map((u) => u.totalMessages), 1);
-  const totalPages = Math.ceil(allSessions.length / SESSIONS_PER_PAGE);
-  const paginatedSessions = allSessions.slice(page * SESSIONS_PER_PAGE, (page + 1) * SESSIONS_PER_PAGE);
+  const totalPages = Math.ceil(allSessions.length / ITEMS_PER_PAGE);
+  const paginatedSessions = allSessions.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE);
+  const leaderboardTotalPages = Math.ceil(users.length / ITEMS_PER_PAGE);
+  const paginatedLeaderboard = users.slice(leaderboardPage * ITEMS_PER_PAGE, (leaderboardPage + 1) * ITEMS_PER_PAGE);
 
   const UserListPopover = ({ userList, label }: { userList: UserEngagement[]; label: string }) => (
     <div className="space-y-1.5">
