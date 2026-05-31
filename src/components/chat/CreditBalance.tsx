@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { Coins, Plus, Gift, Loader2 } from "lucide-react";
+import { Coins, Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -23,9 +22,7 @@ const BOOSTERS = [
   { key: "booster_150", label: "150 credits", price: "$10" },
 ];
 
-export const CreditBalance = ({ credits, onCreditsUpdated }: CreditBalanceProps) => {
-  const [promoCode, setPromoCode] = useState("");
-  const [isRedeeming, setIsRedeeming] = useState(false);
+export const CreditBalance = ({ credits, onCreditsUpdated: _onCreditsUpdated }: CreditBalanceProps) => {
   const [isPurchasing, setIsPurchasing] = useState<string | null>(null);
 
   const handlePurchase = async (priceKey: string) => {
@@ -48,28 +45,6 @@ export const CreditBalance = ({ credits, onCreditsUpdated }: CreditBalanceProps)
       toast({ title: "Failed to start checkout", variant: "destructive" });
     } finally {
       setIsPurchasing(null);
-    }
-  };
-
-  const handleRedeemPromo = async () => {
-    if (!promoCode.trim()) return;
-    setIsRedeeming(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("redeem-promo", {
-        body: { code: promoCode },
-      });
-      if (error) throw error;
-      if (data?.error) {
-        toast({ title: data.error, variant: "destructive" });
-      } else {
-        toast({ title: `${data.creditsAdded} credits added` });
-        setPromoCode("");
-        onCreditsUpdated();
-      }
-    } catch (error) {
-      toast({ title: "Failed to redeem code", variant: "destructive" });
-    } finally {
-      setIsRedeeming(false);
     }
   };
 
@@ -154,30 +129,6 @@ export const CreditBalance = ({ credits, onCreditsUpdated }: CreditBalanceProps)
               </div>
             </>
           )}
-
-          <div className="border-t border-border pt-3">
-            <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-              <Gift className="w-3.5 h-3.5" />
-              Have a promo code?
-            </p>
-            <div className="flex gap-2">
-              <Input
-                value={promoCode}
-                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                placeholder="Enter code"
-                className="h-8 text-sm"
-                onKeyDown={(e) => e.key === "Enter" && handleRedeemPromo()}
-              />
-              <Button
-                size="sm"
-                className="h-8"
-                onClick={handleRedeemPromo}
-                disabled={!promoCode.trim() || isRedeeming}
-              >
-                {isRedeeming ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Apply"}
-              </Button>
-            </div>
-          </div>
         </div>
       </PopoverContent>
     </Popover>

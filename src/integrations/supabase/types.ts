@@ -53,27 +53,6 @@ export type Database = {
         }
         Relationships: []
       }
-      calendar_tokens: {
-        Row: {
-          created_at: string
-          id: string
-          token: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          token?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          token?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       chat_messages: {
         Row: {
           content: string
@@ -103,39 +82,6 @@ export type Database = {
           message_type?: string | null
           metadata?: Json | null
           role?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      community_messages: {
-        Row: {
-          channel: string
-          content: string
-          created_at: string
-          display_name: string
-          id: string
-          is_anonymous: boolean
-          is_pinned: boolean
-          user_id: string
-        }
-        Insert: {
-          channel?: string
-          content: string
-          created_at?: string
-          display_name: string
-          id?: string
-          is_anonymous?: boolean
-          is_pinned?: boolean
-          user_id: string
-        }
-        Update: {
-          channel?: string
-          content?: string
-          created_at?: string
-          display_name?: string
-          id?: string
-          is_anonymous?: boolean
-          is_pinned?: boolean
           user_id?: string
         }
         Relationships: []
@@ -841,65 +787,6 @@ export type Database = {
         }
         Relationships: []
       }
-      promo_codes: {
-        Row: {
-          code: string
-          created_at: string
-          credits_per_use: number
-          id: string
-          is_active: boolean
-          max_uses: number
-          uses_remaining: number
-        }
-        Insert: {
-          code: string
-          created_at?: string
-          credits_per_use?: number
-          id?: string
-          is_active?: boolean
-          max_uses?: number
-          uses_remaining?: number
-        }
-        Update: {
-          code?: string
-          created_at?: string
-          credits_per_use?: number
-          id?: string
-          is_active?: boolean
-          max_uses?: number
-          uses_remaining?: number
-        }
-        Relationships: []
-      }
-      promo_redemptions: {
-        Row: {
-          created_at: string
-          id: string
-          promo_code_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          promo_code_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          promo_code_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "promo_redemptions_promo_code_id_fkey"
-            columns: ["promo_code_id"]
-            isOneToOne: false
-            referencedRelation: "promo_codes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       resource_feedback: {
         Row: {
           comment: string | null
@@ -1270,39 +1157,7 @@ export type Database = {
       }
     }
     Views: {
-      community_messages_public: {
-        Row: {
-          channel: string | null
-          content: string | null
-          created_at: string | null
-          display_name: string | null
-          id: string | null
-          is_anonymous: boolean | null
-          is_pinned: boolean | null
-          user_id: string | null
-        }
-        Insert: {
-          channel?: string | null
-          content?: string | null
-          created_at?: string | null
-          display_name?: never
-          id?: string | null
-          is_anonymous?: boolean | null
-          is_pinned?: boolean | null
-          user_id?: never
-        }
-        Update: {
-          channel?: string | null
-          content?: string | null
-          created_at?: string | null
-          display_name?: never
-          id?: string | null
-          is_anonymous?: boolean | null
-          is_pinned?: boolean | null
-          user_id?: never
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       delete_email: {
@@ -1337,24 +1192,6 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
-      }
-      redeem_promo_code_atomic: {
-        Args: { _promo_id: string }
-        Returns: {
-          code: string
-          created_at: string
-          credits_per_use: number
-          id: string
-          is_active: boolean
-          max_uses: number
-          uses_remaining: number
-        }
-        SetofOptions: {
-          from: "*"
-          to: "promo_codes"
-          isOneToOne: true
-          isSetofReturn: false
-        }
       }
     }
     Enums: {

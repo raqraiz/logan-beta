@@ -11,11 +11,6 @@ const ROUTE_META: Record<string, Meta> = {
     description:
       "Your AI-powered cycle companion. Personalized insights to optimize energy, focus, and recovery across your menstrual cycle.",
   },
-  "/community": {
-    title: "Community — Logan",
-    description:
-      "Share feedback, ideas, and questions with the Logan community of women optimizing health and performance.",
-  },
   "/auth/callback": {
     title: "Signing you in — Logan",
     description: "Completing your secure sign-in to Logan.",
