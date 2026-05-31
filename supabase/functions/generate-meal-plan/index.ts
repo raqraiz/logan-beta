@@ -110,7 +110,8 @@ serve(async (req) => {
     const body = await req.json();
     const mode: Mode = body.mode === "mix" ? "mix" : "ideas";
     const dietaryPrefs = body.dietaryPrefs || {};
-    const cycleContext = body.cycleContext && typeof body.cycleContext === "object" ? body.cycleContext : null;
+    // SECURITY: cycle context (day/phase/lastPeriodStart) is NEVER trusted from the client.
+    // Always re-derived server-side below from the participants row.
 
     // Refinement context
     const parentResourceId: string | null = typeof body.parentResourceId === "string" ? body.parentResourceId : null;
@@ -153,18 +154,10 @@ serve(async (req) => {
       .eq("email", user.email)
       .single();
 
-    const contextCycleDay = Number(cycleContext?.cycleDay);
-    const contextCycleLength = Number(cycleContext?.cycleLengthDays);
-    const contextPhase = typeof cycleContext?.phase === "string" ? cycleContext.phase : null;
-    const contextLastPeriodStart = typeof cycleContext?.lastPeriodStart === "string" ? cycleContext.lastPeriodStart : null;
-    const contextTimezone = typeof cycleContext?.timezone === "string" ? cycleContext.timezone : null;
-    const cycleLengthDays = Number.isFinite(contextCycleLength) && contextCycleLength > 0
-      ? contextCycleLength
-      : participant?.cycle_length_days || 28;
-    const lastPeriodStart = contextLastPeriodStart || participant?.last_period_start || new Date().toISOString().split("T")[0];
-    const cycleDay = Number.isFinite(contextCycleDay) && contextCycleDay >= 1 && contextCycleDay <= 60
-      ? contextCycleDay
-      : getCycleDay(lastPeriodStart, cycleLengthDays, contextTimezone || participant?.timezone || "UTC");
+    const cycleLengthDays = participant?.cycle_length_days || 28;
+    const lastPeriodStart = participant?.last_period_start || new Date().toISOString().split("T")[0];
+    const timezone = participant?.timezone || "UTC";
+    const cycleDay = getCycleDay(lastPeriodStart, cycleLengthDays, timezone);
     const lifeStage = participant?.life_stage || "cycling";
 
     let ppWindow: string | null = null;
@@ -179,7 +172,7 @@ serve(async (req) => {
     }
 
     const phase = lifeStage === "cycling"
-      ? (contextPhase || getPhaseForDay(cycleDay, cycleLengthDays))
+      ? getPhaseForDay(cycleDay, cycleLengthDays)
       : lifeStage === "postpartum"
         ? (ppWindow ? `Postpartum · ${ppWindow}` : "Postpartum")
         : lifeStage === "menopause" ? "Menopause" : "Cyclical";
