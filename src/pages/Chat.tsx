@@ -29,7 +29,7 @@ import { ConversationStarters } from "@/components/chat/ConversationStarters";
 import { MarkdownMessage } from "@/components/chat/MarkdownMessage";
 import { CycleBasicsCard, HormoneBasicsCard, SymptomExplainerCard, AnchorExplainerCard, NotSureButton } from "@/components/chat/OnboardingEducation";
 import { TopicPicker } from "@/components/chat/TopicPicker";
-import { CalendarSubscribe } from "@/components/chat/CalendarSubscribe";
+
 import { CycleForecast } from "@/components/chat/CycleForecast";
 import { CreditBalance } from "@/components/chat/CreditBalance";
 import { OutOfCredits } from "@/components/chat/OutOfCredits";
@@ -1076,7 +1076,6 @@ const Chat = () => {
            </div>
           <div className="flex items-center gap-3">
             {/* Credit balance hidden — free access during alpha */}
-            {/* CalendarSubscribe hidden for now */}
 
             <Button
               variant="ghost"

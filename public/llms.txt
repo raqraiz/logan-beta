@@ -7,4 +7,3 @@ Logan adapts to a user's life stage (cycling, postpartum, or menopause), tracks 
 ## Pages
 
 - [Home](/): Chat-based cycle guidance, daily briefing, and personalized insights.
-- [Community](/community): Share feedback, ideas, and questions with other Logan users.
