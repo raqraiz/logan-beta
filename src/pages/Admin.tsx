@@ -5,14 +5,11 @@ import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { LogOut, RefreshCw, Shield, User, BarChart3, Layers, Radio, Megaphone } from "lucide-react";
+import { LogOut, RefreshCw, Shield, User, BarChart3, Megaphone } from "lucide-react";
 import { AdminManagement } from "@/components/admin/AdminManagement";
 import { ProfilesTab } from "@/components/admin/ProfilesTab";
-import { EngagementTab } from "@/components/admin/EngagementTab";
-import { FeaturesTab } from "@/components/admin/FeaturesTab";
-import { SessionsTab } from "@/components/admin/SessionsTab";
+import { OverviewTab } from "@/components/admin/OverviewTab";
 import { NotificationsTab } from "@/components/admin/NotificationsTab";
-import { LoganLogo } from "@/components/LoganLogo";
 import { LoganFullLogo } from "@/components/LoganFullLogo";
 
 const Admin = () => {
@@ -78,7 +75,6 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -97,28 +93,17 @@ const Admin = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-display font-bold mb-2 text-foreground">Pilot Dashboard</h1>
-          <p className="text-muted-foreground">
-            Manage participants and view chats
-          </p>
+          <p className="text-muted-foreground">Manage participants and view chats</p>
         </div>
 
-        <Tabs defaultValue="engagement" className="space-y-6">
-          <TabsList className="grid w-full max-w-4xl grid-cols-6 bg-muted border border-border">
-            <TabsTrigger value="engagement" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full max-w-2xl grid-cols-4 bg-muted border border-border">
+            <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BarChart3 className="w-4 h-4" />
-              <span className="hidden sm:inline">Engagement</span>
-            </TabsTrigger>
-            <TabsTrigger value="sessions" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Radio className="w-4 h-4" />
-              <span className="hidden sm:inline">Sessions</span>
-            </TabsTrigger>
-            <TabsTrigger value="features" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Layers className="w-4 h-4" />
-              <span className="hidden sm:inline">Features</span>
+              <span className="hidden sm:inline">Overview</span>
             </TabsTrigger>
             <TabsTrigger value="notifications" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Megaphone className="w-4 h-4" />
@@ -134,16 +119,8 @@ const Admin = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="engagement">
-            <EngagementTab />
-          </TabsContent>
-
-          <TabsContent value="sessions">
-            <SessionsTab />
-          </TabsContent>
-
-          <TabsContent value="features">
-            <FeaturesTab />
+          <TabsContent value="overview">
+            <OverviewTab />
           </TabsContent>
 
           <TabsContent value="notifications">
@@ -158,7 +135,6 @@ const Admin = () => {
             <AdminManagement />
           </TabsContent>
         </Tabs>
-
       </main>
     </div>
   );
