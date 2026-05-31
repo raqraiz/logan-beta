@@ -132,6 +132,6 @@ Deno.serve(async (req) => {
     return redirect("ok");
   } catch (e) {
     console.error("Callback error", e);
-    return redirect("error", e instanceof Error ? e.message : "Unknown error");
+    return redirect("error", "internal_error");
   }
 });
