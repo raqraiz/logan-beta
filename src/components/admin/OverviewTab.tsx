@@ -206,7 +206,12 @@ function SessionDetail({ session }: { session: SessionRecord }) {
 }
 
 export const OverviewTab = () => {
-  const [loading, setLoading] = useState(true);
+  // Per-section loading flags for progressive rendering
+  const [engagementLoading, setEngagementLoading] = useState(true);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [adoptionLoading, setAdoptionLoading] = useState(true);
+  const [feedbackLoading, setFeedbackLoading] = useState(true);
+  const [menuLoading, setMenuLoading] = useState(true);
 
   // Engagement state
   const [users, setUsers] = useState<UserEngagement[]>([]);
@@ -240,6 +245,7 @@ export const OverviewTab = () => {
   const [weeklyAdoption, setWeeklyAdoption] = useState<WeeklyAdoption[]>([]);
   const [feedbackItems, setFeedbackItems] = useState<{ id: string; name: string; email: string; category: string; message: string; created_at: string }[]>([]);
   const [menuItems, setMenuItems] = useState<{ id: string; name: string; email: string; title: string; status: string; created_at: string }[]>([]);
+
 
   // Presence subscription
   useEffect(() => {
