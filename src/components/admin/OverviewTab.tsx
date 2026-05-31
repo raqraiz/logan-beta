@@ -23,7 +23,7 @@ import {
 import { format, subDays, startOfDay, parseISO, differenceInMinutes, eachWeekOfInterval } from "date-fns";
 
 const SESSION_GAP_MS = 30 * 60 * 1000;
-const SESSIONS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 10;
 
 interface UserEngagement {
   userId: string;
