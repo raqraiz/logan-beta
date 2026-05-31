@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -206,7 +206,12 @@ function SessionDetail({ session }: { session: SessionRecord }) {
 }
 
 export const OverviewTab = () => {
-  const [loading, setLoading] = useState(true);
+  // Per-section loading flags for progressive rendering
+  const [engagementLoading, setEngagementLoading] = useState(true);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [adoptionLoading, setAdoptionLoading] = useState(true);
+  const [feedbackLoading, setFeedbackLoading] = useState(true);
+  const [menuLoading, setMenuLoading] = useState(true);
 
   // Engagement state
   const [users, setUsers] = useState<UserEngagement[]>([]);
@@ -240,6 +245,7 @@ export const OverviewTab = () => {
   const [weeklyAdoption, setWeeklyAdoption] = useState<WeeklyAdoption[]>([]);
   const [feedbackItems, setFeedbackItems] = useState<{ id: string; name: string; email: string; category: string; message: string; created_at: string }[]>([]);
   const [menuItems, setMenuItems] = useState<{ id: string; name: string; email: string; title: string; status: string; created_at: string }[]>([]);
+
 
   // Presence subscription
   useEffect(() => {
@@ -288,16 +294,27 @@ export const OverviewTab = () => {
     return results.flat();
   }, []);
 
-  const refreshAll = useCallback(async () => {
-    setLoading(true);
+  // Profiles are needed by every section — fetch once and share via a Promise
+  const profilesPromiseRef = useRef<Promise<any[]> | null>(null);
+  const getProfiles = useCallback(() => {
+    if (!profilesPromiseRef.current) {
+      profilesPromiseRef.current = Promise.resolve(
+        supabase
+          .from("profiles")
+          .select("id, email, full_name, created_at")
+      ).then((r: any) => r.data || []);
+
+    }
+    return profilesPromiseRef.current;
+  }, []);
+
+  // ----- ENGAGEMENT + DAILY ACTIVITY + LEADERBOARD -----
+  const loadEngagement = useCallback(async () => {
+    setEngagementLoading(true);
     try {
       const now = new Date();
-      const thirtyDaysAgo = subDays(now, 30);
-      const thirtyDaysAgoIso = thirtyDaysAgo.toISOString();
-
-      // Kick off all top-level fetches in parallel
-      const [profiles, allChatMsgs, allActivity, allFeatureEvents, feedbackRes, menuRes] = await Promise.all([
-        supabase.from("profiles").select("id, email, full_name, created_at").then(r => r.data || []),
+      const [profiles, allChatMsgs, allActivity] = await Promise.all([
+        getProfiles(),
         fetchAllRows<{ user_id: string; created_at: string }>(
           (from, to) => supabase.from("chat_messages")
             .select("user_id, created_at")
@@ -313,31 +330,9 @@ export const OverviewTab = () => {
             .range(from, to),
           () => supabase.from("user_activity_events").select("*", { count: "exact", head: true }),
         ),
-        fetchAllRows<{ user_id: string; feature_name: string; created_at: string }>(
-          (from, to) => (supabase.from("feature_events" as any)
-            .select("user_id, feature_name, created_at")
-            .order("created_at", { ascending: true })
-            .range(from, to) as any),
-          () => (supabase.from("feature_events" as any).select("*", { count: "exact", head: true }) as any),
-        ),
-        supabase.from("user_feedback")
-          .select("id, user_id, category, message, created_at")
-          .order("created_at", { ascending: false })
-          .limit(200),
-        supabase.from("user_resources")
-          .select("id, user_id, title, status, created_at")
-          .eq("type", "meal_plan")
-          .order("created_at", { ascending: false })
-          .limit(200),
       ]);
+      if (!profiles.length) return;
 
-      if (!profiles.length) {
-        setLoading(false);
-        return;
-      }
-      const profileMap = new Map(profiles.map((p: any) => [p.id, p]));
-
-      // ============ ENGAGEMENT (uses all-time chat msgs + activity) ============
       const messagesByUser = new Map<string, string[]>();
       for (const m of allChatMsgs) {
         if (!messagesByUser.has(m.user_id)) messagesByUser.set(m.user_id, []);
@@ -387,9 +382,8 @@ export const OverviewTab = () => {
       });
       engagements.sort((a, b) => b.totalMessages - a.totalMessages);
 
-      const days = 30;
       const dailyMap = new Map<string, { messages: number; users: Set<string> }>();
-      for (let i = 0; i < days; i++) {
+      for (let i = 0; i < 30; i++) {
         const d = format(subDays(now, i), "yyyy-MM-dd");
         dailyMap.set(d, { messages: 0, users: new Set() });
       }
@@ -407,10 +401,12 @@ export const OverviewTab = () => {
       const daily: DailyActivity[] = Array.from(dailyMap.entries())
         .map(([date, v]) => ({ date: format(parseISO(date), "MMM d"), messages: v.messages, activeUsers: v.users.size }))
         .reverse();
-      const totalDailyUsers = daily.reduce((s, d) => s + d.activeUsers, 0);
-      const avgDailyUsers = daily.length > 0 ? Math.round((totalDailyUsers / daily.length) * 10) / 10 : 0;
+      const avgDailyUsers = daily.length > 0
+        ? Math.round((daily.reduce((s, d) => s + d.activeUsers, 0) / daily.length) * 10) / 10
+        : 0;
 
       setUsers(engagements);
+      setLeaderboardPage(0);
       setDailyActivity(daily);
       setTotals({
         totalUsers: profiles.length,
@@ -421,14 +417,46 @@ export const OverviewTab = () => {
         avgSessionsPerUser: profiles.length > 0 ? Math.round((totalSessionsAllTime / profiles.length) * 10) / 10 : 0,
         avgMessagesPerUser: profiles.length > 0 ? Math.round((allChatMsgs.length / profiles.length) * 10) / 10 : 0,
       });
+    } catch (err) {
+      console.error("Engagement load error:", err);
+    } finally {
+      setEngagementLoading(false);
+    }
+  }, [fetchAllRows, getProfiles]);
 
-      // ============ SESSIONS (last 30 days only) ============
-      const recentTs = [
-        ...allChatMsgs.filter(m => m.created_at >= thirtyDaysAgoIso),
-        ...allActivity.filter(e => e.created_at >= thirtyDaysAgoIso),
-      ];
+  // ----- SESSIONS (last 30 days only — server-side filter) -----
+  const loadSessions = useCallback(async () => {
+    setSessionsLoading(true);
+    try {
+      const now = new Date();
+      const thirtyDaysAgoIso = subDays(now, 30).toISOString();
+
+      const [profiles, recentChat, recentActivity] = await Promise.all([
+        getProfiles(),
+        fetchAllRows<{ user_id: string; created_at: string }>(
+          (from, to) => supabase.from("chat_messages")
+            .select("user_id, created_at")
+            .eq("role", "user")
+            .gte("created_at", thirtyDaysAgoIso)
+            .order("created_at", { ascending: true })
+            .range(from, to),
+          () => supabase.from("chat_messages").select("*", { count: "exact", head: true })
+            .eq("role", "user").gte("created_at", thirtyDaysAgoIso),
+        ),
+        fetchAllRows<{ user_id: string; created_at: string }>(
+          (from, to) => supabase.from("user_activity_events")
+            .select("user_id, created_at")
+            .gte("created_at", thirtyDaysAgoIso)
+            .order("created_at", { ascending: true })
+            .range(from, to),
+          () => supabase.from("user_activity_events").select("*", { count: "exact", head: true })
+            .gte("created_at", thirtyDaysAgoIso),
+        ),
+      ]);
+      const profileMap = new Map(profiles.map((p: any) => [p.id, p]));
+
       const tsByUser = new Map<string, string[]>();
-      for (const e of recentTs) {
+      for (const e of [...recentChat, ...recentActivity]) {
         if (!tsByUser.has(e.user_id)) tsByUser.set(e.user_id, []);
         tsByUser.get(e.user_id)!.push(e.created_at);
       }
@@ -444,32 +472,21 @@ export const OverviewTab = () => {
           if (sorted[i] - sorted[i - 1] > SESSION_GAP_MS) {
             const dur = Math.max(1, Math.round(differenceInMinutes(new Date(sessionEnd), new Date(sessionStart))));
             sessions.push({
-              userId,
-              email: profile?.email || "Unknown",
-              fullName: profile?.full_name || "Unknown",
-              startTime: new Date(sessionStart).toISOString(),
-              endTime: new Date(sessionEnd).toISOString(),
-              durationMin: dur,
-              messageCount: msgCount,
+              userId, email: profile?.email || "Unknown", fullName: profile?.full_name || "Unknown",
+              startTime: new Date(sessionStart).toISOString(), endTime: new Date(sessionEnd).toISOString(),
+              durationMin: dur, messageCount: msgCount,
             });
             hourCounts[new Date(sessionStart).getHours()]++;
-            sessionStart = sorted[i];
-            sessionEnd = sorted[i];
-            msgCount = 1;
+            sessionStart = sorted[i]; sessionEnd = sorted[i]; msgCount = 1;
           } else {
-            sessionEnd = sorted[i];
-            msgCount++;
+            sessionEnd = sorted[i]; msgCount++;
           }
         }
         const dur = Math.max(1, Math.round(differenceInMinutes(new Date(sessionEnd), new Date(sessionStart))));
         sessions.push({
-          userId,
-          email: profile?.email || "Unknown",
-          fullName: profile?.full_name || "Unknown",
-          startTime: new Date(sessionStart).toISOString(),
-          endTime: new Date(sessionEnd).toISOString(),
-          durationMin: dur,
-          messageCount: msgCount,
+          userId, email: profile?.email || "Unknown", fullName: profile?.full_name || "Unknown",
+          startTime: new Date(sessionStart).toISOString(), endTime: new Date(sessionEnd).toISOString(),
+          durationMin: dur, messageCount: msgCount,
         });
         hourCounts[new Date(sessionStart).getHours()]++;
       }
@@ -503,7 +520,6 @@ export const OverviewTab = () => {
 
       setAllSessions(sessions);
       setPage(0);
-      setLeaderboardPage(0);
       setExpandedIdx(null);
       setDailyStats(sessionDaily);
       setSessionTotals({
@@ -513,30 +529,35 @@ export const OverviewTab = () => {
         longestSessionUser: longestRecord?.fullName || "",
         peakHour,
       });
+    } catch (err) {
+      console.error("Sessions load error:", err);
+    } finally {
+      setSessionsLoading(false);
+    }
+  }, [fetchAllRows, getProfiles]);
 
-      // ============ FEATURES ============
-      setFeedbackItems((feedbackRes.data ?? []).map((f: any) => {
-        const p: any = profileMap.get(f.user_id);
-        return {
-          id: f.id,
-          name: p?.full_name || "Unknown",
-          email: p?.email || "",
-          category: f.category,
-          message: f.message,
-          created_at: f.created_at,
-        };
-      }));
-      setMenuItems((menuRes.data ?? []).map((m: any) => {
-        const p: any = profileMap.get(m.user_id);
-        return {
-          id: m.id,
-          name: p?.full_name || "Unknown",
-          email: p?.email || "",
-          title: m.title || "Untitled menu",
-          status: m.status,
-          created_at: m.created_at,
-        };
-      }));
+  // ----- ADOPTION CHART (slowest — feature_events table) -----
+  const loadAdoption = useCallback(async () => {
+    setAdoptionLoading(true);
+    try {
+      const now = new Date();
+      const [allFeatureEvents, chatMsgs] = await Promise.all([
+        fetchAllRows<{ user_id: string; feature_name: string; created_at: string }>(
+          (from, to) => (supabase.from("feature_events" as any)
+            .select("user_id, feature_name, created_at")
+            .order("created_at", { ascending: true })
+            .range(from, to) as any),
+          () => (supabase.from("feature_events" as any).select("*", { count: "exact", head: true }) as any),
+        ),
+        fetchAllRows<{ user_id: string; created_at: string }>(
+          (from, to) => supabase.from("chat_messages")
+            .select("user_id, created_at")
+            .eq("role", "user")
+            .order("created_at", { ascending: true })
+            .range(from, to),
+          () => supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("role", "user"),
+        ),
+      ]);
 
       const homeEvents = allFeatureEvents.filter(e => e.feature_name === "home_tab");
       const forecastEvents = allFeatureEvents.filter(e => e.feature_name === "cycle_forecast");
@@ -553,7 +574,7 @@ export const OverviewTab = () => {
         }
         return first;
       };
-      const chatFirst = firstUse(allChatMsgs);
+      const chatFirst = firstUse(chatMsgs);
       const homeFirst = firstUse(homeEvents);
       const forecastFirst = firstUse(forecastEvents);
       const planFirst = firstUse(planEvents);
@@ -575,14 +596,71 @@ export const OverviewTab = () => {
         };
       }));
     } catch (err) {
-      console.error("Error refreshing overview:", err);
+      console.error("Adoption load error:", err);
     } finally {
-      setLoading(false);
+      setAdoptionLoading(false);
     }
   }, [fetchAllRows]);
 
-  useEffect(() => { refreshAll(); }, [refreshAll]);
+  // ----- FEEDBACK + MENU (small, fast) -----
+  const loadFeedback = useCallback(async () => {
+    setFeedbackLoading(true);
+    try {
+      const [profiles, res] = await Promise.all([
+        getProfiles(),
+        supabase.from("user_feedback")
+          .select("id, user_id, category, message, created_at")
+          .order("created_at", { ascending: false })
+          .limit(200),
+      ]);
+      const profileMap = new Map(profiles.map((p: any) => [p.id, p]));
+      setFeedbackItems((res.data ?? []).map((f: any) => {
+        const p: any = profileMap.get(f.user_id);
+        return {
+          id: f.id, name: p?.full_name || "Unknown", email: p?.email || "",
+          category: f.category, message: f.message, created_at: f.created_at,
+        };
+      }));
+    } finally {
+      setFeedbackLoading(false);
+    }
+  }, [getProfiles]);
 
+  const loadMenu = useCallback(async () => {
+    setMenuLoading(true);
+    try {
+      const [profiles, res] = await Promise.all([
+        getProfiles(),
+        supabase.from("user_resources")
+          .select("id, user_id, title, status, created_at")
+          .eq("type", "meal_plan")
+          .order("created_at", { ascending: false })
+          .limit(200),
+      ]);
+      const profileMap = new Map(profiles.map((p: any) => [p.id, p]));
+      setMenuItems((res.data ?? []).map((m: any) => {
+        const p: any = profileMap.get(m.user_id);
+        return {
+          id: m.id, name: p?.full_name || "Unknown", email: p?.email || "",
+          title: m.title || "Untitled menu", status: m.status, created_at: m.created_at,
+        };
+      }));
+    } finally {
+      setMenuLoading(false);
+    }
+  }, [getProfiles]);
+
+  const refreshAll = useCallback(() => {
+    profilesPromiseRef.current = null;
+    // Fire all loaders in parallel — each renders independently as it finishes
+    loadEngagement();
+    loadSessions();
+    loadFeedback();
+    loadMenu();
+    loadAdoption();
+  }, [loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
+
+  useEffect(() => { refreshAll(); }, [refreshAll]);
 
   const activeTodayUsers = useMemo(() => {
     const start = startOfDay(new Date());
@@ -598,13 +676,7 @@ export const OverviewTab = () => {
       .sort((a, b) => new Date(b.lastActive!).getTime() - new Date(a.lastActive!).getTime());
   }, [users]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <RefreshCw className="w-6 h-6 animate-spin text-primary" />
-      </div>
-    );
-  }
+
 
   const maxMessages = Math.max(...users.map((u) => u.totalMessages), 1);
   const totalPages = Math.ceil(allSessions.length / ITEMS_PER_PAGE);
@@ -630,14 +702,20 @@ export const OverviewTab = () => {
     </div>
   );
 
+  const anyLoading = engagementLoading || sessionsLoading || adoptionLoading || feedbackLoading || menuLoading;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-foreground">Overview</h2>
-        <Button variant="ghost" size="sm" onClick={refreshAll}>
-          <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+        <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          Overview
+          {anyLoading && <RefreshCw className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
+        </h2>
+        <Button variant="ghost" size="sm" onClick={refreshAll} disabled={anyLoading}>
+          <RefreshCw className={`w-4 h-4 mr-2 ${anyLoading ? "animate-spin" : ""}`} /> Refresh
         </Button>
       </div>
+
 
       {/* Top stats: 7 engagement + 4 session = 11 cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6 gap-3">
@@ -958,9 +1036,16 @@ export const OverviewTab = () => {
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <TrendingUp className="w-4 h-4" />
             Cumulative Feature Adoption (12 Weeks)
+            {adoptionLoading && <RefreshCw className="w-3 h-3 animate-spin text-muted-foreground ml-1" />}
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {adoptionLoading && weeklyAdoption.length === 0 ? (
+            <div className="h-[280px] flex items-center justify-center text-xs text-muted-foreground">
+              Loading adoption data…
+            </div>
+          ) : (
+
           <ChartContainer config={adoptionChartConfig} className="h-[280px] w-full">
             <AreaChart data={weeklyAdoption}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
@@ -974,7 +1059,9 @@ export const OverviewTab = () => {
               <Area type="monotone" dataKey="cheatSheet" fill="var(--color-cheatSheet)" stroke="var(--color-cheatSheet)" fillOpacity={0.2} />
             </AreaChart>
           </ChartContainer>
+          )}
         </CardContent>
+
       </Card>
 
       {/* User Feedback */}
