@@ -1563,7 +1563,9 @@ serve(async (req) => {
 
     // Generate 3 contextual conversation starters that respond to what was just said
     let conversationStarters: string[] = [];
-    try {
+    if (bleedDay1Prompt) {
+      conversationStarters = ["Yes", "It started earlier", "Not yet, just spotting"];
+    } else try {
       const mainAnswer = assistantMessage.split("\n---\n")[0].trim();
       const starterRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
