@@ -107,6 +107,53 @@ function getReferencedMonthRanges(message: string, referenceDate = new Date()) {
   return Array.from(ranges.values()).sort((a, b) => a.start.getTime() - b.start.getTime());
 }
 
+const SYMPTOM_KEYWORDS: { name: string; patterns: RegExp[] }[] = [
+  { name: "Cramps", patterns: [/\bcramp(s|ing|y)?\b/i, /\bperiod pain\b/i] },
+  { name: "Bloating", patterns: [/\bbloat(ed|ing)?\b/i] },
+  { name: "Headache", patterns: [/\bheadache(s)?\b/i, /\bmigraine(s)?\b/i] },
+  { name: "Fatigue", patterns: [/\bfatigue(d)?\b/i, /\bexhaust(ed|ion)\b/i, /\bso tired\b/i, /\bwiped out\b/i, /\bdrained\b/i] },
+  { name: "Back pain", patterns: [/\bback pain\b/i, /\bbackache\b/i, /\blower back\b/i] },
+  { name: "Breast tenderness", patterns: [/\bbreast(s)?\s+(tender|sore|hurt)/i, /\bsore breasts?\b/i, /\btender breasts?\b/i] },
+  { name: "Nausea", patterns: [/\bnausea(ted|ous)?\b/i, /\bqueasy\b/i, /\bnauseous\b/i] },
+  { name: "Acne", patterns: [/\bacne\b/i, /\bbreak(ing )?out\b/i, /\bpimples?\b/i, /\bzits?\b/i, /\bwhiteheads?\b/i, /\bblemishes\b/i] },
+  { name: "Joint pain", patterns: [/\bjoint(s)? (pain|ache|hurt)/i, /\bachy joints\b/i] },
+  { name: "Insomnia", patterns: [/\binsomnia\b/i, /\bcan'?t sleep\b/i, /\btrouble sleeping\b/i, /\bsleepless\b/i, /\blay in bed for hours\b/i, /\bslept\s+(?:for\s+)?\d+(?:\.\d+)?\s*(?:h|hr|hrs|hours?)?\b/i] },
+  { name: "Mood swings", patterns: [/\bmood swing(s)?\b/i, /\bmoody\b/i, /\bemotional roller ?coaster\b/i] },
+  { name: "Anxiety", patterns: [/\banxious\b/i, /\banxiety\b/i, /\bon edge\b/i, /\bpanick(y|ing)\b/i] },
+  { name: "Irritability", patterns: [/\birritabl(e|y)\b/i, /\birritated\b/i, /\bsnappy\b/i, /\bshort temper(ed)?\b/i, /\bcranky\b/i] },
+  { name: "Brain fog", patterns: [/\bbrain fog(gy)?\b/i, /\bfoggy\b/i, /\bcan'?t (think|focus|concentrate)\b/i] },
+  { name: "Low motivation", patterns: [/\blow motivation\b/i, /\bunmotivated\b/i, /\bno motivation\b/i, /\bcan'?t get going\b/i] },
+  { name: "Sadness", patterns: [/\b(feeling |so |really )?sad\b/i, /\bcrying\b/i, /\btearful\b/i, /\bdown\b/i, /\bblue\b/i] },
+  { name: "Restlessness", patterns: [/\brestless\b/i, /\bantsy\b/i, /\bcan'?t sit still\b/i] },
+  { name: "Overwhelm", patterns: [/\boverwhelmed\b/i, /\boverwhelm\b/i, /\btoo much\b/i] },
+  { name: "High energy", patterns: [/\bhigh energy\b/i, /\benergized\b/i, /\bso much energy\b/i] },
+  { name: "Low energy", patterns: [/\blow energy\b/i, /\bno energy\b/i, /\bsluggish\b/i, /\blethargic\b/i] },
+  { name: "Sharp focus", patterns: [/\bsharp focus\b/i, /\blaser focus(ed)?\b/i, /\bvery focused\b/i] },
+  { name: "Poor focus", patterns: [/\bpoor focus\b/i, /\bcan'?t focus\b/i, /\bdistracted\b/i, /\bunfocused\b/i] },
+  { name: "Cravings", patterns: [/\bcravings?\b/i, /\bcraving (sugar|chocolate|carbs|salt)/i] },
+  { name: "Hot flashes", patterns: [/\bhot flash(es)?\b/i, /\bhot flush(es)?\b/i] },
+  { name: "Night sweats", patterns: [/\bnight sweats?\b/i, /\bsweating at night\b/i] },
+  { name: "Spotting", patterns: [/\bspotting\b/i, /\blight bleeding\b/i] },
+  { name: "Dehydrated skin", patterns: [/\bdehydrated skin\b/i, /\bskin (feels |is )?dehydrated\b/i] },
+  { name: "Dry skin", patterns: [/\bdry skin\b/i, /\bskin (feels |is )?(really |very )?dry\b/i, /\bflaky skin\b/i] },
+  { name: "Thirst", patterns: [/\bvery thirsty\b/i, /\bso thirsty\b/i, /\bcan'?t stop drinking\b/i] },
+];
+
+function detectSymptomMentions(text: string): { name: string; severity: number }[] {
+  const detected: { name: string; severity: number }[] = [];
+  for (const { name, patterns } of SYMPTOM_KEYWORDS) {
+    if (patterns.some(p => p.test(text))) {
+      let severity = 3;
+      if (/\b(mild|minor|slight|tiny|barely|a bit|a little)\b/i.test(text)) severity = 2;
+      if (/\b(very mild|barely)\b/i.test(text)) severity = 1;
+      if (/\b(bad|strong|heavy|really|pretty|quite)\b/i.test(text)) severity = 4;
+      if (/\b(severe|terrible|awful|worst|excruciating|unbearable|killing me|so bad)\b/i.test(text)) severity = 5;
+      detected.push({ name, severity });
+    }
+  }
+  return detected;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -812,38 +859,6 @@ serve(async (req) => {
     // Detect symptoms mentioned in the user's message and persist to symptom_logs
     // so they sync with the Home tab's symptom widget / history.
     {
-      const SYMPTOM_KEYWORDS: { name: string; patterns: RegExp[] }[] = [
-        { name: "Cramps", patterns: [/\bcramp(s|ing|y)?\b/i, /\bperiod pain\b/i] },
-        { name: "Bloating", patterns: [/\bbloat(ed|ing)?\b/i] },
-        { name: "Headache", patterns: [/\bheadache(s)?\b/i, /\bmigraine(s)?\b/i] },
-        { name: "Fatigue", patterns: [/\bfatigue(d)?\b/i, /\bexhaust(ed|ion)\b/i, /\bso tired\b/i, /\bwiped out\b/i, /\bdrained\b/i] },
-        { name: "Back pain", patterns: [/\bback pain\b/i, /\bbackache\b/i, /\blower back\b/i] },
-        { name: "Breast tenderness", patterns: [/\bbreast(s)?\s+(tender|sore|hurt)/i, /\bsore breasts?\b/i, /\btender breasts?\b/i] },
-        { name: "Nausea", patterns: [/\bnausea(ted|ous)?\b/i, /\bqueasy\b/i, /\bnauseous\b/i] },
-        { name: "Acne", patterns: [/\bacne\b/i, /\bbreak(ing )?out\b/i, /\bpimples?\b/i, /\bzits?\b/i] },
-        { name: "Joint pain", patterns: [/\bjoint(s)? (pain|ache|hurt)/i, /\bachy joints\b/i] },
-        { name: "Insomnia", patterns: [/\binsomnia\b/i, /\bcan'?t sleep\b/i, /\btrouble sleeping\b/i, /\bsleepless\b/i] },
-        { name: "Mood swings", patterns: [/\bmood swing(s)?\b/i, /\bmoody\b/i, /\bemotional roller ?coaster\b/i] },
-        { name: "Anxiety", patterns: [/\banxious\b/i, /\banxiety\b/i, /\bon edge\b/i, /\bpanick(y|ing)\b/i] },
-        { name: "Irritability", patterns: [/\birritabl(e|y)\b/i, /\birritated\b/i, /\bsnappy\b/i, /\bshort temper(ed)?\b/i, /\bcranky\b/i] },
-        { name: "Brain fog", patterns: [/\bbrain fog(gy)?\b/i, /\bfoggy\b/i, /\bcan'?t (think|focus|concentrate)\b/i] },
-        { name: "Low motivation", patterns: [/\blow motivation\b/i, /\bunmotivated\b/i, /\bno motivation\b/i, /\bcan'?t get going\b/i] },
-        { name: "Sadness", patterns: [/\b(feeling |so |really )?sad\b/i, /\bcrying\b/i, /\btearful\b/i, /\bdown\b/i, /\bblue\b/i] },
-        { name: "Restlessness", patterns: [/\brestless\b/i, /\bantsy\b/i, /\bcan'?t sit still\b/i] },
-        { name: "Overwhelm", patterns: [/\boverwhelmed\b/i, /\boverwhelm\b/i, /\btoo much\b/i] },
-        { name: "High energy", patterns: [/\bhigh energy\b/i, /\benergized\b/i, /\bso much energy\b/i] },
-        { name: "Low energy", patterns: [/\blow energy\b/i, /\bno energy\b/i, /\bsluggish\b/i, /\blethargic\b/i] },
-        { name: "Sharp focus", patterns: [/\bsharp focus\b/i, /\blaser focus(ed)?\b/i, /\bvery focused\b/i] },
-        { name: "Poor focus", patterns: [/\bpoor focus\b/i, /\bcan'?t focus\b/i, /\bdistracted\b/i, /\bunfocused\b/i] },
-        { name: "Cravings", patterns: [/\bcravings?\b/i, /\bcraving (sugar|chocolate|carbs|salt)/i] },
-        { name: "Hot flashes", patterns: [/\bhot flash(es)?\b/i, /\bhot flush(es)?\b/i] },
-        { name: "Night sweats", patterns: [/\bnight sweats?\b/i, /\bsweating at night\b/i] },
-        { name: "Spotting", patterns: [/\bspotting\b/i, /\blight bleeding\b/i] },
-        { name: "Dehydrated skin", patterns: [/\bdehydrated skin\b/i, /\bskin (feels |is )?dehydrated\b/i] },
-        { name: "Dry skin", patterns: [/\bdry skin\b/i, /\bskin (feels |is )?(really |very )?dry\b/i, /\bflaky skin\b/i] },
-        { name: "Thirst", patterns: [/\bvery thirsty\b/i, /\bso thirsty\b/i, /\bcan'?t stop drinking\b/i] },
-      ];
-
       // Loose intent: user is reporting how they feel (not asking a generic question)
       const reportingIntent = /\b(i\s*(?:'?m|am|feel|have|got|woke up|am having|am feeling)|my\s+(?:head|back|stomach|breasts?|joints?)|having|feeling|today i|right now)\b/i.test(userMessage)
         || /\b(log|track|record|note)\b/i.test(userMessage);
@@ -851,18 +866,7 @@ serve(async (req) => {
         && /\b(history|historical|log|logs|logged|march|april|may|june|july|august|september|october|november|december|january|february|last\s+(?:month|cycle|time)|same\s+time)\b/i.test(userMessage);
 
       if (reportingIntent && !isHistoricalLookupQuestion) {
-        const detected: { name: string; severity: number }[] = [];
-        for (const { name, patterns } of SYMPTOM_KEYWORDS) {
-          if (patterns.some(p => p.test(userMessage))) {
-            // Severity heuristic: scan for intensity modifiers
-            let severity = 3;
-            if (/\b(mild|slight|tiny|barely|a bit|a little)\b/i.test(userMessage)) severity = 2;
-            if (/\b(very mild|barely)\b/i.test(userMessage)) severity = 1;
-            if (/\b(bad|strong|heavy|really|pretty|quite)\b/i.test(userMessage)) severity = 4;
-            if (/\b(severe|terrible|awful|worst|excruciating|unbearable|killing me|so bad)\b/i.test(userMessage)) severity = 5;
-            detected.push({ name, severity });
-          }
-        }
+        const detected = detectSymptomMentions(userMessage);
 
         if (detected.length > 0) {
           const liveCycle = participant?.last_period_start && participant?.cycle_length_days
@@ -1188,9 +1192,36 @@ serve(async (req) => {
         historicalSymptomLogs = (data as any[]) || [];
       }
 
+      const chatSymptomReports = ((recentMessages || []) as any[])
+        .filter((m) => m.role === "user" && typeof m.content === "string")
+        .map((m) => {
+          const detected = detectSymptomMentions(m.content);
+          if (detected.length === 0) return null;
+          const t = new Date(m.created_at).getTime();
+          const inRecentWindow = t >= new Date(since).getTime();
+          const inRequestedMonth = referencedMonths.some(({ start, end }) => t >= start.getTime() && t < end.getTime());
+          if (!inRecentWindow && !inRequestedMonth) return null;
+          return {
+            symptoms: detected,
+            cycle_day: null,
+            cycle_phase: null,
+            logged_at: m.created_at,
+            notes: m.content,
+            source: "chat_report",
+          };
+        })
+        .filter(Boolean) as any[];
+
       const byTime = new Map<string, any>();
-      for (const log of [...(recentSymptomLogs || []), ...historicalSymptomLogs]) {
-        byTime.set(log.logged_at, log);
+      const existingNotesByDay = new Set(
+        [...(recentSymptomLogs || []), ...historicalSymptomLogs]
+          .filter((log: any) => log.notes)
+          .map((log: any) => `${formatUtcDate(log.logged_at)}::${String(log.notes).trim().toLowerCase()}`)
+      );
+      for (const log of [...(recentSymptomLogs || []), ...historicalSymptomLogs, ...chatSymptomReports]) {
+        const duplicateChatReport = log.source === "chat_report"
+          && existingNotesByDay.has(`${formatUtcDate(log.logged_at)}::${String(log.notes || "").trim().toLowerCase()}`);
+        if (!duplicateChatReport) byTime.set(`${log.source || "symptom_log"}:${log.logged_at}`, log);
       }
       const symptomLogs = Array.from(byTime.values()).sort(
         (a, b) => new Date(b.logged_at).getTime() - new Date(a.logged_at).getTime()
@@ -1223,14 +1254,15 @@ serve(async (req) => {
                 const t = new Date(l.logged_at).getTime();
                 return t >= start.getTime() && t < end.getTime();
               });
-              if (logs.length === 0) return `- ${label}: no symptom logs found.`;
+              if (logs.length === 0) return `- ${label}: no symptom logs or symptom-bearing chat reports found.`;
               const symptomLines = logs.map((l: any) => {
                 const symptoms = ((l.symptoms || []) as any[])
                   .map((s: any) => `${s.name}(${s.severity}/5)`)
                   .join(", ") || "note only";
-                return `  • ${formatUtcDate(l.logged_at)}: ${symptoms}${l.cycle_phase ? ` [${l.cycle_phase}, day ${l.cycle_day ?? "?"}]` : ""}${l.notes ? ` — "${l.notes}"` : ""}`;
+                const sourceLabel = l.source === "chat_report" ? " [from chat]" : "";
+                return `  • ${formatUtcDate(l.logged_at)}: ${symptoms}${sourceLabel}${l.cycle_phase ? ` [${l.cycle_phase}, day ${l.cycle_day ?? "?"}]` : ""}${l.notes ? ` — "${l.notes}"` : ""}`;
               }).join("\n");
-              return `- ${label}: ${logs.length} symptom log${logs.length === 1 ? "" : "s"}\n${symptomLines}`;
+              return `- ${label}: ${logs.length} symptom entr${logs.length === 1 ? "y" : "ies"} from logs and chat\n${symptomLines}`;
             }).join("\n")
           : "";
 
@@ -1245,15 +1277,16 @@ serve(async (req) => {
           .map((l: any) => {
             const d = formatUtcDate(l.logged_at);
             const names = (l.symptoms || []).map((s: any) => `${s.name}(${s.severity}/5)`).join(", ");
-            return `  • ${d}: ${names}${l.notes ? ` — "${l.notes}"` : ""}`;
+            const sourceLabel = l.source === "chat_report" ? " [from chat]" : "";
+            return `  • ${d}: ${names}${sourceLabel}${l.notes ? ` — "${l.notes}"` : ""}`;
           })
           .join("\n");
 
         const contextLabel = referencedMonths.length > 0
           ? `last 30 days plus requested month history (${symptomLogs.length} entries)`
           : `last 30 days (${symptomLogs.length} entries)`;
-        symptomContext = `\n\nSYMPTOM LOG DATA (${contextLabel}):\n- Most frequent: ${topSymptoms.join(", ")}\n- Latest log (${latestTime}): ${latestSymptoms}${latest.notes ? ` — "${latest.notes}"` : ""}${historicalCoverage ? `\n- Requested month coverage:\n${historicalCoverage}` : ""}\n- Dated entries (most recent first):\n${datedLog}`;
-        symptomContext += `\nUse this symptom data to personalize responses — reference patterns you see, validate what they're feeling, and give phase-specific advice based on their ACTUAL reported experience. When the user asks about a specific date or month, CHECK the Requested month coverage and dated entries above against TODAY'S DATE before answering. If a requested month has entries, NEVER say there are no logs for that month. If no entries fall in the period they asked about, say so honestly — do NOT fabricate a date.`;
+        symptomContext = `\n\nSYMPTOM HISTORY DATA (${contextLabel}; includes structured symptom logs AND symptom reports found in chat):\n- Most frequent: ${topSymptoms.join(", ")}\n- Latest entry (${latestTime}): ${latestSymptoms}${latest.source === "chat_report" ? " [from chat]" : ""}${latest.notes ? ` — "${latest.notes}"` : ""}${historicalCoverage ? `\n- Requested month coverage:\n${historicalCoverage}` : ""}\n- Dated entries (most recent first):\n${datedLog}`;
+        symptomContext += `\nUse this symptom history to personalize responses — reference patterns you see, validate what they're feeling, and give phase-specific advice based on their ACTUAL reported experience. Chat reports marked [from chat] are real historical symptom evidence, even if they were not stored as structured symptom_logs. When the user asks about a specific date or month, CHECK the Requested month coverage and dated entries above against TODAY'S DATE before answering. If a requested month has entries from logs OR chat, NEVER say there are no symptom entries for that month. If no entries fall in the period they asked about, say so honestly — do NOT fabricate a date.`;
       }
     }
 
