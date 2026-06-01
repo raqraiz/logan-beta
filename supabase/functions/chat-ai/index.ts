@@ -1215,23 +1215,43 @@ serve(async (req) => {
           })
           .slice(0, 6);
 
+        const historicalCoverage = referencedMonths.length > 0
+          ? referencedMonths.map(({ label, start, end }) => {
+              const logs = symptomLogs.filter((l: any) => {
+                const t = new Date(l.logged_at).getTime();
+                return t >= start.getTime() && t < end.getTime();
+              });
+              if (logs.length === 0) return `- ${label}: no symptom logs found.`;
+              const symptomLines = logs.map((l: any) => {
+                const symptoms = ((l.symptoms || []) as any[])
+                  .map((s: any) => `${s.name}(${s.severity}/5)`)
+                  .join(", ") || "note only";
+                return `  • ${formatUtcDate(l.logged_at)}: ${symptoms}${l.cycle_phase ? ` [${l.cycle_phase}, day ${l.cycle_day ?? "?"}]` : ""}${l.notes ? ` — "${l.notes}"` : ""}`;
+              }).join("\n");
+              return `- ${label}: ${logs.length} symptom log${logs.length === 1 ? "" : "s"}\n${symptomLines}`;
+            }).join("\n")
+          : "";
+
         // Most recent log
         const latest = symptomLogs[0];
         const latestSymptoms = (latest.symptoms as any[]).map((s: any) => `${s.name}(${s.severity}/5)`).join(", ");
-        const latestTime = new Date(latest.logged_at).toLocaleDateString();
+        const latestTime = formatUtcDate(latest.logged_at);
 
         // Per-log dated history so the model can answer date-based questions accurately
         const datedLog = symptomLogs
-          .slice(0, 20)
+          .slice(0, 40)
           .map((l: any) => {
-            const d = new Date(l.logged_at).toISOString().slice(0, 10);
+            const d = formatUtcDate(l.logged_at);
             const names = (l.symptoms || []).map((s: any) => `${s.name}(${s.severity}/5)`).join(", ");
             return `  • ${d}: ${names}${l.notes ? ` — "${l.notes}"` : ""}`;
           })
           .join("\n");
 
-        symptomContext = `\n\nSYMPTOM LOG DATA (last 30 days, ${symptomLogs.length} entries):\n- Most frequent: ${topSymptoms.join(", ")}\n- Latest log (${latestTime}): ${latestSymptoms}${latest.notes ? ` — "${latest.notes}"` : ""}\n- Dated entries (most recent first):\n${datedLog}`;
-        symptomContext += `\nUse this symptom data to personalize responses — reference patterns you see, validate what they're feeling, and give phase-specific advice based on their ACTUAL reported experience. When the user asks about a specific date or month, CHECK the dated entries above against TODAY'S DATE before answering. If no entries fall in the period they asked about, say so honestly — do NOT fabricate a date.`;
+        const contextLabel = referencedMonths.length > 0
+          ? `last 30 days plus requested month history (${symptomLogs.length} entries)`
+          : `last 30 days (${symptomLogs.length} entries)`;
+        symptomContext = `\n\nSYMPTOM LOG DATA (${contextLabel}):\n- Most frequent: ${topSymptoms.join(", ")}\n- Latest log (${latestTime}): ${latestSymptoms}${latest.notes ? ` — "${latest.notes}"` : ""}${historicalCoverage ? `\n- Requested month coverage:\n${historicalCoverage}` : ""}\n- Dated entries (most recent first):\n${datedLog}`;
+        symptomContext += `\nUse this symptom data to personalize responses — reference patterns you see, validate what they're feeling, and give phase-specific advice based on their ACTUAL reported experience. When the user asks about a specific date or month, CHECK the Requested month coverage and dated entries above against TODAY'S DATE before answering. If a requested month has entries, NEVER say there are no logs for that month. If no entries fall in the period they asked about, say so honestly — do NOT fabricate a date.`;
       }
     }
 
