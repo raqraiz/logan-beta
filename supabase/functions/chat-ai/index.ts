@@ -1620,7 +1620,11 @@ serve(async (req) => {
     // message so the next "yes" hits the period-confirmation reset path.
     let finalAssistantMessage = assistantMessage;
     if (bleedDay1Prompt) {
-      finalAssistantMessage = assistantMessage + bleedDay1Prompt.text;
+      const deepDiveDivider = "\n---\n";
+      const dividerIndex = assistantMessage.indexOf(deepDiveDivider);
+      finalAssistantMessage = dividerIndex >= 0
+        ? assistantMessage.slice(0, dividerIndex).trimEnd() + bleedDay1Prompt.text + assistantMessage.slice(dividerIndex)
+        : assistantMessage + bleedDay1Prompt.text;
       baseMeta.period_checkin = true;
       baseMeta.suggested_day1 = bleedDay1Prompt.suggestedDay1;
     }
