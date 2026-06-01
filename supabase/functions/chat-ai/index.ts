@@ -847,8 +847,10 @@ serve(async (req) => {
       // Loose intent: user is reporting how they feel (not asking a generic question)
       const reportingIntent = /\b(i\s*(?:'?m|am|feel|have|got|woke up|am having|am feeling)|my\s+(?:head|back|stomach|breasts?|joints?)|having|feeling|today i|right now)\b/i.test(userMessage)
         || /\b(log|track|record|note)\b/i.test(userMessage);
+      const isHistoricalLookupQuestion = /\b(check|look\s*(?:up|at|back)|anything|any|did i|do i have|was there|were there|show|see|find)\b/i.test(userMessage)
+        && /\b(history|historical|log|logs|logged|march|april|may|june|july|august|september|october|november|december|january|february|last\s+(?:month|cycle|time)|same\s+time)\b/i.test(userMessage);
 
-      if (reportingIntent) {
+      if (reportingIntent && !isHistoricalLookupQuestion) {
         const detected: { name: string; severity: number }[] = [];
         for (const { name, patterns } of SYMPTOM_KEYWORDS) {
           if (patterns.some(p => p.test(userMessage))) {
