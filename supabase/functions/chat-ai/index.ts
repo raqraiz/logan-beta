@@ -1276,7 +1276,7 @@ serve(async (req) => {
 
         // Per-log dated history so the model can answer date-based questions accurately
         const datedLog = symptomLogs
-          .slice(0, 40)
+          .slice(0, isHistoricalLookup ? symptomLogs.length : 40)
           .map((l: any) => {
             const d = formatUtcDate(l.logged_at);
             const names = (l.symptoms || []).map((s: any) => `${s.name}(${s.severity}/5)`).join(", ");
@@ -1284,6 +1284,7 @@ serve(async (req) => {
             return `  • ${d}: ${names}${sourceLabel}${l.notes ? ` — "${l.notes}"` : ""}`;
           })
           .join("\n");
+
 
         const contextLabel = referencedMonths.length > 0
           ? `last 30 days plus requested month history (${symptomLogs.length} entries)`
