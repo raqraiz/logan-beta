@@ -1192,9 +1192,36 @@ serve(async (req) => {
         historicalSymptomLogs = (data as any[]) || [];
       }
 
+      const chatSymptomReports = ((recentMessages || []) as any[])
+        .filter((m) => m.role === "user" && typeof m.content === "string")
+        .map((m) => {
+          const detected = detectSymptomMentions(m.content);
+          if (detected.length === 0) return null;
+          const t = new Date(m.created_at).getTime();
+          const inRecentWindow = t >= new Date(since).getTime();
+          const inRequestedMonth = referencedMonths.some(({ start, end }) => t >= start.getTime() && t < end.getTime());
+          if (!inRecentWindow && !inRequestedMonth) return null;
+          return {
+            symptoms: detected,
+            cycle_day: null,
+            cycle_phase: null,
+            logged_at: m.created_at,
+            notes: m.content,
+            source: "chat_report",
+          };
+        })
+        .filter(Boolean) as any[];
+
       const byTime = new Map<string, any>();
-      for (const log of [...(recentSymptomLogs || []), ...historicalSymptomLogs]) {
-        byTime.set(log.logged_at, log);
+      const existingNotesByDay = new Set(
+        [...(recentSymptomLogs || []), ...historicalSymptomLogs]
+          .filter((log: any) => log.notes)
+          .map((log: any) => `${formatUtcDate(log.logged_at)}::${String(log.notes).trim().toLowerCase()}`)
+      );
+      for (const log of [...(recentSymptomLogs || []), ...historicalSymptomLogs, ...chatSymptomReports]) {
+        const duplicateChatReport = log.source === "chat_report"
+          && existingNotesByDay.has(`${formatUtcDate(log.logged_at)}::${String(log.notes || "").trim().toLowerCase()}`);
+        if (!duplicateChatReport) byTime.set(`${log.source || "symptom_log"}:${log.logged_at}`, log);
       }
       const symptomLogs = Array.from(byTime.values()).sort(
         (a, b) => new Date(b.logged_at).getTime() - new Date(a.logged_at).getTime()
@@ -1227,14 +1254,15 @@ serve(async (req) => {
                 const t = new Date(l.logged_at).getTime();
                 return t >= start.getTime() && t < end.getTime();
               });
-              if (logs.length === 0) return `- ${label}: no symptom logs found.`;
+              if (logs.length === 0) return `- ${label}: no symptom logs or symptom-bearing chat reports found.`;
               const symptomLines = logs.map((l: any) => {
                 const symptoms = ((l.symptoms || []) as any[])
                   .map((s: any) => `${s.name}(${s.severity}/5)`)
                   .join(", ") || "note only";
-                return `  • ${formatUtcDate(l.logged_at)}: ${symptoms}${l.cycle_phase ? ` [${l.cycle_phase}, day ${l.cycle_day ?? "?"}]` : ""}${l.notes ? ` — "${l.notes}"` : ""}`;
+                const sourceLabel = l.source === "chat_report" ? " [from chat]" : "";
+                return `  • ${formatUtcDate(l.logged_at)}: ${symptoms}${sourceLabel}${l.cycle_phase ? ` [${l.cycle_phase}, day ${l.cycle_day ?? "?"}]` : ""}${l.notes ? ` — "${l.notes}"` : ""}`;
               }).join("\n");
-              return `- ${label}: ${logs.length} symptom log${logs.length === 1 ? "" : "s"}\n${symptomLines}`;
+              return `- ${label}: ${logs.length} symptom entr${logs.length === 1 ? "y" : "ies"} from logs and chat\n${symptomLines}`;
             }).join("\n")
           : "";
 
@@ -1249,15 +1277,16 @@ serve(async (req) => {
           .map((l: any) => {
             const d = formatUtcDate(l.logged_at);
             const names = (l.symptoms || []).map((s: any) => `${s.name}(${s.severity}/5)`).join(", ");
-            return `  • ${d}: ${names}${l.notes ? ` — "${l.notes}"` : ""}`;
+            const sourceLabel = l.source === "chat_report" ? " [from chat]" : "";
+            return `  • ${d}: ${names}${sourceLabel}${l.notes ? ` — "${l.notes}"` : ""}`;
           })
           .join("\n");
 
         const contextLabel = referencedMonths.length > 0
           ? `last 30 days plus requested month history (${symptomLogs.length} entries)`
           : `last 30 days (${symptomLogs.length} entries)`;
-        symptomContext = `\n\nSYMPTOM LOG DATA (${contextLabel}):\n- Most frequent: ${topSymptoms.join(", ")}\n- Latest log (${latestTime}): ${latestSymptoms}${latest.notes ? ` — "${latest.notes}"` : ""}${historicalCoverage ? `\n- Requested month coverage:\n${historicalCoverage}` : ""}\n- Dated entries (most recent first):\n${datedLog}`;
-        symptomContext += `\nUse this symptom data to personalize responses — reference patterns you see, validate what they're feeling, and give phase-specific advice based on their ACTUAL reported experience. When the user asks about a specific date or month, CHECK the Requested month coverage and dated entries above against TODAY'S DATE before answering. If a requested month has entries, NEVER say there are no logs for that month. If no entries fall in the period they asked about, say so honestly — do NOT fabricate a date.`;
+        symptomContext = `\n\nSYMPTOM HISTORY DATA (${contextLabel}; includes structured symptom logs AND symptom reports found in chat):\n- Most frequent: ${topSymptoms.join(", ")}\n- Latest entry (${latestTime}): ${latestSymptoms}${latest.source === "chat_report" ? " [from chat]" : ""}${latest.notes ? ` — "${latest.notes}"` : ""}${historicalCoverage ? `\n- Requested month coverage:\n${historicalCoverage}` : ""}\n- Dated entries (most recent first):\n${datedLog}`;
+        symptomContext += `\nUse this symptom history to personalize responses — reference patterns you see, validate what they're feeling, and give phase-specific advice based on their ACTUAL reported experience. Chat reports marked [from chat] are real historical symptom evidence, even if they were not stored as structured symptom_logs. When the user asks about a specific date or month, CHECK the Requested month coverage and dated entries above against TODAY'S DATE before answering. If a requested month has entries from logs OR chat, NEVER say there are no symptom entries for that month. If no entries fall in the period they asked about, say so honestly — do NOT fabricate a date.`;
       }
     }
 
