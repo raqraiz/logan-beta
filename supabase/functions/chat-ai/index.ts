@@ -1202,7 +1202,8 @@ serve(async (req) => {
           const t = new Date(m.created_at).getTime();
           const inRecentWindow = t >= new Date(since).getTime();
           const inRequestedMonth = referencedMonths.some(({ start, end }) => t >= start.getTime() && t < end.getTime());
-          if (!inRecentWindow && !inRequestedMonth) return null;
+          if (!isHistoricalLookup && !inRecentWindow && !inRequestedMonth) return null;
+
           return {
             symptoms: detected,
             cycle_day: null,
