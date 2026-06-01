@@ -1153,8 +1153,18 @@ serve(async (req) => {
         const latestSymptoms = (latest.symptoms as any[]).map((s: any) => `${s.name}(${s.severity}/5)`).join(", ");
         const latestTime = new Date(latest.logged_at).toLocaleDateString();
 
-        symptomContext = `\n\nSYMPTOM LOG DATA (last 30 days, ${symptomLogs.length} entries):\n- Most frequent: ${topSymptoms.join(", ")}\n- Latest log (${latestTime}): ${latestSymptoms}${latest.notes ? ` — "${latest.notes}"` : ""}`;
-        symptomContext += `\nUse this symptom data to personalize responses — reference patterns you see, validate what they're feeling, and give phase-specific advice based on their ACTUAL reported experience, not just textbook phases.`;
+        // Per-log dated history so the model can answer date-based questions accurately
+        const datedLog = symptomLogs
+          .slice(0, 20)
+          .map((l: any) => {
+            const d = new Date(l.logged_at).toISOString().slice(0, 10);
+            const names = (l.symptoms || []).map((s: any) => `${s.name}(${s.severity}/5)`).join(", ");
+            return `  • ${d}: ${names}${l.notes ? ` — "${l.notes}"` : ""}`;
+          })
+          .join("\n");
+
+        symptomContext = `\n\nSYMPTOM LOG DATA (last 30 days, ${symptomLogs.length} entries):\n- Most frequent: ${topSymptoms.join(", ")}\n- Latest log (${latestTime}): ${latestSymptoms}${latest.notes ? ` — "${latest.notes}"` : ""}\n- Dated entries (most recent first):\n${datedLog}`;
+        symptomContext += `\nUse this symptom data to personalize responses — reference patterns you see, validate what they're feeling, and give phase-specific advice based on their ACTUAL reported experience. When the user asks about a specific date or month, CHECK the dated entries above against TODAY'S DATE before answering. If no entries fall in the period they asked about, say so honestly — do NOT fabricate a date.`;
       }
     }
 
