@@ -1163,34 +1163,36 @@ serve(async (req) => {
     }
 
     // Fetch symptom logs for personalized context. When the user asks about a
-    // specific month, include that full month even if it falls outside 30 days.
+    // specific month or historical patterns, fetch ALL logs (no cap) so we can
+    // answer date/history questions accurately.
     let symptomContext = "";
     {
       const now = new Date();
       const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const referencedMonths = getReferencedMonthRanges(userMessage, now);
+      const isHistoricalLookup = referencedMonths.length > 0
+        || /\b(history|historical|ever|past|previously|previous|before|earlier|all\s*time|since|trend|pattern|patterns|how\s*long|how\s*often|always|last\s+(?:month|cycle|time|year|few\s+months)|same\s+time)\b/i.test(userMessage)
+        || /\b(check|look\s*(?:up|at|back)|did\s*i|do\s*i\s*have|was\s*there|were\s*there|show|see|find|any)\b/i.test(userMessage);
+
       const { data: recentSymptomLogs } = await supabase
         .from("symptom_logs")
         .select("symptoms, cycle_day, cycle_phase, logged_at, notes")
         .eq("user_id", user.id)
         .gte("logged_at", since)
-        .order("logged_at", { ascending: false })
-        .limit(30);
+        .order("logged_at", { ascending: false });
 
       let historicalSymptomLogs: any[] = [];
-      if (referencedMonths.length > 0) {
-        const start = referencedMonths[0].start.toISOString();
-        const end = referencedMonths[referencedMonths.length - 1].end.toISOString();
+      if (isHistoricalLookup) {
+        // No date filter, no limit — pull the user's full symptom history
+        // so we never claim "no data" for a period that actually has entries.
         const { data } = await supabase
           .from("symptom_logs")
           .select("symptoms, cycle_day, cycle_phase, logged_at, notes")
           .eq("user_id", user.id)
-          .gte("logged_at", start)
-          .lt("logged_at", end)
-          .order("logged_at", { ascending: false })
-          .limit(200);
+          .order("logged_at", { ascending: false });
         historicalSymptomLogs = (data as any[]) || [];
       }
+
 
       const chatSymptomReports = ((recentMessages || []) as any[])
         .filter((m) => m.role === "user" && typeof m.content === "string")
