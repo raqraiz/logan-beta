@@ -536,8 +536,8 @@ serve(async (req) => {
       participant.life_stage === "cycling" &&
       !isPeriodConfirmation &&
       !referencesHistoricalDate &&
-      !wasPeridCheckin
     ) {
+
       const bleedMentionPatterns: RegExp[] = [
         /\b(spotting|spot of blood|some blood|slightest blood|little blood|bit of blood|light bleed(?:ing)?|brown discharge|pink discharge)\b/i,
         /\b(i'?m bleeding|started bleeding|started to bleed|first sign of (?:my )?period|got the first (?:bit|sign))\b/i,
