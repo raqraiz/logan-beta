@@ -1621,10 +1621,12 @@ serve(async (req) => {
     let finalAssistantMessage = assistantMessage;
     if (bleedDay1Prompt) {
       const deepDiveDivider = "\n---\n";
-      const dividerIndex = assistantMessage.indexOf(deepDiveDivider);
+      const duplicateDay1PromptPattern = /\n*\s*Want me to log \*\*?[^\n?]+\*\*? as your new \*\*?Day 1\*\*? and reset your cycle\?\s*Just say \*\*?yes\*\*? to confirm — or tell me the actual start date if it was earlier\./gi;
+      const assistantMessageWithoutDay1Prompt = assistantMessage.replace(duplicateDay1PromptPattern, "").trimEnd();
+      const dividerIndex = assistantMessageWithoutDay1Prompt.indexOf(deepDiveDivider);
       finalAssistantMessage = dividerIndex >= 0
-        ? assistantMessage.slice(0, dividerIndex).trimEnd() + bleedDay1Prompt.text + assistantMessage.slice(dividerIndex)
-        : assistantMessage + bleedDay1Prompt.text;
+        ? assistantMessageWithoutDay1Prompt.slice(0, dividerIndex).trimEnd() + bleedDay1Prompt.text + assistantMessageWithoutDay1Prompt.slice(dividerIndex)
+        : assistantMessageWithoutDay1Prompt + bleedDay1Prompt.text;
       baseMeta.period_checkin = true;
       baseMeta.suggested_day1 = bleedDay1Prompt.suggestedDay1;
     }
