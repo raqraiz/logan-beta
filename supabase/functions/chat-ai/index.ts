@@ -524,11 +524,13 @@ serve(async (req) => {
     }
     // --- End period confirmation ---
 
-    // --- Spotting / early-bleed prompt: ask for approval before resetting Day 1 ---
-    // Trigger when a cycling user casually mentions bleeding/spotting in chat
-    // (not an explicit "period started" phrase, which is handled above).
-    // We never auto-reset here — we ask for her approval, and the next "yes"
-    // is picked up by the periodConfirmPatterns + period_checkin metadata path.
+    // --- Spotting / early-bleed detection: flag for Day-1 confirmation prompt ---
+    // When a cycling user casually mentions bleeding/spotting in chat (not an
+    // explicit "period started" phrase, which is handled above), let the AI
+    // generate its normal phase-shift insight, then we'll append a "Want me to
+    // log today as Day 1?" prompt and set period_checkin metadata so her next
+    // "yes" triggers the existing reset path.
+    let bleedDay1Prompt: { text: string; suggestedDay1: string } | null = null;
     if (
       participant &&
       participant.life_stage === "cycling" &&
@@ -551,8 +553,6 @@ serve(async (req) => {
               participant.timezone || "UTC"
             )
           : null;
-        // Only prompt if she's in a plausible window for a new period: late luteal
-        // or overdue. Skip if she's clearly still mid-cycle.
         const expectedLen = participant.cycle_length_days || 28;
         const inPromptWindow = !liveCycle || liveCycle.cycleDay >= Math.max(20, expectedLen - 8);
 
@@ -562,32 +562,16 @@ serve(async (req) => {
             day: "numeric",
             timeZone: participant.timezone || "UTC",
           });
-          const dayNote = liveCycle ? ` You're on **Day ${liveCycle.cycleDay}** right now.` : "";
-          const promptMessage = `Sounds like your period may be starting.${dayNote} Want me to log **${todayLabel}** as your new **Day 1** and reset your cycle? Just say **yes** to confirm — or tell me the actual start date if it was earlier.`;
-
-          await supabase.from("chat_messages").insert({
-            user_id: user.id,
-            role: "assistant",
-            content: promptMessage,
-            message_type: "text",
-            metadata: {
-              period_checkin: true,
-              suggested_day1: new Date().toISOString().split("T")[0],
-            },
-          });
-
-          return new Response(
-            JSON.stringify({
-              success: true,
-              message: promptMessage,
-              periodCheckin: true,
-            }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+          bleedDay1Prompt = {
+            text: `\n\nWant me to log **${todayLabel}** as your new **Day 1** and reset your cycle? Just say **yes** to confirm — or tell me the actual start date if it was earlier.`,
+            suggestedDay1: new Date().toISOString().split("T")[0],
+          };
         }
       }
     }
-    // --- End spotting prompt ---
+    // --- End spotting detection ---
+
+
 
 
     // --- Cycle edit detection (cycle length or period date changes via chat) ---
