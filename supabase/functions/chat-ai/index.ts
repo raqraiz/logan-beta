@@ -534,8 +534,7 @@ serve(async (req) => {
     if (
       participant &&
       participant.life_stage === "cycling" &&
-      !isPeriodConfirmation &&
-      !referencesHistoricalDate
+      !isPeriodConfirmation
     ) {
 
 
@@ -547,27 +546,15 @@ serve(async (req) => {
       const mentionsBleed = bleedMentionPatterns.some((p) => p.test(userMessage));
 
       if (mentionsBleed) {
-        const liveCycle = participant.last_period_start && participant.cycle_length_days
-          ? calculateCycleInfo(
-              participant.last_period_start,
-              participant.cycle_length_days,
-              participant.timezone || "UTC"
-            )
-          : null;
-        const expectedLen = participant.cycle_length_days || 28;
-        const inPromptWindow = !liveCycle || liveCycle.cycleDay >= Math.max(20, expectedLen - 8);
-
-        if (inPromptWindow) {
-          const todayLabel = new Date().toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            timeZone: participant.timezone || "UTC",
-          });
-          bleedDay1Prompt = {
-            text: `\n\nWant me to log **${todayLabel}** as your new **Day 1** and reset your cycle? Just say **yes** to confirm — or tell me the actual start date if it was earlier.`,
-            suggestedDay1: new Date().toISOString().split("T")[0],
-          };
-        }
+        const todayLabel = new Date().toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          timeZone: participant.timezone || "UTC",
+        });
+        bleedDay1Prompt = {
+          text: `\n\nWant me to log **${todayLabel}** as your new **Day 1** and reset your cycle? Just say **yes** to confirm — or tell me the actual start date if it was earlier.`,
+          suggestedDay1: new Date().toISOString().split("T")[0],
+        };
       }
     }
     // --- End spotting detection ---
