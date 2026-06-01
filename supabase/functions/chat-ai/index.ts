@@ -66,6 +66,47 @@ function parseDateOnly(dateStr: string): Date | null {
   return parseExplicitCalendarDate(dateStr);
 }
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function formatUtcDate(input: string | Date): string {
+  const d = typeof input === "string" ? new Date(input) : input;
+  return d.toISOString().slice(0, 10);
+}
+
+function getReferencedMonthRanges(message: string, referenceDate = new Date()) {
+  const monthIndex: Record<string, number> = {
+    jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2, apr: 3, april: 3,
+    may: 4, jun: 5, june: 5, jul: 6, july: 6, aug: 7, august: 7, sep: 8, sept: 8, september: 8,
+    oct: 9, october: 9, nov: 10, november: 10, dec: 11, december: 11,
+  };
+  const ranges = new Map<string, { label: string; start: Date; end: Date }>();
+  const addMonth = (month: number, year: number) => {
+    const start = new Date(Date.UTC(year, month, 1, 0, 0, 0));
+    const end = new Date(Date.UTC(year, month + 1, 1, 0, 0, 0));
+    ranges.set(`${year}-${month}`, { label: `${MONTH_NAMES[month]} ${year}`, start, end });
+  };
+
+  const monthRx = /\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+(20\d{2}))?\b/gi;
+  let match: RegExpExecArray | null;
+  while ((match = monthRx.exec(message)) !== null) {
+    const month = monthIndex[match[1].toLowerCase()];
+    let year = match[2] ? +match[2] : referenceDate.getUTCFullYear();
+    if (!match[2] && month > referenceDate.getUTCMonth()) year -= 1;
+    addMonth(month, year);
+  }
+
+  if (/\blast month\b/i.test(message)) {
+    const month = referenceDate.getUTCMonth() === 0 ? 11 : referenceDate.getUTCMonth() - 1;
+    const year = referenceDate.getUTCMonth() === 0 ? referenceDate.getUTCFullYear() - 1 : referenceDate.getUTCFullYear();
+    addMonth(month, year);
+  }
+
+  return Array.from(ranges.values()).sort((a, b) => a.start.getTime() - b.start.getTime());
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -806,8 +847,10 @@ serve(async (req) => {
       // Loose intent: user is reporting how they feel (not asking a generic question)
       const reportingIntent = /\b(i\s*(?:'?m|am|feel|have|got|woke up|am having|am feeling)|my\s+(?:head|back|stomach|breasts?|joints?)|having|feeling|today i|right now)\b/i.test(userMessage)
         || /\b(log|track|record|note)\b/i.test(userMessage);
+      const isHistoricalLookupQuestion = /\b(check|look\s*(?:up|at|back)|anything|any|did i|do i have|was there|were there|show|see|find)\b/i.test(userMessage)
+        && /\b(history|historical|log|logs|logged|march|april|may|june|july|august|september|october|november|december|january|february|last\s+(?:month|cycle|time)|same\s+time)\b/i.test(userMessage);
 
-      if (reportingIntent) {
+      if (reportingIntent && !isHistoricalLookupQuestion) {
         const detected: { name: string; severity: number }[] = [];
         for (const { name, patterns } of SYMPTOM_KEYWORDS) {
           if (patterns.some(p => p.test(userMessage))) {
@@ -1115,17 +1158,43 @@ serve(async (req) => {
       }
     }
 
-    // Fetch recent symptom logs for personalized context
+    // Fetch symptom logs for personalized context. When the user asks about a
+    // specific month, include that full month even if it falls outside 30 days.
     let symptomContext = "";
     {
+      const now = new Date();
       const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      const { data: symptomLogs } = await supabase
+      const referencedMonths = getReferencedMonthRanges(userMessage, now);
+      const { data: recentSymptomLogs } = await supabase
         .from("symptom_logs")
         .select("symptoms, cycle_day, cycle_phase, logged_at, notes")
         .eq("user_id", user.id)
         .gte("logged_at", since)
         .order("logged_at", { ascending: false })
         .limit(30);
+
+      let historicalSymptomLogs: any[] = [];
+      if (referencedMonths.length > 0) {
+        const start = referencedMonths[0].start.toISOString();
+        const end = referencedMonths[referencedMonths.length - 1].end.toISOString();
+        const { data } = await supabase
+          .from("symptom_logs")
+          .select("symptoms, cycle_day, cycle_phase, logged_at, notes")
+          .eq("user_id", user.id)
+          .gte("logged_at", start)
+          .lt("logged_at", end)
+          .order("logged_at", { ascending: false })
+          .limit(200);
+        historicalSymptomLogs = (data as any[]) || [];
+      }
+
+      const byTime = new Map<string, any>();
+      for (const log of [...(recentSymptomLogs || []), ...historicalSymptomLogs]) {
+        byTime.set(log.logged_at, log);
+      }
+      const symptomLogs = Array.from(byTime.values()).sort(
+        (a, b) => new Date(b.logged_at).getTime() - new Date(a.logged_at).getTime()
+      );
 
       if (symptomLogs && symptomLogs.length > 0) {
         // Compute frequency and average severity
@@ -1148,23 +1217,43 @@ serve(async (req) => {
           })
           .slice(0, 6);
 
+        const historicalCoverage = referencedMonths.length > 0
+          ? referencedMonths.map(({ label, start, end }) => {
+              const logs = symptomLogs.filter((l: any) => {
+                const t = new Date(l.logged_at).getTime();
+                return t >= start.getTime() && t < end.getTime();
+              });
+              if (logs.length === 0) return `- ${label}: no symptom logs found.`;
+              const symptomLines = logs.map((l: any) => {
+                const symptoms = ((l.symptoms || []) as any[])
+                  .map((s: any) => `${s.name}(${s.severity}/5)`)
+                  .join(", ") || "note only";
+                return `  • ${formatUtcDate(l.logged_at)}: ${symptoms}${l.cycle_phase ? ` [${l.cycle_phase}, day ${l.cycle_day ?? "?"}]` : ""}${l.notes ? ` — "${l.notes}"` : ""}`;
+              }).join("\n");
+              return `- ${label}: ${logs.length} symptom log${logs.length === 1 ? "" : "s"}\n${symptomLines}`;
+            }).join("\n")
+          : "";
+
         // Most recent log
         const latest = symptomLogs[0];
         const latestSymptoms = (latest.symptoms as any[]).map((s: any) => `${s.name}(${s.severity}/5)`).join(", ");
-        const latestTime = new Date(latest.logged_at).toLocaleDateString();
+        const latestTime = formatUtcDate(latest.logged_at);
 
         // Per-log dated history so the model can answer date-based questions accurately
         const datedLog = symptomLogs
-          .slice(0, 20)
+          .slice(0, 40)
           .map((l: any) => {
-            const d = new Date(l.logged_at).toISOString().slice(0, 10);
+            const d = formatUtcDate(l.logged_at);
             const names = (l.symptoms || []).map((s: any) => `${s.name}(${s.severity}/5)`).join(", ");
             return `  • ${d}: ${names}${l.notes ? ` — "${l.notes}"` : ""}`;
           })
           .join("\n");
 
-        symptomContext = `\n\nSYMPTOM LOG DATA (last 30 days, ${symptomLogs.length} entries):\n- Most frequent: ${topSymptoms.join(", ")}\n- Latest log (${latestTime}): ${latestSymptoms}${latest.notes ? ` — "${latest.notes}"` : ""}\n- Dated entries (most recent first):\n${datedLog}`;
-        symptomContext += `\nUse this symptom data to personalize responses — reference patterns you see, validate what they're feeling, and give phase-specific advice based on their ACTUAL reported experience. When the user asks about a specific date or month, CHECK the dated entries above against TODAY'S DATE before answering. If no entries fall in the period they asked about, say so honestly — do NOT fabricate a date.`;
+        const contextLabel = referencedMonths.length > 0
+          ? `last 30 days plus requested month history (${symptomLogs.length} entries)`
+          : `last 30 days (${symptomLogs.length} entries)`;
+        symptomContext = `\n\nSYMPTOM LOG DATA (${contextLabel}):\n- Most frequent: ${topSymptoms.join(", ")}\n- Latest log (${latestTime}): ${latestSymptoms}${latest.notes ? ` — "${latest.notes}"` : ""}${historicalCoverage ? `\n- Requested month coverage:\n${historicalCoverage}` : ""}\n- Dated entries (most recent first):\n${datedLog}`;
+        symptomContext += `\nUse this symptom data to personalize responses — reference patterns you see, validate what they're feeling, and give phase-specific advice based on their ACTUAL reported experience. When the user asks about a specific date or month, CHECK the Requested month coverage and dated entries above against TODAY'S DATE before answering. If a requested month has entries, NEVER say there are no logs for that month. If no entries fall in the period they asked about, say so honestly — do NOT fabricate a date.`;
       }
     }
 
