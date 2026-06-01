@@ -1688,7 +1688,8 @@ MEAL PLANS / MENUS — STRICT RULES:
         : `This user is on HORMONAL BIRTH CONTROL or has an IRREGULAR cycle. Their hormones are externally regulated (pill, IUD, implant, ring, patch) or unpredictable (PCOS, hypothalamic amenorrhea, etc.). They are NOT naturally cycling. RULES: Never reference a cycle "day number" or natural phase (follicular, luteal, ovulation, menstruation). Never invent rising/falling estrogen or progesterone language tied to a phase. Frame guidance around steady-state levers: sleep, protein, strength training, stress, hydration, and micronutrient depletion that hormonal BC can cause (B6, B12, magnesium, zinc, folate). If they ask about a phase, gently explain why phase-based predictions don't apply to them.`;
 
 
-    let userContext = `\n\nUSER CONTEXT:\n- Life stage: ${stageLabel}\n- Age: ${age || "unknown"}${ppTimeline}\n- Anchor symptom: ${participant.anchor_symptom || "not specified"}\n- Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}\n${topics ? `- Focus areas: ${topics}` : ""}\n\n${stageContext}${symptomContext}`;
+    const todayStr = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
+    let userContext = `\n\nUSER CONTEXT:\n- TODAY'S DATE: ${todayStr} (anchor for all time/date reasoning — "last month", "yesterday", etc. NEVER guess or invent dates. If data doesn't cover the period asked about, say so plainly.)\n- Life stage: ${stageLabel}\n- Age: ${age || "unknown"}${ppTimeline}\n- Anchor symptom: ${participant.anchor_symptom || "not specified"}\n- Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}\n${topics ? `- Focus areas: ${topics}` : ""}\n\n${stageContext}${symptomContext}`;
     
     return basePrompt + userContext;
   }
