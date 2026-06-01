@@ -1729,9 +1729,11 @@ This user's cycle has returned, AND she is ${ppLabel} postpartum (baby born ${bi
     }
   }
 
+  const todayStr = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
   const userContext = `
 
 USER CONTEXT:
+- TODAY'S DATE: ${todayStr} (use this as the anchor for any time/date reasoning — "last month", "last week", "yesterday". NEVER guess or invent dates. If symptom data doesn't cover the period the user asked about, say so plainly.)
 - Current cycle day: ${cycleInfo.cycleDay}
 - Current phase: ${cycleInfo.phase}
 - Cycle length: ${participant.cycle_length_days || 28} days
