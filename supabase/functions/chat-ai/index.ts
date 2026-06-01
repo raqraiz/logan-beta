@@ -1156,17 +1156,43 @@ serve(async (req) => {
       }
     }
 
-    // Fetch recent symptom logs for personalized context
+    // Fetch symptom logs for personalized context. When the user asks about a
+    // specific month, include that full month even if it falls outside 30 days.
     let symptomContext = "";
     {
+      const now = new Date();
       const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      const { data: symptomLogs } = await supabase
+      const referencedMonths = getReferencedMonthRanges(userMessage, now);
+      const { data: recentSymptomLogs } = await supabase
         .from("symptom_logs")
         .select("symptoms, cycle_day, cycle_phase, logged_at, notes")
         .eq("user_id", user.id)
         .gte("logged_at", since)
         .order("logged_at", { ascending: false })
         .limit(30);
+
+      let historicalSymptomLogs: any[] = [];
+      if (referencedMonths.length > 0) {
+        const start = referencedMonths[0].start.toISOString();
+        const end = referencedMonths[referencedMonths.length - 1].end.toISOString();
+        const { data } = await supabase
+          .from("symptom_logs")
+          .select("symptoms, cycle_day, cycle_phase, logged_at, notes")
+          .eq("user_id", user.id)
+          .gte("logged_at", start)
+          .lt("logged_at", end)
+          .order("logged_at", { ascending: false })
+          .limit(200);
+        historicalSymptomLogs = (data as any[]) || [];
+      }
+
+      const byTime = new Map<string, any>();
+      for (const log of [...(recentSymptomLogs || []), ...historicalSymptomLogs]) {
+        byTime.set(log.logged_at, log);
+      }
+      const symptomLogs = Array.from(byTime.values()).sort(
+        (a, b) => new Date(b.logged_at).getTime() - new Date(a.logged_at).getTime()
+      );
 
       if (symptomLogs && symptomLogs.length > 0) {
         // Compute frequency and average severity
