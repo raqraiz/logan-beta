@@ -1153,8 +1153,18 @@ serve(async (req) => {
         const latestSymptoms = (latest.symptoms as any[]).map((s: any) => `${s.name}(${s.severity}/5)`).join(", ");
         const latestTime = new Date(latest.logged_at).toLocaleDateString();
 
-        symptomContext = `\n\nSYMPTOM LOG DATA (last 30 days, ${symptomLogs.length} entries):\n- Most frequent: ${topSymptoms.join(", ")}\n- Latest log (${latestTime}): ${latestSymptoms}${latest.notes ? ` — "${latest.notes}"` : ""}`;
-        symptomContext += `\nUse this symptom data to personalize responses — reference patterns you see, validate what they're feeling, and give phase-specific advice based on their ACTUAL reported experience, not just textbook phases.`;
+        // Per-log dated history so the model can answer date-based questions accurately
+        const datedLog = symptomLogs
+          .slice(0, 20)
+          .map((l: any) => {
+            const d = new Date(l.logged_at).toISOString().slice(0, 10);
+            const names = (l.symptoms || []).map((s: any) => `${s.name}(${s.severity}/5)`).join(", ");
+            return `  • ${d}: ${names}${l.notes ? ` — "${l.notes}"` : ""}`;
+          })
+          .join("\n");
+
+        symptomContext = `\n\nSYMPTOM LOG DATA (last 30 days, ${symptomLogs.length} entries):\n- Most frequent: ${topSymptoms.join(", ")}\n- Latest log (${latestTime}): ${latestSymptoms}${latest.notes ? ` — "${latest.notes}"` : ""}\n- Dated entries (most recent first):\n${datedLog}`;
+        symptomContext += `\nUse this symptom data to personalize responses — reference patterns you see, validate what they're feeling, and give phase-specific advice based on their ACTUAL reported experience. When the user asks about a specific date or month, CHECK the dated entries above against TODAY'S DATE before answering. If no entries fall in the period they asked about, say so honestly — do NOT fabricate a date.`;
       }
     }
 
@@ -1688,7 +1698,8 @@ MEAL PLANS / MENUS — STRICT RULES:
         : `This user is on HORMONAL BIRTH CONTROL or has an IRREGULAR cycle. Their hormones are externally regulated (pill, IUD, implant, ring, patch) or unpredictable (PCOS, hypothalamic amenorrhea, etc.). They are NOT naturally cycling. RULES: Never reference a cycle "day number" or natural phase (follicular, luteal, ovulation, menstruation). Never invent rising/falling estrogen or progesterone language tied to a phase. Frame guidance around steady-state levers: sleep, protein, strength training, stress, hydration, and micronutrient depletion that hormonal BC can cause (B6, B12, magnesium, zinc, folate). If they ask about a phase, gently explain why phase-based predictions don't apply to them.`;
 
 
-    let userContext = `\n\nUSER CONTEXT:\n- Life stage: ${stageLabel}\n- Age: ${age || "unknown"}${ppTimeline}\n- Anchor symptom: ${participant.anchor_symptom || "not specified"}\n- Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}\n${topics ? `- Focus areas: ${topics}` : ""}\n\n${stageContext}${symptomContext}`;
+    const todayStr = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
+    let userContext = `\n\nUSER CONTEXT:\n- TODAY'S DATE: ${todayStr} (anchor for all time/date reasoning — "last month", "yesterday", etc. NEVER guess or invent dates. If data doesn't cover the period asked about, say so plainly.)\n- Life stage: ${stageLabel}\n- Age: ${age || "unknown"}${ppTimeline}\n- Anchor symptom: ${participant.anchor_symptom || "not specified"}\n- Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}\n${topics ? `- Focus areas: ${topics}` : ""}\n\n${stageContext}${symptomContext}`;
     
     return basePrompt + userContext;
   }
@@ -1729,9 +1740,11 @@ This user's cycle has returned, AND she is ${ppLabel} postpartum (baby born ${bi
     }
   }
 
+  const todayStr = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
   const userContext = `
 
 USER CONTEXT:
+- TODAY'S DATE: ${todayStr} (use this as the anchor for any time/date reasoning — "last month", "last week", "yesterday". NEVER guess or invent dates. If symptom data doesn't cover the period the user asked about, say so plainly.)
 - Current cycle day: ${cycleInfo.cycleDay}
 - Current phase: ${cycleInfo.phase}
 - Cycle length: ${participant.cycle_length_days || 28} days
