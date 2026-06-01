@@ -859,38 +859,6 @@ serve(async (req) => {
     // Detect symptoms mentioned in the user's message and persist to symptom_logs
     // so they sync with the Home tab's symptom widget / history.
     {
-      const SYMPTOM_KEYWORDS: { name: string; patterns: RegExp[] }[] = [
-        { name: "Cramps", patterns: [/\bcramp(s|ing|y)?\b/i, /\bperiod pain\b/i] },
-        { name: "Bloating", patterns: [/\bbloat(ed|ing)?\b/i] },
-        { name: "Headache", patterns: [/\bheadache(s)?\b/i, /\bmigraine(s)?\b/i] },
-        { name: "Fatigue", patterns: [/\bfatigue(d)?\b/i, /\bexhaust(ed|ion)\b/i, /\bso tired\b/i, /\bwiped out\b/i, /\bdrained\b/i] },
-        { name: "Back pain", patterns: [/\bback pain\b/i, /\bbackache\b/i, /\blower back\b/i] },
-        { name: "Breast tenderness", patterns: [/\bbreast(s)?\s+(tender|sore|hurt)/i, /\bsore breasts?\b/i, /\btender breasts?\b/i] },
-        { name: "Nausea", patterns: [/\bnausea(ted|ous)?\b/i, /\bqueasy\b/i, /\bnauseous\b/i] },
-        { name: "Acne", patterns: [/\bacne\b/i, /\bbreak(ing )?out\b/i, /\bpimples?\b/i, /\bzits?\b/i] },
-        { name: "Joint pain", patterns: [/\bjoint(s)? (pain|ache|hurt)/i, /\bachy joints\b/i] },
-        { name: "Insomnia", patterns: [/\binsomnia\b/i, /\bcan'?t sleep\b/i, /\btrouble sleeping\b/i, /\bsleepless\b/i] },
-        { name: "Mood swings", patterns: [/\bmood swing(s)?\b/i, /\bmoody\b/i, /\bemotional roller ?coaster\b/i] },
-        { name: "Anxiety", patterns: [/\banxious\b/i, /\banxiety\b/i, /\bon edge\b/i, /\bpanick(y|ing)\b/i] },
-        { name: "Irritability", patterns: [/\birritabl(e|y)\b/i, /\birritated\b/i, /\bsnappy\b/i, /\bshort temper(ed)?\b/i, /\bcranky\b/i] },
-        { name: "Brain fog", patterns: [/\bbrain fog(gy)?\b/i, /\bfoggy\b/i, /\bcan'?t (think|focus|concentrate)\b/i] },
-        { name: "Low motivation", patterns: [/\blow motivation\b/i, /\bunmotivated\b/i, /\bno motivation\b/i, /\bcan'?t get going\b/i] },
-        { name: "Sadness", patterns: [/\b(feeling |so |really )?sad\b/i, /\bcrying\b/i, /\btearful\b/i, /\bdown\b/i, /\bblue\b/i] },
-        { name: "Restlessness", patterns: [/\brestless\b/i, /\bantsy\b/i, /\bcan'?t sit still\b/i] },
-        { name: "Overwhelm", patterns: [/\boverwhelmed\b/i, /\boverwhelm\b/i, /\btoo much\b/i] },
-        { name: "High energy", patterns: [/\bhigh energy\b/i, /\benergized\b/i, /\bso much energy\b/i] },
-        { name: "Low energy", patterns: [/\blow energy\b/i, /\bno energy\b/i, /\bsluggish\b/i, /\blethargic\b/i] },
-        { name: "Sharp focus", patterns: [/\bsharp focus\b/i, /\blaser focus(ed)?\b/i, /\bvery focused\b/i] },
-        { name: "Poor focus", patterns: [/\bpoor focus\b/i, /\bcan'?t focus\b/i, /\bdistracted\b/i, /\bunfocused\b/i] },
-        { name: "Cravings", patterns: [/\bcravings?\b/i, /\bcraving (sugar|chocolate|carbs|salt)/i] },
-        { name: "Hot flashes", patterns: [/\bhot flash(es)?\b/i, /\bhot flush(es)?\b/i] },
-        { name: "Night sweats", patterns: [/\bnight sweats?\b/i, /\bsweating at night\b/i] },
-        { name: "Spotting", patterns: [/\bspotting\b/i, /\blight bleeding\b/i] },
-        { name: "Dehydrated skin", patterns: [/\bdehydrated skin\b/i, /\bskin (feels |is )?dehydrated\b/i] },
-        { name: "Dry skin", patterns: [/\bdry skin\b/i, /\bskin (feels |is )?(really |very )?dry\b/i, /\bflaky skin\b/i] },
-        { name: "Thirst", patterns: [/\bvery thirsty\b/i, /\bso thirsty\b/i, /\bcan'?t stop drinking\b/i] },
-      ];
-
       // Loose intent: user is reporting how they feel (not asking a generic question)
       const reportingIntent = /\b(i\s*(?:'?m|am|feel|have|got|woke up|am having|am feeling)|my\s+(?:head|back|stomach|breasts?|joints?)|having|feeling|today i|right now)\b/i.test(userMessage)
         || /\b(log|track|record|note)\b/i.test(userMessage);
@@ -898,18 +866,7 @@ serve(async (req) => {
         && /\b(history|historical|log|logs|logged|march|april|may|june|july|august|september|october|november|december|january|february|last\s+(?:month|cycle|time)|same\s+time)\b/i.test(userMessage);
 
       if (reportingIntent && !isHistoricalLookupQuestion) {
-        const detected: { name: string; severity: number }[] = [];
-        for (const { name, patterns } of SYMPTOM_KEYWORDS) {
-          if (patterns.some(p => p.test(userMessage))) {
-            // Severity heuristic: scan for intensity modifiers
-            let severity = 3;
-            if (/\b(mild|slight|tiny|barely|a bit|a little)\b/i.test(userMessage)) severity = 2;
-            if (/\b(very mild|barely)\b/i.test(userMessage)) severity = 1;
-            if (/\b(bad|strong|heavy|really|pretty|quite)\b/i.test(userMessage)) severity = 4;
-            if (/\b(severe|terrible|awful|worst|excruciating|unbearable|killing me|so bad)\b/i.test(userMessage)) severity = 5;
-            detected.push({ name, severity });
-          }
-        }
+        const detected = detectSymptomMentions(userMessage);
 
         if (detected.length > 0) {
           const liveCycle = participant?.last_period_start && participant?.cycle_length_days
