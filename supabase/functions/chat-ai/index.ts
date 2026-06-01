@@ -1627,13 +1627,24 @@ serve(async (req) => {
       baseMeta.conversation_starters = conversationStarters;
     }
 
+    // If the user mentioned spotting/bleeding in a plausible window, append a
+    // Day-1 confirmation prompt to the assistant's normal insight and flag the
+    // message so the next "yes" hits the period-confirmation reset path.
+    let finalAssistantMessage = assistantMessage;
+    if (bleedDay1Prompt) {
+      finalAssistantMessage = assistantMessage + bleedDay1Prompt.text;
+      baseMeta.period_checkin = true;
+      baseMeta.suggested_day1 = bleedDay1Prompt.suggestedDay1;
+    }
+
     const { error: insertError } = await supabase.from("chat_messages").insert({
       user_id: user.id,
       role: "assistant",
-      content: assistantMessage,
+      content: finalAssistantMessage,
       message_type: "text",
       metadata: baseMeta,
     });
+
 
     if (insertError) {
       console.error("Error saving assistant message:", insertError);
