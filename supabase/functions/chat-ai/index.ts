@@ -66,6 +66,47 @@ function parseDateOnly(dateStr: string): Date | null {
   return parseExplicitCalendarDate(dateStr);
 }
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function formatUtcDate(input: string | Date): string {
+  const d = typeof input === "string" ? new Date(input) : input;
+  return d.toISOString().slice(0, 10);
+}
+
+function getReferencedMonthRanges(message: string, referenceDate = new Date()) {
+  const monthIndex: Record<string, number> = {
+    jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2, apr: 3, april: 3,
+    may: 4, jun: 5, june: 5, jul: 6, july: 6, aug: 7, august: 7, sep: 8, sept: 8, september: 8,
+    oct: 9, october: 9, nov: 10, november: 10, dec: 11, december: 11,
+  };
+  const ranges = new Map<string, { label: string; start: Date; end: Date }>();
+  const addMonth = (month: number, year: number) => {
+    const start = new Date(Date.UTC(year, month, 1, 0, 0, 0));
+    const end = new Date(Date.UTC(year, month + 1, 1, 0, 0, 0));
+    ranges.set(`${year}-${month}`, { label: `${MONTH_NAMES[month]} ${year}`, start, end });
+  };
+
+  const monthRx = /\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+(20\d{2}))?\b/gi;
+  let match: RegExpExecArray | null;
+  while ((match = monthRx.exec(message)) !== null) {
+    const month = monthIndex[match[1].toLowerCase()];
+    let year = match[2] ? +match[2] : referenceDate.getUTCFullYear();
+    if (!match[2] && month > referenceDate.getUTCMonth()) year -= 1;
+    addMonth(month, year);
+  }
+
+  if (/\blast month\b/i.test(message)) {
+    const month = referenceDate.getUTCMonth() === 0 ? 11 : referenceDate.getUTCMonth() - 1;
+    const year = referenceDate.getUTCMonth() === 0 ? referenceDate.getUTCFullYear() - 1 : referenceDate.getUTCFullYear();
+    addMonth(month, year);
+  }
+
+  return Array.from(ranges.values()).sort((a, b) => a.start.getTime() - b.start.getTime());
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
