@@ -1672,7 +1672,9 @@ serve(async (req) => {
       );
     }
 
-    let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext);
+    const backfillBlock = backfillConfirmation ? `\n\n${backfillConfirmation}\n` : "";
+    let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext + backfillBlock);
+
 
 
     // Runtime hint: if the Menu Builder offer card is about to follow this reply,
