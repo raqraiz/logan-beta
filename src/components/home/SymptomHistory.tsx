@@ -113,7 +113,62 @@ export function SymptomHistory({
         setTopSymptoms(sorted);
         setLoading(false);
       });
-  }, [open, userId]);
+  }, [open, userId, refreshTick]);
+
+  const startEdit = (log: SymptomLog) => {
+    setEditingId(log.id);
+    setEditSymptoms(log.symptoms.map(s => ({ ...s })));
+    setEditNotes(log.notes || "");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditSymptoms([]);
+    setEditNotes("");
+  };
+
+  const saveEdit = async (logId: string) => {
+    setSaving(true);
+    const cleaned = editSymptoms.filter(s => s.severity > 0);
+    if (cleaned.length === 0) {
+      // Treat as delete
+      const { error } = await supabase.from("symptom_logs").delete().eq("id", logId);
+      setSaving(false);
+      if (error) {
+        toast({ title: "Couldn't update", description: error.message, variant: "destructive" });
+        return;
+      }
+      toast({ title: "Log removed" });
+      cancelEdit();
+      setRefreshTick(t => t + 1);
+      return;
+    }
+    const { error } = await supabase
+      .from("symptom_logs")
+      .update({ symptoms: cleaned as any, notes: editNotes.trim() || null })
+      .eq("id", logId);
+    setSaving(false);
+    if (error) {
+      toast({ title: "Couldn't save", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Updated" });
+    cancelEdit();
+    setRefreshTick(t => t + 1);
+  };
+
+  const deleteLog = async (logId: string) => {
+    setDeletingId(logId);
+    const { error } = await supabase.from("symptom_logs").delete().eq("id", logId);
+    setDeletingId(null);
+    if (error) {
+      toast({ title: "Couldn't delete", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Deleted" });
+    setRefreshTick(t => t + 1);
+  };
+
 
   // Group logs by date
   const grouped: Record<string, SymptomLog[]> = {};
