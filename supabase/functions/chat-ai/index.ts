@@ -1532,6 +1532,40 @@ serve(async (req) => {
       ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
       : null;
 
+    if (directSymptomLookupResponse) {
+      const directMeta: Record<string, unknown> = cycleInfo ? {
+        cycle_day: cycleInfo.cycleDay,
+        cycle_phase: cycleInfo.phase,
+        cycle_length_days: participant?.cycle_length_days || 28,
+        last_period_start: participant?.last_period_start || null,
+        timezone: participant?.timezone || "UTC",
+      } : {};
+      if (directSymptomLookupStarters.length > 0) {
+        directMeta.conversation_starters = directSymptomLookupStarters;
+      }
+
+      const { error: directInsertError } = await supabase.from("chat_messages").insert({
+        user_id: user.id,
+        role: "assistant",
+        content: directSymptomLookupResponse,
+        message_type: "text",
+        metadata: directMeta,
+      });
+      if (directInsertError) {
+        console.error("Error saving direct symptom lookup response:", directInsertError);
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: directSymptomLookupResponse,
+          cycleInfo,
+          creditBalance: null,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext);
 
 
