@@ -937,24 +937,33 @@ serve(async (req) => {
         || /\b(go ahead|yes please|please do|do it|please add|do that)\b/i.test(userMessage);
 
       if (backfillIntent) {
+        // Build a search text from the current message + recent chat thread so
+        // short confirmations ("yes please add", "go ahead", "please try add now")
+        // still pick up the symptom + dates that were discussed moments earlier.
+        let searchText = userMessage;
+        let recentMsgs: Array<{ content: string; role: string }> = [];
+        try {
+          const { data: recent } = await supabase
+            .from("chat_messages")
+            .select("content, role")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(12);
+          recentMsgs = (recent || []) as any;
+          // Prepend recent context (newest first) so regexes can find dates/symptoms
+          searchText = userMessage + "\n" + recentMsgs.map(m => String(m.content || "")).join("\n");
+        } catch (_) {}
+
         // Pull symptoms from this message, or fall back to the recent chat thread
         let symptoms = detectSymptomMentions(userMessage);
         if (symptoms.length === 0) {
-          try {
-            const { data: recent } = await supabase
-              .from("chat_messages")
-              .select("content, role")
-              .eq("user_id", user.id)
-              .order("created_at", { ascending: false })
-              .limit(12);
-            for (const m of recent || []) {
-              const found = detectSymptomMentions(String(m.content || ""));
-              if (found.length) { symptoms = found; break; }
-            }
-          } catch (_) {}
+          for (const m of recentMsgs) {
+            const found = detectSymptomMentions(String(m.content || ""));
+            if (found.length) { symptoms = found; break; }
+          }
         }
 
-        // Extract explicit dates: "April 15", "Apr 15, 2025", "April 15 and 22", "4/15", "2025-04-15"
+        // Extract explicit dates from current message; if none, scan recent chat
         const dates: Date[] = [];
         const today = new Date();
         const monthMap: Record<string, number> = {
@@ -963,29 +972,33 @@ serve(async (req) => {
           sep: 8, sept: 8, september: 8, oct: 9, october: 9, nov: 10, november: 10, dec: 11, december: 11,
         };
         const monthDayRx = /\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(20\d{2}))?(?:\s*(?:,|and|&|\+)\s*(\d{1,2})(?:st|nd|rd|th)?)*/gi;
-        let mm: RegExpExecArray | null;
-        while ((mm = monthDayRx.exec(userMessage)) !== null) {
-          const month = monthMap[mm[1].toLowerCase()];
-          let year = mm[3] ? +mm[3] : today.getUTCFullYear();
-          if (!mm[3] && month > today.getUTCMonth()) year -= 1;
-          // primary day
-          const primaryDay = +mm[2];
-          dates.push(new Date(Date.UTC(year, month, primaryDay, 12)));
-          // Look for trailing "and 22, 25" style extras in the same match window
-          const tail = mm[0].slice(mm[0].toLowerCase().indexOf(mm[2]) + mm[2].length);
-          const extraRx = /(?:,|and|&|\+)\s*(\d{1,2})(?:st|nd|rd|th)?/gi;
-          let em: RegExpExecArray | null;
-          while ((em = extraRx.exec(tail)) !== null) {
-            const d = +em[1];
-            if (d >= 1 && d <= 31) dates.push(new Date(Date.UTC(year, month, d, 12)));
+        const scanForDates = (text: string) => {
+          let mm: RegExpExecArray | null;
+          const rx = new RegExp(monthDayRx.source, monthDayRx.flags);
+          while ((mm = rx.exec(text)) !== null) {
+            const month = monthMap[mm[1].toLowerCase()];
+            let year = mm[3] ? +mm[3] : today.getUTCFullYear();
+            if (!mm[3] && month > today.getUTCMonth()) year -= 1;
+            const primaryDay = +mm[2];
+            dates.push(new Date(Date.UTC(year, month, primaryDay, 12)));
+            const tail = mm[0].slice(mm[0].toLowerCase().indexOf(mm[2]) + mm[2].length);
+            const extraRx = /(?:,|and|&|\+)\s*(\d{1,2})(?:st|nd|rd|th)?/gi;
+            let em: RegExpExecArray | null;
+            while ((em = extraRx.exec(tail)) !== null) {
+              const d = +em[1];
+              if (d >= 1 && d <= 31) dates.push(new Date(Date.UTC(year, month, d, 12)));
+            }
           }
-        }
-        // ISO and numeric forms
-        const isoRx = /\b(20\d{2})-(\d{1,2})-(\d{1,2})\b/g;
-        let im: RegExpExecArray | null;
-        while ((im = isoRx.exec(userMessage)) !== null) {
-          dates.push(new Date(Date.UTC(+im[1], +im[2] - 1, +im[3], 12)));
-        }
+          const isoRx = /\b(20\d{2})-(\d{1,2})-(\d{1,2})\b/g;
+          let im: RegExpExecArray | null;
+          while ((im = isoRx.exec(text)) !== null) {
+            dates.push(new Date(Date.UTC(+im[1], +im[2] - 1, +im[3], 12)));
+          }
+        };
+        scanForDates(userMessage);
+        if (dates.length === 0) scanForDates(searchText);
+
+
 
         // De-dupe and keep only past or today
         const uniq = new Map<string, Date>();
@@ -1907,6 +1920,7 @@ VOICE — THIS IS EVERYTHING:
 - USE **bold** for key terms only.
 - ABSOLUTELY NO bullet-point lists, numbered lists, or headers/subheadings. Ever. Write in flowing short sentences only.
 - NEVER claim you "added", "logged", "tracked", or "saved" something to her symptom log UNLESS the context above contains a "[BACKFILL CONFIRMED]" note for this turn. If that note is present, confirm naturally — the entries are really saved. Otherwise, symptom logging happens automatically when she describes how she feels; just acknowledge what she shared.
+- NEVER tell her you "don't have access", "can't write to the database", "lack permission", or that she needs to go to the Home tab / symptom widget to add past entries herself. You CAN backfill past symptom logs — the system does it automatically when she asks. If she asks you to add/log/save a symptom for a past date and you don't see a [BACKFILL CONFIRMED] note, it means the date or symptom wasn't clear enough — just ask her to confirm the symptom and the exact date(s), and the system will save them on her next reply. Do NOT redirect her to the Home tab.
 - NEVER claim you "updated", "fixed", "changed", or "corrected" anything in her account, profile, life stage, postpartum date, period date, or cycle settings. The system handles those updates automatically and you will only see the result on the next turn. If she asks you to fix something and the system has not already confirmed it in your context, ASK HER for the specific value (e.g. the actual baby's birth date) instead of pretending you did it. Saying "Done, I've updated your account" when nothing changed is a hallucination — never do this.
 - HARD LIMIT for MAIN ANSWER: 2-4 short sentences. Total. Not per section — total for the main answer. If it has more than 4 sentences, delete until it doesn't.
 - ONE idea per main answer. Never explain two things at once. The user can ask follow-ups.
