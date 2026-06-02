@@ -63,10 +63,17 @@ export function SymptomHistory({
   const [loading, setLoading] = useState(true);
   const [topSymptoms, setTopSymptoms] = useState<{ name: string; count: number; avgSeverity: number }[]>([]);
   const [expandedSymptom, setExpandedSymptom] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editSymptoms, setEditSymptoms] = useState<SymptomEntry[]>([]);
+  const [editNotes, setEditNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     if (!open || !userId) return;
     setLoading(true);
+
 
     const since = subDays(new Date(), 90).toISOString();
 
