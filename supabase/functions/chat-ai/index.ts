@@ -1234,9 +1234,20 @@ serve(async (req) => {
       }
 
 
+      // Heuristic: skip user messages that are clearly *questions/lookups* about
+      // a symptom rather than reports of experiencing it. Otherwise a message like
+      // "Can you check symptom log for April for insomnia?" gets treated as a
+      // fresh insomnia log dated today.
+      const isLookupQuestion = (text: string) => {
+        const t = text.trim();
+        if (/\?\s*$/.test(t)) return true;
+        return /\b(check|look\s*(?:up|at|back)|did\s*i|do\s*i\s*have|was\s*there|were\s*there|show|see|find|anything|any\s+(?:logs?|entries?|record)|every\s*time|history|search)\b/i.test(t);
+      };
+
       const chatSymptomReports = ((recentMessages || []) as any[])
         .filter((m) => m.role === "user" && typeof m.content === "string")
         .map((m) => {
+          if (isLookupQuestion(m.content)) return null;
           const detected = detectSymptomMentions(m.content);
           if (detected.length === 0) return null;
           const t = new Date(m.created_at).getTime();
