@@ -928,6 +928,105 @@ serve(async (req) => {
     }
     // --- End symptom logging ---
 
+    // --- Backfill symptom logs for past dates (user asks Logan to add them) ---
+    // e.g. "log insomnia for April 15 and April 22", "add insomnia on Apr 15, Apr 22",
+    // "go ahead and add insomnia to April 15 and 22", "yes please add those".
+    let backfillConfirmation = "";
+    {
+      const backfillIntent = /\b(add|log|save|record|put|backfill|move|file|enter|insert|create)\b/i.test(userMessage)
+        || /\b(go ahead|yes please|please do|do it|please add|do that)\b/i.test(userMessage);
+
+      if (backfillIntent) {
+        // Pull symptoms from this message, or fall back to the recent chat thread
+        let symptoms = detectSymptomMentions(userMessage);
+        if (symptoms.length === 0) {
+          try {
+            const { data: recent } = await supabase
+              .from("chat_messages")
+              .select("content, role")
+              .eq("user_id", user.id)
+              .order("created_at", { ascending: false })
+              .limit(12);
+            for (const m of recent || []) {
+              const found = detectSymptomMentions(String(m.content || ""));
+              if (found.length) { symptoms = found; break; }
+            }
+          } catch (_) {}
+        }
+
+        // Extract explicit dates: "April 15", "Apr 15, 2025", "April 15 and 22", "4/15", "2025-04-15"
+        const dates: Date[] = [];
+        const today = new Date();
+        const monthMap: Record<string, number> = {
+          jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2, apr: 3, april: 3,
+          may: 4, jun: 5, june: 5, jul: 6, july: 6, aug: 7, august: 7,
+          sep: 8, sept: 8, september: 8, oct: 9, october: 9, nov: 10, november: 10, dec: 11, december: 11,
+        };
+        const monthDayRx = /\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(20\d{2}))?(?:\s*(?:,|and|&|\+)\s*(\d{1,2})(?:st|nd|rd|th)?)*/gi;
+        let mm: RegExpExecArray | null;
+        while ((mm = monthDayRx.exec(userMessage)) !== null) {
+          const month = monthMap[mm[1].toLowerCase()];
+          let year = mm[3] ? +mm[3] : today.getUTCFullYear();
+          if (!mm[3] && month > today.getUTCMonth()) year -= 1;
+          // primary day
+          const primaryDay = +mm[2];
+          dates.push(new Date(Date.UTC(year, month, primaryDay, 12)));
+          // Look for trailing "and 22, 25" style extras in the same match window
+          const tail = mm[0].slice(mm[0].toLowerCase().indexOf(mm[2]) + mm[2].length);
+          const extraRx = /(?:,|and|&|\+)\s*(\d{1,2})(?:st|nd|rd|th)?/gi;
+          let em: RegExpExecArray | null;
+          while ((em = extraRx.exec(tail)) !== null) {
+            const d = +em[1];
+            if (d >= 1 && d <= 31) dates.push(new Date(Date.UTC(year, month, d, 12)));
+          }
+        }
+        // ISO and numeric forms
+        const isoRx = /\b(20\d{2})-(\d{1,2})-(\d{1,2})\b/g;
+        let im: RegExpExecArray | null;
+        while ((im = isoRx.exec(userMessage)) !== null) {
+          dates.push(new Date(Date.UTC(+im[1], +im[2] - 1, +im[3], 12)));
+        }
+
+        // De-dupe and keep only past or today
+        const uniq = new Map<string, Date>();
+        for (const d of dates) {
+          if (isNaN(d.getTime())) continue;
+          if (d.getTime() > today.getTime() + 24 * 3600 * 1000) continue;
+          uniq.set(d.toISOString().slice(0, 10), d);
+        }
+
+        if (symptoms.length > 0 && uniq.size > 0) {
+          const rows = Array.from(uniq.values()).map(d => {
+            const liveCycle = participant?.last_period_start && participant?.cycle_length_days
+              ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC", d)
+              : null;
+            return {
+              user_id: user.id,
+              symptoms,
+              notes: `Backfilled from chat: ${userMessage.slice(0, 300)}`,
+              cycle_day: liveCycle?.cycleDay ?? null,
+              cycle_phase: liveCycle?.phase ?? null,
+              logged_at: d.toISOString(),
+            };
+          });
+          const { error: backfillErr } = await supabase.from("symptom_logs").insert(rows);
+          if (backfillErr) {
+            console.error("Backfill insert failed:", backfillErr);
+          } else {
+            const dateLabels = Array.from(uniq.values())
+              .sort((a, b) => a.getTime() - b.getTime())
+              .map(d => `${MONTH_NAMES[d.getUTCMonth()]} ${d.getUTCDate()}`)
+              .join(", ");
+            const symptomLabels = symptoms.map(s => s.name).join(", ");
+            backfillConfirmation = `[BACKFILL CONFIRMED] Just saved ${symptomLabels} to her symptom log for: ${dateLabels}. Confirm this naturally in your reply (e.g. "Done — added ${symptomLabels} for ${dateLabels}.") and DO NOT tell her to add it from the Home tab.`;
+            console.log("Backfilled symptom logs:", dateLabels, "->", symptomLabels);
+          }
+        }
+      }
+    }
+    // --- End backfill ---
+
+
     // --- Manual life-stage corrections (menopause / cycling) ---
     if (participant) {
       const lower = userMessage.toLowerCase();
