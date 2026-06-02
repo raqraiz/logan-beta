@@ -264,35 +264,114 @@ export function SymptomHistory({
                     <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">
                       {format(new Date(day + "T12:00:00"), "EEE, MMM d")}
                     </p>
-                    {grouped[day].map(log => (
-                      <div key={log.id} className="ml-2 mb-2 border-l-2 border-border/30 pl-3">
-                        <p className="text-[10px] text-muted-foreground mb-1">
-                          {format(new Date(log.logged_at), "h:mm a")}
-                          {log.cycle_phase && (
-                            <span className="ml-1.5 text-primary/60">· {log.cycle_phase}</span>
+                    {grouped[day].map(log => {
+                      const isEditing = editingId === log.id;
+                      return (
+                        <div key={log.id} className="ml-2 mb-2 border-l-2 border-border/30 pl-3 group">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-[10px] text-muted-foreground mb-1">
+                              {format(new Date(log.logged_at), "h:mm a")}
+                              {log.cycle_phase && (
+                                <span className="ml-1.5 text-primary/60">· {log.cycle_phase}</span>
+                              )}
+                              {log.cycle_day && (
+                                <span className="text-muted-foreground/50"> Day {log.cycle_day}</span>
+                              )}
+                            </p>
+                            {!isEditing && (
+                              <div className="flex items-center gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  type="button"
+                                  onClick={() => startEdit(log)}
+                                  className="p-1 rounded hover:bg-muted/60 text-muted-foreground hover:text-foreground"
+                                  aria-label="Edit log"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={deletingId === log.id}
+                                  onClick={() => {
+                                    if (confirm("Delete this symptom log?")) deleteLog(log.id);
+                                  }}
+                                  className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive disabled:opacity-50"
+                                  aria-label="Delete log"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          {isEditing ? (
+                            <div className="space-y-2 mt-1 p-2 rounded-lg bg-muted/30 border border-border/30">
+                              {editSymptoms.map((s, idx) => (
+                                <div key={s.name} className="space-y-1">
+                                  <div className="flex items-center justify-between text-[11px]">
+                                    <span className="font-medium text-foreground/80 flex items-center gap-1.5">
+                                      <span className={`w-1.5 h-1.5 rounded-full ${SEVERITY_COLORS[s.severity]}`} />
+                                      {s.name}
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                      {SEVERITY_LABELS[s.severity]}
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    value={[s.severity]}
+                                    min={0}
+                                    max={5}
+                                    step={1}
+                                    onValueChange={(v) => {
+                                      const next = [...editSymptoms];
+                                      next[idx] = { ...next[idx], severity: v[0] };
+                                      setEditSymptoms(next);
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                              <p className="text-[10px] text-muted-foreground/70">
+                                Set severity to None to remove a symptom.
+                              </p>
+                              <Textarea
+                                value={editNotes}
+                                onChange={(e) => setEditNotes(e.target.value)}
+                                placeholder="Notes (optional)"
+                                rows={2}
+                                className="text-xs"
+                              />
+                              <div className="flex items-center justify-end gap-2 pt-1">
+                                <Button size="sm" variant="ghost" onClick={cancelEdit} disabled={saving}>
+                                  <X className="w-3 h-3" /> Cancel
+                                </Button>
+                                <Button size="sm" onClick={() => saveEdit(log.id)} disabled={saving}>
+                                  <Check className="w-3 h-3" /> {saving ? "Saving…" : "Save"}
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex flex-wrap gap-1">
+                                {log.symptoms.map(s => (
+                                  <span
+                                    key={s.name}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full bg-muted/60 text-foreground/70"
+                                  >
+                                    <span className={`w-1.5 h-1.5 rounded-full ${SEVERITY_COLORS[s.severity]}`} />
+                                    {s.name}
+                                  </span>
+                                ))}
+                              </div>
+                              {log.notes && (
+                                <p className="text-[11px] text-muted-foreground/70 mt-1 italic">
+                                  {log.notes}
+                                </p>
+                              )}
+                            </>
                           )}
-                          {log.cycle_day && (
-                            <span className="text-muted-foreground/50"> Day {log.cycle_day}</span>
-                          )}
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {log.symptoms.map(s => (
-                            <span
-                              key={s.name}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full bg-muted/60 text-foreground/70"
-                            >
-                              <span className={`w-1.5 h-1.5 rounded-full ${SEVERITY_COLORS[s.severity]}`} />
-                              {s.name}
-                            </span>
-                          ))}
                         </div>
-                        {log.notes && (
-                          <p className="text-[11px] text-muted-foreground/70 mt-1 italic">
-                            {log.notes}
-                          </p>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
+
                   </div>
                 ))}
               </div>
