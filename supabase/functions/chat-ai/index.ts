@@ -996,19 +996,15 @@ serve(async (req) => {
         }
 
         if (symptoms.length > 0 && uniq.size > 0) {
-          const rows = Array.from(uniq.values()).map(d => {
-            const liveCycle = participant?.last_period_start && participant?.cycle_length_days
-              ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC", d)
-              : null;
-            return {
-              user_id: user.id,
-              symptoms,
-              notes: `Backfilled from chat: ${userMessage.slice(0, 300)}`,
-              cycle_day: liveCycle?.cycleDay ?? null,
-              cycle_phase: liveCycle?.phase ?? null,
-              logged_at: d.toISOString(),
-            };
-          });
+          const rows = Array.from(uniq.values()).map(d => ({
+            user_id: user.id,
+            symptoms,
+            notes: `Backfilled from chat: ${userMessage.slice(0, 300)}`,
+            cycle_day: null,
+            cycle_phase: null,
+            logged_at: d.toISOString(),
+          }));
+
           const { error: backfillErr } = await supabase.from("symptom_logs").insert(rows);
           if (backfillErr) {
             console.error("Backfill insert failed:", backfillErr);
