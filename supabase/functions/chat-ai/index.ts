@@ -1204,6 +1204,8 @@ serve(async (req) => {
     // specific month or historical patterns, fetch ALL logs (no cap) so we can
     // answer date/history questions accurately.
     let symptomContext = "";
+    let directSymptomLookupResponse: string | null = null;
+    let directSymptomLookupStarters: string[] = [];
     {
       const now = new Date();
       const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -1267,6 +1269,58 @@ serve(async (req) => {
       const symptomLogs = Array.from(byTime.values()).sort(
         (a, b) => new Date(b.logged_at).getTime() - new Date(a.logged_at).getTime()
       );
+
+      const requestedSymptoms = detectSymptomMentions(userMessage);
+      if (isHistoricalLookup && requestedSymptoms.length > 0) {
+        const requestedNames = Array.from(new Set(requestedSymptoms.map((s) => s.name.toLowerCase())));
+        const scopedLogs = referencedMonths.length > 0
+          ? symptomLogs.filter((l: any) => {
+              const t = new Date(l.logged_at).getTime();
+              return referencedMonths.some(({ start, end }) => t >= start.getTime() && t < end.getTime());
+            })
+          : symptomLogs;
+        const matchingLogs = scopedLogs.filter((l: any) =>
+          ((l.symptoms || []) as any[]).some((s: any) => requestedNames.includes(String(s.name || "").toLowerCase()))
+        );
+
+        const symptomLabel = requestedNames.join(" or ");
+        const scopeLabel = referencedMonths.length > 0
+          ? referencedMonths.map(({ label }) => label).join(" and ")
+          : "your history";
+        const shortNote = (note: string) => note.length > 90 ? `${note.slice(0, 87).trimEnd()}…` : note;
+        const friendlyDate = (input: string) => new Date(input).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          timeZone: "UTC",
+        });
+
+        if (matchingLogs.length > 0) {
+          const matchSummary = matchingLogs.slice(0, 5).map((l: any) => {
+            const matched = ((l.symptoms || []) as any[])
+              .filter((s: any) => requestedNames.includes(String(s.name || "").toLowerCase()))
+              .map((s: any) => `${s.name} ${s.severity}/5`)
+              .join(", ");
+            const source = l.source === "chat_report" ? "from chat" : "in the symptom log";
+            const note = l.notes ? ` — “${shortNote(String(l.notes).trim())}”` : "";
+            return `${friendlyDate(l.logged_at)} ${source}: ${matched}${note}`;
+          }).join("; ");
+          const missingMonths = referencedMonths
+            .filter(({ start, end }) => !matchingLogs.some((l: any) => {
+              const t = new Date(l.logged_at).getTime();
+              return t >= start.getTime() && t < end.getTime();
+            }))
+            .map(({ label }) => label);
+          const missingSentence = missingMonths.length > 0
+            ? ` I don't see **${symptomLabel}** in ${missingMonths.join(" or ")}, but it is definitely in the record for the other month.`
+            : " That's definitely in the record.";
+          directSymptomLookupResponse = `Yes — I found **${symptomLabel}** in ${scopeLabel}: ${matchSummary}.${missingSentence}`;
+        } else {
+          directSymptomLookupResponse = `I checked ${scopeLabel}, and I don't see **${symptomLabel}** in the stored symptom logs or symptom-bearing chat reports for that window. If you remember logging it another way, the next thing to check is whether it was saved under a different sleep-related label.`;
+        }
+        directSymptomLookupStarters = matchingLogs.length > 0
+          ? ["That's the one", "Check fatigue too", "Show the pattern"]
+          : ["Check sleep labels", "Look at fatigue", "That's weird"];
+      }
 
       if (symptomLogs && symptomLogs.length > 0) {
         // Compute frequency and average severity
@@ -1477,6 +1531,40 @@ serve(async (req) => {
     const cycleInfo = isCycling && participant?.last_period_start && participant?.cycle_length_days
       ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
       : null;
+
+    if (directSymptomLookupResponse) {
+      const directMeta: Record<string, unknown> = cycleInfo ? {
+        cycle_day: cycleInfo.cycleDay,
+        cycle_phase: cycleInfo.phase,
+        cycle_length_days: participant?.cycle_length_days || 28,
+        last_period_start: participant?.last_period_start || null,
+        timezone: participant?.timezone || "UTC",
+      } : {};
+      if (directSymptomLookupStarters.length > 0) {
+        directMeta.conversation_starters = directSymptomLookupStarters;
+      }
+
+      const { error: directInsertError } = await supabase.from("chat_messages").insert({
+        user_id: user.id,
+        role: "assistant",
+        content: directSymptomLookupResponse,
+        message_type: "text",
+        metadata: directMeta,
+      });
+      if (directInsertError) {
+        console.error("Error saving direct symptom lookup response:", directInsertError);
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: directSymptomLookupResponse,
+          cycleInfo,
+          creditBalance: null,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext);
 
