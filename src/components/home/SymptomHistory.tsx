@@ -7,15 +7,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
 import { format, subDays } from "date-fns";
 import { AllSymptomsChart } from "./AllSymptomsChart";
 import { SymptomHormoneChart } from "./SymptomHormoneChart";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Pencil, Trash2, X, Check } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface SymptomEntry {
   name: string;
   severity: number;
 }
+
 
 interface SymptomLog {
   id: string;
