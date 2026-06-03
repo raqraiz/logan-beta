@@ -19,9 +19,10 @@ interface VoiceInputButtonProps {
 export const VoiceInputButton = ({ onTranscript, disabled, className }: VoiceInputButtonProps) => {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const deliveredRef = useRef(false);
+  const finalTranscriptRef = useRef("");
 
   const toggleListening = useCallback(() => {
-    // iOS does not support Web Speech API in any browser
     if (isIOS()) {
       toast({
         title: "Voice input not available on iPhone",
@@ -53,18 +54,27 @@ export const VoiceInputButton = ({ onTranscript, disabled, className }: VoiceInp
     recognition.interimResults = false;
     recognition.lang = "en-US";
     recognitionRef.current = recognition;
+    deliveredRef.current = false;
+    finalTranscriptRef.current = "";
 
     recognition.onstart = () => {
-      console.log("Speech recognition started");
       setIsListening(true);
     };
 
     recognition.onresult = (event: any) => {
-      console.log("Speech recognition result:", event.results);
-      const transcript = event.results[0][0].transcript;
-      console.log("Transcript:", transcript, "Confidence:", event.results[0][0].confidence);
-      if (transcript.trim()) {
-        onTranscript(transcript.trim());
+      // Some mobile browsers (notably Android Chrome) fire onresult multiple
+      // times with cumulative transcripts even when interimResults=false.
+      // Collect only final results and keep the longest snapshot — we deliver
+      // once in onend to avoid duplicated/stuttered appends.
+      let finalText = "";
+      for (let i = 0; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalText += (finalText ? " " : "") + result[0].transcript;
+        }
+      }
+      if (finalText.length > finalTranscriptRef.current.length) {
+        finalTranscriptRef.current = finalText;
       }
     };
 
@@ -86,8 +96,12 @@ export const VoiceInputButton = ({ onTranscript, disabled, className }: VoiceInp
     };
 
     recognition.onend = () => {
-      console.log("Speech recognition ended");
       setIsListening(false);
+      const text = finalTranscriptRef.current.trim();
+      if (text && !deliveredRef.current) {
+        deliveredRef.current = true;
+        onTranscript(text);
+      }
     };
 
     recognition.start();
