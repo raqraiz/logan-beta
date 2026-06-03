@@ -1711,6 +1711,11 @@ serve(async (req) => {
       systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user just asked you to build a meal plan. A "Build my meal plan" card will appear DIRECTLY BELOW your reply — they tap it to open the Menu Builder. Your reply MUST be ONE short sentence: a phase-aware framing that hands off to the card. Do NOT say "I'm building", "I'll drop", "starting on it", "give me a sec", or anything implying you are working on it. Do NOT ask follow-up questions. ${handoffExample} Then stop.`;
     }
 
+    if (isAboutSomeoneElse) {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user is asking about ANOTHER person (a friend, family member, partner, etc.), NOT themselves. Do NOT reference the user's own symptom logs, cycle data, or chat history as if it answered the question. Do NOT pull up dates from their personal record. Answer the question generally based on what could be happening for that other person at that life stage, and if helpful, ask one clarifying question about the friend (age, cycle status, recent stressors). Never project the user's history onto someone else.`;
+    }
+
+
     // Smart truncation: keep first 10 (onboarding/profile context) + last 50 (recent conversation)
     const allMessages = (recentMessages || [])
       .filter(m => m.role === "user" || m.role === "assistant")
