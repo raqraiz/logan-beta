@@ -1399,8 +1399,9 @@ serve(async (req) => {
       );
 
       const requestedSymptoms = detectSymptomMentions(userMessage);
-      if (isHistoricalLookup && requestedSymptoms.length > 0) {
+      if (isHistoricalLookup && requestedSymptoms.length > 0 && !isAboutSomeoneElse) {
         const requestedNames = Array.from(new Set(requestedSymptoms.map((s) => s.name.toLowerCase())));
+
         const scopedLogs = referencedMonths.length > 0
           ? symptomLogs.filter((l: any) => {
               const t = new Date(l.logged_at).getTime();
