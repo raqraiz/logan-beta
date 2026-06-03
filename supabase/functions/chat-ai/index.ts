@@ -893,6 +893,14 @@ serve(async (req) => {
     }
     // --- End meal plan intent ---
 
+    // --- Third-person detection ---
+    // When the user is asking about someone else (friend, mom, sister, partner, etc.)
+    // we must NOT log symptoms to their own record and must NOT surface their personal
+    // symptom history as if it answered the question.
+    const isAboutSomeoneElse =
+      /\b(my\s+(friend|mom|mother|sister|daughter|wife|partner|girlfriend|gf|coworker|colleague|aunt|cousin|niece|roommate|boss|client|patient)|a\s+friend|someone\s+i\s+know|she\s+(is|was|has|had|feels|felt|wants|needs|asked|says|said)|her\s+(cycle|period|symptoms|insomnia|sleep|mood))\b/i.test(userMessage)
+      && !/\b(i\s*(?:'?m|am|feel|have|had|got))\b/i.test(userMessage);
+
     // --- Symptom logging from chat ---
     // Detect symptoms mentioned in the user's message and persist to symptom_logs
     // so they sync with the Home tab's symptom widget / history.
@@ -903,7 +911,8 @@ serve(async (req) => {
       const isHistoricalLookupQuestion = /\b(check|look\s*(?:up|at|back)|anything|any|did i|do i have|was there|were there|show|see|find)\b/i.test(userMessage)
         && /\b(history|historical|log|logs|logged|march|april|may|june|july|august|september|october|november|december|january|february|last\s+(?:month|cycle|time)|same\s+time)\b/i.test(userMessage);
 
-      if (reportingIntent && !isHistoricalLookupQuestion) {
+      if (reportingIntent && !isHistoricalLookupQuestion && !isAboutSomeoneElse) {
+
         const detected = detectSymptomMentions(userMessage);
 
         if (detected.length > 0) {
