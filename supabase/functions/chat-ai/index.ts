@@ -893,6 +893,14 @@ serve(async (req) => {
     }
     // --- End meal plan intent ---
 
+    // --- Third-person detection ---
+    // When the user is asking about someone else (friend, mom, sister, partner, etc.)
+    // we must NOT log symptoms to their own record and must NOT surface their personal
+    // symptom history as if it answered the question.
+    const isAboutSomeoneElse =
+      /\b(my\s+(friend|mom|mother|sister|daughter|wife|partner|girlfriend|gf|coworker|colleague|aunt|cousin|niece|roommate|boss|client|patient)|a\s+friend|someone\s+i\s+know|she\s+(is|was|has|had|feels|felt|wants|needs|asked|says|said)|her\s+(cycle|period|symptoms|insomnia|sleep|mood))\b/i.test(userMessage)
+      && !/\b(i\s*(?:'?m|am|feel|have|had|got))\b/i.test(userMessage);
+
     // --- Symptom logging from chat ---
     // Detect symptoms mentioned in the user's message and persist to symptom_logs
     // so they sync with the Home tab's symptom widget / history.
@@ -903,7 +911,8 @@ serve(async (req) => {
       const isHistoricalLookupQuestion = /\b(check|look\s*(?:up|at|back)|anything|any|did i|do i have|was there|were there|show|see|find)\b/i.test(userMessage)
         && /\b(history|historical|log|logs|logged|march|april|may|june|july|august|september|october|november|december|january|february|last\s+(?:month|cycle|time)|same\s+time)\b/i.test(userMessage);
 
-      if (reportingIntent && !isHistoricalLookupQuestion) {
+      if (reportingIntent && !isHistoricalLookupQuestion && !isAboutSomeoneElse) {
+
         const detected = detectSymptomMentions(userMessage);
 
         if (detected.length > 0) {
@@ -1390,8 +1399,9 @@ serve(async (req) => {
       );
 
       const requestedSymptoms = detectSymptomMentions(userMessage);
-      if (isHistoricalLookup && requestedSymptoms.length > 0) {
+      if (isHistoricalLookup && requestedSymptoms.length > 0 && !isAboutSomeoneElse) {
         const requestedNames = Array.from(new Set(requestedSymptoms.map((s) => s.name.toLowerCase())));
+
         const scopedLogs = referencedMonths.length > 0
           ? symptomLogs.filter((l: any) => {
               const t = new Date(l.logged_at).getTime();
@@ -1700,6 +1710,11 @@ serve(async (req) => {
           : `Example: "${participant?.life_stage === "menopause" ? "Menopause" : "This"} week — meals built around stable energy and hormonal balance." Do NOT mention cycle phases.`;
       systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user just asked you to build a meal plan. A "Build my meal plan" card will appear DIRECTLY BELOW your reply — they tap it to open the Menu Builder. Your reply MUST be ONE short sentence: a phase-aware framing that hands off to the card. Do NOT say "I'm building", "I'll drop", "starting on it", "give me a sec", or anything implying you are working on it. Do NOT ask follow-up questions. ${handoffExample} Then stop.`;
     }
+
+    if (isAboutSomeoneElse) {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user is asking about ANOTHER person (a friend, family member, partner, etc.), NOT themselves. Do NOT reference the user's own symptom logs, cycle data, or chat history as if it answered the question. Do NOT pull up dates from their personal record. Answer the question generally based on what could be happening for that other person at that life stage, and if helpful, ask one clarifying question about the friend (age, cycle status, recent stressors). Never project the user's history onto someone else.`;
+    }
+
 
     // Smart truncation: keep first 10 (onboarding/profile context) + last 50 (recent conversation)
     const allMessages = (recentMessages || [])
