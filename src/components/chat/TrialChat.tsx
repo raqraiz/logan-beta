@@ -257,7 +257,7 @@ export const TrialChat = () => {
                 </h1>
                 <p className="text-base sm:text-lg text-muted-foreground mt-4 leading-relaxed max-w-xl">
                   Logan predicts what's coming — your energy, mood, and PMS — and tells you what to <em>do</em> about it.
-                  Built for irregular cycles, postpartum, the pill, perimenopause. Whatever's true for you.
+                  Built for irregular cycles, postpartum, the pill, perimenopause, and menopause. Whatever's true for you.
                 </p>
 
                 {/* Primary actions */}
