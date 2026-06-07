@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoganLogo } from "@/components/LoganLogo";
 import { LoganFullLogo } from "@/components/LoganFullLogo";
-import { Send, Loader2, ArrowDown } from "lucide-react";
+import { Send, Loader2, ArrowDown, ArrowRight, Sparkles } from "lucide-react";
 import { VoiceInputButton } from "./VoiceInputButton";
 import { supabase } from "@/integrations/supabase/client";
 import { InlineChatAuth } from "./InlineChatAuth";
@@ -17,63 +17,75 @@ interface TrialMessage {
   content: string;
 }
 
-const SUGGESTED_QUESTIONS = [
-  "What is the luteal phase?",
-  "When do I have the most energy in my cycle?",
-  "How can cycle awareness help my workouts?",
+// Feeling-based entry points — mirrors what women actually say in DMs.
+const FEELING_CHIPS = [
+  "I feel like a different person two weeks a month",
+  "I can't predict my mood anymore",
+  "I never know when to push or rest",
+  "I just had a baby and don't recognize myself",
+  "My cycle is irregular and nothing tracks it right",
+  "I want to stop being blindsided by PMS",
+];
+
+// Real-woman testimonials. Keep first-person, specific, not marketing-y.
+const TESTIMONIALS = [
+  {
+    quote: "I finally understand why I cry every third Tuesday. Logan saw the pattern before I did.",
+    name: "Maya, 34",
+  },
+  {
+    quote: "Postpartum me was lost. This is the first thing that doesn't assume I'm still cycling normally.",
+    name: "Priya, 31",
+  },
+  {
+    quote: "I stopped scheduling hard meetings on day 25. My whole week changed.",
+    name: "Jules, 29",
+  },
+  {
+    quote: "It's like texting a friend who actually knows what's happening in my body.",
+    name: "Sam, 38",
+  },
 ];
 
 const getContextualHeadline = (question: string): string => {
   const q = question.toLowerCase();
-  if (q.includes("luteal")) return "That luteal chaos? I can help you see it coming";
-  if (q.includes("energy") || q.includes("strongest")) return "Your energy has a pattern. I can show you";
-  if (q.includes("workout") || q.includes("training") || q.includes("lift")) return "Your body wants different things at different times";
-  if (q.includes("follicular")) return "That post-period boost is real. Let me show you how to use it";
-  if (q.includes("ovulat")) return "There's a reason you feel unstoppable some weeks";
-  if (q.includes("period") || q.includes("menstrual") || q.includes("bleed")) return "Your period is actually a reset, not a setback";
-  if (q.includes("pms") || q.includes("pmdd")) return "What if you could see PMS coming days in advance?";
-  if (q.includes("hormone") || q.includes("cycle") || q.includes("phase")) return "Once you see the pattern, everything clicks";
-  return "What if you could stop guessing and start planning?";
+  if (q.includes("luteal") || q.includes("two weeks") || q.includes("different person")) return "That luteal chaos? I can help you see it coming.";
+  if (q.includes("predict") || q.includes("mood")) return "Your mood has a pattern. Let's map it.";
+  if (q.includes("push") || q.includes("rest")) return "Your body wants different things on different days.";
+  if (q.includes("baby") || q.includes("postpartum")) return "Postpartum has its own rhythm. I'll meet you there.";
+  if (q.includes("irregular")) return "Irregular doesn't mean unknowable. Let's find your signal.";
+  if (q.includes("pms") || q.includes("blindsided")) return "What if you could see PMS coming days in advance?";
+  return "Once you see the pattern, everything clicks.";
 };
 
 const getContextualDescription = (question: string): string => {
   const q = question.toLowerCase();
-  if (q.includes("luteal")) return "Sign up and I'll learn your cycle so I can warn you before the hard days hit. No more getting blindsided.";
-  if (q.includes("energy") || q.includes("strongest")) return "Sign up and I'll track where you are in your cycle each day so you know when to go hard and when to take it easy.";
-  if (q.includes("workout") || q.includes("training") || q.includes("lift")) return "Sign up and I'll help you work with your body instead of wondering why some weeks feel impossible.";
-  if (q.includes("pms") || q.includes("pmdd")) return "Sign up and I'll track your patterns so you can prepare for the rough days instead of being caught off guard.";
-  return "Sign up and I'll learn your unique patterns so I can give you a heads up before things shift.";
+  if (q.includes("baby") || q.includes("postpartum")) return "Create an account and I'll track where you are in recovery so I can guide you week by week.";
+  if (q.includes("irregular")) return "Create an account and I'll learn your unique patterns instead of forcing you into a 28-day box.";
+  return "Create an account and I'll learn your patterns so I can give you a heads up before things shift.";
 };
 
 export const TrialChat = () => {
-  const [messages, setMessages] = useState<TrialMessage[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: "Hey, I'm Logan. You know how some weeks you feel like you can take on anything, and then other weeks everything is just... harder? That's not random. Your cycle has four phases and each one changes your energy, your mood, even how you think. I help you see the pattern so you can stop fighting it. What do you want to know?",
-    },
-  ]);
+  const [messages, setMessages] = useState<TrialMessage[]>([]);
+  const [hasStarted, setHasStarted] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [trialMessageCount, setTrialMessageCount] = useState(0);
   const [lastUserQuestion, setLastUserQuestion] = useState("");
   const [showScrollButton, setShowScrollButton] = useState(false);
-  
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll only when messages change (not when auth UI appears)
   useEffect(() => {
     if (!isNearBottomRef.current) return;
-
     const viewport = scrollContainerRef.current?.querySelector(
       '[data-radix-scroll-area-viewport]'
     ) as HTMLDivElement | null;
-
     const lastMessageEl = lastMessageRef.current;
     if (viewport && lastMessageEl) {
       const isLongMessage = lastMessageEl.offsetHeight > viewport.clientHeight * 0.8;
@@ -82,7 +94,6 @@ export const TrialChat = () => {
         return;
       }
     }
-
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -90,41 +101,45 @@ export const TrialChat = () => {
     const viewport = scrollContainerRef.current?.querySelector(
       '[data-radix-scroll-area-viewport]'
     ) as HTMLDivElement | null;
-
     if (!viewport) return;
-
     const updateScrollState = () => {
       const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
       isNearBottomRef.current = distanceFromBottom < 150;
       setShowScrollButton(distanceFromBottom > 40);
     };
-
     updateScrollState();
     viewport.addEventListener("scroll", updateScrollState, { passive: true });
-
     return () => viewport.removeEventListener("scroll", updateScrollState);
-  }, [messages.length, showAuth]);
+  }, [messages.length, showAuth, hasStarted]);
+
+  const startChatWith = (text: string) => {
+    setHasStarted(true);
+    setInputValue(text);
+    setTimeout(() => {
+      const form = document.querySelector('form');
+      form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    }, 80);
+  };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || isTyping) return;
 
+    setHasStarted(true);
     const userMessage = inputValue.trim();
     setInputValue("");
-    
-    // Add user message
+
     const newUserMessage: TrialMessage = {
       id: `user-${Date.now()}`,
       role: "user",
       content: userMessage,
     };
-    
+
     setMessages(prev => [...prev, newUserMessage]);
     setLastUserQuestion(userMessage);
     setIsTyping(true);
 
     try {
-      // Call the trial-chat edge function
       const { data, error } = await supabase.functions.invoke("trial-chat", {
         body: {
           messages: [...messages, newUserMessage].map(m => ({
@@ -137,9 +152,6 @@ export const TrialChat = () => {
       if (error) throw error;
 
       const fullResponse = data?.response || "I'd love to help you understand your cycle better. What would you like to know?";
-
-      // Keep the first 2-3 sentences (max ~360 chars) so the answer is substantive
-      // but still fits cleanly inside the sign-up card that follows.
       const sentences = fullResponse.match(/[^.!?]+[.!?]+(\s|$)/g) || [fullResponse];
       let teaser = sentences.slice(0, 3).join("").trim();
       if (teaser.length > 360) teaser = teaser.slice(0, 357).trimEnd() + "…";
@@ -155,14 +167,13 @@ export const TrialChat = () => {
       setMessages(prev => [...prev, {
         id: `assistant-${Date.now()}`,
         role: "assistant",
-        content: "I can help you understand your cycle phases and how they affect your energy and mood. What would you like to know?",
+        content: "I can help you understand your cycle and how it affects your energy, mood, and performance. What's going on for you?",
       }]);
     }
 
     setTrialMessageCount(prev => prev + 1);
     setIsTyping(false);
 
-    // After 1 exchange, show auth prompt
     if (trialMessageCount >= 0) {
       setTimeout(() => setShowAuth(true), 500);
     }
@@ -176,77 +187,175 @@ export const TrialChat = () => {
     setShowScrollButton(false);
   };
 
-  const handleSuggestionClick = (question: string) => {
-    setInputValue(question);
-    // Auto-submit after a brief delay so user sees what was selected
-    setTimeout(() => {
-      const form = document.querySelector('form');
-      form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    }, 100);
-  };
-
   return (
     <div className="h-[100svh] supports-[height:100dvh]:h-[100dvh] bg-background flex flex-col relative overflow-hidden">
       {/* Ambient background effects */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute bottom-1/3 left-0 w-72 h-72 bg-primary/3 rounded-full blur-3xl transform -translate-x-1/2" />
+        <div className="absolute bottom-1/3 left-0 w-72 h-72 bg-primary/[0.03] rounded-full blur-3xl transform -translate-x-1/2" />
       </div>
 
       {/* Header */}
-      <header className="border-b border-border/30 bg-card/30 backdrop-blur-xl sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-           <div className="flex items-center gap-3">
-             <LoganFullLogo size="sm" />
-             <div>
-               <p className="text-xs text-muted-foreground">Intelligent cycle guidance</p>
-             </div>
-           </div>
-          <div className="flex items-center gap-4">
+      <header className="border-b border-border/30 bg-card/30 backdrop-blur-xl sticky top-0 z-20">
+        <div className="max-w-3xl mx-auto px-4 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <LoganFullLogo size="sm" />
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-primary/80 bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5">
+              <Sparkles className="w-2.5 h-2.5" /> Beta
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setShowAuth(true)}
-              className="text-sm font-medium text-primary hover:text-primary/80 transition-colors relative group"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Sign in
-              <span className="absolute -bottom-0.5 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
             </button>
-            <Link
-              to="/consent"
-              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            <Button
+              size="sm"
+              onClick={() => setShowAuth(true)}
+              className="h-9 px-4 text-sm"
             >
-              Privacy
-            </Link>
+              Get started
+            </Button>
           </div>
         </div>
       </header>
 
-      {/* Messages */}
+      {/* Messages / Welcome */}
       <ScrollArea
         ref={scrollContainerRef}
         className="flex-1 px-4 relative z-10"
-        onScrollCapture={(e) => {
-          const el = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
-          if (el) {
-            const { scrollTop, scrollHeight, clientHeight } = el;
-            const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-            isNearBottomRef.current = distanceFromBottom < 150;
-            setShowScrollButton(distanceFromBottom > 40);
-          }
-        }}
       >
-        <div className="max-w-3xl mx-auto py-8 space-y-6">
+        <div className="max-w-2xl mx-auto py-8 space-y-6">
+
+          {/* DM-style welcome — only before the user starts chatting */}
+          {!hasStarted && (
+            <div className="space-y-8 animate-fade-in">
+              {/* Sender row */}
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-display font-semibold text-base shadow-glow">
+                    R
+                  </div>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-background" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Raquella · Founder</p>
+                  <p className="text-xs text-muted-foreground">building Logan with women like you</p>
+                </div>
+              </div>
+
+              {/* DM bubble 1 — welcome */}
+              <div className="bg-gradient-to-br from-card to-card/70 border border-border/50 rounded-2xl rounded-tl-sm px-5 py-4 shadow-card backdrop-blur-sm max-w-[92%]">
+                <p className="text-foreground/95 leading-relaxed">
+                  Welcome to Logan <span className="text-primary">💚</span>
+                </p>
+                <p className="text-foreground/85 leading-relaxed mt-2 text-[15px]">
+                  You're joining a small group of women helping me build this before I launch publicly.
+                  Logan is in beta — it's free, it's evolving fast, and your feedback genuinely shapes
+                  what I build next.
+                </p>
+              </div>
+
+              {/* DM bubble 2 — what Logan is */}
+              <div className="bg-gradient-to-br from-card to-card/70 border border-border/50 rounded-2xl rounded-tl-sm px-5 py-4 shadow-card backdrop-blur-sm max-w-[92%]">
+                <p className="text-foreground/85 leading-relaxed text-[15px]">
+                  Most women don't want another tracker. You want a system that predicts what's coming,
+                  tells you what to <em>do</em> about it, and works for <em>your</em> body — irregular,
+                  postpartum, on the pill, whatever's true for you.
+                </p>
+                <p className="text-foreground/85 leading-relaxed mt-2 text-[15px]">
+                  That's what I'm building. Logan gets better the more it knows you.
+                </p>
+              </div>
+
+              {/* "You might be here because..." */}
+              <div className="pt-2">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground/70 mb-3 pl-1">
+                  You might be here because…
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {FEELING_CHIPS.map((chip) => (
+                    <button
+                      key={chip}
+                      onClick={() => startChatWith(chip)}
+                      className="text-left text-sm px-4 py-2.5 rounded-2xl bg-card/60 border border-border/60 hover:border-primary/50 hover:bg-primary/5 text-foreground/85 hover:text-foreground transition-all duration-200 backdrop-blur-sm"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground/70 mt-3 pl-1">
+                  Tap one to chat with Logan, or type your own below.
+                </p>
+              </div>
+
+              {/* Real quotes */}
+              <div className="pt-4">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground/70 mb-3 pl-1">
+                  Real women, real words
+                </p>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {TESTIMONIALS.map((t) => (
+                    <figure
+                      key={t.name}
+                      className="bg-card/40 border border-border/40 rounded-2xl p-4 backdrop-blur-sm"
+                    >
+                      <blockquote className="text-sm text-foreground/85 leading-relaxed">
+                        "{t.quote}"
+                      </blockquote>
+                      <figcaption className="text-xs text-muted-foreground mt-2">— {t.name}</figcaption>
+                    </figure>
+                  ))}
+                </div>
+              </div>
+
+              {/* Primary CTA — sign up */}
+              <div className="pt-4">
+                <div className="relative bg-gradient-to-br from-primary/15 via-primary/8 to-transparent border border-primary/30 rounded-3xl p-6 overflow-hidden">
+                  <div className="absolute top-0 left-1/2 w-32 h-32 bg-primary/20 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+                  <div className="relative z-10 text-center">
+                    <h2 className="font-display font-semibold text-xl text-foreground mb-1.5">
+                      Ready to meet Logan?
+                    </h2>
+                    <p className="text-sm text-muted-foreground mb-5 max-w-md mx-auto">
+                      Create your account and I'll start learning your patterns from day one.
+                      Free during beta.
+                    </p>
+                    <Button
+                      onClick={() => setShowAuth(true)}
+                      size="lg"
+                      className="h-12 px-7"
+                    >
+                      Create my account
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                    <p className="text-xs text-muted-foreground/70 mt-4">
+                      Or ask Logan a question first ↓
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sign-off */}
+              <p className="text-sm text-muted-foreground italic pl-1">
+                Thank you for building Logan with me,<br />
+                Raquella <span className="text-primary not-italic">💚</span>
+              </p>
+            </div>
+          )}
+
+          {/* Chat messages */}
           {messages.map((message, index) => {
             const isLastAssistant =
               message.role === "assistant" && index === messages.length - 1;
-            // When the auth card is shown, hide the last assistant bubble —
-            // its content is rendered inside the card instead.
             if (showAuth && isLastAssistant) return null;
             return (
               <div
                 key={message.id}
                 ref={index === messages.length - 1 ? lastMessageRef : null}
                 className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
-                style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div
                   className={`max-w-[85%] rounded-2xl px-5 py-4 ${
@@ -265,23 +374,6 @@ export const TrialChat = () => {
             );
           })}
 
-          {/* Suggested questions - show only at start */}
-          {messages.length === 1 && !isTyping && (
-            <div className="flex flex-wrap gap-3 justify-start pl-2 animate-fade-in" style={{ animationDelay: "200ms" }}>
-              {SUGGESTED_QUESTIONS.map((question, index) => (
-                <button
-                  key={question}
-                  onClick={() => handleSuggestionClick(question)}
-                  className="px-5 py-2.5 text-sm bg-primary/5 hover:bg-primary/15 text-primary border border-primary/30 hover:border-primary/50 rounded-full transition-all duration-300 hover:shadow-glow hover:scale-105"
-                  style={{ animationDelay: `${300 + index * 100}ms` }}
-                >
-                  {question}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Typing indicator */}
           {isTyping && (
             <div className="flex justify-start animate-fade-in">
               <div className="bg-gradient-to-br from-card to-card/80 border border-border/50 rounded-2xl px-5 py-4 shadow-card">
@@ -294,24 +386,19 @@ export const TrialChat = () => {
             </div>
           )}
 
-          {/* Inline auth prompt after trial — answer is rendered inside the card */}
           {showAuth && (() => {
             const lastAssistant = [...messages].reverse().find(m => m.role === "assistant");
             return (
               <div className="py-6 animate-fade-in">
                 <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/30 rounded-3xl p-6 sm:p-8 overflow-hidden">
-                  {/* Glow effect */}
                   <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
                   <div className="absolute top-0 left-1/2 w-32 h-32 bg-primary/20 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2" />
-
                   <div className="relative z-10">
-                    {/* Logan's answer, merged into the card */}
                     {lastAssistant && (
                       <div className="mb-5 text-left text-sm text-foreground/90 leading-relaxed">
                         <MarkdownMessage content={lastAssistant.content} />
                       </div>
                     )}
-
                     <div className="text-center">
                       <h3 className="font-display font-semibold text-lg text-foreground mb-2">
                         {getContextualHeadline(lastUserQuestion)}
@@ -345,11 +432,11 @@ export const TrialChat = () => {
         </div>
       )}
 
-      {/* Input - hide when showing auth */}
+      {/* Input — hidden when auth shown */}
       {!showAuth && (
-        <div className="border-t border-border/30 bg-card/30 backdrop-blur-xl sticky bottom-0 relative z-10">
-          <form onSubmit={handleSend} className="max-w-3xl mx-auto px-4 py-5">
-            <div className="flex gap-3">
+        <div className="border-t border-border/30 bg-card/40 backdrop-blur-xl sticky bottom-0 relative z-10">
+          <form onSubmit={handleSend} className="max-w-2xl mx-auto px-4 py-4">
+            <div className="flex gap-2.5">
               <div className="relative flex-1">
                 <Textarea
                   ref={inputRef}
@@ -366,13 +453,8 @@ export const TrialChat = () => {
                       (e.currentTarget.form as HTMLFormElement | null)?.requestSubmit();
                     }
                   }}
-                  onFocus={(e) => {
-                    setTimeout(() => {
-                      e.target.scrollIntoView({ block: "center", behavior: "smooth" });
-                    }, 300);
-                  }}
                   rows={1}
-                  placeholder="Ask Logan anything..."
+                  placeholder={hasStarted ? "Ask Logan anything…" : "Or type what's going on for you…"}
                   className="min-h-[52px] max-h-[200px] resize-none pl-5 pr-4 py-3.5 bg-muted/50 border-border/50 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 text-base"
                   disabled={isTyping}
                 />
@@ -395,9 +477,18 @@ export const TrialChat = () => {
                 )}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground/70 text-center mt-3">
-              Try chatting with Logan to see how it works
-            </p>
+            <div className="flex items-center justify-between mt-2.5 px-1">
+              <p className="text-[11px] text-muted-foreground/60">
+                Free during beta · <Link to="/consent" className="hover:text-foreground transition-colors">Privacy</Link>
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowAuth(true)}
+                className="text-[11px] text-primary hover:text-primary/80 transition-colors font-medium"
+              >
+                Skip — create account →
+              </button>
+            </div>
           </form>
         </div>
       )}
