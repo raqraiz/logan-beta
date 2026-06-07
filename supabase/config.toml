@@ -25,3 +25,5 @@ project_id = "tpohsmxpcqqgxcgectfs"
     verify_jwt = true
   [functions.trial-chat]
     verify_jwt = false
+  [functions.brevo-add-contact]
+    verify_jwt = false

@@ -148,13 +148,18 @@ export const TrialChat = () => {
     if (!waitlistEmail.trim() || waitlistSubmitting) return;
     setWaitlistSubmitting(true);
     try {
+      const email = waitlistEmail.trim().toLowerCase();
       const { error } = await supabase.from("waitlist").insert({
-        email: waitlistEmail.trim().toLowerCase(),
+        email,
         source: "landing_hero",
       });
       if (error && !error.message.toLowerCase().includes("duplicate")) throw error;
+      // Sync to Brevo for email automations. Failures here shouldn't break signup.
+      supabase.functions.invoke("brevo-add-contact", {
+        body: { email, source: "landing_hero" },
+      }).catch((e) => console.warn("Brevo sync failed:", e));
       setWaitlistDone(true);
-      toast({ title: "You're on the list 💚", description: "I'll be in touch soon with your invite." });
+      toast({ title: "You're on the list 💚", description: "I'll be in touch soon." });
     } catch (err) {
       console.error("Waitlist error:", err);
       toast({ title: "Something went wrong", description: "Try again in a moment.", variant: "destructive" });
