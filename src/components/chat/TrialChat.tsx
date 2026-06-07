@@ -256,7 +256,7 @@ export const TrialChat = () => {
                 {/* Primary actions */}
                 <div className="mt-7 flex flex-col sm:flex-row gap-3">
                   <Button size="lg" onClick={scrollToSignup} className="h-12 px-6 text-base">
-                    Get my free invite
+                    Create my free account
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                   <Button
