@@ -25,6 +25,7 @@ const FEELING_CHIPS = [
   "I just had a baby and don't recognize myself",
   "My cycle is irregular and nothing tracks it right",
   "I want to stop being blindsided by PMS",
+  "I'm in menopause and no one prepared me for this",
 ];
 
 // Real-feeling attribution — last initial + a humanising detail.
@@ -45,6 +46,10 @@ const TESTIMONIALS = [
     quote: "It's like texting a friend who actually knows what's happening in my body.",
     name: "Sam K., 38 · marathon runner",
   },
+  {
+    quote: "Finally, something that gets menopause isn't just hot flashes. Logan understands the whole picture.",
+    name: "Diana M., 52 · Edinburgh",
+  },
 ];
 
 const getContextualHeadline = (q: string): string => {
@@ -55,6 +60,7 @@ const getContextualHeadline = (q: string): string => {
   if (s.includes("baby") || s.includes("postpartum")) return "Postpartum has its own rhythm. I'll meet you there.";
   if (s.includes("irregular")) return "Irregular doesn't mean unknowable. Let's find your signal.";
   if (s.includes("pms") || s.includes("blindsided")) return "What if you could see PMS coming days in advance?";
+  if (s.includes("menopause")) return "Menopause isn't the end of knowing your body. I'll help you find your new normal.";
   return "Once you see the pattern, everything clicks.";
 };
 
@@ -62,6 +68,7 @@ const getContextualDescription = (q: string): string => {
   const s = q.toLowerCase();
   if (s.includes("baby") || s.includes("postpartum")) return "Create an account and I'll track where you are in recovery so I can guide you week by week.";
   if (s.includes("irregular")) return "Create an account and I'll learn your unique patterns instead of forcing you into a 28-day box.";
+  if (s.includes("menopause")) return "Create an account and I'll track your symptoms, energy, and sleep so you can feel like yourself again.";
   return "Create an account and I'll learn your patterns so I can give you a heads up before things shift.";
 };
 
@@ -250,7 +257,7 @@ export const TrialChat = () => {
                 </h1>
                 <p className="text-base sm:text-lg text-muted-foreground mt-4 leading-relaxed max-w-xl">
                   Logan predicts what's coming — your energy, mood, and PMS — and tells you what to <em>do</em> about it.
-                  Built for irregular cycles, postpartum, the pill, perimenopause. Whatever's true for you.
+                  Built for irregular cycles, postpartum, the pill, perimenopause, and menopause. Whatever's true for you.
                 </p>
 
                 {/* Primary actions */}
