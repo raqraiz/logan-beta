@@ -277,19 +277,22 @@ export const TrialChat = () => {
                   </Button>
                 </div>
 
-                {/* Soft email capture — lower friction than full signup */}
+                {/* Soft email capture — for visitors who aren't ready to create an account today */}
                 <div className="mt-8 bg-card/40 border border-border/40 rounded-2xl p-4 backdrop-blur-sm max-w-md">
                   {waitlistDone ? (
                     <div className="flex items-center gap-2.5 text-sm text-foreground/90">
                       <span className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center">
                         <Check className="w-4 h-4 text-primary" />
                       </span>
-                      You're on the list. Watch your inbox for your invite.
+                      You're on the list. I'll be in touch.
                     </div>
                   ) : (
                     <>
-                      <p className="text-xs uppercase tracking-widest text-muted-foreground/70 mb-2">
-                        Not ready yet? Get early access by email
+                      <p className="text-sm text-foreground/85 mb-1">
+                        Not ready to sign up today?
+                      </p>
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Leave your email and I'll send you a short note from the founder when there's something worth coming back for.
                       </p>
                       <form onSubmit={handleWaitlist} className="flex gap-2">
                         <Input
@@ -302,15 +305,16 @@ export const TrialChat = () => {
                           disabled={waitlistSubmitting}
                         />
                         <Button type="submit" disabled={waitlistSubmitting || !waitlistEmail.trim()} className="h-11 px-4">
-                          {waitlistSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Join"}
+                          {waitlistSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Keep me posted"}
                         </Button>
                       </form>
                       <p className="text-[11px] text-muted-foreground/70 mt-2">
-                        One email when your invite is ready. No spam, ever.
+                        No spam. Unsubscribe anytime.
                       </p>
                     </>
                   )}
                 </div>
+
               </section>
 
               {/* ================= DM from founder ================= */}
