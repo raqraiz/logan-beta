@@ -1,0 +1,1 @@
+UPDATE public.participants SET last_period_start = '2026-05-26' WHERE email = 'sueanette@gmail.com';
