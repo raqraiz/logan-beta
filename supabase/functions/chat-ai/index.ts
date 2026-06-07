@@ -585,6 +585,12 @@ serve(async (req) => {
         /\b(?:i\s+)?(?:got|had)\s+(?:my\s+|a\s+)?(?:period|bleed)(?:\s+day\s*1)?\s+(?:on\s+)?(?:the\s+)?(\w+\s+\d{1,2}(?:,?\s*\d{4})?|today|yesterday)/i,
         /\b(?:day\s*1|first\s+day(?:\s+of\s+(?:my\s+)?(?:period|bleed|cycle))?)\s+(?:was|started|on|=|is)\s+(?:on\s+)?(?:the\s+)?(\w+\s+\d{1,2}(?:,?\s*\d{4})?|today|yesterday)/i,
         /\bbleed\s+(?:on|started|began)\s+(?:on\s+)?(?:the\s+)?(\w+\s+\d{1,2}(?:,?\s*\d{4})?|today|yesterday)/i,
+        // Correction phrasings: "it came back ... May 26th", "it returned on ...", "I bled on ..."
+        /\b(?:it|she|that)\s+(?:came\s+back|returned|started|showed\s+up|arrived)\b[^.?!]{0,60}?(\w+\s+\d{1,2}(?:,?\s*\d{4})?|today|yesterday)/i,
+        /\bi\s+(?:bled|started\s+bleeding|started\s+spotting)\b[^.?!]{0,60}?(\w+\s+\d{1,2}(?:,?\s*\d{4})?|today|yesterday)/i,
+        // Explicit correction: "not the right date ... May 26th", "the right date is May 26th", "actually May 26th"
+        /(?:not\s+the\s+right|wrong|right|correct)\s+date\b[^.?!]{0,80}?(\w+\s+\d{1,2}(?:,?\s*\d{4})?|today|yesterday)/i,
+        /\b(?:actually|sorry|correction|i\s+meant|my\s+mistake|nope|no\s*,)\b[^.?!]{0,60}?(\w+\s+\d{1,2}(?:,?\s*\d{4})?|today|yesterday)/i,
       ];
       // Find ALL matches across all patterns and pick the LATEST date
       let periodDateMatch: RegExpMatchArray | null = null;
