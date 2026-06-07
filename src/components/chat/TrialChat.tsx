@@ -151,11 +151,7 @@ export const TrialChat = () => {
 
       if (error) throw error;
 
-      const fullResponse = data?.response || "I'd love to help you understand your cycle better. What would you like to know?";
-      const sentences = fullResponse.match(/[^.!?]+[.!?]+(\s|$)/g) || [fullResponse];
-      let teaser = sentences.slice(0, 3).join("").trim();
-      if (teaser.length > 360) teaser = teaser.slice(0, 357).trimEnd() + "…";
-      const aiResponse = teaser || fullResponse;
+      const aiResponse = data?.response || "I'd love to help you understand your cycle better. What would you like to know?";
 
       setMessages(prev => [...prev, {
         id: `assistant-${Date.now()}`,
