@@ -550,7 +550,16 @@ const Chat = () => {
 
   const generateOnOpenInsight = async () => {
     try {
-      const { error } = await supabase.functions.invoke("generate-insight");
+      // Ensure we have a fresh access token (auto-refreshes if expired)
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) {
+        // Not signed in yet; skip silently
+        return;
+      }
+      const { error } = await supabase.functions.invoke("generate-insight", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       if (error) {
         console.error("Error generating on-open insight:", error);
       }
