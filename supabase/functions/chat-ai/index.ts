@@ -610,12 +610,16 @@ serve(async (req) => {
             if (d && d <= new Date()) allDates.push({ token, date: d, match: m as unknown as RegExpMatchArray });
           }
         }
-        // Also catch a trailing "and (then )?today" / "and (then )?yesterday" that often pairs with a prior date
-        if (/\band\s+(?:then\s+)?today\b/i.test(userMessage)) {
-          allDates.push({ token: "today", date: new Date(), match: ["today", "today"] as unknown as RegExpMatchArray });
-        } else if (/\band\s+(?:then\s+)?yesterday\b/i.test(userMessage)) {
-          const y = new Date(); y.setDate(y.getDate() - 1);
-          allDates.push({ token: "yesterday", date: y, match: ["yesterday", "yesterday"] as unknown as RegExpMatchArray });
+        // Also catch a trailing "and (then )?today" / "and (then )?yesterday" that often pairs with a prior date.
+        // ONLY do this when a period-context regex already matched — otherwise unrelated messages like
+        // "acne flare up on Friday 5th, Saturday 6th, yesterday and today" would incorrectly rewrite the period date.
+        if (allDates.length > 0) {
+          if (/\band\s+(?:then\s+)?today\b/i.test(userMessage)) {
+            allDates.push({ token: "today", date: new Date(), match: ["today", "today"] as unknown as RegExpMatchArray });
+          } else if (/\band\s+(?:then\s+)?yesterday\b/i.test(userMessage)) {
+            const y = new Date(); y.setDate(y.getDate() - 1);
+            allDates.push({ token: "yesterday", date: y, match: ["yesterday", "yesterday"] as unknown as RegExpMatchArray });
+          }
         }
         if (allDates.length > 0) {
           allDates.sort((a, b) => b.date.getTime() - a.date.getTime());
