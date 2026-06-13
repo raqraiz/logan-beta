@@ -166,7 +166,7 @@ const Chat = () => {
   const SCROLL_NEAR_BOTTOM_PX = 80;
   const SCROLL_BUTTON_SHOW_PX = 48;
 
-  const refreshMessages = async (currentUserId: string) => {
+  const refreshMessages = async (currentUserId: string, attempt = 0): Promise<ChatMessage[]> => {
     const { count } = await supabase
       .from("chat_messages")
       .select("id", { count: "exact", head: true })
@@ -184,6 +184,12 @@ const Chat = () => {
 
     if (error) {
       console.error("Error fetching messages:", error);
+      // Transient network failure (Safari "Load failed" during navigation) → retry silently
+      const isTransient = (error as any)?.message?.includes("Load failed") || (error as any)?.message?.includes("Failed to fetch");
+      if (isTransient && attempt < 2) {
+        await new Promise((r) => setTimeout(r, 400));
+        return refreshMessages(currentUserId, attempt + 1);
+      }
       toast({ title: "Failed to load messages", variant: "destructive" });
       setIsLoading(false);
       return [] as ChatMessage[];
