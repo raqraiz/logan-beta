@@ -37,13 +37,27 @@ const Admin = () => {
       if (!loading) navigate("/auth");
       return;
     }
-    const checkAdmin = async () => {
-      const { data } = await supabase
+    const checkAdmin = async (attempt = 0) => {
+      const { data, error } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", session.user.id)
         .eq("role", "admin")
-        .single();
+        .maybeSingle();
+
+      if (error) {
+        console.error("Admin check error:", error);
+        // Transient network failure (common on Safari during nav) → retry before denying
+        if (attempt < 2) {
+          setTimeout(() => checkAdmin(attempt + 1), 400);
+          return;
+        }
+        toast({ title: "Couldn't verify admin access", description: "Please try again.", variant: "destructive" });
+        navigate("/");
+        setLoading(false);
+        return;
+      }
+
       if (!data) {
         navigate("/");
         toast({ title: "Access denied", description: "Admin access required.", variant: "destructive" });
