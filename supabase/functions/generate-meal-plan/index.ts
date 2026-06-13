@@ -264,7 +264,11 @@ async function generatePreview(args: {
 
   try {
     const dietBits: string[] = [];
-    if (dietaryPrefs.diet_type) dietBits.push(`Diet: ${dietaryPrefs.diet_type}`);
+    if (dietaryPrefs.diet_type) {
+      dietBits.push(`Diet: ${dietaryPrefs.diet_type}`);
+      const rules = expandDietRules(dietaryPrefs.diet_type);
+      if (rules) dietBits.push(rules);
+    }
     if (dietaryPrefs.allergies?.length) dietBits.push(`Allergies (NEVER use): ${dietaryPrefs.allergies.join(", ")}`);
     if (dietaryPrefs.dislikes?.length) dietBits.push(`Dislikes (NEVER use): ${dietaryPrefs.dislikes.join(", ")}`);
     const focusList = (dietaryPrefs.focus_styles?.length ? dietaryPrefs.focus_styles : dietaryPrefs.cuisines) || [];
