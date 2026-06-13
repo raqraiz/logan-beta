@@ -16,6 +16,36 @@ interface MealOption {
   recipe: string;
 }
 
+// Expand a free-text diet_type into explicit HARD rules so kosher/halal/vegan/etc.
+// are treated as real constraints, not labels.
+function expandDietRules(dietType: string): string | null {
+  const t = dietType.toLowerCase();
+  const lines: string[] = [];
+  if (/\bkosher\b/.test(t)) {
+    lines.push(
+      "KOSHER RULES (strict, NEVER violate): no pork or pork products (bacon, ham, prosciutto, lard); no shellfish or crustaceans (shrimp, prawns, lobster, crab, scallops, mussels, oysters, clams, squid, octopus); no catfish, eel, shark, or other non-finned/non-scaled fish; do NOT combine meat or poultry with dairy in the same meal (no cheeseburgers, no chicken parmesan, no creamy chicken pasta, no butter on steak); eggs and pareve (neutral) ingredients are fine."
+    );
+  }
+  if (/\bhalal\b/.test(t)) {
+    lines.push("HALAL RULES (strict, NEVER violate): no pork or pork products, no alcohol or alcohol-based ingredients, no non-halal gelatin.");
+  }
+  if (/\bvegan\b/.test(t)) {
+    lines.push("VEGAN RULES (strict, NEVER violate): no meat, poultry, fish, shellfish, dairy, eggs, honey, gelatin, or any animal-derived ingredient.");
+  } else if (/\bvegetarian\b/.test(t)) {
+    lines.push("VEGETARIAN RULES (strict, NEVER violate): no meat, poultry, fish, or shellfish. Dairy and eggs are allowed.");
+  }
+  if (/\bpescatarian\b/.test(t)) {
+    lines.push("PESCATARIAN RULES (strict, NEVER violate): no meat or poultry. Fish, shellfish, dairy, and eggs are allowed.");
+  }
+  if (/\bgluten[- ]?free\b/.test(t)) {
+    lines.push("GLUTEN-FREE RULES (strict, NEVER violate): no wheat, barley, rye, spelt, regular soy sauce, seitan, or any gluten-containing grain.");
+  }
+  if (/\bdairy[- ]?free\b/.test(t)) {
+    lines.push("DAIRY-FREE RULES (strict, NEVER violate): no milk, cheese, butter, yogurt, cream, ghee, or whey.");
+  }
+  return lines.length ? lines.join("\n") : null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -150,9 +180,13 @@ serve(async (req) => {
 
     const dietaryPrefs = resource.metadata?.dietary_prefs || {};
     const dietBits: string[] = [];
-    if (dietaryPrefs.diet_type) dietBits.push(`Diet: ${dietaryPrefs.diet_type}`);
-    if (dietaryPrefs.allergies?.length) dietBits.push(`Allergies: ${dietaryPrefs.allergies.join(", ")}`);
-    if (dietaryPrefs.dislikes?.length) dietBits.push(`Dislikes: ${dietaryPrefs.dislikes.join(", ")}`);
+    if (dietaryPrefs.diet_type) {
+      dietBits.push(`Diet: ${dietaryPrefs.diet_type}`);
+      const rules = expandDietRules(dietaryPrefs.diet_type);
+      if (rules) dietBits.push(rules);
+    }
+    if (dietaryPrefs.allergies?.length) dietBits.push(`Allergies (NEVER use): ${dietaryPrefs.allergies.join(", ")}`);
+    if (dietaryPrefs.dislikes?.length) dietBits.push(`Dislikes (NEVER use): ${dietaryPrefs.dislikes.join(", ")}`);
     if (dietaryPrefs.cuisines?.length) dietBits.push(`Cuisine preferences: ${dietaryPrefs.cuisines.join(", ")}`);
     const dietContext = dietBits.length ? dietBits.join("\n") : "Omnivore, no restrictions";
 

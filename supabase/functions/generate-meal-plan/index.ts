@@ -12,6 +12,36 @@ const corsHeaders = {
 
 type Mode = "ideas" | "mix";
 
+// Expand a free-text diet_type (possibly comma-separated) into explicit HARD rules
+// so the model treats kosher / halal / vegan / etc. as real constraints, not labels.
+function expandDietRules(dietType: string): string | null {
+  const t = dietType.toLowerCase();
+  const lines: string[] = [];
+  if (/\bkosher\b/.test(t)) {
+    lines.push(
+      "KOSHER RULES (strict, NEVER violate): no pork or pork products (bacon, ham, prosciutto, lard, gelatin from pork); no shellfish or crustaceans (shrimp, prawns, lobster, crab, scallops, mussels, oysters, clams, squid, octopus); no catfish, eel, shark, or other non-finned/non-scaled fish; do NOT combine meat or poultry with dairy in the same meal or recipe (no cheeseburgers, no chicken parmesan, no creamy chicken pasta, no butter on steak); only beef, lamb, chicken, turkey, duck described as kosher-style cuts; eggs and pareve (neutral) ingredients are fine with either meat or dairy."
+    );
+  }
+  if (/\bhalal\b/.test(t)) {
+    lines.push("HALAL RULES (strict, NEVER violate): no pork or pork products, no alcohol or alcohol-based ingredients (wine, beer, mirin, vanilla extract with alcohol), no non-halal gelatin.");
+  }
+  if (/\bvegan\b/.test(t)) {
+    lines.push("VEGAN RULES (strict, NEVER violate): no meat, poultry, fish, shellfish, dairy, eggs, honey, gelatin, or any animal-derived ingredient.");
+  } else if (/\bvegetarian\b/.test(t)) {
+    lines.push("VEGETARIAN RULES (strict, NEVER violate): no meat, poultry, fish, or shellfish. Dairy and eggs are allowed.");
+  }
+  if (/\bpescatarian\b/.test(t)) {
+    lines.push("PESCATARIAN RULES (strict, NEVER violate): no meat or poultry. Fish, shellfish, dairy, and eggs are allowed.");
+  }
+  if (/\bgluten[- ]?free\b/.test(t)) {
+    lines.push("GLUTEN-FREE RULES (strict, NEVER violate): no wheat, barley, rye, spelt, farro, regular soy sauce, seitan, or any gluten-containing grain or product.");
+  }
+  if (/\bdairy[- ]?free\b/.test(t)) {
+    lines.push("DAIRY-FREE RULES (strict, NEVER violate): no milk, cheese, butter, yogurt, cream, ghee, or whey.");
+  }
+  return lines.length ? lines.join("\n") : null;
+}
+
 interface RecommendedCategory {
   category: string;
   foods: string[];
@@ -264,7 +294,11 @@ async function generatePreview(args: {
 
   try {
     const dietBits: string[] = [];
-    if (dietaryPrefs.diet_type) dietBits.push(`Diet: ${dietaryPrefs.diet_type}`);
+    if (dietaryPrefs.diet_type) {
+      dietBits.push(`Diet: ${dietaryPrefs.diet_type}`);
+      const rules = expandDietRules(dietaryPrefs.diet_type);
+      if (rules) dietBits.push(rules);
+    }
     if (dietaryPrefs.allergies?.length) dietBits.push(`Allergies (NEVER use): ${dietaryPrefs.allergies.join(", ")}`);
     if (dietaryPrefs.dislikes?.length) dietBits.push(`Dislikes (NEVER use): ${dietaryPrefs.dislikes.join(", ")}`);
     const focusList = (dietaryPrefs.focus_styles?.length ? dietaryPrefs.focus_styles : dietaryPrefs.cuisines) || [];
