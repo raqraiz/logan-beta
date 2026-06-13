@@ -180,9 +180,13 @@ serve(async (req) => {
 
     const dietaryPrefs = resource.metadata?.dietary_prefs || {};
     const dietBits: string[] = [];
-    if (dietaryPrefs.diet_type) dietBits.push(`Diet: ${dietaryPrefs.diet_type}`);
-    if (dietaryPrefs.allergies?.length) dietBits.push(`Allergies: ${dietaryPrefs.allergies.join(", ")}`);
-    if (dietaryPrefs.dislikes?.length) dietBits.push(`Dislikes: ${dietaryPrefs.dislikes.join(", ")}`);
+    if (dietaryPrefs.diet_type) {
+      dietBits.push(`Diet: ${dietaryPrefs.diet_type}`);
+      const rules = expandDietRules(dietaryPrefs.diet_type);
+      if (rules) dietBits.push(rules);
+    }
+    if (dietaryPrefs.allergies?.length) dietBits.push(`Allergies (NEVER use): ${dietaryPrefs.allergies.join(", ")}`);
+    if (dietaryPrefs.dislikes?.length) dietBits.push(`Dislikes (NEVER use): ${dietaryPrefs.dislikes.join(", ")}`);
     if (dietaryPrefs.cuisines?.length) dietBits.push(`Cuisine preferences: ${dietaryPrefs.cuisines.join(", ")}`);
     const dietContext = dietBits.length ? dietBits.join("\n") : "Omnivore, no restrictions";
 
