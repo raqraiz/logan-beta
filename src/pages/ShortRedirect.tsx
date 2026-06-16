@@ -15,7 +15,7 @@ export default function ShortRedirect() {
     let cancelled = false;
 
     const go = async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("short_links")
         .select("target_url")
         .eq("slug", slug)
@@ -27,9 +27,6 @@ export default function ShortRedirect() {
         setStatus("notfound");
         return;
       }
-
-      // Fire-and-forget click increment
-      supabase.rpc("increment_short_link_clicks", { _slug: slug }).catch(() => {});
 
       window.location.replace(data.target_url);
     };
