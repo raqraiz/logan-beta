@@ -1148,7 +1148,7 @@ const Chat = () => {
       {effectiveTab === "ask" && (<>
       {/* Onboarding Progress Bar */}
       {isOnboarding && (
-        <div className="sticky top-0 z-20 flex items-center gap-2 bg-card/80 backdrop-blur-sm border-b border-border/50 px-4 py-2">
+        <div className="sticky top-0 z-20 flex items-center gap-2 bg-card border-b border-border/50 px-4 py-2">
           <div className="max-w-3xl mx-auto w-full flex items-center gap-2">
             {onboardingStep > 0 && (
               <Button
