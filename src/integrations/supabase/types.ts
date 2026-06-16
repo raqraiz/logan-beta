@@ -764,8 +764,16 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          landing_at: string | null
+          landing_path: string | null
           phone: string | null
+          referrer: string | null
           updated_at: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -773,8 +781,16 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          landing_at?: string | null
+          landing_path?: string | null
           phone?: string | null
+          referrer?: string | null
           updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -782,8 +798,16 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          landing_at?: string | null
+          landing_path?: string | null
           phone?: string | null
+          referrer?: string | null
           updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
         }
         Relationships: []
       }
