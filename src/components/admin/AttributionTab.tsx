@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Download, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { UtmLinkBuilder } from "./UtmLinkBuilder";
+import { SavedCampaignLinks } from "./SavedCampaignLinks";
 
 type Range = "7d" | "30d" | "90d" | "all";
 
