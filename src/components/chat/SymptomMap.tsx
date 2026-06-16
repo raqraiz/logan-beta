@@ -49,7 +49,7 @@ export const SymptomMap = ({ symptoms = [], anchorSymptom, cycleDay, phase }: Sy
   const peakPhaseName = peakEntry[0];
 
   return (
-    <div className="rounded-xl bg-card/80 backdrop-blur-sm border border-border/50 p-4 space-y-3">
+    <div className="rounded-xl bg-card border border-border/50 p-4 space-y-3">
       {/* Header */}
       <p className="text-[10px] text-primary uppercase tracking-widest font-semibold text-center">
         {targetSymptom ? `When to expect: ${targetSymptom}` : "Symptom forecast"}
