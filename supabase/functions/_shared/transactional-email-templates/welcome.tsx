@@ -2,13 +2,11 @@
 import * as React from 'npm:react@18.3.1'
 import {
   Body,
-  Button,
   Container,
   Head,
   Heading,
   Html,
   Preview,
-  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
@@ -47,19 +45,13 @@ const WelcomeEmail = ({ name }: WelcomeProps) => {
           </Text>
 
           <Text style={text}>
-            So here's the only thing to do right now: go to asklogan.ai and say hi. Logan will take
-            it from there.
+            Give Logan a few days to get to know you — it only gets better the more you use it. Come
+            back and chat whenever something's on your mind, whether it's how you're feeling today
+            or just checking in on your patterns.
           </Text>
 
-          <Section style={buttonSection}>
-            <Button style={button} href="https://asklogan.ai">
-              Open Logan
-            </Button>
-          </Section>
-
           <Text style={text}>
-            Give it a few days to get to know you, it only gets better the more you use it. And if
-            anything ever feels off, just email feedback@asklogan.ai, or report it in the
+            And if anything ever feels off, just email feedback@asklogan.ai, or report it in the
             "feedback" section in the app. This comes straight to me, and I read every word. 🙏
           </Text>
 
@@ -109,20 +101,6 @@ const text = {
   color: '#374151',
   lineHeight: '1.6',
   margin: '0 0 18px',
-}
-const buttonSection = {
-  textAlign: 'center' as const,
-  margin: '28px 0',
-}
-const button = {
-  backgroundColor: '#15B88C',
-  color: '#ffffff',
-  fontSize: '15px',
-  fontWeight: '600' as const,
-  borderRadius: '12px',
-  padding: '14px 28px',
-  textDecoration: 'none',
-  display: 'inline-block',
 }
 const signature = {
   fontSize: '15px',
