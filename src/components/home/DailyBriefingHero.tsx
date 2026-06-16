@@ -118,7 +118,7 @@ export function DailyBriefingHero({
 
   return (
     <div className="w-full max-w-sm">
-      <div className="relative rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm overflow-hidden">
+      <div className="relative rounded-2xl border border-border/30 bg-card overflow-hidden">
         <div className={`absolute inset-0 bg-gradient-to-br ${phaseAccent} pointer-events-none`} />
 
         <div className="relative px-5 pt-5 pb-4">
@@ -137,7 +137,7 @@ export function DailyBriefingHero({
             <button
               onClick={onCircleClick}
               disabled={!onCircleClick || isNonCycling}
-              className="transition-transform duration-200 active:scale-95 hover:scale-[1.02] disabled:hover:scale-100"
+              className="transition-opacity duration-200 active:opacity-80 hover:opacity-95 disabled:hover:opacity-100"
             >
               <ChatCycleCircle
                 cycleDay={cycleDay}
