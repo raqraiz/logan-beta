@@ -1626,7 +1626,7 @@ const Chat = () => {
 
       {/* Input - hide when showing interactive pickers or out of credits */}
       {!shouldShowInteractivePicker() && (
-        <div className={`border-t border-border/50 bg-card/50 backdrop-blur-sm sticky bottom-0 ${!isOnboarding ? "pb-14" : ""}`}>
+        <div className={`border-t border-border/50 bg-card sticky bottom-0 ${!isOnboarding ? "pb-14" : ""}`}>
           <div className="max-w-3xl mx-auto px-4 pt-4">
             {showTopicPrompt && !isOnboarding && (
               <div className="mb-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2">
