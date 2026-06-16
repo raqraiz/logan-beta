@@ -145,7 +145,7 @@ const Auth = () => {
           if (error) throw error;
           toast({ title: "Welcome back! 🤖" });
         } else {
-          const { error } = await supabase.auth.signUp({
+          const { data, error } = await supabase.auth.signUp({
             email,
             password,
             options: {
@@ -163,6 +163,19 @@ const Auth = () => {
               throw error;
             }
           } else {
+            try {
+              const userId = data?.user?.id;
+              supabase.functions.invoke("send-transactional-email", {
+                body: {
+                  templateName: "welcome",
+                  recipientEmail: email,
+                  idempotencyKey: userId ? `welcome-${userId}` : `welcome-${email}`,
+                  templateData: { name: null },
+                },
+              }).catch((e) => console.error("Welcome email send failed:", e));
+            } catch (e) {
+              console.error("Welcome email invoke error:", e);
+            }
             toast({ title: "Welcome to Logan 🎉" });
           }
         }

@@ -81,7 +81,7 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
           options: {
@@ -102,6 +102,20 @@ export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
             throw error;
           }
         } else {
+          // Fire-and-forget welcome email
+          try {
+            const userId = data?.user?.id;
+            supabase.functions.invoke("send-transactional-email", {
+              body: {
+                templateName: "welcome",
+                recipientEmail: email.trim(),
+                idempotencyKey: userId ? `welcome-${userId}` : `welcome-${email.trim()}`,
+                templateData: { name: fullName.trim() || null },
+              },
+            }).catch((e) => console.error("Welcome email send failed:", e));
+          } catch (e) {
+            console.error("Welcome email invoke error:", e);
+          }
           toast({ title: "Welcome to Logan 🎉" });
           onAuthSuccess?.();
         }
