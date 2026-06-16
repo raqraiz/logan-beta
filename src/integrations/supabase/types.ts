@@ -886,6 +886,48 @@ export type Database = {
         }
         Relationships: []
       }
+      short_links: {
+        Row: {
+          clicks: number
+          created_at: string
+          created_by: string | null
+          id: string
+          slug: string
+          target_url: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          clicks?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          slug: string
+          target_url: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          clicks?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          slug?: string
+          target_url?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string

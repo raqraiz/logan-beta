@@ -4,8 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Copy, Link2, QrCode } from "lucide-react";
+import { Copy, Link2, QrCode, Scissors } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 const BASES = [
   { label: "asklogan.ai", value: "https://asklogan.ai" },
@@ -19,7 +21,10 @@ const SOURCE_PRESETS = ["instagram", "tiktok", "twitter", "linkedin", "facebook"
 const slug = (v: string) =>
   v.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_\-.]/g, "");
 
+const randSlug = () => Math.random().toString(36).slice(2, 8);
+
 export const UtmLinkBuilder = () => {
+  const { user } = useAuth();
   const [base, setBase] = useState(BASES[0].value);
   const [path, setPath] = useState("/");
   const [source, setSource] = useState("");
@@ -27,6 +32,8 @@ export const UtmLinkBuilder = () => {
   const [campaign, setCampaign] = useState("");
   const [term, setTerm] = useState("");
   const [content, setContent] = useState("");
+  const [shortUrl, setShortUrl] = useState("");
+  const [shortening, setShortening] = useState(false);
 
   const url = useMemo(() => {
     try {
@@ -49,14 +56,57 @@ export const UtmLinkBuilder = () => {
 
   const ready = !!(source && medium && campaign && url);
 
-  const copy = async () => {
-    if (!url) return;
+  const copy = async (text: string) => {
+    if (!text) return;
     try {
-      await navigator.clipboard.writeText(url);
-      toast({ title: "Link copied", description: "Paste it wherever you're promoting." });
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Copied", description: "Ready to paste." });
     } catch {
-      toast({ title: "Couldn't copy", description: "Select the link and copy manually.", variant: "destructive" });
+      toast({ title: "Couldn't copy", description: "Select and copy manually.", variant: "destructive" });
     }
+  };
+
+  const shorten = async () => {
+    if (!ready || !url || !user) return;
+    setShortening(true);
+    setShortUrl("");
+
+    let attempts = 0;
+    while (attempts < 5) {
+      const s = randSlug();
+      const short = `https://asklogan.ai/s/${s}`;
+
+      const { error } = await (supabase as any).from("short_links").insert({
+        slug: s,
+        target_url: url,
+        utm_source: slug(source) || null,
+        utm_medium: slug(medium) || null,
+        utm_campaign: slug(campaign) || null,
+        utm_term: slug(term) || null,
+        utm_content: slug(content) || null,
+        created_by: user.id,
+      });
+
+      if (!error) {
+        setShortUrl(short);
+        toast({ title: "Short link created", description: short });
+        setShortening(false);
+        return;
+      }
+
+      // collision or other error — retry on unique violation
+      if (error.code === "23505") {
+        attempts++;
+        continue;
+      }
+
+      toast({ title: "Shorten failed", description: error.message, variant: "destructive" });
+      setShortening(false);
+      return;
+    }
+
+    toast({ title: "Shorten failed", description: "Too many collisions. Try again.", variant: "destructive" });
+    setShortening(false);
   };
 
   const qrUrl = ready
@@ -119,14 +169,29 @@ export const UtmLinkBuilder = () => {
           <Label className="text-xs text-muted-foreground">Generated link</Label>
           <div className="flex gap-2">
             <Input readOnly value={url} className="font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />
-            <Button onClick={copy} disabled={!ready} size="sm">
+            <Button onClick={() => copy(url)} disabled={!ready} size="sm">
               <Copy className="w-4 h-4 mr-2" /> Copy
+            </Button>
+            <Button onClick={shorten} disabled={!ready || shortening || !user} size="sm" variant="secondary">
+              <Scissors className="w-4 h-4 mr-2" /> {shortening ? "Creating…" : "Shorten"}
             </Button>
           </div>
           {!ready && (
             <p className="text-xs text-muted-foreground">Fill source, medium, and campaign to generate.</p>
           )}
         </div>
+
+        {shortUrl && (
+          <div className="space-y-2 pt-2 border-t border-border">
+            <Label className="text-xs text-muted-foreground">Short link</Label>
+            <div className="flex gap-2">
+              <Input readOnly value={shortUrl} className="font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />
+              <Button onClick={() => copy(shortUrl)} size="sm">
+                <Copy className="w-4 h-4 mr-2" /> Copy
+              </Button>
+            </div>
+          </div>
+        )}
 
         {ready && (
           <div className="flex items-start gap-4 pt-2 border-t border-border">
