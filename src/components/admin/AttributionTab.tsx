@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Download, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { UtmLinkBuilder } from "./UtmLinkBuilder";
 
 type Range = "7d" | "30d" | "90d" | "all";
 
