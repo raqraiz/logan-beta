@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Download, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { UtmLinkBuilder } from "./UtmLinkBuilder";
+import { SavedCampaignLinks } from "./SavedCampaignLinks";
 
 type Range = "7d" | "30d" | "90d" | "all";
 
@@ -122,6 +123,7 @@ export const AttributionTab = () => {
   return (
     <div className="space-y-6">
       <UtmLinkBuilder />
+      <SavedCampaignLinks />
 
       <Card className="bg-card border-border">
         <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
