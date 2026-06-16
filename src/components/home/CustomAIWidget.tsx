@@ -80,7 +80,7 @@ export function CustomAIWidget({
   return (
     <div
       className={`w-full text-left rounded-2xl border border-border/30 border-l-2 ${borderColor}
-        bg-card/40 backdrop-blur-sm overflow-hidden transition-all duration-200 ${glow} relative`}
+        bg-card overflow-hidden transition-colors duration-200 ${glow} relative`}
     >
       <div className={`absolute inset-0 bg-gradient-to-br ${bgAccent} pointer-events-none`} />
 
