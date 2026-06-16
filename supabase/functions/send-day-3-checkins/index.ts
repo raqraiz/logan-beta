@@ -50,11 +50,12 @@ Deno.serve(async (req) => {
     for (const c of candidates) {
       const idempotencyKey = `day-3-checkin-${c.id}`
 
-      // Skip if we've already logged a send for this idempotency key.
+      // Skip if we've already attempted/sent this template to this recipient.
       const { data: existing } = await admin
         .from('email_send_log')
         .select('id')
-        .eq('idempotency_key', idempotencyKey)
+        .eq('template_name', 'day-3-checkin')
+        .eq('recipient_email', c.email)
         .limit(1)
         .maybeSingle()
 
