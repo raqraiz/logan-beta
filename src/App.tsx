@@ -12,6 +12,7 @@ import AuthCallback from "./pages/AuthCallback";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import Unsubscribe from "./pages/Unsubscribe";
+import ShortRedirect from "./pages/ShortRedirect";
 
 import IntegrationCallback from "./pages/IntegrationCallback";
 import { Seo } from "@/components/Seo";
@@ -29,6 +30,7 @@ const App = () => (
           <main>
             <Routes>
               <Route path="/" element={<Chat />} />
+              <Route path="/s/:slug" element={<ShortRedirect />} />
               
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/logan-admin-access" element={<Auth />} />
