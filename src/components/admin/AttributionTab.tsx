@@ -123,6 +123,7 @@ export const AttributionTab = () => {
   return (
     <div className="space-y-6">
       <UtmLinkBuilder />
+      <SavedCampaignLinks />
 
       <Card className="bg-card border-border">
         <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
