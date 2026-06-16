@@ -492,7 +492,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
         return userId ? (
           <div className="w-full flex flex-col gap-2" key={id}>
             <div
-              className={`w-full rounded-2xl border border-border/40 ${colors.border} border-l-[3px] bg-card/50 backdrop-blur-md overflow-hidden relative`}
+              className={`w-full rounded-2xl border border-border/40 ${colors.border} border-l-[3px] bg-card overflow-hidden relative`}
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${colors.bgGradient} pointer-events-none`} />
               <div className="relative">
