@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Download, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { UtmLinkBuilder } from "./UtmLinkBuilder";
 
 type Range = "7d" | "30d" | "90d" | "all";
 
@@ -120,6 +121,8 @@ export const AttributionTab = () => {
 
   return (
     <div className="space-y-6">
+      <UtmLinkBuilder />
+
       <Card className="bg-card border-border">
         <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
           <div>
