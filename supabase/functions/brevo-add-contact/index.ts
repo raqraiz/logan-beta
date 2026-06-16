@@ -28,10 +28,29 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
-    const source = typeof body?.source === 'string' ? body.source : 'landing_waitlist';
-    const attributes = body?.attributes && typeof body.attributes === 'object' ? body.attributes : {};
+    const rawSource = typeof body?.source === 'string' ? body.source : 'landing_waitlist';
+    const ALLOWED_SOURCES = new Set([
+      'landing_hero',
+      'landing_waitlist',
+      'trial_chat',
+      'signup',
+    ]);
+    const source = ALLOWED_SOURCES.has(rawSource) ? rawSource : 'landing_waitlist';
 
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    // Allowlist of attribute keys we forward to Brevo. Reject everything else
+    // to prevent unauthenticated callers from overriding arbitrary contact fields.
+    const ALLOWED_ATTR_KEYS = ['FIRSTNAME', 'LASTNAME', 'NAME'] as const;
+    const safeAttributes: Record<string, unknown> = {};
+    if (body?.attributes && typeof body.attributes === 'object') {
+      for (const key of ALLOWED_ATTR_KEYS) {
+        const val = (body.attributes as Record<string, unknown>)[key];
+        if (typeof val === 'string' && val.length > 0 && val.length <= 200) {
+          safeAttributes[key] = val;
+        }
+      }
+    }
+
+    if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return new Response(JSON.stringify({ error: 'Valid email required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -43,9 +62,10 @@ Deno.serve(async (req) => {
 
     const payload: Record<string, unknown> = {
       email,
-      attributes: { SOURCE: source, ...attributes },
+      attributes: { SOURCE: source, ...safeAttributes },
       updateEnabled: true,
     };
+
     if (listIds && listIds.length) payload.listIds = listIds;
 
     const res = await fetch(`${GATEWAY_URL}/contacts`, {
