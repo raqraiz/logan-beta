@@ -68,6 +68,10 @@ const WelcomeEmail = ({ name }: WelcomeProps) => {
             Founder &amp; CEO, Logan<br />
             asklogan.ai
           </Text>
+
+          <Text style={ps}>
+            P.S. There's also a small WhatsApp group where founding members swap feedback and ideas with each other. Totally optional, but if you'd like in, just reply and I'll add you.
+          </Text>
         </Container>
       </Body>
     </Html>
@@ -125,4 +129,10 @@ const signature = {
   color: '#111827',
   lineHeight: '1.6',
   margin: '28px 0 0',
+}
+const ps = {
+  fontSize: '15px',
+  color: '#374151',
+  lineHeight: '1.6',
+  margin: '24px 0 0',
 }
