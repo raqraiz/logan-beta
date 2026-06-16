@@ -138,7 +138,6 @@
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'DM Sans', sans-serif;
     background: var(--gradient-soft);
-    background-attachment: fixed;
     letter-spacing: -0.005em;
   }
 
@@ -187,16 +186,12 @@
   /* Premium glass surface */
   .glass {
     background: var(--gradient-glass);
-    backdrop-filter: blur(20px) saturate(140%);
-    -webkit-backdrop-filter: blur(20px) saturate(140%);
     border: 1px solid hsl(210 20% 97% / 0.08);
     box-shadow: var(--shadow-card), var(--shadow-inset);
   }
 
   .glass-strong {
     background: linear-gradient(145deg, hsl(220 10% 14% / 0.92), hsl(220 10% 8% / 0.88));
-    backdrop-filter: blur(28px) saturate(160%);
-    -webkit-backdrop-filter: blur(28px) saturate(160%);
     border: 1px solid hsl(210 20% 97% / 0.08);
     box-shadow: var(--shadow-elevated), var(--shadow-inset);
   }
