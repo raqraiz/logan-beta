@@ -1,7 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { User, Session, type EmailOtpType } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { getAttribution } from "@/lib/attribution";
+import { backfillAttribution, getAttribution } from "@/lib/attribution";
 
 interface AuthContextType {
   user: User | null;
@@ -134,12 +134,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // Ensure profile exists when a user appears (after initial load too)
+  // Ensure profile exists, then backfill any missing UTM attribution.
   useEffect(() => {
     if (!user) return;
-    ensureProfile(user).catch(() => {
-      // Ignore: profile creation is best-effort and should not block auth
-    });
+    (async () => {
+      try {
+        await ensureProfile(user);
+      } catch {
+        // Profile creation is best-effort and should not block auth.
+      }
+      // Always attempt backfill — server only fills currently-null fields.
+      backfillAttribution().catch(() => { /* best-effort */ });
+    })();
   }, [user?.id]);
 
   const signInWithMagicLink = async (email: string) => {
