@@ -1066,7 +1066,7 @@ const Chat = () => {
     <>
     <div className="h-[100svh] supports-[height:100dvh]:h-[100dvh] bg-background flex flex-col relative">
       {/* Header */}
-      <header className="border-b border-border/50 bg-card sticky top-0 z-10">
+      <header className="shrink-0 border-b border-border/50 bg-card z-10">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
            <div className="flex items-center gap-3">
              {cycleData ? (
@@ -1148,7 +1148,7 @@ const Chat = () => {
       {effectiveTab === "ask" && (<>
       {/* Onboarding Progress Bar */}
       {isOnboarding && (
-        <div className="sticky top-0 z-20 flex items-center gap-2 bg-card border-b border-border/50 px-4 py-2">
+        <div className="z-20 flex items-center gap-2 bg-card border-b border-border/50 px-4 py-2">
           <div className="max-w-3xl mx-auto w-full flex items-center gap-2">
             {onboardingStep > 0 && (
               <Button
@@ -1626,7 +1626,7 @@ const Chat = () => {
 
       {/* Input - hide when showing interactive pickers or out of credits */}
       {!shouldShowInteractivePicker() && (
-        <div className={`border-t border-border/50 bg-card sticky bottom-0 ${!isOnboarding ? "pb-14" : ""}`}>
+        <div className={`border-t border-border/50 bg-card shrink-0 ${!isOnboarding ? "pb-14" : ""}`}>
           <div className="max-w-3xl mx-auto px-4 pt-4">
             {showTopicPrompt && !isOnboarding && (
               <div className="mb-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2">

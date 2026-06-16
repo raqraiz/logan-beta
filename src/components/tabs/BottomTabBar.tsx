@@ -72,10 +72,7 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
                     strokeDasharray={circumference}
                     strokeDashoffset={strokeDashoffset}
                     stroke={phaseColor}
-                    style={{
-                      filter: `drop-shadow(0 0 3px ${phaseColor}80)`,
-                      transition: "stroke-dashoffset 0.6s ease",
-                    }}
+                    style={{ transition: "stroke-dashoffset 0.6s ease" }}
                   />
                 )}
               </svg>

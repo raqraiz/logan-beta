@@ -104,7 +104,7 @@ export function CycleCorrelationsWidget({
   return (
     <div
       className="w-full rounded-2xl border border-border/40 border-l-[3px] border-l-teal-500
-        bg-card/50 backdrop-blur-md overflow-hidden relative"
+        bg-card overflow-hidden relative"
     >
       <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 via-teal-500/5 to-transparent pointer-events-none" />
 

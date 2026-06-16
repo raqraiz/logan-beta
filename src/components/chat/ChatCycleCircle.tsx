@@ -38,7 +38,7 @@ function PpBadgeInside({ postpartumStartDate, size }: { postpartumStartDate?: st
   }
   return (
     <div
-      className="absolute bottom-[18%] left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 px-2 py-[3px] rounded-full bg-pink-400/10 border border-pink-400/30 backdrop-blur-md"
+      className="absolute bottom-[18%] left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 px-2 py-[3px] rounded-full bg-card border border-pink-400/30"
       title={`${label} postpartum`}
     >
       <span className="w-1.5 h-1.5 rounded-full bg-pink-400 shadow-[0_0_4px_rgba(244,114,182,0.9)]" />
@@ -94,11 +94,6 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
 
   return (
     <div className={`relative ${ringSize} flex-shrink-0`}>
-      {/* Outer glow shadow */}
-      <div
-        className="absolute inset-0 rounded-full opacity-20 blur-xl"
-        style={{ backgroundColor: styles.hex }}
-      />
       {/* Inner disc with subtle depth */}
       <div className="absolute inset-[6px] rounded-full bg-[hsl(220,10%,8%)] shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)]" />
       {/* SVG ring */}
@@ -119,10 +114,7 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
           stroke={styles.hex}
-          style={{
-            filter: `drop-shadow(0 0 4px ${styles.hex}80)`,
-            transition: "stroke-dashoffset 0.6s ease",
-          }}
+          style={{ transition: "stroke-dashoffset 0.6s ease" }}
         />
       </svg>
       {/* Center text */}
@@ -199,7 +191,6 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: 
   if (size === "sm") {
     return (
       <div className="relative w-10 h-10 flex-shrink-0" title={`${label}${subLabel ? ` · ${subLabel}` : ""}`}>
-        <div className="absolute inset-0 rounded-full opacity-20 blur-xl" style={{ backgroundColor: styles.hex }} />
         <div className="absolute inset-[3px] rounded-full bg-[hsl(220,10%,8%)]" />
         <svg className="w-full h-full relative z-10" viewBox="0 0 100 100">
           <circle
@@ -217,7 +208,6 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: 
             stroke={styles.hex}
             strokeDasharray={dashAttr}
             opacity="0.95"
-            style={{ filter: `drop-shadow(0 0 3px ${styles.hex}80)` }}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
@@ -236,7 +226,6 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: 
   return (
     <div className="flex items-center justify-center py-4">
       <div className="relative w-56 h-56 flex-shrink-0">
-        <div className="absolute inset-0 rounded-full opacity-20 blur-xl" style={{ backgroundColor: styles.hex }} />
         <div className="absolute inset-[6px] rounded-full bg-[hsl(220,10%,8%)] shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)]" />
         <svg className="w-full h-full relative z-10" viewBox="0 0 100 100">
           <circle
@@ -254,7 +243,6 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: 
             stroke={styles.hex}
             strokeDasharray={dashAttrLg}
             opacity="0.9"
-            style={{ filter: `drop-shadow(0 0 6px ${styles.hex}80)` }}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 px-4 text-center">
@@ -295,7 +283,7 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
     const strokeDashoffset = circumference - (progress / 100) * circumference;
 
     return (
-      <div className="relative w-10 h-10 flex-shrink-0 group cursor-pointer transition-transform duration-200 hover:scale-110">
+      <div className="relative w-10 h-10 flex-shrink-0 group cursor-pointer transition-colors duration-200">
         <div className="absolute inset-[3px] rounded-full bg-[hsl(220,10%,8%)]" />
         <svg className="w-full h-full -rotate-90 relative z-10" viewBox="0 0 100 100">
           <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="5" stroke="hsl(220 10% 16%)" />
@@ -303,7 +291,6 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
             cx="50" cy="50" r={radius} fill="none" strokeWidth="5" strokeLinecap="round"
             strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
             stroke={styles.hex}
-            style={{ filter: `drop-shadow(0 0 3px ${styles.hex}80)` }}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
