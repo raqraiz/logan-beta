@@ -102,20 +102,6 @@ const text = {
   lineHeight: '1.6',
   margin: '0 0 18px',
 }
-const buttonSection = {
-  textAlign: 'center' as const,
-  margin: '28px 0',
-}
-const button = {
-  backgroundColor: '#15B88C',
-  color: '#ffffff',
-  fontSize: '15px',
-  fontWeight: '600' as const,
-  borderRadius: '12px',
-  padding: '14px 28px',
-  textDecoration: 'none',
-  display: 'inline-block',
-}
 const signature = {
   fontSize: '15px',
   color: '#111827',
