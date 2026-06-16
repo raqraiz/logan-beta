@@ -47,19 +47,13 @@ const WelcomeEmail = ({ name }: WelcomeProps) => {
           </Text>
 
           <Text style={text}>
-            So here's the only thing to do right now: go to asklogan.ai and say hi. Logan will take
-            it from there.
+            Give Logan a few days to get to know you — it only gets better the more you use it. Come
+            back and chat whenever something's on your mind, whether it's how you're feeling today
+            or just checking in on your patterns.
           </Text>
 
-          <Section style={buttonSection}>
-            <Button style={button} href="https://asklogan.ai">
-              Open Logan
-            </Button>
-          </Section>
-
           <Text style={text}>
-            Give it a few days to get to know you, it only gets better the more you use it. And if
-            anything ever feels off, just email feedback@asklogan.ai, or report it in the
+            And if anything ever feels off, just email feedback@asklogan.ai, or report it in the
             "feedback" section in the app. This comes straight to me, and I read every word. 🙏
           </Text>
 
