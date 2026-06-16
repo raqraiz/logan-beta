@@ -11,6 +11,7 @@ import Consent from "./pages/Consent";
 import AuthCallback from "./pages/AuthCallback";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import Unsubscribe from "./pages/Unsubscribe";
 
 import IntegrationCallback from "./pages/IntegrationCallback";
 import { Seo } from "@/components/Seo";
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/consent" element={<Consent />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/integrations/:provider/callback" element={<IntegrationCallback />} />
+              <Route path="/unsubscribe" element={<Unsubscribe />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
