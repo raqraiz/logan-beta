@@ -77,7 +77,7 @@ export function LabResultsWidget({ userId }: LabResultsWidgetProps) {
     <>
       <button
         onClick={() => setShowHistory(true)}
-        className={`w-full text-left rounded-2xl border border-border/40 ${COLORS.border} border-l-[3px] bg-card/50 backdrop-blur-md overflow-hidden relative transition-transform active:scale-[0.99]`}
+        className={`w-full text-left rounded-2xl border border-border/40 ${COLORS.border} border-l-[3px] bg-card overflow-hidden relative transition-opacity active:opacity-90`}
       >
         <div className={`absolute inset-0 bg-gradient-to-br ${COLORS.bgGradient} pointer-events-none`} />
         <div className="relative px-5 py-4">
