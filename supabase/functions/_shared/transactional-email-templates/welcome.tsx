@@ -130,3 +130,9 @@ const signature = {
   lineHeight: '1.6',
   margin: '28px 0 0',
 }
+const ps = {
+  fontSize: '15px',
+  color: '#374151',
+  lineHeight: '1.6',
+  margin: '24px 0 0',
+}
