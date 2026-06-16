@@ -131,9 +131,7 @@ Deno.serve(async (req) => {
   if (!template) {
     console.error('Template not found in registry', { templateName })
     return new Response(
-      JSON.stringify({
-        error: `Template '${templateName}' not found. Available: ${Object.keys(TEMPLATES).join(', ')}`,
-      }),
+      JSON.stringify({ error: 'Template not found' }),
       {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -145,6 +143,35 @@ Deno.serve(async (req) => {
   // the caller-provided recipientEmail. This allows notification templates
   // to always send to a fixed address (e.g., site owner from env var).
   const effectiveRecipient = template.to || recipientEmail
+
+  if (!effectiveRecipient) {
+    return new Response(
+      JSON.stringify({
+        error: 'recipientEmail is required (unless the template defines a fixed recipient)',
+      }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    )
+  }
+
+  // For authenticated (non-service-role) callers, lock recipient to their own email
+  // unless the template defines a fixed `to` (e.g., owner notifications).
+  if (
+    authedUserEmail &&
+    !template.to &&
+    effectiveRecipient.toLowerCase() !== authedUserEmail
+  ) {
+    return new Response(
+      JSON.stringify({ error: 'Recipient must match authenticated user' }),
+      {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    )
+  }
+
 
   if (!effectiveRecipient) {
     return new Response(
