@@ -53,6 +53,51 @@ export type Database = {
         }
         Relationships: []
       }
+      attribution_events: {
+        Row: {
+          anon_id: string
+          captured_at: string
+          created_at: string
+          id: string
+          landing_path: string | null
+          referrer: string | null
+          user_id: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          anon_id: string
+          captured_at?: string
+          created_at?: string
+          id?: string
+          landing_path?: string | null
+          referrer?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          anon_id?: string
+          captured_at?: string
+          created_at?: string
+          id?: string
+          landing_path?: string | null
+          referrer?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           content: string
