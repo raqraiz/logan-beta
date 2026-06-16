@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { User, Session, type EmailOtpType } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { getAttribution } from "@/lib/attribution";
 
 interface AuthContextType {
   user: User | null;
@@ -20,11 +21,13 @@ const ensureProfile = async (user: User) => {
     .single();
 
   if (!existingProfile) {
+    const attribution = getAttribution();
     await supabase.from("profiles").insert({
       id: user.id,
       email: user.email || "",
       full_name:
         user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
+      ...(attribution ?? {}),
     });
   }
 };
