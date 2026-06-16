@@ -38,7 +38,7 @@ function PpBadgeInside({ postpartumStartDate, size }: { postpartumStartDate?: st
   }
   return (
     <div
-      className="absolute bottom-[18%] left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 px-2 py-[3px] rounded-full bg-pink-400/10 border border-pink-400/30 backdrop-blur-md"
+      className="absolute bottom-[18%] left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 px-2 py-[3px] rounded-full bg-card border border-pink-400/30"
       title={`${label} postpartum`}
     >
       <span className="w-1.5 h-1.5 rounded-full bg-pink-400 shadow-[0_0_4px_rgba(244,114,182,0.9)]" />
@@ -94,11 +94,6 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
 
   return (
     <div className={`relative ${ringSize} flex-shrink-0`}>
-      {/* Outer glow shadow */}
-      <div
-        className="absolute inset-0 rounded-full opacity-20 blur-xl"
-        style={{ backgroundColor: styles.hex }}
-      />
       {/* Inner disc with subtle depth */}
       <div className="absolute inset-[6px] rounded-full bg-[hsl(220,10%,8%)] shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)]" />
       {/* SVG ring */}
@@ -119,10 +114,7 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
           stroke={styles.hex}
-          style={{
-            filter: `drop-shadow(0 0 4px ${styles.hex}80)`,
-            transition: "stroke-dashoffset 0.6s ease",
-          }}
+          style={{ transition: "stroke-dashoffset 0.6s ease" }}
         />
       </svg>
       {/* Center text */}
