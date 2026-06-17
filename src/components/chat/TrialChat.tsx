@@ -223,15 +223,27 @@ export const TrialChat = () => {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowAuth(true)}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Sign in
-            </button>
-            <Button size="sm" onClick={scrollToSignup} className="h-9 px-4 text-sm">
-              Get started
-            </Button>
+            {chatMode ? (
+              <button
+                onClick={() => { setChatMode(false); setHasStarted(false); setMessages([]); setShowAuth(false); setTrialMessageCount(0); }}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Back
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => setShowAuth(true)}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Sign in
+                </button>
+                <Button size="sm" onClick={scrollToSignup} className="h-9 px-4 text-sm">
+                  Get started
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
