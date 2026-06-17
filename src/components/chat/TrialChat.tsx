@@ -307,10 +307,8 @@ export const TrialChat = () => {
                     <InlineChatAuth />
                   </div>
                 </div>
-
-                <p className="text-sm text-muted-foreground italic pl-1 mt-8">
-                  Thank you for building Logan with me,<br />
-                  Raquella <span className="text-primary not-italic">💚</span>
+                <p className="text-xs text-muted-foreground/60 text-center mt-5 max-w-md mx-auto leading-relaxed">
+                  We keep your health data private and secure. It's never sold, shared with advertisers, or used to train AI models outside Logan. You can delete your account and data anytime.
                 </p>
               </section>
 
