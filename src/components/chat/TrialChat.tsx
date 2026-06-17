@@ -25,6 +25,15 @@ const FEELING_CHIPS = [
   "I'm in menopause and no one prepared me for this",
 ];
 
+const STARTER_PROMPTS = [
+  "Why do I crash the week before my period?",
+  "When's the best time of my cycle to work out hard?",
+  "How do I know if I'm in perimenopause?",
+  "What should I eat in my luteal phase?",
+  "Why is my sleep worse some weeks?",
+  "How do I plan my month around my energy?",
+];
+
 // Real-feeling attribution — last initial + a humanising detail.
 const TESTIMONIALS = [
   {
