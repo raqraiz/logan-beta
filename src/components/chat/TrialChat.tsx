@@ -20,35 +20,24 @@ interface TrialMessage {
 
 const FEELING_CHIPS = [
   "I feel like a different person two weeks a month",
-  "I can't predict my mood anymore",
   "I never know when to push or rest",
-  "I just had a baby and don't recognize myself",
   "My cycle is irregular and nothing tracks it right",
-  "I want to stop being blindsided by PMS",
   "I'm in menopause and no one prepared me for this",
 ];
 
 // Real-feeling attribution — last initial + a humanising detail.
 const TESTIMONIALS = [
   {
-    quote: "I finally understand why I cry every third Tuesday. Logan saw the pattern before I did.",
-    name: "Maya R., 34 · London",
+    quote: "I finally understand why I crash every few weeks. Logan saw the pattern before I did.",
+    name: "Maya R., 34 · Los Angeles",
   },
   {
-    quote: "Postpartum me was lost. This is the first thing that doesn't assume I'm still cycling normally.",
-    name: "Priya S., 31 · mum of two",
-  },
-  {
-    quote: "I stopped scheduling hard meetings on day 25. My whole week changed.",
-    name: "Jules T., 29 · product lead",
+    quote: "I stopped scheduling big presentations on day 25. My whole week changed.",
+    name: "Jules T., 29 · Austin",
   },
   {
     quote: "It's like texting a friend who actually knows what's happening in my body.",
-    name: "Sam K., 38 · marathon runner",
-  },
-  {
-    quote: "Finally, something that gets menopause isn't just hot flashes. Logan understands the whole picture.",
-    name: "Diana M., 52 · Edinburgh",
+    name: "Sam K., 38 · New York",
   },
 ];
 
