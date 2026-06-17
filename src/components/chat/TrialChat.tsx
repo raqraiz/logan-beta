@@ -428,8 +428,9 @@ export const TrialChat = () => {
                     onClick={() => {
                       setInputValue(prompt);
                       setTimeout(() => {
-                        document.querySelector<HTMLFormElement>("form[data-trial-chat-form]")?.requestSubmit();
-                      }, 0);
+                        const form = document.querySelector('form[data-trial-chat-form]');
+                        form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                      }, 80);
                     }}
                     className="text-left text-sm px-4 py-2.5 rounded-2xl bg-card/60 border border-border/60 hover:border-primary/50 hover:bg-primary/5 text-foreground/85 hover:text-foreground transition-all duration-200"
                   >
