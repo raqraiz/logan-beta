@@ -20,35 +20,24 @@ interface TrialMessage {
 
 const FEELING_CHIPS = [
   "I feel like a different person two weeks a month",
-  "I can't predict my mood anymore",
   "I never know when to push or rest",
-  "I just had a baby and don't recognize myself",
   "My cycle is irregular and nothing tracks it right",
-  "I want to stop being blindsided by PMS",
   "I'm in menopause and no one prepared me for this",
 ];
 
 // Real-feeling attribution — last initial + a humanising detail.
 const TESTIMONIALS = [
   {
-    quote: "I finally understand why I cry every third Tuesday. Logan saw the pattern before I did.",
-    name: "Maya R., 34 · London",
+    quote: "I finally understand why I crash every few weeks. Logan saw the pattern before I did.",
+    name: "Maya R., 34 · Los Angeles",
   },
   {
-    quote: "Postpartum me was lost. This is the first thing that doesn't assume I'm still cycling normally.",
-    name: "Priya S., 31 · mum of two",
-  },
-  {
-    quote: "I stopped scheduling hard meetings on day 25. My whole week changed.",
-    name: "Jules T., 29 · product lead",
+    quote: "I stopped scheduling big presentations on day 25. My whole week changed.",
+    name: "Jules T., 29 · Austin",
   },
   {
     quote: "It's like texting a friend who actually knows what's happening in my body.",
-    name: "Sam K., 38 · marathon runner",
-  },
-  {
-    quote: "Finally, something that gets menopause isn't just hot flashes. Logan understands the whole picture.",
-    name: "Diana M., 52 · Edinburgh",
+    name: "Sam K., 38 · New York",
   },
 ];
 
@@ -281,9 +270,94 @@ export const TrialChat = () => {
                     Ask Logan a question first
                   </Button>
                 </div>
+              </section>
 
-                {/* Soft email capture — for visitors who aren't ready to create an account today */}
-                <div className="mt-8 bg-card/40 border border-border/40 rounded-2xl p-4 backdrop-blur-sm max-w-md">
+              {/* ================= "You might be here because…" ================= */}
+              <section>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground/70 mb-3 pl-1">
+                  You might be here because…
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {FEELING_CHIPS.map((chip) => (
+                    <button
+                      key={chip}
+                      onClick={() => enterChatMode(chip)}
+                      className="text-left text-sm px-4 py-2.5 rounded-2xl bg-card/60 border border-border/60 hover:border-primary/50 hover:bg-primary/5 text-foreground/85 hover:text-foreground transition-all duration-200 backdrop-blur-sm"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground/70 mt-3 pl-1">
+                  Tap one to ask Logan about it.
+                </p>
+              </section>
+
+              {/* ================= Sign Up ================= */}
+              <section ref={signupRef} className="pt-2">
+                <div className="relative bg-gradient-to-br from-primary/15 via-primary/8 to-transparent border border-primary/30 rounded-3xl p-6 sm:p-8 overflow-hidden">
+                  <div className="absolute top-0 left-1/2 w-32 h-32 bg-primary/20 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+                  <div className="relative z-10 text-center">
+                    <h2 className="font-display font-semibold text-2xl text-foreground mb-2">
+                      Ready to meet Logan?
+                    </h2>
+                    <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+                      Create your account and I'll start learning your patterns from day one. Free during beta.
+                    </p>
+                    <InlineChatAuth />
+                  </div>
+                </div>
+
+                <p className="text-sm text-muted-foreground italic pl-1 mt-8">
+                  Thank you for building Logan with me,<br />
+                  Raquella <span className="text-primary not-italic">💚</span>
+                </p>
+              </section>
+
+              {/* ================= Testimonials ================= */}
+              <section>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground/70 mb-3 pl-1">
+                  Real women, real words
+                </p>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {TESTIMONIALS.map((t) => (
+                    <figure key={t.name} className="bg-card/40 border border-border/40 rounded-2xl p-4 backdrop-blur-sm">
+                      <blockquote className="text-sm text-foreground/85 leading-relaxed">"{t.quote}"</blockquote>
+                      <figcaption className="text-xs text-muted-foreground mt-2">— {t.name}</figcaption>
+                    </figure>
+                  ))}
+                </div>
+              </section>
+
+              {/* ================= DM from founder ================= */}
+              <section className="space-y-5 animate-fade-in">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-display font-semibold text-base shadow-glow">
+                      R
+                    </div>
+                    <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-background" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Raquella · Founder</p>
+                    <p className="text-xs text-muted-foreground">building Logan with women like you</p>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-card to-card/70 border border-border/50 rounded-2xl rounded-tl-sm px-5 py-4 shadow-card backdrop-blur-sm max-w-[92%]">
+                  <p className="text-foreground/95 leading-relaxed">
+                    Welcome to Logan <span className="text-primary">💚</span>
+                  </p>
+                  <p className="text-foreground/85 leading-relaxed mt-2 text-[15px]">
+                    You're joining a small group of women helping me build this before I launch publicly.
+                    Logan is free during beta, evolves fast, and your feedback genuinely shapes what I build next.
+                  </p>
+                </div>
+              </section>
+
+              {/* ================= Not Ready to sign up today? ================= */}
+              <section>
+                <div className="bg-card/40 border border-border/40 rounded-2xl p-4 max-w-md">
                   {waitlistDone ? (
                     <div className="flex items-center gap-2.5 text-sm text-foreground/90">
                       <span className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center">
@@ -319,90 +393,6 @@ export const TrialChat = () => {
                     </>
                   )}
                 </div>
-
-              </section>
-
-              {/* ================= DM from founder ================= */}
-              <section className="space-y-5 animate-fade-in">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-display font-semibold text-base shadow-glow">
-                      R
-                    </div>
-                    <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-background" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Raquella · Founder</p>
-                    <p className="text-xs text-muted-foreground">building Logan with women like you</p>
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-br from-card to-card/70 border border-border/50 rounded-2xl rounded-tl-sm px-5 py-4 shadow-card backdrop-blur-sm max-w-[92%]">
-                  <p className="text-foreground/95 leading-relaxed">
-                    Welcome to Logan <span className="text-primary">💚</span>
-                  </p>
-                  <p className="text-foreground/85 leading-relaxed mt-2 text-[15px]">
-                    You're joining a small group of women helping me build this before I launch publicly.
-                    Logan is free during beta, evolves fast, and your feedback genuinely shapes what I build next.
-                  </p>
-                </div>
-              </section>
-
-              {/* ================= "You might be here because…" ================= */}
-              <section>
-                <p className="text-xs uppercase tracking-widest text-muted-foreground/70 mb-3 pl-1">
-                  You might be here because…
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {FEELING_CHIPS.map((chip) => (
-                    <button
-                      key={chip}
-                      onClick={() => enterChatMode(chip)}
-                      className="text-left text-sm px-4 py-2.5 rounded-2xl bg-card/60 border border-border/60 hover:border-primary/50 hover:bg-primary/5 text-foreground/85 hover:text-foreground transition-all duration-200 backdrop-blur-sm"
-                    >
-                      {chip}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground/70 mt-3 pl-1">
-                  Tap one to ask Logan about it.
-                </p>
-              </section>
-
-              {/* ================= Testimonials ================= */}
-              <section>
-                <p className="text-xs uppercase tracking-widest text-muted-foreground/70 mb-3 pl-1">
-                  Real women, real words
-                </p>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  {TESTIMONIALS.map((t) => (
-                    <figure key={t.name} className="bg-card/40 border border-border/40 rounded-2xl p-4 backdrop-blur-sm">
-                      <blockquote className="text-sm text-foreground/85 leading-relaxed">"{t.quote}"</blockquote>
-                      <figcaption className="text-xs text-muted-foreground mt-2">— {t.name}</figcaption>
-                    </figure>
-                  ))}
-                </div>
-              </section>
-
-              {/* ================= Final CTA — signup ================= */}
-              <section ref={signupRef} className="pt-2">
-                <div className="relative bg-gradient-to-br from-primary/15 via-primary/8 to-transparent border border-primary/30 rounded-3xl p-6 sm:p-8 overflow-hidden">
-                  <div className="absolute top-0 left-1/2 w-32 h-32 bg-primary/20 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-                  <div className="relative z-10 text-center">
-                    <h2 className="font-display font-semibold text-2xl text-foreground mb-2">
-                      Ready to meet Logan?
-                    </h2>
-                    <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-                      Create your account and I'll start learning your patterns from day one. Free during beta.
-                    </p>
-                    <InlineChatAuth />
-                  </div>
-                </div>
-
-                <p className="text-sm text-muted-foreground italic pl-1 mt-8">
-                  Thank you for building Logan with me,<br />
-                  Raquella <span className="text-primary not-italic">💚</span>
-                </p>
               </section>
             </>
           )}
