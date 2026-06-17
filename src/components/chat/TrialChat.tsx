@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoganFullLogo } from "@/components/LoganFullLogo";
-import { Send, Loader2, ArrowDown, ArrowRight, Sparkles, MessageCircle, Check } from "lucide-react";
+import { Send, Loader2, ArrowDown, ArrowRight, ArrowLeft, Sparkles, MessageCircle, Check } from "lucide-react";
 import { VoiceInputButton } from "./VoiceInputButton";
 import { supabase } from "@/integrations/supabase/client";
 import { InlineChatAuth } from "./InlineChatAuth";
@@ -223,15 +223,27 @@ export const TrialChat = () => {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowAuth(true)}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Sign in
-            </button>
-            <Button size="sm" onClick={scrollToSignup} className="h-9 px-4 text-sm">
-              Get started
-            </Button>
+            {chatMode ? (
+              <button
+                onClick={() => { setChatMode(false); setHasStarted(false); setMessages([]); setShowAuth(false); setTrialMessageCount(0); }}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Back
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => setShowAuth(true)}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Sign in
+                </button>
+                <Button size="sm" onClick={scrollToSignup} className="h-9 px-4 text-sm">
+                  Get started
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -307,10 +319,8 @@ export const TrialChat = () => {
                     <InlineChatAuth />
                   </div>
                 </div>
-
-                <p className="text-sm text-muted-foreground italic pl-1 mt-8">
-                  Thank you for building Logan with me,<br />
-                  Raquella <span className="text-primary not-italic">💚</span>
+                <p className="text-xs text-muted-foreground/60 text-center mt-5 max-w-md mx-auto leading-relaxed">
+                  We keep your health data private and secure. It's never sold, shared with advertisers, or used to train AI models outside Logan. You can delete your account and data anytime.
                 </p>
               </section>
 
