@@ -25,6 +25,15 @@ const FEELING_CHIPS = [
   "I'm in menopause and no one prepared me for this",
 ];
 
+const STARTER_PROMPTS = [
+  "Why do I crash the week before my period?",
+  "When's the best time of my cycle to work out hard?",
+  "How do I know if I'm in perimenopause?",
+  "What should I eat in my luteal phase?",
+  "Why is my sleep worse some weeks?",
+  "How do I plan my month around my energy?",
+];
+
 // Real-feeling attribution — last initial + a humanising detail.
 const TESTIMONIALS = [
   {
@@ -405,6 +414,34 @@ export const TrialChat = () => {
                 </div>
               </section>
             </>
+          )}
+
+          {chatMode && messages.length === 0 && !isTyping && (
+            <div className="py-6 animate-fade-in">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground/70 mb-3 pl-1">
+                Not sure where to start? Try one of these
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {STARTER_PROMPTS.map((prompt) => (
+                  <button
+                    key={prompt}
+                    onClick={() => {
+                      setInputValue(prompt);
+                      setTimeout(() => {
+                        const form = document.querySelector('form[data-trial-chat-form]');
+                        form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                      }, 80);
+                    }}
+                    className="text-left text-sm px-4 py-2.5 rounded-2xl bg-card/60 border border-border/60 hover:border-primary/50 hover:bg-primary/5 text-foreground/85 hover:text-foreground transition-all duration-200"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground/70 mt-3 pl-1">
+                Or type your own question below.
+              </p>
+            </div>
           )}
 
           {/* Chat messages (only in chat mode) */}
