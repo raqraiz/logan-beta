@@ -416,6 +416,33 @@ export const TrialChat = () => {
             </>
           )}
 
+          {chatMode && messages.length === 0 && !isTyping && (
+            <div className="py-6 animate-fade-in">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground/70 mb-3 pl-1">
+                Not sure where to start? Try one of these
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {STARTER_PROMPTS.map((prompt) => (
+                  <button
+                    key={prompt}
+                    onClick={() => {
+                      setInputValue(prompt);
+                      setTimeout(() => {
+                        document.querySelector<HTMLFormElement>("form[data-trial-chat-form]")?.requestSubmit();
+                      }, 0);
+                    }}
+                    className="text-left text-sm px-4 py-2.5 rounded-2xl bg-card/60 border border-border/60 hover:border-primary/50 hover:bg-primary/5 text-foreground/85 hover:text-foreground transition-all duration-200"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground/70 mt-3 pl-1">
+                Or type your own question below.
+              </p>
+            </div>
+          )}
+
           {/* Chat messages (only in chat mode) */}
           {chatMode && messages.map((message, index) => {
             const isLastAssistant = message.role === "assistant" && index === messages.length - 1;
