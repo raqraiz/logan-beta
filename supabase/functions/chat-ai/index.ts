@@ -2066,12 +2066,13 @@ MEAL PLANS / MENUS — STRICT RULES:
 
   const userLifeStage = participant.life_stage || "cycling";
 
-  if (userLifeStage !== "cycling") {
+  if (userLifeStage !== "cycling" && userLifeStage !== "perimenopause") {
     const age = participant.age || null;
     const topics = participant.goals?.length ? participant.goals.join(", ") : null;
     const stageLabel =
       userLifeStage === "postpartum" ? "Postpartum" :
       userLifeStage === "menopause" ? "Menopause" :
+      userLifeStage === "perimenopause" ? "Perimenopause" :
       userLifeStage === "irregular" ? "Irregular / hormonal birth control" :
       "Cycling";
     
@@ -2115,8 +2116,10 @@ MEAL PLANS / MENUS — STRICT RULES:
     const stageContext = userLifeStage === "postpartum"
       ? `This user is POSTPARTUM — they do not have a regular cycle right now (unless they say it has returned). Their hormones are recalibrating after pregnancy, but the SPECIFIC focus depends heavily on how far postpartum they are. ${ppPhaseGuidance}\n\nGENERAL POSTPARTUM RULES: Do NOT assume whether the user is breastfeeding or not — only reference breastfeeding if the USER brings it up first. If they mention having multiple children, do NOT assume they are breastfeeding all of them. Do NOT reference cycle phases, cycle days, or ovulation unless the user has confirmed their cycle returned. NEVER default to generic "early postpartum healing/recovery" language for users past 6 months postpartum.`
       : userLifeStage === "menopause"
-        ? `This user is in MENOPAUSE — their cycle may be irregular or has stopped. Their estrogen and progesterone are declining. Focus on: hot flashes, sleep disruption, mood changes, bone health, energy management, cognitive shifts, weight changes. Do NOT reference specific cycle days or ovulation windows. Instead, provide guidance relevant to hormonal transition and thriving through it.`
-        : `This user is on HORMONAL BIRTH CONTROL or has an IRREGULAR cycle. Their hormones are externally regulated (pill, IUD, implant, ring, patch) or unpredictable (PCOS, hypothalamic amenorrhea, etc.). They are NOT naturally cycling. RULES: Never reference a cycle "day number" or natural phase (follicular, luteal, ovulation, menstruation). Never invent rising/falling estrogen or progesterone language tied to a phase. Frame guidance around steady-state levers: sleep, protein, strength training, stress, hydration, and micronutrient depletion that hormonal BC can cause (B6, B12, magnesium, zinc, folate). If they ask about a phase, gently explain why phase-based predictions don't apply to them.`;
+        ? `This user is in MENOPAUSE — their cycle has stopped (12+ months without a period). Their estrogen and progesterone are declining. Focus on: hot flashes, sleep disruption, mood changes, bone health, energy management, cognitive shifts, weight changes. Do NOT reference specific cycle days or ovulation windows. Instead, provide guidance relevant to hormonal transition and thriving through it.`
+        : userLifeStage === "perimenopause"
+          ? `This user is in PERIMENOPAUSE — she STILL HAS PERIODS and is still cycling, but the pattern is shifting (cycles getting shorter/longer, heavier/lighter, skipped months, new symptoms like hot flashes, sleep changes, mood swings). DO NOT call her menopausal. Reference her cycle day and phase when relevant, but acknowledge that hormone swings can be sharper and less predictable than they used to be. Focus on: tracking pattern shifts, sleep, hot flashes, mood, energy, bone/muscle health, and what's changed vs. her baseline. Be precise: perimenopause ≠ menopause.`
+          : `This user is on HORMONAL BIRTH CONTROL or has an IRREGULAR cycle. Their hormones are externally regulated (pill, IUD, implant, ring, patch) or unpredictable (PCOS, hypothalamic amenorrhea, etc.). They are NOT naturally cycling. RULES: Never reference a cycle "day number" or natural phase (follicular, luteal, ovulation, menstruation). Never invent rising/falling estrogen or progesterone language tied to a phase. Frame guidance around steady-state levers: sleep, protein, strength training, stress, hydration, and micronutrient depletion that hormonal BC can cause (B6, B12, magnesium, zinc, folate). If they ask about a phase, gently explain why phase-based predictions don't apply to them.`;
 
 
     const todayStr = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
