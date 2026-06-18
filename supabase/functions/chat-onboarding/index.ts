@@ -361,10 +361,13 @@ serve(async (req) => {
       while (
         nextStep < ONBOARDING_QUESTIONS.length - 1 &&
         (ONBOARDING_QUESTIONS[nextStep] as any).requiresStage &&
-        (ONBOARDING_QUESTIONS[nextStep] as any).requiresStage !== userLifeStage
+        (Array.isArray((ONBOARDING_QUESTIONS[nextStep] as any).requiresStage)
+          ? !((ONBOARDING_QUESTIONS[nextStep] as any).requiresStage as string[]).includes(userLifeStage)
+          : (ONBOARDING_QUESTIONS[nextStep] as any).requiresStage !== userLifeStage)
       ) {
         nextStep++;
       }
+
       const nextQuestion = ONBOARDING_QUESTIONS[nextStep];
 
       // ─── Educational moments between steps ───────────────────────
