@@ -1,5 +1,5 @@
 
-type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause";
+type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
 
 interface ChatCycleCircleProps {
   cycleDay: number;
@@ -141,7 +141,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: 
     : PHASE_STYLES[stageKey];
   const label =
     lifeStage === "postpartum" ? "Postpartum" :
-    lifeStage === "menopause" ? "Perimenopause" :
+    lifeStage === "menopause" ? "Menopause" :
     lifeStage === "steady" ? (steadyReason === "stale" ? "Overdue" : "Steady") :
     "Steady";
 
