@@ -316,7 +316,7 @@ export function NutritionDetailDialog({ open, onOpenChange, userId, onDataChange
             <TabsContent value="goals" className="space-y-3 mt-0">
               <GoalsEditor userId={userId} goal={goal} onSaved={(g) => { setGoal(g); onDataChanged?.(); }} />
             </TabsContent>
-          </ScrollArea>
+          </div>
         </Tabs>
       </DialogContent>
     </Dialog>
