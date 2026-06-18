@@ -195,15 +195,15 @@ export function NutritionDetailDialog({ open, onOpenChange, userId, onDataChange
           <DialogDescription>Log meals, track macros, hit your daily target.</DialogDescription>
         </DialogHeader>
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="grid grid-cols-4 w-full">
+        <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <TabsList className="grid grid-cols-4 w-full shrink-0">
             <TabsTrigger value="log">Log</TabsTrigger>
             <TabsTrigger value="today">Today</TabsTrigger>
             <TabsTrigger value="trends">Trends</TabsTrigger>
             <TabsTrigger value="goals">Goals</TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="flex-1 mt-3 pr-3">
+          <div className="flex-1 min-h-0 mt-3 -mr-3 pr-3 overflow-y-auto">
             <TabsContent value="log" className="space-y-3 mt-0">
               <div className="flex gap-2">
                 <Button variant={mode === "photo" ? "default" : "outline"} size="sm" onClick={() => setMode("photo")} className="flex-1 gap-1">
@@ -316,7 +316,7 @@ export function NutritionDetailDialog({ open, onOpenChange, userId, onDataChange
             <TabsContent value="goals" className="space-y-3 mt-0">
               <GoalsEditor userId={userId} goal={goal} onSaved={(g) => { setGoal(g); onDataChanged?.(); }} />
             </TabsContent>
-          </ScrollArea>
+          </div>
         </Tabs>
       </DialogContent>
     </Dialog>
