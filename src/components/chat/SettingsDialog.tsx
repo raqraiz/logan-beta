@@ -11,7 +11,7 @@ import { Loader2, Upload } from "lucide-react";
 import { HistoryImportDialog } from "./HistoryImportDialog";
 import { ProviderConnectCard } from "@/components/settings/ProviderConnectCard";
 
-type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause";
+type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -68,8 +68,8 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
       // Postpartum mode owns the date; postpartum_active flag is irrelevant here.
       payload.postpartum_active = false;
       if (postpartumStartDate) payload.postpartum_start_date = postpartumStartDate;
-    } else if (stage === "cycling" || stage === "irregular") {
-      // Cycling user may also be in postpartum recovery — preserve the dual state.
+    } else if (stage === "cycling" || stage === "irregular" || stage === "perimenopause") {
+      // Cycling / perimenopause user may also be in postpartum recovery — preserve the dual state.
       payload.postpartum_active = postpartumActive;
       if (postpartumActive && postpartumStartDate) {
         payload.postpartum_start_date = postpartumStartDate;
@@ -132,10 +132,17 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
               </div>
             </label>
             <label className="flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:bg-accent/30 cursor-pointer">
+              <RadioGroupItem value="perimenopause" id="stage-perimenopause" className="mt-0.5" />
+              <div className="flex-1">
+                <div className="text-sm font-medium">Perimenopause</div>
+                <div className="text-xs text-muted-foreground">Still getting periods, but the pattern is shifting (cycles, sleep, mood, hot flashes).</div>
+              </div>
+            </label>
+            <label className="flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:bg-accent/30 cursor-pointer">
               <RadioGroupItem value="menopause" id="stage-menopause" className="mt-0.5" />
               <div className="flex-1">
                 <div className="text-sm font-medium">Menopause</div>
-                <div className="text-xs text-muted-foreground">Post-menopause. No active cycle tracking.</div>
+                <div className="text-xs text-muted-foreground">12+ months without a period. No active cycle tracking.</div>
               </div>
             </label>
           </RadioGroup>

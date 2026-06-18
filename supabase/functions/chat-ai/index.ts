@@ -1666,7 +1666,7 @@ serve(async (req) => {
 
     // Only compute cycle info for actively cycling users — postpartum/menopause have no
     // meaningful "current phase" even if a stale last_period_start lingers on the row.
-    const isCycling = (participant?.life_stage || "cycling") === "cycling";
+    const isCycling = ((participant?.life_stage || "cycling") === "cycling") || (participant?.life_stage === "perimenopause");
     const cycleInfo = isCycling && participant?.last_period_start && participant?.cycle_length_days
       ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
       : null;
