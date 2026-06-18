@@ -11,6 +11,8 @@ export interface WidgetConfig {
 
 const DEFAULT_WIDGETS: WidgetConfig[] = [
   { id: "cycle_circle", visible: true, type: "built-in" },
+  { id: "nutrition_today", visible: true, type: "built-in" },
+  { id: "weight_trend", visible: true, type: "built-in" },
   { id: "symptom_tracker", visible: true, type: "built-in" },
   { id: "cycle_correlations", visible: true, type: "built-in" },
   { id: "lab_results", visible: true, type: "built-in" },
@@ -24,6 +26,8 @@ const DEFAULT_WIDGETS: WidgetConfig[] = [
 
 export const DEFAULT_WIDGET_LABELS: Record<string, string> = {
   cycle_circle: "Cycle Circle",
+  nutrition_today: "Nutrition Today",
+  weight_trend: "Weight Trend",
   symptom_tracker: "Symptom Tracker",
   cycle_correlations: "Cycle Correlations",
   lab_results: "Lab Results",

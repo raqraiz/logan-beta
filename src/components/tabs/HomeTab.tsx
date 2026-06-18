@@ -11,6 +11,8 @@ import { SymptomLogWidget } from "@/components/home/SymptomLogWidget";
 import { SymptomHistory } from "@/components/home/SymptomHistory";
 import { CycleCorrelationsWidget } from "@/components/home/CycleCorrelationsWidget";
 import { LabResultsWidget } from "@/components/home/LabResultsWidget";
+import { NutritionTodayWidget } from "@/components/home/NutritionTodayWidget";
+import { WeightTrendWidget } from "@/components/home/WeightTrendWidget";
 import { MiniPhaseArc, getWidgetGraphic } from "@/components/home/WidgetGraphics";
 import { DailyBriefingHero } from "@/components/home/DailyBriefingHero";
 import { useWidgetPreferences, getWidgetLabel } from "@/hooks/useWidgetPreferences";
@@ -519,6 +521,18 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
         return userId ? (
           <div className="w-full" key={id}>
             <LabResultsWidget userId={userId} />
+          </div>
+        ) : null;
+      case "nutrition_today":
+        return userId ? (
+          <div className="w-full" key={id}>
+            <NutritionTodayWidget userId={userId} />
+          </div>
+        ) : null;
+      case "weight_trend":
+        return userId ? (
+          <div className="w-full" key={id}>
+            <WeightTrendWidget userId={userId} />
           </div>
         ) : null;
       case "cycle_correlations":

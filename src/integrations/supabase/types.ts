@@ -685,6 +685,57 @@ export type Database = {
         }
         Relationships: []
       }
+      meals: {
+        Row: {
+          ai_confidence: string | null
+          calories: number
+          carbs_g: number
+          created_at: string
+          description: string | null
+          fat_g: number
+          id: string
+          image_path: string | null
+          logged_at: string
+          name: string
+          protein_g: number
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_confidence?: string | null
+          calories?: number
+          carbs_g?: number
+          created_at?: string
+          description?: string | null
+          fat_g?: number
+          id?: string
+          image_path?: string | null
+          logged_at?: string
+          name: string
+          protein_g?: number
+          source?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_confidence?: string | null
+          calories?: number
+          carbs_g?: number
+          created_at?: string
+          description?: string | null
+          fat_g?: number
+          id?: string
+          image_path?: string | null
+          logged_at?: string
+          name?: string
+          protein_g?: number
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notification_preferences: {
         Row: {
           created_at: string
@@ -721,6 +772,54 @@ export type Database = {
           timezone?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      nutrition_goals: {
+        Row: {
+          activity_level: string | null
+          age: number | null
+          auto_calculated: boolean
+          calorie_target: number | null
+          carbs_target_g: number | null
+          created_at: string
+          fat_target_g: number | null
+          height_cm: number | null
+          protein_target_g: number | null
+          updated_at: string
+          user_id: string
+          weight_goal_direction: string | null
+          weight_goal_kg: number | null
+        }
+        Insert: {
+          activity_level?: string | null
+          age?: number | null
+          auto_calculated?: boolean
+          calorie_target?: number | null
+          carbs_target_g?: number | null
+          created_at?: string
+          fat_target_g?: number | null
+          height_cm?: number | null
+          protein_target_g?: number | null
+          updated_at?: string
+          user_id: string
+          weight_goal_direction?: string | null
+          weight_goal_kg?: number | null
+        }
+        Update: {
+          activity_level?: string | null
+          age?: number | null
+          auto_calculated?: boolean
+          calorie_target?: number | null
+          carbs_target_g?: number | null
+          created_at?: string
+          fat_target_g?: number | null
+          height_cm?: number | null
+          protein_target_g?: number | null
+          updated_at?: string
+          user_id?: string
+          weight_goal_direction?: string | null
+          weight_goal_kg?: number | null
         }
         Relationships: []
       }
@@ -1287,6 +1386,36 @@ export type Database = {
           email?: string
           id?: string
           source?: string | null
+        }
+        Relationships: []
+      }
+      weight_logs: {
+        Row: {
+          created_at: string
+          id: string
+          logged_on: string
+          note: string | null
+          updated_at: string
+          user_id: string
+          weight_kg: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          logged_on?: string
+          note?: string | null
+          updated_at?: string
+          user_id: string
+          weight_kg: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          logged_on?: string
+          note?: string | null
+          updated_at?: string
+          user_id?: string
+          weight_kg?: number
         }
         Relationships: []
       }
