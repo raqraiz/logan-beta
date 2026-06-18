@@ -84,12 +84,12 @@ const ONBOARDING_QUESTIONS = [
   },
   {
     key: "cycle_length",
-    message: "How many days is your cycle? (From the start of one period to the start of the next.)\n\nMost people are somewhere between 24 and 35 days. If you're not sure, that's totally fine — tap \"I'm not sure\" below.",
+    message: "How many days is your cycle? (From the start of one period to the start of the next.)\n\nMost people are somewhere between 24 and 35 days. If your cycle is irregular or you're not sure, tap \"I'm not sure\" below.",
     field: "cycle_length_days",
     parseType: "number",
     inputType: "text",
     showNotSure: true,
-    requiresStage: "cycling"
+    requiresStage: ["cycling", "menopause"]
   },
   {
     key: "last_period",
@@ -98,8 +98,9 @@ const ONBOARDING_QUESTIONS = [
     parseType: "date",
     inputType: "date_picker",
     showNotSure: true,
-    requiresStage: "cycling"
+    requiresStage: ["cycling", "menopause"]
   },
+
   {
     key: "symptoms",
     message: "Now let's talk about what you feel most often — not just right now. Pick anything that sounds familiar.",
@@ -360,10 +361,13 @@ serve(async (req) => {
       while (
         nextStep < ONBOARDING_QUESTIONS.length - 1 &&
         (ONBOARDING_QUESTIONS[nextStep] as any).requiresStage &&
-        (ONBOARDING_QUESTIONS[nextStep] as any).requiresStage !== userLifeStage
+        (Array.isArray((ONBOARDING_QUESTIONS[nextStep] as any).requiresStage)
+          ? !((ONBOARDING_QUESTIONS[nextStep] as any).requiresStage as string[]).includes(userLifeStage)
+          : (ONBOARDING_QUESTIONS[nextStep] as any).requiresStage !== userLifeStage)
       ) {
         nextStep++;
       }
+
       const nextQuestion = ONBOARDING_QUESTIONS[nextStep];
 
       // ─── Educational moments between steps ───────────────────────
