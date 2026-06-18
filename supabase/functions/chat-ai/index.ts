@@ -2066,7 +2066,7 @@ MEAL PLANS / MENUS — STRICT RULES:
 
   const userLifeStage = participant.life_stage || "cycling";
 
-  if (userLifeStage !== "cycling" && userLifeStage !== "perimenopause") {
+  if (userLifeStage !== "cycling") {
     const age = participant.age || null;
     const topics = participant.goals?.length ? participant.goals.join(", ") : null;
     const stageLabel =
