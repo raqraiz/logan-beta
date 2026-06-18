@@ -89,7 +89,7 @@ const ONBOARDING_QUESTIONS = [
     parseType: "number",
     inputType: "text",
     showNotSure: true,
-    requiresStage: ["cycling", "menopause"]
+    requiresStage: ["cycling", "perimenopause"]
   },
   {
     key: "last_period",
@@ -98,7 +98,7 @@ const ONBOARDING_QUESTIONS = [
     parseType: "date",
     inputType: "date_picker",
     showNotSure: true,
-    requiresStage: ["cycling", "menopause"]
+    requiresStage: ["cycling", "perimenopause"]
   },
 
   {
@@ -296,7 +296,9 @@ serve(async (req) => {
         const lower = (userMessage || "").toLowerCase();
         if (lower.includes("postpartum") || lower.includes("post-partum") || lower.includes("just had")) {
           parsedValue = "postpartum";
-        } else if (lower.includes("menopause") || lower.includes("peri")) {
+        } else if (lower.includes("peri")) {
+          parsedValue = "perimenopause";
+        } else if (lower.includes("menopause")) {
           parsedValue = "menopause";
         } else {
           parsedValue = "cycling";
@@ -378,6 +380,8 @@ serve(async (req) => {
           ? "Your hormones are recalibrating after pregnancy. It takes time — Logan will adapt guidance to your recovery:"
           : userLifeStage === "menopause"
           ? "Your hormones are shifting into a new pattern. Understanding what's changing helps you navigate it:"
+          : userLifeStage === "perimenopause"
+          ? "Perimenopause means your cycle is still happening, but the pattern is shifting. Logan will track your cycle and watch for the new signals coming in:"
           : "Your body has two main hormones that rise and fall each month — they're behind most of what you feel:";
         
         await supabase.from("chat_messages").insert({
@@ -458,7 +462,7 @@ serve(async (req) => {
 
         let validationMsg = "";
 
-        if (userLifeStage === "menopause") {
+        if (userLifeStage === "menopause" || userLifeStage === "perimenopause") {
           if (hasEmotional && hasPhysical) {
             validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. You're getting hit on both sides — mind and body. In menopause, these signals can shift with sleep, stress, and changing hormones. That's what I'm here to help you track.`;
           } else if (hasEmotional) {

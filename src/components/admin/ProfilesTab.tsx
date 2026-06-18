@@ -957,6 +957,7 @@ export function ProfilesTab() {
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
                         <option value="cycling">Cycling</option>
+                        <option value="perimenopause">Perimenopause</option>
                         <option value="postpartum">Postpartum</option>
                         <option value="menopause">Menopause</option>
                       </select>

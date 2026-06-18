@@ -106,7 +106,7 @@ interface CycleData {
   phase: string;
   cycleLengthDays: number;
   lastPeriodStart?: string;
-  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause";
+  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
   postpartumStartDate?: string;
   postpartumActive?: boolean;
 }
@@ -125,7 +125,7 @@ const Chat = () => {
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
-  const [lifeStage, setLifeStage] = useState<"cycling" | "irregular" | "postpartum" | "menopause">("cycling");
+  const [lifeStage, setLifeStage] = useState<"cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause">("cycling");
   const [postpartumStartDate, setPostpartumStartDate] = useState<string | null>(null);
   const [postpartumActive, setPostpartumActive] = useState<boolean>(false);
   // Authoritative cycle data from `participants` table — wins over chat metadata
@@ -329,7 +329,7 @@ const Chat = () => {
             timezone: row.timezone ?? null,
           });
           if (row.life_stage) {
-            setLifeStage(row.life_stage as "cycling" | "irregular" | "postpartum" | "menopause");
+            setLifeStage(row.life_stage as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause");
           }
           if (row.postpartum_start_date !== undefined) {
             setPostpartumStartDate(row.postpartum_start_date ?? null);
@@ -583,7 +583,7 @@ const Chat = () => {
         .eq("email", user.email)
         .single();
       if (data?.life_stage) {
-        setLifeStage(data.life_stage as "cycling" | "irregular" | "postpartum" | "menopause");
+        setLifeStage(data.life_stage as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause");
       }
       if (data?.postpartum_start_date) {
         setPostpartumStartDate(data.postpartum_start_date);
@@ -1473,7 +1473,7 @@ const Chat = () => {
                           key={option.value}
                           onClick={() => {
                             sendOnboardingResponse(option.value);
-                            setLifeStage(option.value as "cycling" | "irregular" | "postpartum" | "menopause");
+                            setLifeStage(option.value as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause");
                           }}
                           disabled={isSending}
                           className="text-left px-4 py-3 rounded-xl border border-border/40 bg-card/60 hover:bg-card/90 transition-all active:scale-[0.98]"
