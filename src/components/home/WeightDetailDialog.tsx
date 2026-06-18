@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
-import { Trash2, Scale } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine } from "recharts";
 import { kgToLbs, lbsToKg } from "@/lib/nutrition";
 

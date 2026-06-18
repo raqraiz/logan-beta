@@ -43,7 +43,6 @@ export function WeightTrendWidget({ userId }: Props) {
 
   const display = (kg: number) => unit === "kg" ? kg : kgToLbs(kg);
   const latest = logs[0];
-  const previous = logs[1];
   const oldest = logs[logs.length - 1];
   const trendDelta = latest && oldest ? Number(latest.weight_kg) - Number(oldest.weight_kg) : 0;
   const goalDelta = latest && goalKg ? Number(latest.weight_kg) - goalKg : null;

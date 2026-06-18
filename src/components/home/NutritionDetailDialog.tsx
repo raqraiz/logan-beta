@@ -8,11 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Loader2, Camera, Type, Trash2, Sparkles, Settings2, X } from "lucide-react";
+import { Loader2, Camera, Type, Trash2, Sparkles, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format, startOfDay, subDays } from "date-fns";
 import {
-  LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid,
+  ResponsiveContainer, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid, ReferenceLine,
 } from "recharts";
 import { calcNutritionTargets, type ActivityLevel, type GoalDirection } from "@/lib/nutrition";
 
@@ -301,7 +301,7 @@ export function NutritionDetailDialog({ open, onOpenChange, userId, onDataChange
                       <YAxis tick={{ fontSize: 10 }} />
                       <Tooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }} />
                       {goal?.calorie_target && (
-                        <Line type="monotone" dataKey={() => goal.calorie_target} stroke="hsl(var(--primary))" dot={false} />
+                        <ReferenceLine y={goal.calorie_target} stroke="hsl(var(--primary))" strokeDasharray="3 3" />
                       )}
                       <Bar dataKey="calories" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                     </BarChart>
