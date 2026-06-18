@@ -5,7 +5,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { toast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import { Trash2 } from "lucide-react";
@@ -86,12 +86,12 @@ export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+        <DialogHeader className="shrink-0">
           <DialogTitle>Weight</DialogTitle>
           <DialogDescription>Log a weight and watch the trend.</DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-3">
+        <div className="flex-1 overflow-y-auto min-h-0 pr-3">
           <div className="space-y-4">
             <div className="rounded-xl bg-card border border-border/40 p-3">
               <div className="flex items-baseline justify-between mb-1">
@@ -173,7 +173,7 @@ export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged }
               ))}
             </div>
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
