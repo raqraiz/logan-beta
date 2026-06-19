@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Loader2, Camera, Type, Trash2, Sparkles, X } from "lucide-react";
+import { Loader2, Camera, Type, Trash2, Sparkles, X, CalendarDays } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format, startOfDay, subDays } from "date-fns";
+import { cn } from "@/lib/utils";
 import {
   ResponsiveContainer, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid, ReferenceLine,
 } from "recharts";
