@@ -93,6 +93,8 @@ export function WeightTrendWidget({ userId }: Props) {
               </div>
               <ChevronRight className="w-4 h-4 text-muted-foreground/60" />
             </div>
+          </div>
+
 
           {!latest ? (
             <div className="text-[14px] text-foreground/75 leading-snug">
