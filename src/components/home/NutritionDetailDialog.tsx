@@ -571,3 +571,128 @@ async function fileToBase64(file: File): Promise<string> {
     r.readAsDataURL(file);
   });
 }
+
+function DateBackdater({
+  logDate,
+  setLogDate,
+  historyMeals,
+  goal,
+}: {
+  logDate: string;
+  setLogDate: (v: string) => void;
+  historyMeals: Meal[];
+  goal: Goal | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const isToday = logDate === todayStr;
+  const selectedDate = new Date(`${logDate}T12:00:00`);
+
+  // index meals per day
+  const dayMap = new Map<string, { cals: number; p: number; c: number; f: number; count: number }>();
+  for (const m of historyMeals) {
+    const k = format(new Date(m.logged_at), "yyyy-MM-dd");
+    const cur = dayMap.get(k) ?? { cals: 0, p: 0, c: 0, f: 0, count: 0 };
+    cur.cals += m.calories;
+    cur.p += Number(m.protein_g);
+    cur.c += Number(m.carbs_g);
+    cur.f += Number(m.fat_g);
+    cur.count += 1;
+    dayMap.set(k, cur);
+  }
+
+  const DayContent = (props: DayContentProps) => {
+    const key = format(props.date, "yyyy-MM-dd");
+    const data = dayMap.get(key);
+    const target = goal?.calorie_target ?? 0;
+    const hasData = !!data;
+    const pct = data && target > 0 ? Math.min(100, Math.round((data.cals / target) * 100)) : 0;
+    const label = format(props.date, "d");
+
+    const dot = hasData ? (
+      <span
+        className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full"
+        style={{ background: pct >= 80 ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))" }}
+      />
+    ) : null;
+
+    if (!hasData) {
+      return (
+        <span className="relative flex items-center justify-center w-full h-full">
+          {label}
+        </span>
+      );
+    }
+
+    return (
+      <TooltipProvider delayDuration={120}>
+        <UITooltip>
+          <TooltipTrigger asChild>
+            <span className="relative flex items-center justify-center w-full h-full">
+              {label}
+              {dot}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs">
+            <div className="font-semibold mb-0.5">{format(props.date, "EEE, MMM d")}</div>
+            <div>{data.count} meal{data.count === 1 ? "" : "s"} · {Math.round(data.cals)} kcal{target ? ` / ${target}` : ""}</div>
+            <div className="text-muted-foreground">
+              P {Math.round(data.p)}g · C {Math.round(data.c)}g · F {Math.round(data.f)}g
+            </div>
+          </TooltipContent>
+        </UITooltip>
+      </TooltipProvider>
+    );
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-border/40 bg-card/50 px-3 py-2">
+      <div className="flex items-center gap-2 min-w-0">
+        <CalendarDays className="w-4 h-4 text-muted-foreground shrink-0" />
+        <span className="text-sm truncate">
+          Logging for{" "}
+          <span className="font-medium">
+            {isToday ? "today" : format(selectedDate, "EEE, MMM d")}
+          </span>
+        </span>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        {!isToday && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs gap-1"
+            onClick={() => setLogDate(todayStr)}
+          >
+            <RotateCcw className="w-3 h-3" /> Today
+          </Button>
+        )}
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
+              {isToday ? "Backdate" : "Change"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="end">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(d) => {
+                if (d) {
+                  setLogDate(format(d, "yyyy-MM-dd"));
+                  setOpen(false);
+                }
+              }}
+              disabled={(d) => d > new Date()}
+              defaultMonth={selectedDate}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+              components={{ DayContent }}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+    </div>
+  );
+}
+
