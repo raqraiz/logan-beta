@@ -24,8 +24,10 @@ export function WeightTrendWidget({ userId }: Props) {
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<Log[]>([]);
   const [goalKg, setGoalKg] = useState<number | null>(null);
-  const [unit] = useState<"kg" | "lbs">((typeof localStorage !== "undefined" && (localStorage.getItem(UNIT_KEY) as "kg" | "lbs")) || "lbs");
+  const [unit, setUnit] = useState<"kg" | "lbs">((typeof localStorage !== "undefined" && (localStorage.getItem(UNIT_KEY) as "kg" | "lbs")) || "lbs");
   const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => { localStorage.setItem(UNIT_KEY, unit); }, [unit]);
 
   const load = useCallback(async () => {
     const [{ data: l }, { data: g }] = await Promise.all([
