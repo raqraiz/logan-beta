@@ -24,8 +24,10 @@ export function WeightTrendWidget({ userId }: Props) {
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<Log[]>([]);
   const [goalKg, setGoalKg] = useState<number | null>(null);
-  const [unit] = useState<"kg" | "lbs">((typeof localStorage !== "undefined" && (localStorage.getItem(UNIT_KEY) as "kg" | "lbs")) || "lbs");
+  const [unit, setUnit] = useState<"kg" | "lbs">((typeof localStorage !== "undefined" && (localStorage.getItem(UNIT_KEY) as "kg" | "lbs")) || "lbs");
   const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => { localStorage.setItem(UNIT_KEY, unit); }, [unit]);
 
   const load = useCallback(async () => {
     const [{ data: l }, { data: g }] = await Promise.all([
@@ -67,8 +69,32 @@ export function WeightTrendWidget({ userId }: Props) {
                 Weight Trend
               </span>
             </div>
-            <ChevronRight className="w-4 h-4 text-muted-foreground/60" />
+            <div className="flex items-center gap-2">
+              <div
+                role="group"
+                aria-label="Weight unit"
+                className="flex items-center rounded-full bg-muted/60 p-0.5 text-[10px] font-semibold"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setUnit("lbs"); }}
+                  className={`px-2 py-0.5 rounded-full transition-colors ${unit === "lbs" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+                >
+                  lbs
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setUnit("kg"); }}
+                  className={`px-2 py-0.5 rounded-full transition-colors ${unit === "kg" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+                >
+                  kg
+                </button>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground/60" />
+            </div>
           </div>
+
 
           {!latest ? (
             <div className="text-[14px] text-foreground/75 leading-snug">
