@@ -23,7 +23,7 @@ interface CycleData {
   phase: string;
   cycleLengthDays: number;
   lastPeriodStart?: string;
-  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause";
+  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
   postpartumStartDate?: string;
 }
 
