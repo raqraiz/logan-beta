@@ -138,6 +138,13 @@ export function NutritionDetailDialog({ open, onOpenChange, userId, onDataChange
         if (upErr) throw upErr;
         imagePath = path;
       }
+      const today = format(new Date(), "yyyy-MM-dd");
+      let loggedAt: string | undefined;
+      if (logDate !== today) {
+        // Backdated: log at noon local time on chosen date
+        const d = new Date(`${logDate}T12:00:00`);
+        loggedAt = d.toISOString();
+      }
       const { error } = await supabase.from("meals").insert({
         user_id: userId,
         name: pending.name,
@@ -149,9 +156,10 @@ export function NutritionDetailDialog({ open, onOpenChange, userId, onDataChange
         image_path: imagePath,
         source: photoFile ? "photo" : "text",
         ai_confidence: pending.confidence,
+        ...(loggedAt ? { logged_at: loggedAt } : {}),
       });
       if (error) throw error;
-      toast({ title: "Logged", description: `${pending.name} · ${pending.calories} kcal` });
+      toast({ title: "Logged", description: `${pending.name} · ${pending.calories} kcal${logDate !== today ? ` · ${format(new Date(`${logDate}T12:00:00`), "MMM d")}` : ""}` });
       resetLogForm();
       setTab("today");
       await loadAll();
