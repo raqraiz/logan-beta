@@ -91,6 +91,7 @@ export function NutritionDetailDialog({ open, onOpenChange, userId, onDataChange
 
   function resetLogForm() {
     setDescription(""); setPortionNote(""); setPhotoPreview(null); setPhotoFile(null); setPending(null);
+    setLogDate(format(new Date(), "yyyy-MM-dd"));
   }
 
   function pickPhoto(file: File) {
