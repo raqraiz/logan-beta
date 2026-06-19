@@ -70,6 +70,7 @@ export function NutritionDetailDialog({ open, onOpenChange, userId, onDataChange
     confidence: string;
   }>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [logDate, setLogDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -90,6 +91,7 @@ export function NutritionDetailDialog({ open, onOpenChange, userId, onDataChange
 
   function resetLogForm() {
     setDescription(""); setPortionNote(""); setPhotoPreview(null); setPhotoFile(null); setPending(null);
+    setLogDate(format(new Date(), "yyyy-MM-dd"));
   }
 
   function pickPhoto(file: File) {
@@ -136,6 +138,13 @@ export function NutritionDetailDialog({ open, onOpenChange, userId, onDataChange
         if (upErr) throw upErr;
         imagePath = path;
       }
+      const today = format(new Date(), "yyyy-MM-dd");
+      let loggedAt: string | undefined;
+      if (logDate !== today) {
+        // Backdated: log at noon local time on chosen date
+        const d = new Date(`${logDate}T12:00:00`);
+        loggedAt = d.toISOString();
+      }
       const { error } = await supabase.from("meals").insert({
         user_id: userId,
         name: pending.name,
@@ -147,9 +156,10 @@ export function NutritionDetailDialog({ open, onOpenChange, userId, onDataChange
         image_path: imagePath,
         source: photoFile ? "photo" : "text",
         ai_confidence: pending.confidence,
+        ...(loggedAt ? { logged_at: loggedAt } : {}),
       });
       if (error) throw error;
-      toast({ title: "Logged", description: `${pending.name} · ${pending.calories} kcal` });
+      toast({ title: "Logged", description: `${pending.name} · ${pending.calories} kcal${logDate !== today ? ` · ${format(new Date(`${logDate}T12:00:00`), "MMM d")}` : ""}` });
       resetLogForm();
       setTab("today");
       await loadAll();
@@ -254,6 +264,17 @@ export function NutritionDetailDialog({ open, onOpenChange, userId, onDataChange
                 value={portionNote}
                 onChange={(e) => setPortionNote(e.target.value)}
               />
+
+              <label className="flex items-center justify-between gap-2 rounded-lg border border-border/40 bg-card px-3 py-2">
+                <span className="text-xs font-medium text-muted-foreground">When did you eat this?</span>
+                <Input
+                  type="date"
+                  value={logDate}
+                  onChange={(e) => setLogDate(e.target.value)}
+                  max={format(new Date(), "yyyy-MM-dd")}
+                  className="w-auto h-8 text-sm"
+                />
+              </label>
 
               {!pending ? (
                 <Button onClick={analyze} disabled={analyzing || (!photoFile && !description.trim())} className="w-full gap-2">
