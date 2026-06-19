@@ -70,6 +70,7 @@ export function NutritionDetailDialog({ open, onOpenChange, userId, onDataChange
     confidence: string;
   }>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [logDate, setLogDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
 
   const loadAll = useCallback(async () => {
     setLoading(true);
