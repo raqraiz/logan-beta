@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Loader2, Camera, Type, Trash2, Sparkles, X } from "lucide-react";
+import { Loader2, Camera, Type, Trash2, Sparkles, X, CalendarDays } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format, startOfDay, subDays } from "date-fns";
+import { cn } from "@/lib/utils";
 import {
   ResponsiveContainer, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid, ReferenceLine,
 } from "recharts";
@@ -197,6 +198,27 @@ export function NutritionDetailDialog({ open, onOpenChange, userId, onDataChange
     return Object.entries(days).map(([day, calories]) => ({ day, calories }));
   })();
 
+  // Last 7 days for visual date picker
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = subDays(new Date(), 6 - i);
+    const dStr = format(d, "yyyy-MM-dd");
+    const dayMeals = historyMeals.filter(m => format(new Date(m.logged_at), "yyyy-MM-dd") === dStr);
+    const totals = dayMeals.reduce((a, m) => ({
+      cals: a.cals + m.calories,
+      p: a.p + Number(m.protein_g),
+      c: a.c + Number(m.carbs_g),
+      f: a.f + Number(m.fat_g),
+    }), { cals: 0, p: 0, c: 0, f: 0 });
+    return {
+      dateStr: dStr,
+      label: dStr === todayStr ? "Today" : format(d, "EEE"),
+      dayNum: format(d, "d"),
+      meals: dayMeals.length,
+      totals,
+    };
+  });
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
@@ -265,16 +287,80 @@ export function NutritionDetailDialog({ open, onOpenChange, userId, onDataChange
                 onChange={(e) => setPortionNote(e.target.value)}
               />
 
-              <label className="flex items-center justify-between gap-2 rounded-lg border border-border/40 bg-card px-3 py-2">
-                <span className="text-xs font-medium text-muted-foreground">When did you eat this?</span>
-                <Input
-                  type="date"
-                  value={logDate}
-                  onChange={(e) => setLogDate(e.target.value)}
-                  max={format(new Date(), "yyyy-MM-dd")}
-                  className="w-auto h-8 text-sm"
-                />
-              </label>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">When did you eat this?</span>
+                  <button
+                    onClick={() => {
+                      const el = document.getElementById("nutrition-backdate-fallback") as HTMLInputElement | null;
+                      el?.showPicker?.();
+                    }}
+                    className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                  >
+                    <CalendarDays className="w-3 h-3" /> Other date
+                  </button>
+                  <input
+                    id="nutrition-backdate-fallback"
+                    type="date"
+                    value={logDate}
+                    onChange={(e) => setLogDate(e.target.value)}
+                    max={format(new Date(), "yyyy-MM-dd")}
+                    className="absolute opacity-0 pointer-events-none w-0 h-0"
+                  />
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {weekDays.map((day) => {
+                    const isSelected = logDate === day.dateStr;
+                    const target = goal?.calorie_target ?? 0;
+                    const pct = target > 0 ? Math.min(100, Math.round((day.totals.cals / target) * 100)) : 0;
+                    const hasMeals = day.meals > 0;
+                    const ringCircumference = 88;
+                    const ringOffset = ringCircumference - (pct / 100) * ringCircumference;
+                    return (
+                      <button
+                        key={day.dateStr}
+                        onClick={() => setLogDate(day.dateStr)}
+                        className={cn(
+                          "flex flex-col items-center gap-1.5 rounded-xl border px-2 py-2 min-w-[68px] transition-all shrink-0",
+                          isSelected
+                            ? "border-primary bg-primary/10"
+                            : "border-border/40 bg-card hover:border-primary/30"
+                        )}
+                      >
+                        <span className={cn("text-[10px] font-medium uppercase", isSelected ? "text-primary" : "text-muted-foreground")}>
+                          {day.label}
+                        </span>
+                        <span className="text-sm font-bold">{day.dayNum}</span>
+                        <div className="relative w-9 h-9">
+                          <svg viewBox="0 0 36 36" className="w-9 h-9 -rotate-90">
+                            <circle cx="18" cy="18" r="14" fill="none" stroke="hsl(var(--muted))" strokeWidth="3.5" />
+                            {hasMeals && (
+                              <circle
+                                cx="18" cy="18" r="14" fill="none"
+                                stroke="hsl(var(--primary))"
+                                strokeWidth="3.5"
+                                strokeDasharray={ringCircumference}
+                                strokeDashoffset={ringOffset}
+                                strokeLinecap="round"
+                              />
+                            )}
+                          </svg>
+                          {!hasMeals && (
+                            <span className="absolute inset-0 flex items-center justify-center text-[9px] text-muted-foreground">—</span>
+                          )}
+                        </div>
+                        {hasMeals && (
+                          <div className="flex gap-0.5 w-full">
+                            <div className="h-1 flex-1 rounded-full bg-rose-500" style={{ opacity: Math.min(1, (day.totals.p / Math.max(1, goal?.protein_target_g ?? 1)) * 0.8 + 0.2) }} />
+                            <div className="h-1 flex-1 rounded-full bg-amber-500" style={{ opacity: Math.min(1, (day.totals.c / Math.max(1, goal?.carbs_target_g ?? 1)) * 0.8 + 0.2) }} />
+                            <div className="h-1 flex-1 rounded-full bg-sky-500" style={{ opacity: Math.min(1, (day.totals.f / Math.max(1, goal?.fat_target_g ?? 1)) * 0.8 + 0.2) }} />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
               {!pending ? (
                 <Button onClick={analyze} disabled={analyzing || (!photoFile && !description.trim())} className="w-full gap-2">
