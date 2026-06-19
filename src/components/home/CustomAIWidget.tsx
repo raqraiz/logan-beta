@@ -10,7 +10,7 @@ interface CustomAIWidgetProps {
   cycleDay: number;
   cycleLengthDays: number;
   targetUserId?: string;
-  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause";
+  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
   postpartumStartDate?: string;
   postpartumActive?: boolean;
 }
