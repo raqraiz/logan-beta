@@ -8,7 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Loader2, Camera, Type, Trash2, Sparkles, X, CalendarDays } from "lucide-react";
+import { Loader2, Camera, Type, Trash2, Sparkles, X, CalendarDays, RotateCcw } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Calendar } from "@/components/ui/calendar";
+import type { DayContentProps } from "react-day-picker";
 import { toast } from "@/hooks/use-toast";
 import { format, startOfDay, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -287,80 +291,13 @@ export function NutritionDetailDialog({ open, onOpenChange, userId, onDataChange
                 onChange={(e) => setPortionNote(e.target.value)}
               />
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">When did you eat this?</span>
-                  <button
-                    onClick={() => {
-                      const el = document.getElementById("nutrition-backdate-fallback") as HTMLInputElement | null;
-                      el?.showPicker?.();
-                    }}
-                    className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-                  >
-                    <CalendarDays className="w-3 h-3" /> Other date
-                  </button>
-                  <input
-                    id="nutrition-backdate-fallback"
-                    type="date"
-                    value={logDate}
-                    onChange={(e) => setLogDate(e.target.value)}
-                    max={format(new Date(), "yyyy-MM-dd")}
-                    className="absolute opacity-0 pointer-events-none w-0 h-0"
-                  />
-                </div>
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {weekDays.map((day) => {
-                    const isSelected = logDate === day.dateStr;
-                    const target = goal?.calorie_target ?? 0;
-                    const pct = target > 0 ? Math.min(100, Math.round((day.totals.cals / target) * 100)) : 0;
-                    const hasMeals = day.meals > 0;
-                    const ringCircumference = 88;
-                    const ringOffset = ringCircumference - (pct / 100) * ringCircumference;
-                    return (
-                      <button
-                        key={day.dateStr}
-                        onClick={() => setLogDate(day.dateStr)}
-                        className={cn(
-                          "flex flex-col items-center gap-1.5 rounded-xl border px-2 py-2 min-w-[68px] transition-all shrink-0",
-                          isSelected
-                            ? "border-primary bg-primary/10"
-                            : "border-border/40 bg-card hover:border-primary/30"
-                        )}
-                      >
-                        <span className={cn("text-[10px] font-medium uppercase", isSelected ? "text-primary" : "text-muted-foreground")}>
-                          {day.label}
-                        </span>
-                        <span className="text-sm font-bold">{day.dayNum}</span>
-                        <div className="relative w-9 h-9">
-                          <svg viewBox="0 0 36 36" className="w-9 h-9 -rotate-90">
-                            <circle cx="18" cy="18" r="14" fill="none" stroke="hsl(var(--muted))" strokeWidth="3.5" />
-                            {hasMeals && (
-                              <circle
-                                cx="18" cy="18" r="14" fill="none"
-                                stroke="hsl(var(--primary))"
-                                strokeWidth="3.5"
-                                strokeDasharray={ringCircumference}
-                                strokeDashoffset={ringOffset}
-                                strokeLinecap="round"
-                              />
-                            )}
-                          </svg>
-                          {!hasMeals && (
-                            <span className="absolute inset-0 flex items-center justify-center text-[9px] text-muted-foreground">—</span>
-                          )}
-                        </div>
-                        {hasMeals && (
-                          <div className="flex gap-0.5 w-full">
-                            <div className="h-1 flex-1 rounded-full bg-rose-500" style={{ opacity: Math.min(1, (day.totals.p / Math.max(1, goal?.protein_target_g ?? 1)) * 0.8 + 0.2) }} />
-                            <div className="h-1 flex-1 rounded-full bg-amber-500" style={{ opacity: Math.min(1, (day.totals.c / Math.max(1, goal?.carbs_target_g ?? 1)) * 0.8 + 0.2) }} />
-                            <div className="h-1 flex-1 rounded-full bg-sky-500" style={{ opacity: Math.min(1, (day.totals.f / Math.max(1, goal?.fat_target_g ?? 1)) * 0.8 + 0.2) }} />
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              <DateBackdater
+                logDate={logDate}
+                setLogDate={setLogDate}
+                historyMeals={historyMeals}
+                goal={goal}
+              />
+
 
               {!pending ? (
                 <Button onClick={analyze} disabled={analyzing || (!photoFile && !description.trim())} className="w-full gap-2">
@@ -634,3 +571,128 @@ async function fileToBase64(file: File): Promise<string> {
     r.readAsDataURL(file);
   });
 }
+
+function DateBackdater({
+  logDate,
+  setLogDate,
+  historyMeals,
+  goal,
+}: {
+  logDate: string;
+  setLogDate: (v: string) => void;
+  historyMeals: Meal[];
+  goal: Goal | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const isToday = logDate === todayStr;
+  const selectedDate = new Date(`${logDate}T12:00:00`);
+
+  // index meals per day
+  const dayMap = new Map<string, { cals: number; p: number; c: number; f: number; count: number }>();
+  for (const m of historyMeals) {
+    const k = format(new Date(m.logged_at), "yyyy-MM-dd");
+    const cur = dayMap.get(k) ?? { cals: 0, p: 0, c: 0, f: 0, count: 0 };
+    cur.cals += m.calories;
+    cur.p += Number(m.protein_g);
+    cur.c += Number(m.carbs_g);
+    cur.f += Number(m.fat_g);
+    cur.count += 1;
+    dayMap.set(k, cur);
+  }
+
+  const DayContent = (props: DayContentProps) => {
+    const key = format(props.date, "yyyy-MM-dd");
+    const data = dayMap.get(key);
+    const target = goal?.calorie_target ?? 0;
+    const hasData = !!data;
+    const pct = data && target > 0 ? Math.min(100, Math.round((data.cals / target) * 100)) : 0;
+    const label = format(props.date, "d");
+
+    const dot = hasData ? (
+      <span
+        className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full"
+        style={{ background: pct >= 80 ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))" }}
+      />
+    ) : null;
+
+    if (!hasData) {
+      return (
+        <span className="relative flex items-center justify-center w-full h-full">
+          {label}
+        </span>
+      );
+    }
+
+    return (
+      <TooltipProvider delayDuration={120}>
+        <UITooltip>
+          <TooltipTrigger asChild>
+            <span className="relative flex items-center justify-center w-full h-full">
+              {label}
+              {dot}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs">
+            <div className="font-semibold mb-0.5">{format(props.date, "EEE, MMM d")}</div>
+            <div>{data.count} meal{data.count === 1 ? "" : "s"} · {Math.round(data.cals)} kcal{target ? ` / ${target}` : ""}</div>
+            <div className="text-muted-foreground">
+              P {Math.round(data.p)}g · C {Math.round(data.c)}g · F {Math.round(data.f)}g
+            </div>
+          </TooltipContent>
+        </UITooltip>
+      </TooltipProvider>
+    );
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-border/40 bg-card/50 px-3 py-2">
+      <div className="flex items-center gap-2 min-w-0">
+        <CalendarDays className="w-4 h-4 text-muted-foreground shrink-0" />
+        <span className="text-sm truncate">
+          Logging for{" "}
+          <span className="font-medium">
+            {isToday ? "today" : format(selectedDate, "EEE, MMM d")}
+          </span>
+        </span>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        {!isToday && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs gap-1"
+            onClick={() => setLogDate(todayStr)}
+          >
+            <RotateCcw className="w-3 h-3" /> Today
+          </Button>
+        )}
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
+              {isToday ? "Backdate" : "Change"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="end">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(d) => {
+                if (d) {
+                  setLogDate(format(d, "yyyy-MM-dd"));
+                  setOpen(false);
+                }
+              }}
+              disabled={(d) => d > new Date()}
+              defaultMonth={selectedDate}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+              components={{ DayContent }}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+    </div>
+  );
+}
+
