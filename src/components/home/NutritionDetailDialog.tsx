@@ -265,6 +265,17 @@ export function NutritionDetailDialog({ open, onOpenChange, userId, onDataChange
                 onChange={(e) => setPortionNote(e.target.value)}
               />
 
+              <label className="flex items-center justify-between gap-2 rounded-lg border border-border/40 bg-card px-3 py-2">
+                <span className="text-xs font-medium text-muted-foreground">When did you eat this?</span>
+                <Input
+                  type="date"
+                  value={logDate}
+                  onChange={(e) => setLogDate(e.target.value)}
+                  max={format(new Date(), "yyyy-MM-dd")}
+                  className="w-auto h-8 text-sm"
+                />
+              </label>
+
               {!pending ? (
                 <Button onClick={analyze} disabled={analyzing || (!photoFile && !description.trim())} className="w-full gap-2">
                   {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
