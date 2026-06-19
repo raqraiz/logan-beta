@@ -198,6 +198,27 @@ export function NutritionDetailDialog({ open, onOpenChange, userId, onDataChange
     return Object.entries(days).map(([day, calories]) => ({ day, calories }));
   })();
 
+  // Last 7 days for visual date picker
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = subDays(new Date(), 6 - i);
+    const dStr = format(d, "yyyy-MM-dd");
+    const dayMeals = historyMeals.filter(m => format(new Date(m.logged_at), "yyyy-MM-dd") === dStr);
+    const totals = dayMeals.reduce((a, m) => ({
+      cals: a.cals + m.calories,
+      p: a.p + Number(m.protein_g),
+      c: a.c + Number(m.carbs_g),
+      f: a.f + Number(m.fat_g),
+    }), { cals: 0, p: 0, c: 0, f: 0 });
+    return {
+      dateStr: dStr,
+      label: dStr === todayStr ? "Today" : format(d, "EEE"),
+      dayNum: format(d, "d"),
+      meals: dayMeals.length,
+      totals,
+    };
+  });
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
