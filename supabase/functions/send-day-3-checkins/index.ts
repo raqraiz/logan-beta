@@ -68,21 +68,29 @@ Deno.serve(async (req) => {
         continue
       }
 
-      const { error } = await admin.functions.invoke('send-transactional-email', {
-        body: {
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+          apikey: SERVICE_ROLE_KEY,
+        },
+        body: JSON.stringify({
           templateName: 'day-3-checkin',
           recipientEmail: c.email,
           idempotencyKey,
           templateData: { name: c.name },
           purpose: 'transactional',
-        },
+        }),
       })
 
-      if (error) {
-        errors.push(`${c.id}: ${error.message ?? String(error)}`)
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => '')
+        errors.push(`${c.id}: ${resp.status} ${text.slice(0, 200)}`)
       } else {
         sent += 1
       }
+
     }
 
     return new Response(
