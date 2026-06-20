@@ -416,7 +416,16 @@ const Chat = () => {
           cycleLengthDays: metadata.cycle_length_days,
           lifeStage: lifeStage === "irregular" ? "irregular" : "cycling",
         });
+        return;
       }
+      // Cycling user with no period start on file — prompt her to add it on Home
+      setCycleData({
+        cycleDay: 0,
+        phase: "Unknown",
+        cycleLengthDays: cycleLengthDays || 28,
+        lifeStage: lifeStage === "irregular" ? "irregular" : "cycling",
+        needsPeriodStart: true,
+      });
       return;
     }
 
