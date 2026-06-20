@@ -179,15 +179,19 @@ export function SymptomHistory({
   };
 
 
-  // Filter by search query (symptom name or notes)
+  // Filter by search query (symptom name or notes) and optionally notes-only
   const q = search.trim().toLowerCase();
-  const filteredLogs = q
-    ? logs.filter(l =>
-        (l.notes && l.notes.toLowerCase().includes(q)) ||
-        l.symptoms.some(s => s.name.toLowerCase().includes(q))
-      )
-    : logs;
-  const isSearching = q.length > 0;
+  let filteredLogs = logs;
+  if (notesOnly) {
+    filteredLogs = filteredLogs.filter(l => l.notes && l.notes.trim().length > 0);
+  }
+  if (q) {
+    filteredLogs = filteredLogs.filter(l =>
+      (l.notes && l.notes.toLowerCase().includes(q)) ||
+      l.symptoms.some(s => s.name.toLowerCase().includes(q))
+    );
+  }
+  const isSearching = q.length > 0 || notesOnly;
 
   // Highlight matching text
   const highlight = (text: string) => {
