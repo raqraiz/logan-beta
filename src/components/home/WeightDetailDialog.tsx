@@ -209,22 +209,65 @@ export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged, 
                   )}
                 </div>
 
-                {view === "trend" && (
-                  <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                        <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                        <YAxis domain={["dataMin - 1", "dataMax + 1"]} tick={{ fontSize: 10 }} />
-                        <Tooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }} />
-                        {goalKg && (
-                          <ReferenceLine y={Number(display(goalKg).toFixed(1))} stroke="hsl(var(--primary))" strokeDasharray="3 3" label={{ value: "Goal", fontSize: 10, fill: "hsl(var(--primary))" }} />
-                        )}
-                        <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
+                {view === "trend" && (() => {
+                  // Group consecutive points with same phase into bands
+                  const bands: { phase: Phase; x1: string; x2: string }[] = [];
+                  if (hasCycle) {
+                    let i = 0;
+                    while (i < chartData.length) {
+                      const p = chartData[i].phase as Phase | null;
+                      if (!p) { i++; continue; }
+                      let j = i;
+                      while (j + 1 < chartData.length && chartData[j + 1].phase === p) j++;
+                      bands.push({ phase: p, x1: chartData[i].date, x2: chartData[j].date });
+                      i = j + 1;
+                    }
+                  }
+                  return (
+                    <>
+                      <div className="h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                            <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                            <YAxis domain={["dataMin - 1", "dataMax + 1"]} tick={{ fontSize: 10 }} />
+                            {bands.map((b, idx) => (
+                              <ReferenceArea key={idx} x1={b.x1} x2={b.x2} fill={PHASE_COLORS[b.phase]} fillOpacity={0.12} stroke="none" />
+                            ))}
+                            <Tooltip
+                              contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))", fontSize: 11 }}
+                              content={({ active, payload }) => {
+                                if (!active || !payload?.length) return null;
+                                const d: any = payload[0].payload;
+                                return (
+                                  <div className="rounded-md bg-background border border-border/60 px-2 py-1.5 text-[11px]">
+                                    <p className="font-medium">{d.value} {unit}</p>
+                                    <p className="text-muted-foreground">{d.date}{d.phase ? <> · <span style={{ color: PHASE_COLORS[d.phase as Phase] }}>{d.phase}</span></> : null}</p>
+                                  </div>
+                                );
+                              }}
+                            />
+                            {goalKg && (
+                              <ReferenceLine y={Number(display(goalKg).toFixed(1))} stroke="hsl(var(--primary))" strokeDasharray="3 3" label={{ value: "Goal", fontSize: 10, fill: "hsl(var(--primary))" }} />
+                            )}
+                            <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                      {hasCycle && bands.length > 0 && (
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[10px]">
+                          {PHASES.map(p => (
+                            <span key={p} className="flex items-center gap-1 text-muted-foreground">
+                              <span className="w-2 h-2 rounded-sm" style={{ background: PHASE_COLORS[p], opacity: 0.5 }} />
+                              {p}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+
 
                 {view === "phase" && hasCycle && (() => {
                   const ovDay = cycleLengthDays! - 14;
