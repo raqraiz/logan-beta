@@ -16,10 +16,17 @@ Deno.serve(async (req) => {
   try {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
-    // Users created between 72h and 96h ago (1-hour cron with 24h window for safety).
+    // Users created between minHours and maxHours ago. Defaults: 72h–96h.
+    let minHours = 72
+    let maxHours = 96
+    try {
+      const body = await req.json()
+      if (typeof body?.minHours === 'number') minHours = body.minHours
+      if (typeof body?.maxHours === 'number') maxHours = body.maxHours
+    } catch { /* no body */ }
     const now = Date.now()
-    const windowStart = new Date(now - 96 * 60 * 60 * 1000).toISOString()
-    const windowEnd = new Date(now - 72 * 60 * 60 * 1000).toISOString()
+    const windowStart = new Date(now - maxHours * 60 * 60 * 1000).toISOString()
+    const windowEnd = new Date(now - minHours * 60 * 60 * 1000).toISOString()
 
     // List users. auth admin listUsers is paginated; iterate.
     let page = 1
