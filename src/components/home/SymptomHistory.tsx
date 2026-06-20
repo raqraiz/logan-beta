@@ -354,8 +354,7 @@ export function SymptomHistory({
               </h3>
               {!isSearching && view === "summary" ? (
                 <SummaryView logs={logs} groupBy={groupBy} />
-              ) : (
-              {isSearching && filteredLogs.length === 0 ? (
+              ) : isSearching && filteredLogs.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-6">
                   No logs match your search. Try a different keyword.
                 </p>
