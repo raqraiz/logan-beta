@@ -204,6 +204,79 @@ export function CycleAnalytics({
     }
   };
 
+  const startPhaseEdit = (row: CycleHistoryRow) => {
+    setPhaseEditId(row.id);
+    setEditingId(null);
+    setAdding(false);
+    // Defaults: use stored values, otherwise typical biology proportional to this cycle
+    const menstruation = row.menstruation_days ?? MENSTRUATION_RANGE.typical;
+    const ovulation = row.ovulation_days ?? OVULATION_RANGE.typical;
+    const luteal = row.luteal_days ?? LUTEAL_RANGE.typical;
+    const follicular = row.follicular_days ?? Math.max(0, row.cycle_length_days - menstruation - ovulation - luteal);
+    setPhaseDraft({
+      menstruation: String(menstruation),
+      follicular: String(follicular),
+      ovulation: String(ovulation),
+      luteal: String(luteal),
+    });
+  };
+
+  const cancelPhaseEdit = () => {
+    setPhaseEditId(null);
+  };
+
+  const savePhases = async (row: CycleHistoryRow) => {
+    const parse = (s: string) => {
+      const n = parseInt(s, 10);
+      return isNaN(n) || n < 0 ? null : n;
+    };
+    const m = parse(phaseDraft.menstruation);
+    const f = parse(phaseDraft.follicular);
+    const o = parse(phaseDraft.ovulation);
+    const l = parse(phaseDraft.luteal);
+    if (m === null || f === null || o === null || l === null) {
+      toast({ title: "Enter valid day counts (0+)", variant: "destructive" });
+      return;
+    }
+    const sum = m + f + o + l;
+    if (Math.abs(sum - row.cycle_length_days) > 2) {
+      toast({
+        title: `Phases sum to ${sum}d but cycle is ${row.cycle_length_days}d`,
+        description: "Adjust phase lengths so they roughly match cycle length.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase
+      .from("cycle_history")
+      .update({ menstruation_days: m, follicular_days: f, ovulation_days: o, luteal_days: l })
+      .eq("id", row.id);
+    setSaving(false);
+    if (error) {
+      toast({ title: "Couldn't save phases", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Phases updated" });
+      setPhaseEditId(null);
+      if (participantId) await reload(participantId);
+    }
+  };
+
+  const resetPhases = async (row: CycleHistoryRow) => {
+    if (!participantId) return;
+    const { error } = await supabase
+      .from("cycle_history")
+      .update({ menstruation_days: null, follicular_days: null, ovulation_days: null, luteal_days: null })
+      .eq("id", row.id);
+    if (error) {
+      toast({ title: "Couldn't reset", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Phases reset to typical" });
+      setPhaseEditId(null);
+      await reload(participantId);
+    }
+  };
+
 
   // Compute stats — exclude unrealistic outliers (>45d are almost always the
   // onboarding-estimate-to-first-real-reset gap, which inflates the average).
