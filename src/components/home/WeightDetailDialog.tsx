@@ -331,14 +331,9 @@ export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged, 
                     </>
                   );
                 })()}
+              </div>
+            )}
 
-                          <span className="w-2 h-2 rounded-full" style={{ background: PHASE_COLORS[p] }} />
-                          {p}
-                        </span>
-                      ))}
-                    </div>
-                  </>
-                )}
               </div>
             )}
 
