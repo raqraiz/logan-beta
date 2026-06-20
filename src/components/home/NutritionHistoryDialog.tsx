@@ -146,6 +146,34 @@ export function NutritionHistoryDialog({ open, onOpenChange, userId }: Props) {
     setRefreshKey((k) => k + 1);
   }
 
+  function startAdd(dayKey: string) {
+    setAddingDay(dayKey);
+    setNewDraft({ name: "", calories: "", p: "", c: "", f: "" });
+    setEditingId(null);
+  }
+
+  async function saveNewMeal(dayKey: string) {
+    const d = new Date(`${dayKey}T12:00:00`);
+    setSaving(true);
+    const { error } = await supabase.from("meals").insert({
+      user_id: userId,
+      name: newDraft.name.trim() || "Meal",
+      calories: Math.max(0, Math.round(Number(newDraft.calories) || 0)),
+      protein_g: Math.max(0, Number(newDraft.p) || 0),
+      carbs_g: Math.max(0, Number(newDraft.c) || 0),
+      fat_g: Math.max(0, Number(newDraft.f) || 0),
+      source: "text",
+      logged_at: d.toISOString(),
+    });
+    setSaving(false);
+    if (error) {
+      toast({ title: "Couldn't add meal", description: error.message, variant: "destructive" });
+      return;
+    }
+    setAddingDay(null);
+    setRefreshKey((k) => k + 1);
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
