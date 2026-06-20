@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { format, subDays } from "date-fns";
 import { AllSymptomsChart } from "./AllSymptomsChart";
 import { SymptomHormoneChart } from "./SymptomHormoneChart";
-import { ChevronDown, Pencil, Trash2, X, Check, Search } from "lucide-react";
+import { ChevronDown, Pencil, Trash2, X, Check, Search, StickyNote } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 
