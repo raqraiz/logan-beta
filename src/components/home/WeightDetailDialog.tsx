@@ -47,12 +47,17 @@ export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged, 
   const load = useCallback(async () => {
     const lRes = await supabase.from("weight_logs").select("*").eq("user_id", userId).order("logged_on", { ascending: false }).limit(120);
     const gRes: any = await supabase.from("nutrition_goals").select("weight_goal_kg").eq("user_id", userId).maybeSingle();
-    const pRes: any = await (supabase.from("participants") as any).select("last_period_start, cycle_length_days").eq("user_id", userId).maybeSingle();
+    const { data: authData } = await supabase.auth.getUser();
+    const email = authData?.user?.email;
+    const pRes: any = email
+      ? await (supabase.from("participants") as any).select("last_period_start, cycle_length_days").eq("email", email).maybeSingle()
+      : { data: null };
     setLogs((lRes.data as WeightLog[]) ?? []);
     setGoalKg(gRes.data?.weight_goal_kg ? Number(gRes.data.weight_goal_kg) : null);
     setLastPeriodStart(pRes.data?.last_period_start ?? null);
     setCycleLengthDays(pRes.data?.cycle_length_days ?? null);
   }, [userId]);
+
 
   useEffect(() => { if (open) load(); }, [open, load]);
   useEffect(() => { localStorage.setItem(UNIT_KEY, unit); }, [unit]);
