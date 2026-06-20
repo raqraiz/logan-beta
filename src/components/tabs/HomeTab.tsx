@@ -8,7 +8,7 @@ import { WidgetEditMode } from "@/components/home/WidgetEditMode";
 import { AddCustomWidgetDialog } from "@/components/home/AddCustomWidgetDialog";
 import { CustomAIWidget } from "@/components/home/CustomAIWidget";
 import { SymptomLogWidget } from "@/components/home/SymptomLogWidget";
-import { SymptomHistory } from "@/components/home/SymptomHistory";
+import { SymptomHistoryWidget } from "@/components/home/SymptomHistoryWidget";
 import { CycleCorrelationsWidget } from "@/components/home/CycleCorrelationsWidget";
 import { LabResultsWidget } from "@/components/home/LabResultsWidget";
 import { NutritionTodayWidget } from "@/components/home/NutritionTodayWidget";
@@ -396,7 +396,6 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   const [dismissed, setDismissed] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [showAddWidget, setShowAddWidget] = useState(false);
-  const [showSymptomHistory, setShowSymptomHistory] = useState(false);
 
   const { widgets, loading, save, toggleWidget, renameWidget, setWidgets, addCustomWidget, removeWidget } = useWidgetPreferences(userId);
 
@@ -539,15 +538,20 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
                 />
               </div>
             </div>
-            <button
-              onClick={() => setShowSymptomHistory(true)}
-              className="text-[11px] text-muted-foreground/70 hover:text-foreground transition-colors underline underline-offset-2 self-center"
-            >
-              View symptom history & patterns
-            </button>
           </div>
         ) : null;
       }
+      case "symptom_history":
+        return userId ? (
+          <div className="w-full" key={id}>
+            <SymptomHistoryWidget
+              userId={userId}
+              lastPeriodStart={cycleData.lastPeriodStart}
+              cycleLengthDays={cycleData.cycleLengthDays}
+              isNonCycling={!!isNonCycling}
+            />
+          </div>
+        ) : null;
       case "lab_results":
         return userId ? (
           <div className="w-full" key={id}>
@@ -774,18 +778,6 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           addCustomWidget(title, prompt);
         }}
       />
-
-      {/* Symptom History */}
-      {userId && (
-        <SymptomHistory
-          open={showSymptomHistory}
-          onOpenChange={setShowSymptomHistory}
-          userId={userId}
-          lastPeriodStart={cycleData.lastPeriodStart}
-          cycleLengthDays={cycleData.cycleLengthDays}
-          isNonCycling={!!isNonCycling}
-        />
-      )}
     </div>
   );
 }
