@@ -12,6 +12,17 @@ import { Input } from "@/components/ui/input";
 import { Pencil, Trash2, Check, X, Plus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format, differenceInDays } from "date-fns";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceArea,
+  ReferenceLine,
+  CartesianGrid,
+} from "recharts";
 
 interface CycleAnalyticsProps {
   open: boolean;
