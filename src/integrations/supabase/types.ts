@@ -843,6 +843,7 @@ export type Database = {
           consent_given: boolean | null
           consent_given_at: string | null
           created_at: string
+          current_period_end_date: string | null
           cycle_length_days: number | null
           cycle_regularity: string | null
           email: string | null
@@ -868,6 +869,7 @@ export type Database = {
           consent_given?: boolean | null
           consent_given_at?: string | null
           created_at?: string
+          current_period_end_date?: string | null
           cycle_length_days?: number | null
           cycle_regularity?: string | null
           email?: string | null
@@ -893,6 +895,7 @@ export type Database = {
           consent_given?: boolean | null
           consent_given_at?: string | null
           created_at?: string
+          current_period_end_date?: string | null
           cycle_length_days?: number | null
           cycle_regularity?: string | null
           email?: string | null
