@@ -139,6 +139,9 @@ export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays,
                 ))}
               </div>
 
+              {/* Donut chart */}
+              {logs.length > 0 && <SymptomPieChart logs={logs} compact />}
+
               {/* Summary */}
               <div className="flex items-center gap-1.5 pt-1">
                 <Sparkles className="w-3 h-3 text-amber-400/70" />
