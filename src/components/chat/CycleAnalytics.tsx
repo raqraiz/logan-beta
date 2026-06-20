@@ -38,7 +38,18 @@ interface CycleHistoryRow {
   cycle_start_date: string;
   cycle_end_date: string;
   cycle_length_days: number;
+  menstruation_days: number | null;
+  follicular_days: number | null;
+  ovulation_days: number | null;
+  luteal_days: number | null;
 }
+
+type PhaseDraft = {
+  menstruation: string;
+  follicular: string;
+  ovulation: string;
+  luteal: string;
+};
 
 export function CycleAnalytics({
   open,
@@ -58,11 +69,18 @@ export function CycleAnalytics({
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
   const [saving, setSaving] = useState(false);
+  const [phaseEditId, setPhaseEditId] = useState<string | null>(null);
+  const [phaseDraft, setPhaseDraft] = useState<PhaseDraft>({
+    menstruation: "",
+    follicular: "",
+    ovulation: "",
+    luteal: "",
+  });
 
   const reload = async (pid: string) => {
     const { data } = await supabase
       .from("cycle_history")
-      .select("id, cycle_start_date, cycle_end_date, cycle_length_days")
+      .select("id, cycle_start_date, cycle_end_date, cycle_length_days, menstruation_days, follicular_days, ovulation_days, luteal_days")
       .eq("participant_id", pid)
       .order("cycle_start_date", { ascending: false })
       .limit(24);
