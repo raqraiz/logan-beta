@@ -538,12 +538,17 @@ serve(async (req) => {
       const notYetPatterns = [
         /^no(\b|$)/i,
         /^nope\b/i,
-        /^not\s*yet\b/i,
-        /haven'?t\s*(started|gotten|had|got)/i,
-        /hasn'?t\s*(started|come|arrived)/i,
-        /still\s*(waiting|nothing|no period)/i,
+        /\bnot\s*yet\b/i,
+        /haven'?t\s*(started|gotten|had|got|come|arrived|begun|come\s+yet|gotten\s+(it|my\s+period)?\s*yet?)/i,
+        /haven'?t\s+\w+\s*(it|yet)/i, // "haven't gotten it", "haven't had it yet"
+        /\bhaven'?t\s+yet\b/i, // "I haven't yet"
+        /hasn'?t\s*(started|come|arrived|happened)/i,
+        /still\s*(waiting|nothing|no\s+period|haven'?t)/i,
         /no\s+period\s+yet/i,
-        /period\s+is\s+late/i,
+        /period\s+is\s+(late|overdue|delayed)/i,
+        /should\s+have\s+(gotten|had|started).*but/i, // "should have gotten it but..."
+        /still\s+no(thing|\s+period|\s+sign)/i,
+        /\bnothing\s+yet\b/i,
       ];
       const isNotYet = notYetPatterns.some(p => p.test(userMessage.trim()));
       if (isNotYet) {
