@@ -528,6 +528,36 @@ serve(async (req) => {
     }
     // --- End period confirmation ---
 
+    // --- "Not yet" response to a period check-in ---
+    // If Logan asked "has it started yet?" (period_checkin) and the user says
+    // no/not yet, remember that so the cycle ring stops auto-wrapping into a
+    // fake new cycle. We'll keep showing her true (overdue) day count and let
+    // the AI follow up on the next late check-in — never silently advance her
+    // cycle without her confirmation.
+    if (wasPeridCheckin && participant && !isPeriodConfirmation) {
+      const notYetPatterns = [
+        /^no(\b|$)/i,
+        /^nope\b/i,
+        /^not\s*yet\b/i,
+        /haven'?t\s*(started|gotten|had|got)/i,
+        /hasn'?t\s*(started|come|arrived)/i,
+        /still\s*(waiting|nothing|no period)/i,
+        /no\s+period\s+yet/i,
+        /period\s+is\s+late/i,
+      ];
+      const isNotYet = notYetPatterns.some(p => p.test(userMessage.trim()));
+      if (isNotYet) {
+        const todayStr = new Date().toISOString().split("T")[0];
+        await supabase
+          .from("participants")
+          .update({ period_pending_since: todayStr })
+          .eq("id", participant.id);
+        participant = { ...participant, period_pending_since: todayStr } as typeof participant;
+      }
+    }
+    // --- End "not yet" ---
+
+
     // --- Spotting / early-bleed detection: flag for Day-1 confirmation prompt ---
     // When a cycling user casually mentions bleeding/spotting in chat (not an
     // explicit "period started" phrase, which is handled above), let the AI
