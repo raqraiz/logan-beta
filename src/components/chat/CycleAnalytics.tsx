@@ -468,3 +468,100 @@ function StatCard({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+function CycleLengthChart({
+  history,
+  median,
+}: {
+  history: CycleHistoryRow[];
+  median: number | null;
+}) {
+  const data = [...history]
+    .filter((h) => h.cycle_length_days >= 15 && h.cycle_length_days <= 45)
+    .sort((a, b) => a.cycle_start_date.localeCompare(b.cycle_start_date))
+    .map((h, i) => ({
+      idx: i + 1,
+      length: h.cycle_length_days,
+      label: format(new Date(h.cycle_start_date), "MMM d"),
+    }));
+
+  if (data.length < 2) return null;
+
+  const lengths = data.map((d) => d.length);
+  const minY = Math.max(15, Math.min(...lengths) - 3);
+  const maxY = Math.min(45, Math.max(...lengths) + 3);
+  const bandTop = Math.min(35, maxY);
+  const bandBottom = Math.max(21, minY);
+
+  return (
+    <div>
+      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+        Cycle Length Over Time
+      </h3>
+      <div className="rounded-xl bg-muted/30 border border-border/30 p-2">
+        <div className="h-40 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data} margin={{ top: 6, right: 8, left: -18, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="2 4" stroke="hsl(var(--border))" strokeOpacity={0.4} vertical={false} />
+              <ReferenceArea y1={bandBottom} y2={bandTop} fill="hsl(var(--primary))" fillOpacity={0.08} />
+              {median !== null && (
+                <ReferenceLine y={median} stroke="hsl(var(--foreground))" strokeOpacity={0.4} strokeDasharray="3 3" />
+              )}
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={false}
+                tickLine={false}
+                interval="preserveStartEnd"
+                minTickGap={20}
+              />
+              <YAxis
+                domain={[minY, maxY]}
+                tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={false}
+                tickLine={false}
+                width={28}
+                tickFormatter={(v) => `${v}d`}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: "hsl(var(--background))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: 8,
+                  fontSize: 11,
+                  padding: "4px 8px",
+                }}
+                labelStyle={{ color: "hsl(var(--muted-foreground))", fontSize: 10 }}
+                formatter={(v: number) => [`${v} days`, "Cycle"]}
+              />
+              <Line
+                type="monotone"
+                dataKey="length"
+                stroke="hsl(var(--primary))"
+                strokeWidth={2}
+                dot={{ r: 3, fill: "hsl(var(--primary))", strokeWidth: 0 }}
+                activeDot={{ r: 5 }}
+                isAnimationActive={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-2 px-1">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-2.5 h-1.5 rounded-sm bg-primary/15" />
+            Typical range (21–35d)
+          </span>
+          {median !== null && (
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-0.5 bg-foreground/50" />
+              Your median ({median}d)
+            </span>
+          )}
+        </div>
+      </div>
+      <p className="text-[11px] text-muted-foreground mt-1.5">
+        {data.length} cycle{data.length === 1 ? "" : "s"} shown, oldest to newest.
+      </p>
+    </div>
+  );
+}
