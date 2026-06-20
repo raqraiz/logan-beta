@@ -555,7 +555,7 @@ export function ProfilesTab() {
                   <Download className="w-4 h-4 mr-2" />
                   Download
                 </Button>
-                {(cycleData || (participant?.life_stage === "postpartum" || participant?.life_stage === "menopause")) && (
+                {(cycleData || participant?.life_stage) && (
                   <Button variant="outline" size="sm" onClick={() => setShowHomePreview(true)}>
                     <Home className="w-4 h-4 mr-2" />
                     View as user
