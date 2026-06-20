@@ -202,6 +202,40 @@ const MENOPAUSE_DONTMESS_HIM: string[] = [
   "Don't write off her ambitions because she's 'in menopause'. She's not done — she's reloading.",
 ];
 
+// ── Perimenopause tips ──────────────────────────
+// She is STILL cycling, but the pattern is shifting. Never use "menopause" framing here.
+const PERIMENOPAUSE_SUCCEED_HER: string[] = [
+  "Track cycle length, flow, sleep, and mood every day — perimenopause is a pattern game.",
+  "Lift heavy 2-3x a week. Strength training protects bone and muscle as estrogen swings.",
+  "Anchor sleep: cool room, no late alcohol, consistent bedtime — sleep is your first lever.",
+  "Eat protein at every meal (30g+) and watch blood sugar — swings hit harder now.",
+  "Ask your doctor about perimenopause specifically — many providers miss it. Bring your tracked data.",
+];
+
+const PERIMENOPAUSE_DONTMESS_HER: string[] = [
+  "Don't let anyone tell you it's 'just menopause' — you're still cycling. Perimenopause is its own thing.",
+  "Don't push through new symptoms alone — hot flashes, sleep loss, mood shifts are real and treatable.",
+  "Don't drop strength work or protein. The window to protect bone and muscle is now.",
+  "Don't assume your old cycle rules still apply — pattern is shifting, so keep tracking.",
+  "Don't dismiss sharper anxiety or rage as 'just stress' — hormone swings drive a lot of it.",
+];
+
+const PERIMENOPAUSE_SUCCEED_HIM: string[] = [
+  "Learn the difference: perimenopause = still cycling, pattern shifting. Menopause = 12+ months no period.",
+  "Adjust the thermostat without comment. Be the climate control, not the critic.",
+  "Cheer her strength training and protein focus — it's longevity, not vanity.",
+  "Listen when she names what's changed. You don't need to solve — just witness.",
+  "Back her on getting real medical support. Many doctors still miss perimenopause.",
+];
+
+const PERIMENOPAUSE_DONTMESS_HIM: string[] = [
+  "Don't call her menopausal. She's still cycling — perimenopause is its own stage.",
+  "Don't joke about hot flashes, mood swings, or 'the change'. Ever.",
+  "Don't take sharper mood shifts personally — estrogen swings rewire the nervous system.",
+  "Don't assume intimacy works the same. Ask, adapt, stay close in other ways.",
+  "Don't expect her to push through alone. Encourage real medical support.",
+];
+
 // Irregular / hormonal birth control — phase prediction doesn't apply.
 const IRREGULAR_SUCCEED_HER: string[] = [
   "Hormonal BC flattens your cycle — your daily levers are sleep, protein, and stress, not phase timing.",
@@ -443,6 +477,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     if (cycleData.lifeStage === "menopause") {
       return isSucceed ? MENOPAUSE_SUCCEED_HER : MENOPAUSE_DONTMESS_HER;
     }
+    if (cycleData.lifeStage === "perimenopause") {
+      return isSucceed ? PERIMENOPAUSE_SUCCEED_HER : PERIMENOPAUSE_DONTMESS_HER;
+    }
     if (isIrregular) {
       return isSucceed ? IRREGULAR_SUCCEED_HER : IRREGULAR_DONTMESS_HER;
     }
@@ -456,11 +493,15 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     if (cycleData.lifeStage === "menopause") {
       return isSucceed ? MENOPAUSE_SUCCEED_HIM : MENOPAUSE_DONTMESS_HIM;
     }
+    if (cycleData.lifeStage === "perimenopause") {
+      return isSucceed ? PERIMENOPAUSE_SUCCEED_HIM : PERIMENOPAUSE_DONTMESS_HIM;
+    }
     if (isIrregular) {
       return isSucceed ? IRREGULAR_SUCCEED_HIM : IRREGULAR_DONTMESS_HIM;
     }
     return isSucceed ? (SUCCEED_HIM[cycleData.phase] || []) : (DONT_MESS_UP_HIM[cycleData.phase] || []);
   };
+
 
 
   const renderWidget = (widget: typeof widgets[number]) => {
