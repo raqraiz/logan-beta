@@ -359,11 +359,11 @@ export function calculateCycleInfo(
   const diffTime = today.getTime() - periodStart.getTime();
   const daysSinceStart = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-  // Don't wrap when she's past her expected cycle length — show the running
-  // count (Day 38, 39, ...) so Home and Ask agree and proactive check-ins can
-  // prompt her to confirm day 1. Only wrap for negative (future-dated) edges.
+  // If she hasn't updated her cycle in a while, wrap around her selected
+  // cycle length so the ring never exceeds her configured length (e.g. Day 66
+  // on a 28-day cycle becomes Day 10 of the next assumed cycle).
   const cycleDay = daysSinceStart >= 0
-    ? daysSinceStart + 1
+    ? (daysSinceStart % cycleLengthDays) + 1
     : (((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays) + 1;
 
   // Derive menstruationEnd. If the user reported her period ended early
