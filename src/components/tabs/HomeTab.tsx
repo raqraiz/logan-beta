@@ -283,6 +283,14 @@ const WIDGET_COLORS: Record<string, {
     iconColor: "text-rose-400",
     labelColor: "text-rose-400/80",
   },
+  discharge_tracker: {
+    border: "border-l-teal-500",
+    bgGradient: "from-teal-500/10 via-teal-500/5 to-transparent",
+    dot: "bg-teal-500",
+    iconBg: "bg-teal-500/15",
+    iconColor: "text-teal-400",
+    labelColor: "text-teal-400/80",
+  },
   hormone_chart: {
     border: "border-l-cyan-500",
     bgGradient: "from-cyan-500/10 via-cyan-500/5 to-transparent",
