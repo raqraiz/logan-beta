@@ -591,7 +591,7 @@ const Chat = () => {
     try {
       const { data } = await supabase
         .from("participants")
-        .select("life_stage, postpartum_start_date, postpartum_active, last_period_start, cycle_length_days, timezone")
+        .select("life_stage, postpartum_start_date, postpartum_active, last_period_start, cycle_length_days, timezone, current_period_end_date")
         .eq("email", user.email)
         .single();
       if (data?.life_stage) {
@@ -608,6 +608,7 @@ const Chat = () => {
           lastPeriodStart: data.last_period_start ?? null,
           cycleLengthDays: data.cycle_length_days ?? null,
           timezone: data.timezone ?? null,
+          currentPeriodEndDate: (data as any).current_period_end_date ?? null,
         });
       }
     } catch (e) {
