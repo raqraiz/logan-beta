@@ -149,6 +149,8 @@ export function WeightTrendWidget({ userId }: Props) {
         onOpenChange={setOpen}
         userId={userId}
         onDataChanged={() => setRefreshKey(k => k + 1)}
+        unit={unit}
+        onUnitChange={setUnit}
       />
     </>
   );

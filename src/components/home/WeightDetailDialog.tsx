@@ -24,14 +24,18 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   userId: string;
   onDataChanged?: () => void;
+  unit?: "kg" | "lbs";
+  onUnitChange?: (u: "kg" | "lbs") => void;
 }
 
 const UNIT_KEY = "logan_weight_unit";
 
-export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged }: Props) {
+export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged, unit: propUnit, onUnitChange }: Props) {
   const [logs, setLogs] = useState<WeightLog[]>([]);
   const [goalKg, setGoalKg] = useState<number | null>(null);
-  const [unit, setUnit] = useState<"kg" | "lbs">((typeof localStorage !== "undefined" && (localStorage.getItem(UNIT_KEY) as "kg" | "lbs")) || "lbs");
+  const [localUnit, setLocalUnit] = useState<"kg" | "lbs">((typeof localStorage !== "undefined" && (localStorage.getItem(UNIT_KEY) as "kg" | "lbs")) || "lbs");
+  const unit = propUnit ?? localUnit;
+  const setUnit = onUnitChange ?? setLocalUnit;
   const [value, setValue] = useState<string>("");
   const [date, setDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [saving, setSaving] = useState(false);
