@@ -66,9 +66,10 @@ Deno.serve(async (req) => {
   // Enforce authentication: require either an authenticated user JWT or service_role.
   // The anon JWT is rejected to prevent unauthenticated email spam.
   const authHeader = req.headers.get('Authorization')
+  const bearer = authHeader?.replace(/^Bearer\s+/i, '') ?? ''
   const callerRole = decodeJwtRole(authHeader)
   let authedUserEmail: string | null = null
-  if (callerRole === 'service_role') {
+  if (callerRole === 'service_role' || (bearer && bearer === supabaseServiceKey)) {
     // service role: allow any recipient
   } else if (callerRole === 'authenticated') {
     const userClient = createClient(supabaseUrl, supabaseServiceKey, {
