@@ -72,6 +72,10 @@ export function SymptomHistory({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
   const [search, setSearch] = useState("");
+  const [view, setView] = useState<"timeline" | "summary">("timeline");
+  const [groupBy, setGroupBy] = useState<"phase" | "week" | "month">(
+    isNonCycling ? "week" : "phase"
+  );
 
 
   useEffect(() => {
