@@ -1480,7 +1480,8 @@ const Chat = () => {
                         { value: "cycling", label: "I have a regular cycle", desc: "Currently menstruating" },
                         { value: "irregular", label: "Irregular or on hormonal BC", desc: "PCOS, unpredictable cycles, or pill/IUD/implant" },
                         { value: "postpartum", label: "Postpartum", desc: "Recently had a baby" },
-                        { value: "menopause", label: "Menopause", desc: "Post-menopause, no active cycle" },
+                        { value: "perimenopause", label: "Perimenopause", desc: "Still getting periods, but the pattern is shifting" },
+                        { value: "menopause", label: "Menopause", desc: "12+ months without a period" },
                       ].map((option) => (
                         <button
                           key={option.value}
