@@ -450,8 +450,15 @@ export function ProfilesTab() {
     return () => clearTimeout(t);
   }, [showHomePreview, chatMessages, selectedProfile?.id]);
 
-  const getCycleData = (participant: { last_period_start: string | null; cycle_length_days: number | null; timezone?: string | null }) => {
-    return calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "Asia/Jerusalem");
+  const getCycleData = (participant: { last_period_start: string | null; cycle_length_days: number | null; timezone?: string | null; period_pending_since?: string | null }) => {
+    return calculateCycleInfo(
+      participant.last_period_start,
+      participant.cycle_length_days,
+      participant.timezone || "Asia/Jerusalem",
+      undefined,
+      null,
+      !!participant.period_pending_since,
+    );
   };
 
   const handleDownloadUserData = (profile: ProfileWithData, messages: ChatMessage[]) => {
