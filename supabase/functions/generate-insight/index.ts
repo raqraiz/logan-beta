@@ -254,9 +254,58 @@ serve(async (req) => {
       );
     }
 
+    // --- Long absence re-engagement ---
+    // If a cycling user hasn't messaged Logan in 30+ days, her cycle data is
+    // almost certainly stale (a period likely came and went). Lead with a
+    // gentle re-engagement check-in instead of confidently quoting a phase.
+    const { data: lastUserMsg } = await supabase
+      .from("chat_messages")
+      .select("created_at")
+      .eq("user_id", user.id)
+      .eq("role", "user")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const daysSinceLastUserMsg = lastUserMsg?.created_at
+      ? Math.floor((Date.now() - new Date(lastUserMsg.created_at).getTime()) / (1000 * 60 * 60 * 24))
+      : null;
+    const isLongAbsence = daysSinceLastUserMsg !== null && daysSinceLastUserMsg >= 30;
+
     // Check if user is in late luteal — ask about period
     const isLateLuteal = cycleInfo.phase === "Luteal" && cycleInfo.daysUntilNextPhase <= 3;
     const isOverdue = cycleInfo.cycleDay > (participant.cycle_length_days || 28);
+
+    if (isLongAbsence) {
+      const absenceContent = `Welcome back — it's been about **${daysSinceLastUserMsg} days** since we last talked. Your cycle data here is likely out of date.\n\nHas your period come (and gone) since then? Let me know and I'll get your timing accurate again.`;
+
+      await supabase.from("chat_messages").update({
+        content: absenceContent,
+        metadata: {
+          has_cycle_visual: true,
+          visual_type: "cycle_circle",
+          cycle_day: cycleInfo.cycleDay,
+          cycle_phase: cycleInfo.phase,
+          cycle_length_days: participant.cycle_length_days || 28,
+          last_period_start: participant.last_period_start,
+          timezone: participant.timezone || "UTC",
+          insight_type: "proactive",
+          period_checkin: true,
+          long_absence_days: daysSinceLastUserMsg,
+          generated_at: new Date().toISOString(),
+          conversation_starters: [
+            "Yes, it started today",
+            "It came and went — let me give you the date",
+            "Not yet"
+          ]
+        }
+      }).eq("id", placeholderId);
+
+      return new Response(
+        JSON.stringify({ success: true, generated: true, longAbsence: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (isLateLuteal || isOverdue) {
       const dayLabel = isOverdue
