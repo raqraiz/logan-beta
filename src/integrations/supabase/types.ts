@@ -860,6 +860,7 @@ export type Database = {
           timezone: string | null
           typical_symptoms: string[] | null
           updated_at: string
+          user_id: string | null
           whatsapp_number: string
         }
         Insert: {
@@ -886,6 +887,7 @@ export type Database = {
           timezone?: string | null
           typical_symptoms?: string[] | null
           updated_at?: string
+          user_id?: string | null
           whatsapp_number: string
         }
         Update: {
@@ -912,6 +914,7 @@ export type Database = {
           timezone?: string | null
           typical_symptoms?: string[] | null
           updated_at?: string
+          user_id?: string | null
           whatsapp_number?: string
         }
         Relationships: []
