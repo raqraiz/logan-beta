@@ -383,7 +383,10 @@ export function SymptomHistory({
                     : "Recent Logs"}
               </h3>
               {!isSearching && view === "summary" ? (
-                <SummaryView logs={logs} groupBy={groupBy} />
+                <div className="space-y-5">
+                  <SymptomPieChart logs={logs} />
+                  <SummaryView logs={logs} groupBy={groupBy} />
+                </div>
               ) : isSearching && filteredLogs.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-6">
                   No logs match your search. Try a different keyword.
