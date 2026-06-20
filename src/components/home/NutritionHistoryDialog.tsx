@@ -202,7 +202,6 @@ export function NutritionHistoryDialog({ open, onOpenChange, userId }: Props) {
                 >
                   <button
                     type="button"
-                    disabled={empty}
                     onClick={() => setExpanded(isOpen ? null : d.dateKey)}
                     className="w-full text-left"
                   >
