@@ -83,9 +83,46 @@ export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged, 
     onDataChanged?.();
   }
 
-  const chartData = [...logs]
-    .sort((a, b) => a.logged_on.localeCompare(b.logged_on))
-    .map(l => ({ date: format(parseISO(l.logged_on), "MMM d"), value: Number(display(Number(l.weight_kg)).toFixed(1)) }));
+  const sortedAsc = [...logs].sort((a, b) => a.logged_on.localeCompare(b.logged_on));
+  const chartData = sortedAsc.map(l => ({ date: format(parseISO(l.logged_on), "MMM d"), value: Number(display(Number(l.weight_kg)).toFixed(1)) }));
+
+  const hasCycle = !!(lastPeriodStart && cycleLengthDays && cycleLengthDays > 0);
+
+  const PHASE_COLORS: Record<Phase, string> = {
+    Menstruation: "#E11D48",
+    Follicular: "#F59E0B",
+    Ovulation: "#15B88C",
+    Luteal: "#8B5CF6",
+  };
+
+  // Per-log phase + cycle day
+  const logsWithCycle = hasCycle
+    ? sortedAsc.map(l => {
+        const d = parseISO(l.logged_on);
+        const phase = getPhaseForDate(d, lastPeriodStart!, cycleLengthDays!);
+        const msPerDay = 24 * 60 * 60 * 1000;
+        const diff = Math.floor((d.getTime() - new Date(lastPeriodStart!).getTime()) / msPerDay);
+        const cycleDay = ((diff % cycleLengthDays!) + cycleLengthDays!) % cycleLengthDays! + 1;
+        return { ...l, phase, cycleDay, value: Number(display(Number(l.weight_kg)).toFixed(1)) };
+      })
+    : [];
+
+  const phaseAverages = hasCycle
+    ? PHASES.map(p => {
+        const items = logsWithCycle.filter(l => l.phase === p);
+        const avg = items.length ? items.reduce((s, x) => s + x.value, 0) / items.length : 0;
+        return { phase: p, avg: Number(avg.toFixed(1)), count: items.length };
+      })
+    : [];
+
+  const cycleDayPoints = logsWithCycle.map(l => ({ cycleDay: l.cycleDay, value: l.value, phase: l.phase }));
+
+  const phaseWithData = phaseAverages.filter(p => p.count > 0);
+  const phaseSpread = phaseWithData.length >= 2
+    ? Math.max(...phaseWithData.map(p => p.avg)) - Math.min(...phaseWithData.map(p => p.avg))
+    : 0;
+  const peakPhase = phaseWithData.length ? [...phaseWithData].sort((a, b) => b.avg - a.avg)[0] : null;
+  const lowPhase = phaseWithData.length ? [...phaseWithData].sort((a, b) => a.avg - b.avg)[0] : null;
 
   const latest = logs[0];
   const start = logs[logs.length - 1];
