@@ -327,7 +327,12 @@ export function calculateCycleInfo(
   cycleLengthDays: number | null,
   timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone,
   forDate?: Date | string | null,
-  currentPeriodEndDate?: string | null
+  currentPeriodEndDate?: string | null,
+  /** When true, do NOT wrap an overdue cycle to the next assumed cycle.
+   * Used after the user has explicitly told Logan her period has NOT started
+   * yet — we keep showing the true (overdue) day count and wait for her to
+   * confirm Day 1, rather than silently rolling into a fake next cycle. */
+  periodPending?: boolean
 ): { cycleDay: number; phase: string } | null {
   if (!lastPeriodStart || !cycleLengthDays) return null;
 
