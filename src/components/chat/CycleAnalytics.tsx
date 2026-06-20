@@ -209,8 +209,10 @@ export function CycleAnalytics({
     ? Math.round(Math.sqrt(lengths.reduce((sum, l) => sum + Math.pow(l - meanForVariance, 2), 0) / (lengths.length - 1)) * 10) / 10
     : null;
 
-  // Estimated period length (menstruation = 5 days by default; could be refined)
-  const periodLength = 5;
+  // Phase ranges based on biological norms (not rigid fixed days)
+  const MENSTRUATION_RANGE = { min: 3, typical: 5, max: 7 };
+  const OVULATION_RANGE = { min: 1, typical: 2, max: 3 };
+  const LUTEAL_RANGE = { min: 10, typical: 14, max: 16 };
 
   // Regularity score: 100 = perfectly regular, lower = more variable
   const regularityScore = variance !== null && avgLength
@@ -227,18 +229,22 @@ export function CycleAnalytics({
           : "Irregular"
     : null;
 
-  // Phase segmentation for current cycle
-  const menstruationDays = periodLength;
-  const ovulationDay = currentCycleLength - 14;
+  // Phase segmentation for current cycle — uses TYPICAL values for the bar
+  // so it still draws proportionally; text labels show the real range.
+  const menstruationDays = MENSTRUATION_RANGE.typical;
+  const ovulationDay = currentCycleLength - LUTEAL_RANGE.typical;
   const follicularDays = Math.max(0, ovulationDay - 1 - menstruationDays);
-  const ovulationDays = 3;
-  const lutealDays = currentCycleLength - (menstruationDays + follicularDays + ovulationDays);
+  const ovulationDays = OVULATION_RANGE.typical;
+  const lutealDays = Math.max(
+    LUTEAL_RANGE.min,
+    currentCycleLength - (menstruationDays + follicularDays + ovulationDays)
+  );
 
   const phases = [
-    { name: "Menstruation", days: menstruationDays, color: "bg-phase-menstruation" },
-    { name: "Follicular", days: follicularDays, color: "bg-phase-follicular" },
-    { name: "Ovulation", days: ovulationDays, color: "bg-phase-ovulation" },
-    { name: "Luteal", days: lutealDays, color: "bg-phase-luteal" },
+    { name: "Menstruation", days: menstruationDays, color: "bg-phase-menstruation", range: `${MENSTRUATION_RANGE.min}–${MENSTRUATION_RANGE.max}` },
+    { name: "Follicular", days: follicularDays, color: "bg-phase-follicular", range: "varies" },
+    { name: "Ovulation", days: ovulationDays, color: "bg-phase-ovulation", range: `${OVULATION_RANGE.min}–${OVULATION_RANGE.max}` },
+    { name: "Luteal", days: lutealDays, color: "bg-phase-luteal", range: `${LUTEAL_RANGE.min}–${LUTEAL_RANGE.max}` },
   ];
 
   return (
@@ -283,7 +289,7 @@ export function CycleAnalytics({
             {/* Period Length */}
             <div>
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Period Length</h3>
-              <StatCard label="Estimated" value={`${periodLength} days`} />
+              <StatCard label="Estimated" value="3–7 days" />
             </div>
 
             <Separator />
@@ -338,11 +344,14 @@ export function CycleAnalytics({
                   <div key={p.name} className="flex items-center gap-2">
                     <div className={`w-2.5 h-2.5 rounded-full ${p.color}`} />
                     <span className="text-xs text-muted-foreground">
-                      {p.name} <span className="text-foreground font-medium">{p.days}d</span>
+                      {p.name} <span className="text-foreground font-medium">~{p.range}d</span>
                     </span>
                   </div>
                 ))}
               </div>
+              <p className="text-[10px] text-muted-foreground/60 mt-2">
+                Based on typical cycle biology. Your actual phase lengths may vary.
+              </p>
             </div>
 
             <Separator />
