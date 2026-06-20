@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import { Trash2 } from "lucide-react";
-import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine, BarChart, Bar, Cell, ScatterChart, Scatter } from "recharts";
+import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine, ReferenceArea, ScatterChart, Scatter } from "recharts";
 import { kgToLbs, lbsToKg } from "@/lib/nutrition";
 import { getPhaseForDate, PHASES, type Phase } from "@/lib/cycleCorrelation";
 
@@ -219,64 +219,121 @@ export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged, 
                   </div>
                 )}
 
-                {view === "phase" && hasCycle && (
-                  <>
-                    <div className="h-48">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={phaseAverages}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                          <XAxis dataKey="phase" tick={{ fontSize: 10 }} />
-                          <YAxis domain={["dataMin - 1", "dataMax + 1"]} tick={{ fontSize: 10 }} />
-                          <Tooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
-                            formatter={(v: any, _n, p: any) => [`${v} ${unit} (${p.payload.count} log${p.payload.count === 1 ? "" : "s"})`, "Avg"]} />
-                          <Bar dataKey="avg" radius={[6, 6, 0, 0]}>
-                            {phaseAverages.map((p) => (
-                              <Cell key={p.phase} fill={p.count ? PHASE_COLORS[p.phase] : "hsl(var(--muted))"} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                    {peakPhase && lowPhase && peakPhase.phase !== lowPhase.phase && phaseSpread > 0.2 ? (
-                      <p className="text-[11px] text-muted-foreground mt-2">
-                        On average you weigh {phaseSpread.toFixed(1)} {unit} more in <span className="font-medium" style={{ color: PHASE_COLORS[peakPhase.phase] }}>{peakPhase.phase}</span> than in <span className="font-medium" style={{ color: PHASE_COLORS[lowPhase.phase] }}>{lowPhase.phase}</span>.
+                {view === "phase" && hasCycle && (() => {
+                  const ovDay = cycleLengthDays! - 14;
+                  const phaseRanges: Record<Phase, string> = {
+                    Menstruation: "Days 1–5",
+                    Follicular: `Days 6–${ovDay - 2}`,
+                    Ovulation: `Days ${ovDay - 1}–${ovDay + 1}`,
+                    Luteal: `Days ${ovDay + 2}–${cycleLengthDays}`,
+                  };
+                  const overallAvg = logsWithCycle.length
+                    ? logsWithCycle.reduce((s, x) => s + x.value, 0) / logsWithCycle.length
+                    : 0;
+                  return (
+                    <>
+                      <p className="text-[11px] text-muted-foreground mb-2">
+                        Your average weight in each phase of your cycle. Compared to your overall average of <span className="font-medium text-foreground">{overallAvg.toFixed(1)} {unit}</span>.
                       </p>
-                    ) : (
-                      <p className="text-[11px] text-muted-foreground mt-2">
-                        Weight stays fairly steady across your cycle so far. Keep logging to surface patterns.
-                      </p>
-                    )}
-                  </>
-                )}
+                      <div className="grid grid-cols-2 gap-2">
+                        {phaseAverages.map(p => {
+                          const delta = p.count ? p.avg - overallAvg : 0;
+                          const deltaStr = delta === 0 ? "—" : `${delta > 0 ? "+" : ""}${delta.toFixed(1)} ${unit}`;
+                          const deltaColor = !p.count ? "text-muted-foreground" : Math.abs(delta) < 0.2 ? "text-muted-foreground" : delta > 0 ? "text-amber-500" : "text-emerald-500";
+                          return (
+                            <div key={p.phase} className="rounded-xl border border-border/40 p-3 bg-card/60">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PHASE_COLORS[p.phase] }} />
+                                <span className="text-[11px] font-medium">{p.phase}</span>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground mb-1">{phaseRanges[p.phase]}</p>
+                              {p.count ? (
+                                <>
+                                  <p className="text-lg font-bold tabular-nums leading-none">{p.avg.toFixed(1)}<span className="text-[10px] font-normal text-muted-foreground ml-1">{unit}</span></p>
+                                  <p className={`text-[10px] mt-0.5 ${deltaColor}`}>{deltaStr} vs avg</p>
+                                  <p className="text-[10px] text-muted-foreground">{p.count} log{p.count === 1 ? "" : "s"}</p>
+                                </>
+                              ) : (
+                                <p className="text-[11px] text-muted-foreground italic mt-1">No logs yet</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {peakPhase && lowPhase && peakPhase.phase !== lowPhase.phase && phaseSpread > 0.2 ? (
+                        <p className="text-[11px] text-muted-foreground mt-3">
+                          You weigh about <span className="font-medium text-foreground">{phaseSpread.toFixed(1)} {unit}</span> more on average in <span className="font-medium" style={{ color: PHASE_COLORS[peakPhase.phase] }}>{peakPhase.phase}</span> than in <span className="font-medium" style={{ color: PHASE_COLORS[lowPhase.phase] }}>{lowPhase.phase}</span> — common, mostly water retention.
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-muted-foreground mt-3">
+                          Weight stays pretty steady across your cycle so far. Keep logging to see patterns emerge.
+                        </p>
+                      )}
+                    </>
+                  );
+                })()}
 
-                {view === "cycleDay" && hasCycle && (
-                  <>
-                    <div className="h-48">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <ScatterChart>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                          <XAxis type="number" dataKey="cycleDay" name="Cycle day" domain={[1, cycleLengthDays!]} tick={{ fontSize: 10 }} label={{ value: "Cycle day", fontSize: 10, position: "insideBottom", offset: -2 }} />
-                          <YAxis type="number" dataKey="value" name={unit} domain={["dataMin - 1", "dataMax + 1"]} tick={{ fontSize: 10 }} />
-                          <Tooltip cursor={{ strokeDasharray: "3 3" }} contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
-                            formatter={(v: any, n: any) => [`${v}${n === unit ? " " + unit : ""}`, n]} />
-                          {PHASES.map((p) => (
-                            <Scatter key={p} name={p} data={cycleDayPoints.filter(c => c.phase === p)} fill={PHASE_COLORS[p]} />
-                          ))}
-                        </ScatterChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="flex flex-wrap gap-2 mt-2 text-[10px]">
-                      {PHASES.map(p => (
-                        <span key={p} className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full" style={{ background: PHASE_COLORS[p] }} />
-                          {p}
-                        </span>
-                      ))}
-                    </div>
-                  </>
-                )}
+                {view === "cycleDay" && hasCycle && (() => {
+                  const ovDay = cycleLengthDays! - 14;
+                  const bands: { phase: Phase; x1: number; x2: number }[] = [
+                    { phase: "Menstruation", x1: 1, x2: 5 },
+                    { phase: "Follicular", x1: 5, x2: ovDay - 1 },
+                    { phase: "Ovulation", x1: ovDay - 1, x2: ovDay + 1 },
+                    { phase: "Luteal", x1: ovDay + 1, x2: cycleLengthDays! },
+                  ];
+                  const points = logsWithCycle.map(l => ({
+                    cycleDay: l.cycleDay,
+                    value: l.value,
+                    phase: l.phase,
+                    date: format(parseISO(l.logged_on), "MMM d"),
+                  }));
+                  return (
+                    <>
+                      <p className="text-[11px] text-muted-foreground mb-2">
+                        Each dot is one weigh-in, placed on the day of your cycle. Day 1 is the first day of your period. Background colors show each phase.
+                      </p>
+                      <div className="h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <ScatterChart margin={{ top: 8, right: 8, bottom: 18, left: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} />
+                            <XAxis type="number" dataKey="cycleDay" name="Cycle day" domain={[1, cycleLengthDays!]} ticks={[1, 5, ovDay, cycleLengthDays!]} tick={{ fontSize: 10 }} label={{ value: "Day of cycle", fontSize: 10, position: "insideBottom", offset: -8 }} />
+                            <YAxis type="number" dataKey="value" name={unit} domain={["dataMin - 1", "dataMax + 1"]} tick={{ fontSize: 10 }} width={32} />
+                            {bands.map(b => (
+                              <ReferenceArea key={b.phase} x1={b.x1} x2={b.x2} fill={PHASE_COLORS[b.phase]} fillOpacity={0.08} stroke="none" />
+                            ))}
+                            <ReferenceLine x={ovDay} stroke={PHASE_COLORS.Ovulation} strokeDasharray="2 3" label={{ value: "ovulation", fontSize: 9, fill: PHASE_COLORS.Ovulation, position: "top" }} />
+                            <Tooltip cursor={{ strokeDasharray: "3 3" }} contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))", fontSize: 11 }}
+                              content={({ active, payload }) => {
+                                if (!active || !payload?.length) return null;
+                                const d: any = payload[0].payload;
+                                return (
+                                  <div className="rounded-md bg-background border border-border/60 px-2 py-1.5 text-[11px]">
+                                    <p className="font-medium">{d.value} {unit}</p>
+                                    <p className="text-muted-foreground">Day {d.cycleDay} · <span style={{ color: PHASE_COLORS[d.phase as Phase] }}>{d.phase}</span></p>
+                                    <p className="text-muted-foreground">{d.date}</p>
+                                  </div>
+                                );
+                              }} />
+                            {PHASES.map((p) => (
+                              <Scatter key={p} name={p} data={points.filter(c => c.phase === p)} fill={PHASE_COLORS[p]} />
+                            ))}
+                          </ScatterChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[10px]">
+                        {PHASES.map(p => (
+                          <span key={p} className="flex items-center gap-1 text-muted-foreground">
+                            <span className="w-2 h-2 rounded-full" style={{ background: PHASE_COLORS[p] }} />
+                            {p}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             )}
+
 
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">History</p>
