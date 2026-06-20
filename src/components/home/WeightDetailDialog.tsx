@@ -334,8 +334,6 @@ export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged, 
               </div>
             )}
 
-              </div>
-            )}
 
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">History</p>
