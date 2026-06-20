@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Apple, ChevronRight, Plus } from "lucide-react";
+import { Apple, ChevronRight, Plus, History } from "lucide-react";
 import { startOfDay } from "date-fns";
 import { NutritionDetailDialog } from "./NutritionDetailDialog";
+import { NutritionHistoryDialog } from "./NutritionHistoryDialog";
+
 
 const COLORS = {
   border: "border-l-orange-500",
