@@ -16,6 +16,7 @@ import { SymptomHormoneChart } from "./SymptomHormoneChart";
 import { ChevronDown, Pencil, Trash2, X, Check, Search, StickyNote } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip } from "recharts";
 
 
 interface SymptomEntry {
