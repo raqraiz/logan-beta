@@ -561,13 +561,29 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             />
           </div>
         ) : null;
-      case "lab_results":
+      case "discharge_tracker": {
+        const colors = WIDGET_COLORS.discharge_tracker;
         return userId ? (
-          <div className="w-full" key={id}>
-            <LabResultsWidget userId={userId} />
+          <div className="w-full flex flex-col gap-2" key={id}>
+            <div
+              className={`w-full rounded-2xl border border-border/40 ${colors.border} border-l-[3px] bg-card overflow-hidden relative`}
+            >
+              <div className={`absolute inset-0 bg-gradient-to-br ${colors.bgGradient} pointer-events-none`} />
+              <div className="relative">
+                <DischargeTrackerWidget
+                  userId={userId}
+                  cycleDay={isNonCycling ? undefined : cycleData.cycleDay}
+                  phase={isNonCycling ? stagePhase : cycleData.phase}
+                  lastPeriodStart={cycleData.lastPeriodStart}
+                  cycleLengthDays={cycleData.cycleLengthDays}
+                  isNonCycling={!!isNonCycling}
+                />
+              </div>
+            </div>
           </div>
         ) : null;
-      case "nutrition_today":
+      }
+      case "lab_results":
         return userId ? (
           <div className="w-full" key={id}>
             <NutritionTodayWidget userId={userId} />
