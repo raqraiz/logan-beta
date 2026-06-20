@@ -16,6 +16,7 @@ import { NutritionTodayWidget } from "@/components/home/NutritionTodayWidget";
 import { WeightTrendWidget } from "@/components/home/WeightTrendWidget";
 import { MiniPhaseArc, getWidgetGraphic } from "@/components/home/WidgetGraphics";
 import { DailyBriefingHero } from "@/components/home/DailyBriefingHero";
+import { PeriodEndedChip } from "@/components/home/PeriodEndedChip";
 import { useWidgetPreferences, getWidgetLabel } from "@/hooks/useWidgetPreferences";
 import {
   getPostpartumPhase,
