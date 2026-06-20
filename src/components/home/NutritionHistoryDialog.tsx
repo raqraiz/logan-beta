@@ -47,9 +47,11 @@ export function NutritionHistoryDialog({ open, onOpenChange, userId }: Props) {
     name: "", calories: "", p: "", c: "", f: "",
   });
   const [addingDay, setAddingDay] = useState<string | null>(null);
-  const [newDraft, setNewDraft] = useState<{ name: string; calories: string; p: string; c: string; f: string }>({
-    name: "", calories: "", p: "", c: "", f: "",
-  });
+  const [addText, setAddText] = useState("");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [pending, setPending] = useState<{
+    name: string; description?: string; calories: number; protein_g: number; carbs_g: number; fat_g: number; confidence?: string;
+  } | null>(null);
   const [saving, setSaving] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
