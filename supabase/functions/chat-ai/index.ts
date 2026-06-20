@@ -437,7 +437,11 @@ serve(async (req) => {
 
       // If user was postpartum and reports a period, transition them to cycling
       // Postpartum → cycling: keep postpartum_start_date intact (it's the baby's birth date)
-      const periodUpdatePayload: Record<string, unknown> = { last_period_start: formattedDate };
+      const periodUpdatePayload: Record<string, unknown> = {
+        last_period_start: formattedDate,
+        // She confirmed Day 1 — clear any pending "haven't started yet" flag.
+        period_pending_since: null,
+      };
       if (participant.life_stage === "postpartum") {
         periodUpdatePayload.life_stage = "cycling";
         // Preserve postpartum recovery context as a secondary state (dual-state).
