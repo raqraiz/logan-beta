@@ -592,7 +592,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           </div>
         ) : null;
       }
-      case "lab_results":
+      case "nutrition_today":
         return userId ? (
           <div className="w-full" key={id}>
             <NutritionTodayWidget userId={userId} />
