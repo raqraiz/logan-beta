@@ -31,6 +31,7 @@ export const DEFAULT_WIDGET_LABELS: Record<string, string> = {
   nutrition_today: "Nutrition Today",
   weight_trend: "Weight Trend",
   symptom_tracker: "Symptom Tracker",
+  discharge_tracker: "Cervical Fluid Tracker",
   symptom_history: "Symptom Patterns",
   cycle_correlations: "Cycle Correlations",
   lab_results: "Lab Results",
