@@ -150,21 +150,51 @@ export function NutritionHistoryDialog({ open, onOpenChange, userId }: Props) {
 
   function startAdd(dayKey: string) {
     setAddingDay(dayKey);
-    setNewDraft({ name: "", calories: "", p: "", c: "", f: "" });
+    setAddText("");
+    setPending(null);
     setEditingId(null);
   }
 
+  async function analyzeText() {
+    if (!addText.trim()) return;
+    setAnalyzing(true);
+    setPending(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("analyze-meal", {
+        body: { description: addText.trim() },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setPending({
+        name: data.name,
+        description: data.description,
+        calories: Number(data.calories) || 0,
+        protein_g: Number(data.protein_g) || 0,
+        carbs_g: Number(data.carbs_g) || 0,
+        fat_g: Number(data.fat_g) || 0,
+        confidence: data.confidence,
+      });
+    } catch (e: any) {
+      toast({ title: "Couldn't analyze", description: e.message || String(e), variant: "destructive" });
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
   async function saveNewMeal(dayKey: string) {
+    if (!pending) return;
     const d = new Date(`${dayKey}T12:00:00`);
     setSaving(true);
     const { error } = await supabase.from("meals").insert({
       user_id: userId,
-      name: newDraft.name.trim() || "Meal",
-      calories: Math.max(0, Math.round(Number(newDraft.calories) || 0)),
-      protein_g: Math.max(0, Number(newDraft.p) || 0),
-      carbs_g: Math.max(0, Number(newDraft.c) || 0),
-      fat_g: Math.max(0, Number(newDraft.f) || 0),
+      name: pending.name?.trim() || "Meal",
+      description: pending.description ?? null,
+      calories: Math.max(0, Math.round(pending.calories || 0)),
+      protein_g: Math.max(0, pending.protein_g || 0),
+      carbs_g: Math.max(0, pending.carbs_g || 0),
+      fat_g: Math.max(0, pending.fat_g || 0),
       source: "text",
+      ai_confidence: pending.confidence ?? null,
       logged_at: d.toISOString(),
     });
     setSaving(false);
@@ -173,6 +203,8 @@ export function NutritionHistoryDialog({ open, onOpenChange, userId }: Props) {
       return;
     }
     setAddingDay(null);
+    setAddText("");
+    setPending(null);
     setRefreshKey((k) => k + 1);
   }
 
