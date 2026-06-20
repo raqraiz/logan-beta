@@ -1,5 +1,9 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.45.0'
-import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -12,10 +16,17 @@ Deno.serve(async (req) => {
   try {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
-    // Users created between 72h and 96h ago (1-hour cron with 24h window for safety).
+    // Users created between minHours and maxHours ago. Defaults: 72h–96h.
+    let minHours = 72
+    let maxHours = 96
+    try {
+      const body = await req.json()
+      if (typeof body?.minHours === 'number') minHours = body.minHours
+      if (typeof body?.maxHours === 'number') maxHours = body.maxHours
+    } catch { /* no body */ }
     const now = Date.now()
-    const windowStart = new Date(now - 96 * 60 * 60 * 1000).toISOString()
-    const windowEnd = new Date(now - 72 * 60 * 60 * 1000).toISOString()
+    const windowStart = new Date(now - maxHours * 60 * 60 * 1000).toISOString()
+    const windowEnd = new Date(now - minHours * 60 * 60 * 1000).toISOString()
 
     // List users. auth admin listUsers is paginated; iterate.
     let page = 1
@@ -64,21 +75,29 @@ Deno.serve(async (req) => {
         continue
       }
 
-      const { error } = await admin.functions.invoke('send-transactional-email', {
-        body: {
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+          apikey: SERVICE_ROLE_KEY,
+        },
+        body: JSON.stringify({
           templateName: 'day-3-checkin',
           recipientEmail: c.email,
           idempotencyKey,
           templateData: { name: c.name },
           purpose: 'transactional',
-        },
+        }),
       })
 
-      if (error) {
-        errors.push(`${c.id}: ${error.message ?? String(error)}`)
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => '')
+        errors.push(`${c.id}: ${resp.status} ${text.slice(0, 200)}`)
       } else {
         sent += 1
       }
+
     }
 
     return new Response(
