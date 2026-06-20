@@ -307,13 +307,54 @@ export function SymptomHistory({
 
             {!isSearching && <Separator />}
 
-            {/* Timeline */}
+            {/* View toggle */}
+            {!isSearching && (
+              <div className="flex items-center justify-between gap-2">
+                <div className="inline-flex rounded-lg bg-muted/40 p-0.5 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setView("timeline")}
+                    className={`px-2.5 py-1 rounded-md transition-colors ${view === "timeline" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+                  >
+                    Timeline
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setView("summary")}
+                    className={`px-2.5 py-1 rounded-md transition-colors ${view === "summary" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+                  >
+                    Summary
+                  </button>
+                </div>
+                {view === "summary" && (
+                  <div className="inline-flex rounded-lg bg-muted/40 p-0.5 text-[10px]">
+                    {(!isNonCycling ? ["phase", "week", "month"] : ["week", "month"]).map(g => (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => setGroupBy(g as any)}
+                        className={`px-2 py-1 rounded-md capitalize transition-colors ${groupBy === g ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+                      >
+                        {g === "phase" ? "By phase" : g === "week" ? "By week" : "By month"}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Timeline / Summary */}
             <div>
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
                 {isSearching
                   ? `${filteredLogs.length} match${filteredLogs.length === 1 ? "" : "es"} for "${search.trim()}"`
-                  : "Recent Logs"}
+                  : view === "summary"
+                    ? groupBy === "phase" ? "Symptoms by Phase" : groupBy === "week" ? "Symptoms by Week" : "Symptoms by Month"
+                    : "Recent Logs"}
               </h3>
+              {!isSearching && view === "summary" ? (
+                <SummaryView logs={logs} groupBy={groupBy} />
+              ) : (
               {isSearching && filteredLogs.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-6">
                   No logs match your search. Try a different keyword.
