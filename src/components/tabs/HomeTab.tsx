@@ -9,6 +9,7 @@ import { AddCustomWidgetDialog } from "@/components/home/AddCustomWidgetDialog";
 import { CustomAIWidget } from "@/components/home/CustomAIWidget";
 import { SymptomLogWidget } from "@/components/home/SymptomLogWidget";
 import { SymptomHistoryWidget } from "@/components/home/SymptomHistoryWidget";
+import { DischargeTrackerWidget } from "@/components/home/DischargeTrackerWidget";
 import { CycleCorrelationsWidget } from "@/components/home/CycleCorrelationsWidget";
 import { LabResultsWidget } from "@/components/home/LabResultsWidget";
 import { NutritionTodayWidget } from "@/components/home/NutritionTodayWidget";
@@ -282,6 +283,14 @@ const WIDGET_COLORS: Record<string, {
     iconColor: "text-rose-400",
     labelColor: "text-rose-400/80",
   },
+  discharge_tracker: {
+    border: "border-l-teal-500",
+    bgGradient: "from-teal-500/10 via-teal-500/5 to-transparent",
+    dot: "bg-teal-500",
+    iconBg: "bg-teal-500/15",
+    iconColor: "text-teal-400",
+    labelColor: "text-teal-400/80",
+  },
   hormone_chart: {
     border: "border-l-cyan-500",
     bgGradient: "from-cyan-500/10 via-cyan-500/5 to-transparent",
@@ -552,13 +561,29 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             />
           </div>
         ) : null;
-      case "lab_results":
+      case "discharge_tracker": {
+        const colors = WIDGET_COLORS.discharge_tracker;
         return userId ? (
-          <div className="w-full" key={id}>
-            <LabResultsWidget userId={userId} />
+          <div className="w-full flex flex-col gap-2" key={id}>
+            <div
+              className={`w-full rounded-2xl border border-border/40 ${colors.border} border-l-[3px] bg-card overflow-hidden relative`}
+            >
+              <div className={`absolute inset-0 bg-gradient-to-br ${colors.bgGradient} pointer-events-none`} />
+              <div className="relative">
+                <DischargeTrackerWidget
+                  userId={userId}
+                  cycleDay={isNonCycling ? undefined : cycleData.cycleDay}
+                  phase={isNonCycling ? stagePhase : cycleData.phase}
+                  lastPeriodStart={cycleData.lastPeriodStart}
+                  cycleLengthDays={cycleData.cycleLengthDays}
+                  isNonCycling={!!isNonCycling}
+                />
+              </div>
+            </div>
           </div>
         ) : null;
-      case "nutrition_today":
+      }
+      case "lab_results":
         return userId ? (
           <div className="w-full" key={id}>
             <NutritionTodayWidget userId={userId} />
