@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { format, subDays } from "date-fns";
 import { AllSymptomsChart } from "./AllSymptomsChart";
 import { SymptomHormoneChart } from "./SymptomHormoneChart";
-import { ChevronDown, Pencil, Trash2, X, Check, Search } from "lucide-react";
+import { ChevronDown, Pencil, Trash2, X, Check, Search, StickyNote } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 
@@ -72,6 +72,7 @@ export function SymptomHistory({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
   const [search, setSearch] = useState("");
+  const [notesOnly, setNotesOnly] = useState(false);
   const [view, setView] = useState<"timeline" | "summary">("timeline");
   const [groupBy, setGroupBy] = useState<"phase" | "week" | "month">(
     isNonCycling ? "week" : "phase"
@@ -178,15 +179,19 @@ export function SymptomHistory({
   };
 
 
-  // Filter by search query (symptom name or notes)
+  // Filter by search query (symptom name or notes) and optionally notes-only
   const q = search.trim().toLowerCase();
-  const filteredLogs = q
-    ? logs.filter(l =>
-        (l.notes && l.notes.toLowerCase().includes(q)) ||
-        l.symptoms.some(s => s.name.toLowerCase().includes(q))
-      )
-    : logs;
-  const isSearching = q.length > 0;
+  let filteredLogs = logs;
+  if (notesOnly) {
+    filteredLogs = filteredLogs.filter(l => l.notes && l.notes.trim().length > 0);
+  }
+  if (q) {
+    filteredLogs = filteredLogs.filter(l =>
+      (l.notes && l.notes.toLowerCase().includes(q)) ||
+      l.symptoms.some(s => s.name.toLowerCase().includes(q))
+    );
+  }
+  const isSearching = q.length > 0 || notesOnly;
 
   // Highlight matching text
   const highlight = (text: string) => {
@@ -249,6 +254,31 @@ export function SymptomHistory({
                 </button>
               )}
             </div>
+
+            {/* Filter chips */}
+            {(() => {
+              const notesCount = logs.filter(l => l.notes && l.notes.trim().length > 0).length;
+              return (
+                <div className="flex items-center gap-2 -mt-3 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setNotesOnly(v => !v)}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] transition-colors ${
+                      notesOnly
+                        ? "border-primary/50 bg-primary/10 text-primary"
+                        : "border-border/50 bg-muted/30 text-muted-foreground hover:text-foreground"
+                    }`}
+                    aria-pressed={notesOnly}
+                  >
+                    <StickyNote className="w-3 h-3" />
+                    Notes only{notesCount > 0 ? ` · ${notesCount}` : ""}
+                  </button>
+                  {(notesOnly || search) && filteredLogs.length === 0 && (
+                    <span className="text-[11px] text-muted-foreground">No matches</span>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Top patterns — hidden while searching */}
             {!isSearching && topSymptoms.length > 0 && (
@@ -464,9 +494,12 @@ export function SymptomHistory({
                                 ))}
                               </div>
                               {log.notes && (
-                                <p className="text-[11px] text-muted-foreground/70 mt-1 italic">
-                                  {highlight(log.notes)}
-                                </p>
+                                <div className="mt-1.5 flex items-start gap-1.5 rounded-md border border-border/40 bg-muted/40 px-2 py-1.5">
+                                  <StickyNote className="w-3 h-3 text-primary/70 mt-0.5 shrink-0" />
+                                  <p className="text-[11px] text-foreground/80 leading-snug whitespace-pre-wrap break-words">
+                                    {highlight(log.notes)}
+                                  </p>
+                                </div>
                               )}
 
                             </>

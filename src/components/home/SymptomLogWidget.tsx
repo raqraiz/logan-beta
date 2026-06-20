@@ -598,13 +598,21 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
           )}
 
           {/* Notes */}
-          <Textarea
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-            placeholder="Anything else? Patterns, triggers, how you feel overall..."
-            className="resize-none text-xs"
-            rows={2}
-          />
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium">
+                Notes
+              </label>
+              <span className="text-[10px] text-muted-foreground/60">Searchable later</span>
+            </div>
+            <Textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Unusual sharp pain on left side, weird metallic taste, vivid dream about… anything you'd want to find again later."
+              className="resize-none text-xs"
+              rows={3}
+            />
+          </div>
 
           {/* Submit */}
           <div className="flex justify-end">
