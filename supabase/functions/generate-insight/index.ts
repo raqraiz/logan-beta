@@ -467,7 +467,7 @@ CONTEXT:
 - Age: ${age || "unknown"}
 - Anchor symptom: ${anchorSymptom || "not set"}
 - Other symptoms: ${symptoms.join(", ") || "none"}
-- PHASE STRENGTHS: ${strengthContext}
+- PHASE STRENGTHS: ${strengthContext}${perimenopauseContext}
 ${anchorContext ? `- ${anchorContext}` : ""}
 ${topicContext}
 ${age && age <= 16 ? "- TONE: User is young. Use simple, relatable language. Keep intro under 25 words. Make the question feel like a text from a friend." : ""}
