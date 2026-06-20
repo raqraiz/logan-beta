@@ -555,7 +555,7 @@ export function ProfilesTab() {
                   <Download className="w-4 h-4 mr-2" />
                   Download
                 </Button>
-                {(cycleData || (participant?.life_stage === "postpartum" || participant?.life_stage === "menopause")) && (
+                {(cycleData || participant?.life_stage) && (
                   <Button variant="outline" size="sm" onClick={() => setShowHomePreview(true)}>
                     <Home className="w-4 h-4 mr-2" />
                     View as user
@@ -1024,11 +1024,16 @@ export function ProfilesTab() {
                 lifeStage: (participant?.life_stage as any) || "cycling",
                 postpartumStartDate: participant?.postpartum_start_date || undefined,
                 postpartumActive: !!(participant as any)?.postpartum_active,
-              } : participant?.life_stage && (participant.life_stage === "postpartum" || participant.life_stage === "menopause") ? {
+              } : participant?.life_stage ? {
                 cycleDay: 0,
-                phase: participant.life_stage === "postpartum" ? "Postpartum" : "Menopause",
-                cycleLengthDays: 0,
-                lifeStage: participant.life_stage as "postpartum" | "menopause",
+                phase:
+                  participant.life_stage === "postpartum" ? "Postpartum" :
+                  participant.life_stage === "menopause" ? "Menopause" :
+                  participant.life_stage === "perimenopause" ? "Perimenopause" :
+                  participant.life_stage === "irregular" ? "Steady" :
+                  "Cycling",
+                cycleLengthDays: participant?.cycle_length_days || 0,
+                lifeStage: participant.life_stage as any,
                 postpartumStartDate: participant?.postpartum_start_date || undefined,
                 postpartumActive: !!(participant as any)?.postpartum_active,
               } : null;
