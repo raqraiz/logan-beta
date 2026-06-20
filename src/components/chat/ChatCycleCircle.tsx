@@ -326,7 +326,8 @@ export function calculateCycleInfo(
   lastPeriodStart: string | null,
   cycleLengthDays: number | null,
   timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone,
-  forDate?: Date | string | null
+  forDate?: Date | string | null,
+  currentPeriodEndDate?: string | null
 ): { cycleDay: number; phase: string } | null {
   if (!lastPeriodStart || !cycleLengthDays) return null;
 
@@ -365,8 +366,19 @@ export function calculateCycleInfo(
     ? daysSinceStart + 1
     : (((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays) + 1;
 
-  // Determine phase using biological model
-  const menstruationEnd = 5;
+  // Derive menstruationEnd. If the user reported her period ended early
+  // (currentPeriodEndDate), use that to shift Follicular forward. Only honor
+  // it when the end date is on/after period start and within this cycle.
+  let menstruationEnd = 5;
+  if (currentPeriodEndDate && /^\d{4}-\d{2}-\d{2}$/.test(currentPeriodEndDate)) {
+    const [ey, em, ed] = currentPeriodEndDate.split("-").map(Number);
+    const endDate = new Date(Date.UTC(ey, em - 1, ed, 12, 0, 0));
+    const endDay = Math.round((endDate.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    if (endDay >= 1 && endDay <= cycleLengthDays) {
+      menstruationEnd = endDay;
+    }
+  }
+
   const ovulationDay = cycleLengthDays - 14;
   const ovulationStart = ovulationDay - 1;
   const ovulationEnd = ovulationDay + 2;

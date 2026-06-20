@@ -1,35 +1,53 @@
-## Goal
-Send a second app email automatically 3 days after a user signs up, with subject "How's Logan feeling so far? 💚" and the copy you provided. Personalize with the user's name; fall back to "Hi there".
+## The problem
 
-## Approach
-Lovable Emails doesn't have native scheduled/delayed sends, so we'll add a tiny scheduler: a cron job runs an Edge Function hourly that finds users whose account is between 3 and 4 days old and haven't received the check-in yet, then invokes the existing `send-transactional-email` with an idempotency key so each user only ever gets it once.
+Logan's current-cycle phase is computed from `last_period_start + cycle_length_days`, with **menstruation hardcoded as days 1–5**. If a user's period only lasts 4 days, day 5 still shows as "Menstruation" even though biologically she's already in the Follicular phase. There is no way to tell Logan "my bleed ended."
 
-## Steps
+The phase-edit UI I just added to Cycle Analytics only affects *completed* cycles in history — it doesn't influence the live phase of the cycle she's currently in.
 
-1. **New template** — `supabase/functions/_shared/transactional-email-templates/day-3-checkin.tsx`
-   - Subject: `How's Logan feeling so far? 💚`
-   - Greeting: `Hi ${name}` or `Hi there` if no name.
-   - Body: exact copy you provided, signed by Raquella.
-   - Same brand styling as the welcome email (white body, DM Sans, teal `#15B88C` accents, plain-text fallback).
-   - Register in `_shared/transactional-email-templates/registry.ts` as `day-3-checkin`.
+## The fix
 
-2. **New Edge Function** — `supabase/functions/send-day-3-checkins/index.ts`
-   - Uses the service role to query `auth.users` for accounts created between 72h and 96h ago (the 24h window matches the hourly cron and prevents misses).
-   - For each user, reads `raw_user_meta_data.full_name` (or `name`) for personalization.
-   - Invokes `send-transactional-email` with:
-     - `templateName: "day-3-checkin"`
-     - `recipientEmail: user.email`
-     - `idempotencyKey: "day-3-checkin-${user.id}"` ← guarantees one send per user even if the job runs multiple times
-     - `templateData: { name: <name or null> }`
-   - Skips users already in `suppressed_emails` (the send function also checks this as a safety net).
-   - Returns a small JSON summary (processed/sent/skipped) for logs.
+Add a per-user "current period end date" that overrides the menstruation window for the in-progress cycle only.
 
-3. **Cron schedule** — Enable `pg_cron` + `pg_net` if not already, then schedule `send-day-3-checkins` to run every hour. Done via `supabase--insert` since the URL/anon key are project-specific.
+### 1. Schema
 
-4. **Deploy** the new function and template.
+Add to `participants`:
+- `current_period_end_date date` (nullable)
 
-## Notes
-- Existing welcome email and all other flows are untouched.
-- Backfill: only users who sign up from deploy-time forward will get this. If you want to backfill the last few days too, say the word and I'll widen the initial window once.
-- Monitoring: sends will appear in Cloud → Emails like the welcome email, and the cron job's invocations will show in Edge Function logs.
-- Unsubscribe footer is appended automatically by the email system — template stays clean.
+Cleared automatically whenever a new `last_period_start` is written.
+
+### 2. Phase calculation
+
+Update `calculateCycleInfo` in `src/components/chat/ChatCycleCircle.tsx` to accept an optional `periodEndDate`:
+
+```text
+if periodEndDate is set and reference date > periodEndDate:
+    menstruationEnd = max(1, daysBetween(periodStart, periodEndDate) + 1)
+else:
+    menstruationEnd = 5   // current default
+```
+
+Everything else (Follicular / Ovulation / Luteal boundaries) stays the same.
+
+### 3. Plumb the value through
+
+- `Chat.tsx`: include `current_period_end_date` in the participants select + realtime subscription, pass it into `calculateCycleInfo`.
+- Same for the other consumers that call `calculateCycleInfo`: `ChatCycleCircle`, `PlanTab`, `SymptomLogWidget`, `CycleCorrelationsWidget`, `DischargeTrackerWidget`, `CycleForecast`, `admin/ProfilesTab`. Each reads `last_period_start` already; they'll read the end date alongside it.
+
+### 4. UI to set it
+
+Add a small "My period ended" action on the Home tab, near the cycle circle:
+- Shown only when current `cycleDay <= 8` and `current_period_end_date` is not set.
+- Tap opens a tiny date picker defaulted to today, with options: today, yesterday, 2 days ago.
+- Saves to `participants.current_period_end_date`. Real-time subscription updates the phase instantly across tabs.
+- Once set, the chip turns into "Period ended {date} · edit" so she can correct it.
+
+When she logs a new period start (existing flow), `current_period_end_date` is set back to `null` automatically — handled in the same UPDATE that writes the new `last_period_start`.
+
+### 5. Cycle Analytics
+
+When the current cycle eventually closes and gets added to `cycle_history`, populate `menstruation_days` from `current_period_end_date - last_period_start + 1` so her Phase Breakdown reflects reality without manual editing.
+
+## Out of scope
+
+- No change to luteal-length assumption (14d) — that's a separate ask.
+- No automatic period-end detection from symptom logs.

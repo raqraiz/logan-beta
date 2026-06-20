@@ -16,6 +16,7 @@ import { NutritionTodayWidget } from "@/components/home/NutritionTodayWidget";
 import { WeightTrendWidget } from "@/components/home/WeightTrendWidget";
 import { MiniPhaseArc, getWidgetGraphic } from "@/components/home/WidgetGraphics";
 import { DailyBriefingHero } from "@/components/home/DailyBriefingHero";
+import { PeriodEndedChip } from "@/components/home/PeriodEndedChip";
 import { useWidgetPreferences, getWidgetLabel } from "@/hooks/useWidgetPreferences";
 import {
   getPostpartumPhase,
@@ -507,6 +508,14 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
               postpartumActive={cycleData.postpartumActive}
               onCircleClick={isNonCycling ? undefined : () => setShowAnalytics(true)}
             />
+
+            {!isNonCycling && userId && (
+              <PeriodEndedChip
+                userId={userId}
+                cycleDay={cycleData.cycleDay}
+                lastPeriodStart={cycleData.lastPeriodStart}
+              />
+            )}
 
             {!isNonCycling && !dismissed && (
               <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground/70">
