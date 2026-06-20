@@ -8,7 +8,6 @@ import { WidgetEditMode } from "@/components/home/WidgetEditMode";
 import { AddCustomWidgetDialog } from "@/components/home/AddCustomWidgetDialog";
 import { CustomAIWidget } from "@/components/home/CustomAIWidget";
 import { SymptomLogWidget } from "@/components/home/SymptomLogWidget";
-import { SymptomHistory } from "@/components/home/SymptomHistory";
 import { SymptomHistoryWidget } from "@/components/home/SymptomHistoryWidget";
 import { CycleCorrelationsWidget } from "@/components/home/CycleCorrelationsWidget";
 import { LabResultsWidget } from "@/components/home/LabResultsWidget";
@@ -397,7 +396,6 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   const [dismissed, setDismissed] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [showAddWidget, setShowAddWidget] = useState(false);
-  const [showSymptomHistory, setShowSymptomHistory] = useState(false);
 
   const { widgets, loading, save, toggleWidget, renameWidget, setWidgets, addCustomWidget, removeWidget } = useWidgetPreferences(userId);
 
@@ -780,18 +778,6 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           addCustomWidget(title, prompt);
         }}
       />
-
-      {/* Symptom History */}
-      {userId && (
-        <SymptomHistory
-          open={showSymptomHistory}
-          onOpenChange={setShowSymptomHistory}
-          userId={userId}
-          lastPeriodStart={cycleData.lastPeriodStart}
-          cycleLengthDays={cycleData.cycleLengthDays}
-          isNonCycling={!!isNonCycling}
-        />
-      )}
     </div>
   );
 }
