@@ -89,7 +89,14 @@ export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged, 
   }
 
   const sortedAsc = [...logs].sort((a, b) => a.logged_on.localeCompare(b.logged_on));
-  const chartData = sortedAsc.map(l => ({ date: format(parseISO(l.logged_on), "MMM d"), value: Number(display(Number(l.weight_kg)).toFixed(1)) }));
+  const chartData = sortedAsc.map(l => ({
+    date: format(parseISO(l.logged_on), "MMM d"),
+    value: Number(display(Number(l.weight_kg)).toFixed(1)),
+    phase: lastPeriodStart && cycleLengthDays
+      ? getPhaseForDate(parseISO(l.logged_on), lastPeriodStart, cycleLengthDays)
+      : null,
+  }));
+
 
   const hasCycle = !!(lastPeriodStart && cycleLengthDays && cycleLengthDays > 0);
 
