@@ -111,8 +111,19 @@ export function NutritionTodayWidget({ userId }: Props) {
             </div>
           </div>
 
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-primary">
-            <Plus className="w-3 h-3" /> Log a meal
+          <div className="mt-3 flex items-center justify-between gap-2 text-[11px]">
+            <span className="flex items-center gap-1.5 text-primary">
+              <Plus className="w-3 h-3" /> Log a meal
+            </span>
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); setHistoryOpen(true); }}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); setHistoryOpen(true); } }}
+              className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <History className="w-3 h-3" /> History
+            </span>
           </div>
         </div>
       </button>
@@ -123,9 +134,15 @@ export function NutritionTodayWidget({ userId }: Props) {
         userId={userId}
         onDataChanged={() => setRefreshKey(k => k + 1)}
       />
+      <NutritionHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        userId={userId}
+      />
     </>
   );
 }
+
 
 function MiniBar({ label, value, target, color }: { label: string; value: number; target: number | null; color: string }) {
   const pct = target ? Math.min(100, (value / target) * 100) : 0;
