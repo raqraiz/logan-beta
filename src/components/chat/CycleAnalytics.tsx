@@ -511,7 +511,13 @@ export function CycleAnalytics({
                 <div className="space-y-1.5 max-h-64 overflow-y-auto">
                   {history.map((row) => {
                     const isEditing = editingId === row.id;
+                    const isEditingPhases = phaseEditId === row.id;
                     const isOutlier = row.cycle_length_days > 45 || row.cycle_length_days < 15;
+                    const hasCustomPhases =
+                      row.menstruation_days != null &&
+                      row.follicular_days != null &&
+                      row.ovulation_days != null &&
+                      row.luteal_days != null;
                     if (isEditing) {
                       return (
                         <div key={row.id} className="rounded-lg border border-primary/40 bg-muted/30 p-2 space-y-2">
@@ -541,6 +547,61 @@ export function CycleAnalytics({
                         </div>
                       );
                     }
+                    if (isEditingPhases) {
+                      const draftSum =
+                        (parseInt(phaseDraft.menstruation, 10) || 0) +
+                        (parseInt(phaseDraft.follicular, 10) || 0) +
+                        (parseInt(phaseDraft.ovulation, 10) || 0) +
+                        (parseInt(phaseDraft.luteal, 10) || 0);
+                      const sumMismatch = Math.abs(draftSum - row.cycle_length_days) > 2;
+                      return (
+                        <div key={row.id} className="rounded-lg border border-primary/40 bg-muted/30 p-2.5 space-y-2">
+                          <p className="text-[11px] text-muted-foreground">
+                            Phase lengths for {format(new Date(row.cycle_start_date), "MMM d")} cycle ({row.cycle_length_days}d total)
+                          </p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {([
+                              { key: "menstruation", label: "Menstruation", color: "bg-phase-menstruation" },
+                              { key: "follicular", label: "Follicular", color: "bg-phase-follicular" },
+                              { key: "ovulation", label: "Ovulation", color: "bg-phase-ovulation" },
+                              { key: "luteal", label: "Luteal", color: "bg-phase-luteal" },
+                            ] as const).map((p) => (
+                              <label key={p.key} className="flex items-center gap-1.5">
+                                <span className={`w-2 h-2 rounded-full ${p.color} shrink-0`} />
+                                <span className="text-[10px] text-muted-foreground flex-1 truncate">{p.label}</span>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={45}
+                                  value={phaseDraft[p.key]}
+                                  onChange={(e) => setPhaseDraft((d) => ({ ...d, [p.key]: e.target.value }))}
+                                  className="h-7 w-12 text-xs text-center"
+                                />
+                              </label>
+                            ))}
+                          </div>
+                          <p className={`text-[10px] ${sumMismatch ? "text-destructive" : "text-muted-foreground"}`}>
+                            Sum: {draftSum}d / {row.cycle_length_days}d
+                            {sumMismatch ? " — adjust to match" : " ✓"}
+                          </p>
+                          <div className="flex justify-between gap-1.5">
+                            {hasCustomPhases ? (
+                              <Button size="sm" variant="ghost" className="h-7 text-[11px] text-muted-foreground" onClick={() => resetPhases(row)}>
+                                Reset
+                              </Button>
+                            ) : <span />}
+                            <div className="flex gap-1.5">
+                              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={cancelPhaseEdit}>
+                                <X className="w-3 h-3" />
+                              </Button>
+                              <Button size="sm" className="h-7 text-xs" onClick={() => savePhases(row)} disabled={saving}>
+                                <Check className="w-3 h-3 mr-1" /> Save
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
                     return (
                       <div
                         key={row.id}
@@ -551,10 +612,20 @@ export function CycleAnalytics({
                             {format(new Date(row.cycle_start_date), "MMM d, yyyy")} → {format(new Date(row.cycle_end_date), "MMM d")}
                           </p>
                           <p className={`text-[10px] ${isOutlier ? "text-destructive" : "text-muted-foreground"}`}>
-                            {row.cycle_length_days} days{isOutlier ? " · likely inaccurate" : ""}
+                            {row.cycle_length_days} days
+                            {hasCustomPhases ? ` · ${row.menstruation_days}/${row.follicular_days}/${row.ovulation_days}/${row.luteal_days}` : ""}
+                            {isOutlier ? " · likely inaccurate" : ""}
                           </p>
                         </div>
                         <div className="flex items-center gap-0.5 shrink-0">
+                          <button
+                            onClick={() => startPhaseEdit(row)}
+                            className={`p-1.5 rounded-md hover:bg-muted ${hasCustomPhases ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                            aria-label="Edit phases"
+                            title={hasCustomPhases ? "Custom phases set" : "Set phase lengths"}
+                          >
+                            <Sliders className="w-3.5 h-3.5" />
+                          </button>
                           <button
                             onClick={() => startEdit(row)}
                             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
