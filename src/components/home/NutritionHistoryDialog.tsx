@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format, startOfDay, subDays } from "date-fns";
-import { History, ChevronDown, ChevronUp, Pencil, Trash2, Check, X, Loader2 } from "lucide-react";
+import { History, ChevronDown, ChevronUp, Pencil, Trash2, Check, X, Loader2, Plus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface Props {
@@ -44,6 +44,10 @@ export function NutritionHistoryDialog({ open, onOpenChange, userId }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<{ name: string; calories: string; p: string; c: string; f: string }>({
+    name: "", calories: "", p: "", c: "", f: "",
+  });
+  const [addingDay, setAddingDay] = useState<string | null>(null);
+  const [newDraft, setNewDraft] = useState<{ name: string; calories: string; p: string; c: string; f: string }>({
     name: "", calories: "", p: "", c: "", f: "",
   });
   const [saving, setSaving] = useState(false);
@@ -142,6 +146,34 @@ export function NutritionHistoryDialog({ open, onOpenChange, userId }: Props) {
     setRefreshKey((k) => k + 1);
   }
 
+  function startAdd(dayKey: string) {
+    setAddingDay(dayKey);
+    setNewDraft({ name: "", calories: "", p: "", c: "", f: "" });
+    setEditingId(null);
+  }
+
+  async function saveNewMeal(dayKey: string) {
+    const d = new Date(`${dayKey}T12:00:00`);
+    setSaving(true);
+    const { error } = await supabase.from("meals").insert({
+      user_id: userId,
+      name: newDraft.name.trim() || "Meal",
+      calories: Math.max(0, Math.round(Number(newDraft.calories) || 0)),
+      protein_g: Math.max(0, Number(newDraft.p) || 0),
+      carbs_g: Math.max(0, Number(newDraft.c) || 0),
+      fat_g: Math.max(0, Number(newDraft.f) || 0),
+      source: "text",
+      logged_at: d.toISOString(),
+    });
+    setSaving(false);
+    if (error) {
+      toast({ title: "Couldn't add meal", description: error.message, variant: "destructive" });
+      return;
+    }
+    setAddingDay(null);
+    setRefreshKey((k) => k + 1);
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
@@ -170,7 +202,6 @@ export function NutritionHistoryDialog({ open, onOpenChange, userId }: Props) {
                 >
                   <button
                     type="button"
-                    disabled={empty}
                     onClick={() => setExpanded(isOpen ? null : d.dateKey)}
                     className="w-full text-left"
                   >
@@ -181,7 +212,7 @@ export function NutritionHistoryDialog({ open, onOpenChange, userId }: Props) {
                           <span className="text-[12px] font-medium">{label}</span>
                           <span className="flex items-center gap-1 text-[11px] text-muted-foreground tabular-nums">
                             {empty ? "No meals" : `${d.meals.length} meal${d.meals.length > 1 ? "s" : ""}`}
-                            {!empty && (isOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                            {isOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                           </span>
                         </div>
                         <Row label="P" value={d.p} target={target.p} color="bg-rose-500" />
@@ -191,7 +222,7 @@ export function NutritionHistoryDialog({ open, onOpenChange, userId }: Props) {
                     </div>
                   </button>
 
-                  {isOpen && !empty && (
+                  {isOpen && (
                     <div className="mt-3 pt-3 border-t border-border/40 space-y-2">
                       {d.meals.map((m) => (
                         <div key={m.id} className="rounded-lg bg-background/40 px-2.5 py-2">
@@ -236,6 +267,41 @@ export function NutritionHistoryDialog({ open, onOpenChange, userId }: Props) {
                           )}
                         </div>
                       ))}
+
+                      {addingDay === d.dateKey ? (
+                        <div className="rounded-lg bg-background/40 px-2.5 py-2 space-y-1.5">
+                          <Input
+                            value={newDraft.name}
+                            onChange={(e) => setNewDraft({ ...newDraft, name: e.target.value })}
+                            placeholder="Meal name"
+                            className="h-7 text-[12px]"
+                          />
+                          <div className="grid grid-cols-4 gap-1.5">
+                            <NumField label="kcal" v={newDraft.calories} on={(v) => setNewDraft({ ...newDraft, calories: v })} />
+                            <NumField label="P" v={newDraft.p} on={(v) => setNewDraft({ ...newDraft, p: v })} />
+                            <NumField label="C" v={newDraft.c} on={(v) => setNewDraft({ ...newDraft, c: v })} />
+                            <NumField label="F" v={newDraft.f} on={(v) => setNewDraft({ ...newDraft, f: v })} />
+                          </div>
+                          <div className="flex items-center justify-end gap-1 pt-0.5">
+                            <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setAddingDay(null)} disabled={saving}>
+                              <X className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button size="sm" className="h-7 px-2" onClick={() => saveNewMeal(d.dateKey)} disabled={saving}>
+                              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="w-full h-8 text-[12px] text-muted-foreground hover:text-foreground"
+                          onClick={() => startAdd(d.dateKey)}
+                        >
+                          <Plus className="w-3.5 h-3.5 mr-1" />
+                          Add a meal
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
