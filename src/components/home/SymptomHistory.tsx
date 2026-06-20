@@ -13,8 +13,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { format, subDays } from "date-fns";
 import { AllSymptomsChart } from "./AllSymptomsChart";
 import { SymptomHormoneChart } from "./SymptomHormoneChart";
-import { ChevronDown, Pencil, Trash2, X, Check } from "lucide-react";
+import { ChevronDown, Pencil, Trash2, X, Check, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
+
 
 interface SymptomEntry {
   name: string;
@@ -69,6 +71,8 @@ export function SymptomHistory({
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [search, setSearch] = useState("");
+
 
   useEffect(() => {
     if (!open || !userId) return;
@@ -170,14 +174,39 @@ export function SymptomHistory({
   };
 
 
+  // Filter by search query (symptom name or notes)
+  const q = search.trim().toLowerCase();
+  const filteredLogs = q
+    ? logs.filter(l =>
+        (l.notes && l.notes.toLowerCase().includes(q)) ||
+        l.symptoms.some(s => s.name.toLowerCase().includes(q))
+      )
+    : logs;
+  const isSearching = q.length > 0;
+
+  // Highlight matching text
+  const highlight = (text: string) => {
+    if (!q) return text;
+    const idx = text.toLowerCase().indexOf(q);
+    if (idx === -1) return text;
+    return (
+      <>
+        {text.slice(0, idx)}
+        <mark className="bg-primary/30 text-foreground rounded px-0.5">{text.slice(idx, idx + q.length)}</mark>
+        {text.slice(idx + q.length)}
+      </>
+    );
+  };
+
   // Group logs by date
   const grouped: Record<string, SymptomLog[]> = {};
-  logs.forEach(log => {
+  filteredLogs.forEach(log => {
     const day = format(new Date(log.logged_at), "yyyy-MM-dd");
     if (!grouped[day]) grouped[day] = [];
     grouped[day].push(log);
   });
   const sortedDays = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -196,8 +225,29 @@ export function SymptomHistory({
           </p>
         ) : (
           <div className="space-y-5">
-            {/* Top patterns */}
-            {topSymptoms.length > 0 && (
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search symptoms or notes (e.g. headache)"
+                className="pl-8 pr-8 h-9 text-xs"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground"
+                  aria-label="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Top patterns — hidden while searching */}
+            {!isSearching && topSymptoms.length > 0 && (
               <div>
                 <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                   Your Top Patterns (90 days)
@@ -251,15 +301,22 @@ export function SymptomHistory({
               </div>
             )}
 
-            <Separator />
+            {!isSearching && <Separator />}
 
             {/* Timeline */}
             <div>
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                Recent Logs
+                {isSearching
+                  ? `${filteredLogs.length} match${filteredLogs.length === 1 ? "" : "es"} for "${search.trim()}"`
+                  : "Recent Logs"}
               </h3>
+              {isSearching && filteredLogs.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  No logs match your search. Try a different keyword.
+                </p>
+              ) : (
               <div className="space-y-4">
-                {sortedDays.slice(0, 14).map(day => (
+                {(isSearching ? sortedDays : sortedDays.slice(0, 14)).map(day => (
                   <div key={day}>
                     <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">
                       {format(new Date(day + "T12:00:00"), "EEE, MMM d")}
@@ -269,6 +326,7 @@ export function SymptomHistory({
                       return (
                         <div key={log.id} className="ml-2 mb-2 border-l-2 border-border/30 pl-3 group">
                           <div className="flex items-start justify-between gap-2">
+
                             <p className="text-[10px] text-muted-foreground mb-1">
                               {format(new Date(log.logged_at), "h:mm a")}
                               {log.cycle_phase && (
@@ -357,15 +415,16 @@ export function SymptomHistory({
                                     className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full bg-muted/60 text-foreground/70"
                                   >
                                     <span className={`w-1.5 h-1.5 rounded-full ${SEVERITY_COLORS[s.severity]}`} />
-                                    {s.name}
+                                    {highlight(s.name)}
                                   </span>
                                 ))}
                               </div>
                               {log.notes && (
                                 <p className="text-[11px] text-muted-foreground/70 mt-1 italic">
-                                  {log.notes}
+                                  {highlight(log.notes)}
                                 </p>
                               )}
+
                             </>
                           )}
                         </div>
@@ -375,7 +434,9 @@ export function SymptomHistory({
                   </div>
                 ))}
               </div>
+              )}
             </div>
+
           </div>
         )}
       </DialogContent>
