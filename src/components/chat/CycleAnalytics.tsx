@@ -320,22 +320,32 @@ export function CycleAnalytics({
           : "Irregular"
     : null;
 
-  // Phase segmentation for current cycle — uses TYPICAL values for the bar
-  // so it still draws proportionally; text labels show the real range.
-  const menstruationDays = MENSTRUATION_RANGE.typical;
-  const ovulationDay = currentCycleLength - LUTEAL_RANGE.typical;
-  const follicularDays = Math.max(0, ovulationDay - 1 - menstruationDays);
-  const ovulationDays = OVULATION_RANGE.typical;
-  const lutealDays = Math.max(
-    LUTEAL_RANGE.min,
-    currentCycleLength - (menstruationDays + follicularDays + ovulationDays)
+  // Phase segmentation for current cycle.
+  // If the most recent tracked cycle has custom phase overrides, use them.
+  // Otherwise fall back to typical biology, scaled to current cycle length.
+  const latestWithPhases = history.find(
+    (h) =>
+      h.menstruation_days != null &&
+      h.follicular_days != null &&
+      h.ovulation_days != null &&
+      h.luteal_days != null
   );
 
+  const usingCustomPhases = !!latestWithPhases;
+  const menstruationDays = latestWithPhases?.menstruation_days ?? MENSTRUATION_RANGE.typical;
+  const ovulationDays = latestWithPhases?.ovulation_days ?? OVULATION_RANGE.typical;
+  const lutealDays = latestWithPhases?.luteal_days ?? LUTEAL_RANGE.typical;
+  const follicularDays = latestWithPhases?.follicular_days ?? Math.max(
+    0,
+    currentCycleLength - menstruationDays - ovulationDays - lutealDays
+  );
+  const phaseTotal = menstruationDays + follicularDays + ovulationDays + lutealDays;
+
   const phases = [
-    { name: "Menstruation", days: menstruationDays, color: "bg-phase-menstruation", range: `${MENSTRUATION_RANGE.min}–${MENSTRUATION_RANGE.max}` },
-    { name: "Follicular", days: follicularDays, color: "bg-phase-follicular", range: "varies" },
-    { name: "Ovulation", days: ovulationDays, color: "bg-phase-ovulation", range: `${OVULATION_RANGE.min}–${OVULATION_RANGE.max}` },
-    { name: "Luteal", days: lutealDays, color: "bg-phase-luteal", range: `${LUTEAL_RANGE.min}–${LUTEAL_RANGE.max}` },
+    { name: "Menstruation", days: menstruationDays, color: "bg-phase-menstruation", range: usingCustomPhases ? `${menstruationDays}` : `${MENSTRUATION_RANGE.min}–${MENSTRUATION_RANGE.max}` },
+    { name: "Follicular", days: follicularDays, color: "bg-phase-follicular", range: usingCustomPhases ? `${follicularDays}` : "varies" },
+    { name: "Ovulation", days: ovulationDays, color: "bg-phase-ovulation", range: usingCustomPhases ? `${ovulationDays}` : `${OVULATION_RANGE.min}–${OVULATION_RANGE.max}` },
+    { name: "Luteal", days: lutealDays, color: "bg-phase-luteal", range: usingCustomPhases ? `${lutealDays}` : `${LUTEAL_RANGE.min}–${LUTEAL_RANGE.max}` },
   ];
 
   return (
