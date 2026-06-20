@@ -434,7 +434,9 @@ export function SymptomHistory({
                   </div>
                 ))}
               </div>
+              )}
             </div>
+
           </div>
         )}
       </DialogContent>
