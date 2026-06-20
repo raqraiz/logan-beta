@@ -40,7 +40,19 @@ export function PeriodEndedChip({ userId, cycleDay, lastPeriodStart }: Props) {
         .single();
       if (cancelled) return;
       if (participant?.id) setParticipantId(participant.id);
-      setEndDate((participant as any)?.current_period_end_date ?? null);
+      const storedEnd = (participant as any)?.current_period_end_date ?? null;
+
+      // Auto-clear stale end date: if a new period started after the stored
+      // end date, it belongs to the previous cycle and shouldn't apply anymore.
+      if (storedEnd && lastPeriodStart && storedEnd < lastPeriodStart) {
+        await supabase
+          .from("participants")
+          .update({ current_period_end_date: null })
+          .eq("id", participant!.id);
+        if (!cancelled) setEndDate(null);
+      } else {
+        setEndDate(storedEnd);
+      }
     })();
     return () => {
       cancelled = true;
