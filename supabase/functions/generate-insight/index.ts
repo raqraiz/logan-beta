@@ -454,6 +454,11 @@ function buildInsightPrompt(
     ? `- Interest areas: ${topics.join(", ")}. Weave relevant tips from these areas into the intro when naturally fitting.`
     : "";
 
+  const isPerimenopause = (participant.life_stage === "perimenopause");
+  const perimenopauseContext = isPerimenopause
+    ? `\n- LIFE STAGE: **Perimenopause**. ${firstName} STILL HAS PERIODS and is still cycling, but the pattern is shifting (cycles getting shorter/longer, heavier/lighter, skipped months, new symptoms like hot flashes, sleep changes, sharper mood swings). DO NOT call her menopausal — perimenopause ≠ menopause. Reference her cycle day and phase as usual, but acknowledge swings can be sharper and less predictable than her baseline. Weave in awareness of sleep, hot flashes, mood, energy, and bone/muscle health where it fits naturally.`
+    : "";
+
   return `You are Logan. You know ${firstName}'s cycle so well you can name what she's feeling before she does. You're not giving advice or instructions. You're the person who just gets it.
 
 CONTEXT:
