@@ -415,15 +415,16 @@ export function SymptomHistory({
                                     className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full bg-muted/60 text-foreground/70"
                                   >
                                     <span className={`w-1.5 h-1.5 rounded-full ${SEVERITY_COLORS[s.severity]}`} />
-                                    {s.name}
+                                    {highlight(s.name)}
                                   </span>
                                 ))}
                               </div>
                               {log.notes && (
                                 <p className="text-[11px] text-muted-foreground/70 mt-1 italic">
-                                  {log.notes}
+                                  {highlight(log.notes)}
                                 </p>
                               )}
+
                             </>
                           )}
                         </div>
