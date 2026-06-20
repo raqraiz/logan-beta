@@ -1545,6 +1545,13 @@ const Chat = () => {
                       "Any strength training tips?", "How can I reduce brain fog?", "What should I eat this week?",
                       "Why do I feel this way?", "How do I manage stress better?", "What patterns should I track?",
                     ];
+                    const perimenopausePool = [
+                      "I just need to vent", "Why is my cycle changing?", "Is this a hot flash?",
+                      "Why am I waking up at 3am?", "What's my phase doing this month?", "How do I track perimenopause patterns?",
+                      "Why do my moods feel sharper?", "Any strength training tips?", "What should I eat this week?",
+                      "How do I protect bone health now?", "Why am I so tired lately?", "I'm having a hard day",
+                      "Should I consider HRT?", "How do I sleep better tonight?", "What patterns should I track?",
+                    ];
                     const postpartumPool = [
                       "I just need to vent", "Why am I so exhausted?", "Tell me what's normal right now",
                       "How can I sleep better tonight?", "Why does my mood swing so much?", "What should I eat this week?",
@@ -1554,9 +1561,11 @@ const Chat = () => {
                     ];
                     const pool = lifeStage === "menopause"
                       ? menopausePool
-                      : lifeStage === "postpartum"
-                        ? postpartumPool
-                        : cyclingPool;
+                      : lifeStage === "perimenopause"
+                        ? perimenopausePool
+                        : lifeStage === "postpartum"
+                          ? postpartumPool
+                          : cyclingPool;
 
                     // AI-suggested starters (per-message) take precedence and behave as before
                     const aiStarters = message.metadata?.conversation_starters;
