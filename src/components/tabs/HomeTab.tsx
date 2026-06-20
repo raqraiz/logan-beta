@@ -540,15 +540,20 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
                 />
               </div>
             </div>
-            <button
-              onClick={() => setShowSymptomHistory(true)}
-              className="text-[11px] text-muted-foreground/70 hover:text-foreground transition-colors underline underline-offset-2 self-center"
-            >
-              View symptom history & patterns
-            </button>
           </div>
         ) : null;
       }
+      case "symptom_history":
+        return userId ? (
+          <div className="w-full" key={id}>
+            <SymptomHistoryWidget
+              userId={userId}
+              lastPeriodStart={cycleData.lastPeriodStart}
+              cycleLengthDays={cycleData.cycleLengthDays}
+              isNonCycling={!!isNonCycling}
+            />
+          </div>
+        ) : null;
       case "lab_results":
         return userId ? (
           <div className="w-full" key={id}>
