@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, ChevronRight, Sparkles } from "lucide-react";
 import { subDays, format } from "date-fns";
 import { SymptomHistory } from "./SymptomHistory";
+import { SymptomPieChart } from "./SymptomPieChart";
 
 const COLORS = {
   border: "border-l-amber-500",
@@ -137,6 +138,9 @@ export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays,
                   </div>
                 ))}
               </div>
+
+              {/* Donut chart */}
+              {logs.length > 0 && <SymptomPieChart logs={logs} compact />}
 
               {/* Summary */}
               <div className="flex items-center gap-1.5 pt-1">
