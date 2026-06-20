@@ -212,7 +212,7 @@ export function NutritionHistoryDialog({ open, onOpenChange, userId }: Props) {
                           <span className="text-[12px] font-medium">{label}</span>
                           <span className="flex items-center gap-1 text-[11px] text-muted-foreground tabular-nums">
                             {empty ? "No meals" : `${d.meals.length} meal${d.meals.length > 1 ? "s" : ""}`}
-                            {!empty && (isOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                            {isOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                           </span>
                         </div>
                         <Row label="P" value={d.p} target={target.p} color="bg-rose-500" />
