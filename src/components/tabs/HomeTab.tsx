@@ -9,6 +9,7 @@ import { AddCustomWidgetDialog } from "@/components/home/AddCustomWidgetDialog";
 import { CustomAIWidget } from "@/components/home/CustomAIWidget";
 import { SymptomLogWidget } from "@/components/home/SymptomLogWidget";
 import { SymptomHistoryWidget } from "@/components/home/SymptomHistoryWidget";
+import { DischargeTrackerWidget } from "@/components/home/DischargeTrackerWidget";
 import { CycleCorrelationsWidget } from "@/components/home/CycleCorrelationsWidget";
 import { LabResultsWidget } from "@/components/home/LabResultsWidget";
 import { NutritionTodayWidget } from "@/components/home/NutritionTodayWidget";
