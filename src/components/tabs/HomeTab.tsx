@@ -509,6 +509,14 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
               onCircleClick={isNonCycling ? undefined : () => setShowAnalytics(true)}
             />
 
+            {!isNonCycling && userId && (
+              <PeriodEndedChip
+                userId={userId}
+                cycleDay={cycleData.cycleDay}
+                lastPeriodStart={cycleData.lastPeriodStart}
+              />
+            )}
+
             {!isNonCycling && !dismissed && (
               <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground/70">
                 <span>Not accurate?</span>
