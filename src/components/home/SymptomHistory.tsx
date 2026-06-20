@@ -71,6 +71,8 @@ export function SymptomHistory({
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [search, setSearch] = useState("");
+
 
   useEffect(() => {
     if (!open || !userId) return;
