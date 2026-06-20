@@ -174,14 +174,39 @@ export function SymptomHistory({
   };
 
 
+  // Filter by search query (symptom name or notes)
+  const q = search.trim().toLowerCase();
+  const filteredLogs = q
+    ? logs.filter(l =>
+        (l.notes && l.notes.toLowerCase().includes(q)) ||
+        l.symptoms.some(s => s.name.toLowerCase().includes(q))
+      )
+    : logs;
+  const isSearching = q.length > 0;
+
+  // Highlight matching text
+  const highlight = (text: string) => {
+    if (!q) return text;
+    const idx = text.toLowerCase().indexOf(q);
+    if (idx === -1) return text;
+    return (
+      <>
+        {text.slice(0, idx)}
+        <mark className="bg-primary/30 text-foreground rounded px-0.5">{text.slice(idx, idx + q.length)}</mark>
+        {text.slice(idx + q.length)}
+      </>
+    );
+  };
+
   // Group logs by date
   const grouped: Record<string, SymptomLog[]> = {};
-  logs.forEach(log => {
+  filteredLogs.forEach(log => {
     const day = format(new Date(log.logged_at), "yyyy-MM-dd");
     if (!grouped[day]) grouped[day] = [];
     grouped[day].push(log);
   });
   const sortedDays = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
