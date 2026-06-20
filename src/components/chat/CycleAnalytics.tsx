@@ -260,6 +260,13 @@ export function CycleAnalytics({
               )}
             </div>
 
+            {lengths.length >= 2 && (
+              <>
+                <Separator />
+                <CycleLengthChart history={history} median={medianLength} />
+              </>
+            )}
+
             <Separator />
 
             {/* Period Length */}
