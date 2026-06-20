@@ -190,8 +190,9 @@ serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(12);
 
-    // For non-cycling users, generate stage-specific insights
-    if (userLifeStage !== "cycling") {
+    // For non-cycling users, generate stage-specific insights.
+    // Perimenopause users are still cycling — route them through the cycling path.
+    if (userLifeStage !== "cycling" && userLifeStage !== "perimenopause") {
       const prompt = buildNonCyclingInsightPrompt(
         profile?.full_name || "there",
         participant,
