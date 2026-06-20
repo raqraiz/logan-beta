@@ -34,6 +34,9 @@ const UNIT_KEY = "logan_weight_unit";
 export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged, unit: propUnit, onUnitChange }: Props) {
   const [logs, setLogs] = useState<WeightLog[]>([]);
   const [goalKg, setGoalKg] = useState<number | null>(null);
+  const [lastPeriodStart, setLastPeriodStart] = useState<string | null>(null);
+  const [cycleLengthDays, setCycleLengthDays] = useState<number | null>(null);
+  const [view, setView] = useState<"trend" | "phase" | "cycleDay">("trend");
   const [localUnit, setLocalUnit] = useState<"kg" | "lbs">((typeof localStorage !== "undefined" && (localStorage.getItem(UNIT_KEY) as "kg" | "lbs")) || "lbs");
   const unit = propUnit ?? localUnit;
   const setUnit = onUnitChange ?? setLocalUnit;
@@ -42,12 +45,15 @@ export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged, 
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
-    const [{ data: l }, { data: g }] = await Promise.all([
+    const [{ data: l }, { data: g }, { data: p }] = await Promise.all([
       supabase.from("weight_logs").select("*").eq("user_id", userId).order("logged_on", { ascending: false }).limit(120),
       supabase.from("nutrition_goals").select("weight_goal_kg").eq("user_id", userId).maybeSingle(),
+      supabase.from("participants").select("last_period_start, cycle_length_days").eq("user_id", userId).maybeSingle(),
     ]);
     setLogs((l as WeightLog[]) ?? []);
     setGoalKg(g?.weight_goal_kg ? Number(g.weight_goal_kg) : null);
+    setLastPeriodStart(p?.last_period_start ?? null);
+    setCycleLengthDays(p?.cycle_length_days ?? null);
   }, [userId]);
 
   useEffect(() => { if (open) load(); }, [open, load]);
