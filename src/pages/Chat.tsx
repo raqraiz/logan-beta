@@ -109,6 +109,7 @@ interface CycleData {
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
   postpartumStartDate?: string;
   postpartumActive?: boolean;
+  needsPeriodStart?: boolean;
 }
 
 const MESSAGES_PER_PAGE = 100;
