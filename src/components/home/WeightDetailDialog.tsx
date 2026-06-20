@@ -184,21 +184,92 @@ export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged, 
 
             {chartData.length >= 2 && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Trend</p>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                      <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                      <YAxis domain={["dataMin - 1", "dataMax + 1"]} tick={{ fontSize: 10 }} />
-                      <Tooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }} />
-                      {goalKg && (
-                        <ReferenceLine y={Number(display(goalKg).toFixed(1))} stroke="hsl(var(--primary))" strokeDasharray="3 3" label={{ value: "Goal", fontSize: 10, fill: "hsl(var(--primary))" }} />
-                      )}
-                      <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                <div className="flex items-center justify-between mb-2 gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {view === "trend" ? "Trend" : view === "phase" ? "By cycle phase" : "By cycle day"}
+                  </p>
+                  {hasCycle && (
+                    <div className="flex items-center gap-1 text-[10px]">
+                      <button onClick={() => setView("trend")} className={`px-2 py-0.5 rounded ${view === "trend" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>Date</button>
+                      <button onClick={() => setView("phase")} className={`px-2 py-0.5 rounded ${view === "phase" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>Phase</button>
+                      <button onClick={() => setView("cycleDay")} className={`px-2 py-0.5 rounded ${view === "cycleDay" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>Cycle day</button>
+                    </div>
+                  )}
                 </div>
+
+                {view === "trend" && (
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                        <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                        <YAxis domain={["dataMin - 1", "dataMax + 1"]} tick={{ fontSize: 10 }} />
+                        <Tooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }} />
+                        {goalKg && (
+                          <ReferenceLine y={Number(display(goalKg).toFixed(1))} stroke="hsl(var(--primary))" strokeDasharray="3 3" label={{ value: "Goal", fontSize: 10, fill: "hsl(var(--primary))" }} />
+                        )}
+                        <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+
+                {view === "phase" && hasCycle && (
+                  <>
+                    <div className="h-48">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={phaseAverages}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                          <XAxis dataKey="phase" tick={{ fontSize: 10 }} />
+                          <YAxis domain={["dataMin - 1", "dataMax + 1"]} tick={{ fontSize: 10 }} />
+                          <Tooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
+                            formatter={(v: any, _n, p: any) => [`${v} ${unit} (${p.payload.count} log${p.payload.count === 1 ? "" : "s"})`, "Avg"]} />
+                          <Bar dataKey="avg" radius={[6, 6, 0, 0]}>
+                            {phaseAverages.map((p) => (
+                              <Cell key={p.phase} fill={p.count ? PHASE_COLORS[p.phase] : "hsl(var(--muted))"} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    {peakPhase && lowPhase && peakPhase.phase !== lowPhase.phase && phaseSpread > 0.2 ? (
+                      <p className="text-[11px] text-muted-foreground mt-2">
+                        On average you weigh {phaseSpread.toFixed(1)} {unit} more in <span className="font-medium" style={{ color: PHASE_COLORS[peakPhase.phase] }}>{peakPhase.phase}</span> than in <span className="font-medium" style={{ color: PHASE_COLORS[lowPhase.phase] }}>{lowPhase.phase}</span>.
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground mt-2">
+                        Weight stays fairly steady across your cycle so far. Keep logging to surface patterns.
+                      </p>
+                    )}
+                  </>
+                )}
+
+                {view === "cycleDay" && hasCycle && (
+                  <>
+                    <div className="h-48">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ScatterChart>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                          <XAxis type="number" dataKey="cycleDay" name="Cycle day" domain={[1, cycleLengthDays!]} tick={{ fontSize: 10 }} label={{ value: "Cycle day", fontSize: 10, position: "insideBottom", offset: -2 }} />
+                          <YAxis type="number" dataKey="value" name={unit} domain={["dataMin - 1", "dataMax + 1"]} tick={{ fontSize: 10 }} />
+                          <Tooltip cursor={{ strokeDasharray: "3 3" }} contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
+                            formatter={(v: any, n: any) => [`${v}${n === unit ? " " + unit : ""}`, n]} />
+                          {PHASES.map((p) => (
+                            <Scatter key={p} name={p} data={cycleDayPoints.filter(c => c.phase === p)} fill={PHASE_COLORS[p]} />
+                          ))}
+                        </ScatterChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2 text-[10px]">
+                      {PHASES.map(p => (
+                        <span key={p} className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full" style={{ background: PHASE_COLORS[p] }} />
+                          {p}
+                        </span>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
