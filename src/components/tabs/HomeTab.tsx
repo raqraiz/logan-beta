@@ -373,6 +373,7 @@ interface CycleData {
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
   postpartumStartDate?: string;
   postpartumActive?: boolean;
+  needsPeriodStart?: boolean;
 }
 
 interface HomeTabProps {
