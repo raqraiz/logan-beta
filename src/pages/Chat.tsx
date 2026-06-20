@@ -134,6 +134,7 @@ const Chat = () => {
     lastPeriodStart: string | null;
     cycleLengthDays: number | null;
     timezone: string | null;
+    currentPeriodEndDate: string | null;
   } | null>(null);
   const [showForecast, setShowForecast] = useState(false);
   
