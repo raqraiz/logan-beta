@@ -494,9 +494,12 @@ export function SymptomHistory({
                                 ))}
                               </div>
                               {log.notes && (
-                                <p className="text-[11px] text-muted-foreground/70 mt-1 italic">
-                                  {highlight(log.notes)}
-                                </p>
+                                <div className="mt-1.5 flex items-start gap-1.5 rounded-md border border-border/40 bg-muted/40 px-2 py-1.5">
+                                  <StickyNote className="w-3 h-3 text-primary/70 mt-0.5 shrink-0" />
+                                  <p className="text-[11px] text-foreground/80 leading-snug whitespace-pre-wrap break-words">
+                                    {highlight(log.notes)}
+                                  </p>
+                                </div>
                               )}
 
                             </>
