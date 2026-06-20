@@ -233,7 +233,11 @@ export type Database = {
           cycle_end_date: string
           cycle_length_days: number
           cycle_start_date: string
+          follicular_days: number | null
           id: string
+          luteal_days: number | null
+          menstruation_days: number | null
+          ovulation_days: number | null
           participant_id: string
         }
         Insert: {
@@ -241,7 +245,11 @@ export type Database = {
           cycle_end_date: string
           cycle_length_days: number
           cycle_start_date: string
+          follicular_days?: number | null
           id?: string
+          luteal_days?: number | null
+          menstruation_days?: number | null
+          ovulation_days?: number | null
           participant_id: string
         }
         Update: {
@@ -249,7 +257,11 @@ export type Database = {
           cycle_end_date?: string
           cycle_length_days?: number
           cycle_start_date?: string
+          follicular_days?: number | null
           id?: string
+          luteal_days?: number | null
+          menstruation_days?: number | null
+          ovulation_days?: number | null
           participant_id?: string
         }
         Relationships: [

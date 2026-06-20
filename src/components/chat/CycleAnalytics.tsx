@@ -9,7 +9,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Pencil, Trash2, Check, X, Plus } from "lucide-react";
+import { Pencil, Trash2, Check, X, Plus, Sliders } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format, differenceInDays } from "date-fns";
 import {
@@ -38,7 +38,18 @@ interface CycleHistoryRow {
   cycle_start_date: string;
   cycle_end_date: string;
   cycle_length_days: number;
+  menstruation_days: number | null;
+  follicular_days: number | null;
+  ovulation_days: number | null;
+  luteal_days: number | null;
 }
+
+type PhaseDraft = {
+  menstruation: string;
+  follicular: string;
+  ovulation: string;
+  luteal: string;
+};
 
 export function CycleAnalytics({
   open,
@@ -58,11 +69,18 @@ export function CycleAnalytics({
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
   const [saving, setSaving] = useState(false);
+  const [phaseEditId, setPhaseEditId] = useState<string | null>(null);
+  const [phaseDraft, setPhaseDraft] = useState<PhaseDraft>({
+    menstruation: "",
+    follicular: "",
+    ovulation: "",
+    luteal: "",
+  });
 
   const reload = async (pid: string) => {
     const { data } = await supabase
       .from("cycle_history")
-      .select("id, cycle_start_date, cycle_end_date, cycle_length_days")
+      .select("id, cycle_start_date, cycle_end_date, cycle_length_days, menstruation_days, follicular_days, ovulation_days, luteal_days")
       .eq("participant_id", pid)
       .order("cycle_start_date", { ascending: false })
       .limit(24);
@@ -186,6 +204,79 @@ export function CycleAnalytics({
     }
   };
 
+  const startPhaseEdit = (row: CycleHistoryRow) => {
+    setPhaseEditId(row.id);
+    setEditingId(null);
+    setAdding(false);
+    // Defaults: use stored values, otherwise typical biology proportional to this cycle
+    const menstruation = row.menstruation_days ?? MENSTRUATION_RANGE.typical;
+    const ovulation = row.ovulation_days ?? OVULATION_RANGE.typical;
+    const luteal = row.luteal_days ?? LUTEAL_RANGE.typical;
+    const follicular = row.follicular_days ?? Math.max(0, row.cycle_length_days - menstruation - ovulation - luteal);
+    setPhaseDraft({
+      menstruation: String(menstruation),
+      follicular: String(follicular),
+      ovulation: String(ovulation),
+      luteal: String(luteal),
+    });
+  };
+
+  const cancelPhaseEdit = () => {
+    setPhaseEditId(null);
+  };
+
+  const savePhases = async (row: CycleHistoryRow) => {
+    const parse = (s: string) => {
+      const n = parseInt(s, 10);
+      return isNaN(n) || n < 0 ? null : n;
+    };
+    const m = parse(phaseDraft.menstruation);
+    const f = parse(phaseDraft.follicular);
+    const o = parse(phaseDraft.ovulation);
+    const l = parse(phaseDraft.luteal);
+    if (m === null || f === null || o === null || l === null) {
+      toast({ title: "Enter valid day counts (0+)", variant: "destructive" });
+      return;
+    }
+    const sum = m + f + o + l;
+    if (Math.abs(sum - row.cycle_length_days) > 2) {
+      toast({
+        title: `Phases sum to ${sum}d but cycle is ${row.cycle_length_days}d`,
+        description: "Adjust phase lengths so they roughly match cycle length.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase
+      .from("cycle_history")
+      .update({ menstruation_days: m, follicular_days: f, ovulation_days: o, luteal_days: l })
+      .eq("id", row.id);
+    setSaving(false);
+    if (error) {
+      toast({ title: "Couldn't save phases", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Phases updated" });
+      setPhaseEditId(null);
+      if (participantId) await reload(participantId);
+    }
+  };
+
+  const resetPhases = async (row: CycleHistoryRow) => {
+    if (!participantId) return;
+    const { error } = await supabase
+      .from("cycle_history")
+      .update({ menstruation_days: null, follicular_days: null, ovulation_days: null, luteal_days: null })
+      .eq("id", row.id);
+    if (error) {
+      toast({ title: "Couldn't reset", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Phases reset to typical" });
+      setPhaseEditId(null);
+      await reload(participantId);
+    }
+  };
+
 
   // Compute stats — exclude unrealistic outliers (>45d are almost always the
   // onboarding-estimate-to-first-real-reset gap, which inflates the average).
@@ -229,22 +320,32 @@ export function CycleAnalytics({
           : "Irregular"
     : null;
 
-  // Phase segmentation for current cycle — uses TYPICAL values for the bar
-  // so it still draws proportionally; text labels show the real range.
-  const menstruationDays = MENSTRUATION_RANGE.typical;
-  const ovulationDay = currentCycleLength - LUTEAL_RANGE.typical;
-  const follicularDays = Math.max(0, ovulationDay - 1 - menstruationDays);
-  const ovulationDays = OVULATION_RANGE.typical;
-  const lutealDays = Math.max(
-    LUTEAL_RANGE.min,
-    currentCycleLength - (menstruationDays + follicularDays + ovulationDays)
+  // Phase segmentation for current cycle.
+  // If the most recent tracked cycle has custom phase overrides, use them.
+  // Otherwise fall back to typical biology, scaled to current cycle length.
+  const latestWithPhases = history.find(
+    (h) =>
+      h.menstruation_days != null &&
+      h.follicular_days != null &&
+      h.ovulation_days != null &&
+      h.luteal_days != null
   );
 
+  const usingCustomPhases = !!latestWithPhases;
+  const menstruationDays = latestWithPhases?.menstruation_days ?? MENSTRUATION_RANGE.typical;
+  const ovulationDays = latestWithPhases?.ovulation_days ?? OVULATION_RANGE.typical;
+  const lutealDays = latestWithPhases?.luteal_days ?? LUTEAL_RANGE.typical;
+  const follicularDays = latestWithPhases?.follicular_days ?? Math.max(
+    0,
+    currentCycleLength - menstruationDays - ovulationDays - lutealDays
+  );
+  const phaseTotal = menstruationDays + follicularDays + ovulationDays + lutealDays;
+
   const phases = [
-    { name: "Menstruation", days: menstruationDays, color: "bg-phase-menstruation", range: `${MENSTRUATION_RANGE.min}–${MENSTRUATION_RANGE.max}` },
-    { name: "Follicular", days: follicularDays, color: "bg-phase-follicular", range: "varies" },
-    { name: "Ovulation", days: ovulationDays, color: "bg-phase-ovulation", range: `${OVULATION_RANGE.min}–${OVULATION_RANGE.max}` },
-    { name: "Luteal", days: lutealDays, color: "bg-phase-luteal", range: `${LUTEAL_RANGE.min}–${LUTEAL_RANGE.max}` },
+    { name: "Menstruation", days: menstruationDays, color: "bg-phase-menstruation", range: usingCustomPhases ? `${menstruationDays}` : `${MENSTRUATION_RANGE.min}–${MENSTRUATION_RANGE.max}` },
+    { name: "Follicular", days: follicularDays, color: "bg-phase-follicular", range: usingCustomPhases ? `${follicularDays}` : "varies" },
+    { name: "Ovulation", days: ovulationDays, color: "bg-phase-ovulation", range: usingCustomPhases ? `${ovulationDays}` : `${OVULATION_RANGE.min}–${OVULATION_RANGE.max}` },
+    { name: "Luteal", days: lutealDays, color: "bg-phase-luteal", range: usingCustomPhases ? `${lutealDays}` : `${LUTEAL_RANGE.min}–${LUTEAL_RANGE.max}` },
   ];
 
   return (
@@ -334,7 +435,7 @@ export function CycleAnalytics({
                   <div
                     key={p.name}
                     className={`${p.color} transition-all`}
-                    style={{ width: `${(p.days / currentCycleLength) * 100}%` }}
+                    style={{ width: `${(p.days / Math.max(1, phaseTotal)) * 100}%` }}
                   />
                 ))}
               </div>
@@ -344,13 +445,15 @@ export function CycleAnalytics({
                   <div key={p.name} className="flex items-center gap-2">
                     <div className={`w-2.5 h-2.5 rounded-full ${p.color}`} />
                     <span className="text-xs text-muted-foreground">
-                      {p.name} <span className="text-foreground font-medium">~{p.range}d</span>
+                      {p.name} <span className="text-foreground font-medium">{usingCustomPhases ? "" : "~"}{p.range}d</span>
                     </span>
                   </div>
                 ))}
               </div>
               <p className="text-[10px] text-muted-foreground/60 mt-2">
-                Based on typical cycle biology. Your actual phase lengths may vary.
+                {usingCustomPhases
+                  ? `Using your custom phase lengths from ${format(new Date(latestWithPhases!.cycle_start_date), "MMM d")}. Edit any tracked cycle below to adjust.`
+                  : "Based on typical cycle biology. Tap the sliders icon on any tracked cycle to set your own phase lengths."}
               </p>
             </div>
 
@@ -408,7 +511,13 @@ export function CycleAnalytics({
                 <div className="space-y-1.5 max-h-64 overflow-y-auto">
                   {history.map((row) => {
                     const isEditing = editingId === row.id;
+                    const isEditingPhases = phaseEditId === row.id;
                     const isOutlier = row.cycle_length_days > 45 || row.cycle_length_days < 15;
+                    const hasCustomPhases =
+                      row.menstruation_days != null &&
+                      row.follicular_days != null &&
+                      row.ovulation_days != null &&
+                      row.luteal_days != null;
                     if (isEditing) {
                       return (
                         <div key={row.id} className="rounded-lg border border-primary/40 bg-muted/30 p-2 space-y-2">
@@ -438,6 +547,61 @@ export function CycleAnalytics({
                         </div>
                       );
                     }
+                    if (isEditingPhases) {
+                      const draftSum =
+                        (parseInt(phaseDraft.menstruation, 10) || 0) +
+                        (parseInt(phaseDraft.follicular, 10) || 0) +
+                        (parseInt(phaseDraft.ovulation, 10) || 0) +
+                        (parseInt(phaseDraft.luteal, 10) || 0);
+                      const sumMismatch = Math.abs(draftSum - row.cycle_length_days) > 2;
+                      return (
+                        <div key={row.id} className="rounded-lg border border-primary/40 bg-muted/30 p-2.5 space-y-2">
+                          <p className="text-[11px] text-muted-foreground">
+                            Phase lengths for {format(new Date(row.cycle_start_date), "MMM d")} cycle ({row.cycle_length_days}d total)
+                          </p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {([
+                              { key: "menstruation", label: "Menstruation", color: "bg-phase-menstruation" },
+                              { key: "follicular", label: "Follicular", color: "bg-phase-follicular" },
+                              { key: "ovulation", label: "Ovulation", color: "bg-phase-ovulation" },
+                              { key: "luteal", label: "Luteal", color: "bg-phase-luteal" },
+                            ] as const).map((p) => (
+                              <label key={p.key} className="flex items-center gap-1.5">
+                                <span className={`w-2 h-2 rounded-full ${p.color} shrink-0`} />
+                                <span className="text-[10px] text-muted-foreground flex-1 truncate">{p.label}</span>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={45}
+                                  value={phaseDraft[p.key]}
+                                  onChange={(e) => setPhaseDraft((d) => ({ ...d, [p.key]: e.target.value }))}
+                                  className="h-7 w-12 text-xs text-center"
+                                />
+                              </label>
+                            ))}
+                          </div>
+                          <p className={`text-[10px] ${sumMismatch ? "text-destructive" : "text-muted-foreground"}`}>
+                            Sum: {draftSum}d / {row.cycle_length_days}d
+                            {sumMismatch ? " — adjust to match" : " ✓"}
+                          </p>
+                          <div className="flex justify-between gap-1.5">
+                            {hasCustomPhases ? (
+                              <Button size="sm" variant="ghost" className="h-7 text-[11px] text-muted-foreground" onClick={() => resetPhases(row)}>
+                                Reset
+                              </Button>
+                            ) : <span />}
+                            <div className="flex gap-1.5">
+                              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={cancelPhaseEdit}>
+                                <X className="w-3 h-3" />
+                              </Button>
+                              <Button size="sm" className="h-7 text-xs" onClick={() => savePhases(row)} disabled={saving}>
+                                <Check className="w-3 h-3 mr-1" /> Save
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
                     return (
                       <div
                         key={row.id}
@@ -448,10 +612,20 @@ export function CycleAnalytics({
                             {format(new Date(row.cycle_start_date), "MMM d, yyyy")} → {format(new Date(row.cycle_end_date), "MMM d")}
                           </p>
                           <p className={`text-[10px] ${isOutlier ? "text-destructive" : "text-muted-foreground"}`}>
-                            {row.cycle_length_days} days{isOutlier ? " · likely inaccurate" : ""}
+                            {row.cycle_length_days} days
+                            {hasCustomPhases ? ` · ${row.menstruation_days}/${row.follicular_days}/${row.ovulation_days}/${row.luteal_days}` : ""}
+                            {isOutlier ? " · likely inaccurate" : ""}
                           </p>
                         </div>
                         <div className="flex items-center gap-0.5 shrink-0">
+                          <button
+                            onClick={() => startPhaseEdit(row)}
+                            className={`p-1.5 rounded-md hover:bg-muted ${hasCustomPhases ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                            aria-label="Edit phases"
+                            title={hasCustomPhases ? "Custom phases set" : "Set phase lengths"}
+                          >
+                            <Sliders className="w-3.5 h-3.5" />
+                          </button>
                           <button
                             onClick={() => startEdit(row)}
                             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
