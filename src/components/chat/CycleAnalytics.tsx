@@ -435,7 +435,7 @@ export function CycleAnalytics({
                   <div
                     key={p.name}
                     className={`${p.color} transition-all`}
-                    style={{ width: `${(p.days / currentCycleLength) * 100}%` }}
+                    style={{ width: `${(p.days / Math.max(1, phaseTotal)) * 100}%` }}
                   />
                 ))}
               </div>
@@ -445,13 +445,15 @@ export function CycleAnalytics({
                   <div key={p.name} className="flex items-center gap-2">
                     <div className={`w-2.5 h-2.5 rounded-full ${p.color}`} />
                     <span className="text-xs text-muted-foreground">
-                      {p.name} <span className="text-foreground font-medium">~{p.range}d</span>
+                      {p.name} <span className="text-foreground font-medium">{usingCustomPhases ? "" : "~"}{p.range}d</span>
                     </span>
                   </div>
                 ))}
               </div>
               <p className="text-[10px] text-muted-foreground/60 mt-2">
-                Based on typical cycle biology. Your actual phase lengths may vary.
+                {usingCustomPhases
+                  ? `Using your custom phase lengths from ${format(new Date(latestWithPhases!.cycle_start_date), "MMM d")}. Edit any tracked cycle below to adjust.`
+                  : "Based on typical cycle biology. Tap the sliders icon on any tracked cycle to set your own phase lengths."}
               </p>
             </div>
 
