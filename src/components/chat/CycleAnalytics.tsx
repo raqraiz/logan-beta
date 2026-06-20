@@ -344,11 +344,14 @@ export function CycleAnalytics({
                   <div key={p.name} className="flex items-center gap-2">
                     <div className={`w-2.5 h-2.5 rounded-full ${p.color}`} />
                     <span className="text-xs text-muted-foreground">
-                      {p.name} <span className="text-foreground font-medium">{p.days}d</span>
+                      {p.name} <span className="text-foreground font-medium">~{p.range}d</span>
                     </span>
                   </div>
                 ))}
               </div>
+              <p className="text-[10px] text-muted-foreground/60 mt-2">
+                Based on typical cycle biology. Your actual phase lengths may vary.
+              </p>
             </div>
 
             <Separator />
