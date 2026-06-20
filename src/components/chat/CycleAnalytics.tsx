@@ -9,7 +9,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Pencil, Trash2, Check, X, Plus } from "lucide-react";
+import { Pencil, Trash2, Check, X, Plus, Sliders } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format, differenceInDays } from "date-fns";
 import {
