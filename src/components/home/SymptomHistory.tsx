@@ -255,6 +255,31 @@ export function SymptomHistory({
               )}
             </div>
 
+            {/* Filter chips */}
+            {(() => {
+              const notesCount = logs.filter(l => l.notes && l.notes.trim().length > 0).length;
+              return (
+                <div className="flex items-center gap-2 -mt-3 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setNotesOnly(v => !v)}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] transition-colors ${
+                      notesOnly
+                        ? "border-primary/50 bg-primary/10 text-primary"
+                        : "border-border/50 bg-muted/30 text-muted-foreground hover:text-foreground"
+                    }`}
+                    aria-pressed={notesOnly}
+                  >
+                    <StickyNote className="w-3 h-3" />
+                    Notes only{notesCount > 0 ? ` · ${notesCount}` : ""}
+                  </button>
+                  {(notesOnly || search) && filteredLogs.length === 0 && (
+                    <span className="text-[11px] text-muted-foreground">No matches</span>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Top patterns — hidden while searching */}
             {!isSearching && topSymptoms.length > 0 && (
               <div>
