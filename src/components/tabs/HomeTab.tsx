@@ -477,6 +477,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     if (cycleData.lifeStage === "menopause") {
       return isSucceed ? MENOPAUSE_SUCCEED_HER : MENOPAUSE_DONTMESS_HER;
     }
+    if (cycleData.lifeStage === "perimenopause") {
+      return isSucceed ? PERIMENOPAUSE_SUCCEED_HER : PERIMENOPAUSE_DONTMESS_HER;
+    }
     if (isIrregular) {
       return isSucceed ? IRREGULAR_SUCCEED_HER : IRREGULAR_DONTMESS_HER;
     }
@@ -490,11 +493,15 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     if (cycleData.lifeStage === "menopause") {
       return isSucceed ? MENOPAUSE_SUCCEED_HIM : MENOPAUSE_DONTMESS_HIM;
     }
+    if (cycleData.lifeStage === "perimenopause") {
+      return isSucceed ? PERIMENOPAUSE_SUCCEED_HIM : PERIMENOPAUSE_DONTMESS_HIM;
+    }
     if (isIrregular) {
       return isSucceed ? IRREGULAR_SUCCEED_HIM : IRREGULAR_DONTMESS_HIM;
     }
     return isSucceed ? (SUCCEED_HIM[cycleData.phase] || []) : (DONT_MESS_UP_HIM[cycleData.phase] || []);
   };
+
 
 
   const renderWidget = (widget: typeof widgets[number]) => {
