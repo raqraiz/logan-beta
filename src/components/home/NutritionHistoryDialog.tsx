@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format, startOfDay, subDays } from "date-fns";
-import { History, ChevronDown, ChevronUp, Pencil, Trash2, Check, X, Loader2, Plus } from "lucide-react";
+import { History, ChevronDown, ChevronUp, Pencil, Trash2, Check, X, Loader2, Plus, Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface Props {
@@ -47,9 +47,11 @@ export function NutritionHistoryDialog({ open, onOpenChange, userId }: Props) {
     name: "", calories: "", p: "", c: "", f: "",
   });
   const [addingDay, setAddingDay] = useState<string | null>(null);
-  const [newDraft, setNewDraft] = useState<{ name: string; calories: string; p: string; c: string; f: string }>({
-    name: "", calories: "", p: "", c: "", f: "",
-  });
+  const [addText, setAddText] = useState("");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [pending, setPending] = useState<{
+    name: string; description?: string; calories: number; protein_g: number; carbs_g: number; fat_g: number; confidence?: string;
+  } | null>(null);
   const [saving, setSaving] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -148,21 +150,51 @@ export function NutritionHistoryDialog({ open, onOpenChange, userId }: Props) {
 
   function startAdd(dayKey: string) {
     setAddingDay(dayKey);
-    setNewDraft({ name: "", calories: "", p: "", c: "", f: "" });
+    setAddText("");
+    setPending(null);
     setEditingId(null);
   }
 
+  async function analyzeText() {
+    if (!addText.trim()) return;
+    setAnalyzing(true);
+    setPending(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("analyze-meal", {
+        body: { description: addText.trim() },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setPending({
+        name: data.name,
+        description: data.description,
+        calories: Number(data.calories) || 0,
+        protein_g: Number(data.protein_g) || 0,
+        carbs_g: Number(data.carbs_g) || 0,
+        fat_g: Number(data.fat_g) || 0,
+        confidence: data.confidence,
+      });
+    } catch (e: any) {
+      toast({ title: "Couldn't analyze", description: e.message || String(e), variant: "destructive" });
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
   async function saveNewMeal(dayKey: string) {
+    if (!pending) return;
     const d = new Date(`${dayKey}T12:00:00`);
     setSaving(true);
     const { error } = await supabase.from("meals").insert({
       user_id: userId,
-      name: newDraft.name.trim() || "Meal",
-      calories: Math.max(0, Math.round(Number(newDraft.calories) || 0)),
-      protein_g: Math.max(0, Number(newDraft.p) || 0),
-      carbs_g: Math.max(0, Number(newDraft.c) || 0),
-      fat_g: Math.max(0, Number(newDraft.f) || 0),
+      name: pending.name?.trim() || "Meal",
+      description: pending.description ?? null,
+      calories: Math.max(0, Math.round(pending.calories || 0)),
+      protein_g: Math.max(0, pending.protein_g || 0),
+      carbs_g: Math.max(0, pending.carbs_g || 0),
+      fat_g: Math.max(0, pending.fat_g || 0),
       source: "text",
+      ai_confidence: pending.confidence ?? null,
       logged_at: d.toISOString(),
     });
     setSaving(false);
@@ -171,6 +203,8 @@ export function NutritionHistoryDialog({ open, onOpenChange, userId }: Props) {
       return;
     }
     setAddingDay(null);
+    setAddText("");
+    setPending(null);
     setRefreshKey((k) => k + 1);
   }
 
@@ -269,27 +303,66 @@ export function NutritionHistoryDialog({ open, onOpenChange, userId }: Props) {
                       ))}
 
                       {addingDay === d.dateKey ? (
-                        <div className="rounded-lg bg-background/40 px-2.5 py-2 space-y-1.5">
-                          <Input
-                            value={newDraft.name}
-                            onChange={(e) => setNewDraft({ ...newDraft, name: e.target.value })}
-                            placeholder="Meal name"
-                            className="h-7 text-[12px]"
-                          />
-                          <div className="grid grid-cols-4 gap-1.5">
-                            <NumField label="kcal" v={newDraft.calories} on={(v) => setNewDraft({ ...newDraft, calories: v })} />
-                            <NumField label="P" v={newDraft.p} on={(v) => setNewDraft({ ...newDraft, p: v })} />
-                            <NumField label="C" v={newDraft.c} on={(v) => setNewDraft({ ...newDraft, c: v })} />
-                            <NumField label="F" v={newDraft.f} on={(v) => setNewDraft({ ...newDraft, f: v })} />
-                          </div>
-                          <div className="flex items-center justify-end gap-1 pt-0.5">
-                            <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setAddingDay(null)} disabled={saving}>
-                              <X className="w-3.5 h-3.5" />
-                            </Button>
-                            <Button size="sm" className="h-7 px-2" onClick={() => saveNewMeal(d.dateKey)} disabled={saving}>
-                              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                            </Button>
-                          </div>
+                        <div className="rounded-lg bg-background/40 px-2.5 py-2 space-y-2">
+                          {!pending ? (
+                            <>
+                              <Input
+                                value={addText}
+                                onChange={(e) => setAddText(e.target.value)}
+                                placeholder="What did you eat? e.g. 2 eggs, toast, avocado"
+                                className="h-8 text-[12px]"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && addText.trim() && !analyzing) {
+                                    e.preventDefault();
+                                    analyzeText();
+                                  }
+                                }}
+                              />
+                              <div className="flex items-center justify-end gap-1">
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => setAddingDay(null)} disabled={analyzing}>
+                                  Cancel
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="h-7 px-2.5 text-[11px] gap-1"
+                                  onClick={analyzeText}
+                                  disabled={analyzing || !addText.trim()}
+                                >
+                                  {analyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                                  {analyzing ? "Estimating…" : "Estimate macros"}
+                                </Button>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="text-[12px] font-medium truncate">{pending.name}</div>
+                                  {pending.description && (
+                                    <div className="text-[10px] text-muted-foreground line-clamp-2">{pending.description}</div>
+                                  )}
+                                </div>
+                                {pending.confidence && (
+                                  <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted shrink-0">{pending.confidence}</span>
+                                )}
+                              </div>
+                              <div className="grid grid-cols-4 gap-1.5">
+                                <NumField label="kcal" v={String(pending.calories)} on={(v) => setPending({ ...pending, calories: Number(v) || 0 })} />
+                                <NumField label="P" v={String(pending.protein_g)} on={(v) => setPending({ ...pending, protein_g: Number(v) || 0 })} />
+                                <NumField label="C" v={String(pending.carbs_g)} on={(v) => setPending({ ...pending, carbs_g: Number(v) || 0 })} />
+                                <NumField label="F" v={String(pending.fat_g)} on={(v) => setPending({ ...pending, fat_g: Number(v) || 0 })} />
+                              </div>
+                              <div className="flex items-center justify-end gap-1 pt-0.5">
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => setPending(null)} disabled={saving}>
+                                  Redo
+                                </Button>
+                                <Button size="sm" className="h-7 px-2" onClick={() => saveNewMeal(d.dateKey)} disabled={saving}>
+                                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                </Button>
+                              </div>
+                            </>
+                          )}
                         </div>
                       ) : (
                         <Button
