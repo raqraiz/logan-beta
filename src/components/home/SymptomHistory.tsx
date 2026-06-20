@@ -225,8 +225,29 @@ export function SymptomHistory({
           </p>
         ) : (
           <div className="space-y-5">
-            {/* Top patterns */}
-            {topSymptoms.length > 0 && (
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search symptoms or notes (e.g. headache)"
+                className="pl-8 pr-8 h-9 text-xs"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground"
+                  aria-label="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Top patterns — hidden while searching */}
+            {!isSearching && topSymptoms.length > 0 && (
               <div>
                 <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                   Your Top Patterns (90 days)
@@ -280,15 +301,22 @@ export function SymptomHistory({
               </div>
             )}
 
-            <Separator />
+            {!isSearching && <Separator />}
 
             {/* Timeline */}
             <div>
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                Recent Logs
+                {isSearching
+                  ? `${filteredLogs.length} match${filteredLogs.length === 1 ? "" : "es"} for "${search.trim()}"`
+                  : "Recent Logs"}
               </h3>
+              {isSearching && filteredLogs.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  No logs match your search. Try a different keyword.
+                </p>
+              ) : (
               <div className="space-y-4">
-                {sortedDays.slice(0, 14).map(day => (
+                {(isSearching ? sortedDays : sortedDays.slice(0, 14)).map(day => (
                   <div key={day}>
                     <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">
                       {format(new Date(day + "T12:00:00"), "EEE, MMM d")}
@@ -298,6 +326,7 @@ export function SymptomHistory({
                       return (
                         <div key={log.id} className="ml-2 mb-2 border-l-2 border-border/30 pl-3 group">
                           <div className="flex items-start justify-between gap-2">
+
                             <p className="text-[10px] text-muted-foreground mb-1">
                               {format(new Date(log.logged_at), "h:mm a")}
                               {log.cycle_phase && (
