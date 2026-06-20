@@ -436,13 +436,12 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
     // Subscribe to participant updates so Plan tab stays in sync after period edits
     let channel: ReturnType<typeof supabase.channel> | null = null;
     (async () => {
-      const email = (await supabase.auth.getUser()).data.user?.email;
-      if (!email) return;
+      if (!userId) return;
       channel = supabase
         .channel(`plan_participants_sync_${userId}`)
         .on(
           "postgres_changes",
-          { event: "UPDATE", schema: "public", table: "participants", filter: `email=eq.${email}` },
+          { event: "UPDATE", schema: "public", table: "participants", filter: `user_id=eq.${userId}` },
           (payload) => {
             const row = payload.new as any;
             if (!row) return;
