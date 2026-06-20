@@ -487,3 +487,132 @@ export function SymptomHistory({
     </Dialog>
   );
 }
+
+const PHASE_ORDER = ["Menstrual", "Follicular", "Ovulatory", "Luteal", "Unknown"];
+
+function SummaryView({
+  logs,
+  groupBy,
+}: {
+  logs: SymptomLog[];
+  groupBy: "phase" | "week" | "month";
+}) {
+  if (logs.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground text-center py-6">
+        No symptoms logged yet.
+      </p>
+    );
+  }
+
+  // Bucket logs
+  const buckets: Record<string, { label: string; sortKey: string; logs: SymptomLog[] }> = {};
+  logs.forEach(log => {
+    let key: string;
+    let label: string;
+    let sortKey: string;
+    const d = new Date(log.logged_at);
+    if (groupBy === "phase") {
+      const raw = (log.cycle_phase || "Unknown").trim();
+      key = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+      label = key;
+      const idx = PHASE_ORDER.indexOf(key);
+      sortKey = String(idx === -1 ? 99 : idx);
+    } else if (groupBy === "week") {
+      // ISO-ish week start (Monday)
+      const dt = new Date(d);
+      const day = (dt.getDay() + 6) % 7;
+      dt.setDate(dt.getDate() - day);
+      dt.setHours(0, 0, 0, 0);
+      key = format(dt, "yyyy-MM-dd");
+      label = `Week of ${format(dt, "MMM d")}`;
+      sortKey = `0-${9999999999999 - dt.getTime()}`;
+    } else {
+      key = format(d, "yyyy-MM");
+      label = format(d, "MMMM yyyy");
+      sortKey = `0-${9999999999999 - new Date(d.getFullYear(), d.getMonth(), 1).getTime()}`;
+    }
+    if (!buckets[key]) buckets[key] = { label, sortKey, logs: [] };
+    buckets[key].logs.push(log);
+  });
+
+  const ordered = Object.entries(buckets).sort((a, b) =>
+    a[1].sortKey.localeCompare(b[1].sortKey)
+  );
+
+  // Total logs across buckets (for share %)
+  const totalLogs = logs.length;
+
+  return (
+    <div className="space-y-3">
+      {ordered.map(([key, bucket]) => {
+        // Aggregate symptoms in this bucket
+        const agg: Record<string, { count: number; totalSev: number; maxSev: number }> = {};
+        bucket.logs.forEach(l => {
+          l.symptoms.forEach(s => {
+            if (!agg[s.name]) agg[s.name] = { count: 0, totalSev: 0, maxSev: 0 };
+            agg[s.name].count++;
+            agg[s.name].totalSev += s.severity;
+            if (s.severity > agg[s.name].maxSev) agg[s.name].maxSev = s.severity;
+          });
+        });
+        const items = Object.entries(agg)
+          .map(([name, v]) => ({
+            name,
+            count: v.count,
+            avgSev: v.totalSev / v.count,
+            maxSev: v.maxSev,
+          }))
+          .sort((a, b) => b.count - a.count);
+
+        const maxCount = items[0]?.count || 1;
+        const sharePct = Math.round((bucket.logs.length / totalLogs) * 100);
+
+        return (
+          <div
+            key={key}
+            className="rounded-xl border border-border/30 bg-muted/20 p-3"
+          >
+            <div className="flex items-baseline justify-between mb-2">
+              <p className="text-xs font-semibold text-foreground">{bucket.label}</p>
+              <p className="text-[10px] text-muted-foreground">
+                {bucket.logs.length} log{bucket.logs.length === 1 ? "" : "s"} · {sharePct}%
+              </p>
+            </div>
+            {items.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground/70">No symptoms.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {items.slice(0, 6).map(it => (
+                  <div key={it.name} className="flex items-center gap-2">
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${SEVERITY_COLORS[Math.round(it.avgSev)] || "bg-muted-foreground/30"}`}
+                    />
+                    <span className="text-[11px] text-foreground/80 w-24 truncate shrink-0">
+                      {it.name}
+                    </span>
+                    <div className="flex-1 h-1.5 rounded-full bg-muted/50 overflow-hidden">
+                      <div
+                        className="h-full bg-primary/60 rounded-full"
+                        style={{ width: `${(it.count / maxCount) * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground tabular-nums w-14 text-right shrink-0">
+                      {it.count}× · {SEVERITY_LABELS[Math.round(it.avgSev)]}
+                    </span>
+                  </div>
+                ))}
+                {items.length > 6 && (
+                  <p className="text-[10px] text-muted-foreground/60 pl-3.5">
+                    +{items.length - 6} more
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
