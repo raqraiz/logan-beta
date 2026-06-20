@@ -18,6 +18,8 @@ interface Props { userId: string }
 
 export function NutritionTodayWidget({ userId }: Props) {
   const [open, setOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [totals, setTotals] = useState({ cals: 0, p: 0, c: 0, f: 0, count: 0 });
   const [target, setTarget] = useState<{ cals: number | null; p: number | null; c: number | null; f: number | null }>({ cals: null, p: null, c: null, f: null });
