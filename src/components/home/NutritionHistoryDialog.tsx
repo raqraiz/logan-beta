@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format, startOfDay, subDays } from "date-fns";
-import { History, ChevronDown, ChevronUp, Pencil, Trash2, Check, X, Loader2, Plus } from "lucide-react";
+import { History, ChevronDown, ChevronUp, Pencil, Trash2, Check, X, Loader2, Plus, Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface Props {
