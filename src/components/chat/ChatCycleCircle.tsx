@@ -327,7 +327,12 @@ export function calculateCycleInfo(
   cycleLengthDays: number | null,
   timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone,
   forDate?: Date | string | null,
-  currentPeriodEndDate?: string | null
+  currentPeriodEndDate?: string | null,
+  /** When true, do NOT wrap an overdue cycle to the next assumed cycle.
+   * Used after the user has explicitly told Logan her period has NOT started
+   * yet — we keep showing the true (overdue) day count and wait for her to
+   * confirm Day 1, rather than silently rolling into a fake next cycle. */
+  periodPending?: boolean
 ): { cycleDay: number; phase: string } | null {
   if (!lastPeriodStart || !cycleLengthDays) return null;
 
@@ -362,9 +367,13 @@ export function calculateCycleInfo(
   // If she hasn't updated her cycle in a while, wrap around her selected
   // cycle length so the ring never exceeds her configured length (e.g. Day 66
   // on a 28-day cycle becomes Day 10 of the next assumed cycle).
-  const cycleDay = daysSinceStart >= 0
-    ? (daysSinceStart % cycleLengthDays) + 1
-    : (((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays) + 1;
+  // EXCEPTION: if she has explicitly told Logan her period hasn't started yet
+  // (periodPending), keep the true day count — don't roll into a fake cycle.
+  const cycleDay = periodPending
+    ? (daysSinceStart >= 0 ? daysSinceStart + 1 : 1)
+    : (daysSinceStart >= 0
+        ? (daysSinceStart % cycleLengthDays) + 1
+        : (((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays) + 1);
 
   // Derive menstruationEnd. If the user reported her period ended early
   // (currentPeriodEndDate), use that to shift Follicular forward. Only honor

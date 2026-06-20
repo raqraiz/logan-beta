@@ -1,0 +1,2 @@
+ALTER TABLE public.participants ADD COLUMN IF NOT EXISTS period_pending_since date;
+COMMENT ON COLUMN public.participants.period_pending_since IS 'Set when user explicitly tells Logan her period has NOT started yet during a late-luteal/overdue check-in. While set, the cycle ring should NOT auto-wrap to the next cycle — we wait for her to confirm Day 1. Cleared when last_period_start updates.';

@@ -135,6 +135,7 @@ const Chat = () => {
     cycleLengthDays: number | null;
     timezone: string | null;
     currentPeriodEndDate: string | null;
+    periodPendingSince: string | null;
   } | null>(null);
   const [showForecast, setShowForecast] = useState(false);
   
@@ -330,6 +331,7 @@ const Chat = () => {
             cycleLengthDays: row.cycle_length_days ?? null,
             timezone: row.timezone ?? null,
             currentPeriodEndDate: row.current_period_end_date ?? null,
+            periodPendingSince: row.period_pending_since ?? null,
           });
           if (row.life_stage) {
             setLifeStage(row.life_stage as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause");
@@ -432,7 +434,7 @@ const Chat = () => {
       return;
     }
 
-    const liveInfo = calculateCycleInfo(lastPeriodStart, cycleLengthDays, timezone, undefined, participantCycle?.currentPeriodEndDate ?? null);
+    const liveInfo = calculateCycleInfo(lastPeriodStart, cycleLengthDays, timezone, undefined, participantCycle?.currentPeriodEndDate ?? null, !!participantCycle?.periodPendingSince);
     if (liveInfo) {
       setCycleData({
         cycleDay: liveInfo.cycleDay,
@@ -609,6 +611,7 @@ const Chat = () => {
           cycleLengthDays: data.cycle_length_days ?? null,
           timezone: data.timezone ?? null,
           currentPeriodEndDate: (data as any).current_period_end_date ?? null,
+          periodPendingSince: (data as any).period_pending_since ?? null,
         });
       }
     } catch (e) {
