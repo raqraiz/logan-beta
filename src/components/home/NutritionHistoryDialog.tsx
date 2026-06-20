@@ -222,7 +222,7 @@ export function NutritionHistoryDialog({ open, onOpenChange, userId }: Props) {
                     </div>
                   </button>
 
-                  {isOpen && !empty && (
+                  {isOpen && (
                     <div className="mt-3 pt-3 border-t border-border/40 space-y-2">
                       {d.meals.map((m) => (
                         <div key={m.id} className="rounded-lg bg-background/40 px-2.5 py-2">
@@ -267,6 +267,41 @@ export function NutritionHistoryDialog({ open, onOpenChange, userId }: Props) {
                           )}
                         </div>
                       ))}
+
+                      {addingDay === d.dateKey ? (
+                        <div className="rounded-lg bg-background/40 px-2.5 py-2 space-y-1.5">
+                          <Input
+                            value={newDraft.name}
+                            onChange={(e) => setNewDraft({ ...newDraft, name: e.target.value })}
+                            placeholder="Meal name"
+                            className="h-7 text-[12px]"
+                          />
+                          <div className="grid grid-cols-4 gap-1.5">
+                            <NumField label="kcal" v={newDraft.calories} on={(v) => setNewDraft({ ...newDraft, calories: v })} />
+                            <NumField label="P" v={newDraft.p} on={(v) => setNewDraft({ ...newDraft, p: v })} />
+                            <NumField label="C" v={newDraft.c} on={(v) => setNewDraft({ ...newDraft, c: v })} />
+                            <NumField label="F" v={newDraft.f} on={(v) => setNewDraft({ ...newDraft, f: v })} />
+                          </div>
+                          <div className="flex items-center justify-end gap-1 pt-0.5">
+                            <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setAddingDay(null)} disabled={saving}>
+                              <X className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button size="sm" className="h-7 px-2" onClick={() => saveNewMeal(d.dateKey)} disabled={saving}>
+                              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="w-full h-8 text-[12px] text-muted-foreground hover:text-foreground"
+                          onClick={() => startAdd(d.dateKey)}
+                        >
+                          <Plus className="w-3.5 h-3.5 mr-1" />
+                          Add a meal
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
