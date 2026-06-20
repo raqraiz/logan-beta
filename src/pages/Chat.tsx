@@ -331,6 +331,7 @@ const Chat = () => {
             cycleLengthDays: row.cycle_length_days ?? null,
             timezone: row.timezone ?? null,
             currentPeriodEndDate: row.current_period_end_date ?? null,
+            periodPendingSince: row.period_pending_since ?? null,
           });
           if (row.life_stage) {
             setLifeStage(row.life_stage as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause");
