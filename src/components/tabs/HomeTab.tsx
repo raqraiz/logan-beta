@@ -373,6 +373,7 @@ interface CycleData {
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
   postpartumStartDate?: string;
   postpartumActive?: boolean;
+  needsPeriodStart?: boolean;
 }
 
 interface HomeTabProps {
@@ -458,6 +459,35 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     const label = getWidgetLabel(widget);
     switch (id) {
       case "cycle_circle": {
+        if (cycleData.needsPeriodStart) {
+          return (
+            <div className="w-full max-w-sm mx-auto" key={id}>
+              <div className="relative rounded-2xl border border-primary/30 bg-card overflow-hidden p-5 text-center">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
+                <div className="relative flex flex-col items-center gap-3">
+                  <div className="w-14 h-14 rounded-full border-2 border-dashed border-primary/40 flex items-center justify-center text-primary text-xl">
+                    ?
+                  </div>
+                  <h3 className="font-display font-semibold text-base text-foreground">
+                    Add your last period date
+                  </h3>
+                  <p className="text-sm text-muted-foreground max-w-[260px]">
+                    Logan needs the first day of your last period to map your cycle and tailor your day.
+                  </p>
+                  <Button
+                    onClick={() => {
+                      setEditedLength(cycleData.cycleLengthDays || 28);
+                      setShowDatePicker(true);
+                    }}
+                    className="mt-1"
+                  >
+                    Set period start
+                  </Button>
+                </div>
+              </div>
+            </div>
+          );
+        }
         return (
           <div className="w-full flex flex-col items-center" key={id}>
             <DailyBriefingHero
@@ -469,6 +499,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
               postpartumActive={cycleData.postpartumActive}
               onCircleClick={isNonCycling ? undefined : () => setShowAnalytics(true)}
             />
+
             {!isNonCycling && !dismissed && (
               <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground/70">
                 <span>Not accurate?</span>
