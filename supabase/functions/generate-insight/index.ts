@@ -190,8 +190,9 @@ serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(12);
 
-    // For non-cycling users, generate stage-specific insights
-    if (userLifeStage !== "cycling") {
+    // For non-cycling users, generate stage-specific insights.
+    // Perimenopause users are still cycling — route them through the cycling path.
+    if (userLifeStage !== "cycling" && userLifeStage !== "perimenopause") {
       const prompt = buildNonCyclingInsightPrompt(
         profile?.full_name || "there",
         participant,
@@ -453,6 +454,11 @@ function buildInsightPrompt(
     ? `- Interest areas: ${topics.join(", ")}. Weave relevant tips from these areas into the intro when naturally fitting.`
     : "";
 
+  const isPerimenopause = (participant.life_stage === "perimenopause");
+  const perimenopauseContext = isPerimenopause
+    ? `\n- LIFE STAGE: **Perimenopause**. ${firstName} STILL HAS PERIODS and is still cycling, but the pattern is shifting (cycles getting shorter/longer, heavier/lighter, skipped months, new symptoms like hot flashes, sleep changes, sharper mood swings). DO NOT call her menopausal — perimenopause ≠ menopause. Reference her cycle day and phase as usual, but acknowledge swings can be sharper and less predictable than her baseline. Weave in awareness of sleep, hot flashes, mood, energy, and bone/muscle health where it fits naturally.`
+    : "";
+
   return `You are Logan. You know ${firstName}'s cycle so well you can name what she's feeling before she does. You're not giving advice or instructions. You're the person who just gets it.
 
 CONTEXT:
@@ -461,7 +467,7 @@ CONTEXT:
 - Age: ${age || "unknown"}
 - Anchor symptom: ${anchorSymptom || "not set"}
 - Other symptoms: ${symptoms.join(", ") || "none"}
-- PHASE STRENGTHS: ${strengthContext}
+- PHASE STRENGTHS: ${strengthContext}${perimenopauseContext}
 ${anchorContext ? `- ${anchorContext}` : ""}
 ${topicContext}
 ${age && age <= 16 ? "- TONE: User is young. Use simple, relatable language. Keep intro under 25 words. Make the question feel like a text from a friend." : ""}
@@ -562,10 +568,16 @@ function buildNonCyclingInsightPrompt(
     }
   }
 
-  const stageLabel = lifeStage === "postpartum" ? "Postpartum" : "Menopause";
-  const stageContext = lifeStage === "postpartum"
-    ? `${firstName} is in the postpartum stage${timelineContext ? ` — ${timelineContext}` : ""}. Phase-specific guidance: ${ppPhaseGuidance} Focus appropriately for this exact phase — do NOT use generic "healing and recovery" language for users past 6 months. Do NOT assume she is breastfeeding — only mention it if she brought it up. If she has multiple children, do NOT assume she is breastfeeding all of them.`
-    : `${firstName} is navigating menopause. Estrogen and progesterone are declining. Focus on bone health, sleep quality, mood stability, and managing symptoms like hot flashes or brain fog.`;
+  const stageLabel =
+    lifeStage === "postpartum" ? "Postpartum"
+    : lifeStage === "perimenopause" ? "Perimenopause"
+    : "Menopause";
+  const stageContext =
+    lifeStage === "postpartum"
+      ? `${firstName} is in the postpartum stage${timelineContext ? ` — ${timelineContext}` : ""}. Phase-specific guidance: ${ppPhaseGuidance} Focus appropriately for this exact phase — do NOT use generic "healing and recovery" language for users past 6 months. Do NOT assume she is breastfeeding — only mention it if she brought it up. If she has multiple children, do NOT assume she is breastfeeding all of them.`
+      : lifeStage === "perimenopause"
+        ? `${firstName} is navigating **perimenopause** — she STILL HAS PERIODS and is still cycling, but the pattern is shifting (cycles getting shorter/longer, heavier/lighter, skipped months, new symptoms like hot flashes, sleep changes, sharper mood swings). DO NOT call her menopausal. Focus on tracking pattern shifts, sleep, hot flashes, mood, energy, and bone/muscle health. Perimenopause ≠ menopause.`
+        : `${firstName} is navigating menopause. Estrogen and progesterone are declining. Focus on bone health, sleep quality, mood stability, and managing symptoms like hot flashes or brain fog.`;
 
   return `You are Logan. You're ${firstName}'s companion through her ${stageLabel.toLowerCase()} journey. You're not clinical — you're the friend who just gets it.
 
@@ -590,8 +602,9 @@ ${checkinMessages.length > 0 ? checkinMessages.map(m => {
 RULES:
 - Lead with empathy and validation. ${stageLabel} is not a deficit — it's a transition with its own strengths.
 - For postpartum: match the EXACT phase guidance above. Acute/early phases = healing, rest, gentle pelvic floor. Rebuilding+ = strength, capacity, identity — NOT "healing/recovery" framing. Never prescribe. Never guilt.
-- For menopause: focus on adaptation, strength preservation, and reframing the narrative.
-- NEVER reference cycle phases, ovulation, or period timing for non-cycling users.
+- For perimenopause: she is STILL CYCLING. Never call her menopausal. Acknowledge pattern shifts, sharper swings, and new signals (hot flashes, sleep, mood). Perimenopause ≠ menopause.
+- For menopause: focus on adaptation, strength preservation, and reframing the narrative. Only use menopause framing when life stage is actually "menopause".
+- NEVER reference cycle phases, ovulation, or period timing for menopause or postpartum users (perimenopause users still cycle, so cycle references are fine for them).
 - NEVER assume breastfeeding status unless the user has explicitly mentioned it.
 
 Generate a JSON object:
