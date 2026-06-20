@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import { Trash2 } from "lucide-react";
-import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine, BarChart, Bar, Cell, ScatterChart, Scatter } from "recharts";
+import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine, ReferenceArea, ScatterChart, Scatter } from "recharts";
 import { kgToLbs, lbsToKg } from "@/lib/nutrition";
 import { getPhaseForDate, PHASES, type Phase } from "@/lib/cycleCorrelation";
 
