@@ -1,53 +1,33 @@
-## The problem
+## The bug
 
-Logan's current-cycle phase is computed from `last_period_start + cycle_length_days`, with **menstruation hardcoded as days 1–5**. If a user's period only lasts 4 days, day 5 still shows as "Menstruation" even though biologically she's already in the Follicular phase. There is no way to tell Logan "my bleed ended."
+In `supabase/functions/generate-insight/index.ts`, the proactive on-open insight routes any non-`"cycling"` user into a single non-cycling prompt that hardcodes the stage as **Menopause**:
 
-The phase-edit UI I just added to Cycle Analytics only affects *completed* cycles in history — it doesn't influence the live phase of the cycle she's currently in.
+- Line 194: `if (userLifeStage !== "cycling")` → sends perimenopause down the non-cycling path.
+- Line 565: `const stageLabel = lifeStage === "postpartum" ? "Postpartum" : "Menopause";`
+- Line 568: `"${firstName} is navigating menopause. Estrogen and progesterone are declining..."`
+- Line 593: `"For menopause: focus on adaptation..."` rule applied to perimenopause too.
 
-## The fix
+That's why Claire (perimenopause) was told she's "navigating menopause."
 
-Add a per-user "current period end date" that overrides the menstruation window for the in-progress cycle only.
+The rest of the app already treats perimenopause as still-cycling (HomeTab, DailyBriefingHero, PlanTab, chat-ai system prompt all distinguish the two correctly). Only `generate-insight` collapses them.
 
-### 1. Schema
+## Fix
 
-Add to `participants`:
-- `current_period_end_date date` (nullable)
+In `supabase/functions/generate-insight/index.ts`:
 
-Cleared automatically whenever a new `last_period_start` is written.
+1. **Route perimenopause through the cycling insight path**, not the non-cycling one. Perimenopause users still have a cycle and `last_period_start`, so the cycling prompt (with phase/day context) is the right base.
+   - Change the gate at line 194 from `userLifeStage !== "cycling"` to `userLifeStage !== "cycling" && userLifeStage !== "perimenopause"`.
+   - In the cycling prompt builder, add a short perimenopause note when `lifeStage === "perimenopause"` so the AI acknowledges sharper/less predictable swings, hot flashes, sleep/mood shifts — mirroring the language already in `chat-ai/index.ts` lines 2120-2121. Explicit rule: **do not call her menopausal**.
 
-### 2. Phase calculation
+2. **Harden the non-cycling builder** so even if a perimenopause user ever reaches it (e.g. missing `last_period_start`), the copy is correct:
+   - `stageLabel`: `postpartum → "Postpartum"`, `perimenopause → "Perimenopause"`, else `"Menopause"`.
+   - Add a `perimenopause` branch to `stageContext` that says she is **navigating perimenopause** (still cycling, pattern shifting) — not menopause.
+   - Update the `RULES` block: separate guidance for perimenopause vs. menopause, with the explicit "perimenopause ≠ menopause" line.
 
-Update `calculateCycleInfo` in `src/components/chat/ChatCycleCircle.tsx` to accept an optional `periodEndDate`:
-
-```text
-if periodEndDate is set and reference date > periodEndDate:
-    menstruationEnd = max(1, daysBetween(periodStart, periodEndDate) + 1)
-else:
-    menstruationEnd = 5   // current default
-```
-
-Everything else (Follicular / Ovulation / Luteal boundaries) stays the same.
-
-### 3. Plumb the value through
-
-- `Chat.tsx`: include `current_period_end_date` in the participants select + realtime subscription, pass it into `calculateCycleInfo`.
-- Same for the other consumers that call `calculateCycleInfo`: `ChatCycleCircle`, `PlanTab`, `SymptomLogWidget`, `CycleCorrelationsWidget`, `DischargeTrackerWidget`, `CycleForecast`, `admin/ProfilesTab`. Each reads `last_period_start` already; they'll read the end date alongside it.
-
-### 4. UI to set it
-
-Add a small "My period ended" action on the Home tab, near the cycle circle:
-- Shown only when current `cycleDay <= 8` and `current_period_end_date` is not set.
-- Tap opens a tiny date picker defaulted to today, with options: today, yesterday, 2 days ago.
-- Saves to `participants.current_period_end_date`. Real-time subscription updates the phase instantly across tabs.
-- Once set, the chip turns into "Period ended {date} · edit" so she can correct it.
-
-When she logs a new period start (existing flow), `current_period_end_date` is set back to `null` automatically — handled in the same UPDATE that writes the new `last_period_start`.
-
-### 5. Cycle Analytics
-
-When the current cycle eventually closes and gets added to `cycle_history`, populate `menstruation_days` from `current_period_end_date - last_period_start + 1` so her Phase Breakdown reflects reality without manual editing.
+3. **Audit pass** in the same file for any other `=== "menopause"` / `!== "cycling"` branch that should also recognize perimenopause (e.g. the stage-label string and any copy templates around lines 538-595). No other functions need changes — `chat-ai`, `chat-onboarding`, `generate-meal-plan`, and the frontend already handle perimenopause distinctly.
 
 ## Out of scope
 
-- No change to luteal-length assumption (14d) — that's a separate ask.
-- No automatic period-end detection from symptom logs.
+- No schema or RLS changes.
+- No UI changes (HomeTab/PlanTab/DailyBriefingHero already correct).
+- Historical insight messages already saved with the wrong copy will not be rewritten; only new generations will be correct.
