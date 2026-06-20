@@ -14,6 +14,7 @@ const DEFAULT_WIDGETS: WidgetConfig[] = [
   { id: "nutrition_today", visible: true, type: "built-in" },
   { id: "weight_trend", visible: true, type: "built-in" },
   { id: "symptom_tracker", visible: true, type: "built-in" },
+  { id: "discharge_tracker", visible: true, type: "built-in" },
   { id: "symptom_history", visible: true, type: "built-in" },
   { id: "cycle_correlations", visible: true, type: "built-in" },
   { id: "lab_results", visible: true, type: "built-in" },
