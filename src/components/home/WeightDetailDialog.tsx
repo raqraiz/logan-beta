@@ -49,7 +49,7 @@ export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged, 
     const gRes = await supabase.from("nutrition_goals").select("weight_goal_kg").eq("user_id", userId).maybeSingle();
     const pRes = await supabase.from("participants").select("last_period_start, cycle_length_days").eq("user_id", userId).maybeSingle();
     setLogs((lRes.data as WeightLog[]) ?? []);
-    setGoalKg(gRes.data?.weight_goal_kg ? Number(gRes.data.weight_goal_kg) : null);
+    setGoalKg((gRes.data as any)?.weight_goal_kg ? Number((gRes.data as any).weight_goal_kg) : null);
     setLastPeriodStart((pRes.data as any)?.last_period_start ?? null);
     setCycleLengthDays((pRes.data as any)?.cycle_length_days ?? null);
   }, [userId]);
