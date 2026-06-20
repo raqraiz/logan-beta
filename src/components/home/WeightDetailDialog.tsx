@@ -45,15 +45,13 @@ export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged, 
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
-    const [{ data: l }, { data: g }, { data: p }] = await Promise.all([
-      supabase.from("weight_logs").select("*").eq("user_id", userId).order("logged_on", { ascending: false }).limit(120),
-      supabase.from("nutrition_goals").select("weight_goal_kg").eq("user_id", userId).maybeSingle(),
-      supabase.from("participants").select("last_period_start, cycle_length_days").eq("user_id", userId).maybeSingle(),
-    ]);
-    setLogs((l as WeightLog[]) ?? []);
-    setGoalKg(g?.weight_goal_kg ? Number(g.weight_goal_kg) : null);
-    setLastPeriodStart(p?.last_period_start ?? null);
-    setCycleLengthDays(p?.cycle_length_days ?? null);
+    const lRes = await supabase.from("weight_logs").select("*").eq("user_id", userId).order("logged_on", { ascending: false }).limit(120);
+    const gRes = await supabase.from("nutrition_goals").select("weight_goal_kg").eq("user_id", userId).maybeSingle();
+    const pRes = await supabase.from("participants").select("last_period_start, cycle_length_days").eq("user_id", userId).maybeSingle();
+    setLogs((lRes.data as WeightLog[]) ?? []);
+    setGoalKg(gRes.data?.weight_goal_kg ? Number(gRes.data.weight_goal_kg) : null);
+    setLastPeriodStart((pRes.data as any)?.last_period_start ?? null);
+    setCycleLengthDays((pRes.data as any)?.cycle_length_days ?? null);
   }, [userId]);
 
   useEffect(() => { if (open) load(); }, [open, load]);
