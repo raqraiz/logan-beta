@@ -260,12 +260,12 @@ export const TrialChat = () => {
             ) : (
               <>
                 <button
-                  onClick={() => setShowAuth(true)}
+                  onClick={() => { setAuthView("signin"); scrollToSignup(); }}
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Sign in
                 </button>
-                <Button size="sm" onClick={scrollToSignup} className="h-9 px-4 text-sm">
+                <Button size="sm" onClick={() => { setAuthView("signup"); scrollToSignup(); }} className="h-9 px-4 text-sm">
                   Get started
                 </Button>
               </>
