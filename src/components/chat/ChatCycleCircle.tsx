@@ -396,9 +396,15 @@ export function calculateCycleInfo(
   const ovulationStart = ovulationDay - 1;
   const ovulationEnd = ovulationDay + 2;
 
+  // If she told Logan her period is still ongoing past the default window,
+  // keep showing Menstruation (up to a sane cap of 12 days) until she logs
+  // an end date or starts a new cycle.
+  const stillBleedingCap = Math.min(12, ovulationStart - 1);
+  const forceMenstruation = !!periodStillActive && cycleDay <= stillBleedingCap;
+
   let phase: string;
 
-  if (cycleDay <= menstruationEnd) {
+  if (forceMenstruation || cycleDay <= menstruationEnd) {
     phase = "Menstruation";
   } else if (cycleDay < ovulationStart) {
     phase = "Follicular";
