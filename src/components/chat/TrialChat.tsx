@@ -92,7 +92,15 @@ export const TrialChat = () => {
   const isNearBottomRef = useRef(true);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Scroll to top on mount so the landing page always starts at the hero
   useEffect(() => {
+    const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
+    if (viewport) viewport.scrollTo({ top: 0, behavior: "auto" });
+  }, []);
+
+  // Auto-scroll only in chat mode
+  useEffect(() => {
+    if (!chatMode) return;
     if (!isNearBottomRef.current) return;
     const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
     const lastMessageEl = lastMessageRef.current;
@@ -104,7 +112,7 @@ export const TrialChat = () => {
       }
     }
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, chatMode]);
 
   useEffect(() => {
     const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
