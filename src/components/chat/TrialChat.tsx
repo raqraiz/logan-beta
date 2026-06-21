@@ -232,14 +232,14 @@ export const TrialChat = () => {
   return (
     <div className="h-[100svh] supports-[height:100dvh]:h-[100dvh] bg-background flex flex-col relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute bottom-1/3 left-0 w-72 h-72 bg-primary/[0.03] rounded-full blur-3xl transform -translate-x-1/2" />
-        {/* Home-page widget color echoes — visible ambient blobs */}
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-phase-follicular/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 right-1/4 w-56 h-56 bg-phase-ovulation/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/3 w-72 h-72 bg-phase-menstruation/8 rounded-full blur-3xl" />
-        <div className="absolute top-3/4 left-1/3 w-48 h-48 bg-phase-luteal/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-80 h-80 bg-primary/8 rounded-full blur-3xl transform translate-x-1/3 translate-y-1/3" />
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl transform translate-x-1/3 -translate-y-1/3" />
+        <div className="absolute bottom-1/3 left-0 w-96 h-96 bg-primary/[0.06] rounded-full blur-3xl transform -translate-x-1/3" />
+        {/* Home-page widget color echoes — prominent ambient blobs */}
+        <div className="absolute top-1/4 left-[10%] w-80 h-80 bg-phase-follicular/15 rounded-full blur-3xl" />
+        <div className="absolute top-[40%] right-[15%] w-72 h-72 bg-phase-ovulation/15 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-[20%] w-96 h-96 bg-phase-menstruation/12 rounded-full blur-3xl" />
+        <div className="absolute top-[70%] left-[20%] w-64 h-64 bg-phase-luteal/15 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-primary/12 rounded-full blur-3xl transform translate-x-1/4 translate-y-1/4" />
       </div>
 
       {/* Header */}
