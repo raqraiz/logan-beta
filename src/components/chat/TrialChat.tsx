@@ -136,11 +136,7 @@ export const TrialChat = () => {
   }, [messages.length, showAuth, hasStarted, chatMode]);
 
   const scrollToSignup = () => {
-    const el = scrollContainerRef.current;
     signupRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    setTimeout(() => {
-      if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-    }, 50);
   };
 
   const enterChatMode = (text?: string) => {
