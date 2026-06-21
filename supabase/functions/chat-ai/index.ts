@@ -563,6 +563,51 @@ serve(async (req) => {
     // --- End "not yet" ---
 
 
+    // --- "Period still ongoing" detection ---
+    // When a cycling user tells Logan her period is still going (e.g.
+    // "almost over but not yet", "still bleeding", "period isn't over"),
+    // flag period_still_active so the cycle ring keeps showing Menstruation
+    // instead of auto-flipping to Follicular on day 6. Cleared automatically
+    // when she logs a new Day 1 or a period end date.
+    if (participant && participant.life_stage === "cycling" && !isPeriodConfirmation) {
+      const stillBleedingPatterns: RegExp[] = [
+        /\b(still|yet)\s+bleeding\b/i,
+        /\bstill\s+on\s+(?:my\s+)?period\b/i,
+        /\bperiod\s+(?:is\s+)?(?:not|isn'?t)\s+(?:over|done|finished|ended)\b/i,
+        /\b(?:almost|nearly)\s+(?:over|done|finished)\s*(?:but\s+)?not\s+yet\b/i,
+        /\bperiod\s+(?:is\s+)?almost\s+(?:over|done|finished)\b/i,
+        /\bnot\s+(?:over|done|finished)\s+yet\b/i,
+        /\bstill\s+(?:getting|having)\s+(?:my\s+)?period\b/i,
+        /\b(?:i'?m\s+)?still\s+(?:on|in)\s+(?:my\s+)?menstruation\b/i,
+        /\bperiod\s+(?:is\s+)?still\s+(?:going|here|ongoing)\b/i,
+      ];
+      const isStillBleeding = stillBleedingPatterns.some(p => p.test(userMessage));
+      // Also detect explicit "period ended" / "period is over" → clear the flag
+      const endedPatterns: RegExp[] = [
+        /\bperiod\s+(?:is\s+)?(?:over|done|finished|ended)\b/i,
+        /\b(?:i'?m\s+)?done\s+(?:with\s+)?(?:my\s+)?period\b/i,
+        /\bperiod\s+ended\s+(?:today|yesterday)\b/i,
+      ];
+      const isEnded = !isStillBleeding && endedPatterns.some(p => p.test(userMessage));
+
+      if (isStillBleeding && !(participant as any).period_still_active) {
+        await supabase
+          .from("participants")
+          .update({ period_still_active: true })
+          .eq("id", participant.id);
+        participant = { ...participant, period_still_active: true } as typeof participant;
+      } else if (isEnded && (participant as any).period_still_active) {
+        await supabase
+          .from("participants")
+          .update({ period_still_active: false })
+          .eq("id", participant.id);
+        participant = { ...participant, period_still_active: false } as typeof participant;
+      }
+    }
+    // --- End "period still ongoing" ---
+
+
+
     // --- Spotting / early-bleed detection: flag for Day-1 confirmation prompt ---
     // When a cycling user casually mentions bleeding/spotting in chat (not an
     // explicit "period started" phrase, which is handled above), let the AI
