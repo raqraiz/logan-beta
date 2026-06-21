@@ -320,15 +320,23 @@ export const TrialChat = () => {
                   You might be here because…
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {FEELING_CHIPS.map((chip) => (
-                    <button
-                      key={chip}
-                      onClick={() => enterChatMode(chip)}
-                      className="text-left text-sm px-4 py-2.5 rounded-2xl bg-card/60 border border-border/60 hover:border-primary/50 hover:bg-primary/5 text-foreground/85 hover:text-foreground transition-all duration-200 backdrop-blur-sm"
-                    >
-                      {chip}
-                    </button>
-                  ))}
+                  {FEELING_CHIPS.map((chip, i) => {
+                    const colors = [
+                      "border-l-phase-menstruation hover:border-l-phase-menstruation",
+                      "border-l-phase-follicular hover:border-l-phase-follicular",
+                      "border-l-phase-ovulation hover:border-l-phase-ovulation",
+                      "border-l-phase-luteal hover:border-l-phase-luteal",
+                    ];
+                    return (
+                      <button
+                        key={chip}
+                        onClick={() => enterChatMode(chip)}
+                        className={`text-left text-sm px-4 py-2.5 rounded-2xl bg-card/60 border border-border/60 ${colors[i % 4]} border-l-[3px] hover:border-primary/50 hover:bg-primary/5 text-foreground/85 hover:text-foreground transition-all duration-200 backdrop-blur-sm`}
+                      >
+                        {chip}
+                      </button>
+                    );
+                  })}
                 </div>
                 <p className="text-xs text-muted-foreground/70 mt-3 pl-1">
                   Tap one to ask Logan about it.
