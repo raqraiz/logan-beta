@@ -80,6 +80,7 @@ export const TrialChat = () => {
   const [trialMessageCount, setTrialMessageCount] = useState(0);
   const [lastUserQuestion, setLastUserQuestion] = useState("");
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [authView, setAuthView] = useState<"signup" | "signin">("signup");
 
   const [waitlistEmail, setWaitlistEmail] = useState("");
   const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
