@@ -68,6 +68,8 @@ interface Participant {
   postpartum_start_date: string | null;
   postpartum_active?: boolean | null;
   period_pending_since?: string | null;
+  period_still_active?: boolean | null;
+  current_period_end_date?: string | null;
 }
 
 
