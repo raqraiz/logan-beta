@@ -332,7 +332,11 @@ export function calculateCycleInfo(
    * Used after the user has explicitly told Logan her period has NOT started
    * yet — we keep showing the true (overdue) day count and wait for her to
    * confirm Day 1, rather than silently rolling into a fake next cycle. */
-  periodPending?: boolean
+  periodPending?: boolean,
+  /** When true, the user has told Logan her period is still ongoing past the
+   * default 5-day window — keep phase as Menstruation until she logs an end
+   * date or starts a new cycle. */
+  periodStillActive?: boolean
 ): { cycleDay: number; phase: string } | null {
   if (!lastPeriodStart || !cycleLengthDays) return null;
 
@@ -392,9 +396,15 @@ export function calculateCycleInfo(
   const ovulationStart = ovulationDay - 1;
   const ovulationEnd = ovulationDay + 2;
 
+  // If she told Logan her period is still ongoing past the default window,
+  // keep showing Menstruation (up to a sane cap of 12 days) until she logs
+  // an end date or starts a new cycle.
+  const stillBleedingCap = Math.min(12, ovulationStart - 1);
+  const forceMenstruation = !!periodStillActive && cycleDay <= stillBleedingCap;
+
   let phase: string;
 
-  if (cycleDay <= menstruationEnd) {
+  if (forceMenstruation || cycleDay <= menstruationEnd) {
     phase = "Menstruation";
   } else if (cycleDay < ovulationStart) {
     phase = "Follicular";

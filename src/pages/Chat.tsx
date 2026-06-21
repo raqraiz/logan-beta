@@ -136,6 +136,7 @@ const Chat = () => {
     timezone: string | null;
     currentPeriodEndDate: string | null;
     periodPendingSince: string | null;
+    periodStillActive: boolean;
   } | null>(null);
   const [showForecast, setShowForecast] = useState(false);
   
@@ -332,6 +333,7 @@ const Chat = () => {
             timezone: row.timezone ?? null,
             currentPeriodEndDate: row.current_period_end_date ?? null,
             periodPendingSince: row.period_pending_since ?? null,
+            periodStillActive: !!row.period_still_active,
           });
           if (row.life_stage) {
             setLifeStage(row.life_stage as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause");
@@ -434,7 +436,7 @@ const Chat = () => {
       return;
     }
 
-    const liveInfo = calculateCycleInfo(lastPeriodStart, cycleLengthDays, timezone, undefined, participantCycle?.currentPeriodEndDate ?? null, !!participantCycle?.periodPendingSince);
+    const liveInfo = calculateCycleInfo(lastPeriodStart, cycleLengthDays, timezone, undefined, participantCycle?.currentPeriodEndDate ?? null, !!participantCycle?.periodPendingSince, !!participantCycle?.periodStillActive);
     if (liveInfo) {
       setCycleData({
         cycleDay: liveInfo.cycleDay,
@@ -593,7 +595,7 @@ const Chat = () => {
     try {
       const { data } = await supabase
         .from("participants")
-        .select("life_stage, postpartum_start_date, postpartum_active, last_period_start, cycle_length_days, timezone, current_period_end_date")
+        .select("life_stage, postpartum_start_date, postpartum_active, last_period_start, cycle_length_days, timezone, current_period_end_date, period_pending_since, period_still_active")
         .eq("email", user.email)
         .single();
       if (data?.life_stage) {
@@ -612,6 +614,7 @@ const Chat = () => {
           timezone: data.timezone ?? null,
           currentPeriodEndDate: (data as any).current_period_end_date ?? null,
           periodPendingSince: (data as any).period_pending_since ?? null,
+          periodStillActive: !!(data as any).period_still_active,
         });
       }
     } catch (e) {
