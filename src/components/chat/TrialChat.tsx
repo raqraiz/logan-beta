@@ -284,20 +284,20 @@ export const TrialChat = () => {
           {!chatMode && !hasStarted && (
             <>
               {/* ================= HERO — above the fold ================= */}
-              <section className="pt-4 sm:pt-8 animate-fade-in">
-                <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-primary/90 bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1 mb-5">
+              <section className="pt-10 sm:pt-16 animate-fade-in">
+                <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-primary/90 bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1 mb-6">
                   <Sparkles className="w-2.5 h-2.5" /> Private beta · free for now
                 </span>
-                <h1 className="font-display font-semibold text-3xl sm:text-5xl leading-[1.05] tracking-tight text-foreground">
+                <h1 className="font-display font-semibold text-3xl sm:text-5xl leading-[1.1] tracking-tight text-foreground">
                   The cycle app that actually <span className="text-primary">keeps up.</span>
                 </h1>
-                <p className="text-base sm:text-lg text-muted-foreground mt-4 leading-relaxed max-w-xl">
+                <p className="text-base sm:text-lg text-muted-foreground mt-5 leading-relaxed max-w-xl">
                   Meet Logan, the AI companion that predicts your energy, mood, and shifts — so nothing catches you off guard.
                   For every body, in every stage, whatever your cycle looks like.
                 </p>
 
                 {/* Primary actions */}
-                <div className="mt-7 flex flex-col sm:flex-row gap-3">
+                <div className="mt-8 flex flex-col sm:flex-row gap-3">
                   <Button size="lg" onClick={scrollToSignup} className="h-12 px-6 text-base">
                     Create my free account
                     <ArrowRight className="w-4 h-4 ml-2" />
