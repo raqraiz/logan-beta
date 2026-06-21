@@ -436,7 +436,7 @@ const Chat = () => {
       return;
     }
 
-    const liveInfo = calculateCycleInfo(lastPeriodStart, cycleLengthDays, timezone, undefined, participantCycle?.currentPeriodEndDate ?? null, !!participantCycle?.periodPendingSince);
+    const liveInfo = calculateCycleInfo(lastPeriodStart, cycleLengthDays, timezone, undefined, participantCycle?.currentPeriodEndDate ?? null, !!participantCycle?.periodPendingSince, !!participantCycle?.periodStillActive);
     if (liveInfo) {
       setCycleData({
         cycleDay: liveInfo.cycleDay,
