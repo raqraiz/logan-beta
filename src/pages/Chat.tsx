@@ -136,6 +136,7 @@ const Chat = () => {
     timezone: string | null;
     currentPeriodEndDate: string | null;
     periodPendingSince: string | null;
+    periodStillActive: boolean;
   } | null>(null);
   const [showForecast, setShowForecast] = useState(false);
   
