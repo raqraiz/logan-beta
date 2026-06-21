@@ -7,9 +7,20 @@ import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, Trash2 } from "lucide-react";
 import { HistoryImportDialog } from "./HistoryImportDialog";
 import { ProviderConnectCard } from "@/components/settings/ProviderConnectCard";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
 
@@ -29,6 +40,28 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
   const [importerOpen, setImporterOpen] = useState(false);
   const [postpartumActive, setPostpartumActive] = useState(false);
   const [postpartumStartDate, setPostpartumStartDate] = useState<string>("");
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const { error } = await supabase.functions.invoke("delete-account", {
+        body: { confirm: "DELETE" },
+      });
+      if (error) throw error;
+      toast({ title: "Account deleted", description: "Your account and data are gone. Sorry to see you go." });
+      await supabase.auth.signOut();
+      window.location.href = "/";
+    } catch (e: any) {
+      toast({
+        title: "Couldn't delete account",
+        description: e?.message ?? "Please try again or contact support.",
+        variant: "destructive",
+      });
+      setDeleting(false);
+    }
+  };
 
   // Load current postpartum_active + postpartum_start_date when dialog opens
   useEffect(() => {
@@ -194,6 +227,46 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
             Auto-sync sleep, recovery, HRV, and workouts so Logan adapts in real time.
           </p>
           <ProviderConnectCard provider="whoop" userId={userId} />
+        </div>
+
+        <div className="border-t border-destructive/30 pt-4">
+          <Label className="text-sm font-medium mb-2 block text-destructive">Danger zone</Label>
+          <p className="text-xs text-muted-foreground mb-3">
+            Permanently delete your account, chat history, cycle data, and connected device tokens. This can't be undone.
+          </p>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" className="w-full border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive">
+                <Trash2 className="w-4 h-4 mr-2" /> Delete my account
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This permanently removes your profile, chat history, cycle data, symptoms, widgets, and connected device tokens. There's no recovery.
+                  Type <span className="font-mono font-semibold">DELETE</span> below to confirm.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <Input
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                placeholder="Type DELETE"
+                autoFocus
+              />
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={deleting} onClick={() => setDeleteConfirm("")}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={deleteConfirm !== "DELETE" || deleting}
+                  onClick={handleDeleteAccount}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Permanently delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         <DialogFooter>

@@ -9,6 +9,8 @@ project_id = "tpohsmxpcqqgxcgectfs"
     verify_jwt = false
   [functions.delete-user]
     verify_jwt = false
+  [functions.delete-account]
+    verify_jwt = false
   [functions.generate-insight]
     verify_jwt = false
   [functions.import-history]
