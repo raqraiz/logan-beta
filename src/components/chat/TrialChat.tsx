@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { LoganFullLogo } from "@/components/LoganFullLogo";
 import { Send, Loader2, ArrowDown, ArrowRight, ArrowLeft, Sparkles, MessageCircle, Check } from "lucide-react";
 import { VoiceInputButton } from "./VoiceInputButton";
@@ -92,39 +92,53 @@ export const TrialChat = () => {
   const isNearBottomRef = useRef(true);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Scroll to top on mount so the landing page always starts at the hero
   useEffect(() => {
+    const scrollTop = () => {
+      const el = scrollContainerRef.current;
+      if (el) el.scrollTo({ top: 0, behavior: "auto" });
+    };
+    scrollTop();
+    requestAnimationFrame(() => {
+      scrollTop();
+      setTimeout(scrollTop, 100);
+    });
+  }, []);
+
+  // Auto-scroll only in chat mode
+  useEffect(() => {
+    if (!chatMode) return;
     if (!isNearBottomRef.current) return;
-    const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
+    const el = scrollContainerRef.current;
     const lastMessageEl = lastMessageRef.current;
-    if (viewport && lastMessageEl) {
-      const isLongMessage = lastMessageEl.offsetHeight > viewport.clientHeight * 0.8;
+    if (el && lastMessageEl) {
+      const isLongMessage = lastMessageEl.offsetHeight > el.clientHeight * 0.8;
       if (isLongMessage) {
         lastMessageEl.scrollIntoView({ behavior: "smooth", block: "start" });
         return;
       }
     }
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, chatMode]);
 
   useEffect(() => {
-    const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
-    if (!viewport) return;
+    const el = scrollContainerRef.current;
+    if (!el) return;
     const updateScrollState = () => {
-      const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
       isNearBottomRef.current = distanceFromBottom < 150;
       setShowScrollButton(distanceFromBottom > 40);
     };
     updateScrollState();
-    viewport.addEventListener("scroll", updateScrollState, { passive: true });
-    return () => viewport.removeEventListener("scroll", updateScrollState);
+    el.addEventListener("scroll", updateScrollState, { passive: true });
+    return () => el.removeEventListener("scroll", updateScrollState);
   }, [messages.length, showAuth, hasStarted, chatMode]);
 
   const scrollToSignup = () => {
-    const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
+    const el = scrollContainerRef.current;
     signupRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    // fallback
     setTimeout(() => {
-      if (viewport) viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+      if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
     }, 50);
   };
 
@@ -218,14 +232,14 @@ export const TrialChat = () => {
   return (
     <div className="h-[100svh] supports-[height:100dvh]:h-[100dvh] bg-background flex flex-col relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute bottom-1/3 left-0 w-72 h-72 bg-primary/[0.03] rounded-full blur-3xl transform -translate-x-1/2" />
-        {/* Home-page widget color echoes — ultra-subtle ambient blobs */}
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-emerald-500/[0.04] rounded-full blur-3xl" />
-        <div className="absolute top-1/2 right-1/4 w-56 h-56 bg-amber-500/[0.04] rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/3 w-72 h-72 bg-rose-500/[0.03] rounded-full blur-3xl" />
-        <div className="absolute top-3/4 left-1/3 w-48 h-48 bg-violet-500/[0.04] rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-80 h-80 bg-cyan-500/[0.03] rounded-full blur-3xl transform translate-x-1/3 translate-y-1/3" />
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl transform translate-x-1/3 -translate-y-1/3" />
+        <div className="absolute bottom-1/3 left-0 w-96 h-96 bg-primary/[0.06] rounded-full blur-3xl transform -translate-x-1/3" />
+        {/* Home-page widget color echoes — prominent ambient blobs */}
+        <div className="absolute top-1/4 left-[10%] w-80 h-80 bg-phase-follicular/15 rounded-full blur-3xl" />
+        <div className="absolute top-[40%] right-[15%] w-72 h-72 bg-phase-ovulation/15 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-[20%] w-96 h-96 bg-phase-menstruation/12 rounded-full blur-3xl" />
+        <div className="absolute top-[70%] left-[20%] w-64 h-64 bg-phase-luteal/15 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-primary/12 rounded-full blur-3xl transform translate-x-1/4 translate-y-1/4" />
       </div>
 
       {/* Header */}
@@ -263,26 +277,33 @@ export const TrialChat = () => {
         </div>
       </header>
 
-      <ScrollArea ref={scrollContainerRef} className="flex-1 px-4 relative z-10">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 relative z-10">
         <div className="max-w-2xl mx-auto py-8 space-y-10">
 
           {!chatMode && !hasStarted && (
             <>
               {/* ================= HERO — above the fold ================= */}
-              <section className="pt-4 sm:pt-8 animate-fade-in">
-                <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-primary/90 bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1 mb-5">
-                  <Sparkles className="w-2.5 h-2.5" /> Private beta · free for now
-                </span>
-                <h1 className="font-display font-semibold text-3xl sm:text-5xl leading-[1.05] tracking-tight text-foreground">
+              <section className="pt-12 sm:pt-20 animate-fade-in">
+                {/* Phase color dots — home tab echo */}
+                <div className="flex items-center gap-2 mb-6">
+                  <span className="w-2.5 h-2.5 rounded-full bg-phase-menstruation" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-phase-follicular" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-phase-ovulation" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-phase-luteal" />
+                  <span className="text-[10px] uppercase tracking-widest text-primary/90 bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1 ml-1">
+                    <Sparkles className="w-2.5 h-2.5 inline-block mr-1" /> Private beta
+                  </span>
+                </div>
+                <h1 className="font-display font-semibold text-3xl sm:text-5xl leading-[1.12] tracking-tight text-foreground">
                   The cycle app that actually <span className="text-primary">keeps up.</span>
                 </h1>
-                <p className="text-base sm:text-lg text-muted-foreground mt-4 leading-relaxed max-w-xl">
+                <p className="text-base sm:text-lg text-muted-foreground mt-6 leading-relaxed max-w-xl">
                   Meet Logan, the AI companion that predicts your energy, mood, and shifts — so nothing catches you off guard.
                   For every body, in every stage, whatever your cycle looks like.
                 </p>
 
                 {/* Primary actions */}
-                <div className="mt-7 flex flex-col sm:flex-row gap-3">
+                <div className="mt-10 flex flex-col sm:flex-row gap-3">
                   <Button size="lg" onClick={scrollToSignup} className="h-12 px-6 text-base">
                     Create my free account
                     <ArrowRight className="w-4 h-4 ml-2" />
@@ -305,15 +326,23 @@ export const TrialChat = () => {
                   You might be here because…
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {FEELING_CHIPS.map((chip) => (
-                    <button
-                      key={chip}
-                      onClick={() => enterChatMode(chip)}
-                      className="text-left text-sm px-4 py-2.5 rounded-2xl bg-card/60 border border-border/60 hover:border-primary/50 hover:bg-primary/5 text-foreground/85 hover:text-foreground transition-all duration-200 backdrop-blur-sm"
-                    >
-                      {chip}
-                    </button>
-                  ))}
+                  {FEELING_CHIPS.map((chip, i) => {
+                    const colors = [
+                      "border-l-phase-menstruation hover:border-l-phase-menstruation",
+                      "border-l-phase-follicular hover:border-l-phase-follicular",
+                      "border-l-phase-ovulation hover:border-l-phase-ovulation",
+                      "border-l-phase-luteal hover:border-l-phase-luteal",
+                    ];
+                    return (
+                      <button
+                        key={chip}
+                        onClick={() => enterChatMode(chip)}
+                        className={`text-left text-sm px-4 py-2.5 rounded-2xl bg-card/60 border border-border/60 ${colors[i % 4]} border-l-[3px] hover:border-primary/50 hover:bg-primary/5 text-foreground/85 hover:text-foreground transition-all duration-200 backdrop-blur-sm`}
+                      >
+                        {chip}
+                      </button>
+                    );
+                  })}
                 </div>
                 <p className="text-xs text-muted-foreground/70 mt-3 pl-1">
                   Tap one to ask Logan about it.
@@ -345,12 +374,19 @@ export const TrialChat = () => {
                   Real women, real words
                 </p>
                 <div className="grid sm:grid-cols-2 gap-3">
-                  {TESTIMONIALS.map((t) => (
-                    <figure key={t.name} className="bg-card/40 border border-border/40 rounded-2xl p-4 backdrop-blur-sm">
-                      <blockquote className="text-sm text-foreground/85 leading-relaxed">"{t.quote}"</blockquote>
-                      <figcaption className="text-xs text-muted-foreground mt-2">— {t.name}</figcaption>
-                    </figure>
-                  ))}
+                  {TESTIMONIALS.map((t, i) => {
+                    const tops = [
+                      "border-t-phase-follicular",
+                      "border-t-phase-ovulation",
+                      "border-t-phase-luteal",
+                    ];
+                    return (
+                      <figure key={t.name} className={`bg-card/40 border border-border/40 ${tops[i]} border-t-[3px] rounded-2xl p-4 backdrop-blur-sm`}>
+                        <blockquote className="text-sm text-foreground/85 leading-relaxed">"{t.quote}"</blockquote>
+                        <figcaption className="text-xs text-muted-foreground mt-2">— {t.name}</figcaption>
+                      </figure>
+                    );
+                  })}
                 </div>
               </section>
 
@@ -519,7 +555,7 @@ export const TrialChat = () => {
 
           <div ref={scrollRef} />
         </div>
-      </ScrollArea>
+      </div>
 
       {showScrollButton && chatMode && (
         <div className={`fixed right-4 md:right-8 ${showAuth ? "bottom-6" : "bottom-24"} z-50 animate-in fade-in slide-in-from-bottom-2`}>
