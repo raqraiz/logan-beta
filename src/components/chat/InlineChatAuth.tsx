@@ -24,6 +24,10 @@ interface InlineChatAuthProps {
 
 export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthProps) => {
   const [view, setView] = useState<AuthView>(defaultView || "signup");
+
+  useEffect(() => {
+    if (defaultView) setView(defaultView);
+  }, [defaultView]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
