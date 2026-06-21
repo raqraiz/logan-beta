@@ -44,17 +44,17 @@ serve(async (req) => {
     // Use service role to check admin status and perform operations
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check if requesting user is an admin
-    const { data: isAdmin } = await adminClient
+    // Check if requesting user is a super_admin (only super admins can manage admins)
+    const { data: isSuperAdmin } = await adminClient
       .from("user_roles")
       .select("id")
       .eq("user_id", requestingUserId)
-      .eq("role", "admin")
-      .single();
+      .eq("role", "super_admin")
+      .maybeSingle();
 
-    if (!isAdmin) {
+    if (!isSuperAdmin) {
       return new Response(
-        JSON.stringify({ error: "Only admins can add other admins" }),
+        JSON.stringify({ error: "Only super admins can add other admins" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

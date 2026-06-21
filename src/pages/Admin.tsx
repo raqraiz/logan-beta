@@ -18,6 +18,7 @@ const Admin = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -43,12 +44,10 @@ const Admin = () => {
         .from("user_roles")
         .select("role")
         .eq("user_id", session.user.id)
-        .eq("role", "admin")
-        .maybeSingle();
+        .in("role", ["admin", "super_admin"]);
 
       if (error) {
         console.error("Admin check error:", error);
-        // Transient network failure (common on Safari during nav) → retry before denying
         if (attempt < 2) {
           setTimeout(() => checkAdmin(attempt + 1), 400);
           return;
@@ -59,11 +58,16 @@ const Admin = () => {
         return;
       }
 
-      if (!data) {
+      const roles = (data ?? []).map((r) => r.role);
+      const hasAny = roles.length > 0;
+      const isSuper = roles.includes("super_admin" as any);
+
+      if (!hasAny) {
         navigate("/");
         toast({ title: "Access denied", description: "Admin access required.", variant: "destructive" });
       } else {
         setIsAdmin(true);
+        setIsSuperAdmin(isSuper);
       }
       setLoading(false);
     };
@@ -111,11 +115,16 @@ const Admin = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-display font-bold mb-2 text-foreground">Pilot Dashboard</h1>
-          <p className="text-muted-foreground">Manage participants and view chats</p>
+          <p className="text-muted-foreground">
+            Manage participants and view chats
+            {isSuperAdmin && <span className="ml-2 text-xs uppercase tracking-wider text-primary">· Super admin</span>}
+          </p>
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full max-w-3xl grid-cols-5 bg-muted border border-border">
+          <TabsList
+            className={`grid w-full max-w-3xl ${isSuperAdmin ? "grid-cols-5" : "grid-cols-3"} bg-muted border border-border`}
+          >
             <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -128,14 +137,18 @@ const Admin = () => {
               <Megaphone className="w-4 h-4" />
               <span className="hidden sm:inline">Notify</span>
             </TabsTrigger>
-            <TabsTrigger value="users" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <User className="w-4 h-4" />
-              <span className="hidden sm:inline">Users</span>
-            </TabsTrigger>
-            <TabsTrigger value="admins" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Shield className="w-4 h-4" />
-              <span className="hidden sm:inline">Admins</span>
-            </TabsTrigger>
+            {isSuperAdmin && (
+              <>
+                <TabsTrigger value="users" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <User className="w-4 h-4" />
+                  <span className="hidden sm:inline">Users</span>
+                </TabsTrigger>
+                <TabsTrigger value="admins" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <Shield className="w-4 h-4" />
+                  <span className="hidden sm:inline">Admins</span>
+                </TabsTrigger>
+              </>
+            )}
           </TabsList>
 
           <TabsContent value="overview">
@@ -150,13 +163,16 @@ const Admin = () => {
             <NotificationsTab />
           </TabsContent>
 
-          <TabsContent value="users">
-            <ProfilesTab />
-          </TabsContent>
-
-          <TabsContent value="admins">
-            <AdminManagement />
-          </TabsContent>
+          {isSuperAdmin && (
+            <>
+              <TabsContent value="users">
+                <ProfilesTab />
+              </TabsContent>
+              <TabsContent value="admins">
+                <AdminManagement />
+              </TabsContent>
+            </>
+          )}
         </Tabs>
       </main>
     </div>

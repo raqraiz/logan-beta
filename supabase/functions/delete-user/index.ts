@@ -38,14 +38,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check if caller is admin
-    const { data: isAdmin } = await supabaseUser.rpc("has_role", {
+    // Check if caller is a super_admin (only super admins can delete users)
+    const { data: isSuperAdmin } = await supabaseUser.rpc("has_role", {
       _user_id: caller.id,
-      _role: "admin",
+      _role: "super_admin",
     });
 
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: "Admin access required" }), {
+    if (!isSuperAdmin) {
+      return new Response(JSON.stringify({ error: "Super admin access required" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
