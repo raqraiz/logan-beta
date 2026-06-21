@@ -333,6 +333,7 @@ const Chat = () => {
             timezone: row.timezone ?? null,
             currentPeriodEndDate: row.current_period_end_date ?? null,
             periodPendingSince: row.period_pending_since ?? null,
+            periodStillActive: !!row.period_still_active,
           });
           if (row.life_stage) {
             setLifeStage(row.life_stage as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause");
