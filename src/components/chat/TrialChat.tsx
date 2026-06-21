@@ -374,12 +374,19 @@ export const TrialChat = () => {
                   Real women, real words
                 </p>
                 <div className="grid sm:grid-cols-2 gap-3">
-                  {TESTIMONIALS.map((t) => (
-                    <figure key={t.name} className="bg-card/40 border border-border/40 rounded-2xl p-4 backdrop-blur-sm">
-                      <blockquote className="text-sm text-foreground/85 leading-relaxed">"{t.quote}"</blockquote>
-                      <figcaption className="text-xs text-muted-foreground mt-2">— {t.name}</figcaption>
-                    </figure>
-                  ))}
+                  {TESTIMONIALS.map((t, i) => {
+                    const tops = [
+                      "border-t-phase-follicular",
+                      "border-t-phase-ovulation",
+                      "border-t-phase-luteal",
+                    ];
+                    return (
+                      <figure key={t.name} className={`bg-card/40 border border-border/40 ${tops[i]} border-t-[3px] rounded-2xl p-4 backdrop-blur-sm`}>
+                        <blockquote className="text-sm text-foreground/85 leading-relaxed">"{t.quote}"</blockquote>
+                        <figcaption className="text-xs text-muted-foreground mt-2">— {t.name}</figcaption>
+                      </figure>
+                    );
+                  })}
                 </div>
               </section>
 
