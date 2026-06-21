@@ -19,9 +19,10 @@ type AuthView = "signup" | "signin" | "forgot-password";
 
 interface InlineChatAuthProps {
   onAuthSuccess?: () => void;
+  defaultView?: AuthView;
 }
 
-export const InlineChatAuth = ({ onAuthSuccess }: InlineChatAuthProps) => {
+export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthProps) => {
   const [view, setView] = useState<AuthView>("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
