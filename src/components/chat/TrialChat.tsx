@@ -122,24 +122,23 @@ export const TrialChat = () => {
   }, [messages, chatMode]);
 
   useEffect(() => {
-    const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
-    if (!viewport) return;
+    const el = scrollContainerRef.current;
+    if (!el) return;
     const updateScrollState = () => {
-      const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
       isNearBottomRef.current = distanceFromBottom < 150;
       setShowScrollButton(distanceFromBottom > 40);
     };
     updateScrollState();
-    viewport.addEventListener("scroll", updateScrollState, { passive: true });
-    return () => viewport.removeEventListener("scroll", updateScrollState);
+    el.addEventListener("scroll", updateScrollState, { passive: true });
+    return () => el.removeEventListener("scroll", updateScrollState);
   }, [messages.length, showAuth, hasStarted, chatMode]);
 
   const scrollToSignup = () => {
-    const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
+    const el = scrollContainerRef.current;
     signupRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    // fallback
     setTimeout(() => {
-      if (viewport) viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+      if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
     }, 50);
   };
 
