@@ -542,7 +542,7 @@ export const TrialChat = () => {
                       <p className="text-sm text-muted-foreground mb-1 max-w-sm mx-auto">
                         {getContextualDescription(lastUserQuestion)}
                       </p>
-                      <InlineChatAuth />
+                      <InlineChatAuth defaultView={authView} />
                     </div>
                   </div>
                 </div>
