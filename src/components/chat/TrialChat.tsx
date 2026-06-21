@@ -274,11 +274,11 @@ export const TrialChat = () => {
                   <Sparkles className="w-2.5 h-2.5" /> Private beta · free for now
                 </span>
                 <h1 className="font-display font-semibold text-3xl sm:text-5xl leading-[1.05] tracking-tight text-foreground">
-                  The AI that finally <span className="text-primary">gets your body.</span>
+                  The cycle app that actually <span className="text-primary">keeps up.</span>
                 </h1>
                 <p className="text-base sm:text-lg text-muted-foreground mt-4 leading-relaxed max-w-xl">
-                  Logan predicts what's coming — your energy, mood, and PMS — and tells you what to <em>do</em> about it.
-                  Built for irregular cycles, postpartum, the pill, perimenopause, and menopause. Whatever's true for you.
+                  Meet Logan, the AI companion that predicts your energy, mood, and shifts — so nothing catches you off guard.
+                  For every body, in every stage, whatever your cycle looks like.
                 </p>
 
                 {/* Primary actions */}
