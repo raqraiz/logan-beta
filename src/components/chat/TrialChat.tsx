@@ -278,7 +278,7 @@ export const TrialChat = () => {
         </div>
       </header>
 
-      <ScrollArea ref={scrollContainerRef} className="flex-1 px-4 relative z-10">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 relative z-10">
         <div className="max-w-2xl mx-auto py-8 space-y-10">
 
           {!chatMode && !hasStarted && (
