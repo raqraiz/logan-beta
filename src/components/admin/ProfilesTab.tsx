@@ -453,14 +453,15 @@ export function ProfilesTab() {
     return () => clearTimeout(t);
   }, [showHomePreview, chatMessages, selectedProfile?.id]);
 
-  const getCycleData = (participant: { last_period_start: string | null; cycle_length_days: number | null; timezone?: string | null; period_pending_since?: string | null }) => {
+  const getCycleData = (participant: { last_period_start: string | null; cycle_length_days: number | null; timezone?: string | null; period_pending_since?: string | null; period_still_active?: boolean | null; current_period_end_date?: string | null }) => {
     return calculateCycleInfo(
       participant.last_period_start,
       participant.cycle_length_days,
       participant.timezone || "Asia/Jerusalem",
       undefined,
-      null,
+      participant.current_period_end_date ?? null,
       !!participant.period_pending_since,
+      !!participant.period_still_active,
     );
   };
 
