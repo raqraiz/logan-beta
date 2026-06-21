@@ -80,6 +80,7 @@ export const TrialChat = () => {
   const [trialMessageCount, setTrialMessageCount] = useState(0);
   const [lastUserQuestion, setLastUserQuestion] = useState("");
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [authView, setAuthView] = useState<"signup" | "signin">("signup");
 
   const [waitlistEmail, setWaitlistEmail] = useState("");
   const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
@@ -135,11 +136,7 @@ export const TrialChat = () => {
   }, [messages.length, showAuth, hasStarted, chatMode]);
 
   const scrollToSignup = () => {
-    const el = scrollContainerRef.current;
     signupRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    setTimeout(() => {
-      if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-    }, 50);
   };
 
   const enterChatMode = (text?: string) => {
@@ -263,12 +260,12 @@ export const TrialChat = () => {
             ) : (
               <>
                 <button
-                  onClick={() => setShowAuth(true)}
+                  onClick={() => { setAuthView("signin"); scrollToSignup(); }}
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Sign in
                 </button>
-                <Button size="sm" onClick={scrollToSignup} className="h-9 px-4 text-sm">
+                <Button size="sm" onClick={() => { setAuthView("signup"); scrollToSignup(); }} className="h-9 px-4 text-sm">
                   Get started
                 </Button>
               </>
@@ -360,7 +357,7 @@ export const TrialChat = () => {
                     <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
                       Create your account and I'll start learning your patterns from day one. Free during beta.
                     </p>
-                    <InlineChatAuth />
+                    <InlineChatAuth defaultView={authView} />
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground/60 text-center mt-5 max-w-md mx-auto leading-relaxed">
@@ -545,7 +542,7 @@ export const TrialChat = () => {
                       <p className="text-sm text-muted-foreground mb-1 max-w-sm mx-auto">
                         {getContextualDescription(lastUserQuestion)}
                       </p>
-                      <InlineChatAuth />
+                      <InlineChatAuth defaultView={authView} />
                     </div>
                   </div>
                 </div>
