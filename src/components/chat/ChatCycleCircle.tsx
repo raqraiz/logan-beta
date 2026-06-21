@@ -397,10 +397,11 @@ export function calculateCycleInfo(
   const ovulationEnd = ovulationDay + 2;
 
   // If she told Logan her period is still ongoing past the default window,
-  // keep showing Menstruation (up to a sane cap of 12 days) until she logs
-  // an end date or starts a new cycle.
-  const stillBleedingCap = Math.min(12, ovulationStart - 1);
-  const forceMenstruation = !!periodStillActive && cycleDay <= stillBleedingCap;
+  // keep showing Menstruation up to a sane cap (12 days) until she logs an
+  // end date or starts a new cycle. This OVERRIDES the ovulation window —
+  // a short cycle (e.g. 21d → ovulationStart=6) should not flip her into
+  // Ovulation while she's still bleeding.
+  const forceMenstruation = !!periodStillActive && cycleDay <= 12;
 
   let phase: string;
 
