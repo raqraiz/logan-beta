@@ -542,7 +542,7 @@ export const TrialChat = () => {
 
           <div ref={scrollRef} />
         </div>
-      </ScrollArea>
+      </div>
 
       {showScrollButton && chatMode && (
         <div className={`fixed right-4 md:right-8 ${showAuth ? "bottom-6" : "bottom-24"} z-50 animate-in fade-in slide-in-from-bottom-2`}>
