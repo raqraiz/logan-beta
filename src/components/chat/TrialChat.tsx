@@ -94,8 +94,15 @@ export const TrialChat = () => {
 
   // Scroll to top on mount so the landing page always starts at the hero
   useEffect(() => {
-    const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
-    if (viewport) viewport.scrollTo({ top: 0, behavior: "auto" });
+    const scrollTop = () => {
+      const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
+      if (viewport) viewport.scrollTo({ top: 0, behavior: "auto" });
+    };
+    scrollTop();
+    requestAnimationFrame(() => {
+      scrollTop();
+      setTimeout(scrollTop, 100);
+    });
   }, []);
 
   // Auto-scroll only in chat mode
