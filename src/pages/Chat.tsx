@@ -614,6 +614,7 @@ const Chat = () => {
           timezone: data.timezone ?? null,
           currentPeriodEndDate: (data as any).current_period_end_date ?? null,
           periodPendingSince: (data as any).period_pending_since ?? null,
+          periodStillActive: !!(data as any).period_still_active,
         });
       }
     } catch (e) {
