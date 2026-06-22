@@ -219,11 +219,35 @@ serve(async (req) => {
         .select("full_name")
         .eq("id", user.id)
         .single();
-      
+
+      const metaFullName = ((user.user_metadata as Record<string, unknown> | null)?.full_name as string | undefined)?.trim();
+      const emailLocal = user.email?.split("@")[0];
+      const participantNameUsable =
+        participant?.full_name && participant.full_name !== emailLocal && !participant.full_name.includes("@");
+
       if (profile?.full_name) {
         userName = profile.full_name.split(" ")[0];
-      } else if (participant?.full_name) {
-        userName = participant.full_name.split(" ")[0];
+      } else if (metaFullName) {
+        userName = metaFullName.split(" ")[0];
+      } else if (participantNameUsable) {
+        userName = participant!.full_name.split(" ")[0];
+      }
+
+      // Best-effort backfill so downstream code has the real name.
+      if (metaFullName) {
+        if (!profile) {
+          await supabase.from("profiles").upsert(
+            { id: user.id, email: user.email || "", full_name: metaFullName },
+            { onConflict: "id" }
+          );
+        }
+        if (participant && !participantNameUsable) {
+          await supabase
+            .from("participants")
+            .update({ full_name: metaFullName })
+            .eq("id", participant.id);
+          (participant as Record<string, unknown>).full_name = metaFullName;
+        }
       }
 
       // Welcome message
