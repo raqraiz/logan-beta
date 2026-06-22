@@ -23,6 +23,7 @@ interface Signup {
   utm_content: string | null;
   referrer: string | null;
   landing_path: string | null;
+  referred_by: string | null;
 }
 
 const rangeToSince = (r: Range): string | null => {
