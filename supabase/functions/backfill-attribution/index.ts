@@ -19,6 +19,7 @@ interface InlineAttribution {
   referrer?: string | null;
   landing_path?: string | null;
   landing_at?: string | null;
+  ref_code?: string | null;
 }
 
 interface RequestBody {
