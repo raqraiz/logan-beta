@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
   // 1. Load the current profile.
   const { data: profile, error: profileErr } = await admin
     .from("profiles")
-    .select("id, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_path, landing_at")
+    .select("id, referred_by, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_path, landing_at")
     .eq("id", user.id)
     .maybeSingle();
 
