@@ -75,8 +75,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Create admin client to delete user
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    // supabaseAdmin already created above for auth validation
 
     // Look up user's email to find linked participant
     const { data: profile } = await supabaseAdmin
