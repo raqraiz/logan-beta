@@ -117,7 +117,8 @@ Deno.serve(async (req) => {
   }
 
   const missing = ATTR_FIELDS.filter((f) => !profile[f]);
-  if (missing.length === 0) {
+  const needsReferral = !profile.referred_by;
+  if (missing.length === 0 && !needsReferral) {
     return new Response(JSON.stringify({ status: "already_filled" }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
