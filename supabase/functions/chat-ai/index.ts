@@ -1139,15 +1139,20 @@ serve(async (req) => {
     // --- End backfill ---
 
 
-    // --- Manual life-stage corrections (menopause / cycling) ---
+    // --- Manual life-stage corrections (menopause / perimenopause / cycling) ---
     if (participant) {
-      const lower = userMessage.toLowerCase();
+      // Perimenopause: "I'm in perimenopause", "I'm perimenopausal", "I'm peri", "peri-menopausal"
+      const perimenopauseSignal =
+        /\b(?:i'?m|i\s+am|currently)\s+(?:in\s+)?peri[-\s]?menopaus(?:e|al)\b/i.test(userMessage)
+        || /\bi'?m\s+peri[-\s]?menopausal\b/i.test(userMessage)
+        || /\b(?:i'?m|i\s+am)\s+in\s+peri\b/i.test(userMessage)
+        || (/\bperi[-\s]?menopaus(?:e|al)\b/i.test(userMessage) && !/\bnot\s+peri/i.test(userMessage));
 
-      // "I'm in menopause", "I'm menopausal", "I'm peri-menopausal", "I went through menopause"
-      // Note: do NOT match "no period" / "stopped getting periods" alone — that's also true for
-      // postpartum users and would incorrectly switch them to menopause.
-      const menopauseSignal = /\b(?:i'?m|i\s+am|i'?ve\s+(?:gone|been)\s+through|currently)\s+(?:in\s+)?(?:peri[-\s]?)?menopaus(?:e|al)\b/i.test(userMessage)
-        || /\bi'?m\s+(?:peri[-\s]?)?menopausal\b/i.test(userMessage);
+      // Full menopause ONLY — must not also match perimenopause
+      const menopauseSignal = !perimenopauseSignal && (
+        /\b(?:i'?m|i\s+am|i'?ve\s+(?:gone|been)\s+through|currently)\s+(?:in\s+)?menopaus(?:e|al)\b/i.test(userMessage)
+        || /\bi'?m\s+menopausal\b/i.test(userMessage)
+      );
 
       // Cycling correction: "I'm not in menopause", "I still get my period", "I'm actually still cycling"
       const cyclingSignal = /\b(?:i'?m\s+not|not)\s+(?:in\s+)?(?:peri[-\s]?)?menopaus/i.test(userMessage)
@@ -1179,7 +1184,29 @@ serve(async (req) => {
         );
       }
 
-      if (menopauseSignal && !cyclingSignal && participant.life_stage !== "menopause") {
+      if (perimenopauseSignal && !cyclingSignal && participant.life_stage !== "perimenopause") {
+        await supabase
+          .from("participants")
+          .update({ life_stage: "perimenopause", postpartum_start_date: null })
+          .eq("id", participant.id);
+        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshed) participant = refreshed;
+
+        const msg = `Got it — noting you're in **perimenopause**. You're still cycling, so I'll keep tracking your phases while factoring in the hormonal shifts (irregular cycles, sleep changes, mood swings, hot flashes) that come with this stage. When did your last period start?`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: msg,
+          message_type: "text",
+          metadata: { life_stage_updated: "perimenopause", awaiting_period_date: true },
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (menopauseSignal && !cyclingSignal && !perimenopauseSignal && participant.life_stage !== "menopause") {
         await supabase
           .from("participants")
           .update({ life_stage: "menopause", last_period_start: null, postpartum_start_date: null })
