@@ -165,15 +165,46 @@ Deno.serve(async (req) => {
     if (anyEvent) candidates.push({ ...anyEvent, landing_at: anyEvent.captured_at });
   }
 
-  if (candidates.length === 0) {
+  // 3. Resolve referral code → referred_by (first one wins, can't self-refer).
+  const patch: Record<string, string | null> = {};
+  if (needsReferral) {
+    const refCandidates: string[] = [];
+    const inlineRef = typeof body.attribution?.ref_code === "string" ? body.attribution.ref_code.trim().toUpperCase() : "";
+    if (inlineRef) refCandidates.push(inlineRef);
+
+    if (isUuid(body.anon_id)) {
+      const { data: refEvent } = await admin
+        .from("attribution_events")
+        .select("ref_code, captured_at")
+        .eq("anon_id", body.anon_id)
+        .not("ref_code", "is", null)
+        .order("captured_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (refEvent?.ref_code) refCandidates.push(String(refEvent.ref_code).toUpperCase());
+    }
+
+    for (const code of refCandidates) {
+      const { data: referrer } = await admin
+        .from("profiles")
+        .select("id")
+        .eq("referral_code", code)
+        .maybeSingle();
+      if (referrer?.id && referrer.id !== user.id) {
+        patch.referred_by = referrer.id;
+        break;
+      }
+    }
+  }
+
+  if (candidates.length === 0 && Object.keys(patch).length === 0) {
     return new Response(JSON.stringify({ status: "no_candidates", missing }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  // 3. Build patch: only fill currently-null fields, walking candidates in order.
-  const patch: Record<string, string | null> = {};
+  // 4. Build UTM patch: only fill currently-null fields, walking candidates in order.
   for (const field of missing) {
     for (const c of candidates) {
       const v = (c as any)[field];
