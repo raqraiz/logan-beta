@@ -92,11 +92,19 @@ export const AttributionTab = () => {
   const grouped = useMemo(() => {
     const byPrimary = new Map<string, { primary: string; total: number; breakdown: Map<string, number> }>();
     const secondaryKey: keyof Signup =
-      groupBy === "utm_source" ? "utm_campaign" : groupBy === "utm_campaign" ? "utm_source" : "utm_source";
+      groupBy === "utm_source" ? "utm_campaign"
+      : groupBy === "utm_campaign" ? "utm_source"
+      : groupBy === "referred_by" ? "utm_source"
+      : "utm_source";
+
+    const resolve = (key: keyof Signup, val: string | null): string => {
+      if (key === "referred_by") return val ? (referrerMap[val] ?? val) : NONE;
+      return display(val);
+    };
 
     for (const r of rows) {
-      const primary = display(r[groupBy] as string | null);
-      const secondary = display(r[secondaryKey] as string | null);
+      const primary = resolve(groupBy, r[groupBy] as string | null);
+      const secondary = resolve(secondaryKey, r[secondaryKey] as string | null);
       if (!byPrimary.has(primary)) byPrimary.set(primary, { primary, total: 0, breakdown: new Map() });
       const entry = byPrimary.get(primary)!;
       entry.total += 1;
@@ -111,7 +119,7 @@ export const AttributionTab = () => {
           .sort((a, b) => b.count - a.count),
       }))
       .sort((a, b) => b.total - a.total);
-  }, [rows, groupBy]);
+  }, [rows, groupBy, referrerMap]);
 
   const total = rows.length;
 
