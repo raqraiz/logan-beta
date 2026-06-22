@@ -226,7 +226,8 @@ export const AttributionTab = () => {
                   <TableHead>Source</TableHead>
                   <TableHead>Medium</TableHead>
                   <TableHead>Campaign</TableHead>
-                  <TableHead>Referrer</TableHead>
+                  <TableHead>Referred by</TableHead>
+                  <TableHead>HTTP referrer</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -239,6 +240,9 @@ export const AttributionTab = () => {
                     <TableCell className="text-sm">{display(r.utm_source)}</TableCell>
                     <TableCell className="text-sm">{display(r.utm_medium)}</TableCell>
                     <TableCell className="text-sm">{display(r.utm_campaign)}</TableCell>
+                    <TableCell className="text-sm">
+                      {r.referred_by ? (referrerMap[r.referred_by] ?? "…") : "—"}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground truncate max-w-[240px]">
                       {r.referrer || "—"}
                     </TableCell>
