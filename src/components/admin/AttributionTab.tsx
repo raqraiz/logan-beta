@@ -127,11 +127,12 @@ export const AttributionTab = () => {
     const header = [
       "id", "email", "created_at",
       "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-      "referrer", "landing_path",
+      "referrer", "landing_path", "referred_by", "referred_by_name",
     ];
     const lines = [header.join(",")];
     for (const r of rows) {
-      lines.push(header.map((h) => csvEscape((r as any)[h])).join(","));
+      const row = { ...(r as any), referred_by_name: r.referred_by ? (referrerMap[r.referred_by] ?? "") : "" };
+      lines.push(header.map((h) => csvEscape(row[h])).join(","));
     }
     const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -145,7 +146,14 @@ export const AttributionTab = () => {
   };
 
   const secondaryLabel =
-    groupBy === "utm_source" ? "Top campaigns" : groupBy === "utm_campaign" ? "Top sources" : "Top sources";
+    groupBy === "utm_source" ? "Top campaigns"
+    : groupBy === "utm_campaign" ? "Top sources"
+    : groupBy === "referred_by" ? "Top sources"
+    : "Top sources";
+
+  const primaryLabel =
+    groupBy === "referred_by" ? "Referred by"
+    : groupBy.replace("utm_", "").replace(/^./, (c) => c.toUpperCase());
 
   return (
     <div className="space-y-6">
