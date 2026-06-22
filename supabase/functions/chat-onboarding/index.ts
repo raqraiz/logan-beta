@@ -559,8 +559,9 @@ serve(async (req) => {
       if (nextStep === ONBOARDING_QUESTIONS.length - 1 && participant) {
         const pLifeStage = (participant as any).life_stage || "cycling";
         
-        if (pLifeStage !== "cycling") {
-          // Non-cycling first insight
+        // Perimenopause users are still cycling — route them through the cycling insight path.
+        if (pLifeStage !== "cycling" && pLifeStage !== "perimenopause") {
+          // Non-cycling first insight (postpartum / menopause)
           const stageLabel = pLifeStage === "postpartum" ? "Postpartum" : "Menopause";
           const stageInsight = pLifeStage === "postpartum"
             ? `Here's your first personal insight 👇\n\n**${stageLabel} — Recovery phase**\n\n- **Energy**: Variable — sleep deprivation and hormonal shifts are real\n- **What to expect**: Your body is rebuilding. Some days are harder than others\n${participant.anchor_symptom ? `- **Your anchor (${participant.anchor_symptom.toLowerCase()})**: may show up differently during recovery` : "- **Tip**: Be patient with your body — it did something extraordinary"}\n\nLogan adapts to where you are, not where a textbook says you should be.`
