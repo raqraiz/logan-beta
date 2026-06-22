@@ -18,17 +18,20 @@ const ensureProfile = async (user: User) => {
     .from("profiles")
     .select("id")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!existingProfile) {
     const attribution = getAttribution();
-    await supabase.from("profiles").insert({
-      id: user.id,
-      email: user.email || "",
-      full_name:
-        user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
-      ...(attribution ?? {}),
-    });
+    await supabase.from("profiles").upsert(
+      {
+        id: user.id,
+        email: user.email || "",
+        full_name:
+          user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
+        ...(attribution ?? {}),
+      },
+      { onConflict: "id" }
+    );
   }
 };
 
