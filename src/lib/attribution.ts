@@ -19,6 +19,7 @@ export interface Attribution {
   referrer: string | null;
   landing_path: string | null;
   landing_at: string | null;
+  ref_code: string | null;
 }
 
 const truncate = (v: string | null, max = 255): string | null =>
