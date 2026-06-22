@@ -340,14 +340,19 @@ serve(async (req) => {
         parsedValue = body.selectedTopics || [];
       }
 
-      // Get user's name
+      // Get user's name (prefer profile, then auth user_metadata)
       let userName = "";
       const { data: profile } = await supabase
         .from("profiles")
         .select("full_name")
         .eq("id", user.id)
         .single();
-      if (profile?.full_name) userName = profile.full_name;
+      if (profile?.full_name) {
+        userName = profile.full_name;
+      } else {
+        const metaFullName = ((user.user_metadata as Record<string, unknown> | null)?.full_name as string | undefined)?.trim();
+        if (metaFullName) userName = metaFullName;
+      }
 
       // Update participant record and refresh local object
       if (participant && currentQuestion.field) {
