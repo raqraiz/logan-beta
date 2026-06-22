@@ -185,6 +185,7 @@ export const AttributionTab = () => {
                 <SelectItem value="utm_source">Group by source</SelectItem>
                 <SelectItem value="utm_medium">Group by medium</SelectItem>
                 <SelectItem value="utm_campaign">Group by campaign</SelectItem>
+                <SelectItem value="referred_by">Group by referrer</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" size="sm" onClick={load} disabled={loading}>
