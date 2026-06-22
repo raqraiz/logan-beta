@@ -19,37 +19,44 @@ Deno.serve(async (req) => {
     // Get the authorization header to verify admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      console.error("delete-user: no Authorization header");
+      return new Response(JSON.stringify({ error: "Unauthorized: missing token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Create client with user's token to verify they're admin
-    const supabaseUser = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
+    // Use admin client to validate JWT directly (works regardless of key system)
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    const { data: { user: caller } } = await supabaseUser.auth.getUser();
-    if (!caller) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(token);
+    const caller = userData?.user;
+    if (userErr || !caller) {
+      console.error("delete-user: getUser failed", userErr?.message);
+      return new Response(JSON.stringify({ error: "Unauthorized: invalid token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Check if caller is a super_admin (only super admins can delete users)
-    const { data: isSuperAdmin } = await supabaseUser.rpc("has_role", {
-      _user_id: caller.id,
-      _role: "super_admin",
-    });
+    // Check if caller is a super_admin by querying user_roles directly with service role
+    const { data: roleRow } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", caller.id)
+      .eq("role", "super_admin")
+      .maybeSingle();
 
-    if (!isSuperAdmin) {
+    if (!roleRow) {
       return new Response(JSON.stringify({ error: "Super admin access required" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     // Get user to delete from request
     const { userId } = await req.json();
