@@ -134,7 +134,10 @@ export const AttributionTab = () => {
     ];
     const lines = [header.join(",")];
     for (const r of rows) {
-      const row = { ...(r as any), referred_by_name: r.referred_by ? (referrerMap[r.referred_by] ?? "") : "" };
+      const row: Record<string, unknown> = {
+        ...r,
+        referred_by_name: r.referred_by ? (referrerMap[r.referred_by] ?? "") : "",
+      };
       lines.push(header.map((h) => csvEscape(row[h])).join(","));
     }
     const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
