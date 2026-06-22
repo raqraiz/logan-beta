@@ -104,7 +104,10 @@ export const AttributionTab = () => {
 
     for (const r of rows) {
       const primary = resolve(groupBy, r[groupBy] as string | null);
-      const secondary = resolve(secondaryKey, r[secondaryKey] as string | null);
+      let secondary = resolve(secondaryKey, r[secondaryKey] as string | null);
+      if (groupBy === "utm_source" && display(r.utm_source).toLowerCase() === "referral" && r.referred_by) {
+        secondary = referrerMap[r.referred_by] ?? r.referred_by;
+      }
       if (!byPrimary.has(primary)) byPrimary.set(primary, { primary, total: 0, breakdown: new Map() });
       const entry = byPrimary.get(primary)!;
       entry.total += 1;
@@ -146,7 +149,7 @@ export const AttributionTab = () => {
   };
 
   const secondaryLabel =
-    groupBy === "utm_source" ? "Top campaigns"
+    groupBy === "utm_source" ? "Top campaigns / referrers"
     : groupBy === "utm_campaign" ? "Top sources"
     : groupBy === "referred_by" ? "Top sources"
     : "Top sources";
