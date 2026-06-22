@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2, Upload, Trash2 } from "lucide-react";
 import { HistoryImportDialog } from "./HistoryImportDialog";
 import { ProviderConnectCard } from "@/components/settings/ProviderConnectCard";
+import { ReferralCard } from "@/components/settings/ReferralCard";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -228,6 +229,8 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
           </p>
           <ProviderConnectCard provider="whoop" userId={userId} />
         </div>
+
+        <ReferralCard userId={userId} />
 
         <div className="border-t border-destructive/30 pt-4">
           <Label className="text-sm font-medium mb-2 block text-destructive">Danger zone</Label>

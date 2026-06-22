@@ -19,6 +19,7 @@ export interface Attribution {
   referrer: string | null;
   landing_path: string | null;
   landing_at: string | null;
+  ref_code: string | null;
 }
 
 const truncate = (v: string | null, max = 255): string | null =>
@@ -67,12 +68,16 @@ export const captureAttribution = (): void => {
       params.has("utm_medium") ||
       params.has("utm_campaign");
 
+    const refRaw = params.get("ref");
+    const refCode = refRaw ? refRaw.trim().toUpperCase().slice(0, 32) : null;
+    const hasRef = !!refCode;
+
     const anonId = getAnonId();
     const existing = localStorage.getItem(STORAGE_KEY);
 
-    // Always log a UTM-bearing visit to the server, so even users who clear
+    // Log any UTM- or ref-bearing visit to the server, so even users who clear
     // localStorage between visit and signup can be backfilled.
-    if (hasUtm && anonId) {
+    if ((hasUtm || hasRef) && anonId) {
       const event = {
         anon_id: anonId,
         utm_source: truncate(params.get("utm_source")),
@@ -82,6 +87,7 @@ export const captureAttribution = (): void => {
         utm_content: truncate(params.get("utm_content")),
         referrer: truncate(document.referrer || null, 512),
         landing_path: truncate(url.pathname + url.search, 512),
+        ref_code: refCode,
       };
       supabase
         .from("attribution_events")
@@ -91,7 +97,7 @@ export const captureAttribution = (): void => {
         });
     }
 
-    if (existing && !hasUtm) return;
+    if (existing && !hasUtm && !hasRef) return;
 
     const attribution: Attribution = {
       utm_source: truncate(params.get("utm_source")),
@@ -102,6 +108,7 @@ export const captureAttribution = (): void => {
       referrer: truncate(document.referrer || null, 512),
       landing_path: truncate(url.pathname + url.search, 512),
       landing_at: new Date().toISOString(),
+      ref_code: refCode,
     };
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(attribution));
