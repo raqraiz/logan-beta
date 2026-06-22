@@ -558,10 +558,11 @@ export function ProfilesTab() {
 
         <div className="grid gap-4 md:grid-cols-2">
           {/* Profile Info Card */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <Card className="min-w-0 overflow-hidden">
+            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-2">
               <CardTitle className="text-lg">Profile</CardTitle>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+
                 <Button variant="outline" size="sm" onClick={() => handleDownloadUserData(profile, chatMessages)}>
                   <Download className="w-4 h-4 mr-2" />
                   Download
