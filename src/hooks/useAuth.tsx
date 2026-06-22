@@ -21,17 +21,23 @@ const ensureProfile = async (user: User) => {
     .maybeSingle();
 
   if (!existingProfile) {
+    // Strip ref_code — it's not a column on profiles; it's resolved to
+    // referred_by by the backfill-attribution edge function.
     const attribution = getAttribution();
-    await supabase.from("profiles").upsert(
+    const { ref_code: _refCode, ...attributionForProfile } = attribution ?? {};
+    const { error } = await supabase.from("profiles").upsert(
       {
         id: user.id,
         email: user.email || "",
         full_name:
           user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
-        ...(attribution ?? {}),
+        ...attributionForProfile,
       },
       { onConflict: "id" }
     );
+    if (error) {
+      console.error("ensureProfile upsert failed:", error);
+    }
   }
 };
 
