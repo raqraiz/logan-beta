@@ -60,6 +60,7 @@ export type Database = {
           created_at: string
           id: string
           landing_path: string | null
+          ref_code: string | null
           referrer: string | null
           user_id: string | null
           utm_campaign: string | null
@@ -74,6 +75,7 @@ export type Database = {
           created_at?: string
           id?: string
           landing_path?: string | null
+          ref_code?: string | null
           referrer?: string | null
           user_id?: string | null
           utm_campaign?: string | null
@@ -88,6 +90,7 @@ export type Database = {
           created_at?: string
           id?: string
           landing_path?: string | null
+          ref_code?: string | null
           referrer?: string | null
           user_id?: string | null
           utm_campaign?: string | null
@@ -935,6 +938,8 @@ export type Database = {
           landing_at: string | null
           landing_path: string | null
           phone: string | null
+          referral_code: string | null
+          referred_by: string | null
           referrer: string | null
           updated_at: string
           utm_campaign: string | null
@@ -952,6 +957,8 @@ export type Database = {
           landing_at?: string | null
           landing_path?: string | null
           phone?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
           referrer?: string | null
           updated_at?: string
           utm_campaign?: string | null
@@ -969,6 +976,8 @@ export type Database = {
           landing_at?: string | null
           landing_path?: string | null
           phone?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
           referrer?: string | null
           updated_at?: string
           utm_campaign?: string | null
@@ -977,7 +986,15 @@ export type Database = {
           utm_source?: string | null
           utm_term?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       resource_feedback: {
         Row: {
@@ -1456,6 +1473,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      generate_referral_code: { Args: never; Returns: string }
       get_auth_email: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -1481,6 +1499,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      resolve_referral_code: { Args: { _code: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "user" | "super_admin"
