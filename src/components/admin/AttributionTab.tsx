@@ -42,7 +42,7 @@ const csvEscape = (v: unknown): string => {
 
 export const AttributionTab = () => {
   const [range, setRange] = useState<Range>("30d");
-  const [groupBy, setGroupBy] = useState<"utm_source" | "utm_campaign" | "utm_medium">("utm_source");
+  const [groupBy, setGroupBy] = useState<"utm_source" | "utm_campaign" | "utm_medium" | "referred_by">("utm_source");
   const [rows, setRows] = useState<Signup[]>([]);
   const [referrerMap, setReferrerMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
