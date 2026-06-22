@@ -23,6 +23,7 @@ interface Signup {
   utm_content: string | null;
   referrer: string | null;
   landing_path: string | null;
+  referred_by: string | null;
 }
 
 const rangeToSince = (r: Range): string | null => {
@@ -43,6 +44,7 @@ export const AttributionTab = () => {
   const [range, setRange] = useState<Range>("30d");
   const [groupBy, setGroupBy] = useState<"utm_source" | "utm_campaign" | "utm_medium">("utm_source");
   const [rows, setRows] = useState<Signup[]>([]);
+  const [referrerMap, setReferrerMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
@@ -50,7 +52,7 @@ export const AttributionTab = () => {
     try {
       let q = supabase
         .from("profiles")
-        .select("id, email, created_at, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_path")
+        .select("id, email, created_at, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_path, referred_by")
         .order("created_at", { ascending: false })
         .limit(5000);
 
@@ -59,7 +61,23 @@ export const AttributionTab = () => {
 
       const { data, error } = await q;
       if (error) throw error;
-      setRows((data ?? []) as Signup[]);
+      const signups = (data ?? []) as Signup[];
+      setRows(signups);
+
+      const refIds = Array.from(new Set(signups.map((s) => s.referred_by).filter((v): v is string => !!v)));
+      if (refIds.length) {
+        const { data: refs } = await supabase
+          .from("profiles")
+          .select("id, email, full_name")
+          .in("id", refIds);
+        const map: Record<string, string> = {};
+        for (const r of (refs ?? []) as Array<{ id: string; email: string | null; full_name: string | null }>) {
+          map[r.id] = r.full_name || r.email || r.id;
+        }
+        setReferrerMap(map);
+      } else {
+        setReferrerMap({});
+      }
     } catch (e) {
       console.error(e);
       toast({ title: "Couldn't load signups", description: e instanceof Error ? e.message : "Try again", variant: "destructive" });
@@ -208,7 +226,8 @@ export const AttributionTab = () => {
                   <TableHead>Source</TableHead>
                   <TableHead>Medium</TableHead>
                   <TableHead>Campaign</TableHead>
-                  <TableHead>Referrer</TableHead>
+                  <TableHead>Referred by</TableHead>
+                  <TableHead>HTTP referrer</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -221,6 +240,9 @@ export const AttributionTab = () => {
                     <TableCell className="text-sm">{display(r.utm_source)}</TableCell>
                     <TableCell className="text-sm">{display(r.utm_medium)}</TableCell>
                     <TableCell className="text-sm">{display(r.utm_campaign)}</TableCell>
+                    <TableCell className="text-sm">
+                      {r.referred_by ? (referrerMap[r.referred_by] ?? "…") : "—"}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground truncate max-w-[240px]">
                       {r.referrer || "—"}
                     </TableCell>
