@@ -203,7 +203,7 @@ export const AttributionTab = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{groupBy.replace("utm_", "").replace(/^./, (c) => c.toUpperCase())}</TableHead>
+                  <TableHead>{primaryLabel}</TableHead>
                   <TableHead className="w-24 text-right">Signups</TableHead>
                   <TableHead className="w-24 text-right">Share</TableHead>
                   <TableHead>{secondaryLabel}</TableHead>
