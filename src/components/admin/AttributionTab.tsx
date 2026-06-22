@@ -42,7 +42,7 @@ const csvEscape = (v: unknown): string => {
 
 export const AttributionTab = () => {
   const [range, setRange] = useState<Range>("30d");
-  const [groupBy, setGroupBy] = useState<"utm_source" | "utm_campaign" | "utm_medium">("utm_source");
+  const [groupBy, setGroupBy] = useState<"utm_source" | "utm_campaign" | "utm_medium" | "referred_by">("utm_source");
   const [rows, setRows] = useState<Signup[]>([]);
   const [referrerMap, setReferrerMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -92,11 +92,19 @@ export const AttributionTab = () => {
   const grouped = useMemo(() => {
     const byPrimary = new Map<string, { primary: string; total: number; breakdown: Map<string, number> }>();
     const secondaryKey: keyof Signup =
-      groupBy === "utm_source" ? "utm_campaign" : groupBy === "utm_campaign" ? "utm_source" : "utm_source";
+      groupBy === "utm_source" ? "utm_campaign"
+      : groupBy === "utm_campaign" ? "utm_source"
+      : groupBy === "referred_by" ? "utm_source"
+      : "utm_source";
+
+    const resolve = (key: keyof Signup, val: string | null): string => {
+      if (key === "referred_by") return val ? (referrerMap[val] ?? val) : NONE;
+      return display(val);
+    };
 
     for (const r of rows) {
-      const primary = display(r[groupBy] as string | null);
-      const secondary = display(r[secondaryKey] as string | null);
+      const primary = resolve(groupBy, r[groupBy] as string | null);
+      const secondary = resolve(secondaryKey, r[secondaryKey] as string | null);
       if (!byPrimary.has(primary)) byPrimary.set(primary, { primary, total: 0, breakdown: new Map() });
       const entry = byPrimary.get(primary)!;
       entry.total += 1;
@@ -111,7 +119,7 @@ export const AttributionTab = () => {
           .sort((a, b) => b.count - a.count),
       }))
       .sort((a, b) => b.total - a.total);
-  }, [rows, groupBy]);
+  }, [rows, groupBy, referrerMap]);
 
   const total = rows.length;
 
@@ -119,11 +127,12 @@ export const AttributionTab = () => {
     const header = [
       "id", "email", "created_at",
       "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-      "referrer", "landing_path",
+      "referrer", "landing_path", "referred_by", "referred_by_name",
     ];
     const lines = [header.join(",")];
     for (const r of rows) {
-      lines.push(header.map((h) => csvEscape((r as any)[h])).join(","));
+      const row = { ...(r as any), referred_by_name: r.referred_by ? (referrerMap[r.referred_by] ?? "") : "" };
+      lines.push(header.map((h) => csvEscape(row[h])).join(","));
     }
     const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -137,7 +146,14 @@ export const AttributionTab = () => {
   };
 
   const secondaryLabel =
-    groupBy === "utm_source" ? "Top campaigns" : groupBy === "utm_campaign" ? "Top sources" : "Top sources";
+    groupBy === "utm_source" ? "Top campaigns"
+    : groupBy === "utm_campaign" ? "Top sources"
+    : groupBy === "referred_by" ? "Top sources"
+    : "Top sources";
+
+  const primaryLabel =
+    groupBy === "referred_by" ? "Referred by"
+    : groupBy.replace("utm_", "").replace(/^./, (c) => c.toUpperCase());
 
   return (
     <div className="space-y-6">
@@ -169,6 +185,7 @@ export const AttributionTab = () => {
                 <SelectItem value="utm_source">Group by source</SelectItem>
                 <SelectItem value="utm_medium">Group by medium</SelectItem>
                 <SelectItem value="utm_campaign">Group by campaign</SelectItem>
+                <SelectItem value="referred_by">Group by referrer</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" size="sm" onClick={load} disabled={loading}>
@@ -186,7 +203,7 @@ export const AttributionTab = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{groupBy.replace("utm_", "").replace(/^./, (c) => c.toUpperCase())}</TableHead>
+                  <TableHead>{primaryLabel}</TableHead>
                   <TableHead className="w-24 text-right">Signups</TableHead>
                   <TableHead className="w-24 text-right">Share</TableHead>
                   <TableHead>{secondaryLabel}</TableHead>
