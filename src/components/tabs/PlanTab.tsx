@@ -480,7 +480,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
   const currentDay = liveCycle?.cycleDay || cycleData?.cycleDay || 1;
   const cycleLength = liveCycle?.cycleLengthDays || cycleData?.cycleLengthDays || 28;
   const lastPeriodStart = liveCycle?.lastPeriodStart || cycleData?.lastPeriodStart;
-  const currentPeriodEndDate = cycleData?.currentPeriodEndDate ?? null;
+  const currentPeriodEndDate = liveCycle?.currentPeriodEndDate ?? cycleData?.currentPeriodEndDate ?? null;
 
   // Derive menstruation end day from optional end-date the user reported.
   const menstruationEndDay = useMemo(() => {
