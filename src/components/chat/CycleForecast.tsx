@@ -11,6 +11,7 @@ interface CycleForecastProps {
   phase: string;
   cycleLengthDays: number;
   lastPeriodStart: string;
+  currentPeriodEndDate?: string | null;
   anchorSymptom?: string | null;
   onClose: () => void;
   embedded?: boolean;
@@ -18,8 +19,8 @@ interface CycleForecastProps {
   postpartumStartDate?: string;
 }
 
-function getPhaseForDay(day: number, cycleLength: number): string {
-  const menEnd = 5;
+function getPhaseForDay(day: number, cycleLength: number, menstruationEnd: number = 5): string {
+  const menEnd = Math.max(1, Math.min(menstruationEnd, cycleLength - 1));
   const ovDay = cycleLength - 14;
   const ovStart = ovDay - 1;
   const ovEnd = ovDay + 2;
@@ -43,26 +44,27 @@ const PHASE_SOLID: Record<string, string> = {
   Luteal:       "bg-phase-luteal",
 };
 
-function getDayMetrics(day: number, cycleLength: number) {
+function getDayMetrics(day: number, cycleLength: number, menstruationEnd: number = 5) {
+  const menEnd = Math.max(2, Math.min(menstruationEnd, cycleLength - 1));
   const ovDay = cycleLength - 14;
 
   let energy = 0.5;
   if (day <= 2) energy = 0.2;
-  else if (day <= 5) energy = 0.3 + (day - 2) * 0.05;
-  else if (day < ovDay - 1) energy = 0.5 + (day - 5) / (ovDay - 6) * 0.4;
+  else if (day <= menEnd) energy = 0.3 + (day - 2) * (0.25 / Math.max(1, menEnd - 2));
+  else if (day < ovDay - 1) energy = 0.55 + (day - menEnd) / Math.max(1, ovDay - menEnd - 1) * 0.35;
   else if (day <= ovDay + 2) energy = 0.9;
   else energy = Math.max(0.3, 0.85 - (day - ovDay - 2) / (cycleLength - ovDay - 2) * 0.55);
 
   let focus = 0.5;
   if (day <= 2) focus = 0.3;
-  else if (day <= 5) focus = 0.35 + (day - 2) * 0.05;
-  else if (day < ovDay - 1) focus = 0.55 + (day - 5) / (ovDay - 6) * 0.35;
+  else if (day <= menEnd) focus = 0.35 + (day - 2) * (0.2 / Math.max(1, menEnd - 2));
+  else if (day < ovDay - 1) focus = 0.6 + (day - menEnd) / Math.max(1, ovDay - menEnd - 1) * 0.25;
   else if (day <= ovDay + 2) focus = 0.85;
   else focus = Math.max(0.25, 0.8 - (day - ovDay - 2) / (cycleLength - ovDay - 2) * 0.55);
 
   let symptomRisk = 0.2;
   if (day <= 3) symptomRisk = 0.7 - (day - 1) * 0.15;
-  else if (day <= 5) symptomRisk = 0.3;
+  else if (day <= menEnd) symptomRisk = 0.3;
   else if (day < ovDay - 1) symptomRisk = 0.15;
   else if (day <= ovDay + 2) symptomRisk = 0.2;
   else {
@@ -148,7 +150,7 @@ function EnergyBar({ value, color }: { value: number; color: string }) {
   );
 }
 
-export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStart, anchorSymptom, onClose, embedded = false, onPeriodUpdate, postpartumStartDate }: CycleForecastProps) {
+export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStart, currentPeriodEndDate, anchorSymptom, onClose, embedded = false, onPeriodUpdate, postpartumStartDate }: CycleForecastProps) {
   useTrackFeature("cycle_forecast");
   const today = useMemo(() => new Date(), []);
   // Parse YYYY-MM-DD as noon UTC to match calculateCycleInfo and avoid timezone off-by-one
@@ -160,6 +162,16 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
     const parsed = parseISO(lastPeriodStart);
     return isValid(parsed) ? parsed : today;
   }, [lastPeriodStart, today]);
+
+  // Menstruation end day (1-indexed cycle day) derived from optional reported end date.
+  const menstruationEndDay = useMemo(() => {
+    if (!currentPeriodEndDate || !/^\d{4}-\d{2}-\d{2}$/.test(currentPeriodEndDate)) return 5;
+    const [ey, em, ed] = currentPeriodEndDate.split("-").map(Number);
+    const endDate = new Date(ey, em - 1, ed);
+    const diff = differenceInCalendarDays(endDate, periodStart) + 1;
+    if (diff >= 1 && diff <= 14) return diff;
+    return 5;
+  }, [currentPeriodEndDate, periodStart]);
 
   const [currentMonth, setCurrentMonth] = useState(today);
   const [selectedDate, setSelectedDate] = useState<Date | null>(today);
@@ -203,8 +215,8 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   // Selected day info
   const selectedCycleDay = selectedDate ? getCycleDayForDate(selectedDate) : null;
   const hasValidSelectedCycleDay = selectedCycleDay !== null && Number.isFinite(selectedCycleDay);
-  const selectedPhase = hasValidSelectedCycleDay ? getPhaseForDay(selectedCycleDay, cycleLengthDays) : null;
-  const selectedMetrics = hasValidSelectedCycleDay ? getDayMetrics(selectedCycleDay, cycleLengthDays) : null;
+  const selectedPhase = hasValidSelectedCycleDay ? getPhaseForDay(selectedCycleDay, cycleLengthDays, menstruationEndDay) : null;
+  const selectedMetrics = hasValidSelectedCycleDay ? getDayMetrics(selectedCycleDay, cycleLengthDays, menstruationEndDay) : null;
   const selectedColors = selectedPhase ? PHASE_COLORS[selectedPhase] : null;
   const selectedTips = selectedPhase ? PHASE_TIPS[selectedPhase] : null;
   const selectedPartnerTips = selectedPhase ? PARTNER_TIPS[selectedPhase] : null;
@@ -323,7 +335,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                   const isToday = isSameDay(date, today);
                   const isSelected = selectedDate && isSameDay(date, selectedDate);
                   const cd = getCycleDayForDate(date);
-                  const ph = getPhaseForDay(cd, cycleLengthDays);
+                  const ph = getPhaseForDay(cd, cycleLengthDays, menstruationEndDay);
                   const colors = PHASE_COLORS[ph];
                   return (
                     <button
@@ -504,7 +516,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                   const isToday = isSameDay(date, today);
                   const isSelected = selectedDate && isSameDay(date, selectedDate);
                   const cd = getCycleDayForDate(date);
-                  const ph = getPhaseForDay(cd, cycleLengthDays);
+                  const ph = getPhaseForDay(cd, cycleLengthDays, menstruationEndDay);
                   const colors = PHASE_COLORS[ph];
 
                   return (

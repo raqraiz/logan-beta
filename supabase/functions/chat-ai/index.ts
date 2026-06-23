@@ -607,6 +607,69 @@ serve(async (req) => {
     // --- End "period still ongoing" ---
 
 
+    // --- "Period/bleed ended" detection: persist current_period_end_date ---
+    // Captures "bleeding ended day 4", "period ended on day 5", "bled for 4 days",
+    // "period lasted 5 days", "my period ended today/yesterday", or a bare
+    // "period is over/done/finished/ended" (treated as ending today).
+    if (participant && participant.life_stage === "cycling" && participant.last_period_start && !isPeriodConfirmation) {
+      const periodStartDate = parseDateOnly(participant.last_period_start);
+      if (periodStartDate) {
+        let endDateStr: string | null = null;
+
+        const endedDayMatch = userMessage.match(/\b(?:bleed(?:ing)?|period|bled)\s+(?:ended|stopped|finished|done|over)\s+(?:on\s+)?day\s*(\d{1,2})\b/i)
+          || userMessage.match(/\bended\s+(?:on\s+)?day\s*(\d{1,2})\b/i)
+          || userMessage.match(/\bday\s*(\d{1,2})\s+(?:was\s+)?(?:my\s+)?(?:last\s+)?(?:bleed|bleeding|period)\s+(?:day|ended)\b/i);
+        const lastedDaysMatch = userMessage.match(/\b(?:bled|bleeding|period|bleed)\s+(?:for|lasted|was)\s+(\d{1,2})\s+days?\b/i)
+          || userMessage.match(/\b(\d{1,2})[-\s]day\s+(?:period|bleed)\b/i);
+        const endedRelMatch = userMessage.match(/\b(?:bleed(?:ing)?|period|bled)\s+(?:ended|stopped|finished|over|done)\s+(today|yesterday)\b/i)
+          || userMessage.match(/\b(?:period|bleed(?:ing)?)\s+(?:is\s+)?(?:over|done|finished|ended)\s+(?:as\s+of\s+)?(today|yesterday)\b/i);
+        const endedNoDateMatch = !endedDayMatch && !lastedDaysMatch && !endedRelMatch
+          && /\b(?:my\s+)?(?:period|bleed(?:ing)?)\s+(?:is\s+)?(?:over|done|finished|ended)\b/i.test(userMessage)
+          && !/\b(?:not|isn'?t|still|almost|nearly)\b/i.test(userMessage)
+          && !/\?/.test(userMessage);
+
+        const addDays = (base: Date, n: number) => {
+          const d = new Date(base.getTime());
+          d.setUTCDate(d.getUTCDate() + n);
+          return d.toISOString().split("T")[0];
+        };
+
+        if (endedDayMatch) {
+          const n = parseInt(endedDayMatch[1]);
+          if (n >= 1 && n <= 14) endDateStr = addDays(periodStartDate, n - 1);
+        } else if (lastedDaysMatch) {
+          const n = parseInt(lastedDaysMatch[1]);
+          if (n >= 1 && n <= 14) endDateStr = addDays(periodStartDate, n - 1);
+        } else if (endedRelMatch) {
+          const isYesterday = /yesterday/i.test(endedRelMatch[1]);
+          const d = new Date();
+          if (isYesterday) d.setDate(d.getDate() - 1);
+          endDateStr = d.toISOString().split("T")[0];
+        } else if (endedNoDateMatch) {
+          endDateStr = new Date().toISOString().split("T")[0];
+        }
+
+        if (endDateStr && endDateStr >= participant.last_period_start) {
+          await supabase
+            .from("participants")
+            .update({
+              current_period_end_date: endDateStr,
+              period_still_active: false,
+            })
+            .eq("id", participant.id);
+          participant = {
+            ...participant,
+            current_period_end_date: endDateStr,
+            period_still_active: false,
+          } as typeof participant;
+          console.log("[chat-ai] persisted current_period_end_date:", endDateStr);
+        }
+      }
+    }
+    // --- End "period ended" detection ---
+
+
+
 
     // --- Spotting / early-bleed detection: flag for Day-1 confirmation prompt ---
     // When a cycling user casually mentions bleeding/spotting in chat (not an

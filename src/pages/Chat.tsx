@@ -106,6 +106,7 @@ interface CycleData {
   phase: string;
   cycleLengthDays: number;
   lastPeriodStart?: string;
+  currentPeriodEndDate?: string | null;
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
   postpartumStartDate?: string;
   postpartumActive?: boolean;
@@ -443,6 +444,7 @@ const Chat = () => {
         phase: liveInfo.phase,
         cycleLengthDays,
         lastPeriodStart,
+        currentPeriodEndDate: participantCycle?.currentPeriodEndDate ?? null,
         lifeStage: lifeStage === "irregular" ? "irregular" : "cycling",
         postpartumStartDate: postpartumStartDate || undefined,
         postpartumActive: postpartumActive && !!postpartumStartDate,

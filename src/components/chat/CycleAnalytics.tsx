@@ -62,6 +62,7 @@ export function CycleAnalytics({
   const [history, setHistory] = useState<CycleHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [participantId, setParticipantId] = useState<string | null>(null);
+  const [currentMenstruationDays, setCurrentMenstruationDays] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
@@ -105,7 +106,7 @@ export function CycleAnalytics({
 
       const { data: participant } = await supabase
         .from("participants")
-        .select("id")
+        .select("id, last_period_start, current_period_end_date")
         .eq("email", profile.email)
         .single();
 
@@ -115,6 +116,18 @@ export function CycleAnalytics({
       }
 
       setParticipantId(participant.id);
+      // Derive current cycle's menstruation length from the reported end date
+      const start = (participant as any).last_period_start as string | null;
+      const end = (participant as any).current_period_end_date as string | null;
+      if (start && end && /^\d{4}-\d{2}-\d{2}$/.test(start) && /^\d{4}-\d{2}-\d{2}$/.test(end)) {
+        const [sy, sm, sd] = start.split("-").map(Number);
+        const [ey, em, ed] = end.split("-").map(Number);
+        const days = Math.round((Date.UTC(ey, em - 1, ed) - Date.UTC(sy, sm - 1, sd)) / 86400000) + 1;
+        if (days >= 1 && days <= 14) setCurrentMenstruationDays(days);
+        else setCurrentMenstruationDays(null);
+      } else {
+        setCurrentMenstruationDays(null);
+      }
       await reload(participant.id);
       setLoading(false);
     })();
@@ -331,14 +344,13 @@ export function CycleAnalytics({
       h.luteal_days != null
   );
 
-  const usingCustomPhases = !!latestWithPhases;
-  const menstruationDays = latestWithPhases?.menstruation_days ?? MENSTRUATION_RANGE.typical;
+  const usingCustomPhases = !!latestWithPhases || currentMenstruationDays !== null;
+  const menstruationDays = currentMenstruationDays ?? latestWithPhases?.menstruation_days ?? MENSTRUATION_RANGE.typical;
   const ovulationDays = latestWithPhases?.ovulation_days ?? OVULATION_RANGE.typical;
   const lutealDays = latestWithPhases?.luteal_days ?? LUTEAL_RANGE.typical;
-  const follicularDays = latestWithPhases?.follicular_days ?? Math.max(
-    0,
-    currentCycleLength - menstruationDays - ovulationDays - lutealDays
-  );
+  const follicularDays = latestWithPhases && currentMenstruationDays === null
+    ? latestWithPhases.follicular_days ?? Math.max(0, currentCycleLength - menstruationDays - ovulationDays - lutealDays)
+    : Math.max(0, currentCycleLength - menstruationDays - ovulationDays - lutealDays);
   const phaseTotal = menstruationDays + follicularDays + ovulationDays + lutealDays;
 
   const phases = [
@@ -390,7 +402,10 @@ export function CycleAnalytics({
             {/* Period Length */}
             <div>
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Period Length</h3>
-              <StatCard label="Estimated" value="3–7 days" />
+              <StatCard
+                label={currentMenstruationDays !== null ? "This cycle" : "Estimated"}
+                value={currentMenstruationDays !== null ? `${currentMenstruationDays} day${currentMenstruationDays !== 1 ? "s" : ""}` : "3–7 days"}
+              />
             </div>
 
             <Separator />

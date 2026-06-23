@@ -23,6 +23,7 @@ interface CycleData {
   phase: string;
   cycleLengthDays: number;
   lastPeriodStart?: string;
+  currentPeriodEndDate?: string | null;
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
   postpartumStartDate?: string;
 }
@@ -42,8 +43,8 @@ interface CheckinEntry {
 }
 
 // ── Phase calculation (mirrors server logic) ──
-function getPhaseForDay(day: number, cycleLength: number): string {
-  const menEnd = 5;
+function getPhaseForDay(day: number, cycleLength: number, menstruationEnd: number = 5): string {
+  const menEnd = Math.max(1, Math.min(menstruationEnd, cycleLength - 1));
   const ovDay = cycleLength - 14;
   const ovStart = ovDay - 1;
   const ovEnd = ovDay + 2;
@@ -53,19 +54,20 @@ function getPhaseForDay(day: number, cycleLength: number): string {
   return "Luteal";
 }
 
-function getDayMetrics(day: number, cycleLength: number) {
+function getDayMetrics(day: number, cycleLength: number, menstruationEnd: number = 5) {
+  const menEnd = Math.max(2, Math.min(menstruationEnd, cycleLength - 1));
   const ovDay = cycleLength - 14;
   let energy = 0.5;
   if (day <= 2) energy = 0.2;
-  else if (day <= 5) energy = 0.3 + (day - 2) * 0.05;
-  else if (day < ovDay - 1) energy = 0.5 + (day - 5) / (ovDay - 6) * 0.4;
+  else if (day <= menEnd) energy = 0.3 + (day - 2) * (0.25 / Math.max(1, menEnd - 2));
+  else if (day < ovDay - 1) energy = 0.55 + (day - menEnd) / Math.max(1, ovDay - menEnd - 1) * 0.35;
   else if (day <= ovDay + 2) energy = 0.9;
   else energy = Math.max(0.3, 0.85 - (day - ovDay - 2) / (cycleLength - ovDay - 2) * 0.55);
 
   let mood = 0.5;
   if (day <= 2) mood = 0.3;
-  else if (day <= 5) mood = 0.4;
-  else if (day < ovDay - 1) mood = 0.5 + (day - 5) / (ovDay - 6) * 0.4;
+  else if (day <= menEnd) mood = 0.4;
+  else if (day < ovDay - 1) mood = 0.55 + (day - menEnd) / Math.max(1, ovDay - menEnd - 1) * 0.3;
   else if (day <= ovDay + 2) mood = 0.85;
   else {
     const daysIntoLuteal = day - (ovDay + 2);
@@ -475,14 +477,28 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
   const currentDay = liveCycle?.cycleDay || cycleData?.cycleDay || 1;
   const cycleLength = liveCycle?.cycleLengthDays || cycleData?.cycleLengthDays || 28;
   const lastPeriodStart = liveCycle?.lastPeriodStart || cycleData?.lastPeriodStart;
+  const currentPeriodEndDate = cycleData?.currentPeriodEndDate ?? null;
+
+  // Derive menstruation end day from optional end-date the user reported.
+  const menstruationEndDay = useMemo(() => {
+    if (!currentPeriodEndDate || !lastPeriodStart) return 5;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(currentPeriodEndDate) || !/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodStart)) return 5;
+    const [sy, sm, sd] = lastPeriodStart.split("-").map(Number);
+    const [ey, em, ed] = currentPeriodEndDate.split("-").map(Number);
+    const start = Date.UTC(sy, sm - 1, sd);
+    const end = Date.UTC(ey, em - 1, ed);
+    const days = Math.round((end - start) / 86400000) + 1;
+    if (days >= 1 && days <= 14) return days;
+    return 5;
+  }, [currentPeriodEndDate, lastPeriodStart]);
 
   // Build 7-day forecast (kept for alerts calculation)
   const forecast: DayForecast[] = useMemo(() => {
     const today = new Date();
     return Array.from({ length: 7 }, (_, i) => {
       const day = ((currentDay - 1 + i) % cycleLength) + 1;
-      const phase = getPhaseForDay(day, cycleLength);
-      const metrics = getDayMetrics(day, cycleLength);
+      const phase = getPhaseForDay(day, cycleLength, menstruationEndDay);
+      const metrics = getDayMetrics(day, cycleLength, menstruationEndDay);
       return {
         date: addDays(today, i),
         cycleDay: day,
@@ -492,7 +508,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
         isToday: i === 0,
       };
     });
-  }, [currentDay, cycleLength]);
+  }, [currentDay, cycleLength, menstruationEndDay]);
 
   // Detect upcoming "heads-up" alerts (no phase transition alert)
   const alerts = useMemo(() => {
@@ -930,6 +946,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             phase={currentPhase}
             cycleLengthDays={cycleLength}
             lastPeriodStart={lastPeriodStart}
+            currentPeriodEndDate={currentPeriodEndDate}
             anchorSymptom={anchorSymptom}
             onClose={() => {}}
             embedded
