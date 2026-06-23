@@ -11,6 +11,7 @@ interface CycleForecastProps {
   phase: string;
   cycleLengthDays: number;
   lastPeriodStart: string;
+  currentPeriodEndDate?: string | null;
   anchorSymptom?: string | null;
   onClose: () => void;
   embedded?: boolean;
@@ -18,8 +19,8 @@ interface CycleForecastProps {
   postpartumStartDate?: string;
 }
 
-function getPhaseForDay(day: number, cycleLength: number): string {
-  const menEnd = 5;
+function getPhaseForDay(day: number, cycleLength: number, menstruationEnd: number = 5): string {
+  const menEnd = Math.max(1, Math.min(menstruationEnd, cycleLength - 1));
   const ovDay = cycleLength - 14;
   const ovStart = ovDay - 1;
   const ovEnd = ovDay + 2;
