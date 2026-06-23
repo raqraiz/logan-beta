@@ -467,7 +467,7 @@ export function CycleAnalytics({
               </div>
               <p className="text-[10px] text-muted-foreground/60 mt-2">
                 {usingCustomPhases
-                  ? `Using your custom phase lengths from ${format(new Date(latestWithPhases!.cycle_start_date), "MMM d")}. Edit any tracked cycle below to adjust.`
+                  ? `Using your custom phase lengths${latestWithPhases ? ` from ${format(new Date(latestWithPhases.cycle_start_date), "MMM d")}` : ""}. Edit any tracked cycle below to adjust.`
                   : "Based on typical cycle biology. Tap the sliders icon on any tracked cycle to set your own phase lengths."}
               </p>
             </div>
