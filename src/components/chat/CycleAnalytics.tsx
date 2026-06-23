@@ -344,14 +344,13 @@ export function CycleAnalytics({
       h.luteal_days != null
   );
 
-  const usingCustomPhases = !!latestWithPhases;
-  const menstruationDays = latestWithPhases?.menstruation_days ?? MENSTRUATION_RANGE.typical;
+  const usingCustomPhases = !!latestWithPhases || currentMenstruationDays !== null;
+  const menstruationDays = currentMenstruationDays ?? latestWithPhases?.menstruation_days ?? MENSTRUATION_RANGE.typical;
   const ovulationDays = latestWithPhases?.ovulation_days ?? OVULATION_RANGE.typical;
   const lutealDays = latestWithPhases?.luteal_days ?? LUTEAL_RANGE.typical;
-  const follicularDays = latestWithPhases?.follicular_days ?? Math.max(
-    0,
-    currentCycleLength - menstruationDays - ovulationDays - lutealDays
-  );
+  const follicularDays = latestWithPhases && currentMenstruationDays === null
+    ? latestWithPhases.follicular_days ?? Math.max(0, currentCycleLength - menstruationDays - ovulationDays - lutealDays)
+    : Math.max(0, currentCycleLength - menstruationDays - ovulationDays - lutealDays);
   const phaseTotal = menstruationDays + follicularDays + ovulationDays + lutealDays;
 
   const phases = [
