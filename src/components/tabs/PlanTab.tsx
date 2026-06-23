@@ -547,7 +547,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
 
   // Phase countdown calculation — use same boundary math as CycleForecast
   const daysUntilNext = useMemo(() => {
-    const menEnd = 5;
+    const menEnd = Math.max(1, Math.min(menstruationEndDay, cycleLength - 1));
     const ovDay = cycleLength - 14;
     const ovStart = ovDay - 1;
     const ovEnd = ovDay + 2;
@@ -557,7 +557,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
     else if (currentPhase === "Ovulation") nextPhaseStartDay = ovEnd + 1;
     else nextPhaseStartDay = cycleLength + 1;
     return Math.max(1, nextPhaseStartDay - currentDay);
-  }, [currentPhase, currentDay, cycleLength]);
+  }, [currentPhase, currentDay, cycleLength, menstruationEndDay]);
 
   const PHASE_ORDER = ["Menstruation", "Follicular", "Ovulation", "Luteal"];
   const nextPhase = PHASE_ORDER[(PHASE_ORDER.indexOf(currentPhase) + 1) % 4];

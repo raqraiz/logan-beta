@@ -620,7 +620,13 @@ serve(async (req) => {
           || userMessage.match(/\bended\s+(?:on\s+)?day\s*(\d{1,2})\b/i)
           || userMessage.match(/\bday\s*(\d{1,2})\s+(?:was\s+)?(?:my\s+)?(?:last\s+)?(?:bleed|bleeding|period)\s+(?:day|ended)\b/i);
         const lastedDaysMatch = userMessage.match(/\b(?:bled|bleeding|period|bleed)\s+(?:for|lasted|was)\s+(\d{1,2})\s+days?\b/i)
-          || userMessage.match(/\b(\d{1,2})[-\s]day\s+(?:period|bleed)\b/i);
+          || userMessage.match(/\b(\d{1,2})[-\s]day\s+(?:period|bleed)\b/i)
+          // "ended after 3 days [of bleeding]", "stopped after 4 days", "done after 5 days"
+          || userMessage.match(/\b(?:ended|stopped|finished|done|over)\s+after\s+(\d{1,2})\s+days?\b/i)
+          // "only bled for 3 days", "only had 3 days of bleeding/period"
+          || userMessage.match(/\bonly\s+(?:bled|bleeding|had)\s+(?:for\s+)?(\d{1,2})\s+days?(?:\s+of\s+(?:bleed(?:ing)?|period))?\b/i)
+          // "(I) bled 3 days" (no for/lasted)
+          || userMessage.match(/\b(?:i\s+)?bled\s+(\d{1,2})\s+days?\b/i);
         const endedRelMatch = userMessage.match(/\b(?:bleed(?:ing)?|period|bled)\s+(?:ended|stopped|finished|over|done)\s+(today|yesterday)\b/i)
           || userMessage.match(/\b(?:period|bleed(?:ing)?)\s+(?:is\s+)?(?:over|done|finished|ended)\s+(?:as\s+of\s+)?(today|yesterday)\b/i);
         const endedNoDateMatch = !endedDayMatch && !lastedDaysMatch && !endedRelMatch
