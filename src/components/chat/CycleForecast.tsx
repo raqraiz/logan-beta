@@ -335,7 +335,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                   const isToday = isSameDay(date, today);
                   const isSelected = selectedDate && isSameDay(date, selectedDate);
                   const cd = getCycleDayForDate(date);
-                  const ph = getPhaseForDay(cd, cycleLengthDays);
+                  const ph = getPhaseForDay(cd, cycleLengthDays, menstruationEndDay);
                   const colors = PHASE_COLORS[ph];
                   return (
                     <button
@@ -516,7 +516,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                   const isToday = isSameDay(date, today);
                   const isSelected = selectedDate && isSameDay(date, selectedDate);
                   const cd = getCycleDayForDate(date);
-                  const ph = getPhaseForDay(cd, cycleLengthDays);
+                  const ph = getPhaseForDay(cd, cycleLengthDays, menstruationEndDay);
                   const colors = PHASE_COLORS[ph];
 
                   return (
