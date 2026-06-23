@@ -362,6 +362,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
     phase: string;
     cycleLengthDays: number;
     lastPeriodStart: string | null;
+    currentPeriodEndDate: string | null;
   } | null>(null);
 
   // Allow other parts of the app (e.g. broadcast CTAs in chat) to deep-link into a section.
@@ -392,7 +393,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
           .limit(50),
         supabase
           .from("participants")
-          .select("anchor_symptom, last_period_start, cycle_length_days, timezone")
+          .select("anchor_symptom, last_period_start, cycle_length_days, timezone, current_period_end_date")
           .eq("user_id", userId)
           .maybeSingle(),
       ]);
@@ -426,6 +427,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
               phase: info.phase,
               cycleLengthDays: cld,
               lastPeriodStart: lps,
+              currentPeriodEndDate: (participantRes.data as any).current_period_end_date ?? null,
             });
           }
         }
@@ -459,6 +461,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
                   phase: info.phase,
                   cycleLengthDays: cld,
                   lastPeriodStart: lps,
+                  currentPeriodEndDate: row.current_period_end_date ?? null,
                 });
               }
             }
@@ -477,7 +480,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
   const currentDay = liveCycle?.cycleDay || cycleData?.cycleDay || 1;
   const cycleLength = liveCycle?.cycleLengthDays || cycleData?.cycleLengthDays || 28;
   const lastPeriodStart = liveCycle?.lastPeriodStart || cycleData?.lastPeriodStart;
-  const currentPeriodEndDate = cycleData?.currentPeriodEndDate ?? null;
+  const currentPeriodEndDate = liveCycle?.currentPeriodEndDate ?? cycleData?.currentPeriodEndDate ?? null;
 
   // Derive menstruation end day from optional end-date the user reported.
   const menstruationEndDay = useMemo(() => {
