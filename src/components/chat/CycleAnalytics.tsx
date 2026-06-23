@@ -402,7 +402,10 @@ export function CycleAnalytics({
             {/* Period Length */}
             <div>
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Period Length</h3>
-              <StatCard label="Estimated" value="3–7 days" />
+              <StatCard
+                label={currentMenstruationDays !== null ? "This cycle" : "Estimated"}
+                value={currentMenstruationDays !== null ? `${currentMenstruationDays} day${currentMenstruationDays !== 1 ? "s" : ""}` : "3–7 days"}
+              />
             </div>
 
             <Separator />
