@@ -150,7 +150,7 @@ function EnergyBar({ value, color }: { value: number; color: string }) {
   );
 }
 
-export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStart, anchorSymptom, onClose, embedded = false, onPeriodUpdate, postpartumStartDate }: CycleForecastProps) {
+export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStart, currentPeriodEndDate, anchorSymptom, onClose, embedded = false, onPeriodUpdate, postpartumStartDate }: CycleForecastProps) {
   useTrackFeature("cycle_forecast");
   const today = useMemo(() => new Date(), []);
   // Parse YYYY-MM-DD as noon UTC to match calculateCycleInfo and avoid timezone off-by-one
@@ -162,6 +162,16 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
     const parsed = parseISO(lastPeriodStart);
     return isValid(parsed) ? parsed : today;
   }, [lastPeriodStart, today]);
+
+  // Menstruation end day (1-indexed cycle day) derived from optional reported end date.
+  const menstruationEndDay = useMemo(() => {
+    if (!currentPeriodEndDate || !/^\d{4}-\d{2}-\d{2}$/.test(currentPeriodEndDate)) return 5;
+    const [ey, em, ed] = currentPeriodEndDate.split("-").map(Number);
+    const endDate = new Date(ey, em - 1, ed);
+    const diff = differenceInCalendarDays(endDate, periodStart) + 1;
+    if (diff >= 1 && diff <= 14) return diff;
+    return 5;
+  }, [currentPeriodEndDate, periodStart]);
 
   const [currentMonth, setCurrentMonth] = useState(today);
   const [selectedDate, setSelectedDate] = useState<Date | null>(today);
