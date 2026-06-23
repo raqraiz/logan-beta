@@ -23,6 +23,7 @@ interface CycleData {
   phase: string;
   cycleLengthDays: number;
   lastPeriodStart?: string;
+  currentPeriodEndDate?: string | null;
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
   postpartumStartDate?: string;
 }
@@ -42,8 +43,8 @@ interface CheckinEntry {
 }
 
 // ── Phase calculation (mirrors server logic) ──
-function getPhaseForDay(day: number, cycleLength: number): string {
-  const menEnd = 5;
+function getPhaseForDay(day: number, cycleLength: number, menstruationEnd: number = 5): string {
+  const menEnd = Math.max(1, Math.min(menstruationEnd, cycleLength - 1));
   const ovDay = cycleLength - 14;
   const ovStart = ovDay - 1;
   const ovEnd = ovDay + 2;
@@ -53,19 +54,20 @@ function getPhaseForDay(day: number, cycleLength: number): string {
   return "Luteal";
 }
 
-function getDayMetrics(day: number, cycleLength: number) {
+function getDayMetrics(day: number, cycleLength: number, menstruationEnd: number = 5) {
+  const menEnd = Math.max(2, Math.min(menstruationEnd, cycleLength - 1));
   const ovDay = cycleLength - 14;
   let energy = 0.5;
   if (day <= 2) energy = 0.2;
-  else if (day <= 5) energy = 0.3 + (day - 2) * 0.05;
-  else if (day < ovDay - 1) energy = 0.5 + (day - 5) / (ovDay - 6) * 0.4;
+  else if (day <= menEnd) energy = 0.3 + (day - 2) * (0.25 / Math.max(1, menEnd - 2));
+  else if (day < ovDay - 1) energy = 0.55 + (day - menEnd) / Math.max(1, ovDay - menEnd - 1) * 0.35;
   else if (day <= ovDay + 2) energy = 0.9;
   else energy = Math.max(0.3, 0.85 - (day - ovDay - 2) / (cycleLength - ovDay - 2) * 0.55);
 
   let mood = 0.5;
   if (day <= 2) mood = 0.3;
-  else if (day <= 5) mood = 0.4;
-  else if (day < ovDay - 1) mood = 0.5 + (day - 5) / (ovDay - 6) * 0.4;
+  else if (day <= menEnd) mood = 0.4;
+  else if (day < ovDay - 1) mood = 0.55 + (day - menEnd) / Math.max(1, ovDay - menEnd - 1) * 0.3;
   else if (day <= ovDay + 2) mood = 0.85;
   else {
     const daysIntoLuteal = day - (ovDay + 2);
