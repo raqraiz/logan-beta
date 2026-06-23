@@ -461,6 +461,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
                   phase: info.phase,
                   cycleLengthDays: cld,
                   lastPeriodStart: lps,
+                  currentPeriodEndDate: row.current_period_end_date ?? null,
                 });
               }
             }
