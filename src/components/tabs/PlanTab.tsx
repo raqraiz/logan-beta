@@ -477,14 +477,28 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
   const currentDay = liveCycle?.cycleDay || cycleData?.cycleDay || 1;
   const cycleLength = liveCycle?.cycleLengthDays || cycleData?.cycleLengthDays || 28;
   const lastPeriodStart = liveCycle?.lastPeriodStart || cycleData?.lastPeriodStart;
+  const currentPeriodEndDate = cycleData?.currentPeriodEndDate ?? null;
+
+  // Derive menstruation end day from optional end-date the user reported.
+  const menstruationEndDay = useMemo(() => {
+    if (!currentPeriodEndDate || !lastPeriodStart) return 5;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(currentPeriodEndDate) || !/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodStart)) return 5;
+    const [sy, sm, sd] = lastPeriodStart.split("-").map(Number);
+    const [ey, em, ed] = currentPeriodEndDate.split("-").map(Number);
+    const start = Date.UTC(sy, sm - 1, sd);
+    const end = Date.UTC(ey, em - 1, ed);
+    const days = Math.round((end - start) / 86400000) + 1;
+    if (days >= 1 && days <= 14) return days;
+    return 5;
+  }, [currentPeriodEndDate, lastPeriodStart]);
 
   // Build 7-day forecast (kept for alerts calculation)
   const forecast: DayForecast[] = useMemo(() => {
     const today = new Date();
     return Array.from({ length: 7 }, (_, i) => {
       const day = ((currentDay - 1 + i) % cycleLength) + 1;
-      const phase = getPhaseForDay(day, cycleLength);
-      const metrics = getDayMetrics(day, cycleLength);
+      const phase = getPhaseForDay(day, cycleLength, menstruationEndDay);
+      const metrics = getDayMetrics(day, cycleLength, menstruationEndDay);
       return {
         date: addDays(today, i),
         cycleDay: day,
@@ -494,7 +508,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
         isToday: i === 0,
       };
     });
-  }, [currentDay, cycleLength]);
+  }, [currentDay, cycleLength, menstruationEndDay]);
 
   // Detect upcoming "heads-up" alerts (no phase transition alert)
   const alerts = useMemo(() => {
