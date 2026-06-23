@@ -362,6 +362,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
     phase: string;
     cycleLengthDays: number;
     lastPeriodStart: string | null;
+    currentPeriodEndDate: string | null;
   } | null>(null);
 
   // Allow other parts of the app (e.g. broadcast CTAs in chat) to deep-link into a section.
