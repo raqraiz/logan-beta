@@ -946,6 +946,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             phase={currentPhase}
             cycleLengthDays={cycleLength}
             lastPeriodStart={lastPeriodStart}
+            currentPeriodEndDate={currentPeriodEndDate}
             anchorSymptom={anchorSymptom}
             onClose={() => {}}
             embedded
