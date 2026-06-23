@@ -444,6 +444,7 @@ const Chat = () => {
         phase: liveInfo.phase,
         cycleLengthDays,
         lastPeriodStart,
+        currentPeriodEndDate: participantCycle?.currentPeriodEndDate ?? null,
         lifeStage: lifeStage === "irregular" ? "irregular" : "cycling",
         postpartumStartDate: postpartumStartDate || undefined,
         postpartumActive: postpartumActive && !!postpartumStartDate,
