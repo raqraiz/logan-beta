@@ -44,26 +44,27 @@ const PHASE_SOLID: Record<string, string> = {
   Luteal:       "bg-phase-luteal",
 };
 
-function getDayMetrics(day: number, cycleLength: number) {
+function getDayMetrics(day: number, cycleLength: number, menstruationEnd: number = 5) {
+  const menEnd = Math.max(2, Math.min(menstruationEnd, cycleLength - 1));
   const ovDay = cycleLength - 14;
 
   let energy = 0.5;
   if (day <= 2) energy = 0.2;
-  else if (day <= 5) energy = 0.3 + (day - 2) * 0.05;
-  else if (day < ovDay - 1) energy = 0.5 + (day - 5) / (ovDay - 6) * 0.4;
+  else if (day <= menEnd) energy = 0.3 + (day - 2) * (0.25 / Math.max(1, menEnd - 2));
+  else if (day < ovDay - 1) energy = 0.55 + (day - menEnd) / Math.max(1, ovDay - menEnd - 1) * 0.35;
   else if (day <= ovDay + 2) energy = 0.9;
   else energy = Math.max(0.3, 0.85 - (day - ovDay - 2) / (cycleLength - ovDay - 2) * 0.55);
 
   let focus = 0.5;
   if (day <= 2) focus = 0.3;
-  else if (day <= 5) focus = 0.35 + (day - 2) * 0.05;
-  else if (day < ovDay - 1) focus = 0.55 + (day - 5) / (ovDay - 6) * 0.35;
+  else if (day <= menEnd) focus = 0.35 + (day - 2) * (0.2 / Math.max(1, menEnd - 2));
+  else if (day < ovDay - 1) focus = 0.6 + (day - menEnd) / Math.max(1, ovDay - menEnd - 1) * 0.25;
   else if (day <= ovDay + 2) focus = 0.85;
   else focus = Math.max(0.25, 0.8 - (day - ovDay - 2) / (cycleLength - ovDay - 2) * 0.55);
 
   let symptomRisk = 0.2;
   if (day <= 3) symptomRisk = 0.7 - (day - 1) * 0.15;
-  else if (day <= 5) symptomRisk = 0.3;
+  else if (day <= menEnd) symptomRisk = 0.3;
   else if (day < ovDay - 1) symptomRisk = 0.15;
   else if (day <= ovDay + 2) symptomRisk = 0.2;
   else {
