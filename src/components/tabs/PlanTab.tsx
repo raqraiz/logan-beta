@@ -393,7 +393,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
           .limit(50),
         supabase
           .from("participants")
-          .select("anchor_symptom, last_period_start, cycle_length_days, timezone")
+          .select("anchor_symptom, last_period_start, cycle_length_days, timezone, current_period_end_date")
           .eq("user_id", userId)
           .maybeSingle(),
       ]);
