@@ -215,8 +215,8 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   // Selected day info
   const selectedCycleDay = selectedDate ? getCycleDayForDate(selectedDate) : null;
   const hasValidSelectedCycleDay = selectedCycleDay !== null && Number.isFinite(selectedCycleDay);
-  const selectedPhase = hasValidSelectedCycleDay ? getPhaseForDay(selectedCycleDay, cycleLengthDays) : null;
-  const selectedMetrics = hasValidSelectedCycleDay ? getDayMetrics(selectedCycleDay, cycleLengthDays) : null;
+  const selectedPhase = hasValidSelectedCycleDay ? getPhaseForDay(selectedCycleDay, cycleLengthDays, menstruationEndDay) : null;
+  const selectedMetrics = hasValidSelectedCycleDay ? getDayMetrics(selectedCycleDay, cycleLengthDays, menstruationEndDay) : null;
   const selectedColors = selectedPhase ? PHASE_COLORS[selectedPhase] : null;
   const selectedTips = selectedPhase ? PHASE_TIPS[selectedPhase] : null;
   const selectedPartnerTips = selectedPhase ? PARTNER_TIPS[selectedPhase] : null;
