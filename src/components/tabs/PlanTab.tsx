@@ -578,7 +578,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
     setExpandedSection((prev) => (prev === section ? null : section));
 
   // Non-cycling life stages get tailored content
-  const isNonCycling = cycleData?.lifeStage === "postpartum" || cycleData?.lifeStage === "menopause";
+  const isNonCycling = cycleData?.lifeStage === "postpartum" || cycleData?.lifeStage === "menopause" || cycleData?.lifeStage === "pregnancy_loss";
 
   if (isNonCycling) {
     const stage = cycleData!.lifeStage!;
