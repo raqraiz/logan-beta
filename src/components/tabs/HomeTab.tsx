@@ -722,6 +722,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
                 lifeStage={cycleData.lifeStage}
                 postpartumStartDate={cycleData.postpartumStartDate}
                 postpartumActive={cycleData.postpartumActive}
+                onEdit={() => setEditingCustomWidget(widget)}
               />
             </div>
           );
