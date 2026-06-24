@@ -440,8 +440,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   const [dismissed, setDismissed] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [showAddWidget, setShowAddWidget] = useState(false);
+  const [editingCustomWidget, setEditingCustomWidget] = useState<WidgetConfig | null>(null);
 
-  const { widgets, loading, save, toggleWidget, renameWidget, setWidgets, addCustomWidget, removeWidget } = useWidgetPreferences(userId);
+  const { widgets, loading, save, toggleWidget, renameWidget, setWidgets, addCustomWidget, updateCustomWidget, removeWidget } = useWidgetPreferences(userId);
 
   if (!cycleData) {
     return (
