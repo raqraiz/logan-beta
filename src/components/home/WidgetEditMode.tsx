@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, EyeOff, GripVertical, Pencil, Check, Trash2, Plus, Sparkles } from "lucide-react";
+import { Eye, EyeOff, GripVertical, Pencil, Check, Trash2, Plus, Sparkles, Settings2 } from "lucide-react";
 import { WidgetConfig, getWidgetLabel, DEFAULT_WIDGET_LABELS } from "@/hooks/useWidgetPreferences";
 import {
   DndContext,
