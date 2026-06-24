@@ -123,7 +123,7 @@ const SYMPTOM_KEYWORDS: { name: string; patterns: RegExp[] }[] = [
   { name: "Irritability", patterns: [/\birritabl(e|y)\b/i, /\birritated\b/i, /\bsnappy\b/i, /\bshort temper(ed)?\b/i, /\bcranky\b/i] },
   { name: "Brain fog", patterns: [/\bbrain fog(gy)?\b/i, /\bfoggy\b/i, /\bcan'?t (think|focus|concentrate)\b/i] },
   { name: "Low motivation", patterns: [/\blow motivation\b/i, /\bunmotivated\b/i, /\bno motivation\b/i, /\bcan'?t get going\b/i] },
-  { name: "Sadness", patterns: [/\b(feeling |so |really )?sad\b/i, /\bcrying\b/i, /\btearful\b/i, /\bdown\b/i, /\bblue\b/i] },
+  { name: "Sadness", patterns: [/\b(feeling|feel|so|really|been)\s+sad\b/i, /\bsadness\b/i, /\bcrying\b/i, /\btearful\b/i, /\b(feeling|feel|been)\s+down\b/i, /\b(feeling|feel)\s+blue\b/i] },
   { name: "Restlessness", patterns: [/\brestless\b/i, /\bantsy\b/i, /\bcan'?t sit still\b/i] },
   { name: "Overwhelm", patterns: [/\boverwhelmed\b/i, /\boverwhelm\b/i, /\btoo much\b/i] },
   { name: "High energy", patterns: [/\bhigh energy\b/i, /\benergized\b/i, /\bso much energy\b/i] },
@@ -1589,7 +1589,12 @@ serve(async (req) => {
       );
 
       const requestedSymptoms = detectSymptomMentions(userMessage);
-      if (isHistoricalLookup && requestedSymptoms.length > 0 && !isAboutSomeoneElse) {
+      // Only do a "did I log X?" style lookup when the user is actually ASKING about their log,
+      // not when they're reporting a new symptom, tracking, or asking an unrelated question
+      // that happens to contain a date or symptom word.
+      const explicitLookupIntent = /\b(check|look\s*(?:up|at|back)|did\s*i|do\s*i\s*have|was\s*there|were\s*there|show\s*me|find|any\s+(?:log|entry|entries|record|history|headache|cramp|symptom)|in\s+(?:my|the)\s+(?:log|history|record)|last\s+(?:time|month|cycle)|how\s+often|how\s+many\s+times)\b/i.test(userMessage);
+      const reportingOrTrackingIntent = /\b(track|log|record|add|note|i\s*(?:'?m|am|feel|have|had|got|woke)|my\s+(?:head|back|stomach|knee|breasts?|joints?))\b/i.test(userMessage);
+      if (isHistoricalLookup && requestedSymptoms.length > 0 && explicitLookupIntent && !reportingOrTrackingIntent && !isAboutSomeoneElse) {
         const requestedNames = Array.from(new Set(requestedSymptoms.map((s) => s.name.toLowerCase())));
 
         const scopedLogs = referencedMonths.length > 0
