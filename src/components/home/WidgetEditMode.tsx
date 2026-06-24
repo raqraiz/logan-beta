@@ -37,11 +37,13 @@ function SortableWidgetItem({
   onToggle,
   onRename,
   onRemove,
+  onEditCustom,
 }: {
   widget: WidgetConfig;
   onToggle: (id: string) => void;
   onRename: (id: string, newTitle: string) => void;
   onRemove: (id: string) => void;
+  onEditCustom: (widget: WidgetConfig) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(getWidgetLabel(widget));
