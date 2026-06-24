@@ -286,10 +286,13 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, steady
   );
 }
 
-export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling", postpartumStartDate, postpartumActive = false }: ChatCycleCircleProps) {
-  // Postpartum/menopause/irregular users get a static badge.
+export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling", postpartumStartDate, postpartumActive = false, lossDate }: ChatCycleCircleProps) {
+  // Postpartum/menopause/pregnancy-loss/irregular users get a static badge.
   if (lifeStage === "postpartum" || lifeStage === "menopause") {
     return <LifeStageBadge lifeStage={lifeStage} size={size} postpartumStartDate={postpartumStartDate} />;
+  }
+  if (lifeStage === "pregnancy_loss") {
+    return <LifeStageBadge lifeStage="pregnancy_loss" size={size} lossDate={lossDate} />;
   }
   if (lifeStage === "irregular") {
     return <LifeStageBadge lifeStage="irregular" size={size} />;
