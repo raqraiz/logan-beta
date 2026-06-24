@@ -856,6 +856,7 @@ export type Database = {
           is_active: boolean | null
           last_period_start: string | null
           life_stage: string
+          loss_date: string | null
           period_pending_since: string | null
           period_still_active: boolean
           postpartum_active: boolean
@@ -885,6 +886,7 @@ export type Database = {
           is_active?: boolean | null
           last_period_start?: string | null
           life_stage?: string
+          loss_date?: string | null
           period_pending_since?: string | null
           period_still_active?: boolean
           postpartum_active?: boolean
@@ -914,6 +916,7 @@ export type Database = {
           is_active?: boolean | null
           last_period_start?: string | null
           life_stage?: string
+          loss_date?: string | null
           period_pending_since?: string | null
           period_still_active?: boolean
           postpartum_active?: boolean
