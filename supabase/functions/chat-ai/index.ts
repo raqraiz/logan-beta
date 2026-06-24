@@ -1589,7 +1589,12 @@ serve(async (req) => {
       );
 
       const requestedSymptoms = detectSymptomMentions(userMessage);
-      if (isHistoricalLookup && requestedSymptoms.length > 0 && !isAboutSomeoneElse) {
+      // Only do a "did I log X?" style lookup when the user is actually ASKING about their log,
+      // not when they're reporting a new symptom, tracking, or asking an unrelated question
+      // that happens to contain a date or symptom word.
+      const explicitLookupIntent = /\b(check|look\s*(?:up|at|back)|did\s*i|do\s*i\s*have|was\s*there|were\s*there|show\s*me|find|any\s+(?:log|entry|entries|record|history|headache|cramp|symptom)|in\s+(?:my|the)\s+(?:log|history|record)|last\s+(?:time|month|cycle)|how\s+often|how\s+many\s+times)\b/i.test(userMessage);
+      const reportingOrTrackingIntent = /\b(track|log|record|add|note|i\s*(?:'?m|am|feel|have|had|got|woke)|my\s+(?:head|back|stomach|knee|breasts?|joints?))\b/i.test(userMessage);
+      if (isHistoricalLookup && requestedSymptoms.length > 0 && explicitLookupIntent && !reportingOrTrackingIntent && !isAboutSomeoneElse) {
         const requestedNames = Array.from(new Set(requestedSymptoms.map((s) => s.name.toLowerCase())));
 
         const scopedLogs = referencedMonths.length > 0
