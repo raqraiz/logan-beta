@@ -187,6 +187,13 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
                 <div className="text-xs text-muted-foreground">12+ months without a period. No active cycle tracking.</div>
               </div>
             </label>
+            <label className="flex items-start gap-3 p-3 rounded-lg border border-rose-300/40 bg-rose-50/40 dark:bg-rose-950/10 hover:bg-rose-100/40 cursor-pointer">
+              <RadioGroupItem value="pregnancy_loss" id="stage-loss" className="mt-0.5" />
+              <div className="flex-1">
+                <div className="text-sm font-medium">Pregnancy loss / miscarriage recovery</div>
+                <div className="text-xs text-muted-foreground">Logan pauses cycle tracking and shifts into gentle, grief-aware recovery support. You can switch back anytime.</div>
+              </div>
+            </label>
           </RadioGroup>
           <p className="text-[11px] text-muted-foreground/80 mt-3">
             Tip: you can also just tell Logan in chat — e.g. "I'm actually still cycling" — and it'll switch automatically.
@@ -216,6 +223,25 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
                   />
                 </div>
               )}
+            </div>
+          )}
+
+          {stage === "pregnancy_loss" && (
+            <div className="mt-4 p-3 rounded-lg border border-rose-300/40 bg-rose-50/40 dark:bg-rose-950/10 space-y-3">
+              <div>
+                <Label htmlFor="loss-date" className="text-xs text-muted-foreground">Date of loss (optional)</Label>
+                <Input
+                  id="loss-date"
+                  type="date"
+                  value={lossDate}
+                  onChange={(e) => setLossDate(e.target.value)}
+                  max={new Date().toISOString().slice(0, 10)}
+                  className="mt-1"
+                />
+                <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">
+                  Logan will hold a gentle, no-pressure space. When you're ready to track cycles again, switch back to "Cycling" — your data stays.
+                </p>
+              </div>
             </div>
           )}
         </div>
