@@ -17,7 +17,7 @@ import { WeightTrendWidget } from "@/components/home/WeightTrendWidget";
 import { MiniPhaseArc, getWidgetGraphic } from "@/components/home/WidgetGraphics";
 import { DailyBriefingHero } from "@/components/home/DailyBriefingHero";
 import { PeriodEndedChip } from "@/components/home/PeriodEndedChip";
-import { useWidgetPreferences, getWidgetLabel } from "@/hooks/useWidgetPreferences";
+import { useWidgetPreferences, getWidgetLabel, type WidgetConfig } from "@/hooks/useWidgetPreferences";
 import {
   getPostpartumPhase,
   PP_SUCCEED_HER,
@@ -440,8 +440,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   const [dismissed, setDismissed] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [showAddWidget, setShowAddWidget] = useState(false);
+  const [editingCustomWidget, setEditingCustomWidget] = useState<WidgetConfig | null>(null);
 
-  const { widgets, loading, save, toggleWidget, renameWidget, setWidgets, addCustomWidget, removeWidget } = useWidgetPreferences(userId);
+  const { widgets, loading, save, toggleWidget, renameWidget, setWidgets, addCustomWidget, updateCustomWidget, removeWidget } = useWidgetPreferences(userId);
 
   if (!cycleData) {
     return (
@@ -712,6 +713,8 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
               <CustomAIWidget
                 title={label}
                 prompt={widget.prompt}
+                format={widget.format}
+                accent={widget.accent}
                 phase={stagePhase}
                 cycleDay={isNonCycling ? 0 : cycleData.cycleDay}
                 cycleLengthDays={cycleData.cycleLengthDays}
@@ -764,6 +767,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           onReorder={setWidgets}
           onRemove={removeWidget}
           onAddCustom={() => setShowAddWidget(true)}
+          onEditCustom={(w) => setEditingCustomWidget(w)}
         />
       ) : (
         <div className="flex flex-col items-center gap-7 px-4 sm:px-6 lg:px-8 w-full pt-1">
@@ -849,8 +853,26 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       <AddCustomWidgetDialog
         open={showAddWidget}
         onOpenChange={setShowAddWidget}
-        onAdd={(title, prompt) => {
-          addCustomWidget(title, prompt);
+        onSave={({ title, prompt, format, accent }) => {
+          addCustomWidget(title, prompt, format, accent);
+        }}
+      />
+
+      {/* Edit Custom Widget Dialog */}
+      <AddCustomWidgetDialog
+        open={!!editingCustomWidget}
+        onOpenChange={(o) => { if (!o) setEditingCustomWidget(null); }}
+        initial={editingCustomWidget ? {
+          title: editingCustomWidget.customTitle || "",
+          prompt: editingCustomWidget.prompt || "",
+          format: editingCustomWidget.format,
+          accent: editingCustomWidget.accent,
+        } : undefined}
+        onSave={({ title, prompt, format, accent }) => {
+          if (editingCustomWidget) {
+            updateCustomWidget(editingCustomWidget.id, { title, prompt, format, accent });
+            setEditingCustomWidget(null);
+          }
         }}
       />
     </div>

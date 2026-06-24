@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, EyeOff, GripVertical, Pencil, Check, Trash2, Plus, Sparkles } from "lucide-react";
+import { Eye, EyeOff, GripVertical, Pencil, Check, Trash2, Plus, Sparkles, Settings2 } from "lucide-react";
 import { WidgetConfig, getWidgetLabel, DEFAULT_WIDGET_LABELS } from "@/hooks/useWidgetPreferences";
 import {
   DndContext,
@@ -29,6 +29,7 @@ interface WidgetEditModeProps {
   onReorder: (widgets: WidgetConfig[]) => void;
   onRemove: (id: string) => void;
   onAddCustom: () => void;
+  onEditCustom: (widget: WidgetConfig) => void;
 }
 
 function SortableWidgetItem({
@@ -36,11 +37,13 @@ function SortableWidgetItem({
   onToggle,
   onRename,
   onRemove,
+  onEditCustom,
 }: {
   widget: WidgetConfig;
   onToggle: (id: string) => void;
   onRename: (id: string, newTitle: string) => void;
   onRemove: (id: string) => void;
+  onEditCustom: (widget: WidgetConfig) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(getWidgetLabel(widget));
@@ -124,12 +127,21 @@ function SortableWidgetItem({
 
       <div className="flex items-center gap-1 shrink-0">
         {isCustom && (
-          <button
-            onClick={() => onRemove(widget.id)}
-            className="text-muted-foreground/40 hover:text-destructive transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+          <>
+            <button
+              onClick={() => onEditCustom(widget)}
+              className="text-muted-foreground/40 hover:text-foreground transition-colors"
+              aria-label="Edit widget"
+            >
+              <Settings2 className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => onRemove(widget.id)}
+              className="text-muted-foreground/40 hover:text-destructive transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </>
         )}
         <button
           onClick={() => onToggle(widget.id)}
@@ -146,7 +158,7 @@ function SortableWidgetItem({
   );
 }
 
-export function WidgetEditMode({ widgets, onToggle, onRename, onReorder, onRemove, onAddCustom }: WidgetEditModeProps) {
+export function WidgetEditMode({ widgets, onToggle, onRename, onReorder, onRemove, onAddCustom, onEditCustom }: WidgetEditModeProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
@@ -173,6 +185,7 @@ export function WidgetEditMode({ widgets, onToggle, onRename, onReorder, onRemov
               onToggle={onToggle}
               onRename={onRename}
               onRemove={onRemove}
+              onEditCustom={onEditCustom}
             />
           ))}
         </SortableContext>

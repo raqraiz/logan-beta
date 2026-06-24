@@ -34,6 +34,7 @@ serve(async (req) => {
     const promptRaw = typeof body.prompt === "string" ? body.prompt : "";
     const prompt = promptRaw.trim().slice(0, 500);
     const targetUserId = typeof body.targetUserId === "string" ? body.targetUserId : null;
+    const format = typeof body.format === "string" ? body.format : "paragraph";
 
     if (!prompt) {
       return new Response(JSON.stringify({ error: "Missing prompt" }), {
@@ -143,9 +144,29 @@ serve(async (req) => {
       stageContext = `The user is on Day ${cycleDay} of ${cycleLengthDays} in their ${phase} phase.`;
     }
 
+    let formatInstruction = "";
+    switch (format) {
+      case "bullets":
+        formatInstruction = `Return ONLY a JSON array of 3-4 short bullet strings (max 12 words each). Example: ["Eat protein at breakfast","Light cardio 20 min","Hydrate before noon"]. No prose, no markdown, no keys — just the JSON array.`;
+        break;
+      case "checklist":
+        formatInstruction = `Return ONLY a JSON array of 3 short actionable to-dos (max 10 words each, imperative voice). Example: ["Drink 2L water","Walk 20 minutes","Take magnesium tonight"]. No prose, no markdown — just the JSON array.`;
+        break;
+      case "stat":
+        formatInstruction = `Return ONLY a JSON object with a "value" (a short number, percentage, or 1-2 word answer) and a "label" (one short sentence, max 14 words, explaining it). Example: {"value":"7/10","label":"Energy is solid — push your hardest workout earlier today."}. No prose, no markdown — just the JSON object.`;
+        break;
+      case "quote":
+        formatInstruction = `Write ONE short reflective sentence or question (max 22 words). Warm, specific to their state. No quotes around it, no attribution, no preamble.`;
+        break;
+      default:
+        formatInstruction = `Write 1-2 short sentences (max 30 words total). Direct, specific to their state. No preamble, no markdown.`;
+    }
+
     const systemPrompt = `You are Logan, a life-stage-aware wellness assistant. ${stageContext}
 
-Generate a single short, actionable insight (1-2 sentences max) based on the user's custom widget description below. Make it specific to their current state. Be warm but direct. No emojis. No fluff.`;
+Generate a personalized insight based on the user's custom widget description below. Make it specific to their current state. Be warm but direct. No emojis. No fluff.
+
+OUTPUT FORMAT: ${formatInstruction}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
