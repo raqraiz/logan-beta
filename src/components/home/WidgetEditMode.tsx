@@ -158,7 +158,7 @@ function SortableWidgetItem({
   );
 }
 
-export function WidgetEditMode({ widgets, onToggle, onRename, onReorder, onRemove, onAddCustom }: WidgetEditModeProps) {
+export function WidgetEditMode({ widgets, onToggle, onRename, onReorder, onRemove, onAddCustom, onEditCustom }: WidgetEditModeProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
@@ -185,6 +185,7 @@ export function WidgetEditMode({ widgets, onToggle, onRename, onReorder, onRemov
               onToggle={onToggle}
               onRename={onRename}
               onRemove={onRemove}
+              onEditCustom={onEditCustom}
             />
           ))}
         </SortableContext>
