@@ -72,12 +72,13 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
     (async () => {
       const { data } = await supabase
         .from("participants")
-        .select("postpartum_active, postpartum_start_date")
+        .select("postpartum_active, postpartum_start_date, loss_date")
         .eq("email", userEmail)
         .maybeSingle();
       if (data) {
         setPostpartumActive(!!(data as any).postpartum_active);
         setPostpartumStartDate((data as any).postpartum_start_date ?? "");
+        setLossDate((data as any).loss_date ?? "");
       }
     })();
   }, [open, userEmail, currentLifeStage]);
@@ -100,21 +101,27 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
     const payload: Record<string, unknown> = { life_stage: stage };
 
     if (stage === "postpartum") {
-      // Postpartum mode owns the date; postpartum_active flag is irrelevant here.
       payload.postpartum_active = false;
       if (postpartumStartDate) payload.postpartum_start_date = postpartumStartDate;
+      payload.loss_date = null;
+    } else if (stage === "pregnancy_loss") {
+      payload.postpartum_active = false;
+      payload.postpartum_start_date = null;
+      payload.loss_date = lossDate || null;
+      payload.last_period_start = null;
     } else if (stage === "cycling" || stage === "irregular" || stage === "perimenopause") {
-      // Cycling / perimenopause user may also be in postpartum recovery — preserve the dual state.
       payload.postpartum_active = postpartumActive;
       if (postpartumActive && postpartumStartDate) {
         payload.postpartum_start_date = postpartumStartDate;
       } else if (!postpartumActive) {
         payload.postpartum_start_date = null;
       }
+      payload.loss_date = null;
     } else if (stage === "menopause") {
       payload.last_period_start = null;
       payload.postpartum_start_date = null;
       payload.postpartum_active = false;
+      payload.loss_date = null;
     }
 
     const { error } = await supabase
