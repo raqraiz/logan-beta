@@ -23,7 +23,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
+type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss";
 
 interface SettingsDialogProps {
   open: boolean;
