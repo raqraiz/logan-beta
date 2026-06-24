@@ -1,5 +1,5 @@
 
-type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
+type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss";
 
 interface ChatCycleCircleProps {
   cycleDay: number;
@@ -10,6 +10,7 @@ interface ChatCycleCircleProps {
   postpartumStartDate?: string;
   /** When true (and lifeStage='cycling'), overlay a small postpartum recovery badge */
   postpartumActive?: boolean;
+  lossDate?: string;
 }
 
 function formatPpShort(postpartumStartDate?: string): string | null {
