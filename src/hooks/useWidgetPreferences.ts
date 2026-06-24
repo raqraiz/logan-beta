@@ -1,12 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+export type WidgetFormat = "paragraph" | "bullets" | "checklist" | "stat" | "quote";
+export type WidgetAccent = "teal" | "rose" | "amber" | "violet" | "sky";
+
 export interface WidgetConfig {
   id: string;
   visible: boolean;
   customTitle?: string;
   type?: "built-in" | "custom";
   prompt?: string; // AI prompt for custom widgets
+  format?: WidgetFormat; // visual layout for custom widgets
+  accent?: WidgetAccent; // accent color for custom widgets
 }
 
 const DEFAULT_WIDGETS: WidgetConfig[] = [
@@ -95,7 +100,12 @@ export function useWidgetPreferences(userId?: string) {
     ));
   }, []);
 
-  const addCustomWidget = useCallback((title: string, prompt: string) => {
+  const addCustomWidget = useCallback((
+    title: string,
+    prompt: string,
+    format: WidgetFormat = "paragraph",
+    accent: WidgetAccent = "teal",
+  ) => {
     const id = `custom_${Date.now()}`;
     setWidgets(prev => [...prev, {
       id,
@@ -103,13 +113,39 @@ export function useWidgetPreferences(userId?: string) {
       customTitle: title,
       type: "custom",
       prompt,
+      format,
+      accent,
     }]);
     return id;
+  }, []);
+
+  const updateCustomWidget = useCallback((
+    id: string,
+    patch: { title?: string; prompt?: string; format?: WidgetFormat; accent?: WidgetAccent },
+  ) => {
+    setWidgets(prev => prev.map(w => w.id === id ? {
+      ...w,
+      ...(patch.title !== undefined ? { customTitle: patch.title || undefined } : {}),
+      ...(patch.prompt !== undefined ? { prompt: patch.prompt } : {}),
+      ...(patch.format !== undefined ? { format: patch.format } : {}),
+      ...(patch.accent !== undefined ? { accent: patch.accent } : {}),
+    } : w));
   }, []);
 
   const removeWidget = useCallback((id: string) => {
     setWidgets(prev => prev.filter(w => w.id !== id));
   }, []);
 
-  return { widgets, loading, saving, save, toggleWidget, renameWidget, setWidgets, addCustomWidget, removeWidget };
+  return {
+    widgets,
+    loading,
+    saving,
+    save,
+    toggleWidget,
+    renameWidget,
+    setWidgets,
+    addCustomWidget,
+    updateCustomWidget,
+    removeWidget,
+  };
 }
