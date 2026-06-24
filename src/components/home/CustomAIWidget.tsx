@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, RefreshCw, Quote as QuoteIcon } from "lucide-react";
+import { Sparkles, RefreshCw, Quote as QuoteIcon, Settings2 } from "lucide-react";
 import type { WidgetFormat, WidgetAccent } from "@/hooks/useWidgetPreferences";
 
 interface CustomAIWidgetProps {
@@ -15,6 +15,7 @@ interface CustomAIWidgetProps {
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
   postpartumStartDate?: string;
   postpartumActive?: boolean;
+  onEdit?: () => void;
 }
 
 const ACCENT_STYLES: Record<WidgetAccent, { border: string; glow: string; bg: string; dot: string; text: string }> = {
