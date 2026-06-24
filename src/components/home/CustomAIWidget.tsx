@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, RefreshCw, Quote as QuoteIcon } from "lucide-react";
+import { Sparkles, RefreshCw, Quote as QuoteIcon, Settings2 } from "lucide-react";
 import type { WidgetFormat, WidgetAccent } from "@/hooks/useWidgetPreferences";
 
 interface CustomAIWidgetProps {
@@ -15,6 +15,7 @@ interface CustomAIWidgetProps {
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
   postpartumStartDate?: string;
   postpartumActive?: boolean;
+  onEdit?: () => void;
 }
 
 const ACCENT_STYLES: Record<WidgetAccent, { border: string; glow: string; bg: string; dot: string; text: string }> = {
@@ -83,6 +84,7 @@ export function CustomAIWidget({
   lifeStage,
   postpartumStartDate,
   postpartumActive,
+  onEdit,
 }: CustomAIWidgetProps) {
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -127,13 +129,25 @@ export function CustomAIWidget({
               {title}
             </span>
           </div>
-          <button
-            onClick={generate}
-            disabled={loading}
-            className="text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors disabled:opacity-30"
-          >
-            <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
-          </button>
+          <div className="flex items-center gap-2">
+            {onEdit && (
+              <button
+                onClick={onEdit}
+                className="text-muted-foreground/40 hover:text-muted-foreground/80 transition-colors"
+                aria-label="Edit widget"
+              >
+                <Settings2 className="w-3 h-3" />
+              </button>
+            )}
+            <button
+              onClick={generate}
+              disabled={loading}
+              className="text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors disabled:opacity-30"
+              aria-label="Refresh"
+            >
+              <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
+            </button>
+          </div>
         </div>
 
         {loading ? (
