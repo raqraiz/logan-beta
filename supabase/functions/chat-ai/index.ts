@@ -123,7 +123,7 @@ const SYMPTOM_KEYWORDS: { name: string; patterns: RegExp[] }[] = [
   { name: "Irritability", patterns: [/\birritabl(e|y)\b/i, /\birritated\b/i, /\bsnappy\b/i, /\bshort temper(ed)?\b/i, /\bcranky\b/i] },
   { name: "Brain fog", patterns: [/\bbrain fog(gy)?\b/i, /\bfoggy\b/i, /\bcan'?t (think|focus|concentrate)\b/i] },
   { name: "Low motivation", patterns: [/\blow motivation\b/i, /\bunmotivated\b/i, /\bno motivation\b/i, /\bcan'?t get going\b/i] },
-  { name: "Sadness", patterns: [/\b(feeling |so |really )?sad\b/i, /\bcrying\b/i, /\btearful\b/i, /\bdown\b/i, /\bblue\b/i] },
+  { name: "Sadness", patterns: [/\b(feeling|feel|so|really|been)\s+sad\b/i, /\bsadness\b/i, /\bcrying\b/i, /\btearful\b/i, /\b(feeling|feel|been)\s+down\b/i, /\b(feeling|feel)\s+blue\b/i] },
   { name: "Restlessness", patterns: [/\brestless\b/i, /\bantsy\b/i, /\bcan'?t sit still\b/i] },
   { name: "Overwhelm", patterns: [/\boverwhelmed\b/i, /\boverwhelm\b/i, /\btoo much\b/i] },
   { name: "High energy", patterns: [/\bhigh energy\b/i, /\benergized\b/i, /\bso much energy\b/i] },
