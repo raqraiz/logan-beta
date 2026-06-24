@@ -23,7 +23,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
+type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -41,6 +41,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
   const [importerOpen, setImporterOpen] = useState(false);
   const [postpartumActive, setPostpartumActive] = useState(false);
   const [postpartumStartDate, setPostpartumStartDate] = useState<string>("");
+  const [lossDate, setLossDate] = useState<string>("");
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
 
@@ -71,12 +72,13 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
     (async () => {
       const { data } = await supabase
         .from("participants")
-        .select("postpartum_active, postpartum_start_date")
+        .select("postpartum_active, postpartum_start_date, loss_date")
         .eq("email", userEmail)
         .maybeSingle();
       if (data) {
         setPostpartumActive(!!(data as any).postpartum_active);
         setPostpartumStartDate((data as any).postpartum_start_date ?? "");
+        setLossDate((data as any).loss_date ?? "");
       }
     })();
   }, [open, userEmail, currentLifeStage]);
@@ -99,21 +101,27 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
     const payload: Record<string, unknown> = { life_stage: stage };
 
     if (stage === "postpartum") {
-      // Postpartum mode owns the date; postpartum_active flag is irrelevant here.
       payload.postpartum_active = false;
       if (postpartumStartDate) payload.postpartum_start_date = postpartumStartDate;
+      payload.loss_date = null;
+    } else if (stage === "pregnancy_loss") {
+      payload.postpartum_active = false;
+      payload.postpartum_start_date = null;
+      payload.loss_date = lossDate || null;
+      payload.last_period_start = null;
     } else if (stage === "cycling" || stage === "irregular" || stage === "perimenopause") {
-      // Cycling / perimenopause user may also be in postpartum recovery — preserve the dual state.
       payload.postpartum_active = postpartumActive;
       if (postpartumActive && postpartumStartDate) {
         payload.postpartum_start_date = postpartumStartDate;
       } else if (!postpartumActive) {
         payload.postpartum_start_date = null;
       }
+      payload.loss_date = null;
     } else if (stage === "menopause") {
       payload.last_period_start = null;
       payload.postpartum_start_date = null;
       payload.postpartum_active = false;
+      payload.loss_date = null;
     }
 
     const { error } = await supabase
@@ -179,6 +187,13 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
                 <div className="text-xs text-muted-foreground">12+ months without a period. No active cycle tracking.</div>
               </div>
             </label>
+            <label className="flex items-start gap-3 p-3 rounded-lg border border-rose-300/40 bg-rose-50/40 dark:bg-rose-950/10 hover:bg-rose-100/40 cursor-pointer">
+              <RadioGroupItem value="pregnancy_loss" id="stage-loss" className="mt-0.5" />
+              <div className="flex-1">
+                <div className="text-sm font-medium">Pregnancy loss / miscarriage recovery</div>
+                <div className="text-xs text-muted-foreground">Logan pauses cycle tracking and shifts into gentle, grief-aware recovery support. You can switch back anytime.</div>
+              </div>
+            </label>
           </RadioGroup>
           <p className="text-[11px] text-muted-foreground/80 mt-3">
             Tip: you can also just tell Logan in chat — e.g. "I'm actually still cycling" — and it'll switch automatically.
@@ -208,6 +223,25 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
                   />
                 </div>
               )}
+            </div>
+          )}
+
+          {stage === "pregnancy_loss" && (
+            <div className="mt-4 p-3 rounded-lg border border-rose-300/40 bg-rose-50/40 dark:bg-rose-950/10 space-y-3">
+              <div>
+                <Label htmlFor="loss-date" className="text-xs text-muted-foreground">Date of loss (optional)</Label>
+                <Input
+                  id="loss-date"
+                  type="date"
+                  value={lossDate}
+                  onChange={(e) => setLossDate(e.target.value)}
+                  max={new Date().toISOString().slice(0, 10)}
+                  className="mt-1"
+                />
+                <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">
+                  Logan will hold a gentle, no-pressure space. When you're ready to track cycles again, switch back to "Cycling" — your data stays.
+                </p>
+              </div>
             </div>
           )}
         </div>

@@ -414,9 +414,10 @@ interface CycleData {
   phase: string;
   cycleLengthDays: number;
   lastPeriodStart?: string;
-  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
+  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss";
   postpartumStartDate?: string;
   postpartumActive?: boolean;
+  lossDate?: string;
   needsPeriodStart?: boolean;
 }
 
@@ -459,19 +460,48 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   const visibleWidgets = widgets.filter(w => w.visible);
   const hasPostpartumContext = cycleData.lifeStage === "postpartum" || !!cycleData.postpartumActive;
   const isIrregular = cycleData.lifeStage === "irregular";
-  const isNonCycling = cycleData.lifeStage === "postpartum" || cycleData.lifeStage === "menopause" || isIrregular;
+  const isLoss = cycleData.lifeStage === "pregnancy_loss";
+  const isNonCycling = cycleData.lifeStage === "postpartum" || cycleData.lifeStage === "menopause" || isLoss || isIrregular;
   const stagePhase = isNonCycling
     ? (cycleData.lifeStage === "postpartum"
         ? "Postpartum"
         : cycleData.lifeStage === "menopause"
           ? "Menopause"
-          : "Steady")
+          : isLoss
+            ? "Recovery"
+            : "Steady")
     : cycleData.phase;
 
   // Helper to get life-stage-aware tips
   const ppPhase = getPostpartumPhase(cycleData.postpartumStartDate);
+  const LOSS_SUCCEED_HER = [
+    "Rest is productive right now. Your body just did something enormous.",
+    "Eat warm, iron-rich meals — red meat, lentils, leafy greens. You lost blood.",
+    "Let people show up. Texts, meals, walks. You don't have to be okay.",
+    "Sleep when you can. Grief is exhausting in ways nothing else is.",
+  ];
+  const LOSS_DONTMESS_HER = [
+    "Don't rush yourself back to 'normal'. There's no schedule for healing.",
+    "Don't compare your loss to anyone else's. Yours is real, full stop.",
+    "Heavy bleeding (soaking a pad an hour), fever, or severe pain — call your provider today.",
+    "Don't avoid the feelings to feel better faster. They come back louder.",
+  ];
+  const LOSS_SUCCEED_HIM = [
+    "Show up without trying to fix it. Sit with her. Bring water, food, quiet.",
+    "Use the word. Say 'our baby', say 'the miscarriage'. Don't tiptoe.",
+    "Handle the logistics — appointments, meals, messages — so she can rest.",
+    "Grieve too. This was your loss as well. Don't disappear into 'being strong'.",
+  ];
+  const LOSS_DONTMESS_HIM = [
+    "Never say 'at least…' anything. Not 'at least it was early', not 'at least you can try again'.",
+    "Don't push timelines. Not for sex, not for trying, not for 'feeling better'.",
+    "Don't go silent. Even a 'thinking of you' text matters when she can't speak.",
+    "Watch for warning signs — heavy bleeding, fever, dark thoughts. Help her call her doctor.",
+  ];
+
   const getTipsHer = (widgetId: string): string[] => {
     const isSucceed = widgetId.startsWith("succeed");
+    if (isLoss) return isSucceed ? LOSS_SUCCEED_HER : LOSS_DONTMESS_HER;
     if (hasPostpartumContext) {
       return isSucceed ? PP_SUCCEED_HER[ppPhase] : PP_DONTMESS_HER[ppPhase];
     }
@@ -488,6 +518,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   };
   const getTipsHim = (widgetId: string): string[] => {
     const isSucceed = widgetId.startsWith("succeed");
+    if (isLoss) return isSucceed ? LOSS_SUCCEED_HIM : LOSS_DONTMESS_HIM;
     if (hasPostpartumContext) {
       return isSucceed ? PP_SUCCEED_HIM[ppPhase] : PP_DONTMESS_HIM[ppPhase];
     }
@@ -548,6 +579,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
               lifeStage={cycleData.lifeStage}
               postpartumStartDate={cycleData.postpartumStartDate}
               postpartumActive={cycleData.postpartumActive}
+              lossDate={cycleData.lossDate}
               onCircleClick={isNonCycling ? undefined : () => setShowAnalytics(true)}
             />
 

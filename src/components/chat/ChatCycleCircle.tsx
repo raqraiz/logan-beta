@@ -1,5 +1,5 @@
 
-type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
+type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss";
 
 interface ChatCycleCircleProps {
   cycleDay: number;
@@ -10,6 +10,7 @@ interface ChatCycleCircleProps {
   postpartumStartDate?: string;
   /** When true (and lifeStage='cycling'), overlay a small postpartum recovery badge */
   postpartumActive?: boolean;
+  lossDate?: string;
 }
 
 function formatPpShort(postpartumStartDate?: string): string | null {
@@ -130,25 +131,28 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
   );
 }
 
-// Static badge for non-cycling/steady life stages (postpartum, menopause, irregular/on-the-pill, or stale cycling)
-function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: { lifeStage: "postpartum" | "menopause" | "irregular" | "steady"; size: "sm" | "md"; postpartumStartDate?: string; steadyReason?: "pill" | "stale" }) {
+// Static badge for non-cycling/steady life stages (postpartum, menopause, irregular/on-the-pill, pregnancy loss, or stale cycling)
+function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, steadyReason }: { lifeStage: "postpartum" | "menopause" | "irregular" | "steady" | "pregnancy_loss"; size: "sm" | "md"; postpartumStartDate?: string; lossDate?: string; steadyReason?: "pill" | "stale" }) {
   const stageKey =
     lifeStage === "postpartum" ? "Postpartum" :
     lifeStage === "menopause" ? "Menopause" :
     "Follicular"; // reuse a calm teal-ish for irregular/steady
   const styles = lifeStage === "irregular" || lifeStage === "steady"
     ? { color: "text-primary", ringColor: "stroke-primary", hex: "#15B88C" }
-    : PHASE_STYLES[stageKey];
+    : lifeStage === "pregnancy_loss"
+      ? { color: "text-rose-300", ringColor: "stroke-rose-300", hex: "#D4A5A5" }
+      : PHASE_STYLES[stageKey];
   const label =
     lifeStage === "postpartum" ? "Postpartum" :
     lifeStage === "menopause" ? "Menopause" :
+    lifeStage === "pregnancy_loss" ? "Healing" :
     lifeStage === "steady" ? (steadyReason === "stale" ? "Overdue" : "Steady") :
     "Steady";
 
 
   // Calculate weeks postpartum (or a default number for menopause/irregular)
   let displayNumber = "—";
-  let subLabel = lifeStage === "postpartum" ? "Recovery" : lifeStage === "menopause" ? "Transition" : "Hormonal BC";
+  let subLabel = lifeStage === "postpartum" ? "Recovery" : lifeStage === "menopause" ? "Transition" : lifeStage === "pregnancy_loss" ? "Recovery" : "Hormonal BC";
   if (lifeStage === "steady") {
     subLabel = steadyReason === "stale" ? "Period overdue" : "Hormonal BC";
   }
@@ -173,6 +177,26 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: 
   } else if (lifeStage === "postpartum") {
     displayNumber = "—";
     subLabel = "Week";
+  }
+  if (lifeStage === "pregnancy_loss") {
+    if (lossDate) {
+      const start = new Date(lossDate + "T12:00:00Z");
+      const diffDays = Math.floor((Date.now() - start.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays < 0) {
+        displayNumber = "♡";
+        subLabel = "Healing";
+      } else if (diffDays < 14) {
+        displayNumber = String(diffDays + 1);
+        subLabel = diffDays === 0 ? "Day 1" : "Day";
+      } else {
+        const weeks = Math.floor(diffDays / 7);
+        displayNumber = String(weeks);
+        subLabel = weeks === 1 ? "Week" : "Weeks";
+      }
+    } else {
+      displayNumber = "♡";
+      subLabel = "Healing";
+    }
   }
   // Irregular / on-the-pill / steady: no day number, show a glyph instead.
   // Pill 💊 only for irregular (BC) users; hourglass ⏳ for stale/overdue cycles.
@@ -262,10 +286,13 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, steadyReason }: 
   );
 }
 
-export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling", postpartumStartDate, postpartumActive = false }: ChatCycleCircleProps) {
-  // Postpartum/menopause/irregular users get a static badge.
+export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling", postpartumStartDate, postpartumActive = false, lossDate }: ChatCycleCircleProps) {
+  // Postpartum/menopause/pregnancy-loss/irregular users get a static badge.
   if (lifeStage === "postpartum" || lifeStage === "menopause") {
     return <LifeStageBadge lifeStage={lifeStage} size={size} postpartumStartDate={postpartumStartDate} />;
+  }
+  if (lifeStage === "pregnancy_loss") {
+    return <LifeStageBadge lifeStage="pregnancy_loss" size={size} lossDate={lossDate} />;
   }
   if (lifeStage === "irregular") {
     return <LifeStageBadge lifeStage="irregular" size={size} />;

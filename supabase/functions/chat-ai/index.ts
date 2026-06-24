@@ -1296,8 +1296,68 @@ serve(async (req) => {
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      // --- Pregnancy loss / miscarriage detection ---
+      const lossSignal =
+        /\b(miscarriage|miscarried|misscarriage|misscarried|pregnancy\s+loss|lost\s+(the|my|our)\s+(baby|pregnancy)|lost\s+the\s+pregnancy|had\s+a\s+(loss|d&c|d\s*and\s*c)|stillbirth|stillborn|chemical\s+pregnancy|ectopic|missed\s+miscarriage|blighted\s+ovum)\b/i.test(userMessage);
+      const lossExit =
+        /\b(i'?m\s+ready\s+to\s+(move\s+on|cycle\s+again|track\s+again)|switch\s+me\s+back\s+to\s+cycling|exit\s+(loss|recovery)\s+mode|i'?m\s+done\s+with\s+recovery)\b/i.test(userMessage)
+        && participant.life_stage === "pregnancy_loss";
+
+      if (lossSignal && participant.life_stage !== "pregnancy_loss") {
+        // Try to extract a date; otherwise default to today
+        const today = new Date().toISOString().slice(0, 10);
+        await supabase
+          .from("participants")
+          .update({
+            life_stage: "pregnancy_loss",
+            loss_date: today,
+            last_period_start: null,
+            postpartum_active: false,
+            postpartum_start_date: null,
+          })
+          .eq("id", participant.id);
+        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshed) participant = refreshed;
+
+        const msg = `I'm so sorry. I'm here with you — there's no rush, no agenda, and nothing you have to do right now.\n\nI've gently paused cycle tracking and switched into **recovery mode**. We'll go at your pace: rest, bleeding, sleep, appetite, mood — whatever you want to share, or nothing at all.\n\nIf any of these show up, please contact your provider right away: heavy bleeding (soaking a pad an hour for 2+ hours), fever over 100.4°F, severe pain, foul-smelling discharge, or fainting.\n\nWould it help to tell me a little about how you're feeling today — physically or emotionally?`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: msg,
+          message_type: "text",
+          metadata: { life_stage_updated: "pregnancy_loss" },
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (lossExit) {
+        await supabase
+          .from("participants")
+          .update({ life_stage: "cycling", loss_date: null })
+          .eq("id", participant.id);
+        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshed) participant = refreshed;
+
+        const msg = `Holding that with care. I've switched you back to **cycling mode** — your history here stays exactly as it is. When did your last period start? We'll pick up from there, gently.`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: msg,
+          message_type: "text",
+          metadata: { life_stage_updated: "cycling", awaiting_period_date: true },
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
     // --- End life-stage corrections ---
+
 
     // --- Postpartum life-stage / birth-date detection ---
     if (participant) {
@@ -1892,6 +1952,19 @@ serve(async (req) => {
 
     const backfillBlock = backfillConfirmation ? `\n\n${backfillConfirmation}\n` : "";
     let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext + backfillBlock);
+
+    // Pregnancy loss / miscarriage grief-aware mode — override tone, pause cycle talk.
+    if (participant?.life_stage === "pregnancy_loss") {
+      const lossDate = (participant as any).loss_date;
+      let daysSince: number | null = null;
+      if (lossDate) {
+        const d = new Date(lossDate + "T00:00:00");
+        daysSince = Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000));
+      }
+      systemPrompt += `\n\nLIFE STAGE: PREGNANCY LOSS / MISCARRIAGE RECOVERY${daysSince !== null ? ` (Day ${daysSince} since loss)` : ""}.\n\nTHIS OVERRIDES NORMAL CYCLE COACHING. The user is grieving and/or physically recovering from a miscarriage, stillbirth, ectopic, chemical pregnancy, or D&C.\n\nABSOLUTE RULES:\n- NEVER mention cycle phases, ovulation, fertile windows, luteal/follicular, or "your next period in X days." Cycle tracking is paused.\n- NEVER say "everything happens for a reason," "at least…," "you can try again," "you're young," or anything that minimizes the loss.\n- NEVER push silver linings, productivity, optimization, workouts, or "getting back on track."\n- NEVER ask "how far along were you" unless she brings it up first.\n- Do NOT be performatively cheerful. Match her energy — quiet, soft, present.\n\nWHAT TO DO:\n- Lead with acknowledgment. Short sentences. Lots of breathing room.\n- Use her words back to her. If she says "baby," say "baby." If she says "pregnancy," mirror that.\n- Offer (don't impose) gentle support: rest, hydration, iron-rich food, sleep, a warm bath, a walk if she wants one, naming the baby if she wants, journaling, a support line.\n- Track what she shares — bleeding days, cramps, sleep, mood, appetite, milk coming in, partner support — without analyzing it into a "plan."\n- One short, optional follow-up question max. Often the right response is just presence: "I'm here. Take your time."\n\nPHYSICAL SAFETY (always flag, kindly but clearly):\nIf she mentions soaking a pad an hour for 2+ hours, fever over 100.4°F / 38°C, severe one-sided pain, foul-smelling discharge, fainting, or thoughts of harming herself — gently urge her to call her provider or emergency line right away. Don't bury this in caveats.\n\nRESOURCES (offer only if relevant, never as a list-dump):\n- Postpartum Support International: 1-800-944-4773 (text "HELP" to 800-944-4773)\n- Return to Zero: HOPE pregnancy loss support\n- Star Legacy Foundation (stillbirth)\n- 988 Suicide & Crisis Lifeline if she expresses self-harm thoughts.\n\nWhen she's ready to "move on" or "track cycles again," she can tell you and you'll switch back. Until then, this space is hers.`;
+    }
+
+
 
 
 

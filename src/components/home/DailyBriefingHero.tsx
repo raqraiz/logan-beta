@@ -6,9 +6,10 @@ interface DailyBriefingHeroProps {
   cycleDay: number;
   phase: string;
   cycleLengthDays: number;
-  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
+  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss";
   postpartumStartDate?: string;
   postpartumActive?: boolean;
+  lossDate?: string;
   onCircleClick?: () => void;
 }
 
@@ -104,16 +105,20 @@ export function DailyBriefingHero({
   lifeStage,
   postpartumStartDate,
   postpartumActive,
+  lossDate,
   onCircleClick,
 }: DailyBriefingHeroProps) {
   const isSteadyByPill = lifeStage === "irregular";
-  const isNonCycling = (lifeStage && (lifeStage === "postpartum" || lifeStage === "menopause")) || isSteadyByPill;
-  const phaseText = PHASE_TEXT[phase] || "text-primary";
-  const phaseBg = PHASE_BG[phase] || "bg-primary/15";
-  const phaseAccent = PHASE_ACCENT[phase] || "from-primary/10 via-transparent to-transparent";
-  const headline = isSteadyByPill
-    ? "Hormonal birth control evens out your cycle. Let's focus on sleep, energy, and stress today."
-    : (PHASE_HEADLINE[phase] || "Your day, your rhythm.");
+  const isLoss = lifeStage === "pregnancy_loss";
+  const isNonCycling = (lifeStage && (lifeStage === "postpartum" || lifeStage === "menopause" || lifeStage === "pregnancy_loss")) || isSteadyByPill;
+  const phaseText = isLoss ? "text-rose-300" : (PHASE_TEXT[phase] || "text-primary");
+  const phaseBg = isLoss ? "bg-rose-300/15" : (PHASE_BG[phase] || "bg-primary/15");
+  const phaseAccent = isLoss ? "from-rose-300/10 via-transparent to-transparent" : (PHASE_ACCENT[phase] || "from-primary/10 via-transparent to-transparent");
+  const headline = isLoss
+    ? "Healing in progress. There's no timeline for this — only your pace."
+    : isSteadyByPill
+      ? "Hormonal birth control evens out your cycle. Let's focus on sleep, energy, and stress today."
+      : (PHASE_HEADLINE[phase] || "Your day, your rhythm.");
   const metrics = !isNonCycling ? getDayMetrics(cycleDay, cycleLengthDays) : null;
 
   return (
@@ -147,6 +152,7 @@ export function DailyBriefingHero({
                 lifeStage={lifeStage}
                 postpartumStartDate={postpartumStartDate}
                 postpartumActive={postpartumActive}
+                lossDate={lossDate}
               />
             </button>
 
@@ -158,10 +164,13 @@ export function DailyBriefingHero({
                       ? "Postpartum"
                       : lifeStage === "menopause"
                         ? "Menopause"
-                        : "On the pill")
+                        : lifeStage === "pregnancy_loss"
+                          ? "Recovery"
+                          : "On the pill")
                   : phase}
               </span>
             </div>
+
 
             <p className="text-sm text-foreground/85 text-center leading-relaxed max-w-[260px]">
               {headline}

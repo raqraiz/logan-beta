@@ -107,9 +107,10 @@ interface CycleData {
   cycleLengthDays: number;
   lastPeriodStart?: string;
   currentPeriodEndDate?: string | null;
-  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause";
+  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss";
   postpartumStartDate?: string;
   postpartumActive?: boolean;
+  lossDate?: string;
   needsPeriodStart?: boolean;
 }
 
@@ -127,9 +128,10 @@ const Chat = () => {
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
-  const [lifeStage, setLifeStage] = useState<"cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause">("cycling");
+  const [lifeStage, setLifeStage] = useState<"cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss">("cycling");
   const [postpartumStartDate, setPostpartumStartDate] = useState<string | null>(null);
   const [postpartumActive, setPostpartumActive] = useState<boolean>(false);
+  const [lossDate, setLossDate] = useState<string | null>(null);
   // Authoritative cycle data from `participants` table — wins over chat metadata
   const [participantCycle, setParticipantCycle] = useState<{
     lastPeriodStart: string | null;
@@ -337,13 +339,16 @@ const Chat = () => {
             periodStillActive: !!row.period_still_active,
           });
           if (row.life_stage) {
-            setLifeStage(row.life_stage as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause");
+            setLifeStage(row.life_stage as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss");
           }
           if (row.postpartum_start_date !== undefined) {
             setPostpartumStartDate(row.postpartum_start_date ?? null);
           }
           if (row.postpartum_active !== undefined) {
             setPostpartumActive(!!row.postpartum_active);
+          }
+          if (row.loss_date !== undefined) {
+            setLossDate(row.loss_date ?? null);
           }
         }
       )
@@ -363,13 +368,14 @@ const Chat = () => {
 
     // For postpartum/menopause users, provide a minimal CycleData with life stage info.
     // Irregular users still get full cycle tracking (they have cycles, just unpredictable).
-    if (lifeStage === "postpartum" || lifeStage === "menopause") {
+    if (lifeStage === "postpartum" || lifeStage === "menopause" || lifeStage === "pregnancy_loss") {
       setCycleData({
         cycleDay: 0,
-        phase: lifeStage === "postpartum" ? "Postpartum" : "Menopause",
+        phase: lifeStage === "postpartum" ? "Postpartum" : lifeStage === "menopause" ? "Menopause" : "Recovery",
         cycleLengthDays: 0,
         lifeStage,
         postpartumStartDate: postpartumStartDate || undefined,
+        lossDate: lossDate || undefined,
       });
       return;
     }
@@ -450,7 +456,7 @@ const Chat = () => {
         postpartumActive: postpartumActive && !!postpartumStartDate,
       });
     }
-  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, postpartumActive, participantCycle]);
+  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, postpartumActive, lossDate, participantCycle]);
 
   // Scroll to bottom on initial load
   const hasScrolledToBottom = useRef(false);
@@ -597,17 +603,20 @@ const Chat = () => {
     try {
       const { data } = await supabase
         .from("participants")
-        .select("life_stage, postpartum_start_date, postpartum_active, last_period_start, cycle_length_days, timezone, current_period_end_date, period_pending_since, period_still_active")
+        .select("life_stage, postpartum_start_date, postpartum_active, loss_date, last_period_start, cycle_length_days, timezone, current_period_end_date, period_pending_since, period_still_active")
         .eq("email", user.email)
         .single();
       if (data?.life_stage) {
-        setLifeStage(data.life_stage as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause");
+        setLifeStage(data.life_stage as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss");
       }
       if (data?.postpartum_start_date) {
         setPostpartumStartDate(data.postpartum_start_date);
       }
       if ((data as any)?.postpartum_active !== undefined) {
         setPostpartumActive(!!(data as any).postpartum_active);
+      }
+      if ((data as any)?.loss_date !== undefined) {
+        setLossDate((data as any).loss_date ?? null);
       }
       if (data) {
         setParticipantCycle({
@@ -1495,7 +1504,7 @@ const Chat = () => {
                           key={option.value}
                           onClick={() => {
                             sendOnboardingResponse(option.value);
-                            setLifeStage(option.value as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause");
+                            setLifeStage(option.value as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss");
                           }}
                           disabled={isSending}
                           className="text-left px-4 py-3 rounded-xl border border-border/40 bg-card/60 hover:bg-card/90 transition-all active:scale-[0.98]"
