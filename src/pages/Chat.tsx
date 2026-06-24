@@ -367,13 +367,14 @@ const Chat = () => {
 
     // For postpartum/menopause users, provide a minimal CycleData with life stage info.
     // Irregular users still get full cycle tracking (they have cycles, just unpredictable).
-    if (lifeStage === "postpartum" || lifeStage === "menopause") {
+    if (lifeStage === "postpartum" || lifeStage === "menopause" || lifeStage === "pregnancy_loss") {
       setCycleData({
         cycleDay: 0,
-        phase: lifeStage === "postpartum" ? "Postpartum" : "Menopause",
+        phase: lifeStage === "postpartum" ? "Postpartum" : lifeStage === "menopause" ? "Menopause" : "Recovery",
         cycleLengthDays: 0,
         lifeStage,
         postpartumStartDate: postpartumStartDate || undefined,
+        lossDate: lossDate || undefined,
       });
       return;
     }
