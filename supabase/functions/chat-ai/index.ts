@@ -1296,8 +1296,68 @@ serve(async (req) => {
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      // --- Pregnancy loss / miscarriage detection ---
+      const lossSignal =
+        /\b(miscarriage|miscarried|misscarriage|misscarried|pregnancy\s+loss|lost\s+(the|my|our)\s+(baby|pregnancy)|lost\s+the\s+pregnancy|had\s+a\s+(loss|d&c|d\s*and\s*c)|stillbirth|stillborn|chemical\s+pregnancy|ectopic|missed\s+miscarriage|blighted\s+ovum)\b/i.test(userMessage);
+      const lossExit =
+        /\b(i'?m\s+ready\s+to\s+(move\s+on|cycle\s+again|track\s+again)|switch\s+me\s+back\s+to\s+cycling|exit\s+(loss|recovery)\s+mode|i'?m\s+done\s+with\s+recovery)\b/i.test(userMessage)
+        && participant.life_stage === "pregnancy_loss";
+
+      if (lossSignal && participant.life_stage !== "pregnancy_loss") {
+        // Try to extract a date; otherwise default to today
+        const today = new Date().toISOString().slice(0, 10);
+        await supabase
+          .from("participants")
+          .update({
+            life_stage: "pregnancy_loss",
+            loss_date: today,
+            last_period_start: null,
+            postpartum_active: false,
+            postpartum_start_date: null,
+          })
+          .eq("id", participant.id);
+        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshed) participant = refreshed;
+
+        const msg = `I'm so sorry. I'm here with you — there's no rush, no agenda, and nothing you have to do right now.\n\nI've gently paused cycle tracking and switched into **recovery mode**. We'll go at your pace: rest, bleeding, sleep, appetite, mood — whatever you want to share, or nothing at all.\n\nIf any of these show up, please contact your provider right away: heavy bleeding (soaking a pad an hour for 2+ hours), fever over 100.4°F, severe pain, foul-smelling discharge, or fainting.\n\nWould it help to tell me a little about how you're feeling today — physically or emotionally?`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: msg,
+          message_type: "text",
+          metadata: { life_stage_updated: "pregnancy_loss" },
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (lossExit) {
+        await supabase
+          .from("participants")
+          .update({ life_stage: "cycling", loss_date: null })
+          .eq("id", participant.id);
+        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshed) participant = refreshed;
+
+        const msg = `Holding that with care. I've switched you back to **cycling mode** — your history here stays exactly as it is. When did your last period start? We'll pick up from there, gently.`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: msg,
+          message_type: "text",
+          metadata: { life_stage_updated: "cycling", awaiting_period_date: true },
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
     // --- End life-stage corrections ---
+
 
     // --- Postpartum life-stage / birth-date detection ---
     if (participant) {
