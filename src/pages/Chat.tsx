@@ -110,6 +110,7 @@ interface CycleData {
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss";
   postpartumStartDate?: string;
   postpartumActive?: boolean;
+  lossDate?: string;
   needsPeriodStart?: boolean;
 }
 
