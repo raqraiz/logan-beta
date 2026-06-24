@@ -456,7 +456,7 @@ const Chat = () => {
         postpartumActive: postpartumActive && !!postpartumStartDate,
       });
     }
-  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, postpartumActive, participantCycle]);
+  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, postpartumActive, lossDate, participantCycle]);
 
   // Scroll to bottom on initial load
   const hasScrolledToBottom = useRef(false);
