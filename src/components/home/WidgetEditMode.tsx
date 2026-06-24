@@ -29,6 +29,7 @@ interface WidgetEditModeProps {
   onReorder: (widgets: WidgetConfig[]) => void;
   onRemove: (id: string) => void;
   onAddCustom: () => void;
+  onEditCustom: (widget: WidgetConfig) => void;
 }
 
 function SortableWidgetItem({
