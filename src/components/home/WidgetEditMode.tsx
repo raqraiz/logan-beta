@@ -127,12 +127,21 @@ function SortableWidgetItem({
 
       <div className="flex items-center gap-1 shrink-0">
         {isCustom && (
-          <button
-            onClick={() => onRemove(widget.id)}
-            className="text-muted-foreground/40 hover:text-destructive transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+          <>
+            <button
+              onClick={() => onEditCustom(widget)}
+              className="text-muted-foreground/40 hover:text-foreground transition-colors"
+              aria-label="Edit widget"
+            >
+              <Settings2 className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => onRemove(widget.id)}
+              className="text-muted-foreground/40 hover:text-destructive transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </>
         )}
         <button
           onClick={() => onToggle(widget.id)}
