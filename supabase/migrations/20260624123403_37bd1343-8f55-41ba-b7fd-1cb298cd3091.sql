@@ -1,0 +1,2 @@
+ALTER TABLE public.participants ADD COLUMN IF NOT EXISTS loss_date date;
+COMMENT ON COLUMN public.participants.loss_date IS 'Date of pregnancy loss / miscarriage when life_stage = pregnancy_loss. Used to compute recovery day count.';
