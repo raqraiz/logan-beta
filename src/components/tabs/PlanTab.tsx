@@ -738,14 +738,27 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
           />
         )}
 
-        {/* ── Header ── */}
+        {/* ── Your Week (collapsible) ── */}
         <div>
-          <h2 className="font-display font-semibold text-lg text-foreground">Your Week</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            <span className={cn("font-medium", PHASE_COLOR[currentPhase])}>{currentPhase}</span>
-            {cycleData && <> · Day {currentDay} of {cycleLength}</>}
-          </p>
+          <button
+            type="button"
+            onClick={() => setYourWeekOpen((v) => !v)}
+            className="w-full flex items-center justify-between text-left"
+          >
+            <div>
+              <h2 className="font-display font-semibold text-lg text-foreground">Your Week</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                <span className={cn("font-medium", PHASE_COLOR[currentPhase])}>{currentPhase}</span>
+                {cycleData && <> · Day {currentDay} of {cycleLength}</>}
+              </p>
+            </div>
+            <ChevronRight className={cn(
+              "w-5 h-5 text-muted-foreground transition-transform shrink-0",
+              yourWeekOpen && "rotate-90"
+            )} />
+          </button>
         </div>
+
 
 
 
