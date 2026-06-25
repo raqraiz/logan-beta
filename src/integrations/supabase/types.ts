@@ -1478,6 +1478,7 @@ export type Database = {
       }
       generate_referral_code: { Args: never; Returns: string }
       get_auth_email: { Args: never; Returns: string }
+      get_referral_count: { Args: { _user_id: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
