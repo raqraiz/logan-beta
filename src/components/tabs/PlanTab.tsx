@@ -945,6 +945,8 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             )}
           </button>
         </div>
+        )}
+
 
         {/* ── Phase countdown + anchor insight ── */}
         <div className={cn(
