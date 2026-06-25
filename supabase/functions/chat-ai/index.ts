@@ -1031,6 +1031,81 @@ serve(async (req) => {
         }
       }
     }
+
+    // --- Phase declaration ("I'm in luteal", "I'm actually in my follicular phase", etc.) ---
+    // When the user explicitly states the phase they're in, back-date last_period_start
+    // to the midpoint of that phase so the rest of the app reflects it. Skip questions/hypotheticals.
+    if (participant && participant.life_stage === "cycling" && participant.cycle_length_days) {
+      const phaseDeclMatch = userMessage.match(
+        /(?:i['’]?m|i\s+am|im)\s+(?:actually\s+|currently\s+|now\s+)?(?:in|on)\s+(?:my\s+|the\s+)?(menstrual|menstruation|period|follicular|ovulation|ovulating|luteal)(?:\s+phase)?/i
+      ) || userMessage.match(
+        /^\s*(?:actually\s+,?\s*)?(?:in\s+)?(?:my\s+)?(menstrual|menstruation|follicular|ovulation|ovulating|luteal)\s+phase\b/i
+      );
+      const isHypotheticalPhase = /\b(?:thought|think|expected|expect|hoped|wonder(?:ed|ing)?|guess(?:ed|ing)?|supposed\s+to|would\s+(?:be|have|mean)|should\s+be|might\s+be|maybe|if\s+i)\b/i.test(userMessage);
+      const isQuestionPhase = /\?/.test(userMessage);
+
+      if (phaseDeclMatch && !isHypotheticalPhase && !isQuestionPhase) {
+        const declared = phaseDeclMatch[1].toLowerCase();
+        const cycLen = participant.cycle_length_days;
+        const ovDay = cycLen - 14;
+        let targetDay: number;
+        let phaseLabel: string;
+        if (declared.startsWith("menstr") || declared === "period") {
+          targetDay = 3; phaseLabel = "Menstruation";
+        } else if (declared.startsWith("foll")) {
+          targetDay = Math.max(7, Math.round((6 + (ovDay - 2)) / 2)); phaseLabel = "Follicular";
+        } else if (declared.startsWith("ovul")) {
+          targetDay = ovDay; phaseLabel = "Ovulation";
+        } else {
+          targetDay = Math.min(cycLen - 2, Math.round((ovDay + 3 + cycLen) / 2)); phaseLabel = "Luteal";
+        }
+
+        const tz = participant.timezone || "UTC";
+        const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
+        const [ty, tm, td] = todayStr.split("-").map(Number);
+        const todayLocal = new Date(Date.UTC(ty, tm - 1, td, 12, 0, 0));
+        todayLocal.setUTCDate(todayLocal.getUTCDate() - (targetDay - 1));
+        const formattedDate = todayLocal.toISOString().split("T")[0];
+
+        const { error: updErr } = await supabase
+          .from("participants")
+          .update({ last_period_start: formattedDate })
+          .eq("id", participant.id);
+
+        if (!updErr) {
+          const { data: refreshed } = await supabase
+            .from("participants").select("*").eq("id", participant.id).single();
+          if (refreshed) participant = refreshed;
+
+          const updatedCycleInfo = calculateCycleInfo(formattedDate, cycLen, tz);
+          const msg = `Got it — logging you as **${updatedCycleInfo.phase}** (around Day ${updatedCycleInfo.cycleDay}). Updated everywhere. If you remember your actual last period start date, share it and I'll dial it in exactly.`;
+
+          await supabase.from("chat_messages").insert({
+            user_id: user.id,
+            role: "assistant",
+            content: msg,
+            message_type: "text",
+            metadata: {
+              cycle_day: updatedCycleInfo.cycleDay,
+              cycle_phase: updatedCycleInfo.phase,
+              has_cycle_visual: true,
+              visual_type: "cycle_circle",
+              cycle_length_days: cycLen,
+              last_period_start: formattedDate,
+              timezone: tz,
+              period_update: true,
+              new_period_start: formattedDate,
+              phase_declared: phaseLabel,
+            }
+          });
+
+          return new Response(
+            JSON.stringify({ success: true, message: msg, cycleInfo: updatedCycleInfo, periodUpdated: true }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+    }
     // --- End cycle edit detection ---
 
     // --- Meal plan intent detection ---
