@@ -721,6 +721,22 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
     <div className="flex-1 overflow-y-auto pb-20">
       <div className="max-w-lg md:max-w-4xl mx-auto px-4 py-5 space-y-4">
 
+        {/* ── Cycle Forecast (moved to top) ── */}
+        {lastPeriodStart && (
+          <CycleForecast
+            cycleDay={currentDay}
+            phase={currentPhase}
+            cycleLengthDays={cycleLength}
+            lastPeriodStart={lastPeriodStart}
+            currentPeriodEndDate={currentPeriodEndDate}
+            anchorSymptom={anchorSymptom}
+            onClose={() => {}}
+            embedded
+            onPeriodUpdate={onPeriodUpdate}
+            postpartumStartDate={cycleData?.postpartumStartDate}
+          />
+        )}
+
         {/* ── Header ── */}
         <div>
           <h2 className="font-display font-semibold text-lg text-foreground">Your Week</h2>
@@ -729,6 +745,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             {cycleData && <> · Day {currentDay} of {cycleLength}</>}
           </p>
         </div>
+
 
 
 
@@ -942,21 +959,8 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
           )}
         </div>
 
-        {/* ── Cycle Forecast ── */}
-        {lastPeriodStart && (
-          <CycleForecast
-            cycleDay={currentDay}
-            phase={currentPhase}
-            cycleLengthDays={cycleLength}
-            lastPeriodStart={lastPeriodStart}
-            currentPeriodEndDate={currentPeriodEndDate}
-            anchorSymptom={anchorSymptom}
-            onClose={() => {}}
-            embedded
-            onPeriodUpdate={onPeriodUpdate}
-            postpartumStartDate={cycleData?.postpartumStartDate}
-          />
-        )}
+
+
 
 
         {/* ── Recent check-ins ── */}
