@@ -274,17 +274,19 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
         <div className="max-w-4xl mx-auto md:flex md:gap-6 md:px-6 md:py-4">
           {/* Calendar */}
           <div className="md:w-[340px] md:shrink-0">
-            <div className="px-4 md:px-0 pt-4 pb-2">
+            <div className="md:px-0 pt-4 pb-2">
               <div className="flex items-center justify-between gap-2 mb-1">
                 <button
                   type="button"
                   onClick={() => setForecastOpen((v) => !v)}
                   aria-expanded={forecastOpen}
-                  className="flex items-center gap-2 flex-1 text-left hover:opacity-80 transition-opacity"
+                  className="flex-1 flex items-center justify-between text-left hover:opacity-80 transition-opacity"
                 >
-                  <Calendar className="w-5 h-5 text-primary" />
-                  <h3 className="font-display font-semibold text-base text-foreground">Cycle Forecast</h3>
-                  <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${forecastOpen ? "rotate-180" : ""}`} />
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-primary" />
+                    <h3 className="font-display font-semibold text-lg text-foreground">Cycle Forecast</h3>
+                  </div>
+                  <ChevronRight className={`w-5 h-5 text-muted-foreground transition-transform shrink-0 ${forecastOpen ? "rotate-90" : ""}`} />
                 </button>
                 {onPeriodUpdate && forecastOpen && (
                   <button
@@ -297,8 +299,9 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                 )}
               </div>
               {!forecastOpen && (
-                <p className="text-xs text-muted-foreground">Tap to open the calendar and see your phase forecast</p>
+                <p className="text-sm text-muted-foreground mt-0.5">Tap to open the calendar and see your phase forecast</p>
               )}
+
               {forecastOpen && (
                 <>
                   <p className="text-xs text-muted-foreground mb-3">
