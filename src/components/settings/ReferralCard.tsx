@@ -25,11 +25,8 @@ export function ReferralCard({ userId }: ReferralCardProps) {
         .maybeSingle();
       setCode((data as any)?.referral_code ?? null);
 
-      const { count: c } = await supabase
-        .from("profiles")
-        .select("id", { count: "exact", head: true })
-        .eq("referred_by", userId);
-      setCount(c ?? 0);
+      const { data: c } = await supabase.rpc("get_referral_count", { _user_id: userId });
+      setCount((c as number) ?? 0);
     })();
   }, [userId]);
 
