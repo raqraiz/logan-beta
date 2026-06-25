@@ -959,21 +959,8 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
           )}
         </div>
 
-        {/* ── Cycle Forecast ── */}
-        {lastPeriodStart && (
-          <CycleForecast
-            cycleDay={currentDay}
-            phase={currentPhase}
-            cycleLengthDays={cycleLength}
-            lastPeriodStart={lastPeriodStart}
-            currentPeriodEndDate={currentPeriodEndDate}
-            anchorSymptom={anchorSymptom}
-            onClose={() => {}}
-            embedded
-            onPeriodUpdate={onPeriodUpdate}
-            postpartumStartDate={cycleData?.postpartumStartDate}
-          />
-        )}
+
+
 
 
         {/* ── Recent check-ins ── */}
