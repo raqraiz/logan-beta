@@ -363,79 +363,95 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
           <div ref={insightsRef} className="md:flex-1 md:min-w-0 md:sticky md:top-0 md:self-start">
             {selectedDate && selectedPhase && selectedMetrics && selectedColors && selectedTips && hasValidSelectedCycleDay ? (
               <div className="px-4 md:px-0 py-4 animate-in slide-in-from-bottom-4 md:slide-in-from-right-4 duration-200">
-                <div className={`rounded-xl border border-border/30 ${selectedColors.bg} overflow-hidden mb-3`}>
-                  <div className="px-4 py-3 flex items-center justify-between">
+                <div className={`rounded-xl border border-border/30 ${selectedColors.bg} backdrop-blur-md overflow-hidden mb-3`}>
+                  <button
+                    type="button"
+                    onClick={() => setShowInsights((v) => !v)}
+                    aria-expanded={showInsights}
+                    className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-white/5 transition-colors"
+                  >
                     <div>
                       <p className="text-sm text-muted-foreground">{format(selectedDate, "EEEE, MMM d")}</p>
                       <p className={`text-lg font-display font-bold ${selectedColors.text}`}>{selectedPhase}</p>
                     </div>
-                    <div className="text-right">
-                      <p className={`text-2xl font-display font-bold ${selectedColors.text}`}>{selectedCycleDay}</p>
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Day</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden mb-3">
-                  <div className="px-4 py-3 flex items-center gap-2 border-b border-border/20">
-                    <Zap className="w-4 h-4 text-primary" />
-                    <h4 className="text-sm font-semibold text-foreground">Day {selectedCycleDay} Insights</h4>
-                  </div>
-                  <div className="px-4 py-3 space-y-2.5">
                     <div className="flex items-center gap-3">
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider w-16">Energy</span>
-                      <EnergyBar value={selectedMetrics.energy} color="bg-phase-follicular" />
-                      <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(selectedMetrics.energy * 100)}%</span>
+                      <div className="text-right">
+                        <p className={`text-2xl font-display font-bold ${selectedColors.text}`}>{selectedCycleDay}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Day</p>
+                      </div>
+                      <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showInsights ? "rotate-180" : ""}`} />
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider w-16">Focus</span>
-                      <EnergyBar value={selectedMetrics.focus} color="bg-phase-ovulation" />
-                      <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(selectedMetrics.focus * 100)}%</span>
+                  </button>
+                  <p className="px-4 pb-2 text-[11px] text-muted-foreground/70">
+                    {showInsights ? "Tap to hide insights" : "Tap to show insights"}
+                  </p>
+                </div>
+                {showInsights && (
+                  <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
+                      <div className="px-4 py-3 flex items-center gap-2 border-b border-border/20">
+                        <Zap className="w-4 h-4 text-primary" />
+                        <h4 className="text-sm font-semibold text-foreground">Day {selectedCycleDay} Insights</h4>
+                      </div>
+                      <div className="px-4 py-3 space-y-2.5">
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] text-muted-foreground uppercase tracking-wider w-16">Energy</span>
+                          <EnergyBar value={selectedMetrics.energy} color="bg-phase-follicular" />
+                          <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(selectedMetrics.energy * 100)}%</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] text-muted-foreground uppercase tracking-wider w-16">Focus</span>
+                          <EnergyBar value={selectedMetrics.focus} color="bg-phase-ovulation" />
+                          <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(selectedMetrics.focus * 100)}%</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] text-muted-foreground uppercase tracking-wider w-16">Symptom</span>
+                          <EnergyBar value={selectedMetrics.symptomRisk} color="bg-phase-menstruation" />
+                          <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(selectedMetrics.symptomRisk * 100)}%</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider w-16">Symptom</span>
-                      <EnergyBar value={selectedMetrics.symptomRisk} color="bg-phase-menstruation" />
-                      <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(selectedMetrics.symptomRisk * 100)}%</span>
+                    <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
+                      <div className="px-3 py-2.5">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
+                          <Shield className="w-3 h-3" /> How not to mess up today
+                        </p>
+                        <ul className="space-y-1.5">
+                          {(selectedTips || []).map((tip, i) => (
+                            <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
+                              <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${selectedColors.dot}`} />
+                              {tip}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      {anchorSymptom && selectedMetrics.symptomRisk > 0.5 && (
+                        <div className="px-3 py-2 border-t border-border/15 flex items-center gap-2">
+                          <Heart className="w-3 h-3 text-phase-menstruation shrink-0" />
+                          <p className="text-[11px] text-muted-foreground">
+                            <span className="text-foreground font-medium">{anchorSymptom}</span> risk is elevated — plan ahead
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
+                      <div className="px-3 py-2.5">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
+                          <Users className="w-3 h-3" /> For him — how not to mess up today
+                        </p>
+                        <ul className="space-y-1.5">
+                          {(selectedPartnerTips || []).map((tip, i) => (
+                            <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
+                              <span className="mt-1 w-1.5 h-1.5 rounded-full shrink-0 bg-primary/50" />
+                              {tip}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
-                  <div className="px-3 py-2.5">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
-                      <Shield className="w-3 h-3" /> How not to mess up today
-                    </p>
-                    <ul className="space-y-1.5">
-                      {(selectedTips || []).map((tip, i) => (
-                        <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
-                          <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${selectedColors.dot}`} />
-                          {tip}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  {anchorSymptom && selectedMetrics.symptomRisk > 0.5 && (
-                    <div className="px-3 py-2 border-t border-border/15 flex items-center gap-2">
-                      <Heart className="w-3 h-3 text-phase-menstruation shrink-0" />
-                      <p className="text-[11px] text-muted-foreground">
-                        <span className="text-foreground font-medium">{anchorSymptom}</span> risk is elevated — plan ahead
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
-                  <div className="px-3 py-2.5">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
-                      <Users className="w-3 h-3" /> For him — how not to mess up today
-                    </p>
-                    <ul className="space-y-1.5">
-                      {(selectedPartnerTips || []).map((tip, i) => (
-                        <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
-                          <span className="mt-1 w-1.5 h-1.5 rounded-full shrink-0 bg-primary/50" />
-                          {tip}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
+                )}
+              </div>
               </div>
             ) : (
               <div className="px-4 md:px-0 py-4">
