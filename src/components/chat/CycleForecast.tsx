@@ -179,6 +179,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   const [showEditPeriod, setShowEditPeriod] = useState(false);
   const [editPeriodDate, setEditPeriodDate] = useState<Date | undefined>(periodStart);
   const [isSavingPeriod, setIsSavingPeriod] = useState(false);
+  const [showInsights, setShowInsights] = useState(false);
 
 
   // Build calendar grid
