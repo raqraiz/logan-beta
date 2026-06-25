@@ -980,32 +980,11 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
 
 
 
-        {/* ── Recent check-ins ── */}
-        {Object.keys(latestByDimension).length > 0 && (
-          <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden max-w-lg">
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20">
-              <Brain className="w-3.5 h-3.5 text-primary" />
-              <span className="text-xs font-semibold text-foreground">Your Check-ins</span>
-            </div>
-            <div className="divide-y divide-border/10">
-              {Object.entries(latestByDimension).map(([dim, entry]) => {
-                const config = DIMENSION_CONFIG[dim];
-                if (!config) return null;
-                const Icon = config.icon;
-                return (
-                  <div key={dim} className="flex items-center gap-3 px-4 py-2.5">
-                    <Icon className={cn("w-3.5 h-3.5", config.color)} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-foreground">{config.label}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">{entry.response}</p>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground/50 shrink-0">Day {entry.cycle_day}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        {/* ── Referrals ── */}
+        <div className="max-w-lg">
+          <ReferralCard userId={userId} />
+        </div>
+
       </div>
     </div>
   );
