@@ -276,11 +276,17 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
           <div className="md:w-[340px] md:shrink-0">
             <div className="px-4 md:px-0 pt-4 pb-2">
               <div className="flex items-center justify-between gap-2 mb-1">
-                <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setForecastOpen((v) => !v)}
+                  aria-expanded={forecastOpen}
+                  className="flex items-center gap-2 flex-1 text-left hover:opacity-80 transition-opacity"
+                >
                   <Calendar className="w-5 h-5 text-primary" />
                   <h3 className="font-display font-semibold text-base text-foreground">Cycle Forecast</h3>
-                </div>
-                {onPeriodUpdate && (
+                  <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${forecastOpen ? "rotate-180" : ""}`} />
+                </button>
+                {onPeriodUpdate && forecastOpen && (
                   <button
                     onClick={() => { setEditPeriodDate(periodStart); setShowEditPeriod(true); }}
                     className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 transition-colors px-2 py-1 rounded-md border border-primary/30 hover:bg-primary/5"
@@ -290,78 +296,87 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                   </button>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mb-3">
-                Tap any date to see insights for that day
-                {lastPeriodStart && (
-                  <> · Last period: <span className="text-foreground/70">{format(periodStart, "MMM d, yyyy")}</span></>
-                )}
-                {postpartumStartDate && (
-                  <> · Baby's birth date: <span className="text-foreground/70">{format(new Date(postpartumStartDate + "T12:00:00Z"), "MMM d, yyyy")}</span></>
-                )}
-              </p>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3">
-                {PHASES.map((p) => (
-                  <div key={p} className="flex items-center gap-1.5">
-                    <span className={`w-2.5 h-2.5 rounded-full ${PHASE_SOLID[p]}`} />
-                    <span className="text-xs text-muted-foreground">{p}</span>
+              {forecastOpen && (
+                <>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Tap any date to see insights for that day
+                    {lastPeriodStart && (
+                      <> · Last period: <span className="text-foreground/70">{format(periodStart, "MMM d, yyyy")}</span></>
+                    )}
+                    {postpartumStartDate && (
+                      <> · Baby's birth date: <span className="text-foreground/70">{format(new Date(postpartumStartDate + "T12:00:00Z"), "MMM d, yyyy")}</span></>
+                    )}
+                  </p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3">
+                    {PHASES.map((p) => (
+                      <div key={p} className="flex items-center gap-1.5">
+                        <span className={`w-2.5 h-2.5 rounded-full ${PHASE_SOLID[p]}`} />
+                        <span className="text-xs text-muted-foreground">{p}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              {/* Disclaimer */}
-              <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 mb-3">
-                <AlertTriangle className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                <p className="text-xs text-muted-foreground">
-                  This forecast is an estimate based on your cycle length and may vary with natural fluctuations. It is not medical advice.
-                </p>
-              </div>
-              <div className="border-b border-border/30" />
+                  {/* Disclaimer */}
+                  <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 mb-3">
+                    <AlertTriangle className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                    <p className="text-xs text-muted-foreground">
+                      This forecast is an estimate based on your cycle length and may vary with natural fluctuations. It is not medical advice.
+                    </p>
+                  </div>
+                  <div className="border-b border-border/30" />
+                </>
+              )}
             </div>
-            <div className="px-4 md:px-0 py-2 flex items-center justify-between">
-              <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-1.5 rounded-md border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-colors">
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="font-display font-semibold text-sm text-foreground">{format(currentMonth, "MMMM yyyy")}</span>
-              <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-1.5 rounded-md border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-colors">
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="px-4 md:px-0">
-              <div className="grid grid-cols-7 gap-1.5 mb-1">
-                {WEEKDAYS.map((d) => (
-                  <div key={d} className="text-center text-[11px] font-medium text-muted-foreground py-1">{d}</div>
-                ))}
-              </div>
-              <div className="grid grid-cols-7 gap-1.5">
-                {calendarDays.map((date) => {
-                  const inMonth = isSameMonth(date, currentMonth);
-                  const isToday = isSameDay(date, today);
-                  const isSelected = selectedDate && isSameDay(date, selectedDate);
-                  const cd = getCycleDayForDate(date);
-                  const ph = getPhaseForDay(cd, cycleLengthDays, menstruationEndDay);
-                  const colors = PHASE_COLORS[ph];
-                  return (
-                    <button
-                      key={date.toISOString()}
-                      onClick={() => setSelectedDate(isSelected ? null : date)}
-                      className={`
-                        aspect-square rounded-lg flex items-center justify-center text-sm font-medium transition-all duration-150
-                        ${!inMonth ? "opacity-30" : ""}
-                        ${isSelected ? `ring-2 ring-primary scale-110 ${colors.bg}` : ""}
-                        ${isToday && !isSelected ? "ring-2 ring-primary/60 bg-primary/10" : ""}
-                        ${!isSelected && !isToday && inMonth ? colors.bg : ""}
-                        hover:scale-105 active:scale-95
-                      `}
-                    >
-                      <span className={isToday ? "text-primary font-bold" : colors.text}>{format(date, "d")}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            {forecastOpen && (
+              <>
+                <div className="px-4 md:px-0 py-2 flex items-center justify-between">
+                  <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-1.5 rounded-md border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-colors">
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="font-display font-semibold text-sm text-foreground">{format(currentMonth, "MMMM yyyy")}</span>
+                  <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-1.5 rounded-md border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-colors">
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="px-4 md:px-0">
+                  <div className="grid grid-cols-7 gap-1.5 mb-1">
+                    {WEEKDAYS.map((d) => (
+                      <div key={d} className="text-center text-[11px] font-medium text-muted-foreground py-1">{d}</div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {calendarDays.map((date) => {
+                      const inMonth = isSameMonth(date, currentMonth);
+                      const isToday = isSameDay(date, today);
+                      const isSelected = selectedDate && isSameDay(date, selectedDate);
+                      const cd = getCycleDayForDate(date);
+                      const ph = getPhaseForDay(cd, cycleLengthDays, menstruationEndDay);
+                      const colors = PHASE_COLORS[ph];
+                      return (
+                        <button
+                          key={date.toISOString()}
+                          onClick={() => setSelectedDate(isSelected ? null : date)}
+                          className={`
+                            aspect-square rounded-lg flex items-center justify-center text-sm font-medium transition-all duration-150
+                            ${!inMonth ? "opacity-30" : ""}
+                            ${isSelected ? `ring-2 ring-primary scale-110 ${colors.bg}` : ""}
+                            ${isToday && !isSelected ? "ring-2 ring-primary/60 bg-primary/10" : ""}
+                            ${!isSelected && !isToday && inMonth ? colors.bg : ""}
+                            hover:scale-105 active:scale-95
+                          `}
+                        >
+                          <span className={isToday ? "text-primary font-bold" : colors.text}>{format(date, "d")}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Insights */}
-          <div ref={insightsRef} className="md:flex-1 md:min-w-0 md:sticky md:top-0 md:self-start">
+          <div ref={insightsRef} className={`md:flex-1 md:min-w-0 md:sticky md:top-0 md:self-start ${!forecastOpen ? "hidden" : ""}`}>
+
             {selectedDate && selectedPhase && selectedMetrics && selectedColors && selectedTips && hasValidSelectedCycleDay ? (
               <div className="px-4 md:px-0 py-4 animate-in slide-in-from-bottom-4 md:slide-in-from-right-4 duration-200">
                 <div className={`rounded-xl border border-border/30 ${selectedColors.bg} backdrop-blur-md overflow-hidden mb-3`}>
