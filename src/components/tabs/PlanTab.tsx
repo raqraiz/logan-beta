@@ -358,7 +358,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
   const [anchorSymptom, setAnchorSymptom] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
-  const [yourWeekOpen, setYourWeekOpen] = useState(true);
+  const [yourWeekOpen, setYourWeekOpen] = useState(false);
   const [liveCycle, setLiveCycle] = useState<{
     cycleDay: number;
     phase: string;
