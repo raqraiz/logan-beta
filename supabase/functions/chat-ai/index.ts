@@ -1119,7 +1119,7 @@ serve(async (req) => {
         const inferredLength = currentDay
           ? inferCycleLengthForDeclaredPhase(currentDay, phaseLabel as "Menstruation" | "Follicular" | "Ovulation" | "Luteal", cycLen)
           : null;
-        const shouldPreserveDayOne = !!participant.last_period_start && inferredLength && inferredLength !== cycLen;
+        const shouldPreserveDayOne = !!participant.last_period_start && inferredLength !== null && inferredLength !== cycLen;
 
         if (shouldPreserveDayOne) {
           const { error: updErr } = await supabase
