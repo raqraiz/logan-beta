@@ -296,6 +296,9 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                   </button>
                 )}
               </div>
+              {!forecastOpen && (
+                <p className="text-xs text-muted-foreground">Tap to open the calendar and see your phase forecast</p>
+              )}
               {forecastOpen && (
                 <>
                   <p className="text-xs text-muted-foreground mb-3">
