@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Copy, Check, Share2 } from "lucide-react";
+import { Copy, Check, Share2, Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface ReferralCardProps {
@@ -67,8 +67,24 @@ export function ReferralCard({ userId }: ReferralCardProps) {
       <Label className="text-sm font-medium mb-2 block">Invite friends</Label>
       <p className="text-xs text-muted-foreground mb-3">
         Share your personal link. We'll credit you when someone signs up through it.
-        {count > 0 && <span className="ml-1 text-foreground font-medium">{count} signup{count === 1 ? "" : "s"} so far.</span>}
       </p>
+
+      {count > 0 && (
+        <div className="mb-3 rounded-xl border border-primary/25 bg-primary/10 backdrop-blur-sm px-4 py-3 flex items-center gap-3 shadow-sm">
+          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+            <Sparkles className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-lg font-display font-semibold text-foreground leading-tight">
+              {count} signup{count === 1 ? "" : "s"} so far
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {count === 1 ? "Your first invite landed — nice." : "Thanks for spreading the word."}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-2">
         <Input value={link} readOnly className="font-mono text-xs" onClick={(e) => (e.target as HTMLInputElement).select()} />
         <Button variant="outline" size="icon" onClick={copy} disabled={!link} aria-label="Copy link">
