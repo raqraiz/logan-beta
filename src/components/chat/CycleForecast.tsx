@@ -452,7 +452,6 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                   </div>
                 )}
               </div>
-              </div>
             ) : (
               <div className="px-4 md:px-0 py-4">
                 <div className="rounded-xl border border-border/30 bg-card/50 p-6 text-center">
