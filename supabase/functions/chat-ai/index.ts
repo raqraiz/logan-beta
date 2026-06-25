@@ -154,6 +154,40 @@ function detectSymptomMentions(text: string): { name: string; severity: number }
   return detected;
 }
 
+function clampNumber(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function getDeclaredPhaseFromText(text: string): "Menstruation" | "Follicular" | "Ovulation" | "Luteal" | null {
+  if (/\b(?:menstrual|menstruation|period)\b/i.test(text)) return "Menstruation";
+  if (/\bfollicular\b/i.test(text)) return "Follicular";
+  if (/\b(?:ovulation|ovulating)\b/i.test(text)) return "Ovulation";
+  if (/\bluteal\b/i.test(text)) return "Luteal";
+  return null;
+}
+
+function getCycleDayForToday(lastPeriodStart: string, timezone: string): number {
+  const periodStart = parseDateOnly(lastPeriodStart);
+  if (!periodStart) return 1;
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: timezone });
+  const [ty, tm, td] = todayStr.split("-").map(Number);
+  const today = new Date(Date.UTC(ty, tm - 1, td, 12, 0, 0));
+  const daysSinceStart = Math.round((today.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24));
+  return daysSinceStart >= 0 ? daysSinceStart + 1 : 1;
+}
+
+function inferCycleLengthForDeclaredPhase(
+  currentDay: number,
+  declaredPhase: "Menstruation" | "Follicular" | "Ovulation" | "Luteal",
+  currentLength: number,
+): number | null {
+  if (!Number.isFinite(currentDay) || currentDay < 1) return null;
+  if (declaredPhase === "Luteal") return clampNumber(currentDay + 11, 18, 45);
+  if (declaredPhase === "Ovulation") return clampNumber(currentDay + 14, 18, 45);
+  if (declaredPhase === "Follicular") return currentDay <= 5 ? currentLength : clampNumber(Math.max(currentLength, currentDay + 16), 18, 45);
+  return currentDay <= 5 ? currentLength : null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -339,7 +373,7 @@ serve(async (req) => {
     // --- Period confirmation detection ---
     const { data: lastAssistantMsg } = await supabase
       .from("chat_messages")
-      .select("metadata")
+      .select("content, metadata")
       .eq("user_id", user.id)
       .eq("role", "assistant")
       .order("created_at", { ascending: false })
@@ -347,6 +381,7 @@ serve(async (req) => {
       .single();
     
     const wasPeridCheckin = (lastAssistantMsg?.metadata as any)?.period_checkin === true;
+    const lastAssistantContent = typeof lastAssistantMsg?.content === "string" ? lastAssistantMsg.content : "";
 
     const referencesHistoricalDate = /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/i.test(userMessage)
       || /last (month|cycle|time)/i.test(userMessage)
@@ -1032,35 +1067,108 @@ serve(async (req) => {
       }
     }
 
-    // --- Phase declaration ("I'm in luteal", "I'm actually in my follicular phase", etc.) ---
-    // When the user explicitly states the phase they're in, back-date last_period_start
-    // to the midpoint of that phase so the rest of the app reflects it. Skip questions/hypotheticals.
+    // --- Phase declaration / update request ("I'm in luteal", "will you update my phase?", etc.) ---
+    // Preserve a known Day 1. If the user is postpartum+cycling or otherwise has a real period
+    // start on file, update the cycle length estimate so the app reflects her actual phase
+    // instead of inventing a new period start date.
     if (participant && participant.life_stage === "cycling" && participant.cycle_length_days) {
       const phaseDeclMatch = userMessage.match(
         /(?:i['’]?m|i\s+am|im)\s+(?:actually\s+|currently\s+|now\s+)?(?:in|on)\s+(?:my\s+|the\s+)?(menstrual|menstruation|period|follicular|ovulation|ovulating|luteal)(?:\s+phase)?/i
       ) || userMessage.match(
         /^\s*(?:actually\s+,?\s*)?(?:in\s+)?(?:my\s+)?(menstrual|menstruation|follicular|ovulation|ovulating|luteal)\s+phase\b/i
       );
+      const phaseUpdateRequest = /\b(?:update|change|set|fix|adjust|correct)\b[^.?!]{0,50}\b(?:my\s+)?(?:phase|cycle)\b/i.test(userMessage)
+        || /\bwill\s+you\s+(?:update|change|set|fix|adjust|correct)\b[^.?!]{0,50}\b(?:my\s+)?(?:phase|cycle)\b/i.test(userMessage)
+        || /\bcan\s+you\s+(?:update|change|set|fix|adjust|correct)\b[^.?!]{0,50}\b(?:my\s+)?(?:phase|cycle)\b/i.test(userMessage);
       const isHypotheticalPhase = /\b(?:thought|think|expected|expect|hoped|wonder(?:ed|ing)?|guess(?:ed|ing)?|supposed\s+to|would\s+(?:be|have|mean)|should\s+be|might\s+be|maybe|if\s+i)\b/i.test(userMessage);
       const isQuestionPhase = /\?/.test(userMessage);
 
-      if (phaseDeclMatch && !isHypotheticalPhase && !isQuestionPhase) {
-        const declared = phaseDeclMatch[1].toLowerCase();
+      if ((phaseDeclMatch && !isHypotheticalPhase && !isQuestionPhase) || phaseUpdateRequest) {
+        const declared = phaseDeclMatch?.[1]?.toLowerCase();
         const cycLen = participant.cycle_length_days;
         const ovDay = cycLen - 14;
         let targetDay: number;
-        let phaseLabel: string;
-        if (declared.startsWith("menstr") || declared === "period") {
+        let phaseLabel = declared ? getDeclaredPhaseFromText(declared) : getDeclaredPhaseFromText(lastAssistantContent);
+
+        if (!phaseLabel) {
+          phaseLabel = getDeclaredPhaseFromText(userMessage);
+        }
+
+        if (!phaseLabel) {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              message: "I can update that — tell me which phase to set: menstruation, follicular, ovulation, or luteal.",
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        if (phaseLabel === "Menstruation") {
           targetDay = 3; phaseLabel = "Menstruation";
-        } else if (declared.startsWith("foll")) {
+        } else if (phaseLabel === "Follicular") {
           targetDay = Math.max(7, Math.round((6 + (ovDay - 2)) / 2)); phaseLabel = "Follicular";
-        } else if (declared.startsWith("ovul")) {
+        } else if (phaseLabel === "Ovulation") {
           targetDay = ovDay; phaseLabel = "Ovulation";
         } else {
           targetDay = Math.min(cycLen - 2, Math.round((ovDay + 3 + cycLen) / 2)); phaseLabel = "Luteal";
         }
 
         const tz = participant.timezone || "UTC";
+        const currentDay = participant.last_period_start ? getCycleDayForToday(participant.last_period_start, tz) : null;
+        const inferredLength = currentDay
+          ? inferCycleLengthForDeclaredPhase(currentDay, phaseLabel as "Menstruation" | "Follicular" | "Ovulation" | "Luteal", cycLen)
+          : null;
+        const shouldPreserveDayOne = !!participant.last_period_start && inferredLength !== null && inferredLength !== cycLen;
+
+        if (shouldPreserveDayOne) {
+          const { error: updErr } = await supabase
+            .from("participants")
+            .update({ cycle_length_days: inferredLength })
+            .eq("id", participant.id);
+
+          if (!updErr) {
+            const { data: refreshed } = await supabase
+              .from("participants").select("*").eq("id", participant.id).single();
+            if (refreshed) participant = refreshed;
+
+            const updatedCycleInfo = calculateCycleInfo(participant.last_period_start, inferredLength, tz);
+            const msg = `Got it — I kept your Day 1 as **${participant.last_period_start}** and updated this cycle estimate to **${inferredLength} days**, which puts you in **${updatedCycleInfo.phase}** now.`;
+
+            await supabase.from("cycle_updates").insert({
+              participant_id: participant.id,
+              update_type: "phase_adjustment",
+              category: "cycle",
+              description: `Phase set to ${phaseLabel}; cycle length adjusted from ${cycLen} to ${inferredLength} days based on current Day ${currentDay}.`,
+            });
+
+            await supabase.from("chat_messages").insert({
+              user_id: user.id,
+              role: "assistant",
+              content: msg,
+              message_type: "text",
+              metadata: {
+                cycle_day: updatedCycleInfo.cycleDay,
+                cycle_phase: updatedCycleInfo.phase,
+                has_cycle_visual: true,
+                visual_type: "cycle_circle",
+                cycle_length_days: inferredLength,
+                previous_cycle_length_days: cycLen,
+                last_period_start: participant.last_period_start,
+                timezone: tz,
+                cycle_length_update: true,
+                phase_declared: phaseLabel,
+                preserved_period_start: true,
+              }
+            });
+
+            return new Response(
+              JSON.stringify({ success: true, message: msg, cycleInfo: updatedCycleInfo, cycleLengthUpdated: true }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+
         const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
         const [ty, tm, td] = todayStr.split("-").map(Number);
         const todayLocal = new Date(Date.UTC(ty, tm - 1, td, 12, 0, 0));
