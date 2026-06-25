@@ -10,6 +10,7 @@ import { format, addDays } from "date-fns";
 import { CycleForecast } from "@/components/chat/CycleForecast";
 import { calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
 import { NutritionMenuActions } from "@/components/chat/NutritionMenuActions";
+import { ReferralCard } from "@/components/settings/ReferralCard";
 import {
   getPostpartumPhase,
   PP_META,
