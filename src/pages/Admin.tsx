@@ -5,12 +5,13 @@ import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { LogOut, RefreshCw, Shield, User, BarChart3, Megaphone, TrendingUp } from "lucide-react";
+import { LogOut, RefreshCw, Shield, User, BarChart3, Megaphone, TrendingUp, Mail } from "lucide-react";
 import { AdminManagement } from "@/components/admin/AdminManagement";
 import { ProfilesTab } from "@/components/admin/ProfilesTab";
 import { OverviewTab } from "@/components/admin/OverviewTab";
 import { NotificationsTab } from "@/components/admin/NotificationsTab";
 import { AttributionTab } from "@/components/admin/AttributionTab";
+import { EmailsTab } from "@/components/admin/EmailsTab";
 import { LoganFullLogo } from "@/components/LoganFullLogo";
 
 const Admin = () => {
