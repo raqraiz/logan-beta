@@ -639,6 +639,16 @@ serve(async (req) => {
             }
           }
         }
+
+        // Final nudge: ask the user to confirm the welcome email landed in their inbox.
+        await new Promise(resolve => setTimeout(resolve, 1800));
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: "One quick housekeeping note 💚 — I just sent a welcome email to the address you signed up with. Open it when you get a sec, drag it out of spam if it landed there, and add the sender to your contacts (or mark it \"Not Spam\"). That inbox is where your weekly insights, cycle nudges, and check-ins will come from, and I don't want you to miss any of it.",
+          message_type: "text",
+          metadata: { insight_type: "email_confirmation_nudge" }
+        });
       }
 
       return new Response(
