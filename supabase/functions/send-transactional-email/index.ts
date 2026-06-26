@@ -336,13 +336,25 @@ Deno.serve(async (req) => {
   }
 
   // 4. Render React Email template to HTML and plain text
-  const html = await renderAsync(
+  let html = await renderAsync(
     React.createElement(template.component, templateData)
   )
   const plainText = await renderAsync(
     React.createElement(template.component, templateData),
     { plainText: true }
   )
+
+  // Inject a 1x1 tracking pixel so we can detect opens. Best-effort: if the
+  // template lacks a </body>, fall back to appending at the end of the HTML.
+  const projectRef = (supabaseUrl.match(/^https?:\/\/([^.]+)\./) || [])[1] || ''
+  if (projectRef) {
+    const pixelUrl = `https://${projectRef}.supabase.co/functions/v1/track-email-open?mid=${encodeURIComponent(messageId)}&tpl=${encodeURIComponent(templateName)}&rcpt=${encodeURIComponent(effectiveRecipient.toLowerCase())}`
+    const pixelTag = `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;outline:none;text-decoration:none;" />`
+    html = html.includes('</body>')
+      ? html.replace('</body>', `${pixelTag}</body>`)
+      : `${html}${pixelTag}`
+  }
+
 
   // Resolve subject — supports static string or dynamic function
   const resolvedSubject =
