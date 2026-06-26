@@ -37,3 +37,6 @@ project_id = "tpohsmxpcqqgxcgectfs"
     verify_jwt = false
   [functions.handle-email-suppression]
     verify_jwt = false
+  [functions.track-email-open]
+    verify_jwt = false
+
