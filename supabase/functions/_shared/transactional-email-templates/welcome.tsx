@@ -2,11 +2,13 @@
 import * as React from 'npm:react@18.3.1'
 import {
   Body,
+  Button,
   Container,
   Head,
   Heading,
   Html,
   Preview,
+  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
@@ -14,6 +16,8 @@ import type { TemplateEntry } from './registry.ts'
 interface WelcomeProps {
   name?: string | null
 }
+
+const APP_URL = 'https://asklogan.ai/chat'
 
 const WelcomeEmail = ({ name }: WelcomeProps) => {
   const greetingName = name && name.trim().length > 0 ? name.trim() : 'there'
@@ -45,15 +49,18 @@ const WelcomeEmail = ({ name }: WelcomeProps) => {
           </Text>
 
           <Text style={text}>
-            Give Logan a few days to get to know you — it only gets better the more you use it. Come
-            back and chat whenever something's on your mind, whether it's how you're feeling today
-            or just checking in on your patterns.
+            Give it a few days to get to know you, it only gets better the more you use it. And if
+            anything ever feels off, just hit reply to this email, or report it in the "feedback"
+            section in the app.
           </Text>
 
-          <Text style={text}>
-            And if anything ever feels off, just email feedback@asklogan.ai, or report it in the
-            "feedback" section in the app. This comes straight to me, and I read every word. 🙏
-          </Text>
+          <Text style={text}>This comes straight to me, and I read every word. 🙏</Text>
+
+          <Section style={buttonWrap}>
+            <Button style={button} href={APP_URL}>
+              CONTINUE CHATTING WITH LOGAN
+            </Button>
+          </Section>
 
           <Text style={signature}>
             Raquella 💚<br />
@@ -101,6 +108,21 @@ const text = {
   color: '#374151',
   lineHeight: '1.6',
   margin: '0 0 18px',
+}
+const buttonWrap = {
+  textAlign: 'center' as const,
+  margin: '28px 0 8px',
+}
+const button = {
+  backgroundColor: 'hsl(168, 80%, 42%)',
+  color: '#0f172a',
+  fontSize: '14px',
+  fontWeight: '600' as const,
+  letterSpacing: '0.5px',
+  borderRadius: '12px',
+  padding: '14px 24px',
+  textDecoration: 'none',
+  display: 'inline-block',
 }
 const signature = {
   fontSize: '15px',
