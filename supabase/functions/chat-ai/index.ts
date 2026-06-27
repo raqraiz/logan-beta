@@ -980,6 +980,8 @@ serve(async (req) => {
       const lastAssistantMentionedDay = !!(lastAssistantMsg?.metadata as any)?.cycle_day
         || /\bday\s+\d{1,2}\b/i.test(((lastAssistantMsg as any)?.content as string) || "");
       const isCorrectionContext = /(?:sorry|actually|correction|i meant|my mistake|oops|nope|no\s*,|wait\s*,)/i.test(userMessage);
+      // Corrections are statements, not questions.
+      const isQuestion = /\?/.test(userMessage);
       const restorePreviousCycleState = /\b(?:put|move|switch|set)\s+me\s+back\b/i.test(userMessage)
         || /\b(?:i['’]?m\s+not|not|no)\s+(?:on|having|in)\s+(?:my\s+)?period\b/i.test(userMessage);
 
@@ -1078,9 +1080,6 @@ serve(async (req) => {
       // Skip if the user is speaking hypothetically / rhetorically / about expectations rather than asserting today's day
       // e.g. "I thought I'd be day 2 today", "would mean I'm on day 36", "how can that be?", "if I'm on day 5"
       const isHypothetical = /\b(?:thought|think|expected|expect|hoped|hope|wish|wished|wonder(?:ed|ing)?|figured|assumed|guess(?:ed|ing)?|supposed\s+to|would\s+(?:be|have|mean|put|make)|that\s+would|that\s+means?|means?\s+(?:i|that)|should\s+(?:be|have)|might\s+be|maybe|imagined?|if\s+i|how\s+can|how\s+is|how\s+could|why\s+(?:am|would|is)|does\s+that\s+mean|doesn'?t\s+that\s+mean)\b/i.test(userMessage);
-      // Also skip when the message is a question — corrections are statements, not questions
-      const isQuestion = /\?/.test(userMessage);
-
       if (cycleDayCorrectionMatch && !isHypothetical && !isQuestion) {
         const targetDay = parseInt(cycleDayCorrectionMatch[1]);
         if (targetDay >= 1 && targetDay <= 60) {
