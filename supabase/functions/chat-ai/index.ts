@@ -1235,7 +1235,7 @@ serve(async (req) => {
             if (refreshed) participant = refreshed;
 
             const updatedCycleInfo = calculateCycleInfo(participant.last_period_start, inferredLength, tz);
-            const msg = `Got it — trusting your read. You're in **${updatedCycleInfo.phase}** (Day ${updatedCycleInfo.cycleDay}). I kept your Day 1 (**${participant.last_period_start}**) and nudged this cycle's length estimate to **${inferredLength} days** to match. Your history stays intact.`;
+            const msg = `Got it — **Day ${updatedCycleInfo.cycleDay}, ${updatedCycleInfo.phase}**. Locking that in. I kept your Day 1 (**${participant.last_period_start}**) exactly where you logged it. Want me to update Day 1 too, or leave it as is?`;
 
             await supabase.from("cycle_updates").insert({
               participant_id: participant.id,
