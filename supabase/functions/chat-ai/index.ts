@@ -407,7 +407,11 @@ serve(async (req) => {
     const bareYesPatterns = [/^yes$/i, /^yes,? (it )?(started|has|did)/i];
     const isBareYes = bareYesPatterns.some(p => p.test(userMessage.trim()));
     
-    const isPeriodConfirmation = !referencesHistoricalDate && (
+    const isPeriodStartQuestion = /\?/.test(userMessage)
+      || /\b(?:when|what|which)\b[^.?!]{0,80}\b(?:period|bleed|day\s*1)\b[^.?!]{0,80}\b(?:start|started|begin|began|come|came|arrive|arrived)\b/i.test(userMessage)
+      || /\b(?:did|have)\s+i\s+(?:tell|say|mention|log|report)\b[^.?!]{0,80}\b(?:period|bleed|day\s*1)\b/i.test(userMessage);
+
+    const isPeriodConfirmation = !referencesHistoricalDate && !isPeriodStartQuestion && (
       periodConfirmPatterns.some(p => p.test(userMessage)) ||
       (isBareYes && wasPeridCheckin)
     );
@@ -876,7 +880,7 @@ serve(async (req) => {
         }
       }
 
-      if (periodDateMatch) {
+      if (periodDateMatch && !isPeriodStartQuestion) {
         const dateStr = periodDateMatch[1];
         const parsed = parseExplicitCalendarDate(dateStr);
         if (parsed && parsed <= new Date()) {
@@ -977,7 +981,9 @@ serve(async (req) => {
         || /\bday\s+\d{1,2}\b/i.test(((lastAssistantMsg as any)?.content as string) || "");
       const isCorrectionContext = /(?:sorry|actually|correction|i meant|my mistake|oops|nope|no\s*,|wait\s*,)/i.test(userMessage);
       const cycleDayCorrectionMatch = userMessage.match(
-        /(?:today\s+(?:should\s+be|is)|i['’]?m\s+(?:on|actually\s+on)|i\s+am\s+on|should\s+be|make\s+it|set\s+(?:it|me|cycle)?\s*to|change\s+(?:it|me)?\s*to|put\s+me\s+(?:on|at))\s+(?:my\s+|on\s+|at\s+)?(?:cycle\s+)?day\s*(\d{1,2})/i
+        /(?:today\s+(?:should\s+be|is)|i['’]?m\s+(?:on|actually\s+on)|i\s+am\s+on|should\s+be|make\s+it|set\s+(?:it|me|cycle)?\s*to|change\s+(?:it|me)?\s*to|put\s+me\s+(?:back\s+)?(?:on|at|to))\s+(?:my\s+|on\s+|at\s+|to\s+)?(?:cycle\s+)?day\s*(\d{1,2})/i
+      ) || userMessage.match(
+        /\b(?:put|move|switch|set)\s+me\s+back\s+(?:to\s+)?(?:cycle\s+)?day\s*(\d{1,2})/i
       ) || userMessage.match(
         /\bday\s*(\d{1,2})\s*(?:today|now|,?\s*not\s+day\s*\d{1,2})/i
       ) || userMessage.match(
@@ -1062,6 +1068,81 @@ serve(async (req) => {
               }),
               { headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
+          }
+        }
+
+        const restorePreviousCycleState = /\b(?:put|move|switch|set)\s+me\s+back\b/i.test(userMessage)
+          || /\b(?:i['’]?m\s+not|not|no)\s+(?:on|having|in)\s+(?:my\s+)?period\b/i.test(userMessage);
+
+        if (restorePreviousCycleState && !isQuestion) {
+          const { data: recentAssistantMessages } = await supabase
+            .from("chat_messages")
+            .select("metadata")
+            .eq("user_id", user.id)
+            .eq("role", "assistant")
+            .order("created_at", { ascending: false })
+            .limit(20);
+
+          const previousCycleMeta = (recentAssistantMessages || [])
+            .map((m) => (m.metadata || {}) as Record<string, unknown>)
+            .find((meta) => {
+              const priorStart = typeof meta.last_period_start === "string" ? meta.last_period_start : null;
+              const priorDay = typeof meta.cycle_day === "number" ? meta.cycle_day : Number(meta.cycle_day);
+              return !!priorStart
+                && priorStart !== participant.last_period_start
+                && Number.isFinite(priorDay)
+                && priorDay > 1;
+            });
+
+          if (previousCycleMeta) {
+            const restoredStart = previousCycleMeta.last_period_start as string;
+            const restoredLengthRaw = previousCycleMeta.cycle_length_days;
+            const restoredLength = typeof restoredLengthRaw === "number" ? restoredLengthRaw : Number(restoredLengthRaw);
+            const restorePayload: Record<string, unknown> = { last_period_start: restoredStart };
+            if (Number.isFinite(restoredLength) && restoredLength >= 18 && restoredLength <= 45) {
+              restorePayload.cycle_length_days = restoredLength;
+            }
+
+            const { error: restoreErr } = await supabase
+              .from("participants")
+              .update(restorePayload)
+              .eq("id", participant.id);
+
+            if (!restoreErr) {
+              const { data: refreshed } = await supabase
+                .from("participants").select("*").eq("id", participant.id).single();
+              if (refreshed) participant = refreshed;
+
+              const restoredCycleInfo = calculateCycleInfo(
+                participant.last_period_start,
+                participant.cycle_length_days || restoredLength || 28,
+                participant.timezone || "UTC"
+              );
+              const msg = `You're right — I restored you to **Day ${restoredCycleInfo.cycleDay}** in your **${restoredCycleInfo.phase}** phase. Updated everywhere.`;
+
+              await supabase.from("chat_messages").insert({
+                user_id: user.id,
+                role: "assistant",
+                content: msg,
+                message_type: "text",
+                metadata: {
+                  cycle_day: restoredCycleInfo.cycleDay,
+                  cycle_phase: restoredCycleInfo.phase,
+                  has_cycle_visual: true,
+                  visual_type: "cycle_circle",
+                  cycle_length_days: participant.cycle_length_days || restoredLength || 28,
+                  last_period_start: participant.last_period_start,
+                  timezone: participant.timezone || "UTC",
+                  period_update: true,
+                  restored_cycle_state: true,
+                }
+              });
+
+              return new Response(
+                JSON.stringify({ success: true, message: msg, cycleInfo: restoredCycleInfo, periodUpdated: true }),
+                { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              );
+            }
           }
         }
       }
