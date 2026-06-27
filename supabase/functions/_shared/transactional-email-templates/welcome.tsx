@@ -17,7 +17,7 @@ interface WelcomeProps {
   name?: string | null
 }
 
-const APP_URL = 'https://asklogan.ai/chat'
+const APP_URL = 'https://asklogan.ai/'
 
 const WelcomeEmail = ({ name }: WelcomeProps) => {
   const greetingName = name && name.trim().length > 0 ? name.trim() : 'there'
