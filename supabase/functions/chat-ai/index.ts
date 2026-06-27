@@ -2367,7 +2367,21 @@ serve(async (req) => {
     }
 
     const aiData = await aiResponse.json();
-    const assistantMessage = aiData.choices?.[0]?.message?.content || "I'm not sure how to respond to that. Could you try rephrasing?";
+    let assistantMessage = aiData.choices?.[0]?.message?.content || "I'm not sure how to respond to that. Could you try rephrasing?";
+
+    // SAFETY: strip any leaked system/meta instructions the model may have echoed
+    // back into the user-visible reply (e.g. "[!IMPORTANT] ...", "[CRITICAL] ...",
+    // "[SYSTEM] ...", or paraphrased rules about not referring to other apps).
+    const sanitizeLeakedInstructions = (text: string): string => {
+      let out = text;
+      // Remove lines that start with a bracketed meta tag like [!IMPORTANT], [CRITICAL], [SYSTEM], [NOTE], [RULE], [BACKFILL ...], [RUNTIME ...]
+      out = out.replace(/^[ \t]*\[!?\s*(?:IMPORTANT|CRITICAL|SYSTEM|NOTE|RULE|REMINDER|INSTRUCTION|BACKFILL[^\]]*|RUNTIME[^\]]*|META[^\]]*)\][^\n]*\n?/gim, "");
+      // Remove sentences that paraphrase the "never refer to yourself/themselves as any other app/product" rule
+      out = out.replace(/[^.\n]*\b(?:Logan|I|you)\b[^.\n]*\b(?:should|must|will|never)\b[^.\n]*\brefer to (?:themselves|yourself|itself|myself)\b[^.\n]*\.\s*/gi, "");
+      out = out.replace(/[^.\n]*\bnever refer to (?:themselves|yourself|itself|myself)\s+as\s+any other\s+(?:app|product|service)[^.\n]*\.\s*/gi, "");
+      return out.replace(/^\s+/, "").trimEnd();
+    };
+    assistantMessage = sanitizeLeakedInstructions(assistantMessage);
 
     // Generate 3 contextual conversation starters that respond to what was just said
     let conversationStarters: string[] = [];
