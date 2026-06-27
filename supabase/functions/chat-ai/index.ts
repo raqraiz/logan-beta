@@ -1516,6 +1516,14 @@ serve(async (req) => {
         || /\b(?:i'?m|i\s+am)\s+(?:still\s+)?cycling\b/i.test(userMessage)
         || /\bi'?m\s+not\s+postpartum\b/i.test(userMessage);
 
+      // Irregular / hormonal birth control: "I'm on the pill", "I have an IUD", "I'm on hormonal BC", "PCOS", "irregular cycle"
+      const irregularSignal =
+        /\b(?:i'?m|i\s+am|just\s+(?:started|got)|started|recently\s+started|switched\s+to|now\s+on|currently\s+on|going\s+on)\s+(?:on\s+)?(?:the\s+)?(?:pill|mini[-\s]?pill|combined\s+pill|birth\s+control(?:\s+pill)?|hormonal\s+(?:birth\s+control|bc|iud|contracepti(?:on|ve))|nuvaring|the\s+ring|the\s+patch|nexplanon|the\s+implant|depo(?:[-\s]provera)?|mirena|kyleena|skyla|liletta)\b/i.test(userMessage)
+        || /\b(?:i\s+have|got|just\s+got|just\s+had)\s+(?:an?\s+)?(?:hormonal\s+)?(?:iud|implant|nexplanon|mirena|kyleena|skyla|liletta|nuvaring|patch)\s+(?:put\s+in|inserted|placed)?\b/i.test(userMessage)
+        || /\b(?:change|switch|update|set)\s+(?:my\s+)?(?:settings?|account|life\s+stage|profile)\s+(?:to|for)\s+(?:hormonal\s+(?:birth\s+control|bc)|birth\s+control|irregular|the\s+pill|iud)\b/i.test(userMessage)
+        || /\b(?:i\s+have|i'?ve\s+got|diagnosed\s+with)\s+(?:pcos|hypothalamic\s+amenorrhea)\b/i.test(userMessage)
+        || /\b(?:my\s+)?(?:cycles?\s+(?:are|is)|periods?\s+(?:are|is))\s+(?:really\s+)?irregular\b/i.test(userMessage);
+
       // Cycling wins over menopause if both somehow match
       if (cyclingSignal && participant.life_stage !== "cycling") {
         await supabase
