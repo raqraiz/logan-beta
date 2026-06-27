@@ -1516,6 +1516,14 @@ serve(async (req) => {
         || /\b(?:i'?m|i\s+am)\s+(?:still\s+)?cycling\b/i.test(userMessage)
         || /\bi'?m\s+not\s+postpartum\b/i.test(userMessage);
 
+      // Irregular / hormonal birth control: "I'm on the pill", "I have an IUD", "I'm on hormonal BC", "PCOS", "irregular cycle"
+      const irregularSignal =
+        /\b(?:i'?m|i\s+am|just\s+(?:started|got)|started|recently\s+started|switched\s+to|now\s+on|currently\s+on|going\s+on)\s+(?:on\s+)?(?:the\s+)?(?:pill|mini[-\s]?pill|combined\s+pill|birth\s+control(?:\s+pill)?|hormonal\s+(?:birth\s+control|bc|iud|contracepti(?:on|ve))|nuvaring|the\s+ring|the\s+patch|nexplanon|the\s+implant|depo(?:[-\s]provera)?|mirena|kyleena|skyla|liletta)\b/i.test(userMessage)
+        || /\b(?:i\s+have|got|just\s+got|just\s+had)\s+(?:an?\s+)?(?:hormonal\s+)?(?:iud|implant|nexplanon|mirena|kyleena|skyla|liletta|nuvaring|patch)\s+(?:put\s+in|inserted|placed)?\b/i.test(userMessage)
+        || /\b(?:change|switch|update|set)\s+(?:my\s+)?(?:settings?|account|life\s+stage|profile)\s+(?:to|for)\s+(?:hormonal\s+(?:birth\s+control|bc)|birth\s+control|irregular|the\s+pill|iud)\b/i.test(userMessage)
+        || /\b(?:i\s+have|i'?ve\s+got|diagnosed\s+with)\s+(?:pcos|hypothalamic\s+amenorrhea)\b/i.test(userMessage)
+        || /\b(?:my\s+)?(?:cycles?\s+(?:are|is)|periods?\s+(?:are|is))\s+(?:really\s+)?irregular\b/i.test(userMessage);
+
       // Cycling wins over menopause if both somehow match
       if (cyclingSignal && participant.life_stage !== "cycling") {
         await supabase
@@ -1532,6 +1540,28 @@ serve(async (req) => {
           content: msg,
           message_type: "text",
           metadata: { life_stage_updated: "cycling", awaiting_period_date: true },
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (irregularSignal && !cyclingSignal && !perimenopauseSignal && participant.life_stage !== "irregular") {
+        await supabase
+          .from("participants")
+          .update({ life_stage: "irregular", postpartum_start_date: null, last_period_start: null })
+          .eq("id", participant.id);
+        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshed) participant = refreshed;
+
+        const msg = `Done — switched your account to **hormonal birth control / irregular cycle** mode. I'll stop predicting natural phases and instead focus on steady-state levers: sleep, protein, strength, stress, hydration, and the micronutrients hormonal BC can deplete (B6, B12, magnesium, zinc, folate). Anything specific you want to dig into first?`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: msg,
+          message_type: "text",
+          metadata: { life_stage_updated: "irregular" },
         });
         return new Response(
           JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
@@ -2593,8 +2623,9 @@ CYCLE DATA EDITS:
 - If a user asks HOW to change their cycle data themselves (e.g. "how do I update my cycle length?", "where can I edit my period date?"), tell them to head to the Home tab where there's an "Update period date" option right under the cycle circle. Keep it brief and friendly.
 
 LIFE STAGE CHANGES:
-- If a user mentions they are postpartum, just had a baby, gave birth recently, or shares a postpartum duration (e.g. "I'm 10 months postpartum", "had my baby in March"), the system automatically switches their life stage to postpartum and asks for the baby's birth date.
-- If a user mentions menopause symptoms or stage, acknowledge it warmly and ask for confirmation before making assumptions. Always ask for the baby's birth date when postpartum is mentioned without one — it's essential for accurate recovery tracking.
+- If a user TELLS you to change their life stage (e.g. "I just started the pill", "I have a hormonal IUD now", "switch me to hormonal birth control", "I'm in perimenopause", "I'm postpartum"), the system handles the switch automatically — just confirm it's done. NEVER tell her to do it herself.
+- If a user asks HOW to change their life stage manually (e.g. "where do I change my settings?"), tell her: tap the **gear icon in the top right corner** to open Settings, then pick the new life stage. Do NOT say Home tab — life-stage lives in Settings only.
+- Always ask for the baby's birth date when postpartum is mentioned without one — it's essential for accurate recovery tracking.
 
 MEAL PLANS / MENUS — STRICT RULES:
 - NEVER mention PDFs, downloads, files, attachments, printables, or "dropping" anything. That feature does not exist.
