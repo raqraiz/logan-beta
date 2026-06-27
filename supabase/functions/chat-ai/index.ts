@@ -1207,6 +1207,20 @@ serve(async (req) => {
         const inferredLength = currentDay
           ? inferCycleLengthForDeclaredPhase(currentDay, phaseLabel as "Menstruation" | "Follicular" | "Ovulation" | "Luteal", cycLen)
           : null;
+
+        // If the user is already in the phase she's declaring, just confirm — don't touch the cycle.
+        const calculatedPhaseNow = participant.last_period_start
+          ? calculateCycleInfo(participant.last_period_start, cycLen, tz).phase
+          : null;
+        if (calculatedPhaseNow === phaseLabel) {
+          const msg = `You're already logged as **${phaseLabel}** (Day ${currentDay}). I'm trusting your read — nothing to change.`;
+          await supabase.from("chat_messages").insert({
+            user_id: user.id, role: "assistant", content: msg, message_type: "text",
+            metadata: { cycle_day: currentDay, cycle_phase: phaseLabel, has_cycle_visual: true, visual_type: "cycle_circle", cycle_length_days: cycLen, last_period_start: participant.last_period_start, timezone: tz, phase_declared: phaseLabel, phase_confirmed_no_change: true }
+          });
+          return new Response(JSON.stringify({ success: true, message: msg }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+
         const shouldPreserveDayOne = !!participant.last_period_start && inferredLength !== null && inferredLength !== cycLen;
 
         if (shouldPreserveDayOne) {
@@ -1221,14 +1235,15 @@ serve(async (req) => {
             if (refreshed) participant = refreshed;
 
             const updatedCycleInfo = calculateCycleInfo(participant.last_period_start, inferredLength, tz);
-            const msg = `Got it — I kept your Day 1 as **${participant.last_period_start}** and updated this cycle estimate to **${inferredLength} days**, which puts you in **${updatedCycleInfo.phase}** now.`;
+            const msg = `Got it — trusting your read. You're in **${updatedCycleInfo.phase}** (Day ${updatedCycleInfo.cycleDay}). I kept your Day 1 (**${participant.last_period_start}**) and nudged this cycle's length estimate to **${inferredLength} days** to match. Your history stays intact.`;
 
             await supabase.from("cycle_updates").insert({
               participant_id: participant.id,
               update_type: "phase_adjustment",
               category: "cycle",
-              description: `Phase set to ${phaseLabel}; cycle length adjusted from ${cycLen} to ${inferredLength} days based on current Day ${currentDay}.`,
+              description: `User declared ${phaseLabel}; cycle length adjusted from ${cycLen} to ${inferredLength} days based on current Day ${currentDay}.`,
             });
+
 
             await supabase.from("chat_messages").insert({
               user_id: user.id,
