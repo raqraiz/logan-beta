@@ -1,9 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { RefreshCw, Search, Mail, MailOpen, AlertTriangle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -32,12 +39,21 @@ interface Row {
   open_count: number;
 }
 
-const TEMPLATE_FILTER = "welcome";
+const STATUS_PRIORITY: Record<string, number> = {
+  sent: 5,
+  bounced: 4,
+  dlq: 4,
+  failed: 4,
+  suppressed: 3,
+  pending: 2,
+};
 
 export const EmailsTab = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [templateFilter, setTemplateFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const load = async () => {
     setLoading(true);
@@ -45,28 +61,39 @@ export const EmailsTab = () => {
       const { data: logs } = await supabase
         .from("email_send_log")
         .select("message_id, template_name, recipient_email, status, error_message, created_at")
-        .eq("template_name", TEMPLATE_FILTER)
         .order("created_at", { ascending: false })
-        .limit(500);
+        .limit(2000);
 
-      // Dedupe by message_id, keep latest status
+      // Dedupe by message_id, keeping the row with highest status priority
+      // (fallback: latest by created_at, which is the first occurrence given desc order)
       const latest = new Map<string, LogRow>();
       for (const r of (logs ?? []) as LogRow[]) {
-        if (!latest.has(r.message_id)) latest.set(r.message_id, r);
+        const existing = latest.get(r.message_id);
+        if (!existing) {
+          latest.set(r.message_id, r);
+          continue;
+        }
+        const newP = STATUS_PRIORITY[r.status] ?? 0;
+        const oldP = STATUS_PRIORITY[existing.status] ?? 0;
+        if (newP > oldP) latest.set(r.message_id, r);
       }
 
       const msgIds = Array.from(latest.keys());
-      let opensByMsg = new Map<string, OpenRow[]>();
+      const opensByMsg = new Map<string, OpenRow[]>();
       if (msgIds.length) {
-        const { data: opens } = await supabase
-          .from("email_opens")
-          .select("message_id, opened_at")
-          .in("message_id", msgIds)
-          .order("opened_at", { ascending: true });
-        for (const o of (opens ?? []) as OpenRow[]) {
-          const arr = opensByMsg.get(o.message_id) ?? [];
-          arr.push(o);
-          opensByMsg.set(o.message_id, arr);
+        // chunk to avoid URL length limits
+        for (let i = 0; i < msgIds.length; i += 200) {
+          const chunk = msgIds.slice(i, i + 200);
+          const { data: opens } = await supabase
+            .from("email_opens")
+            .select("message_id, opened_at")
+            .in("message_id", chunk)
+            .order("opened_at", { ascending: true });
+          for (const o of (opens ?? []) as OpenRow[]) {
+            const arr = opensByMsg.get(o.message_id) ?? [];
+            arr.push(o);
+            opensByMsg.set(o.message_id, arr);
+          }
         }
       }
 
@@ -83,6 +110,7 @@ export const EmailsTab = () => {
           open_count: opens.length,
         };
       });
+      built.sort((a, b) => +new Date(b.sent_at) - +new Date(a.sent_at));
       setRows(built);
     } finally {
       setLoading(false);
@@ -93,18 +121,33 @@ export const EmailsTab = () => {
     load();
   }, []);
 
-  const filtered = rows.filter((r) =>
-    !search || r.recipient_email?.toLowerCase().includes(search.toLowerCase())
+  const templates = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.template_name))).sort(),
+    [rows]
   );
 
-  const totalSent = rows.filter((r) => r.status === "sent").length;
-  const totalOpened = rows.filter((r) => r.first_opened_at).length;
-  const totalFailed = rows.filter((r) => r.status === "dlq" || r.status === "failed" || r.status === "bounced").length;
+  const filtered = rows.filter((r) => {
+    if (templateFilter !== "all" && r.template_name !== templateFilter) return false;
+    if (statusFilter !== "all") {
+      if (statusFilter === "failed") {
+        if (!(r.status === "dlq" || r.status === "failed" || r.status === "bounced")) return false;
+      } else if (r.status !== statusFilter) return false;
+    }
+    if (search && !r.recipient_email?.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const totalSent = filtered.filter((r) => r.status === "sent").length;
+  const totalOpened = filtered.filter((r) => r.first_opened_at).length;
+  const totalFailed = filtered.filter(
+    (r) => r.status === "dlq" || r.status === "failed" || r.status === "bounced"
+  ).length;
+  const totalPending = filtered.filter((r) => r.status === "pending").length;
   const openRate = totalSent > 0 ? Math.round((totalOpened / totalSent) * 100) : 0;
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider">
             <Mail className="w-3.5 h-3.5" /> Delivered
@@ -122,6 +165,10 @@ export const EmailsTab = () => {
           <div className="text-2xl font-semibold mt-1">{openRate}%</div>
         </Card>
         <Card className="p-4">
+          <div className="text-muted-foreground text-xs uppercase tracking-wider">Pending</div>
+          <div className="text-2xl font-semibold mt-1">{totalPending}</div>
+        </Card>
+        <Card className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider">
             <AlertTriangle className="w-3.5 h-3.5" /> Failed
           </div>
@@ -132,17 +179,44 @@ export const EmailsTab = () => {
       <Card className="p-4">
         <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
           <div>
-            <h3 className="font-semibold text-foreground">Welcome emails</h3>
-            <p className="text-xs text-muted-foreground">Delivery + open tracking. Opens require images enabled in the recipient's client.</p>
+            <h3 className="font-semibold text-foreground">Email audit log</h3>
+            <p className="text-xs text-muted-foreground">
+              Every outbound email is recorded. Opens require images enabled in the recipient's client.
+            </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Select value={templateFilter} onValueChange={setTemplateFilter}>
+              <SelectTrigger className="w-44 h-9">
+                <SelectValue placeholder="Template" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All templates</SelectItem>
+                {templates.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-36 h-9">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="sent">Sent</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="suppressed">Suppressed</SelectItem>
+              </SelectContent>
+            </Select>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search email…"
-                className="pl-8 w-56"
+                className="pl-8 w-56 h-9"
               />
             </div>
             <Button variant="outline" size="sm" onClick={load} disabled={loading}>
@@ -156,6 +230,7 @@ export const EmailsTab = () => {
             <thead>
               <tr className="text-left text-muted-foreground border-b border-border">
                 <th className="py-2 pr-3 font-medium">Recipient</th>
+                <th className="py-2 pr-3 font-medium">Template</th>
                 <th className="py-2 pr-3 font-medium">Status</th>
                 <th className="py-2 pr-3 font-medium">Opened</th>
                 <th className="py-2 pr-3 font-medium">Sent</th>
@@ -165,9 +240,11 @@ export const EmailsTab = () => {
               {filtered.map((r) => {
                 const failed = r.status === "dlq" || r.status === "failed" || r.status === "bounced";
                 const suppressed = r.status === "suppressed";
+                const pending = r.status === "pending";
                 return (
                   <tr key={r.message_id} className="border-b border-border/50">
                     <td className="py-2 pr-3">{r.recipient_email}</td>
+                    <td className="py-2 pr-3 text-muted-foreground">{r.template_name}</td>
                     <td className="py-2 pr-3">
                       <Badge
                         variant="outline"
@@ -176,13 +253,18 @@ export const EmailsTab = () => {
                             ? "border-destructive/40 text-destructive"
                             : suppressed
                             ? "border-yellow-500/40 text-yellow-600"
+                            : pending
+                            ? "border-muted-foreground/40 text-muted-foreground"
                             : "border-emerald-500/40 text-emerald-600"
                         }
                       >
                         {r.status}
                       </Badge>
                       {r.error_message && (
-                        <div className="text-xs text-muted-foreground mt-1 max-w-xs truncate" title={r.error_message}>
+                        <div
+                          className="text-xs text-muted-foreground mt-1 max-w-xs truncate"
+                          title={r.error_message}
+                        >
                           {r.error_message}
                         </div>
                       )}
@@ -207,7 +289,9 @@ export const EmailsTab = () => {
               })}
               {!filtered.length && !loading && (
                 <tr>
-                  <td colSpan={4} className="py-8 text-center text-muted-foreground">No welcome emails yet.</td>
+                  <td colSpan={5} className="py-8 text-center text-muted-foreground">
+                    No emails match these filters.
+                  </td>
                 </tr>
               )}
             </tbody>
