@@ -1154,13 +1154,20 @@ serve(async (req) => {
     // instead of inventing a new period start date.
     if (participant && participant.life_stage === "cycling" && participant.cycle_length_days) {
       const phaseDeclMatch = userMessage.match(
-        /(?:i['’]?m|i\s+am|im)\s+(?:actually\s+|currently\s+|now\s+)?(?:in|on)\s+(?:my\s+|the\s+)?(menstrual|menstruation|period|follicular|ovulation|ovulating|ovulatory|fertile|luteal)(?:\s+phase)?/i
+        /(?:i['’]?m|i\s+am|im)\s+(?:actually\s+|currently\s+|now\s+|definitely\s+|really\s+)?(?:in|on)\s+(?:my\s+|the\s+)?(menstrual|menstruation|period|follicular|ovulation|ovulating|ovulatory|fertile|luteal)(?:\s+phase|\s+window)?/i
       ) || userMessage.match(
-        /^\s*(?:actually\s+,?\s*)?(?:in\s+)?(?:my\s+)?(menstrual|menstruation|follicular|ovulation|ovulating|ovulatory|fertile|luteal)\s+phase\b/i
+        /^\s*(?:no,?\s+)?(?:actually,?\s+)?(?:i['’]?m|i\s+am|im)\s+(?:actually\s+|currently\s+|now\s+|definitely\s+)?(menstruating|ovulating)\b/i
+      ) || userMessage.match(
+        /^\s*(?:actually\s+,?\s*)?(?:in\s+)?(?:my\s+)?(menstrual|menstruation|follicular|ovulation|ovulating|ovulatory|fertile|luteal)\s+(?:phase|window)\b/i
+      ) || userMessage.match(
+        /\b(?:switch|put|move|set|change|correct)\s+me\s+(?:to|into|back\s+to)\s+(?:my\s+|the\s+)?(menstrual|menstruation|period|follicular|ovulation|ovulating|ovulatory|fertile|luteal)(?:\s+phase|\s+window)?/i
+      ) || userMessage.match(
+        /\bi['’]?m\s+(?:not\s+(?:in\s+)?(?:my\s+)?\w+,?\s+)?(?:in\s+)?(?:my\s+)?(menstrual|menstruation|follicular|ovulation|ovulatory|fertile|luteal)\s+(?:phase|window)\b/i
       );
-      const phaseUpdateRequest = /\b(?:update|change|set|fix|adjust|correct)\b[^.?!]{0,50}\b(?:my\s+)?(?:phase|cycle)\b/i.test(userMessage)
-        || /\bwill\s+you\s+(?:update|change|set|fix|adjust|correct)\b[^.?!]{0,50}\b(?:my\s+)?(?:phase|cycle)\b/i.test(userMessage)
-        || /\bcan\s+you\s+(?:update|change|set|fix|adjust|correct)\b[^.?!]{0,50}\b(?:my\s+)?(?:phase|cycle)\b/i.test(userMessage);
+      const phaseUpdateRequest = /\b(?:update|change|set|fix|adjust|correct|switch)\b[^.?!]{0,50}\b(?:my\s+)?(?:phase|cycle)\b/i.test(userMessage)
+        || /\bwill\s+you\s+(?:update|change|set|fix|adjust|correct|switch)\b[^.?!]{0,50}\b(?:my\s+)?(?:phase|cycle)\b/i.test(userMessage)
+        || /\bcan\s+you\s+(?:update|change|set|fix|adjust|correct|switch)\b[^.?!]{0,50}\b(?:my\s+)?(?:phase|cycle)\b/i.test(userMessage);
+
       const isHypotheticalPhase = /\b(?:thought|think|expected|expect|hoped|wonder(?:ed|ing)?|guess(?:ed|ing)?|supposed\s+to|would\s+(?:be|have|mean)|should\s+be|might\s+be|maybe|if\s+i)\b/i.test(userMessage);
       const isQuestionPhase = /\?/.test(userMessage);
 
