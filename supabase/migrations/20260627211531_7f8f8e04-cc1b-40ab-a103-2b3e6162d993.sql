@@ -1,0 +1,1 @@
+UPDATE public.participants SET last_period_start = '2026-06-14', period_pending_since = NULL, period_still_active = false WHERE email = 'baylesmiri@gmail.com';
