@@ -93,7 +93,6 @@ Deno.serve(async (req) => {
     // Empty body is fine — we'll still try to match via any prior events.
   }
 
-  });
 
   // 1. Load the current profile.
   const { data: profile, error: profileErr } = await admin
