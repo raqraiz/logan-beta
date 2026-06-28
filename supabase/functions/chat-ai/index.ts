@@ -2374,17 +2374,30 @@ serve(async (req) => {
     // "[SYSTEM] ...", or paraphrased rules about not referring to other apps).
     const sanitizeLeakedInstructions = (text: string): string => {
       let out = text;
-      // Remove lines that start with a bracketed meta tag like [!IMPORTANT], [CRITICAL], [SYSTEM], [NOTE], [RULE], [BACKFILL ...], [RUNTIME ...]
-      // Allow optional markdown blockquote markers (">", ">>", etc.) before the bracketed meta tag
-      out = out.replace(/^[ \t]*(?:>[ \t]*)*\[!?\s*(?:IMPORTANT|CRITICAL|SYSTEM|NOTE|RULE|REMINDER|INSTRUCTION|BACKFILL[^\]]*|RUNTIME[^\]]*|META[^\]]*)\][^\n]*\n?/gim, "");
-      // Also strip any remaining empty blockquote lines left behind
-      out = out.replace(/^[ \t]*>[ \t]*$\n?/gim, "");
-      // Remove sentences that paraphrase the "never refer to yourself/themselves as any other app/product" rule
+      // 1) Remove ANY line (optionally blockquoted) that starts with a bracketed tag like
+      //    [ANYTHING], [!ANYTHING], [BACKFILL ...], [RUNTIME ...], [SYSTEM], [META], etc.
+      out = out.replace(/^[ \t]*(?:>+[ \t]*)*\[!?[^\]\n]{1,80}\][^\n]*\n?/gm, "");
+      // 2) Remove inline bracketed ALL-CAPS meta tags wherever they appear in a line
+      //    e.g. "Done — added X. [BACKFILL CONFIRMED]" -> "Done — added X."
+      out = out.replace(/\[!?\s*(?:[A-Z][A-Z0-9 _-]{2,40})(?:\s*:[^\]\n]*)?\]/g, "");
+      // 3) Remove any line that is a blockquote containing internal-sounding keywords
+      out = out.replace(/^[ \t]*>+[ \t]*[^\n]*\b(?:IMPORTANT|CRITICAL|SYSTEM|RUNTIME|BACKFILL|INTERNAL|META|REMINDER|INSTRUCTION|CONFIRMED|NOTE TO SELF)\b[^\n]*\n?/gim, "");
+      // 4) Strip leftover empty blockquote lines
+      out = out.replace(/^[ \t]*>+[ \t]*$\n?/gm, "");
+      // 5) Remove sentences that paraphrase the "never refer to yourself as any other app" rule
       out = out.replace(/[^.\n]*\b(?:Logan|I|you)\b[^.\n]*\b(?:should|must|will|never)\b[^.\n]*\brefer to (?:themselves|yourself|itself|myself)\b[^.\n]*\.\s*/gi, "");
       out = out.replace(/[^.\n]*\bnever refer to (?:themselves|yourself|itself|myself)\s+as\s+any other\s+(?:app|product|service)[^.\n]*\.\s*/gi, "");
+      // 6) Remove sentences that quote/reference an "internal note" or "system note"
+      out = out.replace(/[^.\n]*\b(?:internal note|system note|runtime context|backfill confirmed)\b[^.\n]*\.\s*/gi, "");
+      // 7) Collapse 3+ blank lines
+      out = out.replace(/\n{3,}/g, "\n\n");
       return out.replace(/^\s+/, "").trimEnd();
     };
     assistantMessage = sanitizeLeakedInstructions(assistantMessage);
+    // Final safety net: if sanitizer stripped everything, fall back to a safe reply
+    if (!assistantMessage.trim()) {
+      assistantMessage = "Got it — noted. What else is going on?";
+    }
 
     // Generate 3 contextual conversation starters that respond to what was just said
     let conversationStarters: string[] = [];
