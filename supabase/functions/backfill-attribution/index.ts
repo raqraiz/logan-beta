@@ -93,8 +93,6 @@ Deno.serve(async (req) => {
     // Empty body is fine — we'll still try to match via any prior events.
   }
 
-  {
-    const _unused = ANON_KEY; void _unused;
   });
 
   // 1. Load the current profile.
