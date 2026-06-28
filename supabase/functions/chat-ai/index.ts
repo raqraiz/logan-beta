@@ -1541,10 +1541,10 @@ serve(async (req) => {
               newOnes.push(c);
             }
             if (newOnes.length > 0) {
-              const rows = newOnes.map(name => ({ name, added_by: user.id }));
+              const rows = newOnes.map(name => ({ name: name.toLowerCase(), added_by: user.id }));
               const { error: addErr } = await supabase
                 .from("community_symptoms")
-                .upsert(rows, { onConflict: "name" });
+                .insert(rows);
               if (addErr) {
                 console.error("Community symptom add failed:", addErr);
               } else {
@@ -1553,6 +1553,7 @@ serve(async (req) => {
                 console.log("Added to community_symptoms:", list);
               }
             }
+
           }
         } catch (e) {
           console.error("Library add block error:", e);
