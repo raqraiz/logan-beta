@@ -2337,7 +2337,13 @@ serve(async (req) => {
     }
 
     const backfillBlock = backfillConfirmation ? `\n\n${backfillConfirmation}\n` : "";
-    let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext + backfillBlock);
+    const libraryBlock = libraryConfirmation ? `\n\n${libraryConfirmation}\n` : "";
+
+    // Sample of the shared symptom library for the model to compare against
+    const librarySample = knownLibraryNames.slice(0, 200).join(", ");
+    const libraryGuidance = `\n\nSHARED SYMPTOM LIBRARY (already trackable in Home → Log Symptoms): ${librarySample}.\n\nWHEN THE USER WANTS TO TRACK / RECORD / LOG SPECIFIC SYMPTOMS:\n1. For each symptom she names, check the library above (case-insensitive, loose match).\n2. For ones ALREADY in the library: tell her she can track them right now from Home → Log Symptoms (the gear / + on the symptom widget).\n3. For ones NOT in the library: wrap each new candidate name in inline-code backticks like \`hair loss\`, \`mouth ulcers\`, and ask exactly: "Want me to add these to the shared symptom library? They're anonymous." Then stop and wait.\n4. NEVER add silently. NEVER claim you added something unless the system tells you it was added.\n5. If she confirms ("yes", "please add", "go ahead"), the system handles the insert — just reply naturally that it's done and they'll show up in Log Symptoms.\n6. Keep the candidate list short (max 6 names). Use the user's own wording for each name, lowercased, no punctuation.`;
+    let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext + backfillBlock + libraryBlock + libraryGuidance);
+
 
     // Pregnancy loss / miscarriage grief-aware mode — override tone, pause cycle talk.
     if (participant?.life_stage === "pregnancy_loss") {
