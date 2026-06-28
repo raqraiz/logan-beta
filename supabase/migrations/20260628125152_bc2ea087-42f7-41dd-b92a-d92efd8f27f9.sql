@@ -1,0 +1,1 @@
+UPDATE public.profiles SET referred_by = '0ac20323-faff-40be-9dad-5157540146d1' WHERE id = '6a1642e8-4987-4cc8-a09f-638db63d2404' AND referred_by IS NULL;
