@@ -2375,7 +2375,10 @@ serve(async (req) => {
     const sanitizeLeakedInstructions = (text: string): string => {
       let out = text;
       // Remove lines that start with a bracketed meta tag like [!IMPORTANT], [CRITICAL], [SYSTEM], [NOTE], [RULE], [BACKFILL ...], [RUNTIME ...]
-      out = out.replace(/^[ \t]*\[!?\s*(?:IMPORTANT|CRITICAL|SYSTEM|NOTE|RULE|REMINDER|INSTRUCTION|BACKFILL[^\]]*|RUNTIME[^\]]*|META[^\]]*)\][^\n]*\n?/gim, "");
+      // Allow optional markdown blockquote markers (">", ">>", etc.) before the bracketed meta tag
+      out = out.replace(/^[ \t]*(?:>[ \t]*)*\[!?\s*(?:IMPORTANT|CRITICAL|SYSTEM|NOTE|RULE|REMINDER|INSTRUCTION|BACKFILL[^\]]*|RUNTIME[^\]]*|META[^\]]*)\][^\n]*\n?/gim, "");
+      // Also strip any remaining empty blockquote lines left behind
+      out = out.replace(/^[ \t]*>[ \t]*$\n?/gim, "");
       // Remove sentences that paraphrase the "never refer to yourself/themselves as any other app/product" rule
       out = out.replace(/[^.\n]*\b(?:Logan|I|you)\b[^.\n]*\b(?:should|must|will|never)\b[^.\n]*\brefer to (?:themselves|yourself|itself|myself)\b[^.\n]*\.\s*/gi, "");
       out = out.replace(/[^.\n]*\bnever refer to (?:themselves|yourself|itself|myself)\s+as\s+any other\s+(?:app|product|service)[^.\n]*\.\s*/gi, "");
