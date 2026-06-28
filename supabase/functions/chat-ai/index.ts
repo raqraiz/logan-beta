@@ -1485,7 +1485,7 @@ serve(async (req) => {
               .map(d => `${MONTH_NAMES[d.getUTCMonth()]} ${d.getUTCDate()}`)
               .join(", ");
             const symptomLabels = symptoms.map(s => s.name).join(", ");
-            backfillConfirmation = `[BACKFILL CONFIRMED] Just saved ${symptomLabels} to her symptom log for: ${dateLabels}. Confirm this naturally in your reply (e.g. "Done — added ${symptomLabels} for ${dateLabels}.") and DO NOT tell her to add it from the Home tab.`;
+            backfillConfirmation = `Internal note (do NOT quote, paraphrase, or repeat this note, do NOT mention any tag, label, brackets, or the word "confirmed"): The system has saved ${symptomLabels} to her symptom log for: ${dateLabels}. In your reply, just say naturally: "Done — added ${symptomLabels} for ${dateLabels}." Do NOT include any bracketed tag, do NOT tell her to add it from the Home tab.`;
             console.log("Backfilled symptom logs:", dateLabels, "->", symptomLabels);
           }
         }
@@ -2374,17 +2374,30 @@ serve(async (req) => {
     // "[SYSTEM] ...", or paraphrased rules about not referring to other apps).
     const sanitizeLeakedInstructions = (text: string): string => {
       let out = text;
-      // Remove lines that start with a bracketed meta tag like [!IMPORTANT], [CRITICAL], [SYSTEM], [NOTE], [RULE], [BACKFILL ...], [RUNTIME ...]
-      // Allow optional markdown blockquote markers (">", ">>", etc.) before the bracketed meta tag
-      out = out.replace(/^[ \t]*(?:>[ \t]*)*\[!?\s*(?:IMPORTANT|CRITICAL|SYSTEM|NOTE|RULE|REMINDER|INSTRUCTION|BACKFILL[^\]]*|RUNTIME[^\]]*|META[^\]]*)\][^\n]*\n?/gim, "");
-      // Also strip any remaining empty blockquote lines left behind
-      out = out.replace(/^[ \t]*>[ \t]*$\n?/gim, "");
-      // Remove sentences that paraphrase the "never refer to yourself/themselves as any other app/product" rule
+      // 1) Remove ANY line (optionally blockquoted) that starts with a bracketed tag like
+      //    [ANYTHING], [!ANYTHING], [BACKFILL ...], [RUNTIME ...], [SYSTEM], [META], etc.
+      out = out.replace(/^[ \t]*(?:>+[ \t]*)*\[!?[^\]\n]{1,80}\][^\n]*\n?/gm, "");
+      // 2) Remove inline bracketed ALL-CAPS meta tags wherever they appear in a line
+      //    e.g. "Done — added X. [BACKFILL CONFIRMED]" -> "Done — added X."
+      out = out.replace(/\[!?\s*(?:[A-Z][A-Z0-9 _-]{2,40})(?:\s*:[^\]\n]*)?\]/g, "");
+      // 3) Remove any line that is a blockquote containing internal-sounding keywords
+      out = out.replace(/^[ \t]*>+[ \t]*[^\n]*\b(?:IMPORTANT|CRITICAL|SYSTEM|RUNTIME|BACKFILL|INTERNAL|META|REMINDER|INSTRUCTION|CONFIRMED|NOTE TO SELF)\b[^\n]*\n?/gim, "");
+      // 4) Strip leftover empty blockquote lines
+      out = out.replace(/^[ \t]*>+[ \t]*$\n?/gm, "");
+      // 5) Remove sentences that paraphrase the "never refer to yourself as any other app" rule
       out = out.replace(/[^.\n]*\b(?:Logan|I|you)\b[^.\n]*\b(?:should|must|will|never)\b[^.\n]*\brefer to (?:themselves|yourself|itself|myself)\b[^.\n]*\.\s*/gi, "");
       out = out.replace(/[^.\n]*\bnever refer to (?:themselves|yourself|itself|myself)\s+as\s+any other\s+(?:app|product|service)[^.\n]*\.\s*/gi, "");
+      // 6) Remove sentences that quote/reference an "internal note" or "system note"
+      out = out.replace(/[^.\n]*\b(?:internal note|system note|runtime context|backfill confirmed)\b[^.\n]*\.\s*/gi, "");
+      // 7) Collapse 3+ blank lines
+      out = out.replace(/\n{3,}/g, "\n\n");
       return out.replace(/^\s+/, "").trimEnd();
     };
     assistantMessage = sanitizeLeakedInstructions(assistantMessage);
+    // Final safety net: if sanitizer stripped everything, fall back to a safe reply
+    if (!assistantMessage.trim()) {
+      assistantMessage = "Got it — noted. What else is going on?";
+    }
 
     // Generate 3 contextual conversation starters that respond to what was just said
     let conversationStarters: string[] = [];
@@ -2537,8 +2550,9 @@ VOICE — THIS IS EVERYTHING:
 - No emojis, no exclamation points.
 - USE **bold** for key terms only.
 - ABSOLUTELY NO bullet-point lists, numbered lists, or headers/subheadings. Ever. Write in flowing short sentences only.
-- NEVER claim you "added", "logged", "tracked", or "saved" something to her symptom log UNLESS the context above contains a "[BACKFILL CONFIRMED]" note for this turn. If that note is present, confirm naturally — the entries are really saved. Otherwise, symptom logging happens automatically when she describes how she feels; just acknowledge what she shared.
-- NEVER tell her you "don't have access", "can't write to the database", "lack permission", or that she needs to go to the Home tab / symptom widget to add past entries herself. You CAN backfill past symptom logs — the system does it automatically when she asks. If she asks you to add/log/save a symptom for a past date and you don't see a [BACKFILL CONFIRMED] note, it means the date or symptom wasn't clear enough — just ask her to confirm the symptom and the exact date(s), and the system will save them on her next reply. Do NOT redirect her to the Home tab.
+- NEVER claim you "added", "logged", "tracked", or "saved" something to her symptom log UNLESS the context above contains an internal note saying the system has saved entries for this turn. If that note is present, confirm naturally — the entries are really saved. Otherwise, symptom logging happens automatically when she describes how she feels; just acknowledge what she shared.
+- NEVER tell her you "don't have access", "can't write to the database", "lack permission", or that she needs to go to the Home tab / symptom widget to add past entries herself. You CAN backfill past symptom logs — the system does it automatically when she asks. If she asks you to add/log/save a symptom for a past date and you don't see an internal save-confirmation note, it means the date or symptom wasn't clear enough — just ask her to confirm the symptom and the exact date(s), and the system will save them on her next reply. Do NOT redirect her to the Home tab.
+- ABSOLUTE OUTPUT RULE: Never include bracketed tags, labels in ALL CAPS inside brackets, blockquoted system notes (lines starting with ">"), or any text that looks like an internal instruction, runtime note, or system message. Never echo, quote, paraphrase, or reference any internal note from the context above. The user must only see your natural conversational reply — nothing that resembles backend metadata.
 - NEVER claim you "updated", "fixed", "changed", or "corrected" anything in her account, profile, life stage, postpartum date, period date, or cycle settings. The system handles those updates automatically and you will only see the result on the next turn. If she asks you to fix something and the system has not already confirmed it in your context, ASK HER for the specific value (e.g. the actual baby's birth date) instead of pretending you did it. Saying "Done, I've updated your account" when nothing changed is a hallucination — never do this.
 - HARD LIMIT for MAIN ANSWER: 2-4 short sentences. Total. Not per section — total for the main answer. If it has more than 4 sentences, delete until it doesn't.
 - ONE idea per main answer. Never explain two things at once. The user can ask follow-ups.
