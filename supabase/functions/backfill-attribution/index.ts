@@ -72,10 +72,12 @@ Deno.serve(async (req) => {
     });
   }
 
-  const userClient = createClient(SUPABASE_URL, ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
+  const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
   });
-  const { data: userData, error: userErr } = await userClient.auth.getUser();
+
+  const token = authHeader.slice(7).trim();
+  const { data: userData, error: userErr } = await admin.auth.getUser(token);
   if (userErr || !userData?.user) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
@@ -91,8 +93,8 @@ Deno.serve(async (req) => {
     // Empty body is fine — we'll still try to match via any prior events.
   }
 
-  const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
+  {
+    const _unused = ANON_KEY; void _unused;
   });
 
   // 1. Load the current profile.
