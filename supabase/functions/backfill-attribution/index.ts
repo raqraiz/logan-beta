@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
   }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-  const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const _ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
   // Validate JWT — require an authenticated user.
@@ -72,10 +72,12 @@ Deno.serve(async (req) => {
     });
   }
 
-  const userClient = createClient(SUPABASE_URL, ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
+  const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
   });
-  const { data: userData, error: userErr } = await userClient.auth.getUser();
+
+  const token = authHeader.slice(7).trim();
+  const { data: userData, error: userErr } = await admin.auth.getUser(token);
   if (userErr || !userData?.user) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
@@ -91,9 +93,6 @@ Deno.serve(async (req) => {
     // Empty body is fine — we'll still try to match via any prior events.
   }
 
-  const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
 
   // 1. Load the current profile.
   const { data: profile, error: profileErr } = await admin
