@@ -2608,7 +2608,8 @@ serve(async (req) => {
           const rows = toAdd.map(name => ({ name, added_by: user.id }));
           const { error: addErr } = await supabase
             .from("community_symptoms")
-            .upsert(rows, { onConflict: "name" });
+            .insert(rows);
+
           if (addErr) {
             console.error("Post-reply library add failed:", addErr);
           } else {
