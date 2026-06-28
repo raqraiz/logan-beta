@@ -1485,7 +1485,7 @@ serve(async (req) => {
               .map(d => `${MONTH_NAMES[d.getUTCMonth()]} ${d.getUTCDate()}`)
               .join(", ");
             const symptomLabels = symptoms.map(s => s.name).join(", ");
-            backfillConfirmation = `[BACKFILL CONFIRMED] Just saved ${symptomLabels} to her symptom log for: ${dateLabels}. Confirm this naturally in your reply (e.g. "Done — added ${symptomLabels} for ${dateLabels}.") and DO NOT tell her to add it from the Home tab.`;
+            backfillConfirmation = `Internal note (do NOT quote, paraphrase, or repeat this note, do NOT mention any tag, label, brackets, or the word "confirmed"): The system has saved ${symptomLabels} to her symptom log for: ${dateLabels}. In your reply, just say naturally: "Done — added ${symptomLabels} for ${dateLabels}." Do NOT include any bracketed tag, do NOT tell her to add it from the Home tab.`;
             console.log("Backfilled symptom logs:", dateLabels, "->", symptomLabels);
           }
         }
