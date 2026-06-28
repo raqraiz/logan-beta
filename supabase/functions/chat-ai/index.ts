@@ -2547,7 +2547,81 @@ serve(async (req) => {
       baseMeta.suggested_day1 = bleedDay1Prompt.suggestedDay1;
     }
 
+    // --- Safety net: if Logan's reply PROMISES to add symptoms to the shared
+    // library (e.g. "I'll add memory loss to the symptom library"), actually
+    // insert them. Prevents the model from claiming the action without it
+    // happening server-side.
+    try {
+      const replyText = finalAssistantMessage;
+      const promisesAdd = /\b(?:add(?:ing|ed)?|including|put(?:ting)?|including|i'?ll\s+add|i\s+will\s+add|i'?ve\s+added)\b[^.?!\n]*\b(?:symptom\s+)?library\b/i.test(replyText)
+        || /\bto\s+the\s+(?:shared\s+)?(?:symptom\s+)?library\b/i.test(replyText);
+      if (promisesAdd) {
+        // Gather candidate symptom names: inline-code names, quoted names, and
+        // names appearing in "add X, Y, and Z to ... library".
+        const candidates: string[] = [];
+        for (const m of replyText.matchAll(/`([^`\n]{2,50})`/g)) candidates.push(m[1]);
+        for (const m of replyText.matchAll(/["'“”‘’]([^"'“”‘’\n]{2,50})["'“”‘’]/g)) candidates.push(m[1]);
+        const listMatch = replyText.match(/\badd(?:ing|ed)?\s+([^.?!\n]+?)\s+to\s+the\s+(?:shared\s+)?(?:symptom\s+)?library/i);
+        if (listMatch) {
+          const segment = listMatch[1].replace(/\band\b/gi, ",");
+          for (const part of segment.split(",")) {
+            const cleaned = part.trim().replace(/^[`"'“”‘’]+|[`"'“”‘’.]+$/g, "");
+            if (cleaned) candidates.push(cleaned);
+          }
+        }
+        // Also accept symptoms named in the user message when they explicitly
+        // asked to add ("can you add memory loss to the library").
+        if (/\b(?:add|include|put)\b[^.?!\n]*\blibrary\b/i.test(userMessage)) {
+          const um = userMessage.match(/\b(?:add|include|put)\s+([^.?!\n]+?)\s+to\s+the\s+(?:shared\s+)?(?:symptom\s+)?library/i);
+          if (um) {
+            const seg = um[1].replace(/\band\b/gi, ",");
+            for (const part of seg.split(",")) {
+              const cleaned = part.trim().replace(/^[`"'“”‘’]+|[`"'“”‘’.]+$/g, "");
+              if (cleaned) candidates.push(cleaned);
+            }
+          }
+        }
+
+        // Dedupe + filter against the catalog and existing community rows.
+        const known = new Set<string>(SYMPTOM_KEYWORDS.map(s => s.name.toLowerCase()));
+        try {
+          const { data: commRows2 } = await supabase
+            .from("community_symptoms").select("name").limit(1000);
+          for (const r of (commRows2 || []) as any[]) {
+            if (r?.name) known.add(String(r.name).toLowerCase());
+          }
+        } catch (_) {}
+        const seen = new Set<string>();
+        const toAdd: string[] = [];
+        for (const raw of candidates) {
+          const name = raw.trim().toLowerCase().replace(/\s+/g, " ");
+          if (name.length < 2 || name.length > 50) continue;
+          if (!/[a-z]/i.test(name)) continue;
+          // Skip generic words that aren't symptoms
+          if (/^(?:the|a|an|them|those|these|it|this|that|some|any|new|symptom|symptoms|library|home|log|track|tracker|trackers|things|stuff)$/i.test(name)) continue;
+          if (seen.has(name) || known.has(name)) continue;
+          seen.add(name);
+          toAdd.push(name);
+        }
+        if (toAdd.length > 0) {
+          const rows = toAdd.map(name => ({ name, added_by: user.id }));
+          const { error: addErr } = await supabase
+            .from("community_symptoms")
+            .upsert(rows, { onConflict: "name" });
+          if (addErr) {
+            console.error("Post-reply library add failed:", addErr);
+          } else {
+            console.log("Post-reply added to community_symptoms:", toAdd.join(", "));
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Post-reply library guard error:", e);
+    }
+    // --- End safety net ---
+
     const { error: insertError } = await supabase.from("chat_messages").insert({
+
       user_id: user.id,
       role: "assistant",
       content: finalAssistantMessage,
