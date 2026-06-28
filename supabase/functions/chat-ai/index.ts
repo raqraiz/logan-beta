@@ -1493,6 +1493,76 @@ serve(async (req) => {
     }
     // --- End backfill ---
 
+    // --- Community symptom library add ---
+    // When the user asks Logan to track / record symptoms that aren't standard, Logan
+    // asks permission and lists candidates as inline-code (`name`) in her reply. When
+    // the user confirms ("yes please add"), we look at the last assistant message,
+    // extract the inline-code names, dedupe against the built-in catalog + existing
+    // community_symptoms, and insert the truly new ones into the shared library.
+    let libraryConfirmation = "";
+    const knownLibraryNames: string[] = SYMPTOM_KEYWORDS.map(s => s.name);
+    {
+      try {
+        const { data: commRows } = await supabase
+          .from("community_symptoms")
+          .select("name")
+          .order("created_at", { ascending: false })
+          .limit(500);
+        for (const r of (commRows || []) as any[]) {
+          if (r?.name) knownLibraryNames.push(String(r.name));
+        }
+      } catch (_) {}
+      const knownLower = new Set(knownLibraryNames.map(n => n.trim().toLowerCase()));
+
+      const affirmative = /\b(?:yes|yeah|yep|yup|sure|please do|please add|ok|okay|go ahead|do it|add (?:them|those|it|all)|sounds good|sgtm)\b/i.test(userMessage);
+      const explicitAdd = /\b(?:add|include|put)\b[^.?!]*\blibrary\b/i.test(userMessage);
+
+      if (affirmative || explicitAdd) {
+        try {
+          const { data: recent2 } = await supabase
+            .from("chat_messages")
+            .select("content, role, created_at")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(6);
+          const lastAssistant = ((recent2 || []) as any[]).find(m => m.role === "assistant");
+          if (lastAssistant && /\blibrary\b/i.test(String(lastAssistant.content))) {
+            const content = String(lastAssistant.content);
+            const matches = Array.from(content.matchAll(/`([^`\n]{1,60})`/g));
+            const candidates = matches
+              .map(m => m[1].trim().replace(/^["'`]+|["'`]+$/g, ""))
+              .filter(s => s.length > 1 && s.length < 60 && /[a-zA-Z]/.test(s));
+            const newOnes: string[] = [];
+            const seen = new Set<string>();
+            for (const c of candidates) {
+              const lc = c.toLowerCase();
+              if (seen.has(lc) || knownLower.has(lc)) continue;
+              seen.add(lc);
+              newOnes.push(c);
+            }
+            if (newOnes.length > 0) {
+              const rows = newOnes.map(name => ({ name, added_by: user.id }));
+              const { error: addErr } = await supabase
+                .from("community_symptoms")
+                .upsert(rows, { onConflict: "name" });
+              if (addErr) {
+                console.error("Community symptom add failed:", addErr);
+              } else {
+                const list = newOnes.join(", ");
+                libraryConfirmation = `Internal note (do NOT quote, paraphrase, or repeat this note, do NOT mention any tag, label, or brackets): The system has added these to the shared symptom library anonymously: ${list}. In your reply, say naturally: "Done — added ${list} to the shared symptom library. You'll find them in Home → Log Symptoms next time you open it." Do NOT include any bracketed tag.`;
+                console.log("Added to community_symptoms:", list);
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Library add block error:", e);
+        }
+      }
+    }
+    // --- End community symptom library add ---
+
+
+
 
     // --- Manual life-stage corrections (menopause / perimenopause / cycling) ---
     if (participant) {
