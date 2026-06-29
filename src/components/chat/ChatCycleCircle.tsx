@@ -398,9 +398,17 @@ export function calculateCycleInfo(
   // If she hasn't updated her cycle in a while, wrap around her selected
   // cycle length so the ring never exceeds her configured length (e.g. Day 66
   // on a 28-day cycle becomes Day 10 of the next assumed cycle).
-  // EXCEPTION: if she has explicitly told Logan her period hasn't started yet
+  // EXCEPTION 1: if she has explicitly told Logan her period hasn't started yet
   // (periodPending), keep the true day count — don't roll into a fake cycle.
-  const cycleDay = periodPending
+  // EXCEPTION 2: if she's only slightly overdue (within 14 days past cycle
+  // length), keep showing the unwrapped day. Cycles vary, the luteal phase
+  // can run long, and silently rolling Day 29 into "Day 1 / Menstruation"
+  // creates a UI conflict with Cycle Forecast (which keeps the unwrapped day
+  // until next period is logged). Wait for her to confirm Day 1.
+  const OVERDUE_GRACE_DAYS = 14;
+  const overdueWithinGrace =
+    daysSinceStart >= cycleLengthDays && daysSinceStart < cycleLengthDays + OVERDUE_GRACE_DAYS;
+  const cycleDay = (periodPending || overdueWithinGrace)
     ? (daysSinceStart >= 0 ? daysSinceStart + 1 : 1)
     : (daysSinceStart >= 0
         ? (daysSinceStart % cycleLengthDays) + 1
