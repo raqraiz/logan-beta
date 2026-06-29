@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface ReferredSignup {
   id: string;
@@ -47,6 +49,7 @@ export const ReferralsPanel = () => {
   const [referred, setReferred] = useState<ReferredSignup[]>([]);
   const [referrerMap, setReferrerMap] = useState<Map<string, any>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     (async () => {
@@ -144,8 +147,10 @@ export const ReferralsPanel = () => {
             </TabsList>
 
             <TabsContent value="weekly">
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {weekRows.map((w) => {
+                  const key = w.weekStart.toISOString();
+                  const isCollapsed = collapsed.has(key);
                   const groups = Array.from(w.byReferrer.entries())
                     .map(([id, v]) => ({
                       id,
@@ -157,47 +162,63 @@ export const ReferralsPanel = () => {
                     }))
                     .sort((a, b) => b.count - a.count);
                   return (
-                    <div key={w.weekStart.toISOString()} className="space-y-2">
-                      <div className="flex items-center justify-between gap-4">
+                    <div key={key} className="space-y-2">
+                      <Button
+                        variant="ghost"
+                        className="w-full h-auto px-2 py-3 justify-between font-normal hover:bg-muted/50"
+                        onClick={() => {
+                          setCollapsed((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(key)) next.delete(key);
+                            else next.add(key);
+                            return next;
+                          });
+                        }}
+                      >
                         <div className="flex items-baseline gap-3">
                           <h3 className="font-medium text-foreground">{fmtRange(w.weekStart, w.weekEnd)}</h3>
                           <span className="text-xs text-muted-foreground tabular-nums">
                             {w.total} signup{w.total === 1 ? "" : "s"}
                           </span>
                         </div>
-                        <div className="h-1.5 w-32 bg-muted rounded-full overflow-hidden">
-                          <div className="h-full bg-primary" style={{ width: `${(w.total / maxWeek) * 100}%` }} />
+                        <div className="flex items-center gap-3">
+                          <div className="h-1.5 w-24 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-primary" style={{ width: `${(w.total / maxWeek) * 100}%` }} />
+                          </div>
+                          {isCollapsed ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronUp className="w-4 h-4 text-muted-foreground" />}
                         </div>
-                      </div>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Referrer</TableHead>
-                            <TableHead>Brought in</TableHead>
-                            <TableHead className="text-right w-20">Count</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {groups.map((g) => (
-                            <TableRow key={g.id}>
-                              <TableCell className="font-medium text-foreground align-top whitespace-nowrap">
-                                {g.ref?.full_name ?? g.ref?.email ?? "Unknown"}
-                                {g.ref?.referral_code && (
-                                  <Badge variant="outline" className="font-mono ml-2 text-[10px]">
-                                    {g.ref.referral_code}
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-xs text-muted-foreground">
-                                {g.signups
-                                  .map((s) => `${s.email ?? "anon"} (${new Date(s.created_at).toLocaleDateString()})`)
-                                  .join(" · ")}
-                              </TableCell>
-                              <TableCell className="text-right tabular-nums">{g.count}</TableCell>
+                      </Button>
+                      {!isCollapsed && (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Referrer</TableHead>
+                              <TableHead>Brought in</TableHead>
+                              <TableHead className="text-right w-20">Count</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {groups.map((g) => (
+                              <TableRow key={g.id}>
+                                <TableCell className="font-medium text-foreground align-top whitespace-nowrap">
+                                  {g.ref?.full_name ?? g.ref?.email ?? "Unknown"}
+                                  {g.ref?.referral_code && (
+                                    <Badge variant="outline" className="font-mono ml-2 text-[10px]">
+                                      {g.ref.referral_code}
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-xs text-muted-foreground">
+                                  {g.signups
+                                    .map((s) => `${s.email ?? "anon"} (${new Date(s.created_at).toLocaleDateString()})`)
+                                    .join(" · ")}
+                                </TableCell>
+                                <TableCell className="text-right tabular-nums">{g.count}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      )}
                     </div>
                   );
                 })}
