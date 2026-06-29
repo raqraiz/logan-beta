@@ -49,6 +49,7 @@ export const ReferralsPanel = () => {
   const [referred, setReferred] = useState<ReferredSignup[]>([]);
   const [referrerMap, setReferrerMap] = useState<Map<string, any>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     (async () => {
