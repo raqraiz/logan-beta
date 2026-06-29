@@ -144,49 +144,64 @@ export const ReferralsPanel = () => {
             </TabsList>
 
             <TabsContent value="weekly">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Week</TableHead>
-                    <TableHead className="text-right w-24">Signups</TableHead>
-                    <TableHead className="w-1/3">Volume</TableHead>
-                    <TableHead>Top referrers</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {weekRows.map((w) => {
-                    const top = Array.from(w.byReferrer.entries())
-                      .map(([id, v]) => {
-                        const ref = referrerMap.get(id);
-                        return {
-                          name: ref?.full_name ?? ref?.email ?? "Unknown",
-                          count: v.count,
-                        };
-                      })
-                      .sort((a, b) => b.count - a.count)
-                      .slice(0, 4);
-                    return (
-                      <TableRow key={w.weekStart.toISOString()}>
-                        <TableCell className="font-medium text-foreground whitespace-nowrap">
-                          {fmtRange(w.weekStart, w.weekEnd)}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">{w.total}</TableCell>
-                        <TableCell>
-                          <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-primary"
-                              style={{ width: `${(w.total / maxWeek) * 100}%` }}
-                            />
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {top.map((t) => `${t.name} (${t.count})`).join(" · ")}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              <div className="space-y-6">
+                {weekRows.map((w) => {
+                  const groups = Array.from(w.byReferrer.entries())
+                    .map(([id, v]) => ({
+                      id,
+                      ref: referrerMap.get(id),
+                      count: v.count,
+                      signups: [...v.signups].sort(
+                        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                      ),
+                    }))
+                    .sort((a, b) => b.count - a.count);
+                  return (
+                    <div key={w.weekStart.toISOString()} className="space-y-2">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-baseline gap-3">
+                          <h3 className="font-medium text-foreground">{fmtRange(w.weekStart, w.weekEnd)}</h3>
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            {w.total} signup{w.total === 1 ? "" : "s"}
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-32 bg-muted rounded-full overflow-hidden">
+                          <div className="h-full bg-primary" style={{ width: `${(w.total / maxWeek) * 100}%` }} />
+                        </div>
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Referrer</TableHead>
+                            <TableHead>Brought in</TableHead>
+                            <TableHead className="text-right w-20">Count</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {groups.map((g) => (
+                            <TableRow key={g.id}>
+                              <TableCell className="font-medium text-foreground align-top whitespace-nowrap">
+                                {g.ref?.full_name ?? g.ref?.email ?? "Unknown"}
+                                {g.ref?.referral_code && (
+                                  <Badge variant="outline" className="font-mono ml-2 text-[10px]">
+                                    {g.ref.referral_code}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground">
+                                {g.signups
+                                  .map((s) => `${s.email ?? "anon"} (${new Date(s.created_at).toLocaleDateString()})`)
+                                  .join(" · ")}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums">{g.count}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  );
+                })}
+              </div>
             </TabsContent>
 
             <TabsContent value="referrer">
