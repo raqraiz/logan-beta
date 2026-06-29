@@ -720,8 +720,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
           <ReferralCard userId={userId} />
         </div>
       </div>
-    </div>
-  );
+    );
   }
 
 
