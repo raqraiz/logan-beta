@@ -30,13 +30,12 @@ interface WeekRow {
   byReferrer: Map<string, { count: number; signups: { email: string | null; created_at: string }[] }>;
 }
 
-// Monday-start week
+// Sunday-start week
 function startOfWeek(d: Date): Date {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);
   const day = x.getDay(); // 0 Sun .. 6 Sat
-  const diff = (day === 0 ? -6 : 1 - day);
-  x.setDate(x.getDate() + diff);
+  x.setDate(x.getDate() - day);
   return x;
 }
 
