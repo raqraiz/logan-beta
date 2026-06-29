@@ -714,8 +714,14 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             </button>
           </div>
         </div>
+
+        {/* ── Referrals ── */}
+        <div className="max-w-lg">
+          <ReferralCard userId={userId} />
+        </div>
       </div>
-    );
+    </div>
+  );
   }
 
 
