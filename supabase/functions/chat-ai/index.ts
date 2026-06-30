@@ -2104,7 +2104,7 @@ serve(async (req) => {
       const chatSymptomReports = ((recentMessages || []) as any[])
         .filter((m) => m.role === "user" && typeof m.content === "string")
         .map((m) => {
-          if (isLookupQuestion(m.content)) return null;
+          if (isLookupQuestion(m.content) || isSymptomQuestionOrHypothetical(m.content) || isSymptomNegationOrCorrection(m.content)) return null;
           const detected = detectSymptomMentions(m.content);
           if (detected.length === 0) return null;
           const t = new Date(m.created_at).getTime();
