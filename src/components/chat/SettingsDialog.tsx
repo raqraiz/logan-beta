@@ -42,6 +42,8 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
   const [postpartumActive, setPostpartumActive] = useState(false);
   const [postpartumStartDate, setPostpartumStartDate] = useState<string>("");
   const [lossDate, setLossDate] = useState<string>("");
+  const [dueDate, setDueDate] = useState<string>("");
+  const [pregnancyLmp, setPregnancyLmp] = useState<string>("");
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
 
