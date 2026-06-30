@@ -154,6 +154,46 @@ function detectSymptomMentions(text: string): { name: string; severity: number }
   return detected;
 }
 
+function normalizeSymptomText(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function mentionsKnownLibrarySymptom(text: string, knownLibraryNames: string[]): boolean {
+  const normalizedText = ` ${normalizeSymptomText(text)} `;
+  if (!normalizedText.trim()) return false;
+
+  return knownLibraryNames.some((rawName) => {
+    const normalizedName = normalizeSymptomText(String(rawName || ""));
+    if (!normalizedName) return false;
+
+    // Exact multi-word library names, e.g. "mood swings".
+    if (normalizedText.includes(` ${normalizedName} `)) return true;
+
+    // Community names may be stored as variants like "Sudden Rage" while the
+    // user asks "what about rage". For question-framing only, allow a strong
+    // single-token match so every known symptom library term gets the same veto.
+    const strongTokens = normalizedName.split(" ").filter((token) => token.length >= 4);
+    return strongTokens.some((token) => normalizedText.includes(` ${token} `));
+  });
+}
+
+function getKnownLibrarySymptomLabel(text: string, knownLibraryNames: string[]): string | null {
+  const detected = detectSymptomMentions(text);
+  if (detected.length > 0) return detected[0].name.toLowerCase();
+
+  const normalizedText = ` ${normalizeSymptomText(text)} `;
+  for (const rawName of knownLibraryNames) {
+    const normalizedName = normalizeSymptomText(String(rawName || ""));
+    if (!normalizedName) continue;
+    if (normalizedText.includes(` ${normalizedName} `)) return normalizedName;
+
+    const strongToken = normalizedName.split(" ").find((token) => token.length >= 4 && normalizedText.includes(` ${token} `));
+    if (strongToken) return strongToken;
+  }
+
+  return null;
+}
+
 function isSymptomQuestionOrHypothetical(text: string): boolean {
   const t = text.trim();
   return (
@@ -167,6 +207,15 @@ function isSymptomQuestionOrHypothetical(text: string): boolean {
 function isSymptomNegationOrCorrection(text: string): boolean {
   const t = text.trim();
   return /\b(i\s+(?:did\s+not|didn't|do\s+not|don't|never)\s+(?:log|track|record|note|say|report|have|had)|i\s+(?:am\s+not|'?m\s+not)\s+(?:having|feeling|experiencing)|not\s+(?:having|feeling|experiencing)|that'?s?\s+not\s+(?:me|what\s+i\s+said|right)|wrong,?\s*i\s+(?:do\s+not|don't|did\s+not|didn't))\b/i.test(t);
+}
+
+function stripFalseSymptomLoggingClaim(text: string): string {
+  let out = text;
+  out = out.replace(/(?:^|\n)\s*(?:I(?:'ve| have)?|Logan has|We(?:'ve| have)?)\s+(?:logged|noted|tracked|saved|recorded)\b[^.?!\n]*(?:[.?!]\s*|\n|$)/gi, "");
+  out = out.replace(/(?:^|\n)\s*Got it\s*[—-]\s*(?:I(?:'ve| have)?\s+)?(?:logged|noted|tracked|saved|recorded)\b[^.?!\n]*(?:[.?!]\s*|\n|$)/gi, "");
+  out = out.replace(/\b(?:logged|noted|tracked|saved|recorded)\s+(?:that|those|this|it)\s+(?:for\s+today|today)\b[.?!]?/gi, "");
+  out = out.replace(/[^.?!\n]*\b(?:log(?:ged|ging)?|not(?:ed|ing)?|track(?:ed|ing)?|sav(?:ed|ing)?|record(?:ed|ing)?)\b[^.?!\n]*(?:[.?!]\s*|\n|$)/gi, "");
+  return out.replace(/^\s+/, "").trimEnd();
 }
 
 function clampNumber(value: number, min: number, max: number): number {
@@ -1665,6 +1714,11 @@ serve(async (req) => {
     }
     // --- End community symptom library add ---
 
+    const currentMessageMentionsKnownSymptom = detectSymptomMentions(userMessage).length > 0
+      || mentionsKnownLibrarySymptom(userMessage, knownLibraryNames);
+    const isCurrentSymptomQuestion = currentMessageMentionsKnownSymptom && isSymptomQuestionOrHypothetical(userMessage);
+    const isCurrentSymptomNegation = currentMessageMentionsKnownSymptom && isSymptomNegationOrCorrection(userMessage);
+
 
 
 
@@ -2406,6 +2460,33 @@ serve(async (req) => {
       ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
       : null;
 
+    if (isCurrentSymptomQuestion) {
+      const symptomLabel = getKnownLibrarySymptomLabel(userMessage, knownLibraryNames) || "that symptom";
+      const phaseLine = cycleInfo
+        ? `On **Day ${cycleInfo.cycleDay}**, **${symptomLabel}** can sometimes make sense through the lens of **${cycleInfo.phase}** physiology, but your question alone does not mean it's happening today.`
+        : `**${symptomLabel}** can show up for a lot of reasons, but your question alone does not mean it's happening today.`;
+      const msg = `${phaseLine} If you're asking generally, I can explain what it tends to feel like and what usually drives it.`;
+
+      await supabase.from("chat_messages").insert({
+        user_id: user.id,
+        role: "assistant",
+        content: msg,
+        message_type: "text",
+        metadata: cycleInfo ? {
+          cycle_day: cycleInfo.cycleDay,
+          cycle_phase: cycleInfo.phase,
+          cycle_length_days: participant?.cycle_length_days || 28,
+          last_period_start: participant?.last_period_start || null,
+          timezone: participant?.timezone || "UTC",
+        } : {},
+      });
+
+      return new Response(
+        JSON.stringify({ success: true, message: msg, cycleInfo, creditBalance: null }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (directSymptomLookupResponse) {
       const directMeta: Record<string, unknown> = cycleInfo ? {
         cycle_day: cycleInfo.cycleDay,
@@ -2486,9 +2567,12 @@ serve(async (req) => {
       systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user is asking about ANOTHER person (a friend, family member, partner, etc.), NOT themselves. Do NOT reference the user's own symptom logs, cycle data, or chat history as if it answered the question. Do NOT pull up dates from their personal record. Answer the question generally based on what could be happening for that other person at that life stage, and if helpful, ask one clarifying question about the friend (age, cycle status, recent stressors). Never project the user's history onto someone else.`;
     }
 
-    const requestedSymptomQuestion = detectSymptomMentions(userMessage).length > 0 && isSymptomQuestionOrHypothetical(userMessage);
-    if (requestedSymptomQuestion) {
-      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user asked a question about a symptom; they did NOT report having it today. Answer the question directly using her current cycle context if helpful, but do NOT say "I've noted", "I've logged", "tracked", "got it", or anything that implies the symptom was recorded or is currently happening. Do NOT validate it as her lived symptom unless she explicitly says she has it.`;
+    if (isCurrentSymptomQuestion) {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user asked a question about a known symptom/library term; they did NOT report having it today. Answer the question directly using her current cycle context if helpful, but do NOT say "I've noted", "I've logged", "tracked", "got it", or anything that implies the symptom was recorded or is currently happening. Do NOT validate it as her lived symptom unless she explicitly says she has it. If the symptom exists in her past history, frame it as past pattern only, not today's report.`;
+    }
+
+    if (isCurrentSymptomNegation) {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user is correcting or negating a symptom log. Do NOT log, note, track, or save the symptom mentioned in this correction. Do NOT treat it as today's lived symptom. Apologize briefly and clarify that you won't count that symptom from this message.`;
     }
 
 
@@ -2586,9 +2670,14 @@ serve(async (req) => {
       return out.replace(/^\s+/, "").trimEnd();
     };
     assistantMessage = sanitizeLeakedInstructions(assistantMessage);
+    if (isCurrentSymptomQuestion || isCurrentSymptomNegation) {
+      assistantMessage = stripFalseSymptomLoggingClaim(assistantMessage);
+    }
     // Final safety net: if sanitizer stripped everything, fall back to a safe reply
     if (!assistantMessage.trim()) {
-      assistantMessage = "Got it — noted. What else is going on?";
+      assistantMessage = isCurrentSymptomQuestion
+        ? "That can show up differently depending on timing and stress load. If you mean it generally, I can explain what tends to drive it in this phase."
+        : "You're right — I won't count that from this message. What should I track instead?";
     }
 
     // Generate 3 contextual conversation starters that respond to what was just said
