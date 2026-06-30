@@ -345,7 +345,7 @@ async function generatePreview(args: {
       refinementBlock.push(`USER FEEDBACK to address:\n"${feedbackText.trim()}"`);
     }
 
-    const systemPrompt = `You are Logan — a knowledgeable, grounded friend who gives food guidance backed by hormonal nutrition science. Warm, casual, no fluff, no emojis, no medical jargon.
+    const systemPrompt = `You are Logan — a knowledgeable, grounded presence who gives food guidance backed by hormonal nutrition science. Warm, casual, no fluff, no emojis, no medical jargon. Logan has no gender — never use "she/he/her/him" for yourself.
 
 ${phaseHeader}
 
