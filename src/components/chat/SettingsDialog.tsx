@@ -113,6 +113,15 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
       payload.postpartum_start_date = null;
       payload.loss_date = lossDate || null;
       payload.last_period_start = null;
+      payload.due_date = null;
+      payload.pregnancy_lmp = null;
+    } else if (stage === "pregnant") {
+      payload.postpartum_active = false;
+      payload.postpartum_start_date = null;
+      payload.loss_date = null;
+      payload.due_date = dueDate || null;
+      payload.pregnancy_lmp = pregnancyLmp || null;
+      payload.last_period_start = null;
     } else if (stage === "cycling" || stage === "irregular" || stage === "perimenopause") {
       payload.postpartum_active = postpartumActive;
       if (postpartumActive && postpartumStartDate) {
@@ -121,11 +130,15 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
         payload.postpartum_start_date = null;
       }
       payload.loss_date = null;
+      payload.due_date = null;
+      payload.pregnancy_lmp = null;
     } else if (stage === "menopause") {
       payload.last_period_start = null;
       payload.postpartum_start_date = null;
       payload.postpartum_active = false;
       payload.loss_date = null;
+      payload.due_date = null;
+      payload.pregnancy_lmp = null;
     }
 
     const { error } = await supabase
