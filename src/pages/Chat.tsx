@@ -19,6 +19,7 @@ import { AnchorPicker } from "@/components/chat/AnchorPicker";
 import { DatePickerInput } from "@/components/chat/DatePickerInput";
 import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 import { ChatCycleCircle, calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
+import { inferCycleLengthForDeclaredPhase, autoCycleLengthFromHistory } from "@/lib/cyclePhase";
 import { HormoneChart } from "@/components/chat/HormoneChart";
 import { SymptomMap } from "@/components/chat/SymptomMap";
 import { PhaseCheatSheet } from "@/components/chat/PhaseCheatSheet";
