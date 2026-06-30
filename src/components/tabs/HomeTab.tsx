@@ -26,6 +26,8 @@ import {
   PP_DONTMESS_HIM,
 } from "@/lib/postpartumPhases";
 import { format } from "date-fns";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
 import { X, Pencil, Check, Shield, Users, Sparkles, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,6 +40,13 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // ── Tip data ──────────────────────────────────────────────
 
