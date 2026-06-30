@@ -435,17 +435,21 @@ interface HomeTabProps {
   anchorSymptom?: string | null;
   onPeriodUpdate?: (date: Date) => void;
   onCycleLengthUpdate?: (days: number) => void;
+  onPhaseOverride?: (phase: "auto" | "Menstruation" | "Follicular" | "Ovulation" | "Luteal") => void;
+  onPostpartumDeclare?: () => void;
+  onStillCyclingDeclare?: () => void;
   userId?: string;
 }
 
 // ── HomeTab ───────────────────────────────────────────────
 
-export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengthUpdate, userId }: HomeTabProps) {
+export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengthUpdate, onPhaseOverride, onPostpartumDeclare, onStillCyclingDeclare, userId }: HomeTabProps) {
   useTrackFeature("home_tab");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [editedLength, setEditedLength] = useState<number>(28);
+  const [editedPhase, setEditedPhase] = useState<"auto" | "Menstruation" | "Follicular" | "Ovulation" | "Luteal">("auto");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [editMode, setEditMode] = useState(false);
