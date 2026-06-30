@@ -10,6 +10,8 @@ interface DailyBriefingHeroProps {
   postpartumStartDate?: string;
   postpartumActive?: boolean;
   lossDate?: string;
+  dueDate?: string;
+  pregnancyLmp?: string;
   onCircleClick?: () => void;
 }
 
