@@ -1001,7 +1001,7 @@ serve(async (req) => {
           .order("created_at", { ascending: false })
           .limit(20);
 
-        const previousCycleMeta = (recentAssistantMessages || [])
+        let previousCycleMeta: Record<string, unknown> | undefined = (recentAssistantMessages || [])
           .map((m) => (m.metadata || {}) as Record<string, unknown>)
           .find((meta) => {
             const priorStart = typeof meta.last_period_start === "string" ? meta.last_period_start : null;
@@ -1011,6 +1011,40 @@ serve(async (req) => {
               && Number.isFinite(priorDay)
               && priorDay > 1;
           });
+
+        // Fallback: use the most recently archived cycle_history row (created in the last 48h)
+        // if assistant metadata doesn't carry the prior cycle. This handles the case where the
+        // reset just happened and prior messages have already been overwritten.
+        if (!previousCycleMeta) {
+          const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+          const { data: lastArchived } = await supabase
+            .from("cycle_history")
+            .select("cycle_start_date, cycle_length_days, created_at")
+            .eq("participant_id", participant.id)
+            .gte("created_at", cutoff)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (lastArchived?.cycle_start_date && lastArchived.cycle_start_date !== participant.last_period_start) {
+            previousCycleMeta = {
+              last_period_start: lastArchived.cycle_start_date,
+              cycle_length_days: lastArchived.cycle_length_days,
+              cycle_day: 99, // sentinel > 1 so downstream guard passes
+              _from_archive: true,
+              _archive_row_id: (lastArchived as any).id,
+            };
+            // Also delete the bad archive row so we don't have a phantom 22-day cycle.
+            try {
+              await supabase
+                .from("cycle_history")
+                .delete()
+                .eq("participant_id", participant.id)
+                .eq("cycle_start_date", lastArchived.cycle_start_date)
+                .gte("created_at", cutoff);
+            } catch (_) {}
+          }
+        }
+
 
         if (previousCycleMeta) {
           const restoredStart = previousCycleMeta.last_period_start as string;
