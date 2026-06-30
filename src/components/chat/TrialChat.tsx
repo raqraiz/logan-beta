@@ -235,7 +235,7 @@ export const TrialChat = () => {
   };
 
   return (
-    <div className="h-[100svh] supports-[height:100dvh]:h-[100dvh] bg-background flex flex-col relative overflow-hidden">
+    <div className={`${theme === "light" ? "theme-light" : ""} h-[100svh] supports-[height:100dvh]:h-[100dvh] bg-background text-foreground flex flex-col relative overflow-hidden`}>
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl transform translate-x-1/3 -translate-y-1/3" />
         <div className="absolute bottom-1/3 left-0 w-96 h-96 bg-primary/[0.06] rounded-full blur-3xl transform -translate-x-1/3" />
