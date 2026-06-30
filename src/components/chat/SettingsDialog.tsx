@@ -11,6 +11,7 @@ import { Loader2, Upload, Trash2 } from "lucide-react";
 import { HistoryImportDialog } from "./HistoryImportDialog";
 import { ProviderConnectCard } from "@/components/settings/ProviderConnectCard";
 import { ReferralCard } from "@/components/settings/ReferralCard";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   AlertDialog,
   AlertDialogAction,
