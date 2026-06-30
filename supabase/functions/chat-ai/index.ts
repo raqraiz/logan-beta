@@ -722,36 +722,73 @@ serve(async (req) => {
 
 
     // --- Spotting / early-bleed detection: flag for Day-1 confirmation prompt ---
-    // When a cycling user casually mentions bleeding/spotting in chat (not an
-    // explicit "period started" phrase, which is handled above), let the AI
-    // generate its normal phase-shift insight, then we'll append a "Want me to
-    // log today as Day 1?" prompt and set period_checkin metadata so her next
-    // "yes" triggers the existing reset path.
+    // Rules (all must hold to even consider a Day-1 prompt):
+    //   1. Explicit bleed/spotting/blood language — NOT vague "feels like period coming",
+    //      cramps alone, or hypothetical phrasing ("might", "maybe", "tomorrow").
+    //   2. life_stage === "cycling" AND we have a reliable cycle anchor:
+    //        - last_period_start is set
+    //        - cycle_length_days is set AND has been confirmed by at least one
+    //          completed cycle (cycle_history row), OR differs from the 28 default.
+    //      Irregular / PCOS / hormonal-BC / brand-new accounts skip the auto-prompt
+    //      entirely and we tell the AI to acknowledge gently without proposing a reset.
+    //   3. Cycle day is in a plausible window (>= length-5 OR <= 2).
+    // Anything that fails (1) is ignored; failing (2) or (3) sets midCycleSpottingNote
+    // so the system prompt nudges the AI to ask rather than auto-reset.
     let bleedDay1Prompt: { text: string; suggestedDay1: string } | null = null;
-    if (
-      participant &&
-      participant.life_stage === "cycling" &&
-      !isPeriodConfirmation
-    ) {
-
-
+    let midCycleSpottingNote = false;
+    let unreliableCycleNote = false;
+    if (participant && !isPeriodConfirmation) {
       const bleedMentionPatterns: RegExp[] = [
         /\b(spotting|spot of blood|some blood|slightest blood|little blood|bit of blood|light bleed(?:ing)?|brown discharge|pink discharge)\b/i,
         /\b(i'?m bleeding|started bleeding|started to bleed|first sign of (?:my )?period|got the first (?:bit|sign))\b/i,
-        /\b(period (?:is )?(?:starting|coming|on its way|here)|think (?:my )?period (?:is )?(?:starting|coming))\b/i,
       ];
-      const mentionsBleed = bleedMentionPatterns.some((p) => p.test(userMessage));
+      // Drop speculative phrasing — too easy to misfire on PMS chatter.
+      const isHypotheticalBleed = /\b(might|maybe|could be|feels?\s+like|i\s+think|i\s+wonder|tomorrow|in\s+a\s+(?:few\s+)?days?|soon|expecting)\b/i.test(userMessage);
+      const mentionsBleed = !isHypotheticalBleed && bleedMentionPatterns.some((p) => p.test(userMessage));
 
       if (mentionsBleed) {
-        const todayLabel = new Date().toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          timeZone: participant.timezone || "UTC",
-        });
-        bleedDay1Prompt = {
-          text: `\n\nWant me to log **${todayLabel}** as your new **Day 1** and reset your cycle? Just say **yes** to confirm — or tell me the actual start date if it was earlier.`,
-          suggestedDay1: new Date().toISOString().split("T")[0],
-        };
+        // Check whether this user has a reliable cycle anchor.
+        const isCyclingStage = participant.life_stage === "cycling";
+        let hasConfirmedCycle = false;
+        if (isCyclingStage && participant.last_period_start && participant.cycle_length_days) {
+          if (participant.cycle_length_days !== 28) {
+            hasConfirmedCycle = true;
+          } else {
+            // 28 might just be the default — only trust it if she's completed a real cycle.
+            const { count: historyCount } = await supabase
+              .from("cycle_history")
+              .select("id", { count: "exact", head: true })
+              .eq("participant_id", participant.id);
+            hasConfirmedCycle = (historyCount ?? 0) > 0;
+          }
+        }
+
+        if (!isCyclingStage || !hasConfirmedCycle) {
+          // Irregular / PCOS / hormonal BC / brand-new / postpartum / menopause / pregnancy_loss:
+          // never auto-propose Day 1. Just have Logan acknowledge gently.
+          unreliableCycleNote = true;
+          midCycleSpottingNote = true;
+        } else {
+          const tz = participant.timezone || "UTC";
+          const cd = getCycleDayForToday(participant.last_period_start, tz);
+          const cycLen = participant.cycle_length_days;
+          const inPlausibleWindow = cd >= cycLen - 5 || cd <= 2;
+          if (inPlausibleWindow) {
+            const todayLabel = new Date().toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              timeZone: tz,
+            });
+            bleedDay1Prompt = {
+              text: `\n\nWant me to log **${todayLabel}** as your new **Day 1** and reset your cycle? Just say **yes** to confirm — or tell me the actual start date if it was earlier.`,
+              suggestedDay1: new Date().toISOString().split("T")[0],
+            };
+          } else {
+            // Mid-cycle bleed — could be ovulatory spotting, implantation, breakthrough.
+            // Don't propose a reset; ask.
+            midCycleSpottingNote = true;
+          }
+        }
       }
     }
     // --- End spotting detection ---
