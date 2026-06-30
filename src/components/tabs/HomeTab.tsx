@@ -619,8 +619,11 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
               postpartumStartDate={cycleData.postpartumStartDate}
               postpartumActive={cycleData.postpartumActive}
               lossDate={cycleData.lossDate}
+              dueDate={cycleData.dueDate}
+              pregnancyLmp={cycleData.pregnancyLmp}
               onCircleClick={isNonCycling ? undefined : () => setShowAnalytics(true)}
             />
+
 
             {!isNonCycling && userId && (
               <PeriodEndedChip
