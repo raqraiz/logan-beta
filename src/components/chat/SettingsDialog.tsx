@@ -74,13 +74,15 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
     (async () => {
       const { data } = await supabase
         .from("participants")
-        .select("postpartum_active, postpartum_start_date, loss_date")
+        .select("postpartum_active, postpartum_start_date, loss_date, due_date, pregnancy_lmp")
         .eq("email", userEmail)
         .maybeSingle();
       if (data) {
         setPostpartumActive(!!(data as any).postpartum_active);
         setPostpartumStartDate((data as any).postpartum_start_date ?? "");
         setLossDate((data as any).loss_date ?? "");
+        setDueDate((data as any).due_date ?? "");
+        setPregnancyLmp((data as any).pregnancy_lmp ?? "");
       }
     })();
   }, [open, userEmail, currentLifeStage]);
