@@ -1016,7 +1016,12 @@ serve(async (req) => {
           const restoredStart = previousCycleMeta.last_period_start as string;
           const restoredLengthRaw = previousCycleMeta.cycle_length_days;
           const restoredLength = typeof restoredLengthRaw === "number" ? restoredLengthRaw : Number(restoredLengthRaw);
-          const restorePayload: Record<string, unknown> = { last_period_start: restoredStart };
+          const restorePayload: Record<string, unknown> = {
+            last_period_start: restoredStart,
+            period_pending_since: null,
+            period_still_active: false,
+            current_period_end_date: null,
+          };
           if (Number.isFinite(restoredLength) && restoredLength >= 18 && restoredLength <= 45) {
             restorePayload.cycle_length_days = restoredLength;
           }
