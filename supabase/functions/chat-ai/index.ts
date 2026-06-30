@@ -177,6 +177,23 @@ function mentionsKnownLibrarySymptom(text: string, knownLibraryNames: string[]):
   });
 }
 
+function getKnownLibrarySymptomLabel(text: string, knownLibraryNames: string[]): string | null {
+  const detected = detectSymptomMentions(text);
+  if (detected.length > 0) return detected[0].name.toLowerCase();
+
+  const normalizedText = ` ${normalizeSymptomText(text)} `;
+  for (const rawName of knownLibraryNames) {
+    const normalizedName = normalizeSymptomText(String(rawName || ""));
+    if (!normalizedName) continue;
+    if (normalizedText.includes(` ${normalizedName} `)) return normalizedName;
+
+    const strongToken = normalizedName.split(" ").find((token) => token.length >= 4 && normalizedText.includes(` ${token} `));
+    if (strongToken) return strongToken;
+  }
+
+  return null;
+}
+
 function isSymptomQuestionOrHypothetical(text: string): boolean {
   const t = text.trim();
   return (
@@ -2442,6 +2459,33 @@ serve(async (req) => {
     const cycleInfo = isCycling && participant?.last_period_start && participant?.cycle_length_days
       ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
       : null;
+
+    if (isCurrentSymptomQuestion) {
+      const symptomLabel = getKnownLibrarySymptomLabel(userMessage, knownLibraryNames) || "that symptom";
+      const phaseLine = cycleInfo
+        ? `On **Day ${cycleInfo.cycleDay}**, **${symptomLabel}** can sometimes make sense through the lens of **${cycleInfo.phase}** physiology, but your question alone does not mean it's happening today.`
+        : `**${symptomLabel}** can show up for a lot of reasons, but your question alone does not mean it's happening today.`;
+      const msg = `${phaseLine} If you're asking generally, I can explain what it tends to feel like and what usually drives it.`;
+
+      await supabase.from("chat_messages").insert({
+        user_id: user.id,
+        role: "assistant",
+        content: msg,
+        message_type: "text",
+        metadata: cycleInfo ? {
+          cycle_day: cycleInfo.cycleDay,
+          cycle_phase: cycleInfo.phase,
+          cycle_length_days: participant?.cycle_length_days || 28,
+          last_period_start: participant?.last_period_start || null,
+          timezone: participant?.timezone || "UTC",
+        } : {},
+      });
+
+      return new Response(
+        JSON.stringify({ success: true, message: msg, cycleInfo, creditBalance: null }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (directSymptomLookupResponse) {
       const directMeta: Record<string, unknown> = cycleInfo ? {
