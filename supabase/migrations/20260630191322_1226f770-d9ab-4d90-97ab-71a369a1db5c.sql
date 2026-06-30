@@ -1,0 +1,2 @@
+ALTER TABLE public.participants DROP CONSTRAINT IF EXISTS life_stage_check;
+ALTER TABLE public.participants ADD CONSTRAINT life_stage_check CHECK (life_stage IN ('cycling','irregular','postpartum','menopause','perimenopause','pregnancy_loss','pregnant'));
