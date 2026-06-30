@@ -313,6 +313,154 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
   );
 }
 
+// Dedicated visual for pregnancy: 40-week progress arc with trimester zones,
+// growing seedling glyph that scales with gestational age, soft emerald palette.
+function PregnancyCircle({ size, dueDate, pregnancyLmp }: { size: "sm" | "md"; dueDate?: string; pregnancyLmp?: string }) {
+  // Compute gestational days
+  const today = new Date();
+  let gestDays: number | null = null;
+  if (pregnancyLmp) {
+    const lmp = new Date(pregnancyLmp + "T12:00:00Z");
+    const d = Math.floor((today.getTime() - lmp.getTime()) / (1000 * 60 * 60 * 24));
+    if (d >= 0) gestDays = d;
+  } else if (dueDate) {
+    const due = new Date(dueDate + "T12:00:00Z");
+    const daysToDue = Math.floor((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    gestDays = Math.max(0, 280 - daysToDue);
+  }
+
+  const totalDays = 280; // 40w
+  const gestWeeks = gestDays !== null ? Math.floor(gestDays / 7) : null;
+  const progress = gestDays !== null ? Math.min(gestDays / totalDays, 1) : 0;
+
+  const trimesterLabel =
+    gestWeeks === null ? "Pregnant" :
+    gestWeeks <= 13 ? "Trimester 1" :
+    gestWeeks <= 27 ? "Trimester 2" : "Trimester 3";
+
+  // Glyph grows by trimester: bud → sprout → blossom
+  const glyph = gestWeeks === null ? "🌱" : gestWeeks <= 13 ? "🌱" : gestWeeks <= 27 ? "🌿" : "🌸";
+
+  const radius = 42;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - progress * circumference;
+
+  // Trimester arc segments (in % of circumference): T1 = 13/40, T2 = 14/40, T3 = 13/40
+  const seg1 = (13 / 40) * circumference;
+  const seg2 = (14 / 40) * circumference;
+  const seg3 = (13 / 40) * circumference;
+  const gap = 2;
+
+  const T1 = "#86D7B5"; // emerald-300
+  const T2 = "#F5C089"; // warm peach
+  const T3 = "#E8A4C9"; // soft pink
+
+  if (size === "sm") {
+    return (
+      <div className="relative w-10 h-10 flex-shrink-0" title={`${trimesterLabel}${gestWeeks !== null ? ` · Week ${gestWeeks}` : ""}`}>
+        <div className="absolute inset-[3px] rounded-full bg-[hsl(220,10%,8%)]" />
+        <svg className="w-full h-full -rotate-90 relative z-10" viewBox="0 0 100 100">
+          {/* Trimester track segments */}
+          <circle
+            cx="50" cy="50" r={radius}
+            fill="none" strokeWidth="3" stroke={T1} opacity="0.35"
+            strokeDasharray={`${seg1 - gap} ${circumference - seg1 + gap}`}
+            strokeDashoffset={0}
+          />
+          <circle
+            cx="50" cy="50" r={radius}
+            fill="none" strokeWidth="3" stroke={T2} opacity="0.35"
+            strokeDasharray={`${seg2 - gap} ${circumference - seg2 + gap}`}
+            strokeDashoffset={-seg1}
+          />
+          <circle
+            cx="50" cy="50" r={radius}
+            fill="none" strokeWidth="3" stroke={T3} opacity="0.35"
+            strokeDasharray={`${seg3 - gap} ${circumference - seg3 + gap}`}
+            strokeDashoffset={-(seg1 + seg2)}
+          />
+          {/* Progress arc */}
+          <circle
+            cx="50" cy="50" r={radius} fill="none" strokeWidth="3" strokeLinecap="round"
+            strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
+            stroke="#86D7B5"
+            style={{ transition: "stroke-dashoffset 0.6s ease" }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center z-20">
+          {gestWeeks !== null ? (
+            <span className="text-[11px] font-bold leading-none text-emerald-300">{gestWeeks}w</span>
+          ) : (
+            <span className="text-[14px] leading-none" aria-hidden>{glyph}</span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Large
+  return (
+    <div className="flex items-center justify-center py-4">
+      <div className="relative w-56 h-56 flex-shrink-0">
+        {/* Soft glow */}
+        <div className="absolute inset-0 rounded-full bg-emerald-300/5 blur-xl" />
+        <div className="absolute inset-[6px] rounded-full bg-[hsl(220,10%,8%)] shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)]" />
+        <svg className="w-full h-full -rotate-90 relative z-10" viewBox="0 0 100 100">
+          {/* Trimester segments */}
+          <circle
+            cx="50" cy="50" r={radius}
+            fill="none" strokeWidth="5" stroke={T1} opacity="0.3"
+            strokeDasharray={`${seg1 - gap} ${circumference - seg1 + gap}`}
+            strokeDashoffset={0}
+          />
+          <circle
+            cx="50" cy="50" r={radius}
+            fill="none" strokeWidth="5" stroke={T2} opacity="0.3"
+            strokeDasharray={`${seg2 - gap} ${circumference - seg2 + gap}`}
+            strokeDashoffset={-seg1}
+          />
+          <circle
+            cx="50" cy="50" r={radius}
+            fill="none" strokeWidth="5" stroke={T3} opacity="0.3"
+            strokeDasharray={`${seg3 - gap} ${circumference - seg3 + gap}`}
+            strokeDashoffset={-(seg1 + seg2)}
+          />
+          {/* Progress arc */}
+          <circle
+            cx="50" cy="50" r={radius} fill="none" strokeWidth="3.5" strokeLinecap="round"
+            strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
+            stroke="#86D7B5"
+            style={{ transition: "stroke-dashoffset 0.8s ease" }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 px-4 text-center">
+          <span className="text-2xl leading-none mb-1" aria-hidden>{glyph}</span>
+          {gestWeeks !== null ? (
+            <>
+              <div className="flex items-baseline gap-1">
+                <span className="text-4xl font-bold leading-none text-emerald-300">{gestWeeks}</span>
+                <span className="text-sm text-muted-foreground">/ 40w</span>
+              </div>
+              <span className="text-xs text-muted-foreground mt-2">{trimesterLabel}</span>
+              {dueDate && (
+                <span className="text-[10px] text-muted-foreground/70 mt-0.5 uppercase tracking-wider">
+                  Due {new Date(dueDate + "T12:00:00Z").toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                </span>
+              )}
+            </>
+          ) : (
+            <>
+              <span className="text-2xl font-bold text-emerald-300 mt-1">Pregnant</span>
+              <span className="text-xs text-muted-foreground mt-1">Add LMP or due date</span>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling", postpartumStartDate, postpartumActive = false, lossDate, dueDate, pregnancyLmp }: ChatCycleCircleProps) {
   // Postpartum/menopause/pregnancy-loss/pregnant/irregular users get a static badge.
   if (lifeStage === "postpartum" || lifeStage === "menopause") {
@@ -322,7 +470,7 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
     return <LifeStageBadge lifeStage="pregnancy_loss" size={size} lossDate={lossDate} />;
   }
   if (lifeStage === "pregnant") {
-    return <LifeStageBadge lifeStage="pregnant" size={size} dueDate={dueDate} pregnancyLmp={pregnancyLmp} />;
+    return <PregnancyCircle size={size} dueDate={dueDate} pregnancyLmp={pregnancyLmp} />;
   }
   if (lifeStage === "irregular") {
     return <LifeStageBadge lifeStage="irregular" size={size} />;
