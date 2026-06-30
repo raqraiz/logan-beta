@@ -562,6 +562,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   const getTipsHim = (widgetId: string): string[] => {
     const isSucceed = widgetId.startsWith("succeed");
     if (isLoss) return isSucceed ? LOSS_SUCCEED_HIM : LOSS_DONTMESS_HIM;
+    if (isPregnant) return isSucceed ? PREG_SUCCEED_HIM : PREG_DONTMESS_HIM;
     if (hasPostpartumContext) {
       return isSucceed ? PP_SUCCEED_HIM[ppPhase] : PP_DONTMESS_HIM[ppPhase];
     }
