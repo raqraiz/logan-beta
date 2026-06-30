@@ -26,6 +26,8 @@ import {
   PP_DONTMESS_HIM,
 } from "@/lib/postpartumPhases";
 import { format } from "date-fns";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
 import { X, Pencil, Check, Shield, Users, Sparkles, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,6 +40,13 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // ── Tip data ──────────────────────────────────────────────
 
@@ -426,17 +435,21 @@ interface HomeTabProps {
   anchorSymptom?: string | null;
   onPeriodUpdate?: (date: Date) => void;
   onCycleLengthUpdate?: (days: number) => void;
+  onPhaseOverride?: (phase: "auto" | "Menstruation" | "Follicular" | "Ovulation" | "Luteal") => void;
+  onPostpartumDeclare?: () => void;
+  onStillCyclingDeclare?: () => void;
   userId?: string;
 }
 
 // ── HomeTab ───────────────────────────────────────────────
 
-export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengthUpdate, userId }: HomeTabProps) {
+export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengthUpdate, onPhaseOverride, onPostpartumDeclare, onStillCyclingDeclare, userId }: HomeTabProps) {
   useTrackFeature("home_tab");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [editedLength, setEditedLength] = useState<number>(28);
+  const [editedPhase, setEditedPhase] = useState<"auto" | "Menstruation" | "Follicular" | "Ovulation" | "Luteal">("auto");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -542,6 +555,29 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     switch (id) {
       case "cycle_circle": {
         if (cycleData.needsPeriodStart) {
+          const postpartumUnconfirmed =
+            cycleData.lifeStage === "postpartum" && !cycleData.postpartumActive;
+          if (postpartumUnconfirmed) {
+            return (
+              <div className="w-full max-w-sm mx-auto" key={id}>
+                <div className="relative rounded-2xl border border-primary/30 bg-card overflow-hidden p-5 text-center">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
+                  <div className="relative flex flex-col items-center gap-3">
+                    <h3 className="font-display font-semibold text-base text-foreground">
+                      Where are you right now?
+                    </h3>
+                    <p className="text-sm text-muted-foreground max-w-[260px]">
+                      So Logan tracks the right things for you.
+                    </p>
+                    <div className="flex flex-col gap-2 w-full max-w-[220px]">
+                      <Button onClick={() => onPostpartumDeclare?.()}>I had a baby</Button>
+                      <Button variant="outline" onClick={() => onStillCyclingDeclare?.()}>I'm still cycling</Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
           return (
             <div className="w-full max-w-sm mx-auto" key={id}>
               <div className="relative rounded-2xl border border-primary/30 bg-card overflow-hidden p-5 text-center">
@@ -559,6 +595,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
                   <Button
                     onClick={() => {
                       setEditedLength(cycleData.cycleLengthDays || 28);
+                      setEditedPhase("auto");
                       setShowDatePicker(true);
                     }}
                     className="mt-1"
@@ -591,22 +628,19 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
               />
             )}
 
-            {!isNonCycling && !dismissed && (
-              <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground/70">
-                <span>Not accurate?</span>
-                <button
-                  onClick={() => {
-                    setEditedLength(cycleData.cycleLengthDays);
-                    setShowDatePicker(true);
-                  }}
-                  className="underline underline-offset-2 hover:text-foreground transition-colors"
-                >
-                  Update period date
-                </button>
-                <button onClick={() => setDismissed(true)} className="ml-1 hover:text-foreground transition-colors">
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
+            {!isNonCycling && (
+              <button
+                onClick={() => {
+                  setEditedLength(cycleData.cycleLengthDays);
+                  setEditedPhase("auto");
+                  setShowDatePicker(true);
+                }}
+                aria-label="Edit cycle"
+                className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-full px-2.5 py-1 border border-border/40 bg-background/60 backdrop-blur"
+              >
+                <Pencil className="w-3 h-3" />
+                Edit cycle
+              </button>
             )}
           </div>
         );
@@ -820,9 +854,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
         <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader>
-            <DialogTitle>When did your last period start?</DialogTitle>
+            <DialogTitle>Edit your cycle</DialogTitle>
             <DialogDescription>
-              Pick the first day of your most recent period so we can recalculate your cycle.
+              Override Day 1, cycle length, or current phase. Logan will keep this in sync.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center">
@@ -848,21 +882,60 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
               <span className="text-xs font-medium text-muted-foreground w-12 text-right">{editedLength} days</span>
             </div>
           </div>
+          <div className="flex items-center justify-between gap-3 px-1">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">Current phase</span>
+            <Select value={editedPhase} onValueChange={(v) => setEditedPhase(v as typeof editedPhase)}>
+              <SelectTrigger className="max-w-[180px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">Auto (use formula)</SelectItem>
+                <SelectItem value="Menstruation">Menstruation</SelectItem>
+                <SelectItem value="Follicular">Follicular</SelectItem>
+                <SelectItem value="Ovulation">Ovulation</SelectItem>
+                <SelectItem value="Luteal">Luteal</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={() => setShowDatePicker(false)}>Cancel</Button>
             <Button
               onClick={async () => {
                 setIsSubmitting(true);
                 try {
+                  const prevStart = cycleData.lastPeriodStart;
                   if (selectedDate && onPeriodUpdate) await onPeriodUpdate(selectedDate);
                   if (editedLength !== cycleData.cycleLengthDays && onCycleLengthUpdate) await onCycleLengthUpdate(editedLength);
+                  if (onPhaseOverride) await onPhaseOverride(editedPhase);
+
+                  // Historical symptom warning: Day 1 shifted > 3 days AND symptoms exist after new Day 1
+                  if (selectedDate && prevStart && userId) {
+                    const newStartISO = format(selectedDate, "yyyy-MM-dd");
+                    const diffDays = Math.abs(
+                      (new Date(newStartISO).getTime() - new Date(prevStart).getTime()) / 86400000
+                    );
+                    if (diffDays > 3) {
+                      const { count } = await supabase
+                        .from("symptom_logs")
+                        .select("id", { count: "exact", head: true })
+                        .eq("user_id", userId)
+                        .gte("logged_date", newStartISO);
+                      if ((count ?? 0) > 0) {
+                        toast("Heads up — logged symptoms now fall in a different phase", {
+                          description: "Your past entries didn't move, but their phase context shifted.",
+                        });
+                      }
+                    }
+                  }
+
                   setShowDatePicker(false);
                   setSelectedDate(undefined);
+                  setEditedPhase("auto");
                 } finally {
                   setIsSubmitting(false);
                 }
               }}
-              disabled={(!selectedDate && editedLength === cycleData.cycleLengthDays) || isSubmitting}
+              disabled={(!selectedDate && editedLength === cycleData.cycleLengthDays && editedPhase === "auto") || isSubmitting}
             >
               {isSubmitting ? "Updating…" : "Save"}
             </Button>
