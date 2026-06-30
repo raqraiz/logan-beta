@@ -81,6 +81,14 @@ export const TrialChat = () => {
   const [lastUserQuestion, setLastUserQuestion] = useState("");
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [authView, setAuthView] = useState<"signup" | "signin">("signup");
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window === "undefined") return "dark";
+    return (localStorage.getItem("logan-landing-theme") as "dark" | "light") || "dark";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("logan-landing-theme", theme);
+  }, [theme]);
 
   const [waitlistEmail, setWaitlistEmail] = useState("");
   const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
