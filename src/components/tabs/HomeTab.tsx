@@ -854,9 +854,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
         <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader>
-            <DialogTitle>When did your last period start?</DialogTitle>
+            <DialogTitle>Edit your cycle</DialogTitle>
             <DialogDescription>
-              Pick the first day of your most recent period so we can recalculate your cycle.
+              Override Day 1, cycle length, or current phase. Logan will keep this in sync.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center">
@@ -882,21 +882,60 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
               <span className="text-xs font-medium text-muted-foreground w-12 text-right">{editedLength} days</span>
             </div>
           </div>
+          <div className="flex items-center justify-between gap-3 px-1">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">Current phase</span>
+            <Select value={editedPhase} onValueChange={(v) => setEditedPhase(v as typeof editedPhase)}>
+              <SelectTrigger className="max-w-[180px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">Auto (use formula)</SelectItem>
+                <SelectItem value="Menstruation">Menstruation</SelectItem>
+                <SelectItem value="Follicular">Follicular</SelectItem>
+                <SelectItem value="Ovulation">Ovulation</SelectItem>
+                <SelectItem value="Luteal">Luteal</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={() => setShowDatePicker(false)}>Cancel</Button>
             <Button
               onClick={async () => {
                 setIsSubmitting(true);
                 try {
+                  const prevStart = cycleData.lastPeriodStart;
                   if (selectedDate && onPeriodUpdate) await onPeriodUpdate(selectedDate);
                   if (editedLength !== cycleData.cycleLengthDays && onCycleLengthUpdate) await onCycleLengthUpdate(editedLength);
+                  if (onPhaseOverride) await onPhaseOverride(editedPhase);
+
+                  // Historical symptom warning: Day 1 shifted > 3 days AND symptoms exist after new Day 1
+                  if (selectedDate && prevStart && userId) {
+                    const newStartISO = format(selectedDate, "yyyy-MM-dd");
+                    const diffDays = Math.abs(
+                      (new Date(newStartISO).getTime() - new Date(prevStart).getTime()) / 86400000
+                    );
+                    if (diffDays > 3) {
+                      const { count } = await supabase
+                        .from("symptom_logs")
+                        .select("id", { count: "exact", head: true })
+                        .eq("user_id", userId)
+                        .gte("logged_date", newStartISO);
+                      if ((count ?? 0) > 0) {
+                        toast("Heads up — logged symptoms now fall in a different phase", {
+                          description: "Your past entries didn't move, but their phase context shifted.",
+                        });
+                      }
+                    }
+                  }
+
                   setShowDatePicker(false);
                   setSelectedDate(undefined);
+                  setEditedPhase("auto");
                 } finally {
                   setIsSubmitting(false);
                 }
               }}
-              disabled={(!selectedDate && editedLength === cycleData.cycleLengthDays) || isSubmitting}
+              disabled={(!selectedDate && editedLength === cycleData.cycleLengthDays && editedPhase === "auto") || isSubmitting}
             >
               {isSubmitting ? "Updating…" : "Save"}
             </Button>
