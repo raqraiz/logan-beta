@@ -154,6 +154,29 @@ function detectSymptomMentions(text: string): { name: string; severity: number }
   return detected;
 }
 
+function normalizeSymptomText(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function mentionsKnownLibrarySymptom(text: string, knownLibraryNames: string[]): boolean {
+  const normalizedText = ` ${normalizeSymptomText(text)} `;
+  if (!normalizedText.trim()) return false;
+
+  return knownLibraryNames.some((rawName) => {
+    const normalizedName = normalizeSymptomText(String(rawName || ""));
+    if (!normalizedName) return false;
+
+    // Exact multi-word library names, e.g. "mood swings".
+    if (normalizedText.includes(` ${normalizedName} `)) return true;
+
+    // Community names may be stored as variants like "Sudden Rage" while the
+    // user asks "what about rage". For question-framing only, allow a strong
+    // single-token match so every known symptom library term gets the same veto.
+    const strongTokens = normalizedName.split(" ").filter((token) => token.length >= 4);
+    return strongTokens.some((token) => normalizedText.includes(` ${token} `));
+  });
+}
+
 function isSymptomQuestionOrHypothetical(text: string): boolean {
   const t = text.trim();
   return (
@@ -167,6 +190,14 @@ function isSymptomQuestionOrHypothetical(text: string): boolean {
 function isSymptomNegationOrCorrection(text: string): boolean {
   const t = text.trim();
   return /\b(i\s+(?:did\s+not|didn't|do\s+not|don't|never)\s+(?:log|track|record|note|say|report|have|had)|i\s+(?:am\s+not|'?m\s+not)\s+(?:having|feeling|experiencing)|not\s+(?:having|feeling|experiencing)|that'?s?\s+not\s+(?:me|what\s+i\s+said|right)|wrong,?\s*i\s+(?:do\s+not|don't|did\s+not|didn't))\b/i.test(t);
+}
+
+function stripFalseSymptomLoggingClaim(text: string): string {
+  let out = text;
+  out = out.replace(/(?:^|\n)\s*(?:I(?:'ve| have)?|Logan has|We(?:'ve| have)?)\s+(?:logged|noted|tracked|saved|recorded)\b[^.?!\n]*(?:[.?!]\s*|\n|$)/gi, "");
+  out = out.replace(/(?:^|\n)\s*Got it\s*[—-]\s*(?:I(?:'ve| have)?\s+)?(?:logged|noted|tracked|saved|recorded)\b[^.?!\n]*(?:[.?!]\s*|\n|$)/gi, "");
+  out = out.replace(/\b(?:logged|noted|tracked|saved|recorded)\s+(?:that|those|this|it)\s+(?:for\s+today|today)\b[.?!]?/gi, "");
+  return out.replace(/^\s+/, "").trimEnd();
 }
 
 function clampNumber(value: number, min: number, max: number): number {
