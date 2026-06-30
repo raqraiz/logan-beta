@@ -11,6 +11,7 @@ import { Loader2, Upload, Trash2 } from "lucide-react";
 import { HistoryImportDialog } from "./HistoryImportDialog";
 import { ProviderConnectCard } from "@/components/settings/ProviderConnectCard";
 import { ReferralCard } from "@/components/settings/ReferralCard";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -319,6 +320,15 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
         </div>
 
         <ReferralCard userId={userId} />
+
+        <div className="border-t border-border/60 pt-4">
+          <Label className="text-sm font-medium mb-2 block">Appearance</Label>
+          <p className="text-xs text-muted-foreground mb-3">
+            Choose light, dark, or follow your device. Saved to your account.
+          </p>
+          <ThemeToggle />
+        </div>
+
 
         <div className="border-t border-destructive/30 pt-4">
           <Label className="text-sm font-medium mb-2 block text-destructive">Danger zone</Label>

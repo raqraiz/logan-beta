@@ -896,6 +896,7 @@ export type Database = {
           preferred_channel: string | null
           pregnancy_lmp: string | null
           telegram_chat_id: string | null
+          theme_preference: string
           timezone: string | null
           typical_symptoms: string[] | null
           updated_at: string
@@ -929,6 +930,7 @@ export type Database = {
           preferred_channel?: string | null
           pregnancy_lmp?: string | null
           telegram_chat_id?: string | null
+          theme_preference?: string
           timezone?: string | null
           typical_symptoms?: string[] | null
           updated_at?: string
@@ -962,6 +964,7 @@ export type Database = {
           preferred_channel?: string | null
           pregnancy_lmp?: string | null
           telegram_chat_id?: string | null
+          theme_preference?: string
           timezone?: string | null
           typical_symptoms?: string[] | null
           updated_at?: string
