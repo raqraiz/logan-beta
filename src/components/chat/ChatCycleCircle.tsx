@@ -322,7 +322,7 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
     return <LifeStageBadge lifeStage="pregnancy_loss" size={size} lossDate={lossDate} />;
   }
   if (lifeStage === "pregnant") {
-    return <LifeStageBadge lifeStage="pregnant" size={size} dueDate={dueDate} pregnancyLmp={pregnancyLmp} />;
+    return <PregnancyCircle size={size} dueDate={dueDate} pregnancyLmp={pregnancyLmp} />;
   }
   if (lifeStage === "irregular") {
     return <LifeStageBadge lifeStage="irregular" size={size} />;
