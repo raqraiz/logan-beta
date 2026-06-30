@@ -25,7 +25,7 @@ interface CycleData {
   cycleLengthDays: number;
   lastPeriodStart?: string;
   currentPeriodEndDate?: string | null;
-  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss";
+  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
   postpartumStartDate?: string;
 }
 

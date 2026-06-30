@@ -6,7 +6,7 @@ interface DailyBriefingHeroProps {
   cycleDay: number;
   phase: string;
   cycleLengthDays: number;
-  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss";
+  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
   postpartumStartDate?: string;
   postpartumActive?: boolean;
   lossDate?: string;
