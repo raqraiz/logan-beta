@@ -203,6 +203,28 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
       subLabel = "Healing";
     }
   }
+  if (lifeStage === "pregnant") {
+    // Compute gestational week. Prefer LMP (standard OB method = days since LMP / 7).
+    // If only due date is known: gestational age ≈ 40w - (due - today).
+    const today = new Date();
+    let gestWeeks: number | null = null;
+    if (pregnancyLmp) {
+      const lmp = new Date(pregnancyLmp + "T12:00:00Z");
+      const days = Math.floor((today.getTime() - lmp.getTime()) / (1000 * 60 * 60 * 24));
+      if (days >= 0) gestWeeks = Math.floor(days / 7);
+    } else if (dueDate) {
+      const due = new Date(dueDate + "T12:00:00Z");
+      const daysToDue = Math.floor((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      gestWeeks = Math.max(0, 40 - Math.ceil(daysToDue / 7));
+    }
+    if (gestWeeks !== null && gestWeeks >= 0 && gestWeeks <= 45) {
+      displayNumber = String(gestWeeks);
+      subLabel = gestWeeks <= 13 ? "Trimester 1" : gestWeeks <= 27 ? "Trimester 2" : "Trimester 3";
+    } else {
+      displayNumber = "🌱";
+      subLabel = "Pregnant";
+    }
+  }
   // Irregular / on-the-pill / steady: no day number, show a glyph instead.
   // Pill 💊 only for irregular (BC) users; hourglass ⏳ for stale/overdue cycles.
   const showGlyph = lifeStage === "irregular" || lifeStage === "steady";
