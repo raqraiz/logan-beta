@@ -1,0 +1,1 @@
+ALTER TABLE public.participants ADD COLUMN IF NOT EXISTS theme_preference text NOT NULL DEFAULT 'system' CHECK (theme_preference IN ('light','dark','system'));
