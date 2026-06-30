@@ -355,6 +355,12 @@ const Chat = () => {
           if (row.loss_date !== undefined) {
             setLossDate(row.loss_date ?? null);
           }
+          if ((row as any).due_date !== undefined) {
+            setDueDate((row as any).due_date ?? null);
+          }
+          if ((row as any).pregnancy_lmp !== undefined) {
+            setPregnancyLmp((row as any).pregnancy_lmp ?? null);
+          }
         }
       )
       .subscribe();
