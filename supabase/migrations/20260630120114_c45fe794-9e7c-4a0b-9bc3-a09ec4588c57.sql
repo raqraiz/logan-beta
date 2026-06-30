@@ -1,0 +1,1 @@
+ALTER TABLE public.participants ADD COLUMN IF NOT EXISTS cycle_length_user_override boolean NOT NULL DEFAULT false;

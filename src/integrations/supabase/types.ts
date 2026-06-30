@@ -878,6 +878,7 @@ export type Database = {
           created_at: string
           current_period_end_date: string | null
           cycle_length_days: number | null
+          cycle_length_user_override: boolean
           cycle_regularity: string | null
           email: string | null
           full_name: string
@@ -908,6 +909,7 @@ export type Database = {
           created_at?: string
           current_period_end_date?: string | null
           cycle_length_days?: number | null
+          cycle_length_user_override?: boolean
           cycle_regularity?: string | null
           email?: string | null
           full_name: string
@@ -938,6 +940,7 @@ export type Database = {
           created_at?: string
           current_period_end_date?: string | null
           cycle_length_days?: number | null
+          cycle_length_user_override?: boolean
           cycle_regularity?: string | null
           email?: string | null
           full_name?: string
