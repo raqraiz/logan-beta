@@ -631,6 +631,12 @@ const Chat = () => {
       if ((data as any)?.loss_date !== undefined) {
         setLossDate((data as any).loss_date ?? null);
       }
+      if ((data as any)?.due_date !== undefined) {
+        setDueDate((data as any).due_date ?? null);
+      }
+      if ((data as any)?.pregnancy_lmp !== undefined) {
+        setPregnancyLmp((data as any).pregnancy_lmp ?? null);
+      }
       if (data) {
         setParticipantCycle({
           lastPeriodStart: data.last_period_start ?? null,
