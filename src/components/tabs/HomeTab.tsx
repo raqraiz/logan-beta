@@ -423,10 +423,12 @@ interface CycleData {
   phase: string;
   cycleLengthDays: number;
   lastPeriodStart?: string;
-  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss";
+  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
   postpartumStartDate?: string;
   postpartumActive?: boolean;
   lossDate?: string;
+  dueDate?: string;
+  pregnancyLmp?: string;
   needsPeriodStart?: boolean;
 }
 
@@ -474,7 +476,8 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   const hasPostpartumContext = cycleData.lifeStage === "postpartum" || !!cycleData.postpartumActive;
   const isIrregular = cycleData.lifeStage === "irregular";
   const isLoss = cycleData.lifeStage === "pregnancy_loss";
-  const isNonCycling = cycleData.lifeStage === "postpartum" || cycleData.lifeStage === "menopause" || isLoss || isIrregular;
+  const isPregnant = cycleData.lifeStage === "pregnant";
+  const isNonCycling = cycleData.lifeStage === "postpartum" || cycleData.lifeStage === "menopause" || isLoss || isPregnant || isIrregular;
   const stagePhase = isNonCycling
     ? (cycleData.lifeStage === "postpartum"
         ? "Postpartum"
@@ -482,7 +485,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           ? "Menopause"
           : isLoss
             ? "Recovery"
-            : "Steady")
+            : isPregnant
+              ? "Pregnant"
+              : "Steady")
     : cycleData.phase;
 
   // Helper to get life-stage-aware tips
@@ -511,10 +516,35 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     "Don't go silent. Even a 'thinking of you' text matters when she can't speak.",
     "Watch for warning signs — heavy bleeding, fever, dark thoughts. Help her call her doctor.",
   ];
+  const PREG_SUCCEED_HER = [
+    "Eat little + often. Protein and complex carbs steady nausea and energy.",
+    "Hydrate. Pregnancy doubles your blood volume — water + electrolytes matter.",
+    "Sleep on your side (especially after 20 weeks). Pillow between knees helps.",
+    "Move daily, gently. Walking, prenatal yoga, swimming — your nervous system needs it.",
+  ];
+  const PREG_DONTMESS_HER = [
+    "Heavy bleeding, severe pain, fever 100.4°F+, reduced fetal movement → call your provider TODAY.",
+    "Don't tough out persistent vomiting (HG is real). Tell your doctor.",
+    "Skip raw fish, unpasteurized dairy, deli meat unless heated, alcohol, high-mercury fish.",
+    "Don't compare bumps, symptoms, or timelines. Every pregnancy is its own.",
+  ];
+  const PREG_SUCCEED_HIM = [
+    "Stock the fridge. Make 'safe foods' easy to grab when nausea hits.",
+    "Handle one weekly logistic — appointment, registry, freezer meal. Take it off her plate.",
+    "Ask 'what would help right now?' — and actually do it without a debrief.",
+    "Go to the appointments you can. Being there is the point.",
+  ];
+  const PREG_DONTMESS_HIM = [
+    "Don't say 'you're glowing' when she's exhausted. Say 'you're doing the hardest work.'",
+    "Don't comment on her body, weight, or eating. Ever.",
+    "Don't disappear into work. She needs presence more than productivity right now.",
+    "Watch for warning signs — bleeding, severe headaches, swelling, fever, dark thoughts. Help her call.",
+  ];
 
   const getTipsHer = (widgetId: string): string[] => {
     const isSucceed = widgetId.startsWith("succeed");
     if (isLoss) return isSucceed ? LOSS_SUCCEED_HER : LOSS_DONTMESS_HER;
+    if (isPregnant) return isSucceed ? PREG_SUCCEED_HER : PREG_DONTMESS_HER;
     if (hasPostpartumContext) {
       return isSucceed ? PP_SUCCEED_HER[ppPhase] : PP_DONTMESS_HER[ppPhase];
     }
@@ -532,6 +562,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   const getTipsHim = (widgetId: string): string[] => {
     const isSucceed = widgetId.startsWith("succeed");
     if (isLoss) return isSucceed ? LOSS_SUCCEED_HIM : LOSS_DONTMESS_HIM;
+    if (isPregnant) return isSucceed ? PREG_SUCCEED_HIM : PREG_DONTMESS_HIM;
     if (hasPostpartumContext) {
       return isSucceed ? PP_SUCCEED_HIM[ppPhase] : PP_DONTMESS_HIM[ppPhase];
     }
@@ -617,8 +648,11 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
               postpartumStartDate={cycleData.postpartumStartDate}
               postpartumActive={cycleData.postpartumActive}
               lossDate={cycleData.lossDate}
+              dueDate={cycleData.dueDate}
+              pregnancyLmp={cycleData.pregnancyLmp}
               onCircleClick={isNonCycling ? undefined : () => setShowAnalytics(true)}
             />
+
 
             {!isNonCycling && userId && (
               <PeriodEndedChip

@@ -1899,6 +1899,84 @@ serve(async (req) => {
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      // --- Pregnancy detection ---
+      // Trigger only on clear self-statements ("I'm pregnant", "I just found out I'm pregnant", "I'm X weeks pregnant").
+      // Do NOT trigger on questions like "could I be pregnant?" or third-party mentions.
+      const pregnancySignal =
+        /\b(i'?m|i\s+am|just\s+found\s+out\s+i'?m|just\s+confirmed\s+i'?m|we'?re|we\s+are)\s+(pregnant|expecting|having\s+a\s+baby)\b/i.test(userMessage)
+        || /\bi'?m\s+\d{1,2}\s+weeks?\s+(pregnant|along)\b/i.test(userMessage)
+        || /\b(positive\s+pregnancy\s+test|positive\s+test\s+today|two\s+lines\s+today|bfp)\b/i.test(userMessage);
+      const pregnancyExit =
+        /\b(i\s+had\s+the\s+baby|baby\s+(is\s+)?here|gave\s+birth|delivered|switch\s+me\s+to\s+postpartum|switch\s+to\s+postpartum|i'?m\s+postpartum\s+now|no\s+longer\s+pregnant|lost\s+the\s+baby|miscarried)\b/i.test(userMessage)
+        && participant.life_stage === "pregnant";
+
+      if (pregnancySignal && participant.life_stage !== "pregnant" && participant.life_stage !== "pregnancy_loss") {
+        // Try to extract weeks pregnant; LMP/due date will be asked.
+        const weeksMatch = userMessage.match(/\b(\d{1,2})\s+weeks?\b/i);
+        const weeksAlong = weeksMatch ? parseInt(weeksMatch[1]) : null;
+        let lmp: string | null = null;
+        if (weeksAlong && weeksAlong > 0 && weeksAlong < 45) {
+          const lmpDate = new Date();
+          lmpDate.setDate(lmpDate.getDate() - weeksAlong * 7);
+          lmp = lmpDate.toISOString().slice(0, 10);
+        }
+        await supabase
+          .from("participants")
+          .update({
+            life_stage: "pregnant",
+            pregnancy_lmp: lmp,
+            last_period_start: null,
+            postpartum_active: false,
+            postpartum_start_date: null,
+            loss_date: null,
+          })
+          .eq("id", participant.id);
+        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshed) participant = refreshed;
+
+        const msg = `Oh wow — congratulations. 🌱\n\nI've switched into **pregnancy mode**, so cycle tracking is paused and I'll focus on what actually matters now: symptoms, sleep, energy, nutrition, safe movement, and the real red flags to watch for.\n\nQuick anchor so I can speak in trimesters and weeks: do you know either your **last menstrual period (LMP)** or your **due date**? You can also tell me how many weeks along you are. Totally fine to skip — you can update it in Settings anytime.\n\nAnd a soft reminder: heavy bleeding, severe pain, fever over 100.4°F / 38°C, persistent vomiting, or sudden swelling — please call your provider.`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: msg,
+          message_type: "text",
+          metadata: { life_stage_updated: "pregnant" },
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (pregnancyExit) {
+        // If she said she lost the baby, switch to pregnancy_loss; otherwise postpartum.
+        const toLoss = /\b(lost\s+the\s+baby|miscarried|miscarriage)\b/i.test(userMessage);
+        const today = new Date().toISOString().slice(0, 10);
+        await supabase
+          .from("participants")
+          .update(toLoss
+            ? { life_stage: "pregnancy_loss", loss_date: today, due_date: null, pregnancy_lmp: null }
+            : { life_stage: "postpartum", postpartum_active: false, postpartum_start_date: today, due_date: null, pregnancy_lmp: null }
+          )
+          .eq("id", participant.id);
+        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshed) participant = refreshed;
+        const msg = toLoss
+          ? `I'm so sorry. I've switched us into recovery mode and paused everything else. We move at your pace from here.`
+          : `Congratulations 💛 — I've switched into **postpartum mode**. I'll layer in recovery context (sleep, iron, pelvic floor, mood) from today. If the birth date isn't today, just tell me when, and I'll update it.`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: msg,
+          message_type: "text",
+          metadata: { life_stage_updated: toLoss ? "pregnancy_loss" : "postpartum" },
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
     // --- End life-stage corrections ---
 
@@ -2546,6 +2624,22 @@ serve(async (req) => {
         daysSince = Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000));
       }
       systemPrompt += `\n\nLIFE STAGE: PREGNANCY LOSS / MISCARRIAGE RECOVERY${daysSince !== null ? ` (Day ${daysSince} since loss)` : ""}.\n\nTHIS OVERRIDES NORMAL CYCLE COACHING. The user is grieving and/or physically recovering from a miscarriage, stillbirth, ectopic, chemical pregnancy, or D&C.\n\nABSOLUTE RULES:\n- NEVER mention cycle phases, ovulation, fertile windows, luteal/follicular, or "your next period in X days." Cycle tracking is paused.\n- NEVER say "everything happens for a reason," "at least…," "you can try again," "you're young," or anything that minimizes the loss.\n- NEVER push silver linings, productivity, optimization, workouts, or "getting back on track."\n- NEVER ask "how far along were you" unless she brings it up first.\n- Do NOT be performatively cheerful. Match her energy — quiet, soft, present.\n\nWHAT TO DO:\n- Lead with acknowledgment. Short sentences. Lots of breathing room.\n- Use her words back to her. If she says "baby," say "baby." If she says "pregnancy," mirror that.\n- Offer (don't impose) gentle support: rest, hydration, iron-rich food, sleep, a warm bath, a walk if she wants one, naming the baby if she wants, journaling, a support line.\n- Track what she shares — bleeding days, cramps, sleep, mood, appetite, milk coming in, partner support — without analyzing it into a "plan."\n- One short, optional follow-up question max. Often the right response is just presence: "I'm here. Take your time."\n\nPHYSICAL SAFETY (always flag, kindly but clearly):\nIf she mentions soaking a pad an hour for 2+ hours, fever over 100.4°F / 38°C, severe one-sided pain, foul-smelling discharge, fainting, or thoughts of harming herself — gently urge her to call her provider or emergency line right away. Don't bury this in caveats.\n\nRESOURCES (offer only if relevant, never as a list-dump):\n- Postpartum Support International: 1-800-944-4773 (text "HELP" to 800-944-4773)\n- Return to Zero: HOPE pregnancy loss support\n- Star Legacy Foundation (stillbirth)\n- 988 Suicide & Crisis Lifeline if she expresses self-harm thoughts.\n\nWhen she's ready to "move on" or "track cycles again," she can tell you and you'll switch back. Until then, this space is hers.`;
+    }
+
+    if (participant?.life_stage === "pregnant") {
+      const lmp = (participant as any).pregnancy_lmp as string | null;
+      const due = (participant as any).due_date as string | null;
+      let gestWeeks: number | null = null;
+      if (lmp) {
+        const d = new Date(lmp + "T12:00:00Z");
+        gestWeeks = Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000 / 7));
+      } else if (due) {
+        const d = new Date(due + "T12:00:00Z");
+        const daysToDue = Math.floor((d.getTime() - Date.now()) / 86400000);
+        gestWeeks = Math.max(0, 40 - Math.ceil(daysToDue / 7));
+      }
+      const trimester = gestWeeks === null ? null : gestWeeks <= 13 ? 1 : gestWeeks <= 27 ? 2 : 3;
+      systemPrompt += `\n\nLIFE STAGE: PREGNANT${gestWeeks !== null ? ` (week ${gestWeeks}, trimester ${trimester})` : ""}.\n\nTHIS OVERRIDES NORMAL CYCLE COACHING. Cycle tracking is paused.\n\nABSOLUTE RULES:\n- NEVER mention cycle day, phases, ovulation, follicular/luteal, "next period," or fertile windows. She is pregnant.\n- NEVER prescribe medication, supplements (beyond standard prenatal/folate/iron when she asks), specific exercises she hasn't already been doing, or diagnostic conclusions. Defer to her OB/midwife.\n- NEVER comment on her body, weight gain, or bump size.\n- NEVER minimize symptoms ("oh that's normal") without first acknowledging how they actually feel.\n\nWHAT TO DO:\n- Speak in trimesters and weeks when relevant. Tailor tone: T1 = nausea/fatigue/secrecy, T2 = energy returns/movement felt, T3 = sleep/heartburn/birth prep.\n- Track what she shares — nausea, sleep, energy, mood, food aversions, movement, kicks (T2+), Braxton-Hicks (T3), appointments — without turning it into a plan unless she asks.\n- Gentle, evidence-based nudges only when relevant: hydration, protein at every meal, side-sleeping after 20 weeks, pelvic floor awareness, prenatal vitamin, iron-paired-with-vitamin-C, kegels + perineal massage in T3.\n- Movement: walking, prenatal yoga, swimming, modified strength. Avoid contact sports, supine work after T1, hot yoga, anything she hasn't already been doing.\n- Foods to avoid: raw fish, deli meat (unless heated), unpasteurized dairy, high-mercury fish, alcohol, excess caffeine (>200mg/day). Mention only if relevant.\n- One short, optional follow-up question max. Default to witness-and-validate.\n\nRED-FLAG GUARDRAILS (always flag clearly, kindly, immediately — never bury in caveats):\nVaginal bleeding, severe abdominal pain, fever over 100.4°F / 38°C, severe headache + vision changes, sudden swelling of face/hands, persistent vomiting (can't keep fluids down), reduced fetal movement after 28 weeks, leaking fluid before 37 weeks, signs of preterm labor (regular contractions before 37w), or thoughts of harming herself or the baby → urge her to call her provider or L&D triage RIGHT NOW.\n\nBIRTH PREP (trimester 3 only, when she brings it up or asks):\nBirth plan basics, pain options (epidural, nitrous, unmedicated), labor signs (mucus plug, contractions 5-1-1, water breaking), hospital bag, postpartum recovery realities, infant feeding choices — present as options, never prescriptions.\n\nWhen she says she had the baby / gave birth, switch to postpartum mode. If she experiences a loss, switch to pregnancy loss mode.`;
     }
 
 

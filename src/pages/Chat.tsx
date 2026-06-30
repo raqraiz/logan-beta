@@ -108,10 +108,12 @@ interface CycleData {
   cycleLengthDays: number;
   lastPeriodStart?: string;
   currentPeriodEndDate?: string | null;
-  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss";
+  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
   postpartumStartDate?: string;
   postpartumActive?: boolean;
   lossDate?: string;
+  dueDate?: string;
+  pregnancyLmp?: string;
   needsPeriodStart?: boolean;
 }
 
@@ -129,10 +131,12 @@ const Chat = () => {
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
-  const [lifeStage, setLifeStage] = useState<"cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss">("cycling");
+  const [lifeStage, setLifeStage] = useState<"cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant">("cycling");
   const [postpartumStartDate, setPostpartumStartDate] = useState<string | null>(null);
   const [postpartumActive, setPostpartumActive] = useState<boolean>(false);
   const [lossDate, setLossDate] = useState<string | null>(null);
+  const [dueDate, setDueDate] = useState<string | null>(null);
+  const [pregnancyLmp, setPregnancyLmp] = useState<string | null>(null);
   // Authoritative cycle data from `participants` table — wins over chat metadata
   const [participantCycle, setParticipantCycle] = useState<{
     lastPeriodStart: string | null;
@@ -340,7 +344,7 @@ const Chat = () => {
             periodStillActive: !!row.period_still_active,
           });
           if (row.life_stage) {
-            setLifeStage(row.life_stage as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss");
+            setLifeStage(row.life_stage as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant");
           }
           if (row.postpartum_start_date !== undefined) {
             setPostpartumStartDate(row.postpartum_start_date ?? null);
@@ -350,6 +354,12 @@ const Chat = () => {
           }
           if (row.loss_date !== undefined) {
             setLossDate(row.loss_date ?? null);
+          }
+          if ((row as any).due_date !== undefined) {
+            setDueDate((row as any).due_date ?? null);
+          }
+          if ((row as any).pregnancy_lmp !== undefined) {
+            setPregnancyLmp((row as any).pregnancy_lmp ?? null);
           }
         }
       )
@@ -367,16 +377,18 @@ const Chat = () => {
       return;
     }
 
-    // For postpartum/menopause users, provide a minimal CycleData with life stage info.
+    // For postpartum/menopause/pregnancy_loss/pregnant users, provide a minimal CycleData with life stage info.
     // Irregular users still get full cycle tracking (they have cycles, just unpredictable).
-    if (lifeStage === "postpartum" || lifeStage === "menopause" || lifeStage === "pregnancy_loss") {
+    if (lifeStage === "postpartum" || lifeStage === "menopause" || lifeStage === "pregnancy_loss" || lifeStage === "pregnant") {
       setCycleData({
         cycleDay: 0,
-        phase: lifeStage === "postpartum" ? "Postpartum" : lifeStage === "menopause" ? "Menopause" : "Recovery",
+        phase: lifeStage === "postpartum" ? "Postpartum" : lifeStage === "menopause" ? "Menopause" : lifeStage === "pregnant" ? "Pregnant" : "Recovery",
         cycleLengthDays: 0,
         lifeStage,
         postpartumStartDate: postpartumStartDate || undefined,
         lossDate: lossDate || undefined,
+        dueDate: dueDate || undefined,
+        pregnancyLmp: pregnancyLmp || undefined,
       });
       return;
     }
@@ -457,7 +469,7 @@ const Chat = () => {
         postpartumActive: postpartumActive && !!postpartumStartDate,
       });
     }
-  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, postpartumActive, lossDate, participantCycle]);
+  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, postpartumActive, lossDate, dueDate, pregnancyLmp, participantCycle]);
 
   // Scroll to bottom on initial load
   const hasScrolledToBottom = useRef(false);
@@ -604,11 +616,11 @@ const Chat = () => {
     try {
       const { data } = await supabase
         .from("participants")
-        .select("life_stage, postpartum_start_date, postpartum_active, loss_date, last_period_start, cycle_length_days, timezone, current_period_end_date, period_pending_since, period_still_active")
+        .select("life_stage, postpartum_start_date, postpartum_active, loss_date, due_date, pregnancy_lmp, last_period_start, cycle_length_days, timezone, current_period_end_date, period_pending_since, period_still_active")
         .eq("email", user.email)
         .single();
       if (data?.life_stage) {
-        setLifeStage(data.life_stage as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss");
+        setLifeStage(data.life_stage as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant");
       }
       if (data?.postpartum_start_date) {
         setPostpartumStartDate(data.postpartum_start_date);
@@ -618,6 +630,12 @@ const Chat = () => {
       }
       if ((data as any)?.loss_date !== undefined) {
         setLossDate((data as any).loss_date ?? null);
+      }
+      if ((data as any)?.due_date !== undefined) {
+        setDueDate((data as any).due_date ?? null);
+      }
+      if ((data as any)?.pregnancy_lmp !== undefined) {
+        setPregnancyLmp((data as any).pregnancy_lmp ?? null);
       }
       if (data) {
         setParticipantCycle({
@@ -1558,6 +1576,7 @@ const Chat = () => {
                       {[
                         { value: "cycling", label: "I have a regular cycle", desc: "Currently menstruating" },
                         { value: "irregular", label: "Irregular or on hormonal BC", desc: "PCOS, unpredictable cycles, or pill/IUD/implant" },
+                        { value: "pregnant", label: "Pregnant 🌱", desc: "Currently pregnant" },
                         { value: "postpartum", label: "Postpartum", desc: "Recently had a baby" },
                         { value: "perimenopause", label: "Perimenopause", desc: "Still getting periods, but the pattern is shifting" },
                         { value: "menopause", label: "Menopause", desc: "12+ months without a period" },
@@ -1566,7 +1585,7 @@ const Chat = () => {
                           key={option.value}
                           onClick={() => {
                             sendOnboardingResponse(option.value);
-                            setLifeStage(option.value as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss");
+                            setLifeStage(option.value as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant");
                           }}
                           disabled={isSending}
                           className="text-left px-4 py-3 rounded-xl border border-border/40 bg-card/60 hover:bg-card/90 transition-all active:scale-[0.98]"

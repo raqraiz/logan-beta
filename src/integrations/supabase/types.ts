@@ -880,6 +880,7 @@ export type Database = {
           cycle_length_days: number | null
           cycle_length_user_override: boolean
           cycle_regularity: string | null
+          due_date: string | null
           email: string | null
           full_name: string
           goals: string[] | null
@@ -893,6 +894,7 @@ export type Database = {
           postpartum_active: boolean
           postpartum_start_date: string | null
           preferred_channel: string | null
+          pregnancy_lmp: string | null
           telegram_chat_id: string | null
           timezone: string | null
           typical_symptoms: string[] | null
@@ -911,6 +913,7 @@ export type Database = {
           cycle_length_days?: number | null
           cycle_length_user_override?: boolean
           cycle_regularity?: string | null
+          due_date?: string | null
           email?: string | null
           full_name: string
           goals?: string[] | null
@@ -924,6 +927,7 @@ export type Database = {
           postpartum_active?: boolean
           postpartum_start_date?: string | null
           preferred_channel?: string | null
+          pregnancy_lmp?: string | null
           telegram_chat_id?: string | null
           timezone?: string | null
           typical_symptoms?: string[] | null
@@ -942,6 +946,7 @@ export type Database = {
           cycle_length_days?: number | null
           cycle_length_user_override?: boolean
           cycle_regularity?: string | null
+          due_date?: string | null
           email?: string | null
           full_name?: string
           goals?: string[] | null
@@ -955,6 +960,7 @@ export type Database = {
           postpartum_active?: boolean
           postpartum_start_date?: string | null
           preferred_channel?: string | null
+          pregnancy_lmp?: string | null
           telegram_chat_id?: string | null
           timezone?: string | null
           typical_symptoms?: string[] | null

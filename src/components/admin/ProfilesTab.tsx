@@ -1208,7 +1208,7 @@ export function ProfilesTab() {
             const cycleData = profile.participant ? getCycleData(profile.participant) : null;
             const cycleDay = cycleData?.cycleDay ?? null;
             const phase = cycleData?.phase ?? null;
-            const lifeStage = (profile.participant?.life_stage || "cycling") as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss";
+            const lifeStage = (profile.participant?.life_stage || "cycling") as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
             
             return (
               <Card
