@@ -108,19 +108,28 @@ export function DailyBriefingHero({
   postpartumStartDate,
   postpartumActive,
   lossDate,
+  dueDate,
+  pregnancyLmp,
   onCircleClick,
 }: DailyBriefingHeroProps) {
   const isSteadyByPill = lifeStage === "irregular";
   const isLoss = lifeStage === "pregnancy_loss";
-  const isNonCycling = (lifeStage && (lifeStage === "postpartum" || lifeStage === "menopause" || lifeStage === "pregnancy_loss")) || isSteadyByPill;
-  const phaseText = isLoss ? "text-rose-300" : (PHASE_TEXT[phase] || "text-primary");
-  const phaseBg = isLoss ? "bg-rose-300/15" : (PHASE_BG[phase] || "bg-primary/15");
-  const phaseAccent = isLoss ? "from-rose-300/10 via-transparent to-transparent" : (PHASE_ACCENT[phase] || "from-primary/10 via-transparent to-transparent");
+  const isPregnant = lifeStage === "pregnant";
+  const isNonCycling = (lifeStage && (lifeStage === "postpartum" || lifeStage === "menopause" || lifeStage === "pregnancy_loss" || lifeStage === "pregnant")) || isSteadyByPill;
+  const phaseText = isLoss ? "text-rose-300" : isPregnant ? "text-emerald-300" : (PHASE_TEXT[phase] || "text-primary");
+  const phaseBg = isLoss ? "bg-rose-300/15" : isPregnant ? "bg-emerald-300/15" : (PHASE_BG[phase] || "bg-primary/15");
+  const phaseAccent = isLoss
+    ? "from-rose-300/10 via-transparent to-transparent"
+    : isPregnant
+      ? "from-emerald-300/10 via-transparent to-transparent"
+      : (PHASE_ACCENT[phase] || "from-primary/10 via-transparent to-transparent");
   const headline = isLoss
     ? "Healing in progress. There's no timeline for this — only your pace."
-    : isSteadyByPill
-      ? "Hormonal birth control evens out your cycle. Let's focus on sleep, energy, and stress today."
-      : (PHASE_HEADLINE[phase] || "Your day, your rhythm.");
+    : isPregnant
+      ? "Growing a human is a full-time job. Rest is part of the work."
+      : isSteadyByPill
+        ? "Hormonal birth control evens out your cycle. Let's focus on sleep, energy, and stress today."
+        : (PHASE_HEADLINE[phase] || "Your day, your rhythm.");
   const metrics = !isNonCycling ? getDayMetrics(cycleDay, cycleLengthDays) : null;
 
   return (
@@ -155,6 +164,8 @@ export function DailyBriefingHero({
                 postpartumStartDate={postpartumStartDate}
                 postpartumActive={postpartumActive}
                 lossDate={lossDate}
+                dueDate={dueDate}
+                pregnancyLmp={pregnancyLmp}
               />
             </button>
 
@@ -168,7 +179,9 @@ export function DailyBriefingHero({
                         ? "Menopause"
                         : lifeStage === "pregnancy_loss"
                           ? "Recovery"
-                          : "On the pill")
+                          : lifeStage === "pregnant"
+                            ? "Pregnant"
+                            : "On the pill")
                   : phase}
               </span>
             </div>
@@ -178,6 +191,7 @@ export function DailyBriefingHero({
               {headline}
             </p>
           </div>
+
 
           {/* Metrics */}
           {metrics && (
