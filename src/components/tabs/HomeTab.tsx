@@ -555,6 +555,29 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     switch (id) {
       case "cycle_circle": {
         if (cycleData.needsPeriodStart) {
+          const postpartumUnconfirmed =
+            cycleData.lifeStage === "postpartum" && !cycleData.postpartumActive;
+          if (postpartumUnconfirmed) {
+            return (
+              <div className="w-full max-w-sm mx-auto" key={id}>
+                <div className="relative rounded-2xl border border-primary/30 bg-card overflow-hidden p-5 text-center">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
+                  <div className="relative flex flex-col items-center gap-3">
+                    <h3 className="font-display font-semibold text-base text-foreground">
+                      Where are you right now?
+                    </h3>
+                    <p className="text-sm text-muted-foreground max-w-[260px]">
+                      So Logan tracks the right things for you.
+                    </p>
+                    <div className="flex flex-col gap-2 w-full max-w-[220px]">
+                      <Button onClick={() => onPostpartumDeclare?.()}>I had a baby</Button>
+                      <Button variant="outline" onClick={() => onStillCyclingDeclare?.()}>I'm still cycling</Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
           return (
             <div className="w-full max-w-sm mx-auto" key={id}>
               <div className="relative rounded-2xl border border-primary/30 bg-card overflow-hidden p-5 text-center">
@@ -572,6 +595,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
                   <Button
                     onClick={() => {
                       setEditedLength(cycleData.cycleLengthDays || 28);
+                      setEditedPhase("auto");
                       setShowDatePicker(true);
                     }}
                     className="mt-1"
