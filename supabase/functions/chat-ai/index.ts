@@ -1432,9 +1432,28 @@ serve(async (req) => {
     // Detect symptoms mentioned in the user's message and persist to symptom_logs
     // so they sync with the Home tab's symptom widget / history.
     {
-      // Loose intent: user is reporting how they feel (not asking a generic question)
-      const reportingIntent = /\b(i\s*(?:'?m|am|feel|have|got|woke up|am having|am feeling)|my\s+(?:head|back|stomach|breasts?|joints?)|having|feeling|today i|right now)\b/i.test(userMessage)
-        || /\b(log|track|record|note)\b/i.test(userMessage);
+      const trimmed = userMessage.trim();
+
+      // (a) Question veto — never log a symptom from an interrogative.
+      // Covers "What about mood swings", "Does bloating happen on day 6",
+      // "Is it normal to have cramps", "How does X feel", etc.
+      const isQuestion =
+        /\?\s*$/.test(trimmed) ||
+        /^\s*(what|whats|what's|why|how|when|where|does|do|is|are|can|could|would|should|will|did|was|were|any|anyone|tell\s+me)\b/i.test(trimmed) ||
+        /\b(what\s+about|how\s+about|what\s+if|what\s+causes?|why\s+do(?:es)?|is\s+it\s+normal|is\s+that\s+normal|can\s+(?:you|i)|does\s+(?:this|that|\w+)\s+(?:make|mean|happen|cause|fit|indicate)|tell\s+me\s+about|what\s+(?:does|do|phase|kind|else))\b/i.test(trimmed);
+
+      // (b) Hypothetical / generic veto — "if I…", "in general", "some women", etc.
+      const isHypothetical =
+        /\b(if\s+i|in\s+general|generally|typically|usually\s+happen|some\s+(?:women|people)|other\s+(?:women|people)|might\s+(?:i|that)|supposed\s+to|normal\s+to)\b/i.test(trimmed);
+
+      // (c) Loose reporting intent — same matchers as before so legit reports
+      // like "having such bad cramps today" still log.
+      const reportingIntent =
+        (/\b(i\s*(?:'?m|am)|i\s+(?:have|had|feel|felt|got|woke up)|my\s+(?:head|back|stomach|breasts?|joints?|chest|skin)|having|feeling|craving|today i|tonight|this morning|right now)\b/i.test(trimmed)
+         || /\b(log|track|record|note)\b/i.test(trimmed))
+        && !isQuestion
+        && !isHypothetical;
+
       const isHistoricalLookupQuestion = /\b(check|look\s*(?:up|at|back)|anything|any|did i|do i have|was there|were there|show|see|find)\b/i.test(userMessage)
         && /\b(history|historical|log|logs|logged|march|april|may|june|july|august|september|october|november|december|january|february|last\s+(?:month|cycle|time)|same\s+time)\b/i.test(userMessage);
 
