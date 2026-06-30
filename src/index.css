@@ -21,9 +21,12 @@
     --popover: 30 18% 9%;
     --popover-foreground: 41 33% 94%;
 
-    /* Brand accents — bright on dark */
-    --primary: 327 100% 59%;           /* #FF2E92 magenta — "you" */
-    --primary-foreground: 41 33% 96%;
+    /* Brand accents — bright on dark
+       NOTE: magenta (#FF2E92) is RESERVED for the locked 3-color gradient
+       (logo + cycle ring). It MUST NOT be used as a flat/solid fill.
+       Teal is the hero solid-fill color. Violet is secondary/accent. */
+    --primary: 182 70% 51%;            /* #2BD4D9 teal — hero solid fill */
+    --primary-foreground: 30 21% 6%;
 
     --secondary: 30 10% 18%;
     --secondary-foreground: 41 33% 94%;
@@ -31,25 +34,26 @@
     --muted: 30 12% 14%;
     --muted-foreground: 38 14% 70%;
 
-    --accent: 280 81% 54%;             /* #A22BE8 violet — "together" */
+    --accent: 280 81% 54%;             /* #A22BE8 violet — secondary accent */
     --accent-foreground: 41 33% 96%;
 
-    --tertiary: 182 70% 51%;           /* #2BD4D9 teal — "support" */
-    --tertiary-foreground: 30 21% 6%;
+    --tertiary: 327 100% 59%;          /* magenta — GRADIENT-ONLY, do not use as flat fill */
+    --tertiary-foreground: 41 33% 96%;
 
     --destructive: 355 79% 56%;
     --destructive-foreground: 41 33% 96%;
 
     --border: 30 12% 18%;
     --input: 30 12% 14%;
-    --ring: 327 100% 59%;
+    --ring: 182 70% 51%;
 
     --radius: 0.75rem;
 
     /* Brand-ink variants — deeper, for legible text on light surfaces */
-    --primary-ink: 327 75% 56%;        /* #E63B97 */
+    --primary-ink: 184 71% 47%;        /* #22C3CE deeper teal */
     --accent-ink: 281 65% 55%;         /* #9A45D8 */
-    --tertiary-ink: 184 71% 47%;       /* #22C3CE */
+    --tertiary-ink: 327 75% 56%;       /* #E63B97 — gradient-only ink variant */
+
 
     /* Logan token aliases (kept for backward-compat with existing utilities) */
     --logan-jet: 30 21% 6%;
@@ -84,7 +88,7 @@
 
     /* Shadows */
     --shadow-soft: 0 4px 24px -8px hsl(0 0% 0% / 0.5);
-    --shadow-glow: 0 0 40px -8px hsl(327 100% 59% / 0.4);
+    --shadow-glow: 0 0 40px -8px hsl(182 70% 51% / 0.4);
     --shadow-card: 0 8px 32px -12px hsl(0 0% 0% / 0.6), 0 2px 4px -2px hsl(0 0% 0% / 0.4);
     --shadow-elevated: 0 20px 60px -20px hsl(0 0% 0% / 0.7), 0 8px 24px -12px hsl(280 81% 54% / 0.18);
     --shadow-inset: inset 0 1px 0 0 hsl(41 33% 94% / 0.06);
@@ -112,30 +116,30 @@
     --card-foreground: 41 33% 94%;
     --popover: 30 18% 9%;
     --popover-foreground: 41 33% 94%;
-    --primary: 327 100% 59%;
-    --primary-foreground: 41 33% 96%;
+    --primary: 182 70% 51%;
+    --primary-foreground: 30 21% 6%;
     --secondary: 30 10% 18%;
     --secondary-foreground: 41 33% 94%;
     --muted: 30 12% 14%;
     --muted-foreground: 38 14% 70%;
     --accent: 280 81% 54%;
     --accent-foreground: 41 33% 96%;
-    --tertiary: 182 70% 51%;
-    --tertiary-foreground: 30 21% 6%;
+    --tertiary: 327 100% 59%;
+    --tertiary-foreground: 41 33% 96%;
     --destructive: 355 79% 56%;
     --destructive-foreground: 41 33% 96%;
     --border: 30 12% 18%;
     --input: 30 12% 14%;
-    --ring: 327 100% 59%;
+    --ring: 182 70% 51%;
 
     --sidebar-background: 30 21% 6%;
     --sidebar-foreground: 41 33% 94%;
-    --sidebar-primary: 327 100% 59%;
-    --sidebar-primary-foreground: 41 33% 96%;
+    --sidebar-primary: 182 70% 51%;
+    --sidebar-primary-foreground: 30 21% 6%;
     --sidebar-accent: 280 81% 54%;
     --sidebar-accent-foreground: 41 33% 96%;
     --sidebar-border: 30 12% 18%;
-    --sidebar-ring: 327 100% 59%;
+    --sidebar-ring: 182 70% 51%;
   }
 }
 
@@ -209,7 +213,7 @@
   }
 
   .ring-glow {
-    box-shadow: 0 0 0 1px hsl(327 100% 59% / 0.35), 0 0 24px -4px hsl(280 81% 54% / 0.4);
+    box-shadow: 0 0 0 1px hsl(182 70% 51% / 0.35), 0 0 24px -4px hsl(280 81% 54% / 0.4);
   }
 
   .hairline {

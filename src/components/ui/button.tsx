@@ -10,7 +10,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "gradient-primary text-primary-foreground shadow-[0_4px_16px_-6px_hsl(var(--primary)/0.55)] hover:shadow-[0_8px_28px_-8px_hsl(var(--primary)/0.7)] hover:brightness-110",
+          "bg-primary text-primary-foreground shadow-[0_4px_16px_-6px_hsl(var(--primary)/0.55)] hover:shadow-[0_8px_28px_-8px_hsl(var(--primary)/0.7)] hover:brightness-110",
         destructive:
           "bg-destructive text-destructive-foreground shadow-[0_4px_16px_-6px_hsl(var(--destructive)/0.5)] hover:bg-destructive/90",
         outline:
@@ -20,7 +20,7 @@ const buttonVariants = cva(
         ghost: "hover:bg-accent/10 hover:text-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         premium:
-          "gradient-primary text-primary-foreground shadow-glow hover:brightness-110 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700",
+          "bg-primary text-primary-foreground shadow-glow hover:brightness-110 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700",
       },
       size: {
         default: "h-10 px-5 py-2",
