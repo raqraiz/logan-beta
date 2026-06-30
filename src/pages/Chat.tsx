@@ -1179,7 +1179,7 @@ const Chat = () => {
           onPhaseOverride={async (phase) => {
             if (!user?.id || !cycleData?.lastPeriodStart || !cycleData.cycleLengthDays) return;
             if (phase === "auto") {
-              const { data: hist } = await supabase
+              const { data: hist } = await (supabase as any)
                 .from("cycle_history")
                 .select("cycle_length_days")
                 .eq("user_id", user.id)
