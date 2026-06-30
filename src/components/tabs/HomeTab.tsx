@@ -628,22 +628,19 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
               />
             )}
 
-            {!isNonCycling && !dismissed && (
-              <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground/70">
-                <span>Not accurate?</span>
-                <button
-                  onClick={() => {
-                    setEditedLength(cycleData.cycleLengthDays);
-                    setShowDatePicker(true);
-                  }}
-                  className="underline underline-offset-2 hover:text-foreground transition-colors"
-                >
-                  Update period date
-                </button>
-                <button onClick={() => setDismissed(true)} className="ml-1 hover:text-foreground transition-colors">
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
+            {!isNonCycling && (
+              <button
+                onClick={() => {
+                  setEditedLength(cycleData.cycleLengthDays);
+                  setEditedPhase("auto");
+                  setShowDatePicker(true);
+                }}
+                aria-label="Edit cycle"
+                className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-full px-2.5 py-1 border border-border/40 bg-background/60 backdrop-blur"
+              >
+                <Pencil className="w-3 h-3" />
+                Edit cycle
+              </button>
             )}
           </div>
         );
