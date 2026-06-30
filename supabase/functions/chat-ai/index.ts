@@ -1696,6 +1696,11 @@ serve(async (req) => {
     }
     // --- End community symptom library add ---
 
+    const currentMessageMentionsKnownSymptom = detectSymptomMentions(userMessage).length > 0
+      || mentionsKnownLibrarySymptom(userMessage, knownLibraryNames);
+    const isCurrentSymptomQuestion = currentMessageMentionsKnownSymptom && isSymptomQuestionOrHypothetical(userMessage);
+    const isCurrentSymptomNegation = currentMessageMentionsKnownSymptom && isSymptomNegationOrCorrection(userMessage);
+
 
 
 
@@ -2517,9 +2522,12 @@ serve(async (req) => {
       systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user is asking about ANOTHER person (a friend, family member, partner, etc.), NOT themselves. Do NOT reference the user's own symptom logs, cycle data, or chat history as if it answered the question. Do NOT pull up dates from their personal record. Answer the question generally based on what could be happening for that other person at that life stage, and if helpful, ask one clarifying question about the friend (age, cycle status, recent stressors). Never project the user's history onto someone else.`;
     }
 
-    const requestedSymptomQuestion = detectSymptomMentions(userMessage).length > 0 && isSymptomQuestionOrHypothetical(userMessage);
-    if (requestedSymptomQuestion) {
-      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user asked a question about a symptom; they did NOT report having it today. Answer the question directly using her current cycle context if helpful, but do NOT say "I've noted", "I've logged", "tracked", "got it", or anything that implies the symptom was recorded or is currently happening. Do NOT validate it as her lived symptom unless she explicitly says she has it.`;
+    if (isCurrentSymptomQuestion) {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user asked a question about a known symptom/library term; they did NOT report having it today. Answer the question directly using her current cycle context if helpful, but do NOT say "I've noted", "I've logged", "tracked", "got it", or anything that implies the symptom was recorded or is currently happening. Do NOT validate it as her lived symptom unless she explicitly says she has it. If the symptom exists in her past history, frame it as past pattern only, not today's report.`;
+    }
+
+    if (isCurrentSymptomNegation) {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user is correcting or negating a symptom log. Do NOT log, note, track, or save the symptom mentioned in this correction. Do NOT treat it as today's lived symptom. Apologize briefly and clarify that you won't count that symptom from this message.`;
     }
 
 
@@ -2617,9 +2625,14 @@ serve(async (req) => {
       return out.replace(/^\s+/, "").trimEnd();
     };
     assistantMessage = sanitizeLeakedInstructions(assistantMessage);
+    if (isCurrentSymptomQuestion || isCurrentSymptomNegation) {
+      assistantMessage = stripFalseSymptomLoggingClaim(assistantMessage);
+    }
     // Final safety net: if sanitizer stripped everything, fall back to a safe reply
     if (!assistantMessage.trim()) {
-      assistantMessage = "Got it — noted. What else is going on?";
+      assistantMessage = isCurrentSymptomQuestion
+        ? "That can show up differently depending on timing and stress load. If you mean it generally, I can explain what tends to drive it in this phase."
+        : "You're right — I won't count that from this message. What should I track instead?";
     }
 
     // Generate 3 contextual conversation starters that respond to what was just said
