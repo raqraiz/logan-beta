@@ -213,7 +213,7 @@
   }
 
   .ring-glow {
-    box-shadow: 0 0 0 1px hsl(327 100% 59% / 0.35), 0 0 24px -4px hsl(280 81% 54% / 0.4);
+    box-shadow: 0 0 0 1px hsl(182 70% 51% / 0.35), 0 0 24px -4px hsl(280 81% 54% / 0.4);
   }
 
   .hairline {
