@@ -268,7 +268,37 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
               </div>
             </div>
           )}
+
+          {stage === "pregnant" && (
+            <div className="mt-4 p-3 rounded-lg border border-emerald-300/40 bg-emerald-50/40 dark:bg-emerald-950/10 space-y-3">
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Add either date so Logan can track your gestational week (LMP is the standard OB method and most accurate). You can update or skip these anytime.
+              </p>
+              <div>
+                <Label htmlFor="lmp-date" className="text-xs text-muted-foreground">Last menstrual period (LMP)</Label>
+                <Input
+                  id="lmp-date"
+                  type="date"
+                  value={pregnancyLmp}
+                  onChange={(e) => setPregnancyLmp(e.target.value)}
+                  max={new Date().toISOString().slice(0, 10)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="due-date" className="text-xs text-muted-foreground">Due date</Label>
+                <Input
+                  id="due-date"
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
         </div>
+
 
         <div className="border-t border-border/50 pt-4">
           <Label className="text-sm font-medium mb-2 block">Import history</Label>
