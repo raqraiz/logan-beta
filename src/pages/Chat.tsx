@@ -813,7 +813,7 @@ const Chat = () => {
         setOutOfCredits(data.creditBalance.total <= 0);
       }
 
-      if (data?.periodUpdated && data?.cycleInfo) {
+      if ((data?.periodUpdated || data?.cycleLengthUpdated) && data?.cycleInfo) {
         setCycleData({
           cycleDay: data.cycleInfo.cycleDay,
           phase: data.cycleInfo.phase,
@@ -821,6 +821,10 @@ const Chat = () => {
         });
         // Pull authoritative values from the DB so every tab stays in sync
         fetchLifeStage();
+        // Broadcast so HomeTab / PlanTab / CycleForecast invalidate their own caches.
+        window.dispatchEvent(new CustomEvent("cycle-data-updated", {
+          detail: { source: "chat-correction", cycleInfo: data.cycleInfo }
+        }));
       }
 
       await refreshMessages(user.id);
