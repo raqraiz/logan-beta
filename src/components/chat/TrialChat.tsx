@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 import { LoganFullLogo } from "@/components/LoganFullLogo";
-import { Send, Loader2, ArrowDown, ArrowRight, ArrowLeft, Sparkles, MessageCircle, Check } from "lucide-react";
+import { Send, Loader2, ArrowDown, ArrowRight, ArrowLeft, Sparkles, MessageCircle, Check, Sun, Moon } from "lucide-react";
 import { VoiceInputButton } from "./VoiceInputButton";
 import { supabase } from "@/integrations/supabase/client";
 import { InlineChatAuth } from "./InlineChatAuth";
@@ -81,6 +81,14 @@ export const TrialChat = () => {
   const [lastUserQuestion, setLastUserQuestion] = useState("");
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [authView, setAuthView] = useState<"signup" | "signin">("signup");
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window === "undefined") return "dark";
+    return (localStorage.getItem("logan-landing-theme") as "dark" | "light") || "dark";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("logan-landing-theme", theme);
+  }, [theme]);
 
   const [waitlistEmail, setWaitlistEmail] = useState("");
   const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
@@ -227,7 +235,7 @@ export const TrialChat = () => {
   };
 
   return (
-    <div className="h-[100svh] supports-[height:100dvh]:h-[100dvh] bg-background flex flex-col relative overflow-hidden">
+    <div className={`${theme === "light" ? "theme-light" : ""} h-[100svh] supports-[height:100dvh]:h-[100dvh] bg-background text-foreground flex flex-col relative overflow-hidden`}>
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl transform translate-x-1/3 -translate-y-1/3" />
         <div className="absolute bottom-1/3 left-0 w-96 h-96 bg-primary/[0.06] rounded-full blur-3xl transform -translate-x-1/3" />
@@ -260,15 +268,28 @@ export const TrialChat = () => {
             ) : (
               <>
                 <button
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  className="hidden sm:inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors border border-border/60 rounded-full px-3.5 h-9"
+                  aria-label="Toggle theme"
+                >
+                  {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                  {theme === "dark" ? "Light mode" : "Dark mode"}
+                </button>
+                <button
                   onClick={() => { setAuthView("signin"); scrollToSignup(); }}
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Sign in
                 </button>
-                <Button size="sm" onClick={() => { setAuthView("signup"); scrollToSignup(); }} className="h-9 px-4 text-sm">
+                <Button
+                  size="sm"
+                  onClick={() => { setAuthView("signup"); scrollToSignup(); }}
+                  className="h-9 px-4 text-sm rounded-full bg-foreground text-background hover:bg-foreground/90"
+                >
                   Get started
                 </Button>
               </>
+
             )}
           </div>
         </div>
