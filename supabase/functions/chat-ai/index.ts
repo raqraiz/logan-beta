@@ -1899,6 +1899,84 @@ serve(async (req) => {
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      // --- Pregnancy detection ---
+      // Trigger only on clear self-statements ("I'm pregnant", "I just found out I'm pregnant", "I'm X weeks pregnant").
+      // Do NOT trigger on questions like "could I be pregnant?" or third-party mentions.
+      const pregnancySignal =
+        /\b(i'?m|i\s+am|just\s+found\s+out\s+i'?m|just\s+confirmed\s+i'?m|we'?re|we\s+are)\s+(pregnant|expecting|having\s+a\s+baby)\b/i.test(userMessage)
+        || /\bi'?m\s+\d{1,2}\s+weeks?\s+(pregnant|along)\b/i.test(userMessage)
+        || /\b(positive\s+pregnancy\s+test|positive\s+test\s+today|two\s+lines\s+today|bfp)\b/i.test(userMessage);
+      const pregnancyExit =
+        /\b(i\s+had\s+the\s+baby|baby\s+(is\s+)?here|gave\s+birth|delivered|switch\s+me\s+to\s+postpartum|switch\s+to\s+postpartum|i'?m\s+postpartum\s+now|no\s+longer\s+pregnant|lost\s+the\s+baby|miscarried)\b/i.test(userMessage)
+        && participant.life_stage === "pregnant";
+
+      if (pregnancySignal && participant.life_stage !== "pregnant" && participant.life_stage !== "pregnancy_loss") {
+        // Try to extract weeks pregnant; LMP/due date will be asked.
+        const weeksMatch = userMessage.match(/\b(\d{1,2})\s+weeks?\b/i);
+        const weeksAlong = weeksMatch ? parseInt(weeksMatch[1]) : null;
+        let lmp: string | null = null;
+        if (weeksAlong && weeksAlong > 0 && weeksAlong < 45) {
+          const lmpDate = new Date();
+          lmpDate.setDate(lmpDate.getDate() - weeksAlong * 7);
+          lmp = lmpDate.toISOString().slice(0, 10);
+        }
+        await supabase
+          .from("participants")
+          .update({
+            life_stage: "pregnant",
+            pregnancy_lmp: lmp,
+            last_period_start: null,
+            postpartum_active: false,
+            postpartum_start_date: null,
+            loss_date: null,
+          })
+          .eq("id", participant.id);
+        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshed) participant = refreshed;
+
+        const msg = `Oh wow — congratulations. 🌱\n\nI've switched into **pregnancy mode**, so cycle tracking is paused and I'll focus on what actually matters now: symptoms, sleep, energy, nutrition, safe movement, and the real red flags to watch for.\n\nQuick anchor so I can speak in trimesters and weeks: do you know either your **last menstrual period (LMP)** or your **due date**? You can also tell me how many weeks along you are. Totally fine to skip — you can update it in Settings anytime.\n\nAnd a soft reminder: heavy bleeding, severe pain, fever over 100.4°F / 38°C, persistent vomiting, or sudden swelling — please call your provider.`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: msg,
+          message_type: "text",
+          metadata: { life_stage_updated: "pregnant" },
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (pregnancyExit) {
+        // If she said she lost the baby, switch to pregnancy_loss; otherwise postpartum.
+        const toLoss = /\b(lost\s+the\s+baby|miscarried|miscarriage)\b/i.test(userMessage);
+        const today = new Date().toISOString().slice(0, 10);
+        await supabase
+          .from("participants")
+          .update(toLoss
+            ? { life_stage: "pregnancy_loss", loss_date: today, due_date: null, pregnancy_lmp: null }
+            : { life_stage: "postpartum", postpartum_active: false, postpartum_start_date: today, due_date: null, pregnancy_lmp: null }
+          )
+          .eq("id", participant.id);
+        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshed) participant = refreshed;
+        const msg = toLoss
+          ? `I'm so sorry. I've switched us into recovery mode and paused everything else. We move at your pace from here.`
+          : `Congratulations 💛 — I've switched into **postpartum mode**. I'll layer in recovery context (sleep, iron, pelvic floor, mood) from today. If the birth date isn't today, just tell me when, and I'll update it.`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: msg,
+          message_type: "text",
+          metadata: { life_stage_updated: toLoss ? "pregnancy_loss" : "postpartum" },
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
     // --- End life-stage corrections ---
 
