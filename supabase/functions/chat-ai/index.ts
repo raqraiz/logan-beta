@@ -2486,6 +2486,11 @@ serve(async (req) => {
       systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user is asking about ANOTHER person (a friend, family member, partner, etc.), NOT themselves. Do NOT reference the user's own symptom logs, cycle data, or chat history as if it answered the question. Do NOT pull up dates from their personal record. Answer the question generally based on what could be happening for that other person at that life stage, and if helpful, ask one clarifying question about the friend (age, cycle status, recent stressors). Never project the user's history onto someone else.`;
     }
 
+    const requestedSymptomQuestion = detectSymptomMentions(userMessage).length > 0 && isSymptomQuestionOrHypothetical(userMessage);
+    if (requestedSymptomQuestion) {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user asked a question about a symptom; they did NOT report having it today. Answer the question directly using her current cycle context if helpful, but do NOT say "I've noted", "I've logged", "tracked", "got it", or anything that implies the symptom was recorded or is currently happening. Do NOT validate it as her lived symptom unless she explicitly says she has it.`;
+    }
+
 
     // Smart truncation: keep first 10 (onboarding/profile context) + last 50 (recent conversation)
     const allMessages = (recentMessages || [])
