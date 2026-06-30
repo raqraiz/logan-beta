@@ -427,6 +427,8 @@ interface CycleData {
   postpartumStartDate?: string;
   postpartumActive?: boolean;
   lossDate?: string;
+  dueDate?: string;
+  pregnancyLmp?: string;
   needsPeriodStart?: boolean;
 }
 
