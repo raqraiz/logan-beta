@@ -143,11 +143,14 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
     ? { color: "text-primary", ringColor: "stroke-primary", hex: "#15B88C" }
     : lifeStage === "pregnancy_loss"
       ? { color: "text-rose-300", ringColor: "stroke-rose-300", hex: "#D4A5A5" }
-      : PHASE_STYLES[stageKey];
+      : lifeStage === "pregnant"
+        ? { color: "text-emerald-300", ringColor: "stroke-emerald-300", hex: "#86D7B5" }
+        : PHASE_STYLES[stageKey];
   const label =
     lifeStage === "postpartum" ? "Postpartum" :
     lifeStage === "menopause" ? "Menopause" :
     lifeStage === "pregnancy_loss" ? "Healing" :
+    lifeStage === "pregnant" ? "Pregnant" :
     lifeStage === "steady" ? (steadyReason === "stale" ? "Overdue" : "Steady") :
     "Steady";
 
