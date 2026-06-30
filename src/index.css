@@ -141,6 +141,72 @@
     --sidebar-border: 30 12% 18%;
     --sidebar-ring: 182 70% 51%;
   }
+
+  /* LIGHT MODE — paper background, ink foreground.
+     Activated when .light class is present on <html>.
+     Gradient (magenta→violet→teal) stays locked & identical to dark. */
+  .light {
+    --background: 41 33% 94%;          /* #F4F1EA paper */
+    --foreground: 30 13% 12%;          /* #23201C ink */
+
+    --card: 0 0% 100%;                 /* white card surface */
+    --card-foreground: 30 13% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 30 13% 12%;
+
+    --primary: 184 71% 47%;            /* #22C3CE deeper teal — legible on paper */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 38 24% 88%;
+    --secondary-foreground: 30 13% 12%;
+
+    --muted: 38 24% 92%;
+    --muted-foreground: 30 10% 38%;
+
+    --accent: 281 65% 55%;             /* #9A45D8 violet-ink */
+    --accent-foreground: 0 0% 100%;
+
+    --tertiary: 327 75% 56%;           /* magenta-ink — gradient-only */
+    --tertiary-foreground: 0 0% 100%;
+
+    --destructive: 355 70% 48%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 36 18% 82%;              /* soft warm grey */
+    --input: 38 24% 90%;
+    --ring: 184 71% 47%;
+
+    /* ink variants in light mode flip — deeper colors are already the
+       base, so the "ink" alias points to the on-dark variants for any
+       component that needs a brighter swatch on a dark backdrop */
+    --primary-ink: 182 70% 51%;
+    --accent-ink: 280 81% 54%;
+    --tertiary-ink: 327 100% 59%;
+
+    /* Re-tune soft background gradient for paper */
+    --gradient-soft: radial-gradient(1200px 600px at 20% -10%, hsl(327 75% 90% / 0.55), transparent 60%),
+                     radial-gradient(900px 500px at 100% 0%, hsl(280 65% 92% / 0.5), transparent 55%),
+                     linear-gradient(180deg, hsl(41 33% 96%) 0%, hsl(41 33% 92%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100% / 0.95) 0%, hsl(41 33% 96% / 0.85) 100%);
+    --gradient-glass: linear-gradient(145deg, hsl(30 13% 12% / 0.04) 0%, hsl(30 13% 12% / 0.01) 100%);
+
+    --shadow-soft: 0 4px 24px -8px hsl(30 13% 12% / 0.12);
+    --shadow-glow: 0 0 40px -8px hsl(184 71% 47% / 0.35);
+    --shadow-card: 0 8px 32px -12px hsl(30 13% 12% / 0.18), 0 2px 4px -2px hsl(30 13% 12% / 0.08);
+    --shadow-elevated: 0 20px 60px -20px hsl(30 13% 12% / 0.22), 0 8px 24px -12px hsl(280 81% 54% / 0.14);
+    --shadow-inset: inset 0 1px 0 0 hsl(0 0% 100% / 0.6);
+
+    --sidebar-background: 41 33% 94%;
+    --sidebar-foreground: 30 13% 12%;
+    --sidebar-primary: 184 71% 47%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 281 65% 55%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 36 18% 82%;
+    --sidebar-ring: 184 71% 47%;
+  }
+
 }
 
 @layer base {
