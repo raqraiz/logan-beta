@@ -211,6 +211,13 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
                 <div className="text-xs text-muted-foreground">Logan pauses cycle tracking and shifts into gentle, grief-aware recovery support. You can switch back anytime.</div>
               </div>
             </label>
+            <label className="flex items-start gap-3 p-3 rounded-lg border border-emerald-300/40 bg-emerald-50/40 dark:bg-emerald-950/10 hover:bg-emerald-100/40 cursor-pointer">
+              <RadioGroupItem value="pregnant" id="stage-pregnant" className="mt-0.5" />
+              <div className="flex-1">
+                <div className="text-sm font-medium">Pregnant 🌱</div>
+                <div className="text-xs text-muted-foreground">Logan pauses cycle tracking and switches to trimester-aware support — symptoms, nutrition, safe movement, and red-flag guardrails.</div>
+              </div>
+            </label>
           </RadioGroup>
           <p className="text-[11px] text-muted-foreground/80 mt-3">
             Tip: you can also just tell Logan in chat — e.g. "I'm actually still cycling" — and it'll switch automatically.
