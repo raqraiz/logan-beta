@@ -154,6 +154,21 @@ function detectSymptomMentions(text: string): { name: string; severity: number }
   return detected;
 }
 
+function isSymptomQuestionOrHypothetical(text: string): boolean {
+  const t = text.trim();
+  return (
+    /\?\s*$/.test(t) ||
+    /^\s*(what|whats|what's|why|how|when|where|does|do|is|are|can|could|would|should|will|did|was|were|any|anyone|tell\s+me)\b/i.test(t) ||
+    /\b(what\s+about|how\s+about|what\s+if|what\s+causes?|why\s+do(?:es)?|is\s+it\s+normal|is\s+that\s+normal|can\s+(?:you|i)|does\s+(?:this|that|\w+)\s+(?:make|mean|happen|cause|fit|indicate)|tell\s+me\s+about|what\s+(?:does|do|phase|kind|else))\b/i.test(t) ||
+    /\b(if\s+i|in\s+general|generally|typically|usually\s+happen|some\s+(?:women|people)|other\s+(?:women|people)|might\s+(?:i|that)|supposed\s+to|normal\s+to)\b/i.test(t)
+  );
+}
+
+function isSymptomNegationOrCorrection(text: string): boolean {
+  const t = text.trim();
+  return /\b(i\s+(?:did\s+not|didn't|do\s+not|don't|never)\s+(?:log|track|record|note|say|report|have|had)|i\s+(?:am\s+not|'?m\s+not)\s+(?:having|feeling|experiencing)|not\s+(?:having|feeling|experiencing)|that'?s?\s+not\s+(?:me|what\s+i\s+said|right)|wrong,?\s*i\s+(?:do\s+not|don't|did\s+not|didn't))\b/i.test(t);
+}
+
 function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -1434,25 +1449,16 @@ serve(async (req) => {
     {
       const trimmed = userMessage.trim();
 
-      // (a) Question veto — never log a symptom from an interrogative.
-      // Covers "What about mood swings", "Does bloating happen on day 6",
-      // "Is it normal to have cramps", "How does X feel", etc.
-      const isQuestion =
-        /\?\s*$/.test(trimmed) ||
-        /^\s*(what|whats|what's|why|how|when|where|does|do|is|are|can|could|would|should|will|did|was|were|any|anyone|tell\s+me)\b/i.test(trimmed) ||
-        /\b(what\s+about|how\s+about|what\s+if|what\s+causes?|why\s+do(?:es)?|is\s+it\s+normal|is\s+that\s+normal|can\s+(?:you|i)|does\s+(?:this|that|\w+)\s+(?:make|mean|happen|cause|fit|indicate)|tell\s+me\s+about|what\s+(?:does|do|phase|kind|else))\b/i.test(trimmed);
-
-      // (b) Hypothetical / generic veto — "if I…", "in general", "some women", etc.
-      const isHypothetical =
-        /\b(if\s+i|in\s+general|generally|typically|usually\s+happen|some\s+(?:women|people)|other\s+(?:women|people)|might\s+(?:i|that)|supposed\s+to|normal\s+to)\b/i.test(trimmed);
+      // Question / hypothetical / negation veto — never log a symptom from
+      // "what about X", "is X normal", or "I did not log X" phrasing.
+      const shouldVetoSymptomWrite = isSymptomQuestionOrHypothetical(trimmed) || isSymptomNegationOrCorrection(trimmed);
 
       // (c) Loose reporting intent — same matchers as before so legit reports
       // like "having such bad cramps today" still log.
       const reportingIntent =
         (/\b(i\s*(?:'?m|am)|i\s+(?:have|had|feel|felt|got|woke up)|my\s+(?:head|back|stomach|breasts?|joints?|chest|skin)|having|feeling|craving|today i|tonight|this morning|right now)\b/i.test(trimmed)
          || /\b(log|track|record|note)\b/i.test(trimmed))
-        && !isQuestion
-        && !isHypothetical;
+        && !shouldVetoSymptomWrite;
 
       const isHistoricalLookupQuestion = /\b(check|look\s*(?:up|at|back)|anything|any|did i|do i have|was there|were there|show|see|find)\b/i.test(userMessage)
         && /\b(history|historical|log|logs|logged|march|april|may|june|july|august|september|october|november|december|january|february|last\s+(?:month|cycle|time)|same\s+time)\b/i.test(userMessage);
@@ -2098,7 +2104,7 @@ serve(async (req) => {
       const chatSymptomReports = ((recentMessages || []) as any[])
         .filter((m) => m.role === "user" && typeof m.content === "string")
         .map((m) => {
-          if (isLookupQuestion(m.content)) return null;
+          if (isLookupQuestion(m.content) || isSymptomQuestionOrHypothetical(m.content) || isSymptomNegationOrCorrection(m.content)) return null;
           const detected = detectSymptomMentions(m.content);
           if (detected.length === 0) return null;
           const t = new Date(m.created_at).getTime();
@@ -2439,7 +2445,7 @@ serve(async (req) => {
 
     // Sample of the shared symptom library for the model to compare against
     const librarySample = knownLibraryNames.slice(0, 200).join(", ");
-    const libraryGuidance = `\n\nSHARED SYMPTOM LIBRARY (symptoms Logan already knows how to watch): ${librarySample}.\n\nWHEN THE USER MENTIONS OR WANTS TO TRACK SYMPTOMS:\n1. When a user describes symptoms, she is usually just telling you how she feels — not asking for a feature demo. Acknowledge what she shared warmly and naturally, like a friend would. The system logs those symptoms automatically from the chat, so you do NOT need to tell her to "go to Home → Log Symptoms" or use any app-navigation language.\n2. For each symptom she names, check the library above (case-insensitive, loose match).\n3. For symptoms ALREADY in the library: keep it conversational. Good examples: "I'll note that down so we can watch for any pattern," or "Got it — I'll keep track of that for you." Bad examples: "added Irritability for June 27," "You can track this in the symptom log," or "go to Home → Log Symptoms."\n4. For symptoms NOT in the library: wrap each new candidate name in inline-code backticks like \`hair loss\`, \`mouth ulcers\`, and ask exactly: "Want me to add these to the shared symptom library so you (and other women) can track them later? They're completely anonymous." Then stop and wait.\n5. NEVER add symptoms silently. NEVER claim you added something unless the system tells you it was added.\n6. If she confirms ("yes", "please add", "go ahead"), the system handles the insert — just reply naturally that it's done and they'll show up as trackable symptoms going forward.\n7. Keep the candidate list short (max 6 names). Use the user's own wording, lowercased, no punctuation.`;
+    const libraryGuidance = `\n\nSHARED SYMPTOM LIBRARY (symptoms Logan already knows how to watch): ${librarySample}.\n\nWHEN THE USER MENTIONS OR WANTS TO TRACK SYMPTOMS:\n1. First decide whether the user is REPORTING a symptom, asking a QUESTION about a symptom, or correcting a mistaken log.\n2. If the user asks a question like "what about mood swings", "is bloating normal", "what causes cramps", or "does X happen", answer the question. Do NOT say you logged/noted/tracked it. Do NOT imply she is having it today. Use conditional language like "if that's happening" only if needed.\n3. If the user corrects you with language like "I did not log X" or "I'm not having X", apologize briefly and do NOT treat X as part of her current symptoms.\n4. When a user clearly describes symptoms she is experiencing, she is usually just telling you how she feels — not asking for a feature demo. Acknowledge what she shared warmly and naturally, like a friend would. The system logs those symptoms automatically from the chat, so you do NOT need to tell her to "go to Home → Log Symptoms" or use any app-navigation language.\n5. For each reported symptom she names, check the library above (case-insensitive, loose match).\n6. For reported symptoms ALREADY in the library: keep it conversational. Good examples: "I'll keep an eye on that pattern," or "Got it — we can watch whether that clusters by phase." Bad examples: "added Irritability for June 27," "You can track this in the symptom log," or "go to Home → Log Symptoms."\n7. For reported symptoms NOT in the library: wrap each new candidate name in inline-code backticks like \`hair loss\`, \`mouth ulcers\`, and ask exactly: "Want me to add these to the shared symptom library so you (and other women) can track them later? They're completely anonymous." Then stop and wait.\n8. NEVER add symptoms silently. NEVER claim you added something unless the system tells you it was added.\n9. If she confirms ("yes", "please add", "go ahead"), the system handles the insert — just reply naturally that it's done and they'll show up as trackable symptoms going forward.\n10. Keep the candidate list short (max 6 names). Use the user's own wording, lowercased, no punctuation.`;
     let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext + backfillBlock + libraryBlock + libraryGuidance);
 
     // Bleed/spotting acknowledgment guards (set in the spotting block above).
@@ -2478,6 +2484,11 @@ serve(async (req) => {
 
     if (isAboutSomeoneElse) {
       systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user is asking about ANOTHER person (a friend, family member, partner, etc.), NOT themselves. Do NOT reference the user's own symptom logs, cycle data, or chat history as if it answered the question. Do NOT pull up dates from their personal record. Answer the question generally based on what could be happening for that other person at that life stage, and if helpful, ask one clarifying question about the friend (age, cycle status, recent stressors). Never project the user's history onto someone else.`;
+    }
+
+    const requestedSymptomQuestion = detectSymptomMentions(userMessage).length > 0 && isSymptomQuestionOrHypothetical(userMessage);
+    if (requestedSymptomQuestion) {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user asked a question about a symptom; they did NOT report having it today. Answer the question directly using her current cycle context if helpful, but do NOT say "I've noted", "I've logged", "tracked", "got it", or anything that implies the symptom was recorded or is currently happening. Do NOT validate it as her lived symptom unless she explicitly says she has it.`;
     }
 
 
