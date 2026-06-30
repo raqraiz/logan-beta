@@ -7,6 +7,8 @@ interface ChatCycleCircleProps {
   cycleLengthDays: number;
   size?: "sm" | "md";
   lifeStage?: LifeStage;
+  dueDate?: string;
+  pregnancyLmp?: string;
   postpartumStartDate?: string;
   /** When true (and lifeStage='cycling'), overlay a small postpartum recovery badge */
   postpartumActive?: boolean;
