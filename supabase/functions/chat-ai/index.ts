@@ -411,8 +411,13 @@ serve(async (req) => {
       || /\b(?:when|what|which)\b[^.?!]{0,80}\b(?:period|bleed|day\s*1)\b[^.?!]{0,80}\b(?:start|started|begin|began|come|came|arrive|arrived)\b/i.test(userMessage)
       || /\b(?:did|have)\s+i\s+(?:tell|say|mention|log|report)\b[^.?!]{0,80}\b(?:period|bleed|day\s*1)\b/i.test(userMessage);
 
+    // A bare "yes"/"yep" only counts as a period confirmation when Logan just
+    // asked (wasPeridCheckin). Explicit phrases ("my period started yesterday")
+    // still pass on their own. Generic confirm patterns must also mention a
+    // period-related word OR follow a check-in, to avoid hijacking unrelated yeses.
+    const mentionsPeriodWord = /\b(period|bleed|bleeding|day\s*1|menstruation|menstruating|spotting)\b/i.test(userMessage);
     const isPeriodConfirmation = !referencesHistoricalDate && !isPeriodStartQuestion && (
-      periodConfirmPatterns.some(p => p.test(userMessage)) ||
+      (periodConfirmPatterns.some(p => p.test(userMessage)) && (wasPeridCheckin || mentionsPeriodWord)) ||
       (isBareYes && wasPeridCheckin)
     );
 
