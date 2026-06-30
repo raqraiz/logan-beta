@@ -154,6 +154,21 @@ function detectSymptomMentions(text: string): { name: string; severity: number }
   return detected;
 }
 
+function isSymptomQuestionOrHypothetical(text: string): boolean {
+  const t = text.trim();
+  return (
+    /\?\s*$/.test(t) ||
+    /^\s*(what|whats|what's|why|how|when|where|does|do|is|are|can|could|would|should|will|did|was|were|any|anyone|tell\s+me)\b/i.test(t) ||
+    /\b(what\s+about|how\s+about|what\s+if|what\s+causes?|why\s+do(?:es)?|is\s+it\s+normal|is\s+that\s+normal|can\s+(?:you|i)|does\s+(?:this|that|\w+)\s+(?:make|mean|happen|cause|fit|indicate)|tell\s+me\s+about|what\s+(?:does|do|phase|kind|else))\b/i.test(t) ||
+    /\b(if\s+i|in\s+general|generally|typically|usually\s+happen|some\s+(?:women|people)|other\s+(?:women|people)|might\s+(?:i|that)|supposed\s+to|normal\s+to)\b/i.test(t)
+  );
+}
+
+function isSymptomNegationOrCorrection(text: string): boolean {
+  const t = text.trim();
+  return /\b(i\s+(?:did\s+not|didn't|do\s+not|don't|never)\s+(?:log|track|record|note|say|report|have|had)|i\s+(?:am\s+not|'?m\s+not)\s+(?:having|feeling|experiencing)|not\s+(?:having|feeling|experiencing)|that'?s?\s+not\s+(?:me|what\s+i\s+said|right)|wrong,?\s*i\s+(?:do\s+not|don't|did\s+not|didn't))\b/i.test(t);
+}
+
 function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
