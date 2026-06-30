@@ -197,6 +197,7 @@ function stripFalseSymptomLoggingClaim(text: string): string {
   out = out.replace(/(?:^|\n)\s*(?:I(?:'ve| have)?|Logan has|We(?:'ve| have)?)\s+(?:logged|noted|tracked|saved|recorded)\b[^.?!\n]*(?:[.?!]\s*|\n|$)/gi, "");
   out = out.replace(/(?:^|\n)\s*Got it\s*[—-]\s*(?:I(?:'ve| have)?\s+)?(?:logged|noted|tracked|saved|recorded)\b[^.?!\n]*(?:[.?!]\s*|\n|$)/gi, "");
   out = out.replace(/\b(?:logged|noted|tracked|saved|recorded)\s+(?:that|those|this|it)\s+(?:for\s+today|today)\b[.?!]?/gi, "");
+  out = out.replace(/[^.?!\n]*\b(?:log(?:ged|ging)?|not(?:ed|ing)?|track(?:ed|ing)?|sav(?:ed|ing)?|record(?:ed|ing)?)\b[^.?!\n]*(?:[.?!]\s*|\n|$)/gi, "");
   return out.replace(/^\s+/, "").trimEnd();
 }
 
