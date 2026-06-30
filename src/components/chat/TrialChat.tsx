@@ -268,15 +268,28 @@ export const TrialChat = () => {
             ) : (
               <>
                 <button
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  className="hidden sm:inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors border border-border/60 rounded-full px-3.5 h-9"
+                  aria-label="Toggle theme"
+                >
+                  {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                  {theme === "dark" ? "Light mode" : "Dark mode"}
+                </button>
+                <button
                   onClick={() => { setAuthView("signin"); scrollToSignup(); }}
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Sign in
                 </button>
-                <Button size="sm" onClick={() => { setAuthView("signup"); scrollToSignup(); }} className="h-9 px-4 text-sm">
+                <Button
+                  size="sm"
+                  onClick={() => { setAuthView("signup"); scrollToSignup(); }}
+                  className="h-9 px-4 text-sm rounded-full bg-foreground text-background hover:bg-foreground/90"
+                >
                   Get started
                 </Button>
               </>
+
             )}
           </div>
         </div>
