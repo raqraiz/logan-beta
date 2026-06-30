@@ -133,8 +133,8 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
   );
 }
 
-// Static badge for non-cycling/steady life stages (postpartum, menopause, irregular/on-the-pill, pregnancy loss, or stale cycling)
-function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, steadyReason }: { lifeStage: "postpartum" | "menopause" | "irregular" | "steady" | "pregnancy_loss"; size: "sm" | "md"; postpartumStartDate?: string; lossDate?: string; steadyReason?: "pill" | "stale" }) {
+// Static badge for non-cycling/steady life stages (postpartum, menopause, irregular/on-the-pill, pregnancy loss, pregnant, or stale cycling)
+function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDate, pregnancyLmp, steadyReason }: { lifeStage: "postpartum" | "menopause" | "irregular" | "steady" | "pregnancy_loss" | "pregnant"; size: "sm" | "md"; postpartumStartDate?: string; lossDate?: string; dueDate?: string; pregnancyLmp?: string; steadyReason?: "pill" | "stale" }) {
   const stageKey =
     lifeStage === "postpartum" ? "Postpartum" :
     lifeStage === "menopause" ? "Menopause" :
