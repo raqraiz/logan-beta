@@ -983,7 +983,14 @@ serve(async (req) => {
       // Corrections are statements, not questions.
       const isQuestion = /\?/.test(userMessage);
       const restorePreviousCycleState = /\b(?:put|move|switch|set)\s+me\s+back\b/i.test(userMessage)
-        || /\b(?:i['’]?m\s+not|not|no)\s+(?:on|having|in)\s+(?:my\s+)?period\b/i.test(userMessage);
+        || /\b(?:i['’]?m\s+not|not|no)\s+(?:on|having|in)\s+(?:my\s+)?period\b/i.test(userMessage)
+        || /\bi['’]?m\s+not\s+(?:in|on|having)\s+(?:my\s+)?(?:menstruation|menstrual|period|bleeding)\b/i.test(userMessage)
+        || /\b(?:i\s+)?(?:have|did|do)\s*n[o']?t\s+(?:gotten|get|got|have|start(?:ed)?|begin|began|begun)\s+(?:my\s+)?period\b/i.test(userMessage)
+        || /\bhaven'?t\s+(?:gotten|got|had|started|begun)\s+(?:my\s+)?(?:period|menstruation|bleed(?:ing)?)\b/i.test(userMessage)
+        || /\b(?:no|nope)[,\s]+(?:i\s+)?(?:have|did|do)\s*n[o']?t\s+(?:gotten|get|got|have|start(?:ed)?)\b[^.?!\n]*\bperiod\b/i.test(userMessage)
+        || /\b(?:that'?s|this is|you'?re|you are)\s+(?:wrong|incorrect|a mistake)\b/i.test(userMessage)
+        || /\b(?:undo|revert|cancel)\s+(?:that|the\s+(?:day\s*1|reset|period|update))\b/i.test(userMessage)
+        || /\bperiod\s+(?:hasn'?t|has\s+not)\s+(?:started|begun|come|arrived)\b/i.test(userMessage);
 
       if (restorePreviousCycleState && !isQuestion) {
         const { data: recentAssistantMessages } = await supabase
@@ -1009,7 +1016,12 @@ serve(async (req) => {
           const restoredStart = previousCycleMeta.last_period_start as string;
           const restoredLengthRaw = previousCycleMeta.cycle_length_days;
           const restoredLength = typeof restoredLengthRaw === "number" ? restoredLengthRaw : Number(restoredLengthRaw);
-          const restorePayload: Record<string, unknown> = { last_period_start: restoredStart };
+          const restorePayload: Record<string, unknown> = {
+            last_period_start: restoredStart,
+            period_pending_since: null,
+            period_still_active: false,
+            current_period_end_date: null,
+          };
           if (Number.isFinite(restoredLength) && restoredLength >= 18 && restoredLength <= 45) {
             restorePayload.cycle_length_days = restoredLength;
           }

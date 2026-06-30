@@ -1,0 +1,1 @@
+UPDATE public.participants SET last_period_start='2026-06-07', period_pending_since=NULL, period_still_active=false, current_period_end_date=NULL WHERE id='e5cf053c-484f-42a0-91fc-653aa7dcec34';
