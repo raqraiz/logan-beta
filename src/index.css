@@ -126,6 +126,50 @@
     --sidebar-accent-foreground: 210 20% 97%;
     --sidebar-border: 220 10% 18%;
     --sidebar-ring: 168 80% 42%;
+}
+
+  /* ============================================================
+     LIGHT THEME — scoped to landing page via .theme-light
+     Matches the cream/off-white aesthetic from the design refs.
+     ============================================================ */
+  .theme-light {
+    --background: 40 30% 94%;
+    --foreground: 220 15% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 12%;
+
+    --primary: 168 75% 36%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 40 15% 88%;
+    --secondary-foreground: 220 15% 12%;
+
+    --muted: 40 20% 90%;
+    --muted-foreground: 220 8% 40%;
+
+    --accent: 355 75% 52%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 355 75% 52%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 40 15% 84%;
+    --input: 0 0% 100%;
+    --ring: 168 75% 36%;
+
+    --gradient-soft:
+      radial-gradient(1200px 600px at 10% -10%, hsl(168 60% 80% / 0.35), transparent 60%),
+      radial-gradient(900px 500px at 100% 10%, hsl(340 70% 88% / 0.45), transparent 55%),
+      linear-gradient(180deg, hsl(40 35% 96%) 0%, hsl(40 25% 92%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100% / 0.95) 0%, hsl(40 30% 98% / 0.85) 100%);
+    --gradient-glass: linear-gradient(145deg, hsl(220 15% 12% / 0.03) 0%, hsl(220 15% 12% / 0.01) 100%);
+    --shadow-soft: 0 4px 24px -8px hsl(220 15% 12% / 0.08);
+    --shadow-card: 0 8px 32px -12px hsl(220 15% 12% / 0.1), 0 2px 4px -2px hsl(220 15% 12% / 0.04);
+    --shadow-elevated: 0 20px 60px -20px hsl(220 15% 12% / 0.15), 0 8px 24px -12px hsl(168 75% 36% / 0.08);
   }
 }
 
