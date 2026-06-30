@@ -2,130 +2,140 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Quicksand:wght@300;400;500;600;700&display=swap');
 
-/* Logan Design System - Bold, High-Performance Dark Aesthetic */
+/* Logan Brand System — Magenta · Violet · Teal
+   ----------------------------------------------
+   Locked ring gradient: magenta #FF2E92 → violet #A22BE8 → teal #2BD4D9
+   Never recolor / rotate / detach. Use --gradient-brand as single source. */
 
 @layer base {
   :root {
-    /* Dark mode by default - Jet Black & Deep Graphite */
-    --background: 240 10% 4%;
-    --foreground: 210 20% 97%;
+    /* Neutrals — near-black ink, paper highlight */
+    --background: 30 21% 6%;          /* #16120E near-black */
+    --foreground: 41 33% 94%;          /* #F4F1EA paper */
 
-    --card: 220 10% 10%;
-    --card-foreground: 210 20% 97%;
+    --card: 30 18% 9%;
+    --card-foreground: 41 33% 94%;
 
-    --popover: 220 10% 10%;
-    --popover-foreground: 210 20% 97%;
+    --popover: 30 18% 9%;
+    --popover-foreground: 41 33% 94%;
 
-    /* Primary - Teal-green to match Logan logo */
-    --primary: 168 80% 42%;
-    --primary-foreground: 240 10% 4%;
+    /* Brand accents — bright on dark */
+    --primary: 327 100% 59%;           /* #FF2E92 magenta — "you" */
+    --primary-foreground: 41 33% 96%;
 
-    /* Secondary - Dark Slate */
-    --secondary: 210 7% 26%;
-    --secondary-foreground: 210 20% 97%;
+    --secondary: 30 10% 18%;
+    --secondary-foreground: 41 33% 94%;
 
-    /* Muted - subtle contrast */
-    --muted: 220 10% 16%;
-    --muted-foreground: 210 15% 75%;
+    --muted: 30 12% 14%;
+    --muted-foreground: 38 14% 70%;
 
-    /* Accent - Hero Red */
-    --accent: 355 79% 56%;
-    --accent-foreground: 210 20% 97%;
+    --accent: 280 81% 54%;             /* #A22BE8 violet — "together" */
+    --accent-foreground: 41 33% 96%;
+
+    --tertiary: 182 70% 51%;           /* #2BD4D9 teal — "support" */
+    --tertiary-foreground: 30 21% 6%;
 
     --destructive: 355 79% 56%;
-    --destructive-foreground: 210 20% 97%;
+    --destructive-foreground: 41 33% 96%;
 
-    --border: 220 10% 18%;
-    --input: 220 10% 14%;
-    --ring: 168 80% 42%;
+    --border: 30 12% 18%;
+    --input: 30 12% 14%;
+    --ring: 327 100% 59%;
 
     --radius: 0.75rem;
 
-    /* Custom Logan tokens - exact colors from reference */
-    --logan-jet: 240 10% 4%;
-    --logan-graphite: 220 10% 10%;
-    --logan-red: 355 79% 56%;
-    --logan-cyan: 168 80% 42%;
-    --logan-slate: 210 7% 26%;
-    --logan-frost: 210 20% 97%;
-    --logan-gold: 42 100% 47%;
-    --logan-blue: 168 80% 42%;
+    /* Brand-ink variants — deeper, for legible text on light surfaces */
+    --primary-ink: 327 75% 56%;        /* #E63B97 */
+    --accent-ink: 281 65% 55%;         /* #9A45D8 */
+    --tertiary-ink: 184 71% 47%;       /* #22C3CE */
 
-    /* Phase colors — single source of truth */
+    /* Logan token aliases (kept for backward-compat with existing utilities) */
+    --logan-jet: 30 21% 6%;
+    --logan-graphite: 30 18% 9%;
+    --logan-red: 327 100% 59%;
+    --logan-cyan: 182 70% 51%;
+    --logan-slate: 30 10% 26%;
+    --logan-frost: 41 33% 94%;
+    --logan-gold: 280 81% 54%;
+    --logan-blue: 280 81% 54%;
+
+    /* Phase colors — UNCHANGED. Functional learned mapping per cycle phase.
+       Per user Decision A (brand rollout 2026-06-30), do not retune these. */
     --phase-menstruation: 355 78% 60%;
     --phase-follicular: 152 60% 52%;
     --phase-ovulation: 40 90% 56%;
     --phase-luteal: 270 60% 65%;
-    
-    /* Gradients — premium, layered */
-    --gradient-hero: linear-gradient(135deg, hsl(168 80% 48%) 0%, hsl(168 70% 36%) 60%, hsl(190 70% 30%) 100%);
-    --gradient-soft: radial-gradient(1200px 600px at 20% -10%, hsl(168 60% 14% / 0.55), transparent 60%), radial-gradient(900px 500px at 100% 0%, hsl(270 50% 18% / 0.35), transparent 55%), linear-gradient(180deg, hsl(240 10% 4%) 0%, hsl(220 10% 6%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(220 10% 13% / 0.85) 0%, hsl(220 10% 8% / 0.75) 100%);
-    --gradient-glass: linear-gradient(145deg, hsl(210 20% 97% / 0.06) 0%, hsl(210 20% 97% / 0.02) 100%);
-    --gradient-primary: linear-gradient(135deg, hsl(168 85% 50%), hsl(168 70% 38%));
-    --gradient-text: linear-gradient(135deg, hsl(210 20% 99%), hsl(168 60% 80%));
 
-    /* Shadows — refined depth */
+    /* Locked brand gradient — magenta → violet → teal */
+    --gradient-brand: linear-gradient(135deg, #FF2E92 0%, #A22BE8 55%, #2BD4D9 100%);
+    --gradient-brand-soft: linear-gradient(135deg, hsl(327 100% 59% / 0.18) 0%, hsl(280 81% 54% / 0.16) 55%, hsl(182 70% 51% / 0.18) 100%);
+
+    /* Aliases for legacy gradient names — all route to the locked brand gradient */
+    --gradient-hero: var(--gradient-brand);
+    --gradient-primary: var(--gradient-brand);
+    --gradient-text: var(--gradient-brand);
+    --gradient-soft: radial-gradient(1200px 600px at 20% -10%, hsl(327 60% 18% / 0.45), transparent 60%),
+                     radial-gradient(900px 500px at 100% 0%, hsl(280 50% 22% / 0.35), transparent 55%),
+                     linear-gradient(180deg, hsl(30 21% 6%) 0%, hsl(30 18% 8%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(30 18% 11% / 0.85) 0%, hsl(30 18% 7% / 0.78) 100%);
+    --gradient-glass: linear-gradient(145deg, hsl(41 33% 94% / 0.06) 0%, hsl(41 33% 94% / 0.02) 100%);
+
+    /* Shadows */
     --shadow-soft: 0 4px 24px -8px hsl(0 0% 0% / 0.5);
-    --shadow-glow: 0 0 40px -8px hsl(168 80% 42% / 0.45);
+    --shadow-glow: 0 0 40px -8px hsl(327 100% 59% / 0.4);
     --shadow-card: 0 8px 32px -12px hsl(0 0% 0% / 0.6), 0 2px 4px -2px hsl(0 0% 0% / 0.4);
-    --shadow-elevated: 0 20px 60px -20px hsl(0 0% 0% / 0.7), 0 8px 24px -12px hsl(168 80% 42% / 0.15);
-    --shadow-inset: inset 0 1px 0 0 hsl(210 20% 97% / 0.06);
+    --shadow-elevated: 0 20px 60px -20px hsl(0 0% 0% / 0.7), 0 8px 24px -12px hsl(280 81% 54% / 0.18);
+    --shadow-inset: inset 0 1px 0 0 hsl(41 33% 94% / 0.06);
 
-    /* Motion */
+    /* Calm, settling motion — no bounce, no overshoot */
     --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
-    --duration-base: 240ms;
+    --ease-settle: cubic-bezier(0.4, 0, 0.2, 1);
+    --duration-base: 260ms;
 
-    --sidebar-background: 240 10% 4%;
-    --sidebar-foreground: 210 20% 97%;
-    --sidebar-primary: 168 80% 42%;
-    --sidebar-primary-foreground: 240 10% 4%;
-    --sidebar-accent: 355 79% 56%;
-    --sidebar-accent-foreground: 210 20% 97%;
-    --sidebar-border: 220 10% 18%;
-    --sidebar-ring: 168 80% 42%;
+    --sidebar-background: 30 21% 6%;
+    --sidebar-foreground: 41 33% 94%;
+    --sidebar-primary: 327 100% 59%;
+    --sidebar-primary-foreground: 41 33% 96%;
+    --sidebar-accent: 280 81% 54%;
+    --sidebar-accent-foreground: 41 33% 96%;
+    --sidebar-border: 30 12% 18%;
+    --sidebar-ring: 327 100% 59%;
   }
 
   .dark {
-    /* Same as root - always dark mode */
-    --background: 240 10% 4%;
-    --foreground: 210 20% 97%;
-
-    --card: 220 10% 10%;
-    --card-foreground: 210 20% 97%;
-
-    --popover: 220 10% 10%;
-    --popover-foreground: 210 20% 97%;
-
-    --primary: 168 80% 42%;
-    --primary-foreground: 240 10% 4%;
-
-    --secondary: 210 7% 26%;
-    --secondary-foreground: 210 20% 97%;
-
-    --muted: 220 10% 16%;
-    --muted-foreground: 210 15% 55%;
-
-    --accent: 355 79% 56%;
-    --accent-foreground: 210 20% 97%;
-
+    /* Single dark-only system — mirrors :root */
+    --background: 30 21% 6%;
+    --foreground: 41 33% 94%;
+    --card: 30 18% 9%;
+    --card-foreground: 41 33% 94%;
+    --popover: 30 18% 9%;
+    --popover-foreground: 41 33% 94%;
+    --primary: 327 100% 59%;
+    --primary-foreground: 41 33% 96%;
+    --secondary: 30 10% 18%;
+    --secondary-foreground: 41 33% 94%;
+    --muted: 30 12% 14%;
+    --muted-foreground: 38 14% 70%;
+    --accent: 280 81% 54%;
+    --accent-foreground: 41 33% 96%;
+    --tertiary: 182 70% 51%;
+    --tertiary-foreground: 30 21% 6%;
     --destructive: 355 79% 56%;
-    --destructive-foreground: 210 20% 97%;
+    --destructive-foreground: 41 33% 96%;
+    --border: 30 12% 18%;
+    --input: 30 12% 14%;
+    --ring: 327 100% 59%;
 
-    --border: 220 10% 18%;
-    --input: 220 10% 14%;
-    --ring: 168 80% 42%;
-
-    --sidebar-background: 240 10% 4%;
-    --sidebar-foreground: 210 20% 97%;
-    --sidebar-primary: 168 80% 42%;
-    --sidebar-primary-foreground: 240 10% 4%;
-    --sidebar-accent: 355 79% 56%;
-    --sidebar-accent-foreground: 210 20% 97%;
-    --sidebar-border: 220 10% 18%;
-    --sidebar-ring: 168 80% 42%;
+    --sidebar-background: 30 21% 6%;
+    --sidebar-foreground: 41 33% 94%;
+    --sidebar-primary: 327 100% 59%;
+    --sidebar-primary-foreground: 41 33% 96%;
+    --sidebar-accent: 280 81% 54%;
+    --sidebar-accent-foreground: 41 33% 96%;
+    --sidebar-border: 30 12% 18%;
+    --sidebar-ring: 327 100% 59%;
   }
 }
 
@@ -136,14 +146,16 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Quicksand', system-ui, sans-serif;
     background: var(--gradient-soft);
-    letter-spacing: -0.005em;
+    font-weight: 400;
+    letter-spacing: 0;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Space Grotesk', sans-serif;
-    letter-spacing: -0.02em;
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-weight: 600;
+    letter-spacing: -0.015em;
   }
 }
 
@@ -161,69 +173,61 @@
     -webkit-backdrop-filter: none !important;
   }
 
-  .gradient-hero {
-    background: var(--gradient-hero);
-  }
-  
-  .gradient-soft {
-    background: var(--gradient-soft);
-  }
-  
-  .gradient-card {
-    background: var(--gradient-card);
-  }
-  
-  .shadow-soft {
-    box-shadow: var(--shadow-soft);
-  }
-  
-  .shadow-glow {
-    box-shadow: var(--shadow-glow);
-  }
-  
-  .shadow-card {
-    box-shadow: var(--shadow-card);
-  }
+  .gradient-brand { background: var(--gradient-brand); }
+  .gradient-brand-soft { background: var(--gradient-brand-soft); }
+  .gradient-hero { background: var(--gradient-hero); }
+  .gradient-soft { background: var(--gradient-soft); }
+  .gradient-card { background: var(--gradient-card); }
+  .gradient-primary { background: var(--gradient-primary); }
 
-  .shadow-elevated {
-    box-shadow: var(--shadow-elevated);
-  }
+  .shadow-soft { box-shadow: var(--shadow-soft); }
+  .shadow-glow { box-shadow: var(--shadow-glow); }
+  .shadow-card { box-shadow: var(--shadow-card); }
+  .shadow-elevated { box-shadow: var(--shadow-elevated); }
 
-  .text-gradient {
-    background: var(--gradient-text);
+  /* Brand-gradient text — use sparingly on single words per brand rules */
+  .text-gradient,
+  .text-brand-gradient {
+    background: var(--gradient-brand);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    color: transparent;
   }
 
   /* Premium glass surface */
   .glass {
     background: var(--gradient-glass);
-    border: 1px solid hsl(210 20% 97% / 0.08);
+    border: 1px solid hsl(41 33% 94% / 0.08);
     box-shadow: var(--shadow-card), var(--shadow-inset);
   }
 
   .glass-strong {
-    background: linear-gradient(145deg, hsl(220 10% 14% / 0.92), hsl(220 10% 8% / 0.88));
-    border: 1px solid hsl(210 20% 97% / 0.08);
+    background: linear-gradient(145deg, hsl(30 18% 12% / 0.92), hsl(30 18% 7% / 0.88));
+    border: 1px solid hsl(41 33% 94% / 0.08);
     box-shadow: var(--shadow-elevated), var(--shadow-inset);
   }
 
-  .gradient-primary {
-    background: var(--gradient-primary);
-  }
-
   .ring-glow {
-    box-shadow: 0 0 0 1px hsl(168 80% 42% / 0.35), 0 0 24px -4px hsl(168 80% 42% / 0.4);
+    box-shadow: 0 0 0 1px hsl(327 100% 59% / 0.35), 0 0 24px -4px hsl(280 81% 54% / 0.4);
   }
 
   .hairline {
-    background: linear-gradient(90deg, transparent, hsl(210 20% 97% / 0.12), transparent);
+    background: linear-gradient(90deg, transparent, hsl(41 33% 94% / 0.12), transparent);
     height: 1px;
   }
 
+  /* Display type helper — Cormorant for marketing-style headlines */
+  .font-display {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
+  /* Calm settle motion */
   .lift {
-    transition: transform var(--duration-base, 240ms) var(--ease-out-soft, cubic-bezier(0.22,1,0.36,1)), box-shadow var(--duration-base, 240ms) var(--ease-out-soft, cubic-bezier(0.22,1,0.36,1));
+    transition: transform var(--duration-base) var(--ease-settle),
+                box-shadow var(--duration-base) var(--ease-settle);
   }
   .lift:hover {
     transform: translateY(-2px);

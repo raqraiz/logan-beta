@@ -14,8 +14,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['DM Sans', 'sans-serif'],
-        display: ['Space Grotesk', 'sans-serif'],
+        sans: ['Quicksand', 'system-ui', 'sans-serif'],
+        display: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+        serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -26,6 +27,7 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          ink: "hsl(var(--primary-ink))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -42,6 +44,12 @@ export default {
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
+          ink: "hsl(var(--accent-ink))",
+        },
+        tertiary: {
+          DEFAULT: "hsl(var(--tertiary))",
+          foreground: "hsl(var(--tertiary-foreground))",
+          ink: "hsl(var(--tertiary-ink))",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",
@@ -71,6 +79,14 @@ export default {
           gold: "hsl(var(--logan-gold))",
           blue: "hsl(var(--logan-blue))",
         },
+        brand: {
+          magenta: "#FF2E92",
+          violet: "#A22BE8",
+          teal: "#2BD4D9",
+          ink: "#23201C",
+          paper: "#F4F1EA",
+          night: "#16120E",
+        },
         phase: {
           menstruation: "hsl(var(--phase-menstruation))",
           follicular: "hsl(var(--phase-follicular))",
@@ -93,29 +109,35 @@ export default {
           to: { height: "0" },
         },
         "fade-in": {
-          from: { opacity: "0", transform: "translateY(10px)" },
+          from: { opacity: "0", transform: "translateY(6px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
         "slide-in": {
-          from: { opacity: "0", transform: "translateX(-10px)" },
+          from: { opacity: "0", transform: "translateX(-6px)" },
           to: { opacity: "1", transform: "translateX(0)" },
         },
         "pulse-soft": {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.7" },
         },
+        "ring-pop": {
+          "0%": { transform: "scale(1)" },
+          "40%": { transform: "scale(1.04)" },
+          "100%": { transform: "scale(1)" },
+        },
         float: {
           "0%, 100%": { transform: "translateY(0)" },
-          "50%": { transform: "translateY(-10px)" },
+          "50%": { transform: "translateY(-6px)" },
         },
       },
       animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in": "fade-in 0.5s ease-out",
-        "slide-in": "slide-in 0.3s ease-out",
-        "pulse-soft": "pulse-soft 2s ease-in-out infinite",
-        "float": "float 3s ease-in-out infinite",
+        "accordion-down": "accordion-down 0.24s cubic-bezier(0.22,1,0.36,1)",
+        "accordion-up": "accordion-up 0.24s cubic-bezier(0.22,1,0.36,1)",
+        "fade-in": "fade-in 0.5s cubic-bezier(0.22,1,0.36,1)",
+        "slide-in": "slide-in 0.35s cubic-bezier(0.22,1,0.36,1)",
+        "pulse-soft": "pulse-soft 2.4s ease-in-out infinite",
+        "ring-pop": "ring-pop 0.6s cubic-bezier(0.22,1,0.36,1)",
+        "float": "float 4s ease-in-out infinite",
       },
     },
   },
