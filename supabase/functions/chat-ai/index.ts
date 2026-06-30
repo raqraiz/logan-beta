@@ -176,17 +176,7 @@ function getCycleDayForToday(lastPeriodStart: string, timezone: string): number 
   return daysSinceStart >= 0 ? daysSinceStart + 1 : 1;
 }
 
-function inferCycleLengthForDeclaredPhase(
-  currentDay: number,
-  declaredPhase: "Menstruation" | "Follicular" | "Ovulation" | "Luteal",
-  currentLength: number,
-): number | null {
-  if (!Number.isFinite(currentDay) || currentDay < 1) return null;
-  if (declaredPhase === "Luteal") return clampNumber(currentDay + 11, 18, 45);
-  if (declaredPhase === "Ovulation") return clampNumber(currentDay + 14, 18, 45);
-  if (declaredPhase === "Follicular") return currentDay <= 5 ? currentLength : clampNumber(Math.max(currentLength, currentDay + 16), 18, 45);
-  return currentDay <= 5 ? currentLength : null;
-}
+import { inferCycleLengthForDeclaredPhase } from "../_shared/cyclePhase.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -1314,7 +1304,7 @@ serve(async (req) => {
         if (shouldPreserveDayOne) {
           const { error: updErr } = await supabase
             .from("participants")
-            .update({ cycle_length_days: inferredLength })
+            .update({ cycle_length_days: inferredLength, cycle_length_user_override: true })
             .eq("id", participant.id);
 
           if (!updErr) {
