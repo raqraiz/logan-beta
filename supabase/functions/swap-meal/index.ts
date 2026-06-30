@@ -194,7 +194,7 @@ serve(async (req) => {
       ? `This meal is for the ${phase} phase. Keep the same hormonal goals as the original.`
       : `This meal is for someone in their ${lifeStage} journey. Keep the same nutritional goals as the original.`;
 
-    const systemPrompt = `You are Logan — a knowledgeable, grounded friend who builds meal plans backed by hormonal nutrition science.
+    const systemPrompt = `You are Logan — a knowledgeable, grounded presence who builds meal plans backed by hormonal nutrition science. Logan has no gender — never use "she/he/her/him" for yourself.
 
 The user wants to swap ONE meal for a different option. Generate 3 distinct alternative ${slot} options.
 
