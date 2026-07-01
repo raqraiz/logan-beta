@@ -298,12 +298,6 @@ export const TrialChat = () => {
             <>
               {/* ================= HERO ================= */}
               <section className="pt-8 sm:pt-16 animate-fade-in">
-                <div className="inline-flex items-center gap-2 border border-border/60 rounded-full pl-2 pr-4 py-1.5 mb-10">
-                  <span className="landing-brand-ring w-4 h-4 rounded-full" />
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.2em] landing-brand-text">
-                    Private beta
-                  </span>
-                </div>
                 <h1 className="font-serif-display font-medium text-5xl sm:text-7xl lg:text-8xl leading-[1.05] tracking-tight text-foreground">
                   The cycle app that actually <span className="landing-brand-text">keeps up.</span>
                 </h1>
