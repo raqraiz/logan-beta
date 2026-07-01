@@ -1123,12 +1123,17 @@ export function ProfilesTab() {
                   participant.life_stage === "postpartum" ? "Postpartum" :
                   participant.life_stage === "menopause" ? "Menopause" :
                   participant.life_stage === "perimenopause" ? "Perimenopause" :
+                  participant.life_stage === "pregnant" ? "Pregnant" :
+                  participant.life_stage === "pregnancy_loss" ? "Recovery" :
                   participant.life_stage === "irregular" ? "Steady" :
                   "Cycling",
                 cycleLengthDays: participant?.cycle_length_days || 0,
                 lifeStage: participant.life_stage as any,
                 postpartumStartDate: participant?.postpartum_start_date || undefined,
                 postpartumActive: !!(participant as any)?.postpartum_active,
+                dueDate: (participant as any)?.due_date || undefined,
+                pregnancyLmp: (participant as any)?.pregnancy_lmp || undefined,
+                lossDate: (participant as any)?.loss_date || undefined,
               } : null;
 
               const scrollAskToLastSeen = () => {
