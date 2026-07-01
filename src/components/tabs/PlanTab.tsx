@@ -854,7 +854,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             <button onClick={() => toggle("exercise")} className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70">
               <div className="flex items-center gap-3 px-4 py-3.5">
                 <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center"><Dumbbell className="w-5 h-5 text-primary" /></div>
-                <div className="flex-1 min-w-0"><p className="text-sm font-semibold text-foreground">Workout</p><p className="text-xs text-muted-foreground truncate">{stage === "postpartum" ? "Rebuild gently" : "Protect & strengthen"}</p></div>
+                <div className="flex-1 min-w-0"><p className="text-sm font-semibold text-foreground">Workout</p><p className="text-xs text-muted-foreground truncate">{stage === "postpartum" ? "Rebuild gently" : stage === "pregnant" ? "Move safely for your trimester" : stage === "pregnancy_loss" ? "Rest first, move gently" : "Protect & strengthen"}</p></div>
                 <ChevronRight className={cn("w-4 h-4 text-muted-foreground transition-transform", expandedSection === "exercise" && "rotate-90")} />
               </div>
               {expandedSection === "exercise" && (
