@@ -310,16 +310,16 @@ export const TrialChat = () => {
                 <div className="mt-10 flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={scrollToSignup}
-                    className="landing-brand-fill h-14 px-8 text-base font-semibold rounded-full inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+                    className="bg-black text-white h-14 px-8 text-base font-semibold rounded-full inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
                   >
                     Create my free account
                     <ArrowRight className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => enterChatMode()}
-                    className="h-14 px-8 text-base rounded-full bg-[#2BD4D9] text-[#16120E] inline-flex items-center justify-center gap-3 hover:opacity-90 transition-opacity"
+                    className="h-14 px-8 text-base rounded-full border border-foreground/20 text-foreground bg-transparent inline-flex items-center justify-center gap-3 hover:bg-foreground/5 hover:border-foreground/30 transition-all"
                   >
-                    <span className="landing-brand-ring w-4 h-4 rounded-full inline-block" />
+                    <span className="w-4 h-4 rounded-full border-2 border-current" />
                     Ask Logan a question first
                   </button>
                 </div>
