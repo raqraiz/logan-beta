@@ -27,6 +27,9 @@ interface CycleData {
   currentPeriodEndDate?: string | null;
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
   postpartumStartDate?: string;
+  dueDate?: string;
+  pregnancyLmp?: string;
+  lossDate?: string;
 }
 
 interface PlanTabProps {
@@ -584,15 +587,65 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
 
   if (isNonCycling) {
     const stage = cycleData!.lifeStage!;
-    const stageLabel = stage === "postpartum" ? "Postpartum" : "Menopause";
-    const stageColor = stage === "postpartum" ? "text-pink-400" : "text-amber-400";
-    const stageBgFaint = stage === "postpartum" ? "bg-pink-400/15" : "bg-amber-400/15";
-    const stageBorder = stage === "postpartum" ? "border-pink-400/20" : "border-amber-400/20";
+    const stageLabel =
+      stage === "postpartum" ? "Postpartum" :
+      stage === "menopause" ? "Menopause" :
+      stage === "pregnant" ? "Pregnancy" :
+      stage === "pregnancy_loss" ? "Recovery" :
+      "Menopause";
+    const stageColor =
+      stage === "postpartum" ? "text-pink-400" :
+      stage === "pregnant" ? "text-emerald-400" :
+      stage === "pregnancy_loss" ? "text-rose-300" :
+      "text-amber-400";
+    const stageBgFaint =
+      stage === "postpartum" ? "bg-pink-400/15" :
+      stage === "pregnant" ? "bg-emerald-400/15" :
+      stage === "pregnancy_loss" ? "bg-rose-300/15" :
+      "bg-amber-400/15";
+    const stageBorder =
+      stage === "postpartum" ? "border-pink-400/20" :
+      stage === "pregnant" ? "border-emerald-400/20" :
+      stage === "pregnancy_loss" ? "border-rose-300/20" :
+      "border-amber-400/20";
 
     // Postpartum: 6-phase model from src/lib/postpartumPhases.ts
     const ppStart = cycleData?.postpartumStartDate;
     const ppPhase = getPostpartumPhase(ppStart);
     const ppLabel = PP_META[ppPhase].label;
+
+    // Pregnancy: derive gestational week + trimester
+    const today = new Date();
+    let gestDays: number | null = null;
+    if (cycleData?.pregnancyLmp) {
+      const lmp = new Date(cycleData.pregnancyLmp + "T12:00:00Z");
+      const d = Math.floor((today.getTime() - lmp.getTime()) / 86400000);
+      if (d >= 0) gestDays = d;
+    } else if (cycleData?.dueDate) {
+      const due = new Date(cycleData.dueDate + "T12:00:00Z");
+      const daysToDue = Math.floor((due.getTime() - today.getTime()) / 86400000);
+      gestDays = Math.max(0, 280 - daysToDue);
+    }
+    const gestWeeks = gestDays !== null ? Math.floor(gestDays / 7) : null;
+    const trimester: 1 | 2 | 3 | null =
+      gestWeeks === null ? null : gestWeeks <= 13 ? 1 : gestWeeks <= 27 ? 2 : 3;
+    const pregLabel =
+      trimester === null
+        ? "Pregnancy · Add LMP or due date in Settings"
+        : `Week ${gestWeeks} · Trimester ${trimester}`;
+
+    // Pregnancy loss: days since loss
+    const lossDaysAgo = cycleData?.lossDate
+      ? Math.max(0, Math.floor((today.getTime() - new Date(cycleData.lossDate + "T12:00:00Z").getTime()) / 86400000))
+      : null;
+    const lossLabel =
+      lossDaysAgo === null
+        ? "Early recovery — one day at a time"
+        : lossDaysAgo <= 14
+          ? "Acute recovery — rest and be gentle"
+          : lossDaysAgo <= 42
+            ? "Physical healing — body finding its way back"
+            : "Ongoing recovery — grief has no timeline";
 
     const MENO_WORKOUT = {
       suggestion: "Strength training protects bone density and manages symptoms. Consistency matters more than intensity.",
@@ -619,9 +672,129 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
       },
     };
 
-    const workout = stage === "postpartum" ? PP_WORKOUTS[ppPhase] : MENO_WORKOUT;
-    const nutrition = stage === "postpartum" ? PP_NUTRITIONS[ppPhase] : MENO_NUTRITION;
-    const moodGuide = stage === "postpartum" ? PP_MOODS[ppPhase] : MENO_MOOD;
+    // ── Pregnancy content, trimester-aware ──
+    const PREG_WORKOUT_BY_TRI = {
+      1: {
+        suggestion: "Gentle movement is safe and helpful. Fatigue is real — honor it. Skip anything with fall risk or breath-holding.",
+        examples: ["Walking", "Prenatal yoga", "Swimming", "Light strength"],
+        trainingNote: "First trimester fatigue peaks around weeks 8–12. Consistency beats intensity. Stop if you feel dizzy, breathless, or crampy.",
+      },
+      2: {
+        suggestion: "Often the most energetic trimester. Maintain strength and cardio at a moderate effort — talk test, not breath test.",
+        examples: ["Prenatal strength", "Swimming", "Stationary bike", "Prenatal Pilates"],
+        trainingNote: "Avoid supine (flat-on-back) work after ~16 weeks. Skip contact sports and anything with a fall risk. Pelvic floor work pays dividends.",
+      },
+      3: {
+        suggestion: "Focus on mobility, pelvic floor, and gentle strength. Prep the body for labor without draining reserves.",
+        examples: ["Walking", "Prenatal yoga", "Birth-prep mobility", "Light resistance"],
+        trainingNote: "Center of gravity is shifting — balance work matters. Listen for pelvic pressure or Braxton Hicks; back off when they show up.",
+      },
+    } as const;
+
+    const PREG_NUTRITION_BY_TRI = {
+      1: {
+        focus: "Folate, iron, and steady blood sugar",
+        foods: ["Leafy greens & citrus (folate)", "Lean protein at every meal", "Small frequent meals for nausea", "Ginger for queasiness"],
+        avoid: "Raw fish, unpasteurized dairy, high-mercury fish, alcohol. Confirm any supplement with your clinician.",
+      },
+      2: {
+        focus: "Iron, calcium, and omega-3s for baby's brain",
+        foods: ["Iron-rich foods (red meat, lentils, spinach)", "Calcium (dairy, fortified plant milk)", "Fatty fish (low mercury) or DHA supplement", "Colorful produce for micronutrients"],
+        avoid: "Deli meats unless heated, unpasteurized soft cheeses, alcohol. Pair iron with vitamin C for absorption.",
+      },
+      3: {
+        focus: "Energy, iron stores, and hydration for late-term demands",
+        foods: ["Complex carbs for steady energy", "Iron + vitamin C combos", "Fiber for constipation", "Water — dehydration triggers Braxton Hicks"],
+        avoid: "Excess sodium if swelling is significant, alcohol, unpasteurized dairy. Small frequent meals ease reflux.",
+      },
+    } as const;
+
+    const PREG_MOOD_BY_TRI = {
+      1: {
+        outlook: "First trimester — real, invisible work",
+        hormonalShift: "hCG surges and progesterone climbs. Nausea, exhaustion, and mood swings are hormonal — not weakness.",
+        headsUp: "Anxiety around miscarriage risk is common and normal. If low mood or panic feels persistent, tell your clinician — perinatal mood support is real medicine.",
+        selfCare: "Rest without guilt. Say no more than usual. Hydrate and eat before nausea hits, not after.",
+        relationships: {
+          people: "You may not be ready to share yet. That's your call, on your timeline. Choose one or two trusted people to lean on.",
+          withPartner: "Symptoms are invisible from the outside. Naming what you feel ('I'm nauseous and wiped') helps them show up.",
+          withKids: "If you already have kids, low-energy connection counts — reading, cuddles, screen time without shame.",
+          strategy: "The first trimester is often the hardest and the loneliest. It gets easier. Most people feel like themselves again by weeks 14–16.",
+        },
+      },
+      2: {
+        outlook: "Second trimester — often the sweet spot",
+        hormonalShift: "hCG drops, progesterone stabilizes. Energy usually returns. Bump becomes visible, movement (quickening) begins around 18–22 weeks.",
+        headsUp: "Mood is often better here — but perinatal anxiety and depression can still show up. Body image shifts are real. Talk to someone if you're struggling.",
+        selfCare: "Use the energy window for what matters — sleep hygiene, gentle movement, connection. Don't overspend it.",
+        relationships: {
+          people: "You may want to share more widely now. Boundaries around advice and belly-touching are yours to set.",
+          withPartner: "Involve them in appointments and baby prep. Shared experience now builds partnership later.",
+          withKids: "Talk about the sibling to come in simple terms. Preserve one-on-one time with existing kids.",
+          strategy: "Nesting energy is real. Use it, but don't force it — plenty of parents skip the nursery-Pinterest phase and are just fine.",
+        },
+      },
+      3: {
+        outlook: "Third trimester — big body, big feelings",
+        hormonalShift: "Relaxin loosens joints, cortisol shifts sleep, oxytocin rises. Anticipation and anxiety often coexist.",
+        headsUp: "Prenatal anxiety and depression are real and treatable. Insomnia in late pregnancy is common — but exhaustion + hopelessness is not something to tough out.",
+        selfCare: "Nap without guilt. Move daily. Practice slowing your breath — it's the same tool you'll use in labor.",
+        relationships: {
+          people: "Ask directly for what you need. Vague hints get ignored; specific requests get met.",
+          withPartner: "Talk through birth preferences, postpartum support, division of night duty. Better to negotiate now than at 3am with a newborn.",
+          withKids: "Prepare them for the shift honestly and gently. Tantrums about the baby are normal — hold both truths at once.",
+          strategy: "You don't need a perfect birth plan. You need flexibility, a support person who knows what you want, and permission to change your mind.",
+        },
+      },
+    } as const;
+
+    // ── Pregnancy loss content ──
+    const LOSS_WORKOUT = {
+      suggestion: "Rest is the assignment. When you're ready, gentle walking and breath work — nothing that leaves you drained.",
+      examples: ["Walking", "Restorative yoga", "Stretching", "Breath work"],
+      trainingNote: "Physical recovery timelines vary. Bleeding, cramping, and fatigue can last weeks. Wait for medical clearance before returning to intensity.",
+    };
+
+    const LOSS_NUTRITION = {
+      focus: "Replenishment, iron, and comfort",
+      foods: ["Iron-rich foods (red meat, lentils, spinach)", "Vitamin C to help iron absorption", "Warm, easy meals", "Hydration — grief dehydrates"],
+      avoid: "There are no rules. Eat what you can, when you can. Comfort food counts.",
+    };
+
+    const LOSS_MOOD = {
+      outlook: "Grief has no timeline",
+      hormonalShift: "Pregnancy hormones drop rapidly after loss. Weepiness, night sweats, and mood swings are physical, not just emotional.",
+      headsUp: "Grief comes in waves — anniversaries, due dates, and pregnant people around you can trigger fresh waves. This is not backsliding.",
+      selfCare: "Lower the bar. Sleep, water, one meal you can keep down. Rituals of remembrance help when they feel right.",
+      relationships: {
+        people: "You get to decide who to tell and how. 'I'm not okay and I don't want to talk about it' is a complete sentence.",
+        withPartner: "You may grieve on different timelines and in different ways. That's normal, not a rupture.",
+        withKids: "Age-appropriate honesty is okay — 'the baby couldn't grow' is enough. Kids notice sadness; naming it makes them safer, not sadder.",
+        strategy: "Perinatal loss support groups and therapists exist. You don't have to move through this alone, and 'moving on' is not the goal — integrating is.",
+      },
+    };
+
+    const workout =
+      stage === "postpartum" ? PP_WORKOUTS[ppPhase] :
+      stage === "pregnant" ? (trimester ? PREG_WORKOUT_BY_TRI[trimester] : PREG_WORKOUT_BY_TRI[1]) :
+      stage === "pregnancy_loss" ? LOSS_WORKOUT :
+      MENO_WORKOUT;
+    const nutrition =
+      stage === "postpartum" ? PP_NUTRITIONS[ppPhase] :
+      stage === "pregnant" ? (trimester ? PREG_NUTRITION_BY_TRI[trimester] : PREG_NUTRITION_BY_TRI[1]) :
+      stage === "pregnancy_loss" ? LOSS_NUTRITION :
+      MENO_NUTRITION;
+    const moodGuide =
+      stage === "postpartum" ? PP_MOODS[ppPhase] :
+      stage === "pregnant" ? (trimester ? PREG_MOOD_BY_TRI[trimester] : PREG_MOOD_BY_TRI[1]) :
+      stage === "pregnancy_loss" ? LOSS_MOOD :
+      MENO_MOOD;
+
+    const subLabel =
+      stage === "postpartum" ? <> · {ppLabel}</> :
+      stage === "pregnant" ? <> · {pregLabel}</> :
+      stage === "pregnancy_loss" ? <> · {lossLabel}</> :
+      <> · Tailored guidance for your stage</>;
 
 
     return (
@@ -631,7 +804,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             <h2 className="font-display font-semibold text-lg text-foreground">Your Week</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               <span className={cn("font-medium", stageColor)}>{stageLabel}</span>
-              {stage === "postpartum" ? <> · {ppLabel}</> : <> · Tailored guidance for your stage</>}
+              {subLabel}
             </p>
           </div>
 
@@ -681,7 +854,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             <button onClick={() => toggle("exercise")} className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70">
               <div className="flex items-center gap-3 px-4 py-3.5">
                 <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center"><Dumbbell className="w-5 h-5 text-primary" /></div>
-                <div className="flex-1 min-w-0"><p className="text-sm font-semibold text-foreground">Workout</p><p className="text-xs text-muted-foreground truncate">{stage === "postpartum" ? "Rebuild gently" : "Protect & strengthen"}</p></div>
+                <div className="flex-1 min-w-0"><p className="text-sm font-semibold text-foreground">Workout</p><p className="text-xs text-muted-foreground truncate">{stage === "postpartum" ? "Rebuild gently" : stage === "pregnant" ? "Move safely for your trimester" : stage === "pregnancy_loss" ? "Rest first, move gently" : "Protect & strengthen"}</p></div>
                 <ChevronRight className={cn("w-4 h-4 text-muted-foreground transition-transform", expandedSection === "exercise" && "rotate-90")} />
               </div>
               {expandedSection === "exercise" && (

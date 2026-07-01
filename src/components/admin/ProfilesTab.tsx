@@ -675,58 +675,138 @@ export function ProfilesTab() {
             <CardContent>
               {participant ? (
                 <div className="space-y-4">
-                  {/* Cycle Circle Visualization */}
-                  {participant.life_stage && (participant.life_stage === "postpartum" || participant.life_stage === "menopause") ? (
-                    <div className="flex justify-center py-2">
-                      <ChatCycleCircle
-                        cycleDay={0}
-                        phase={participant.life_stage === "postpartum" ? "Postpartum" : "Menopause"}
-                        cycleLengthDays={0}
-                        lifeStage={participant.life_stage as "postpartum" | "menopause"}
-                        postpartumStartDate={participant.postpartum_start_date || undefined}
-                      />
-                    </div>
-                  ) : cycleDay && phase ? (
-                    <div className="flex justify-center py-2">
-                      <ChatCycleCircle
-                        cycleDay={cycleDay}
-                        phase={phase}
-                        cycleLengthDays={participant.cycle_length_days || 28}
-                        postpartumActive={!!(participant as any).postpartum_active}
-                        postpartumStartDate={participant.postpartum_start_date || undefined}
-                      />
-                    </div>
-                  ) : null}
-                  {(participant as any).postpartum_active && (
-                    <div className="flex justify-center">
-                      <Badge variant="secondary" className="bg-pink-400/15 text-pink-300 border-pink-400/30">
-                        Also recovering postpartum
-                      </Badge>
-                    </div>
-                  )}
-                  
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Cycle Length</p>
-                      <p className="font-medium">{participant.cycle_length_days || 28} days</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Regularity</p>
-                      <p className="font-medium">{participant.cycle_regularity || "Not set"}</p>
-                    </div>
-                    {participant.last_period_start && (
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground">Last Period</p>
-                        <p className="font-medium">{format(new Date(participant.last_period_start), "MMM d, yyyy")}</p>
-                      </div>
-                    )}
-                    {participant.postpartum_start_date && (
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground">Birth Date</p>
-                        <p className="font-medium">{format(new Date(participant.postpartum_start_date), "MMM d, yyyy")}</p>
-                      </div>
-                    )}
-                  </div>
+                  {(() => {
+                    const ls = participant.life_stage;
+                    const isPregnant = ls === "pregnant";
+                    const isLoss = ls === "pregnancy_loss";
+                    const pregLmp = (participant as any).pregnancy_lmp as string | null | undefined;
+                    const due = (participant as any).due_date as string | null | undefined;
+                    const lossDate = (participant as any).loss_date as string | null | undefined;
+
+                    // Pregnancy: gestational week + trimester
+                    let gestWeeks: number | null = null;
+                    let trimester: number | null = null;
+                    if (isPregnant) {
+                      const today = new Date();
+                      let gestDays: number | null = null;
+                      if (pregLmp) {
+                        const lmp = new Date(pregLmp + "T12:00:00Z");
+                        const d = Math.floor((today.getTime() - lmp.getTime()) / 86400000);
+                        if (d >= 0) gestDays = d;
+                      } else if (due) {
+                        const dueD = new Date(due + "T12:00:00Z");
+                        const daysToDue = Math.floor((dueD.getTime() - today.getTime()) / 86400000);
+                        gestDays = Math.max(0, 280 - daysToDue);
+                      }
+                      if (gestDays !== null) {
+                        gestWeeks = Math.floor(gestDays / 7);
+                        trimester = gestWeeks <= 13 ? 1 : gestWeeks <= 27 ? 2 : 3;
+                      }
+                    }
+
+                    const showNonCyclingRing = ls === "postpartum" || ls === "menopause" || isPregnant || isLoss;
+                    const nonCyclingPhase =
+                      ls === "postpartum" ? "Postpartum" :
+                      ls === "menopause" ? "Menopause" :
+                      ls === "perimenopause" ? "Perimenopause" :
+                      isPregnant ? "Pregnant" :
+                      isLoss ? "Recovery" : "";
+
+                    return (
+                      <>
+                        {/* Cycle Circle Visualization */}
+                        {showNonCyclingRing ? (
+                          <div className="flex justify-center py-2">
+                            <ChatCycleCircle
+                              cycleDay={0}
+                              phase={nonCyclingPhase}
+                              cycleLengthDays={0}
+                              lifeStage={ls as any}
+                              postpartumStartDate={participant.postpartum_start_date || undefined}
+                              lossDate={lossDate || undefined}
+                              dueDate={due || undefined}
+                              pregnancyLmp={pregLmp || undefined}
+                            />
+                          </div>
+                        ) : cycleDay && phase ? (
+                          <div className="flex justify-center py-2">
+                            <ChatCycleCircle
+                              cycleDay={cycleDay}
+                              phase={phase}
+                              cycleLengthDays={participant.cycle_length_days || 28}
+                              postpartumActive={!!(participant as any).postpartum_active}
+                              postpartumStartDate={participant.postpartum_start_date || undefined}
+                            />
+                          </div>
+                        ) : null}
+                        {(participant as any).postpartum_active && !isPregnant && !isLoss && (
+                          <div className="flex justify-center">
+                            <Badge variant="secondary" className="bg-pink-400/15 text-pink-300 border-pink-400/30">
+                              Also recovering postpartum
+                            </Badge>
+                          </div>
+                        )}
+
+                        {isPregnant ? (
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                              <p className="text-muted-foreground">Week</p>
+                              <p className="font-medium">{gestWeeks !== null ? `Week ${gestWeeks}` : "—"}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">Trimester</p>
+                              <p className="font-medium">{trimester ? `T${trimester}` : "—"}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">LMP</p>
+                              <p className="font-medium">{pregLmp ? format(new Date(pregLmp + "T12:00:00Z"), "MMM d, yyyy") : "—"}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">Due date</p>
+                              <p className="font-medium">{due ? format(new Date(due + "T12:00:00Z"), "MMM d, yyyy") : "—"}</p>
+                            </div>
+                            {!pregLmp && !due && (
+                              <div className="col-span-2">
+                                <p className="text-xs text-muted-foreground italic">
+                                  Add LMP or due date in Settings to see week and trimester.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        ) : isLoss ? (
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div className="col-span-2">
+                              <p className="text-muted-foreground">Loss date</p>
+                              <p className="font-medium">{lossDate ? format(new Date(lossDate + "T12:00:00Z"), "MMM d, yyyy") : "Not set"}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                              <p className="text-muted-foreground">Cycle Length</p>
+                              <p className="font-medium">{participant.cycle_length_days || 28} days</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">Regularity</p>
+                              <p className="font-medium">{participant.cycle_regularity || "Not set"}</p>
+                            </div>
+                            {participant.last_period_start && (
+                              <div className="col-span-2">
+                                <p className="text-muted-foreground">Last Period</p>
+                                <p className="font-medium">{format(new Date(participant.last_period_start), "MMM d, yyyy")}</p>
+                              </div>
+                            )}
+                            {participant.postpartum_start_date && (
+                              <div className="col-span-2">
+                                <p className="text-muted-foreground">Birth Date</p>
+                                <p className="font-medium">{format(new Date(participant.postpartum_start_date), "MMM d, yyyy")}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                   {participant.anchor_symptom && (
                     <div>
                       <p className="text-sm text-muted-foreground">Anchor Symptom</p>
@@ -1043,12 +1123,17 @@ export function ProfilesTab() {
                   participant.life_stage === "postpartum" ? "Postpartum" :
                   participant.life_stage === "menopause" ? "Menopause" :
                   participant.life_stage === "perimenopause" ? "Perimenopause" :
+                  participant.life_stage === "pregnant" ? "Pregnant" :
+                  participant.life_stage === "pregnancy_loss" ? "Recovery" :
                   participant.life_stage === "irregular" ? "Steady" :
                   "Cycling",
                 cycleLengthDays: participant?.cycle_length_days || 0,
                 lifeStage: participant.life_stage as any,
                 postpartumStartDate: participant?.postpartum_start_date || undefined,
                 postpartumActive: !!(participant as any)?.postpartum_active,
+                dueDate: (participant as any)?.due_date || undefined,
+                pregnancyLmp: (participant as any)?.pregnancy_lmp || undefined,
+                lossDate: (participant as any)?.loss_date || undefined,
               } : null;
 
               const scrollAskToLastSeen = () => {
@@ -1211,12 +1296,18 @@ export function ProfilesTab() {
       ) : (
         <div className="grid gap-3">
           {filtered.map((profile) => {
-            const isNonCycling = profile.participant?.life_stage === "postpartum" || profile.participant?.life_stage === "menopause";
+            const ls = profile.participant?.life_stage;
+            const isNonCycling = ls === "postpartum" || ls === "menopause" || ls === "pregnant" || ls === "pregnancy_loss";
             const cycleData = profile.participant ? getCycleData(profile.participant) : null;
             const cycleDay = cycleData?.cycleDay ?? null;
             const phase = cycleData?.phase ?? null;
             const lifeStage = (profile.participant?.life_stage || "cycling") as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
-            
+            const nonCyclingPhase =
+              lifeStage === "postpartum" ? "Postpartum" :
+              lifeStage === "menopause" ? "Menopause" :
+              lifeStage === "pregnant" ? "Pregnant" :
+              lifeStage === "pregnancy_loss" ? "Recovery" : "Menopause";
+
             return (
               <Card
                 key={profile.id}
@@ -1229,11 +1320,14 @@ export function ProfilesTab() {
                       <div className="shrink-0">
                         <ChatCycleCircle
                           cycleDay={0}
-                          phase={lifeStage === "postpartum" ? "Postpartum" : "Menopause"}
+                          phase={nonCyclingPhase}
                           cycleLengthDays={0}
                           size="sm"
-                          lifeStage={lifeStage as "postpartum" | "menopause"}
+                          lifeStage={lifeStage as any}
                           postpartumStartDate={profile.participant?.postpartum_start_date || undefined}
+                          lossDate={(profile.participant as any)?.loss_date || undefined}
+                          dueDate={(profile.participant as any)?.due_date || undefined}
+                          pregnancyLmp={(profile.participant as any)?.pregnancy_lmp || undefined}
                         />
                       </div>
                     ) : cycleDay && phase ? (
