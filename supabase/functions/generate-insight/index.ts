@@ -590,6 +590,7 @@ function buildNonCyclingInsightPrompt(
 
   let timelineContext = "";
   let ppPhaseGuidance = "";
+  let pregnancyPhaseGuidance = "";
   if (lifeStage === "postpartum" && participant.postpartum_start_date) {
     const birthDate = new Date(participant.postpartum_start_date + "T12:00:00Z");
     const now = new Date();
@@ -617,16 +618,50 @@ function buildNonCyclingInsightPrompt(
     }
   }
 
+  if (lifeStage === "pregnant") {
+    // Compute gestational week from due_date (preferred) or pregnancy_lmp
+    let gestWeeks: number | null = null;
+    if (participant.due_date) {
+      const due = new Date(participant.due_date + "T12:00:00Z");
+      const now = new Date();
+      const daysUntilDue = Math.floor((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      gestWeeks = Math.max(0, Math.min(42, 40 - Math.floor(daysUntilDue / 7)));
+    } else if (participant.pregnancy_lmp) {
+      const lmp = new Date(participant.pregnancy_lmp + "T12:00:00Z");
+      const now = new Date();
+      gestWeeks = Math.floor((now.getTime() - lmp.getTime()) / (1000 * 60 * 60 * 24 * 7));
+    }
+    if (gestWeeks !== null) {
+      timelineContext = `${gestWeeks} weeks pregnant`;
+      if (gestWeeks < 14) {
+        pregnancyPhaseGuidance = "FIRST TRIMESTER (0-13 weeks): nausea, fatigue, food aversions, breast tenderness, emotional swings from progesterone surge. Focus on rest, hydration, small frequent meals, folate, and reassurance. Miscarriage anxiety is real — hold that gently.";
+      } else if (gestWeeks < 28) {
+        pregnancyPhaseGuidance = "SECOND TRIMESTER (14-27 weeks): energy often returns, bump grows, first movements, round ligament pain. Focus on protein, iron, gentle strength, pelvic floor awareness, sleep positioning.";
+      } else {
+        pregnancyPhaseGuidance = "THIRD TRIMESTER (28+ weeks): braxton hicks, reflux, swelling, sleep disruption, nesting, birth prep. Focus on hydration, protein, side-sleeping, perineal prep, mental prep for labor and postpartum.";
+      }
+    } else {
+      pregnancyPhaseGuidance = "PREGNANCY (gestational age unknown): focus on validation, gentle nutrition, hydration, sleep, and mood — ask about trimester before giving stage-specific tips.";
+    }
+  }
+
   const stageLabel =
     lifeStage === "postpartum" ? "Postpartum"
     : lifeStage === "perimenopause" ? "Perimenopause"
+    : lifeStage === "pregnant" ? "Pregnancy"
+    : lifeStage === "pregnancy_loss" ? "Pregnancy Loss"
     : "Menopause";
   const stageContext =
     lifeStage === "postpartum"
       ? `${firstName} is in the postpartum stage${timelineContext ? ` — ${timelineContext}` : ""}. Phase-specific guidance: ${ppPhaseGuidance} Focus appropriately for this exact phase — do NOT use generic "healing and recovery" language for users past 6 months. Do NOT assume she is breastfeeding — only mention it if she brought it up. If she has multiple children, do NOT assume she is breastfeeding all of them.`
       : lifeStage === "perimenopause"
         ? `${firstName} is navigating **perimenopause** — she STILL HAS PERIODS and is still cycling, but the pattern is shifting (cycles getting shorter/longer, heavier/lighter, skipped months, new symptoms like hot flashes, sleep changes, sharper mood swings). DO NOT call her menopausal. Focus on tracking pattern shifts, sleep, hot flashes, mood, energy, and bone/muscle health. Perimenopause ≠ menopause.`
-        : `${firstName} is navigating menopause. Estrogen and progesterone are declining. Focus on bone health, sleep quality, mood stability, and managing symptoms like hot flashes or brain fog.`;
+        : lifeStage === "pregnant"
+          ? `${firstName} is **pregnant**${timelineContext ? ` — ${timelineContext}` : ""}. Phase-specific guidance: ${pregnancyPhaseGuidance} DO NOT reference cycle phases, ovulation, or period timing. DO NOT use menopause, perimenopause, or postpartum framing. Center pregnancy body-changes, emotional shifts, nutrition, sleep, and mental preparation for the specific trimester.`
+          : lifeStage === "pregnancy_loss"
+            ? `${firstName} is navigating **pregnancy loss**. Lead with grief-aware, empathetic witnessing. Do NOT rush to cycle tracking, milestones, or "silver linings." Do NOT reference ovulation, phases, or menopause framing. Acknowledge the loss, name that the body is also recovering (hormones drop, bleeding, milk changes possible), and offer gentle presence — not fixes.`
+            : `${firstName} is navigating menopause. Estrogen and progesterone are declining. Focus on bone health, sleep quality, mood stability, and managing symptoms like hot flashes or brain fog.`;
+
 
   return `You are Logan. You're ${firstName}'s companion through her ${stageLabel.toLowerCase()} journey. You're not clinical — you're the friend who just gets it.
 
@@ -649,11 +684,14 @@ ${checkinMessages.length > 0 ? checkinMessages.map(m => {
   }).join("\n") : "None yet"}
 
 RULES:
+- STAGE AUTHORITY: The life stage above is **${stageLabel}** and is authoritative. It is IMPOSSIBLE for this response to use framing from any other stage. Never mention menopause for a pregnant/postpartum/perimenopause user. Never mention pregnancy for a menopause user. Never mention cycle phases or ovulation for pregnant, pregnancy_loss, postpartum, or menopause users.
 - Lead with empathy and validation. ${stageLabel} is not a deficit — it's a transition with its own strengths.
 - For postpartum: match the EXACT phase guidance above. Acute/early phases = healing, rest, gentle pelvic floor. Rebuilding+ = strength, capacity, identity — NOT "healing/recovery" framing. Never prescribe. Never guilt.
 - For perimenopause: she is STILL CYCLING. Never call her menopausal. Acknowledge pattern shifts, sharper swings, and new signals (hot flashes, sleep, mood). Perimenopause ≠ menopause.
 - For menopause: focus on adaptation, strength preservation, and reframing the narrative. Only use menopause framing when life stage is actually "menopause".
-- NEVER reference cycle phases, ovulation, or period timing for menopause or postpartum users (perimenopause users still cycle, so cycle references are fine for them).
+- For pregnancy: match the EXACT trimester guidance above. Center pregnancy-specific body, mind, nutrition, and prep. NEVER use menopause, perimenopause, or postpartum framing. NEVER reference cycle phases or ovulation.
+- For pregnancy loss: lead with grief-aware witnessing. Never rush to cycle tracking or "next steps." NEVER use cycle-phase, menopause, or generic postpartum framing.
+- NEVER reference cycle phases, ovulation, or period timing for menopause, postpartum, pregnant, or pregnancy_loss users (perimenopause users still cycle, so cycle references are fine for them).
 - NEVER assume breastfeeding status unless the user has explicitly mentioned it.
 
 Generate a JSON object:
