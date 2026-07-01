@@ -31,6 +31,9 @@ interface CycleAnalyticsProps {
   currentCycleLength: number;
   currentPhase: string;
   currentCycleDay: number;
+  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
+  dueDate?: string;
+  pregnancyLmp?: string;
 }
 
 interface CycleHistoryRow {
@@ -58,6 +61,9 @@ export function CycleAnalytics({
   currentCycleLength,
   currentPhase,
   currentCycleDay,
+  lifeStage,
+  dueDate,
+  pregnancyLmp,
 }: CycleAnalyticsProps) {
   const [history, setHistory] = useState<CycleHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -359,6 +365,82 @@ export function CycleAnalytics({
     { name: "Ovulation", days: ovulationDays, color: "bg-phase-ovulation", range: usingCustomPhases ? `${ovulationDays}` : `${OVULATION_RANGE.min}–${OVULATION_RANGE.max}` },
     { name: "Luteal", days: lutealDays, color: "bg-phase-luteal", range: usingCustomPhases ? `${lutealDays}` : `${LUTEAL_RANGE.min}–${LUTEAL_RANGE.max}` },
   ];
+
+  const isPregnant = lifeStage === "pregnant";
+
+  // Pregnancy variant: gestational week + trimester, LMP + Due Date. Hide cycle-specific stats.
+  if (isPregnant) {
+    const today = new Date();
+    let gestDays: number | null = null;
+    if (pregnancyLmp) {
+      const lmp = new Date(pregnancyLmp + "T12:00:00Z");
+      const d = Math.floor((today.getTime() - lmp.getTime()) / 86400000);
+      if (d >= 0) gestDays = d;
+    } else if (dueDate) {
+      const due = new Date(dueDate + "T12:00:00Z");
+      const daysToDue = Math.floor((due.getTime() - today.getTime()) / 86400000);
+      gestDays = Math.max(0, 280 - daysToDue);
+    }
+    const gestWeeks = gestDays !== null ? Math.floor(gestDays / 7) : null;
+    const gestDayOfWeek = gestDays !== null ? gestDays % 7 : null;
+    const trimester =
+      gestWeeks === null ? null : gestWeeks <= 13 ? 1 : gestWeeks <= 27 ? 2 : 3;
+    const daysToDue = dueDate
+      ? Math.floor((new Date(dueDate + "T12:00:00Z").getTime() - today.getTime()) / 86400000)
+      : gestDays !== null
+        ? 280 - gestDays
+        : null;
+
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-sm rounded-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg">Pregnancy</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-5">
+            <div>
+              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Gestational Age</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <StatCard
+                  label="Week"
+                  value={gestWeeks !== null ? `${gestWeeks}w ${gestDayOfWeek ?? 0}d` : "—"}
+                />
+                <StatCard label="Trimester" value={trimester ? `T${trimester}` : "—"} />
+              </div>
+            </div>
+            <Separator />
+            <div>
+              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Key Dates</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <StatCard
+                  label="LMP"
+                  value={pregnancyLmp ? format(new Date(pregnancyLmp + "T12:00:00Z"), "MMM d") : "—"}
+                />
+                <StatCard
+                  label="Due date"
+                  value={dueDate ? format(new Date(dueDate + "T12:00:00Z"), "MMM d") : "—"}
+                />
+              </div>
+              {daysToDue !== null && (
+                <p className="text-[11px] text-muted-foreground mt-2">
+                  {daysToDue > 0
+                    ? `${daysToDue} day${daysToDue !== 1 ? "s" : ""} until due date`
+                    : daysToDue === 0
+                      ? "Due date is today"
+                      : `${Math.abs(daysToDue)} day${Math.abs(daysToDue) !== 1 ? "s" : ""} past due date`}
+                </p>
+              )}
+            </div>
+            {!pregnancyLmp && !dueDate && (
+              <p className="text-xs text-muted-foreground">
+                Add your last menstrual period or due date in Settings to see your week and trimester.
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
