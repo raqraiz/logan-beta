@@ -31,6 +31,9 @@ interface CycleAnalyticsProps {
   currentCycleLength: number;
   currentPhase: string;
   currentCycleDay: number;
+  lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
+  dueDate?: string;
+  pregnancyLmp?: string;
 }
 
 interface CycleHistoryRow {
