@@ -296,134 +296,124 @@ export const TrialChat = () => {
 
           {!chatMode && !hasStarted && (
             <>
-              {/* ================= HERO — above the fold ================= */}
-              <section className="pt-12 sm:pt-20 animate-fade-in">
-                {/* Phase color dots — home tab echo */}
-                <div className="flex items-center gap-2 mb-6">
-                  <span className="w-2.5 h-2.5 rounded-full bg-phase-menstruation" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-phase-follicular" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-phase-ovulation" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-phase-luteal" />
-                  <span className="text-[10px] uppercase tracking-widest text-primary/90 bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1 ml-1">
-                    <Sparkles className="w-2.5 h-2.5 inline-block mr-1" /> Private beta
+              {/* ================= HERO ================= */}
+              <section className="pt-8 sm:pt-16 animate-fade-in">
+                <div className="inline-flex items-center gap-2 border border-border/60 rounded-full pl-2 pr-4 py-1.5 mb-10">
+                  <span className="landing-brand-ring w-4 h-4 rounded-full" />
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.2em] landing-brand-text">
+                    Private beta
                   </span>
                 </div>
-                <h1 className="font-display font-semibold text-3xl sm:text-5xl leading-[1.12] tracking-tight text-foreground">
-                  The cycle app that actually <span className="text-primary">keeps up.</span>
+                <h1 className="font-serif-display font-medium text-5xl sm:text-7xl lg:text-8xl leading-[1.05] tracking-tight text-foreground">
+                  The cycle app that actually <span className="landing-brand-text">keeps up.</span>
                 </h1>
-                <p className="text-base sm:text-lg text-muted-foreground mt-6 leading-relaxed max-w-xl">
-                  Meet Logan, the AI companion that predicts your energy, mood, and shifts — so nothing catches you off guard.
+                <p className="text-lg sm:text-xl text-muted-foreground mt-8 leading-relaxed max-w-2xl">
+                  Meet Logan, the companion that reads your energy, mood, and shifts — so nothing catches you off guard.
                   For every body, in every stage, whatever your cycle looks like.
                 </p>
 
                 {/* Primary actions */}
                 <div className="mt-10 flex flex-col sm:flex-row gap-3">
-                  <Button size="lg" onClick={scrollToSignup} className="h-12 px-6 text-base">
-                    Create my free account
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    onClick={() => enterChatMode()}
-                    className="h-12 px-6 text-base border-border/60 hover:border-primary/50 hover:bg-primary/5"
+                  <button
+                    onClick={scrollToSignup}
+                    className="landing-brand-fill h-14 px-8 text-base font-semibold rounded-full inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
                   >
-                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Create my free account
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => enterChatMode()}
+                    className="h-14 px-8 text-base rounded-full border border-border/60 hover:border-foreground/40 text-foreground/90 hover:text-foreground inline-flex items-center justify-center gap-3 transition-colors"
+                  >
+                    <span className="landing-brand-ring w-4 h-4 rounded-full inline-block" />
                     Ask Logan a question first
-                  </Button>
+                  </button>
                 </div>
               </section>
 
               {/* ================= "You might be here because…" ================= */}
               <section>
-                <p className="text-xs uppercase tracking-widest text-muted-foreground/70 mb-3 pl-1">
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/70 mb-4">
                   You might be here because…
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid sm:grid-cols-2 gap-3">
                   {FEELING_CHIPS.map((chip, i) => {
-                    const colors = [
-                      "border-l-phase-menstruation hover:border-l-phase-menstruation",
-                      "border-l-phase-follicular hover:border-l-phase-follicular",
-                      "border-l-phase-ovulation hover:border-l-phase-ovulation",
-                      "border-l-phase-luteal hover:border-l-phase-luteal",
-                    ];
+                    const accents = ["#FF2E92", "#2BD4D9", "#A22BE8", "#4F8EF7"];
                     return (
                       <button
                         key={chip}
                         onClick={() => enterChatMode(chip)}
-                        className={`text-left text-sm px-4 py-2.5 rounded-2xl bg-card/60 border border-border/60 ${colors[i % 4]} border-l-[3px] hover:border-primary/50 hover:bg-primary/5 text-foreground/85 hover:text-foreground transition-all duration-200 backdrop-blur-sm`}
+                        className="text-left text-sm px-5 py-4 rounded-xl bg-card/40 border border-border/50 hover:border-border text-foreground/90 hover:text-foreground transition-all"
+                        style={{ borderLeft: `3px solid ${accents[i % 4]}` }}
                       >
                         {chip}
                       </button>
                     );
                   })}
                 </div>
-                <p className="text-xs text-muted-foreground/70 mt-3 pl-1">
+                <p className="text-xs text-muted-foreground/70 mt-3">
                   Tap one to ask Logan about it.
                 </p>
               </section>
 
               {/* ================= Sign Up ================= */}
-              <section ref={signupRef} className="pt-2">
-                <div className="relative bg-gradient-to-br from-primary/15 via-primary/8 to-transparent border border-primary/30 rounded-3xl p-6 sm:p-8 overflow-hidden">
-                  <div className="absolute top-0 left-1/2 w-32 h-32 bg-primary/20 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-                  <div className="relative z-10 text-center">
-                    <h2 className="font-display font-semibold text-2xl text-foreground mb-2">
+              <section ref={signupRef} className="pt-4">
+                <div className="rounded-3xl border border-border/50 bg-card/30 p-8 sm:p-14">
+                  <div className="text-center">
+                    <h2 className="font-serif-display font-medium text-4xl sm:text-5xl text-foreground mb-4">
                       Ready to meet Logan?
                     </h2>
-                    <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+                    <p className="text-base text-muted-foreground mb-8 max-w-md mx-auto leading-relaxed">
                       Create your account and I'll start learning your patterns from day one. Free during beta.
                     </p>
-                    <InlineChatAuth defaultView={authView} />
+                    <div className="max-w-md mx-auto rounded-2xl bg-card border border-border/50 p-6">
+                      <InlineChatAuth defaultView={authView} />
+                    </div>
                   </div>
+                  <p className="text-xs text-muted-foreground/70 text-center mt-8 max-w-xl mx-auto leading-relaxed">
+                    We keep your health data private and secure. It's never sold, shared with advertisers, or used to train models outside Logan. You can delete your account and data anytime.
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground/60 text-center mt-5 max-w-md mx-auto leading-relaxed">
-                  We keep your health data private and secure. It's never sold, shared with advertisers, or used to train AI models outside Logan. You can delete your account and data anytime.
-                </p>
               </section>
 
               {/* ================= Testimonials ================= */}
               <section>
-                <p className="text-xs uppercase tracking-widest text-muted-foreground/70 mb-3 pl-1">
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/70 mb-4">
                   Real women, real words
                 </p>
-                <div className="grid sm:grid-cols-2 gap-3">
+                <div className="grid sm:grid-cols-3 gap-4">
                   {TESTIMONIALS.map((t, i) => {
-                    const tops = [
-                      "border-t-phase-follicular",
-                      "border-t-phase-ovulation",
-                      "border-t-phase-luteal",
-                    ];
+                    const tops = ["#2BD4D9", "#A22BE8", "#FF2E92"];
                     return (
-                      <figure key={t.name} className={`bg-card/40 border border-border/40 ${tops[i]} border-t-[3px] rounded-2xl p-4 backdrop-blur-sm`}>
-                        <blockquote className="text-sm text-foreground/85 leading-relaxed">"{t.quote}"</blockquote>
-                        <figcaption className="text-xs text-muted-foreground mt-2">— {t.name}</figcaption>
+                      <figure key={t.name} className="bg-card/40 border border-border/50 rounded-2xl p-6" style={{ borderTop: `3px solid ${tops[i]}` }}>
+                        <blockquote className="text-base text-foreground/90 leading-relaxed">"{t.quote}"</blockquote>
+                        <figcaption className="text-sm text-muted-foreground mt-4">— {t.name}</figcaption>
                       </figure>
                     );
                   })}
                 </div>
               </section>
 
-              {/* ================= DM from founder ================= */}
-              <section className="space-y-5 animate-fade-in">
+              {/* ================= Founder note ================= */}
+              <section className="space-y-4">
                 <div className="flex items-center gap-3">
                   <div className="relative">
-                    <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-display font-semibold text-base shadow-glow">
+                    <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-lg">
                       R
                     </div>
                     <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-background" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground">Raquella · Founder</p>
-                    <p className="text-xs text-muted-foreground">building Logan with women like you</p>
+                    <p className="text-base font-semibold text-foreground">Raquella · Founder</p>
+                    <p className="text-sm text-muted-foreground">building Logan with women like you</p>
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-br from-card to-card/70 border border-border/50 rounded-2xl rounded-tl-sm px-5 py-4 shadow-card backdrop-blur-sm max-w-[92%]">
-                  <p className="text-foreground/95 leading-relaxed">
-                    Welcome to Logan <span className="text-primary">💚</span>
-                  </p>
-                  <p className="text-foreground/85 leading-relaxed mt-2 text-[15px]">
+                <div className="bg-card/40 border border-border/50 rounded-2xl p-8 max-w-2xl">
+                  <h3 className="font-serif-display font-medium text-3xl text-foreground mb-4">
+                    Welcome to Logan.
+                  </h3>
+                  <p className="text-foreground/85 leading-relaxed text-base">
                     You're joining a small group of women helping me build this before I launch publicly.
                     Logan is free during beta, evolves fast, and your feedback genuinely shapes what I build next.
                   </p>
@@ -432,7 +422,7 @@ export const TrialChat = () => {
 
               {/* ================= Not Ready to sign up today? ================= */}
               <section>
-                <div className="bg-card/40 border border-border/40 rounded-2xl p-4 max-w-md">
+                <div className="bg-card/40 border border-border/50 rounded-2xl p-8">
                   {waitlistDone ? (
                     <div className="flex items-center gap-2.5 text-sm text-foreground/90">
                       <span className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center">
@@ -442,35 +432,48 @@ export const TrialChat = () => {
                     </div>
                   ) : (
                     <>
-                      <p className="text-sm text-foreground/85 mb-1">
+                      <h3 className="text-lg font-semibold text-foreground mb-2">
                         Not ready to sign up today?
-                      </p>
-                      <p className="text-xs text-muted-foreground mb-3">
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-5 max-w-lg">
                         Leave your email and I'll send you a short note from the founder when there's something worth coming back for.
                       </p>
-                      <form onSubmit={handleWaitlist} className="flex gap-2">
+                      <form onSubmit={handleWaitlist} className="flex flex-col sm:flex-row gap-3 max-w-xl">
                         <Input
                           type="email"
                           required
                           value={waitlistEmail}
                           onChange={(e) => setWaitlistEmail(e.target.value)}
                           placeholder="you@email.com"
-                          className="flex-1 h-11 bg-background/60"
+                          className="flex-1 h-12 bg-background/60 rounded-xl"
                           disabled={waitlistSubmitting}
                         />
-                        <Button type="submit" disabled={waitlistSubmitting || !waitlistEmail.trim()} className="h-11 px-4">
-                          {waitlistSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Keep me posted"}
-                        </Button>
+                        <button
+                          type="submit"
+                          disabled={waitlistSubmitting || !waitlistEmail.trim()}
+                          className={`h-12 px-6 rounded-xl font-medium transition-opacity hover:opacity-90 disabled:opacity-50 ${theme === "light" ? "bg-[#16120E] text-white" : "bg-white text-[#16120E]"}`}
+                        >
+                          {waitlistSubmitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Keep me posted"}
+                        </button>
                       </form>
-                      <p className="text-[11px] text-muted-foreground/70 mt-2">
+                      <p className="text-xs text-muted-foreground/70 mt-3">
                         No spam. Unsubscribe anytime.
                       </p>
                     </>
                   )}
                 </div>
               </section>
+
+              {/* ================= Footer ================= */}
+              <footer className="pt-8 pb-6 border-t border-border/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <LoganFullLogo size="sm" />
+                <p className="text-sm text-muted-foreground">
+                  Understanding your body improves everything · © 2026
+                </p>
+              </footer>
             </>
           )}
+
 
           {chatMode && messages.length === 0 && !isTyping && (
             <div className="py-6 animate-fade-in">
