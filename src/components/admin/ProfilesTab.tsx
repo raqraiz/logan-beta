@@ -1296,12 +1296,18 @@ export function ProfilesTab() {
       ) : (
         <div className="grid gap-3">
           {filtered.map((profile) => {
-            const isNonCycling = profile.participant?.life_stage === "postpartum" || profile.participant?.life_stage === "menopause";
+            const ls = profile.participant?.life_stage;
+            const isNonCycling = ls === "postpartum" || ls === "menopause" || ls === "pregnant" || ls === "pregnancy_loss";
             const cycleData = profile.participant ? getCycleData(profile.participant) : null;
             const cycleDay = cycleData?.cycleDay ?? null;
             const phase = cycleData?.phase ?? null;
             const lifeStage = (profile.participant?.life_stage || "cycling") as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
-            
+            const nonCyclingPhase =
+              lifeStage === "postpartum" ? "Postpartum" :
+              lifeStage === "menopause" ? "Menopause" :
+              lifeStage === "pregnant" ? "Pregnant" :
+              lifeStage === "pregnancy_loss" ? "Recovery" : "Menopause";
+
             return (
               <Card
                 key={profile.id}
@@ -1314,11 +1320,14 @@ export function ProfilesTab() {
                       <div className="shrink-0">
                         <ChatCycleCircle
                           cycleDay={0}
-                          phase={lifeStage === "postpartum" ? "Postpartum" : "Menopause"}
+                          phase={nonCyclingPhase}
                           cycleLengthDays={0}
                           size="sm"
-                          lifeStage={lifeStage as "postpartum" | "menopause"}
+                          lifeStage={lifeStage as any}
                           postpartumStartDate={profile.participant?.postpartum_start_date || undefined}
+                          lossDate={(profile.participant as any)?.loss_date || undefined}
+                          dueDate={(profile.participant as any)?.due_date || undefined}
+                          pregnancyLmp={(profile.participant as any)?.pregnancy_lmp || undefined}
                         />
                       </div>
                     ) : cycleDay && phase ? (
