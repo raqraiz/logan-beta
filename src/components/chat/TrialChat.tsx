@@ -377,7 +377,7 @@ export const TrialChat = () => {
                     <p className="text-base text-muted-foreground mb-8 max-w-md mx-auto leading-relaxed">
                       Create your account and I'll start learning your patterns from day one. Free during beta.
                     </p>
-                    <div className="max-w-md mx-auto rounded-2xl bg-card border border-border/50 p-6">
+                    <div className="max-w-md mx-auto rounded-2xl bg-card border border-border/50 p-3 sm:p-6">
                       <InlineChatAuth defaultView={authView} />
                     </div>
                   </div>

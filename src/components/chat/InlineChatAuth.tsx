@@ -144,8 +144,8 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 pt-2 pb-6">
-      <div className="bg-card/80 backdrop-blur-sm rounded-2xl border border-border p-6 shadow-lg">
+    <div className="w-full max-w-md mx-auto px-0 sm:px-4 pt-2 pb-6">
+      <div className="bg-card/80 backdrop-blur-sm rounded-2xl border border-border p-4 sm:p-6 shadow-lg">
         {/* Value proposition — only shown for forgot password / sign in views.
             Sign-up context is already provided by the surrounding TrialChat headline. */}
         {(isForgotPassword || (!isSignUp && !isForgotPassword)) && (
@@ -160,16 +160,37 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
           </div>
         )}
 
-        {/* Logo divider — sits in the gap above the first form field */}
+        {/* Gradient ring divider — matches locked Logan brand ring */}
         {isSignUp && !isForgotPassword && (
           <div className="flex justify-center mb-4">
-            <LoganLogo size="md" />
+            <svg
+              viewBox="0 0 56 56"
+              className="w-14 h-14"
+              aria-label="Logan"
+            >
+              <defs>
+                <linearGradient id="inline-auth-ring" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#FF2E92" />
+                  <stop offset="50%" stopColor="#A22BE8" />
+                  <stop offset="100%" stopColor="#2BD4D9" />
+                </linearGradient>
+              </defs>
+              <circle
+                cx="28"
+                cy="28"
+                r="22"
+                fill="none"
+                stroke="url(#inline-auth-ring)"
+                strokeWidth="4"
+                strokeLinecap="round"
+              />
+            </svg>
           </div>
         )}
 
 
         {/* Inline auth form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-4">
           {isSignUp && !isForgotPassword && (
             <div className="space-y-2">
               <Label htmlFor="fullName" className="text-muted-foreground text-sm">
