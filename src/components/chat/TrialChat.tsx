@@ -280,7 +280,7 @@ export const TrialChat = () => {
                 </button>
                 <button
                   onClick={() => { setAuthView("signup"); scrollToSignup(); }}
-                  className="landing-brand-fill h-10 px-5 text-sm rounded-full font-medium transition-opacity hover:opacity-90 text-[#16120E]"
+                  className="bg-black text-white h-10 px-5 text-sm rounded-full font-medium transition-opacity hover:opacity-90"
                 >
                   Get started
                 </button>
@@ -310,16 +310,16 @@ export const TrialChat = () => {
                 <div className="mt-10 flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={scrollToSignup}
-                    className="landing-brand-fill h-14 px-8 text-base font-semibold rounded-full inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+                    className="bg-black text-white h-14 px-8 text-base font-semibold rounded-full inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
                   >
                     Create my free account
                     <ArrowRight className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => enterChatMode()}
-                    className="h-14 px-8 text-base rounded-full bg-[#2BD4D9] text-[#16120E] inline-flex items-center justify-center gap-3 hover:opacity-90 transition-opacity"
+                    className="h-14 px-8 text-base rounded-full border border-foreground/20 text-foreground bg-transparent inline-flex items-center justify-center gap-3 hover:bg-foreground/5 hover:border-foreground/30 transition-all"
                   >
-                    <span className="landing-brand-ring w-4 h-4 rounded-full inline-block" />
+                    <span className="w-4 h-4 rounded-full border-2 border-current" />
                     Ask Logan a question first
                   </button>
                 </div>
@@ -445,7 +445,7 @@ export const TrialChat = () => {
                         <button
                           type="submit"
                           disabled={waitlistSubmitting || !waitlistEmail.trim()}
-                          className="h-12 px-6 rounded-xl font-medium transition-opacity hover:opacity-90 disabled:opacity-50 bg-[#2BD4D9] text-[#16120E]"
+                          className="h-12 px-6 rounded-xl font-medium transition-opacity hover:opacity-90 disabled:opacity-50 bg-black text-white"
                         >
                           {waitlistSubmitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Keep me posted"}
                         </button>
