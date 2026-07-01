@@ -445,7 +445,7 @@ export const TrialChat = () => {
                         <button
                           type="submit"
                           disabled={waitlistSubmitting || !waitlistEmail.trim()}
-                          className="h-12 px-6 rounded-xl font-medium transition-opacity hover:opacity-90 disabled:opacity-50 bg-[#2BD4D9] text-[#16120E]"
+                          className="h-12 px-6 rounded-xl font-medium transition-opacity hover:opacity-90 disabled:opacity-50 bg-black text-white"
                         >
                           {waitlistSubmitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Keep me posted"}
                         </button>
