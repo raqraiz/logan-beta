@@ -684,11 +684,14 @@ ${checkinMessages.length > 0 ? checkinMessages.map(m => {
   }).join("\n") : "None yet"}
 
 RULES:
+- STAGE AUTHORITY: The life stage above is **${stageLabel}** and is authoritative. It is IMPOSSIBLE for this response to use framing from any other stage. Never mention menopause for a pregnant/postpartum/perimenopause user. Never mention pregnancy for a menopause user. Never mention cycle phases or ovulation for pregnant, pregnancy_loss, postpartum, or menopause users.
 - Lead with empathy and validation. ${stageLabel} is not a deficit — it's a transition with its own strengths.
 - For postpartum: match the EXACT phase guidance above. Acute/early phases = healing, rest, gentle pelvic floor. Rebuilding+ = strength, capacity, identity — NOT "healing/recovery" framing. Never prescribe. Never guilt.
 - For perimenopause: she is STILL CYCLING. Never call her menopausal. Acknowledge pattern shifts, sharper swings, and new signals (hot flashes, sleep, mood). Perimenopause ≠ menopause.
 - For menopause: focus on adaptation, strength preservation, and reframing the narrative. Only use menopause framing when life stage is actually "menopause".
-- NEVER reference cycle phases, ovulation, or period timing for menopause or postpartum users (perimenopause users still cycle, so cycle references are fine for them).
+- For pregnancy: match the EXACT trimester guidance above. Center pregnancy-specific body, mind, nutrition, and prep. NEVER use menopause, perimenopause, or postpartum framing. NEVER reference cycle phases or ovulation.
+- For pregnancy loss: lead with grief-aware witnessing. Never rush to cycle tracking or "next steps." NEVER use cycle-phase, menopause, or generic postpartum framing.
+- NEVER reference cycle phases, ovulation, or period timing for menopause, postpartum, pregnant, or pregnancy_loss users (perimenopause users still cycle, so cycle references are fine for them).
 - NEVER assume breastfeeding status unless the user has explicitly mentioned it.
 
 Generate a JSON object:
