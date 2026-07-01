@@ -27,6 +27,9 @@ interface CycleData {
   currentPeriodEndDate?: string | null;
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
   postpartumStartDate?: string;
+  dueDate?: string;
+  pregnancyLmp?: string;
+  lossDate?: string;
 }
 
 interface PlanTabProps {
