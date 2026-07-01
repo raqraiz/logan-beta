@@ -1142,7 +1142,13 @@ export function ProfilesTab() {
                                       />
                                     </div>
                                   )}
-                                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                  {isAssistant ? (
+                                    <div className="text-sm">
+                                      <MarkdownMessage content={msg.content} />
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                  )}
                                   {msg.emoji_reaction && (
                                     <div className="mt-2"><span className="text-xl">{msg.emoji_reaction}</span></div>
                                   )}
