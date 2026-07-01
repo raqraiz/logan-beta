@@ -24,6 +24,18 @@
   -webkit-mask: radial-gradient(circle, transparent 55%, #000 56%);
           mask: radial-gradient(circle, transparent 55%, #000 56%);
 }
+/* Scoped landing surface — warm near-black dark, warm cream light */
+.landing-page {
+  font-family: 'Quicksand', system-ui, sans-serif;
+  background-color: #16120E;
+}
+.landing-page.theme-light {
+  background-color: #F5F0E8;
+}
+.landing-page .font-serif-display {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  letter-spacing: -0.01em;
+}
 
 /* Logan Design System - Bold, High-Performance Dark Aesthetic */
 
