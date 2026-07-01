@@ -1347,6 +1347,16 @@ serve(async (req) => {
           else phaseLabel = getDeclaredPhaseFromText(lastAssistantContent);
         }
 
+        // "past X" / "X was N days/weeks ago" → user is AFTER that phase. Shift forward one phase.
+        const shiftForward = /\b(?:way\s+past|much\s+past|far\s+past|past)\s+(?:my\s+|the\s+)?(?:menstrual|menstruation|follicular|ovulation|ovulatory|fertile|luteal)/i.test(userMessage)
+          || /\b(?:menstrual|menstruation|follicular|ovulation|ovulatory|fertile|luteal)(?:\s+phase|\s+window)?\s+was\s+\d+\s+(?:day|week)s?\s+ago/i.test(userMessage);
+        if (shiftForward && phaseLabel) {
+          const next: Record<string, "Menstruation" | "Follicular" | "Ovulation" | "Luteal"> = {
+            Menstruation: "Follicular", Follicular: "Ovulation", Ovulation: "Luteal", Luteal: "Menstruation",
+          };
+          phaseLabel = next[phaseLabel] ?? phaseLabel;
+        }
+
 
         if (!phaseLabel) {
           return new Response(
