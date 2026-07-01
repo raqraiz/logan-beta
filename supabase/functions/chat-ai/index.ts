@@ -3257,6 +3257,9 @@ USER CONTEXT:
 - Current cycle day: ${cycleInfo.cycleDay}
 - Current phase: ${cycleInfo.phase}
 - Cycle length: ${participant.cycle_length_days || 28} days
+
+PHASE AUTHORITY RULE (non-negotiable): The Current phase and cycle day above are authoritative. Never generate symptom explanations, hormone framing, or phase-specific guidance that contradicts this value, regardless of what earlier messages in this conversation discussed. If prior conversation mentioned a different phase, that context is outdated — the current phase value is always correct. Do not attribute today's symptoms to ovulation if the current phase is Luteal, and do not attribute them to Luteal if the current phase is Ovulation, etc. When in doubt, defer to Current phase.
+
 - Age: ${age || "unknown"}
 - Anchor symptom (most disruptive): ${participant.anchor_symptom || "not specified"}
 - Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}
