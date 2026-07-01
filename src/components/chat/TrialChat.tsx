@@ -319,7 +319,26 @@ export const TrialChat = () => {
                     onClick={() => enterChatMode()}
                     className="h-14 px-8 text-base rounded-full border border-foreground/20 text-foreground bg-transparent inline-flex items-center justify-center gap-3 hover:bg-foreground/5 hover:border-foreground/30 transition-all"
                   >
-                    <span className="w-4 h-4 rounded-full border-2 border-current" />
+                    <svg viewBox="0 0 16 16" className="w-4 h-4">
+                      <defs>
+                        <linearGradient id="ask-ring-gradient" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor="#FF2E92" />
+                          <stop offset="50%" stopColor="#A22BE8" />
+                          <stop offset="100%" stopColor="#2BD4D9" />
+                        </linearGradient>
+                      </defs>
+                      <circle
+                        cx="8"
+                        cy="8"
+                        r="6"
+                        stroke="url(#ask-ring-gradient)"
+                        strokeWidth="2"
+                        fill="none"
+                        strokeDasharray="32 4"
+                        strokeLinecap="round"
+                        transform="rotate(-90 8 8)"
+                      />
+                    </svg>
                     Ask Logan a question first
                   </button>
                 </div>
