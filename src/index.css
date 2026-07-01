@@ -2,7 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Cormorant+Garamond:wght@400;500;600;700&family=Quicksand:wght@300;400;500;600;700&display=swap');
+
+/* Landing-page brand gradient — magenta → violet → teal */
+:root {
+  --gradient-brand: linear-gradient(90deg, #FF2E92 0%, #A22BE8 50%, #2BD4D9 100%);
+}
+.landing-brand-text {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.landing-brand-fill {
+  background: var(--gradient-brand);
+  color: #16120E;
+}
+.landing-brand-ring {
+  background: var(--gradient-brand);
+  -webkit-mask: radial-gradient(circle, transparent 55%, #000 56%);
+          mask: radial-gradient(circle, transparent 55%, #000 56%);
+}
 
 /* Logan Design System - Bold, High-Performance Dark Aesthetic */
 
