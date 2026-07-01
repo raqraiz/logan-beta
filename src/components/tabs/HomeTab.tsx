@@ -986,6 +986,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           currentCycleLength={cycleData.cycleLengthDays}
           currentPhase={cycleData.phase}
           currentCycleDay={cycleData.cycleDay}
+          lifeStage={cycleData.lifeStage}
+          dueDate={(cycleData as any).dueDate}
+          pregnancyLmp={(cycleData as any).pregnancyLmp}
         />
       )}
 
