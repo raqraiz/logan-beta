@@ -61,6 +61,9 @@ export function CycleAnalytics({
   currentCycleLength,
   currentPhase,
   currentCycleDay,
+  lifeStage,
+  dueDate,
+  pregnancyLmp,
 }: CycleAnalyticsProps) {
   const [history, setHistory] = useState<CycleHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
