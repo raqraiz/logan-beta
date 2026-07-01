@@ -245,15 +245,15 @@ export const TrialChat = () => {
       </div>
 
       {/* Header */}
-      <header className="border-b border-border/30 bg-card/30 backdrop-blur-xl sticky top-0 z-20">
-        <div className="max-w-3xl mx-auto px-4 py-3.5 flex items-center justify-between">
+      <header className="relative z-20">
+        <div className="max-w-6xl mx-auto px-6 sm:px-10 py-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <LoganFullLogo size="sm" />
-            <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-primary/80 bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5">
-              <Sparkles className="w-2.5 h-2.5" /> Beta
+            <span className="inline-flex items-center text-[10px] uppercase tracking-[0.2em] text-primary border border-primary/40 rounded-full px-3 py-1">
+              Beta
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4 sm:gap-5">
             {chatMode ? (
               <button
                 onClick={() => { setChatMode(false); setHasStarted(false); setMessages([]); setShowAuth(false); setTrialMessageCount(0); }}
@@ -266,7 +266,7 @@ export const TrialChat = () => {
               <>
                 <button
                   onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                  className="hidden sm:inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors border border-border/60 rounded-full px-3.5 h-9"
+                  className="hidden sm:inline-flex items-center gap-2 text-sm text-foreground/80 hover:text-foreground transition-colors border border-border/60 rounded-full px-4 h-10"
                   aria-label="Toggle theme"
                 >
                   {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
@@ -274,17 +274,16 @@ export const TrialChat = () => {
                 </button>
                 <button
                   onClick={() => { setAuthView("signin"); scrollToSignup(); }}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-sm text-foreground/80 hover:text-foreground transition-colors"
                 >
                   Sign in
                 </button>
-                <Button
-                  size="sm"
+                <button
                   onClick={() => { setAuthView("signup"); scrollToSignup(); }}
-                  className="h-9 px-4 text-sm rounded-full bg-foreground text-background hover:bg-foreground/90"
+                  className={`h-10 px-5 text-sm rounded-full font-medium transition-opacity hover:opacity-90 ${theme === "light" ? "bg-[#16120E] text-white" : "bg-white text-[#16120E]"}`}
                 >
                   Get started
-                </Button>
+                </button>
               </>
 
             )}
