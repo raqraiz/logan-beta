@@ -235,16 +235,13 @@ export const TrialChat = () => {
   };
 
   return (
-    <div className={`${theme === "light" ? "theme-light" : ""} h-[100svh] supports-[height:100dvh]:h-[100dvh] bg-background text-foreground flex flex-col relative overflow-hidden`}>
+    <div className={`landing-page ${theme === "light" ? "theme-light" : ""} h-[100svh] supports-[height:100dvh]:h-[100dvh] text-foreground flex flex-col relative overflow-hidden`}>
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl transform translate-x-1/3 -translate-y-1/3" />
-        <div className="absolute bottom-1/3 left-0 w-96 h-96 bg-primary/[0.06] rounded-full blur-3xl transform -translate-x-1/3" />
-        {/* Home-page widget color echoes — prominent ambient blobs */}
-        <div className="absolute top-1/4 left-[10%] w-80 h-80 bg-phase-follicular/15 rounded-full blur-3xl" />
-        <div className="absolute top-[40%] right-[15%] w-72 h-72 bg-phase-ovulation/15 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-[20%] w-96 h-96 bg-phase-menstruation/12 rounded-full blur-3xl" />
-        <div className="absolute top-[70%] left-[20%] w-64 h-64 bg-phase-luteal/15 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-primary/12 rounded-full blur-3xl transform translate-x-1/4 translate-y-1/4" />
+        {/* Subtle radial glows — teal top-left, violet/magenta bottom-right */}
+        <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full blur-3xl opacity-40"
+             style={{ background: "radial-gradient(circle, #2BD4D9 0%, transparent 70%)", transform: "translate(-30%, -30%)" }} />
+        <div className="absolute bottom-0 right-0 w-[600px] h-[600px] rounded-full blur-3xl opacity-30"
+             style={{ background: "radial-gradient(circle, #A22BE8 0%, transparent 70%)", transform: "translate(25%, 25%)" }} />
       </div>
 
       {/* Header */}
