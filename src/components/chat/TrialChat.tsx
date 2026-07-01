@@ -334,9 +334,7 @@ export const TrialChat = () => {
                         stroke="url(#ask-ring-gradient)"
                         strokeWidth="2"
                         fill="none"
-                        strokeDasharray="32 4"
                         strokeLinecap="round"
-                        transform="rotate(-90 8 8)"
                       />
                     </svg>
                     Ask Logan a question first
