@@ -280,7 +280,7 @@ export const TrialChat = () => {
                 </button>
                 <button
                   onClick={() => { setAuthView("signup"); scrollToSignup(); }}
-                  className="landing-brand-fill h-10 px-5 text-sm rounded-full font-medium transition-opacity hover:opacity-90 text-[#16120E]"
+                  className="bg-black text-white h-10 px-5 text-sm rounded-full font-medium transition-opacity hover:opacity-90"
                 >
                   Get started
                 </button>
