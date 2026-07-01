@@ -1305,7 +1305,22 @@ serve(async (req) => {
         /\b(?:switch|put|move|set|change|correct)\s+me\s+(?:to|into|back\s+to)\s+(?:my\s+|the\s+)?(menstrual|menstruation|period|follicular|ovulation|ovulating|ovulatory|fertile|luteal)(?:\s+phase|\s+window)?/i
       ) || userMessage.match(
         /\bi['’]?m\s+(?:not\s+(?:in\s+)?(?:my\s+)?\w+,?\s+)?(?:in\s+)?(?:my\s+)?(menstrual|menstruation|follicular|ovulation|ovulatory|fertile|luteal)\s+(?:phase|window)\b/i
+      ) || userMessage.match(
+        // Natural corrections: "deep in luteal", "way past ovulation", "much past follicular", "well into luteal"
+        /\b(?:deep\s+in|well\s+into|solidly\s+in|way\s+past|much\s+past|far\s+past|past)\s+(?:my\s+|the\s+)?(menstrual|menstruation|follicular|ovulation|ovulatory|fertile|luteal)(?:\s+phase|\s+window)?/i
+      ) || userMessage.match(
+        // "I'm not in ovulation, I'm in luteal" — capture the SECOND phase
+        /\bi['’]?m\s+not\s+(?:in\s+)?(?:my\s+|the\s+)?(?:menstrual|menstruation|follicular|ovulation|ovulating|ovulatory|fertile|luteal)(?:\s+phase|\s+window)?[,;:\s]+(?:i['’]?m|im)?\s*(?:in\s+)?(?:my\s+|the\s+)?(menstrual|menstruation|follicular|ovulation|ovulating|ovulatory|fertile|luteal)\b/i
+      ) || userMessage.match(
+        // "luteal not ovulation" / "luteal, not ovulation" — capture the FIRST phase (the correct one)
+        /\b(menstrual|menstruation|follicular|ovulation|ovulating|ovulatory|fertile|luteal)(?:\s+phase|\s+window)?\s*,?\s+not\s+(?:menstrual|menstruation|follicular|ovulation|ovulating|ovulatory|fertile|luteal)/i
+      ) || userMessage.match(
+        // "[phase] was N days/weeks ago"
+        /\b(menstrual|menstruation|follicular|ovulation|ovulatory|fertile|luteal)(?:\s+phase|\s+window)?\s+was\s+\d+\s+(?:day|week)s?\s+ago/i
       );
+      // Implicit corrections that don't carry a phase word — fall back to lastAssistantContent inference below.
+      const implicitPastPhaseCorrection = /\b(?:i\s+)?already\s+(ovulated|had\s+my\s+period|got\s+my\s+period|finished\s+(?:my\s+)?period|bled)\b/i.test(userMessage)
+        || /\bthat(?:'s|\s+was)\s+(?:been\s+)?(?:like\s+)?\d*\s*(?:day|week)s?\s+ago\b/i.test(userMessage);
       const phaseUpdateRequest = /\b(?:update|change|set|fix|adjust|correct|switch)\b[^.?!]{0,50}\b(?:my\s+)?(?:phase|cycle)\b/i.test(userMessage)
         || /\bwill\s+you\s+(?:update|change|set|fix|adjust|correct|switch)\b[^.?!]{0,50}\b(?:my\s+)?(?:phase|cycle)\b/i.test(userMessage)
         || /\bcan\s+you\s+(?:update|change|set|fix|adjust|correct|switch)\b[^.?!]{0,50}\b(?:my\s+)?(?:phase|cycle)\b/i.test(userMessage);
