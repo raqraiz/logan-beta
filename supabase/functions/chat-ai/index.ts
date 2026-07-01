@@ -1339,6 +1339,15 @@ serve(async (req) => {
           phaseLabel = getDeclaredPhaseFromText(userMessage);
         }
 
+        // Implicit past-phase corrections: "I already ovulated" → Luteal; "already had my period" → Follicular.
+        if (!phaseLabel && implicitPastPhaseCorrection) {
+          if (/already\s+ovulated/i.test(userMessage)) phaseLabel = "Luteal";
+          else if (/already\s+(?:had|got|finished)\s+(?:my\s+)?period|finished\s+bleeding|already\s+bled/i.test(userMessage))
+            phaseLabel = "Follicular";
+          else phaseLabel = getDeclaredPhaseFromText(lastAssistantContent);
+        }
+
+
         if (!phaseLabel) {
           return new Response(
             JSON.stringify({
