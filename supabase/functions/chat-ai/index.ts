@@ -2011,8 +2011,129 @@ serve(async (req) => {
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      // --- Pregnancy LMP / due date / weeks-along updates (already pregnant) ---
+      if (participant.life_stage === "pregnant") {
+        const msg = userMessage;
+        const lowerMsg = msg.toLowerCase();
+
+        // Skip questions/hypotheticals.
+        const isQuestion = /\?\s*$/.test(msg.trim()) || /^(what|when|how|is|are|do|does|could|should|would|will)\b/i.test(msg.trim());
+
+        // Extract a date phrase after common cue words.
+        const dateRx = /((?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:,?\s*\d{2,4})?|\d{4}-\d{2}-\d{2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i;
+
+        const lmpCue = /\b(last\s+(missed\s+)?period|last\s+menstrual\s+period|lmp|missed\s+my\s+period|my\s+period\s+was|last\s+cycle\s+started|period\s+started)\b/i;
+        const dueCue = /\b(due\s+date|due\s+on|i'?m\s+due|baby\s+is\s+due|edd|estimated\s+due\s+date)\b/i;
+
+        let newLmp: string | null = null;
+        let newDue: string | null = null;
+        let source: "lmp" | "due" | "weeks" | null = null;
+
+        if (!isQuestion) {
+          const lmpMatch = lmpCue.test(msg) ? msg.match(dateRx) : null;
+          if (lmpMatch) {
+            const parsed = parseExplicitCalendarDate(lmpMatch[1]);
+            if (parsed) {
+              newLmp = dateOnly(parsed);
+              const dueD = new Date(parsed);
+              dueD.setUTCDate(dueD.getUTCDate() + 280);
+              newDue = dateOnly(dueD);
+              source = "lmp";
+            }
+          }
+
+          if (!source && dueCue.test(msg)) {
+            const dueMatch = msg.match(dateRx);
+            if (dueMatch) {
+              const parsed = parseExplicitCalendarDate(dueMatch[1]);
+              if (parsed) {
+                newDue = dateOnly(parsed);
+                const lmpD = new Date(parsed);
+                lmpD.setUTCDate(lmpD.getUTCDate() - 280);
+                newLmp = dateOnly(lmpD);
+                source = "due";
+              }
+            }
+          }
+
+          // "I'm X weeks pregnant / along" — back-calculate LMP.
+          if (!source) {
+            const wkMatch = msg.match(/\b(?:i'?m|i\s+am)\s+(\d{1,2})\s+weeks?\s+(?:pregnant|along)\b/i)
+              || msg.match(/\b(\d{1,2})\s+weeks?\s+(?:pregnant|along)\b/i);
+            if (wkMatch) {
+              const wks = parseInt(wkMatch[1], 10);
+              if (wks > 0 && wks < 45) {
+                const lmpD = new Date();
+                lmpD.setUTCDate(lmpD.getUTCDate() - wks * 7);
+                newLmp = dateOnly(lmpD);
+                const dueD = new Date(lmpD);
+                dueD.setUTCDate(dueD.getUTCDate() + 280);
+                newDue = dateOnly(dueD);
+                source = "weeks";
+              }
+            }
+          }
+
+          // Trimester declaration — approximate LMP to midpoint of trimester.
+          if (!source) {
+            const triMatch = msg.match(/\b(?:i'?m\s+in\s+my|i'?m|in\s+my)\s+(first|second|third|1st|2nd|3rd)\s+trimester\b/i);
+            if (triMatch) {
+              const tri = triMatch[1].toLowerCase();
+              const midWeeks = tri.startsWith("f") || tri === "1st" ? 7 : tri.startsWith("s") || tri === "2nd" ? 20 : 33;
+              const lmpD = new Date();
+              lmpD.setUTCDate(lmpD.getUTCDate() - midWeeks * 7);
+              newLmp = dateOnly(lmpD);
+              const dueD = new Date(lmpD);
+              dueD.setUTCDate(dueD.getUTCDate() + 280);
+              newDue = dateOnly(dueD);
+              source = "weeks";
+            }
+          }
+        }
+
+        if (source && newLmp && newDue) {
+          await supabase
+            .from("participants")
+            .update({ pregnancy_lmp: newLmp, due_date: newDue })
+            .eq("id", participant.id);
+          const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+          if (refreshed) participant = refreshed;
+
+          const lmpD = parseExplicitCalendarDate(newLmp)!;
+          const now = new Date();
+          const gestDays = Math.floor((Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - Date.UTC(lmpD.getUTCFullYear(), lmpD.getUTCMonth(), lmpD.getUTCDate())) / 86400000);
+          const gWeeks = Math.floor(gestDays / 7);
+          const gDays = gestDays % 7;
+          const tri = gWeeks <= 13 ? 1 : gWeeks <= 27 ? 2 : 3;
+
+          const dueD = parseExplicitCalendarDate(newDue)!;
+          const dueLabel = `${MONTH_NAMES[dueD.getUTCMonth()]} ${dueD.getUTCDate()}, ${dueD.getUTCFullYear()}`;
+          const lmpLabel = `${MONTH_NAMES[lmpD.getUTCMonth()]} ${lmpD.getUTCDate()}, ${lmpD.getUTCFullYear()}`;
+
+          const ackMsg = source === "due"
+            ? `Got it — due date **${dueLabel}** saved. That puts you at around **week ${gWeeks}${gDays ? ` + ${gDays}d` : ""}, trimester ${tri}** (LMP ≈ ${lmpLabel}). Your Home and Plan tabs will update to match.`
+            : source === "weeks"
+            ? `Saved — around **week ${gWeeks}${gDays ? ` + ${gDays}d` : ""}, trimester ${tri}**, LMP ≈ ${lmpLabel}, due ≈ ${dueLabel}. You can fine-tune either date anytime in Settings.`
+            : `Got it — LMP **${lmpLabel}** saved. You're at **week ${gWeeks}${gDays ? ` + ${gDays}d` : ""}, trimester ${tri}**, due date ≈ **${dueLabel}**. Home and Plan tabs will reflect this now.`;
+
+          await supabase.from("chat_messages").insert({
+            user_id: user.id,
+            role: "assistant",
+            content: ackMsg,
+            message_type: "text",
+            metadata: { pregnancy_dates_updated: true, pregnancy_lmp: newLmp, due_date: newDue },
+          });
+          return new Response(
+            JSON.stringify({ success: true, message: ackMsg, pregnancyDatesUpdated: true }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+      // --- End pregnancy date updates ---
     }
     // --- End life-stage corrections ---
+
 
 
     // --- Postpartum life-stage / birth-date detection ---
