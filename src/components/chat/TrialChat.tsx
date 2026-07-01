@@ -238,9 +238,9 @@ export const TrialChat = () => {
     <div className={`landing-page ${theme === "light" ? "theme-light" : ""} h-[100svh] supports-[height:100dvh]:h-[100dvh] text-foreground flex flex-col relative overflow-hidden`}>
       <div className="absolute inset-0 pointer-events-none">
         {/* Subtle radial glows — teal top-left, violet/magenta bottom-right */}
-        <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full blur-3xl opacity-40"
+        <div className={`absolute top-0 left-0 w-[600px] h-[600px] rounded-full blur-3xl ${theme === "light" ? "opacity-20" : "opacity-40"}`}
              style={{ background: "radial-gradient(circle, #2BD4D9 0%, transparent 70%)", transform: "translate(-30%, -30%)" }} />
-        <div className="absolute bottom-0 right-0 w-[600px] h-[600px] rounded-full blur-3xl opacity-30"
+        <div className={`absolute bottom-0 right-0 w-[600px] h-[600px] rounded-full blur-3xl ${theme === "light" ? "opacity-5" : "opacity-30"}`}
              style={{ background: "radial-gradient(circle, #A22BE8 0%, transparent 70%)", transform: "translate(25%, 25%)" }} />
       </div>
 
@@ -280,7 +280,7 @@ export const TrialChat = () => {
                 </button>
                 <button
                   onClick={() => { setAuthView("signup"); scrollToSignup(); }}
-                  className={`h-10 px-5 text-sm rounded-full font-medium transition-opacity hover:opacity-90 ${theme === "light" ? "bg-[#16120E] text-white" : "bg-white text-[#16120E]"}`}
+                  className="landing-brand-fill h-10 px-5 text-sm rounded-full font-medium transition-opacity hover:opacity-90 text-[#16120E]"
                 >
                   Get started
                 </button>
@@ -317,7 +317,7 @@ export const TrialChat = () => {
                   </button>
                   <button
                     onClick={() => enterChatMode()}
-                    className="h-14 px-8 text-base rounded-full border border-border/60 hover:border-foreground/40 text-foreground/90 hover:text-foreground inline-flex items-center justify-center gap-3 transition-colors"
+                    className="h-14 px-8 text-base rounded-full bg-[#2BD4D9] text-[#16120E] inline-flex items-center justify-center gap-3 hover:opacity-90 transition-opacity"
                   >
                     <span className="landing-brand-ring w-4 h-4 rounded-full inline-block" />
                     Ask Logan a question first
@@ -445,7 +445,7 @@ export const TrialChat = () => {
                         <button
                           type="submit"
                           disabled={waitlistSubmitting || !waitlistEmail.trim()}
-                          className={`h-12 px-6 rounded-xl font-medium transition-opacity hover:opacity-90 disabled:opacity-50 ${theme === "light" ? "bg-[#16120E] text-white" : "bg-white text-[#16120E]"}`}
+                          className="h-12 px-6 rounded-xl font-medium transition-opacity hover:opacity-90 disabled:opacity-50 bg-[#2BD4D9] text-[#16120E]"
                         >
                           {waitlistSubmitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Keep me posted"}
                         </button>

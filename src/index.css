@@ -196,8 +196,8 @@
     --ring: 168 75% 36%;
 
     --gradient-soft:
-      radial-gradient(1200px 600px at 10% -10%, hsl(168 60% 80% / 0.35), transparent 60%),
-      radial-gradient(900px 500px at 100% 10%, hsl(340 70% 88% / 0.45), transparent 55%),
+      radial-gradient(1200px 600px at 10% -10%, hsl(168 60% 80% / 0.20), transparent 60%),
+      radial-gradient(900px 500px at 100% 10%, hsl(340 70% 88% / 0.04), transparent 55%),
       linear-gradient(180deg, hsl(40 35% 96%) 0%, hsl(40 25% 92%) 100%);
     --gradient-card: linear-gradient(145deg, hsl(0 0% 100% / 0.95) 0%, hsl(40 30% 98% / 0.85) 100%);
     --gradient-glass: linear-gradient(145deg, hsl(220 15% 12% / 0.03) 0%, hsl(220 15% 12% / 0.01) 100%);
