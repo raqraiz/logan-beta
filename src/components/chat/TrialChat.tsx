@@ -382,7 +382,7 @@ export const TrialChat = () => {
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground/70 text-center mt-8 max-w-xl mx-auto leading-relaxed">
-                    We keep your health data private and secure. It's never sold, shared with advertisers, or used to train models outside Logan. You can delete your account and data anytime.
+                    We keep your wellness data private and secure and only use it to improve Logan's recommendations. It's never sold, shared with advertisers, or used to train outside models. You can delete your account and data at any time.
                   </p>
                 </div>
               </section>
