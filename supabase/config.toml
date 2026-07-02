@@ -39,4 +39,7 @@ project_id = "tpohsmxpcqqgxcgectfs"
     verify_jwt = false
   [functions.track-email-open]
     verify_jwt = false
+  [functions.send-policy-update]
+    verify_jwt = false
+
 
