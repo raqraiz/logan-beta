@@ -139,8 +139,10 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({
-      eligible: toSend.length,
+      eligible: allToSend.length,
+      attempted: toSend.length,
       sent,
+      remaining: remainingAfter,
       errors,
       policyVersion: POLICY_VERSION,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 })
