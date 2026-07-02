@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RefreshCw, Search, Mail, MailOpen, AlertTriangle } from "lucide-react";
+import { PolicyUpdateSender } from "./PolicyUpdateSender";
 import { formatDistanceToNow } from "date-fns";
 
 interface LogRow {
