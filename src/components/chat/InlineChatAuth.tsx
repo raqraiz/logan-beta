@@ -274,7 +274,7 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
                 htmlFor="consent" 
                 className="text-sm text-muted-foreground leading-relaxed cursor-pointer"
               >
-                I agree to the{" "}
+                I agree to Logan's{" "}
                 <Link 
                   to="/consent" 
                   target="_blank"
@@ -282,7 +282,7 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
                 >
                   terms & privacy policy
                 </Link>
-                , including consent to receive cycle guidance through Logan.
+                , including consent to store and use my wellness data to personalize my experience.
               </Label>
             </div>
           )}
