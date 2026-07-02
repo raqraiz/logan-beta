@@ -78,12 +78,18 @@ Deno.serve(async (req) => {
       .eq('policy_version', POLICY_VERSION)
       .in('recipient_email', emails)
     const alreadySet = new Set((already ?? []).map((r: any) => (r.recipient_email as string).toLowerCase()))
-    let toSend = Array.from(byEmail.entries()).filter(([em]) => !alreadySet.has(em))
+    const allToSend = Array.from(byEmail.entries()).filter(([em]) => !alreadySet.has(em))
 
+    // Cap per invocation to stay within Edge Function wall-time limits.
+    // Remaining recipients will be picked up on the next click (dedup via policy_notifications).
+    const MAX_PER_INVOCATION = 25
+    const CHUNK_SIZE = 5
+    const toSend = allToSend.slice(0, MAX_PER_INVOCATION)
+    const remainingAfter = Math.max(0, allToSend.length - toSend.length)
 
     if (dryRun) {
       return new Response(JSON.stringify({
-        eligible: toSend.length,
+        eligible: allToSend.length,
         totalParticipants: byEmail.size,
         alreadySent: alreadySet.size,
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 })
@@ -92,7 +98,7 @@ Deno.serve(async (req) => {
     let sent = 0
     const errors: string[] = []
 
-    for (const [em, info] of toSend) {
+    async function sendOne([em, info]: [string, { user_id: string | null; email: string; full_name: string | null }]) {
       const idempotencyKey = `policy-update-2026-07-${em}`
       try {
         const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
@@ -113,7 +119,7 @@ Deno.serve(async (req) => {
         if (!resp.ok) {
           const text = await resp.text().catch(() => '')
           errors.push(`${em}: ${resp.status} ${text.slice(0, 200)}`)
-          continue
+          return
         }
         await admin.from('policy_notifications').insert({
           user_id: info.user_id,
@@ -124,6 +130,12 @@ Deno.serve(async (req) => {
       } catch (e) {
         errors.push(`${em}: ${(e as Error).message}`)
       }
+    }
+
+    // Parallelize in small chunks so we don't hammer the queue or hit resource limits.
+    for (let i = 0; i < toSend.length; i += CHUNK_SIZE) {
+      const chunk = toSend.slice(i, i + CHUNK_SIZE)
+      await Promise.all(chunk.map(sendOne))
     }
 
     return new Response(JSON.stringify({
