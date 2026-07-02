@@ -36,6 +36,7 @@ const App = () => (
               <Route path="/logan-admin-access" element={<Auth />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/consent" element={<Consent />} />
+              <Route path="/privacy" element={<Consent />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/integrations/:provider/callback" element={<IntegrationCallback />} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
