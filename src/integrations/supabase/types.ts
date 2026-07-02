@@ -973,6 +973,33 @@ export type Database = {
         }
         Relationships: []
       }
+      policy_notifications: {
+        Row: {
+          created_at: string
+          email_sent_at: string
+          id: string
+          policy_version: string
+          recipient_email: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email_sent_at?: string
+          id?: string
+          policy_version: string
+          recipient_email: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email_sent_at?: string
+          id?: string
+          policy_version?: string
+          recipient_email?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
