@@ -80,18 +80,6 @@ Deno.serve(async (req) => {
     const alreadySet = new Set((already ?? []).map((r: any) => (r.recipient_email as string).toLowerCase()))
     let toSend = Array.from(byEmail.entries()).filter(([em]) => !alreadySet.has(em))
 
-    // TEMPORARY TEST MODE: restrict sends to a single test recipient before
-    // rolling out to all users. Remove this block after the test is confirmed.
-    const TEST_ONLY_EMAIL = 'raquella@asklogan.ai'
-    toSend = toSend.filter(([em]) => em === TEST_ONLY_EMAIL.toLowerCase())
-    if (toSend.length === 0) {
-      // Ensure the test recipient can still receive it even if the participant
-      // row is missing or already logged — synthesize an entry.
-      toSend = [[
-        TEST_ONLY_EMAIL.toLowerCase(),
-        { user_id: null, email: TEST_ONLY_EMAIL, full_name: 'Raquella' },
-      ]]
-    }
 
     if (dryRun) {
       return new Response(JSON.stringify({
