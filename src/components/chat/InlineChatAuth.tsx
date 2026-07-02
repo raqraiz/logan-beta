@@ -276,7 +276,7 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
               >
                 I agree to Logan's{" "}
                 <Link 
-                  to="/consent" 
+                  to="/privacy" 
                   target="_blank"
                   className="text-primary underline hover:text-primary/80"
                 >
