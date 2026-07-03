@@ -36,6 +36,7 @@ import { CreditBalance } from "@/components/chat/CreditBalance";
 import { OutOfCredits } from "@/components/chat/OutOfCredits";
 import { ResourceOfferCard, ResourceCard } from "@/components/chat/ResourceCards";
 import { MenuBuilderAnnouncement } from "@/components/chat/MenuBuilderAnnouncement";
+import { InstallPWABanner } from "@/components/chat/InstallPWABanner";
 import { BottomTabBar, type TabId } from "@/components/tabs/BottomTabBar";
 import { HomeTab } from "@/components/tabs/HomeTab";
 import { PlanTab } from "@/components/tabs/PlanTab";
@@ -1314,12 +1315,15 @@ const Chat = () => {
             </div>
           )}
 
-          {/* One-time announcement: Menu Builder */}
+          {/* One-time announcements */}
           {!isOnboarding && user && messages.length > 0 && (
-            <MenuBuilderAnnouncement
-              userId={user.id}
-              onOpenPlan={() => setActiveTab("plan")}
-            />
+            <div className="space-y-3">
+              <InstallPWABanner userId={user.id} />
+              <MenuBuilderAnnouncement
+                userId={user.id}
+                onOpenPlan={() => setActiveTab("plan")}
+              />
+            </div>
           )}
 
           {messages.length === 0 && !isLoading ? (
