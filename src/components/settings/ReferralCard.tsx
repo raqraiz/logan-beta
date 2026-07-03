@@ -30,7 +30,7 @@ export function ReferralCard({ userId }: ReferralCardProps) {
     })();
   }, [userId]);
 
-  const link = code ? `${window.location.origin}/?ref=${code}` : "";
+  const link = code ? `https://asklogan.ai/?ref=${code}` : "";
 
   const copy = async () => {
     if (!link) return;
@@ -63,7 +63,7 @@ export function ReferralCard({ userId }: ReferralCardProps) {
     <div className="border-t border-border/50 pt-4">
       <Label className="text-sm font-medium mb-2 block">Invite friends</Label>
       <p className="text-xs text-muted-foreground mb-3">
-        Share your personal link. We'll credit you when someone signs up through it.
+        Share your link and help Logan grow 🌱
       </p>
 
       {count > 0 && (
