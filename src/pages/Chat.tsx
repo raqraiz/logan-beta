@@ -1138,12 +1138,9 @@ const Chat = () => {
              ) : (
                <LoganLogo size="sm" />
              )}
-             <div>
-               <h1 className="font-display font-semibold text-foreground">Logan</h1>
-               <p className="text-xs text-muted-foreground">
-                 {isOnboarding ? "Setting up your profile" : "Your performance partner"}
-               </p>
-             </div>
+              <div>
+                <h1 className="font-display font-semibold text-foreground">Logan</h1>
+              </div>
            </div>
           <div className="flex items-center gap-3">
             {/* Credit balance hidden — free access during alpha */}
