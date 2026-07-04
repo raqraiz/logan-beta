@@ -456,6 +456,13 @@ serve(async (req) => {
       // Day-of-week variants: "period began Tuesday", "started on Monday", "got my period friday"
       /(?:period|it)\s+(?:started|began|came|arrived)\s+(?:on\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)/i,
       /(?:started|began|came|got it)\s+(?:on\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)/i,
+      // Declarative Day-1 corrections: user tells Logan the cycle should reset to Day 1 today.
+      // Examples: "I want it to show day 1 period", "it should show day 1", "today should be day 1",
+      // "today is day 1 menstruation", "show day 1 period", "change it to day 1".
+      /\b(?:i\s+want\s+(?:it|you|logan)\s+to\s+show|it\s+should\s+show|show(?:\s+me)?|set(?:\s+it)?\s+to|change\s+(?:it|this)\s+to|make\s+it|log|mark)\s+(?:as\s+)?day\s*1\b/i,
+      /\btoday\s+(?:is|should\s+be|=)\s+day\s*1\b/i,
+      /\bday\s*1\s+(?:today|of\s+(?:my\s+)?(?:period|menstruation|cycle))\b/i,
+      /\b(?:i['’]?m|im)\s+on\s+day\s*1\b/i,
     ];
     
     const bareYesPatterns = [/^yes$/i, /^yes,? (it )?(started|has|did)/i];
