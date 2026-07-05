@@ -1772,7 +1772,7 @@ serve(async (req) => {
 
     const currentMessageMentionsKnownSymptom = detectSymptomMentions(userMessage).length > 0
       || mentionsKnownLibrarySymptom(userMessage, knownLibraryNames);
-    const isCurrentSymptomQuestion = currentMessageMentionsKnownSymptom && isSymptomQuestionOrHypothetical(userMessage);
+    const isCurrentSymptomQuestion = currentMessageMentionsKnownSymptom && isSymptomQuestionOrHypothetical(userMessage) && !hasPersonalSymptomContext(userMessage);
     const isCurrentSymptomNegation = currentMessageMentionsKnownSymptom && isSymptomNegationOrCorrection(userMessage);
 
 
