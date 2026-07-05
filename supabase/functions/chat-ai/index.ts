@@ -204,6 +204,21 @@ function isSymptomQuestionOrHypothetical(text: string): boolean {
   );
 }
 
+function hasPersonalSymptomContext(text: string): boolean {
+  const t = text.trim();
+  // First-person experience language that makes a symptom question a real report
+  // rather than a pure hypothetical question.
+  return (
+    // I'm / I am / I've been / I feel / I have / I get / I got + experience marker
+    /\b(?:i['']?m|i\s+am|i['']?ve\s+been|i\s+feel|i\s+have|i\s+had|i\s+get|i\s+got)\b[^.?!]*\b(?:feeling|craving|crave|having|getting|experiencing|dealing\s+with|going\s+through|noticing|struggling\s+with|battling|a\s+little|a\s+bit|somewhat|slightly|mild|minor|bad|terrible|awful|so|really|very|pretty|quite|constantly|still|also|just|always|often|today|lately|recently|currently|now|super|extremely)\b/i.test(t) ||
+    // my [body part / state]
+    /\bmy\s+(?:head|back|breasts?|chest|stomach|belly|abdomen|gut|joints?|muscles?|body|skin|period|cycle|mood|sleep|energy|focus|motivation|cravings?|bloating?|digestion|pms|hormones|uterus|ovaries|libido|bowels?|progesterone|estrogen)\b/i.test(t) ||
+    // conjunction + am + experience verb (e.g., "I eat healthy and am craving")
+    /\b(?:and|but|so|yet)\s+(?:am|i['']?m)\s+(?:feeling|craving|having|getting|experiencing|dealing\s+with|going\s+through|noticing|struggling\s+with|battling)\b/i.test(t)
+  );
+}
+
+
 function isSymptomNegationOrCorrection(text: string): boolean {
   const t = text.trim();
   return /\b(i\s+(?:did\s+not|didn't|do\s+not|don't|never)\s+(?:log|track|record|note|say|report|have|had)|i\s+(?:am\s+not|'?m\s+not)\s+(?:having|feeling|experiencing)|not\s+(?:having|feeling|experiencing)|that'?s?\s+not\s+(?:me|what\s+i\s+said|right)|wrong,?\s*i\s+(?:do\s+not|don't|did\s+not|didn't))\b/i.test(t);
@@ -1757,7 +1772,7 @@ serve(async (req) => {
 
     const currentMessageMentionsKnownSymptom = detectSymptomMentions(userMessage).length > 0
       || mentionsKnownLibrarySymptom(userMessage, knownLibraryNames);
-    const isCurrentSymptomQuestion = currentMessageMentionsKnownSymptom && isSymptomQuestionOrHypothetical(userMessage);
+    const isCurrentSymptomQuestion = currentMessageMentionsKnownSymptom && isSymptomQuestionOrHypothetical(userMessage) && !hasPersonalSymptomContext(userMessage);
     const isCurrentSymptomNegation = currentMessageMentionsKnownSymptom && isSymptomNegationOrCorrection(userMessage);
 
 
