@@ -35,7 +35,6 @@ import { CycleForecast } from "@/components/chat/CycleForecast";
 import { CreditBalance } from "@/components/chat/CreditBalance";
 import { OutOfCredits } from "@/components/chat/OutOfCredits";
 import { ResourceOfferCard, ResourceCard } from "@/components/chat/ResourceCards";
-import { MenuBuilderAnnouncement } from "@/components/chat/MenuBuilderAnnouncement";
 import { InstallPWABanner } from "@/components/chat/InstallPWABanner";
 import { BottomTabBar, type TabId } from "@/components/tabs/BottomTabBar";
 import { HomeTab } from "@/components/tabs/HomeTab";
@@ -1315,17 +1314,6 @@ const Chat = () => {
             </div>
           )}
 
-          {/* One-time announcements */}
-          {!isOnboarding && user && messages.length > 0 && (
-            <div className="space-y-3">
-              <InstallPWABanner userId={user.id} />
-              <MenuBuilderAnnouncement
-                userId={user.id}
-                onOpenPlan={() => setActiveTab("plan")}
-              />
-            </div>
-          )}
-
           {messages.length === 0 && !isLoading ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
@@ -1835,6 +1823,13 @@ const Chat = () => {
               }
             </p>
           </form>
+
+          {/* PWA install prompt — below input bar, above bottom nav */}
+          {!isOnboarding && user && messages.length > 0 && (
+            <div className="max-w-3xl mx-auto px-4 pb-4">
+              <InstallPWABanner userId={user.id} />
+            </div>
+          )}
         </div>
       )}
       </>)}
