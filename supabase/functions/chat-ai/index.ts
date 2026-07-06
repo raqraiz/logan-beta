@@ -214,7 +214,14 @@ function hasPersonalSymptomContext(text: string): boolean {
     // my [body part / state]
     /\bmy\s+(?:head|back|breasts?|chest|stomach|belly|abdomen|gut|joints?|muscles?|body|skin|period|cycle|mood|sleep|energy|focus|motivation|cravings?|bloating?|digestion|pms|hormones|uterus|ovaries|libido|bowels?|progesterone|estrogen)\b/i.test(t) ||
     // conjunction + am + experience verb (e.g., "I eat healthy and am craving")
-    /\b(?:and|but|so|yet)\s+(?:am|i['']?m)\s+(?:feeling|craving|having|getting|experiencing|dealing\s+with|going\s+through|noticing|struggling\s+with|battling)\b/i.test(t)
+    /\b(?:and|but|so|yet)\s+(?:am|i['']?m)\s+(?:feeling|craving|having|getting|experiencing|dealing\s+with|going\s+through|noticing|struggling\s+with|battling)\b/i.test(t) ||
+    // Forecast questions about her own state ("what's my energy like today",
+    // "what will my mood be like", "how's my focus going to be tomorrow") —
+    // these ask Logan for a phase-based forecast, not a symptom report, and
+    // should route to the LLM, not the generic symptom-question early return.
+    /\bwhat(?:'?s|\s+is)\s+my\s+\w+(?:\s+\w+)?\s+(?:like|going\s+to\s+be|gonna\s+be)\b/i.test(t) ||
+    /\bwhat\s+will\s+my\s+\w+(?:\s+\w+)?\s+(?:be|feel|look)\b/i.test(t) ||
+    /\bhow(?:'?s|\s+is|\s+will)\s+my\s+\w+(?:\s+\w+)?\s+(?:be|going|feel|today|tomorrow)\b/i.test(t)
   );
 }
 
