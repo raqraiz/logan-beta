@@ -2822,7 +2822,8 @@ serve(async (req) => {
     if (overdueNote) {
       systemPrompt += overdueNote;
     }
-    }
+
+
 
 
     // Pregnancy loss / miscarriage grief-aware mode — override tone, pause cycle talk.
