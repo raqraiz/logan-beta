@@ -3433,7 +3433,10 @@ Use this context to make your responses personally relevant. Reference their cur
 function calculateCycleInfo(
   lastPeriodStart: string,
   cycleLengthDays: number,
-  timezone: string = "UTC"
+  timezone: string = "UTC",
+  currentPeriodEndDate?: string | null,
+  periodPending?: boolean,
+  periodStillActive?: boolean,
 ): { cycleDay: number; phase: string } {
   let periodStart: Date;
   if (/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodStart)) {
@@ -3450,21 +3453,34 @@ function calculateCycleInfo(
   const diffTime = today.getTime() - periodStart.getTime();
   const daysSinceStart = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-  // Don't wrap when she's past her expected cycle length — show the running
-  // count (Day 38, 39, ...) so we can prompt her to confirm day 1. Only wrap
-  // for negative (future-dated) edge cases.
-  const cycleDay = daysSinceStart >= 0
-    ? daysSinceStart + 1
-    : ((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
+  // Never wrap into a fake next cycle — always keep the running unwrapped day
+  // count so the overdue detector can fire and Logan can prompt for a real
+  // Day-1 confirmation instead of silently pretending a new cycle started.
+  const cycleDay = daysSinceStart >= 0 ? daysSinceStart + 1 : 1;
 
-  const menstruationEnd = 5;
+  // If she reported her period ended early, shift Follicular forward.
+  let menstruationEnd = 5;
+  if (currentPeriodEndDate && /^\d{4}-\d{2}-\d{2}$/.test(currentPeriodEndDate)) {
+    const [ey, em, ed] = currentPeriodEndDate.split("-").map(Number);
+    const endDate = new Date(Date.UTC(ey, em - 1, ed, 12, 0, 0));
+    const endDay = Math.round((endDate.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    if (endDay >= 1 && endDay <= cycleLengthDays) menstruationEnd = endDay;
+  }
+
   const ovulationDay = cycleLengthDays - 14;
   const ovulationStart = ovulationDay - 1;
   const ovulationEnd = ovulationDay + 2;
 
-  let phase: string;
+  // If she said her period is still ongoing past the default window, keep her
+  // in Menstruation (capped at day 12) until she logs an end date or new Day 1.
+  const forceMenstruation = !!periodStillActive && cycleDay <= 12;
 
-  if (cycleDay <= menstruationEnd) {
+  // periodPending is informational for prompt context — parity with the client
+  // ring; we already don't wrap, so no behavior change here.
+  void periodPending;
+
+  let phase: string;
+  if (forceMenstruation || cycleDay <= menstruationEnd) {
     phase = "Menstruation";
   } else if (cycleDay < ovulationStart) {
     phase = "Follicular";
