@@ -2719,8 +2719,30 @@ serve(async (req) => {
     // meaningful "current phase" even if a stale last_period_start lingers on the row.
     const isCycling = ((participant?.life_stage || "cycling") === "cycling") || (participant?.life_stage === "perimenopause");
     const cycleInfo = isCycling && participant?.last_period_start && participant?.cycle_length_days
-      ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
+      ? calculateCycleInfo(
+          participant.last_period_start,
+          participant.cycle_length_days,
+          participant.timezone || "UTC",
+          (participant as any).current_period_end_date ?? null,
+          !!(participant as any).period_pending_since,
+          !!(participant as any).period_still_active,
+        )
       : null;
+
+    // Overdue plausibility check — if she's run well past her expected cycle
+    // length with no new Day 1, no logged end date, and no confirmation her
+    // period is still ongoing, don't let Logan pretend it's a normal luteal day.
+    let overdueNote = "";
+    if (
+      cycleInfo &&
+      participant?.cycle_length_days &&
+      cycleInfo.cycleDay > participant.cycle_length_days + 7 &&
+      !(participant as any).current_period_end_date &&
+      !(participant as any).period_still_active
+    ) {
+      const daysLate = cycleInfo.cycleDay - participant.cycle_length_days;
+      overdueNote = `\n\nRUNTIME CONTEXT (this turn only): The user is currently on **Day ${cycleInfo.cycleDay}** of a ${participant.cycle_length_days}-day cycle — she is **${daysLate} days past** her expected next period with no new Day 1 logged and no confirmation her period is still ongoing. Do NOT provide standard luteal-phase guidance as if this is a normal cycle day. Instead: (a) acknowledge the overdue count plainly and warmly, (b) ask if her period has started (or if she's still waiting), and (c) if she wants, offer to log today (or an earlier day) as her new Day 1. Do not assume pregnancy. Do not diagnose. Just check in.`;
+    }
 
     if (isCurrentSymptomQuestion) {
       const symptomLabel = getKnownLibrarySymptomLabel(userMessage, knownLibraryNames) || "that symptom";
