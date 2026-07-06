@@ -214,7 +214,14 @@ function hasPersonalSymptomContext(text: string): boolean {
     // my [body part / state]
     /\bmy\s+(?:head|back|breasts?|chest|stomach|belly|abdomen|gut|joints?|muscles?|body|skin|period|cycle|mood|sleep|energy|focus|motivation|cravings?|bloating?|digestion|pms|hormones|uterus|ovaries|libido|bowels?|progesterone|estrogen)\b/i.test(t) ||
     // conjunction + am + experience verb (e.g., "I eat healthy and am craving")
-    /\b(?:and|but|so|yet)\s+(?:am|i['']?m)\s+(?:feeling|craving|having|getting|experiencing|dealing\s+with|going\s+through|noticing|struggling\s+with|battling)\b/i.test(t)
+    /\b(?:and|but|so|yet)\s+(?:am|i['']?m)\s+(?:feeling|craving|having|getting|experiencing|dealing\s+with|going\s+through|noticing|struggling\s+with|battling)\b/i.test(t) ||
+    // Forecast questions about her own state ("what's my energy like today",
+    // "what will my mood be like", "how's my focus going to be tomorrow") —
+    // these ask Logan for a phase-based forecast, not a symptom report, and
+    // should route to the LLM, not the generic symptom-question early return.
+    /\bwhat(?:'?s|\s+is)\s+my\s+\w+(?:\s+\w+)?\s+(?:like|going\s+to\s+be|gonna\s+be)\b/i.test(t) ||
+    /\bwhat\s+will\s+my\s+\w+(?:\s+\w+)?\s+(?:be|feel|look)\b/i.test(t) ||
+    /\bhow(?:'?s|\s+is|\s+will)\s+my\s+\w+(?:\s+\w+)?\s+(?:be|going|feel|today|tomorrow)\b/i.test(t)
   );
 }
 
@@ -2712,8 +2719,30 @@ serve(async (req) => {
     // meaningful "current phase" even if a stale last_period_start lingers on the row.
     const isCycling = ((participant?.life_stage || "cycling") === "cycling") || (participant?.life_stage === "perimenopause");
     const cycleInfo = isCycling && participant?.last_period_start && participant?.cycle_length_days
-      ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
+      ? calculateCycleInfo(
+          participant.last_period_start,
+          participant.cycle_length_days,
+          participant.timezone || "UTC",
+          (participant as any).current_period_end_date ?? null,
+          !!(participant as any).period_pending_since,
+          !!(participant as any).period_still_active,
+        )
       : null;
+
+    // Overdue plausibility check — if she's run well past her expected cycle
+    // length with no new Day 1, no logged end date, and no confirmation her
+    // period is still ongoing, don't let Logan pretend it's a normal luteal day.
+    let overdueNote = "";
+    if (
+      cycleInfo &&
+      participant?.cycle_length_days &&
+      cycleInfo.cycleDay > participant.cycle_length_days + 7 &&
+      !(participant as any).current_period_end_date &&
+      !(participant as any).period_still_active
+    ) {
+      const daysLate = cycleInfo.cycleDay - participant.cycle_length_days;
+      overdueNote = `\n\nRUNTIME CONTEXT (this turn only): The user is currently on **Day ${cycleInfo.cycleDay}** of a ${participant.cycle_length_days}-day cycle — she is **${daysLate} days past** her expected next period with no new Day 1 logged and no confirmation her period is still ongoing. Do NOT provide standard luteal-phase guidance as if this is a normal cycle day. Instead: (a) acknowledge the overdue count plainly and warmly, (b) ask if her period has started (or if she's still waiting), and (c) if she wants, offer to log today (or an earlier day) as her new Day 1. Do not assume pregnancy. Do not diagnose. Just check in.`;
+    }
 
     if (isCurrentSymptomQuestion) {
       const symptomLabel = getKnownLibrarySymptomLabel(userMessage, knownLibraryNames) || "that symptom";
@@ -2790,6 +2819,11 @@ serve(async (req) => {
     } else if (midCycleSpottingNote) {
       systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user mentioned bleeding/spotting, but based on her cycle day this is likely mid-cycle (ovulatory spotting, implantation, or breakthrough bleeding) — not her period starting. Acknowledge it gently, ask if it's heavier than usual or accompanied by cramps, and DO NOT propose a cycle reset or change her phase from this single mention.`;
     }
+    if (overdueNote) {
+      systemPrompt += overdueNote;
+    }
+
+
 
 
     // Pregnancy loss / miscarriage grief-aware mode — override tone, pause cycle talk.
@@ -3426,7 +3460,10 @@ Use this context to make your responses personally relevant. Reference their cur
 function calculateCycleInfo(
   lastPeriodStart: string,
   cycleLengthDays: number,
-  timezone: string = "UTC"
+  timezone: string = "UTC",
+  currentPeriodEndDate?: string | null,
+  periodPending?: boolean,
+  periodStillActive?: boolean,
 ): { cycleDay: number; phase: string } {
   let periodStart: Date;
   if (/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodStart)) {
@@ -3443,21 +3480,34 @@ function calculateCycleInfo(
   const diffTime = today.getTime() - periodStart.getTime();
   const daysSinceStart = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-  // Don't wrap when she's past her expected cycle length — show the running
-  // count (Day 38, 39, ...) so we can prompt her to confirm day 1. Only wrap
-  // for negative (future-dated) edge cases.
-  const cycleDay = daysSinceStart >= 0
-    ? daysSinceStart + 1
-    : ((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
+  // Never wrap into a fake next cycle — always keep the running unwrapped day
+  // count so the overdue detector can fire and Logan can prompt for a real
+  // Day-1 confirmation instead of silently pretending a new cycle started.
+  const cycleDay = daysSinceStart >= 0 ? daysSinceStart + 1 : 1;
 
-  const menstruationEnd = 5;
+  // If she reported her period ended early, shift Follicular forward.
+  let menstruationEnd = 5;
+  if (currentPeriodEndDate && /^\d{4}-\d{2}-\d{2}$/.test(currentPeriodEndDate)) {
+    const [ey, em, ed] = currentPeriodEndDate.split("-").map(Number);
+    const endDate = new Date(Date.UTC(ey, em - 1, ed, 12, 0, 0));
+    const endDay = Math.round((endDate.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    if (endDay >= 1 && endDay <= cycleLengthDays) menstruationEnd = endDay;
+  }
+
   const ovulationDay = cycleLengthDays - 14;
   const ovulationStart = ovulationDay - 1;
   const ovulationEnd = ovulationDay + 2;
 
-  let phase: string;
+  // If she said her period is still ongoing past the default window, keep her
+  // in Menstruation (capped at day 12) until she logs an end date or new Day 1.
+  const forceMenstruation = !!periodStillActive && cycleDay <= 12;
 
-  if (cycleDay <= menstruationEnd) {
+  // periodPending is informational for prompt context — parity with the client
+  // ring; we already don't wrap, so no behavior change here.
+  void periodPending;
+
+  let phase: string;
+  if (forceMenstruation || cycleDay <= menstruationEnd) {
     phase = "Menstruation";
   } else if (cycleDay < ovulationStart) {
     phase = "Follicular";
