@@ -2819,6 +2819,10 @@ serve(async (req) => {
     } else if (midCycleSpottingNote) {
       systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user mentioned bleeding/spotting, but based on her cycle day this is likely mid-cycle (ovulatory spotting, implantation, or breakthrough bleeding) — not her period starting. Acknowledge it gently, ask if it's heavier than usual or accompanied by cramps, and DO NOT propose a cycle reset or change her phase from this single mention.`;
     }
+    if (overdueNote) {
+      systemPrompt += overdueNote;
+    }
+    }
 
 
     // Pregnancy loss / miscarriage grief-aware mode — override tone, pause cycle talk.
