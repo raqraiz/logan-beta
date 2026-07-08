@@ -649,8 +649,7 @@ serve(async (req) => {
         metadata: {
           cycle_day: newCycleInfo.cycleDay,
           cycle_phase: newCycleInfo.phase,
-          has_cycle_visual: true,
-          visual_type: "cycle_circle",
+          ...cycleVisualMeta(userMessage),
           cycle_length_days: participant.cycle_length_days || 28,
           last_period_start: formattedDate,
           timezone: participant.timezone || "UTC",
@@ -1005,8 +1004,7 @@ serve(async (req) => {
               metadata: {
                 cycle_day: updatedCycleInfo.cycleDay,
                 cycle_phase: updatedCycleInfo.phase,
-                has_cycle_visual: true,
-                visual_type: "cycle_circle",
+                ...cycleVisualMeta(userMessage),
                 cycle_length_days: newLength,
                 last_period_start: participant.last_period_start,
                 timezone: participant.timezone || "UTC",
@@ -1095,8 +1093,7 @@ serve(async (req) => {
               metadata: {
                 cycle_day: updatedCycleInfo.cycleDay,
                 cycle_phase: updatedCycleInfo.phase,
-                has_cycle_visual: true,
-                visual_type: "cycle_circle",
+                ...cycleVisualMeta(userMessage),
                 cycle_length_days: participant.cycle_length_days || 28,
                 last_period_start: formattedDate,
                 timezone: participant.timezone || "UTC",
@@ -1232,8 +1229,7 @@ serve(async (req) => {
               metadata: {
                 cycle_day: restoredCycleInfo.cycleDay,
                 cycle_phase: restoredCycleInfo.phase,
-                has_cycle_visual: true,
-                visual_type: "cycle_circle",
+                ...cycleVisualMeta(userMessage),
                 cycle_length_days: participant.cycle_length_days || restoredLength || 28,
                 last_period_start: participant.last_period_start,
                 timezone: participant.timezone || "UTC",
@@ -1316,8 +1312,7 @@ serve(async (req) => {
               metadata: {
                 cycle_day: updatedCycleInfo.cycleDay,
                 cycle_phase: updatedCycleInfo.phase,
-                has_cycle_visual: true,
-                visual_type: "cycle_circle",
+                ...cycleVisualMeta(userMessage),
                 cycle_length_days: participant.cycle_length_days || 28,
                 last_period_start: formattedDate,
                 timezone: tz,
@@ -1443,7 +1438,7 @@ serve(async (req) => {
           const msg = `You're already logged as **${phaseLabel}** (Day ${currentDay}). I'm trusting your read — nothing to change.`;
           await supabase.from("chat_messages").insert({
             user_id: user.id, role: "assistant", content: msg, message_type: "text",
-            metadata: { cycle_day: currentDay, cycle_phase: phaseLabel, has_cycle_visual: true, visual_type: "cycle_circle", cycle_length_days: cycLen, last_period_start: participant.last_period_start, timezone: tz, phase_declared: phaseLabel, phase_confirmed_no_change: true }
+            metadata: { cycle_day: currentDay, cycle_phase: phaseLabel, ...cycleVisualMeta(userMessage), cycle_length_days: cycLen, last_period_start: participant.last_period_start, timezone: tz, phase_declared: phaseLabel, phase_confirmed_no_change: true }
           });
           return new Response(JSON.stringify({ success: true, message: msg }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
@@ -1480,8 +1475,7 @@ serve(async (req) => {
               metadata: {
                 cycle_day: updatedCycleInfo.cycleDay,
                 cycle_phase: updatedCycleInfo.phase,
-                has_cycle_visual: true,
-                visual_type: "cycle_circle",
+                ...cycleVisualMeta(userMessage),
                 cycle_length_days: inferredLength,
                 previous_cycle_length_days: cycLen,
                 last_period_start: participant.last_period_start,
@@ -1526,8 +1520,7 @@ serve(async (req) => {
             metadata: {
               cycle_day: updatedCycleInfo.cycleDay,
               cycle_phase: updatedCycleInfo.phase,
-              has_cycle_visual: true,
-              visual_type: "cycle_circle",
+              ...cycleVisualMeta(userMessage),
               cycle_length_days: cycLen,
               last_period_start: formattedDate,
               timezone: tz,
@@ -2307,8 +2300,7 @@ serve(async (req) => {
               content: msg,
               message_type: "text",
               metadata: {
-                has_cycle_visual: true,
-                visual_type: "cycle_circle",
+                ...cycleVisualMeta(userMessage),
                 life_stage: "postpartum",
                 postpartum_start_date: computedStartDate || participant.postpartum_start_date,
                 postpartum_update: true,
@@ -2351,8 +2343,7 @@ serve(async (req) => {
               content: msg,
               message_type: "text",
               metadata: {
-                has_cycle_visual: true,
-                visual_type: "cycle_circle",
+                ...cycleVisualMeta(userMessage),
                 life_stage: "postpartum",
                 postpartum_start_date: formattedDate,
                 postpartum_update: true,
