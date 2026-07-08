@@ -6,6 +6,28 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Suppress the big inline cycle circle card when the triggering user message
+// is long or emotionally loaded — the visual should not dominate a support moment.
+// Home tab ring / cycle data logic are untouched; only the inline chat visual is gated.
+function isEmotionalOrHeavyMessage(text: string): boolean {
+  if (!text) return false;
+  const t = text.toLowerCase();
+  const words = t.trim().split(/\s+/).filter(Boolean).length;
+  if (words > 100) return true;
+  if (/\b(worried|anxious|scared|overwhelmed|exhausted|struggling|hoping|bated breath|kinda scared|kinda worried)\b/.test(t)) return true;
+  if (/\b(postpartum|post-partum|pregnancy|pregnant|miscarriage|pregnancy loss|iud|coil)\b/.test(t)) return true;
+  return false;
+}
+
+function cycleVisualMeta(userMessage: string) {
+  if (isEmotionalOrHeavyMessage(userMessage)) {
+    return { has_cycle_visual: false, cycle_visual_suppressed_emotional: true } as const;
+  }
+  return { has_cycle_visual: true, visual_type: "cycle_circle" } as const;
+}
+
+
+
 function parseExplicitCalendarDate(dateStr: string, referenceDate = new Date()): Date | null {
   const raw = dateStr.trim().replace(/\s+/g, " ");
   if (!raw) return null;
