@@ -1562,7 +1562,12 @@ const Chat = () => {
                       {message.role === "assistant" ? (
                         <MarkdownMessage content={message.content} />
                       ) : (
-                        <p className="whitespace-pre-wrap">{message.content}</p>
+                        <p className="whitespace-pre-wrap">
+                          <HighlightedText
+                            text={message.content}
+                            query={searchOpen ? debouncedQuery : ""}
+                          />
+                        </p>
                       )}
 
                       {/* Education cards */}
