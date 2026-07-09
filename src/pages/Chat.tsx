@@ -1165,6 +1165,19 @@ const Chat = () => {
           <div className="flex items-center gap-3">
             {/* Credit balance hidden — free access during alpha */}
 
+            {effectiveTab === "ask" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSearchOpen((v) => !v)}
+                aria-label="Search chat"
+                title="Search chat"
+              >
+                <Search className="w-4 h-4" />
+              </Button>
+            )}
+
+
             <Button
               variant="ghost"
               size="sm"
