@@ -1289,6 +1289,104 @@ const Chat = () => {
       )}
 
       {effectiveTab === "ask" && (<>
+      {/* Chat search bar */}
+      {searchOpen && (() => {
+        const q = debouncedQuery.toLowerCase();
+        const searchable = messages.filter(
+          (m) => m.message_type !== "reaction" && m.message_type !== "checkin"
+        );
+        const matches = q
+          ? searchable.filter((m) => (m.content || "").toLowerCase().includes(q))
+          : [];
+        const total = matches.length;
+        const idx = total > 0 ? ((currentMatchIdx % total) + total) % total : 0;
+        const gotoMatch = (delta: number) => {
+          if (total === 0) return;
+          const next = ((idx + delta) % total + total) % total;
+          setCurrentMatchIdx(next);
+          const target = matches[next];
+          if (target) {
+            messageRefs.current[target.id]?.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
+          }
+        };
+        const closeSearch = () => {
+          setSearchOpen(false);
+          setSearchQuery("");
+          setDebouncedQuery("");
+          setCurrentMatchIdx(0);
+        };
+        return (
+          <div className="z-20 bg-card border-b border-border/50 px-4 py-2">
+            <div className="max-w-3xl mx-auto w-full flex items-center gap-2">
+              <div className="flex-1 flex items-center gap-2 rounded-full bg-background/60 border border-border/40 px-3 py-1.5">
+                <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+                <Input
+                  ref={searchInputRef}
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentMatchIdx(0);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      gotoMatch(e.shiftKey ? -1 : 1);
+                    } else if (e.key === "Escape") {
+                      closeSearch();
+                    }
+                  }}
+                  placeholder="Search your chat..."
+                  className="border-0 bg-transparent px-0 h-8 font-sans focus-visible:ring-0 focus-visible:ring-offset-0"
+                  style={{ fontFamily: "Quicksand, sans-serif" }}
+                />
+                {debouncedQuery && (
+                  <span className="text-xs text-muted-foreground shrink-0 tabular-nums">
+                    {total > 0 ? `${idx + 1}/${total}` : "0"}
+                  </span>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 shrink-0"
+                  onClick={() => gotoMatch(-1)}
+                  disabled={total === 0}
+                  aria-label="Previous match"
+                >
+                  <ChevronUp className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 shrink-0"
+                  onClick={() => gotoMatch(1)}
+                  disabled={total === 0}
+                  aria-label="Next match"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 shrink-0"
+                onClick={closeSearch}
+                aria-label="Close search"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            {debouncedQuery && total === 0 && (
+              <div className="max-w-3xl mx-auto w-full mt-2 text-xs text-muted-foreground">
+                No results for "{debouncedQuery}"
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Onboarding Progress Bar */}
       {isOnboarding && (
         <div className="z-20 flex items-center gap-2 bg-card border-b border-border/50 px-4 py-2">
