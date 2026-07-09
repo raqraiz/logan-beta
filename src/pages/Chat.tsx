@@ -1494,7 +1494,15 @@ const Chat = () => {
                   : null;
 
               return (
-                <div key={message.id} ref={isLastMessage ? lastMessageRef : null}>
+                <div
+                  key={message.id}
+                  ref={(el) => {
+                    messageRefs.current[message.id] = el;
+                    if (isLastMessage) {
+                      (lastMessageRef as any).current = el;
+                    }
+                  }}
+                >
                   {showDateSeparator && (
                     <div className="flex items-center justify-center my-4">
                       <span className="text-xs text-muted-foreground bg-background/80 px-3 py-1 rounded-full border border-border/40">
@@ -1502,15 +1510,23 @@ const Chat = () => {
                       </span>
                     </div>
                   )}
+                  {(() => {
+                    const q = debouncedQuery.toLowerCase();
+                    const isMatch =
+                      !!q && (message.content || "").toLowerCase().includes(q);
+                    const searching = searchOpen && !!q;
+                    return (
                   <div
-                    className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                    className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} ${
+                      searching && !isMatch ? "opacity-40" : ""
+                    } transition-opacity`}
                   >
                     <div
                       className={`relative max-w-[85%] rounded-2xl px-4 py-3 ${
                         message.role === "user"
                           ? "bg-primary text-primary-foreground"
                           : "bg-card border border-border"
-                      }`}
+                      } ${searching && isMatch ? "ring-2 ring-primary" : ""}`}
                     >
                       {/* Cycle visual first for insight messages */}
                       {message.metadata?.has_cycle_visual && message.metadata?.cycle_day && message.metadata?.cycle_phase && (
