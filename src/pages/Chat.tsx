@@ -1677,6 +1677,9 @@ const Chat = () => {
                       </div>
                     </div>
                   </div>
+                  );
+                  })()}
+
 
                   {/* Interactive inputs for onboarding */}
                   {showInteractiveInput && inputType === "symptom_picker" && message.metadata?.symptom_categories && (
