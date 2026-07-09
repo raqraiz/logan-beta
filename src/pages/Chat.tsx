@@ -158,6 +158,25 @@ const Chat = () => {
   const [activeTab, setActiveTab] = useState<TabId>("ask");
   const [visibleStarters, setVisibleStarters] = useState<string[]>([]);
   const [usedStarters, setUsedStarters] = useState<string[]>([]);
+
+  // Chat search
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [currentMatchIdx, setCurrentMatchIdx] = useState(0);
+  const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (searchOpen) {
+      setTimeout(() => searchInputRef.current?.focus(), 50);
+    }
+  }, [searchOpen]);
   
   const { user, loading: authLoading, signOut } = useAuth();
   usePresence(user?.id, user?.email || undefined, user?.user_metadata?.full_name);
