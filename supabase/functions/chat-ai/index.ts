@@ -233,6 +233,7 @@ function getKnownLibrarySymptomLabel(text: string, knownLibraryNames: string[]):
       .split(" ")
       .find((token) => token.length >= 4 && !isSymptomStopword(token) && normalizedText.includes(` ${token} `));
     if (strongToken) return strongToken;
+  }
 
   return null;
 }
