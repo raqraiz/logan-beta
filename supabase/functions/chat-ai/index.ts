@@ -161,6 +161,21 @@ const SYMPTOM_KEYWORDS: { name: string; patterns: RegExp[] }[] = [
   { name: "Thirst", patterns: [/\bvery thirsty\b/i, /\bso thirsty\b/i, /\bcan'?t stop drinking\b/i] },
 ];
 
+// Stopwords that must never be treated as symptom names, even if a community
+// library entry happens to contain them or a token match would otherwise fire.
+// "about" appears in nearly every conversational question ("what about X",
+// "how about Y", "what's that about") and was causing the symptom-question
+// early return to render "About can sometimes make sense..." — invalid output.
+const SYMPTOM_STOPWORDS = new Set<string>([
+  "about", "it", "this", "that", "things", "stuff", "something", "anything",
+  "today", "phase", "cycle", "period", "body", "food", "mentally", "generally",
+]);
+
+function isSymptomStopword(name: string | null | undefined): boolean {
+  if (!name) return true;
+  return SYMPTOM_STOPWORDS.has(String(name).trim().toLowerCase());
+}
+
 function detectSymptomMentions(text: string): { name: string; severity: number }[] {
   const detected: { name: string; severity: number }[] = [];
   for (const { name, patterns } of SYMPTOM_KEYWORDS) {
@@ -187,6 +202,7 @@ function mentionsKnownLibrarySymptom(text: string, knownLibraryNames: string[]):
   return knownLibraryNames.some((rawName) => {
     const normalizedName = normalizeSymptomText(String(rawName || ""));
     if (!normalizedName) return false;
+    if (isSymptomStopword(normalizedName)) return false;
 
     // Exact multi-word library names, e.g. "mood swings".
     if (normalizedText.includes(` ${normalizedName} `)) return true;
@@ -194,27 +210,34 @@ function mentionsKnownLibrarySymptom(text: string, knownLibraryNames: string[]):
     // Community names may be stored as variants like "Sudden Rage" while the
     // user asks "what about rage". For question-framing only, allow a strong
     // single-token match so every known symptom library term gets the same veto.
-    const strongTokens = normalizedName.split(" ").filter((token) => token.length >= 4);
+    const strongTokens = normalizedName
+      .split(" ")
+      .filter((token) => token.length >= 4 && !isSymptomStopword(token));
     return strongTokens.some((token) => normalizedText.includes(` ${token} `));
   });
 }
 
 function getKnownLibrarySymptomLabel(text: string, knownLibraryNames: string[]): string | null {
   const detected = detectSymptomMentions(text);
-  if (detected.length > 0) return detected[0].name.toLowerCase();
+  if (detected.length > 0 && !isSymptomStopword(detected[0].name)) {
+    return detected[0].name.toLowerCase();
+  }
 
   const normalizedText = ` ${normalizeSymptomText(text)} `;
   for (const rawName of knownLibraryNames) {
     const normalizedName = normalizeSymptomText(String(rawName || ""));
-    if (!normalizedName) continue;
+    if (!normalizedName || isSymptomStopword(normalizedName)) continue;
     if (normalizedText.includes(` ${normalizedName} `)) return normalizedName;
 
-    const strongToken = normalizedName.split(" ").find((token) => token.length >= 4 && normalizedText.includes(` ${token} `));
+    const strongToken = normalizedName
+      .split(" ")
+      .find((token) => token.length >= 4 && !isSymptomStopword(token) && normalizedText.includes(` ${token} `));
     if (strongToken) return strongToken;
   }
 
   return null;
 }
+
 
 function isSymptomQuestionOrHypothetical(text: string): boolean {
   const t = text.trim();
@@ -2757,8 +2780,14 @@ serve(async (req) => {
       overdueNote = `\n\nRUNTIME CONTEXT (this turn only): The user is currently on **Day ${cycleInfo.cycleDay}** of a ${participant.cycle_length_days}-day cycle — she is **${daysLate} days past** her expected next period with no new Day 1 logged and no confirmation her period is still ongoing. Do NOT provide standard luteal-phase guidance as if this is a normal cycle day. Instead: (a) acknowledge the overdue count plainly and warmly, (b) ask if her period has started (or if she's still waiting), and (c) if she wants, offer to log today (or an earlier day) as her new Day 1. Do not assume pregnancy. Do not diagnose. Just check in.`;
     }
 
-    if (isCurrentSymptomQuestion) {
-      const symptomLabel = getKnownLibrarySymptomLabel(userMessage, knownLibraryNames) || "that symptom";
+    const earlyReturnSymptomLabel = isCurrentSymptomQuestion
+      ? getKnownLibrarySymptomLabel(userMessage, knownLibraryNames)
+      : null;
+    // If we couldn't extract a real symptom (or the extracted token is a
+    // stopword like "about"/"it"/"that"), do NOT render the template — fall
+    // through to the LLM instead. A blank/invalid template is worse than none.
+    if (isCurrentSymptomQuestion && earlyReturnSymptomLabel && !isSymptomStopword(earlyReturnSymptomLabel)) {
+      const symptomLabel = earlyReturnSymptomLabel;
       const phaseLine = cycleInfo
         ? `On **Day ${cycleInfo.cycleDay}**, **${symptomLabel}** can sometimes make sense through the lens of **${cycleInfo.phase}** physiology, but your question alone does not mean it's happening today.`
         : `**${symptomLabel}** can show up for a lot of reasons, but your question alone does not mean it's happening today.`;
