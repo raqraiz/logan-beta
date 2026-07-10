@@ -233,24 +233,10 @@ function getKnownLibrarySymptomLabel(text: string, knownLibraryNames: string[]):
       .split(" ")
       .find((token) => token.length >= 4 && !isSymptomStopword(token) && normalizedText.includes(` ${token} `));
     if (strongToken) return strongToken;
-  }
-
-function getKnownLibrarySymptomLabel(text: string, knownLibraryNames: string[]): string | null {
-  const detected = detectSymptomMentions(text);
-  if (detected.length > 0) return detected[0].name.toLowerCase();
-
-  const normalizedText = ` ${normalizeSymptomText(text)} `;
-  for (const rawName of knownLibraryNames) {
-    const normalizedName = normalizeSymptomText(String(rawName || ""));
-    if (!normalizedName) continue;
-    if (normalizedText.includes(` ${normalizedName} `)) return normalizedName;
-
-    const strongToken = normalizedName.split(" ").find((token) => token.length >= 4 && normalizedText.includes(` ${token} `));
-    if (strongToken) return strongToken;
-  }
 
   return null;
 }
+
 
 function isSymptomQuestionOrHypothetical(text: string): boolean {
   const t = text.trim();
