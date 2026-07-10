@@ -202,6 +202,7 @@ function mentionsKnownLibrarySymptom(text: string, knownLibraryNames: string[]):
   return knownLibraryNames.some((rawName) => {
     const normalizedName = normalizeSymptomText(String(rawName || ""));
     if (!normalizedName) return false;
+    if (isSymptomStopword(normalizedName)) return false;
 
     // Exact multi-word library names, e.g. "mood swings".
     if (normalizedText.includes(` ${normalizedName} `)) return true;
@@ -209,10 +210,30 @@ function mentionsKnownLibrarySymptom(text: string, knownLibraryNames: string[]):
     // Community names may be stored as variants like "Sudden Rage" while the
     // user asks "what about rage". For question-framing only, allow a strong
     // single-token match so every known symptom library term gets the same veto.
-    const strongTokens = normalizedName.split(" ").filter((token) => token.length >= 4);
+    const strongTokens = normalizedName
+      .split(" ")
+      .filter((token) => token.length >= 4 && !isSymptomStopword(token));
     return strongTokens.some((token) => normalizedText.includes(` ${token} `));
   });
 }
+
+function getKnownLibrarySymptomLabel(text: string, knownLibraryNames: string[]): string | null {
+  const detected = detectSymptomMentions(text);
+  if (detected.length > 0 && !isSymptomStopword(detected[0].name)) {
+    return detected[0].name.toLowerCase();
+  }
+
+  const normalizedText = ` ${normalizeSymptomText(text)} `;
+  for (const rawName of knownLibraryNames) {
+    const normalizedName = normalizeSymptomText(String(rawName || ""));
+    if (!normalizedName || isSymptomStopword(normalizedName)) continue;
+    if (normalizedText.includes(` ${normalizedName} `)) return normalizedName;
+
+    const strongToken = normalizedName
+      .split(" ")
+      .find((token) => token.length >= 4 && !isSymptomStopword(token) && normalizedText.includes(` ${token} `));
+    if (strongToken) return strongToken;
+  }
 
 function getKnownLibrarySymptomLabel(text: string, knownLibraryNames: string[]): string | null {
   const detected = detectSymptomMentions(text);
