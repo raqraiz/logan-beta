@@ -161,6 +161,21 @@ const SYMPTOM_KEYWORDS: { name: string; patterns: RegExp[] }[] = [
   { name: "Thirst", patterns: [/\bvery thirsty\b/i, /\bso thirsty\b/i, /\bcan'?t stop drinking\b/i] },
 ];
 
+// Stopwords that must never be treated as symptom names, even if a community
+// library entry happens to contain them or a token match would otherwise fire.
+// "about" appears in nearly every conversational question ("what about X",
+// "how about Y", "what's that about") and was causing the symptom-question
+// early return to render "About can sometimes make sense..." — invalid output.
+const SYMPTOM_STOPWORDS = new Set<string>([
+  "about", "it", "this", "that", "things", "stuff", "something", "anything",
+  "today", "phase", "cycle", "period", "body", "food", "mentally", "generally",
+]);
+
+function isSymptomStopword(name: string | null | undefined): boolean {
+  if (!name) return true;
+  return SYMPTOM_STOPWORDS.has(String(name).trim().toLowerCase());
+}
+
 function detectSymptomMentions(text: string): { name: string; severity: number }[] {
   const detected: { name: string; severity: number }[] = [];
   for (const { name, patterns } of SYMPTOM_KEYWORDS) {
