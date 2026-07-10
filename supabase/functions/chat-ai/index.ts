@@ -2780,38 +2780,6 @@ serve(async (req) => {
       overdueNote = `\n\nRUNTIME CONTEXT (this turn only): The user is currently on **Day ${cycleInfo.cycleDay}** of a ${participant.cycle_length_days}-day cycle — she is **${daysLate} days past** her expected next period with no new Day 1 logged and no confirmation her period is still ongoing. Do NOT provide standard luteal-phase guidance as if this is a normal cycle day. Instead: (a) acknowledge the overdue count plainly and warmly, (b) ask if her period has started (or if she's still waiting), and (c) if she wants, offer to log today (or an earlier day) as her new Day 1. Do not assume pregnancy. Do not diagnose. Just check in.`;
     }
 
-    const earlyReturnSymptomLabel = isCurrentSymptomQuestion
-      ? getKnownLibrarySymptomLabel(userMessage, knownLibraryNames)
-      : null;
-    // If we couldn't extract a real symptom (or the extracted token is a
-    // stopword like "about"/"it"/"that"), do NOT render the template — fall
-    // through to the LLM instead. A blank/invalid template is worse than none.
-    if (isCurrentSymptomQuestion && earlyReturnSymptomLabel && !isSymptomStopword(earlyReturnSymptomLabel)) {
-      const symptomLabel = earlyReturnSymptomLabel;
-      const phaseLine = cycleInfo
-        ? `On **Day ${cycleInfo.cycleDay}**, **${symptomLabel}** can sometimes make sense through the lens of **${cycleInfo.phase}** physiology, but your question alone does not mean it's happening today.`
-        : `**${symptomLabel}** can show up for a lot of reasons, but your question alone does not mean it's happening today.`;
-      const msg = `${phaseLine} If you're asking generally, I can explain what it tends to feel like and what usually drives it.`;
-
-      await supabase.from("chat_messages").insert({
-        user_id: user.id,
-        role: "assistant",
-        content: msg,
-        message_type: "text",
-        metadata: cycleInfo ? {
-          cycle_day: cycleInfo.cycleDay,
-          cycle_phase: cycleInfo.phase,
-          cycle_length_days: participant?.cycle_length_days || 28,
-          last_period_start: participant?.last_period_start || null,
-          timezone: participant?.timezone || "UTC",
-        } : {},
-      });
-
-      return new Response(
-        JSON.stringify({ success: true, message: msg, cycleInfo, creditBalance: null }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     if (directSymptomLookupResponse) {
       const directMeta: Record<string, unknown> = cycleInfo ? {
