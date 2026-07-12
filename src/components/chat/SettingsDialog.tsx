@@ -308,6 +308,34 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
 
 
         <div className="border-t border-border/50 pt-4">
+          <Label htmlFor="timezone" className="text-sm font-medium mb-2 block">Timezone</Label>
+          <p className="text-xs text-muted-foreground mb-3">
+            Used to calculate your cycle day accurately. Auto-detected from your device — only change this if it's wrong.
+          </p>
+          <div className="flex gap-2">
+            <Input
+              id="timezone"
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              placeholder="e.g. America/New_York"
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                try {
+                  const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                  if (detected) setTimezone(detected);
+                } catch { /* noop */ }
+              }}
+            >
+              Detect
+            </Button>
+          </div>
+        </div>
+
+        <div className="border-t border-border/50 pt-4">
           <Label className="text-sm font-medium mb-2 block">Import history</Label>
           <p className="text-xs text-muted-foreground mb-3">
             Pull months of cycles, symptoms, sleep, and workouts from Apple Health or any period tracker (Clue, Flo, Natural Cycles).
