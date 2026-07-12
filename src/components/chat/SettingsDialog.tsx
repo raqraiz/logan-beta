@@ -75,7 +75,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
     (async () => {
       const { data } = await supabase
         .from("participants")
-        .select("postpartum_active, postpartum_start_date, loss_date, due_date, pregnancy_lmp")
+        .select("postpartum_active, postpartum_start_date, loss_date, due_date, pregnancy_lmp, timezone")
         .eq("email", userEmail)
         .maybeSingle();
       if (data) {
@@ -84,6 +84,11 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
         setLossDate((data as any).loss_date ?? "");
         setDueDate((data as any).due_date ?? "");
         setPregnancyLmp((data as any).pregnancy_lmp ?? "");
+        let tz = (data as any).timezone ?? "";
+        if (!tz) {
+          try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch { tz = ""; }
+        }
+        setTimezone(tz);
       }
     })();
   }, [open, userEmail, currentLifeStage]);
