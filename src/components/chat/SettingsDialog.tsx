@@ -109,6 +109,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
     }
     setSaving(true);
     const payload: Record<string, unknown> = { life_stage: stage };
+    if (timezone && timezone.trim()) payload.timezone = timezone.trim();
 
     if (stage === "postpartum") {
       payload.postpartum_active = false;
