@@ -44,6 +44,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
   const [lossDate, setLossDate] = useState<string>("");
   const [dueDate, setDueDate] = useState<string>("");
   const [pregnancyLmp, setPregnancyLmp] = useState<string>("");
+  const [timezone, setTimezone] = useState<string>("");
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
 
