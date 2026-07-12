@@ -2751,6 +2751,20 @@ serve(async (req) => {
       }).catch(() => {});
     } catch (_) { /* no-op */ }
 
+    // Authoritative refetch: cycle-critical fields must come from the live DB
+    // row, not any in-request patched snapshot. Fixes stale cycleDay/phase when
+    // upstream mutation paths spread-patch `participant` without a full refetch,
+    // or when a concurrent writer (HomeTab override, insight gen) has updated
+    // the row mid-request. Read pattern only — no cycle calc changes.
+    if (participant?.id) {
+      const { data: freshParticipant } = await supabase
+        .from("participants")
+        .select("*")
+        .eq("id", participant.id)
+        .maybeSingle();
+      if (freshParticipant) participant = freshParticipant;
+    }
+
     // Only compute cycle info for actively cycling users — postpartum/menopause have no
     // meaningful "current phase" even if a stale last_period_start lingers on the row.
     const isCycling = ((participant?.life_stage || "cycling") === "cycling") || (participant?.life_stage === "perimenopause");
