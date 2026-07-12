@@ -658,10 +658,27 @@ const Chat = () => {
         setPregnancyLmp((data as any).pregnancy_lmp ?? null);
       }
       if (data) {
+        let effectiveTimezone: string | null = data.timezone ?? null;
+        // Silent one-time backfill: if the user has no timezone set, detect and persist.
+        if (!effectiveTimezone) {
+          try {
+            const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if (detected) {
+              const { error: tzErr } = await supabase
+                .from("participants")
+                .update({ timezone: detected })
+                .eq("email", user.email!)
+                .is("timezone", null);
+              if (!tzErr) effectiveTimezone = detected;
+            }
+          } catch (e) {
+            // Non-fatal — cycle logic falls back to browser tz elsewhere.
+          }
+        }
         setParticipantCycle({
           lastPeriodStart: data.last_period_start ?? null,
           cycleLengthDays: data.cycle_length_days ?? null,
-          timezone: data.timezone ?? null,
+          timezone: effectiveTimezone,
           currentPeriodEndDate: (data as any).current_period_end_date ?? null,
           periodPendingSince: (data as any).period_pending_since ?? null,
           periodStillActive: !!(data as any).period_still_active,
