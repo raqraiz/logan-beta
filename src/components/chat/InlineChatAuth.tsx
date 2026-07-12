@@ -86,6 +86,9 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
 
     try {
       if (isSignUp) {
+        const detectedTimezone = (() => {
+          try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch { return null; }
+        })();
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
@@ -95,6 +98,7 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
               full_name: fullName.trim(),
               consent_given: true,
               consent_given_at: new Date().toISOString(),
+              timezone: detectedTimezone,
             },
           },
         });
