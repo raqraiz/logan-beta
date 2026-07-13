@@ -33,6 +33,7 @@ interface Props {
   lastPeriodStart?: string;
   cycleLengthDays: number;
   isNonCycling: boolean;
+  lifeStage?: string;
 }
 
 const SYMPTOM_PALETTE = [
@@ -73,6 +74,7 @@ export function AllSymptomsChart({
   lastPeriodStart,
   cycleLengthDays,
   isNonCycling,
+  lifeStage,
 }: Props) {
   const [showHormones, setShowHormones] = useState(false);
 
@@ -435,6 +437,12 @@ export function AllSymptomsChart({
           })}
         </div>
       </div>
+
+      {lifeStage === "irregular" && (
+        <p className="px-4 pb-2 pt-1 text-[11px] text-muted-foreground/70">
+          Phase estimates are approximate — your cycle may not follow a predictable pattern.
+        </p>
+      )}
 
       {/* Hormone toggle */}
       <div className="px-4 pb-3 pt-1 border-t border-white/5 flex items-center justify-between">

@@ -31,6 +31,7 @@ interface DischargeTrackerWidgetProps {
   cycleLengthDays?: number;
   isNonCycling?: boolean;
   onLogged?: () => void;
+  lifeStage?: string;
 }
 
 type FertilityCue = "low" | "rising" | "peak" | "alert";
@@ -177,6 +178,7 @@ export function DischargeTrackerWidget({
   cycleLengthDays,
   isNonCycling,
   onLogged,
+  lifeStage,
 }: DischargeTrackerWidgetProps) {
   const [saving, setSaving] = useState(false);
   const [recent, setRecent] = useState<{ date: string; key: string }[]>([]);
@@ -367,13 +369,18 @@ export function DischargeTrackerWidget({
                     <X className="w-2.5 h-2.5 text-muted-foreground/30" />
                   )}
                 </div>
-                <span className="text-[9px] text-muted-foreground/60">
+            <span className="text-[9px] text-muted-foreground/60">
                   {format(d, "EEEEEE")}
                 </span>
               </div>
             );
           })}
         </div>
+        {lifeStage === "irregular" && (
+          <p className="text-[11px] text-muted-foreground/70 pt-2">
+            Phase estimates are approximate — your cycle may not follow a predictable pattern.
+          </p>
+        )}
       </div>
     </div>
   );

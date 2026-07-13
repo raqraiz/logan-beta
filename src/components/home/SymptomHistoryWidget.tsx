@@ -30,6 +30,7 @@ interface Props {
   lastPeriodStart?: string;
   cycleLengthDays?: number;
   isNonCycling?: boolean;
+  lifeStage?: string;
 }
 
 const SEVERITY_COLORS = [
@@ -41,7 +42,7 @@ const SEVERITY_COLORS = [
   "bg-red-400/70",
 ];
 
-export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays, isNonCycling }: Props) {
+export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays, isNonCycling, lifeStage }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<SymptomLog[]>([]);
@@ -150,6 +151,11 @@ export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays,
                   {latestLog && ` · last ${format(new Date(latestLog.logged_at), "MMM d")}`}
                 </span>
               </div>
+              {lifeStage === "irregular" && (
+                <p className="text-[11px] text-muted-foreground/70 pt-1">
+                  Phase estimates are approximate — your cycle may not follow a predictable pattern.
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -163,6 +169,7 @@ export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays,
           lastPeriodStart={lastPeriodStart}
           cycleLengthDays={cycleLengthDays}
           isNonCycling={!!isNonCycling}
+          lifeStage={lifeStage}
         />
       )}
     </>

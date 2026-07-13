@@ -25,6 +25,7 @@ interface Props {
   lastPeriodStart?: string;
   cycleLengthDays: number;
   isNonCycling: boolean;
+  lifeStage?: string;
 }
 
 const QUICK_INTENSITIES = [0, 1, 2, 3, 4, 5];
@@ -36,6 +37,7 @@ export function CycleCorrelationsWidget({
   lastPeriodStart,
   cycleLengthDays,
   isNonCycling,
+  lifeStage,
 }: Props) {
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -213,6 +215,11 @@ export function CycleCorrelationsWidget({
               <Plus className="w-3.5 h-3.5" />
               Track something else
             </Button>
+            {lifeStage === "irregular" && (
+              <p className="text-[11px] text-muted-foreground/70 px-1">
+                Phase estimates are approximate — your cycle may not follow a predictable pattern.
+              </p>
+            )}
           </div>
         )}
       </div>

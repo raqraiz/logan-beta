@@ -41,6 +41,7 @@ interface SymptomHistoryProps {
   lastPeriodStart?: string;
   cycleLengthDays?: number;
   isNonCycling?: boolean;
+  lifeStage?: string;
 }
 
 const SEVERITY_COLORS = [
@@ -61,6 +62,7 @@ export function SymptomHistory({
   lastPeriodStart,
   cycleLengthDays = 28,
   isNonCycling = false,
+  lifeStage,
 }: SymptomHistoryProps) {
   const [logs, setLogs] = useState<SymptomLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -319,6 +321,7 @@ export function SymptomHistory({
                               lastPeriodStart={lastPeriodStart}
                               cycleLengthDays={cycleLengthDays}
                               isNonCycling={isNonCycling}
+                              lifeStage={lifeStage}
                             />
                           </div>
                         )}
@@ -332,6 +335,7 @@ export function SymptomHistory({
                   lastPeriodStart={lastPeriodStart}
                   cycleLengthDays={cycleLengthDays}
                   isNonCycling={isNonCycling}
+                  lifeStage={lifeStage}
                 />
               </div>
             )}
