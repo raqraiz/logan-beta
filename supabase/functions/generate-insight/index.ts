@@ -695,6 +695,7 @@ RULES:
 - For pregnancy: match the EXACT trimester guidance above. Center pregnancy-specific body, mind, nutrition, and prep. NEVER use menopause, perimenopause, or postpartum framing. NEVER reference cycle phases or ovulation.
 - For pregnancy loss: lead with grief-aware witnessing. Never rush to cycle tracking or "next steps." NEVER use cycle-phase, menopause, or generic postpartum framing.
 - NEVER reference cycle phases, ovulation, or period timing for menopause, postpartum, pregnant, or pregnancy_loss users (perimenopause users still cycle, so cycle references are fine for them).
+- For irregular / hormonal BC: never use menopause, perimenopause, postpartum, or pregnancy framing. Do NOT confidently assign a cycle phase. Focus on steady-state levers (sleep, protein, strength, stress, micronutrients B6/B12/magnesium/zinc/folate).
 - NEVER assume breastfeeding status unless the user has explicitly mentioned it.
 
 Generate a JSON object:
