@@ -650,6 +650,7 @@ function buildNonCyclingInsightPrompt(
     : lifeStage === "perimenopause" ? "Perimenopause"
     : lifeStage === "pregnant" ? "Pregnancy"
     : lifeStage === "pregnancy_loss" ? "Pregnancy Loss"
+    : lifeStage === "irregular" ? "Irregular / Hormonal BC"
     : "Menopause";
   const stageContext =
     lifeStage === "postpartum"
@@ -660,7 +661,9 @@ function buildNonCyclingInsightPrompt(
           ? `${firstName} is **pregnant**${timelineContext ? ` — ${timelineContext}` : ""}. Phase-specific guidance: ${pregnancyPhaseGuidance} DO NOT reference cycle phases, ovulation, or period timing. DO NOT use menopause, perimenopause, or postpartum framing. Center pregnancy body-changes, emotional shifts, nutrition, sleep, and mental preparation for the specific trimester.`
           : lifeStage === "pregnancy_loss"
             ? `${firstName} is navigating **pregnancy loss**. Lead with grief-aware, empathetic witnessing. Do NOT rush to cycle tracking, milestones, or "silver linings." Do NOT reference ovulation, phases, or menopause framing. Acknowledge the loss, name that the body is also recovering (hormones drop, bleeding, milk changes possible), and offer gentle presence — not fixes.`
-            : `${firstName} is navigating menopause. Estrogen and progesterone are declining. Focus on bone health, sleep quality, mood stability, and managing symptoms like hot flashes or brain fog.`;
+            : lifeStage === "irregular"
+              ? `${firstName} is on **hormonal birth control or has an irregular cycle** (IUD, pill, implant, PCOS, etc.). Natural cycle phases don't apply cleanly — hormones are being modulated externally or unpredictably. DO NOT use menopause, perimenopause, postpartum, or pregnancy framing. DO NOT confidently quote a specific cycle phase. Focus on steady-state levers: sleep, protein, strength, stress, hydration, and micronutrients hormonal BC can deplete (B6, B12, magnesium, zinc, folate). Acknowledge symptoms in terms of daily patterns, not phase predictions.`
+              : `${firstName} is navigating menopause. Estrogen and progesterone are declining. Focus on bone health, sleep quality, mood stability, and managing symptoms like hot flashes or brain fog.`;
 
 
   return `You are Logan. You're ${firstName}'s companion through her ${stageLabel.toLowerCase()} journey. You're not clinical — you're the friend who just gets it.
