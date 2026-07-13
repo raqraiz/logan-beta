@@ -1567,7 +1567,7 @@ const Chat = () => {
                               cycleDay={message.metadata.cycle_day}
                               phase={message.metadata.cycle_phase}
                               cycleLengthDays={message.metadata.cycle_length_days || 28}
-                              lifeStage={lifeStage === "irregular" ? "irregular" : "cycling"}
+                              lifeStage="cycling"
                               postpartumStartDate={postpartumStartDate || undefined}
                               postpartumActive={postpartumActive && !!postpartumStartDate}
                             />

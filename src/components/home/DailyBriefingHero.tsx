@@ -115,7 +115,7 @@ export function DailyBriefingHero({
   const isSteadyByPill = lifeStage === "irregular";
   const isLoss = lifeStage === "pregnancy_loss";
   const isPregnant = lifeStage === "pregnant";
-  const isNonCycling = (lifeStage && (lifeStage === "postpartum" || lifeStage === "menopause" || lifeStage === "pregnancy_loss" || lifeStage === "pregnant")) || isSteadyByPill;
+  const isNonCycling = !!lifeStage && (lifeStage === "postpartum" || lifeStage === "menopause" || lifeStage === "pregnancy_loss" || lifeStage === "pregnant");
   const phaseText = isLoss ? "text-rose-300" : isPregnant ? "text-emerald-300" : (PHASE_TEXT[phase] || "text-primary");
   const phaseBg = isLoss ? "bg-rose-300/15" : isPregnant ? "bg-emerald-300/15" : (PHASE_BG[phase] || "bg-primary/15");
   const phaseAccent = isLoss
