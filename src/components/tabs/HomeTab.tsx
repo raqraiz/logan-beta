@@ -477,7 +477,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   const isIrregular = cycleData.lifeStage === "irregular";
   const isLoss = cycleData.lifeStage === "pregnancy_loss";
   const isPregnant = cycleData.lifeStage === "pregnant";
-  const isNonCycling = cycleData.lifeStage === "postpartum" || cycleData.lifeStage === "menopause" || isLoss || isPregnant || isIrregular;
+  const isNonCycling = cycleData.lifeStage === "postpartum" || cycleData.lifeStage === "menopause" || isLoss || isPregnant;
   const stagePhase = isNonCycling
     ? (cycleData.lifeStage === "postpartum"
         ? "Postpartum"
@@ -485,9 +485,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           ? "Menopause"
           : isLoss
             ? "Recovery"
-            : isPregnant
-              ? "Pregnant"
-              : "Steady")
+            : "Pregnant")
     : cycleData.phase;
 
   // Helper to get life-stage-aware tips
