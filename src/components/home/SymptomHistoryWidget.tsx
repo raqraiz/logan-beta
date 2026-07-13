@@ -42,7 +42,7 @@ const SEVERITY_COLORS = [
   "bg-red-400/70",
 ];
 
-export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays, isNonCycling }: Props) {
+export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays, isNonCycling, lifeStage }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<SymptomLog[]>([]);
