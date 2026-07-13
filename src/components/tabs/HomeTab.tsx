@@ -707,6 +707,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
               lastPeriodStart={cycleData.lastPeriodStart}
               cycleLengthDays={cycleData.cycleLengthDays}
               isNonCycling={!!isNonCycling}
+              lifeStage={cycleData.lifeStage}
             />
           </div>
         ) : null;
@@ -726,6 +727,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
                   lastPeriodStart={cycleData.lastPeriodStart}
                   cycleLengthDays={cycleData.cycleLengthDays}
                   isNonCycling={!!isNonCycling}
+                  lifeStage={cycleData.lifeStage}
                 />
               </div>
             </div>
@@ -754,6 +756,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
               lastPeriodStart={cycleData.lastPeriodStart}
               cycleLengthDays={cycleData.cycleLengthDays}
               isNonCycling={!!isNonCycling}
+              lifeStage={cycleData.lifeStage}
             />
           </div>
         ) : null;
