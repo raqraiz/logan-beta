@@ -1592,7 +1592,7 @@ const Chat = () => {
                         <div className="mt-3"><CycleBasicsCard /></div>
                       )}
                       {message.metadata?.visual_type === "education_hormones" && (
-                        <div className="mt-3"><HormoneBasicsCard /></div>
+                        <div className="mt-3"><HormoneBasicsCard lifeStage={lifeStage} /></div>
                       )}
                       {message.metadata?.visual_type === "education_symptoms" && (
                         <div className="mt-3"><SymptomExplainerCard /></div>

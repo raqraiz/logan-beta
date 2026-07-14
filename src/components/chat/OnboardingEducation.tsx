@@ -152,7 +152,16 @@ export function CycleBasicsCard() {
 // 2. HORMONE TIMELINE — Annotated chart with labeled peaks + crossover
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function HormoneBasicsCard() {
+type HormoneLifeStage =
+  | "cycling"
+  | "irregular"
+  | "postpartum"
+  | "menopause"
+  | "perimenopause"
+  | "pregnancy_loss"
+  | "pregnant";
+
+export function HormoneBasicsCard({ lifeStage = "cycling" }: { lifeStage?: HormoneLifeStage } = {}) {
   const [animate, setAnimate] = useState(false);
   const [hoveredHormone, setHoveredHormone] = useState<string | null>(null);
 
@@ -160,6 +169,23 @@ export function HormoneBasicsCard() {
     const t = setTimeout(() => setAnimate(true), 300);
     return () => clearTimeout(t);
   }, []);
+
+  // Skip entirely for pregnancy states — hormone cycle graph is not relevant.
+  if (lifeStage === "pregnant" || lifeStage === "pregnancy_loss") {
+    return null;
+  }
+
+  // Menopause / perimenopause — declining, erratic hormones, no phase bands.
+  if (lifeStage === "menopause" || lifeStage === "perimenopause") {
+    return <DecliningHormonesCard animate={animate} />;
+  }
+
+  const stageNote =
+    lifeStage === "irregular"
+      ? "Your hormones follow a similar pattern, but the timing is less predictable."
+      : lifeStage === "postpartum"
+      ? "Your hormones are rebuilding — this pattern will return as your cycle regulates."
+      : null;
 
   const W = 280, H = 100;
   const pad = { top: 12, right: 10, bottom: 22, left: 10 };
@@ -298,9 +324,100 @@ export function HormoneBasicsCard() {
       <p className="text-xs text-muted-foreground leading-relaxed">
         These two hormones rise and fall every cycle. When they shift, so does your mood, energy, and focus. That's not random — it's biology you can learn to read.
       </p>
+
+      {stageNote && (
+        <p className="text-[11px] text-muted-foreground/80 leading-relaxed italic border-t border-border/40 pt-2">
+          {stageNote}
+        </p>
+      )}
     </div>
   );
 }
+
+// Declining/erratic hormones graph for menopause & perimenopause.
+function DecliningHormonesCard({ animate }: { animate: boolean }) {
+  const W = 280, H = 100;
+  const pad = { top: 12, right: 10, bottom: 22, left: 10 };
+
+  return (
+    <div className="rounded-xl bg-card border border-border/50 p-4 space-y-3 animate-fade-in">
+      <p className="text-xs font-semibold text-primary uppercase tracking-wider">How your hormones are shifting</p>
+
+      <div className="relative overflow-hidden rounded-lg bg-muted/10 border border-border/30">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 140 }}>
+          {/* Grid lines */}
+          {[0.25, 0.5, 0.75].map(frac => (
+            <line
+              key={frac}
+              x1={pad.left} y1={pad.top + (H - pad.top - pad.bottom) * (1 - frac)}
+              x2={W - pad.right} y2={pad.top + (H - pad.top - pad.bottom) * (1 - frac)}
+              stroke="hsl(210, 10%, 20%)" strokeWidth="0.3" strokeDasharray="3,3"
+            />
+          ))}
+
+          {/* Estrogen — erratic decline (jagged downward wave) */}
+          <path
+            d="M10,22 C30,18 40,42 60,30 C80,18 95,52 115,38 C135,26 150,60 170,52 C190,44 210,68 235,62 C255,58 265,72 270,70"
+            fill="none"
+            stroke="hsl(152, 60%, 52%)"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            className="transition-all duration-700"
+            style={{ strokeDasharray: 500, strokeDashoffset: animate ? 0 : 500 }}
+          />
+
+          {/* Progesterone — smoother, steadier decline */}
+          <path
+            d="M10,32 C50,36 90,44 130,52 C170,60 210,68 270,74"
+            fill="none"
+            stroke="hsl(270, 60%, 65%)"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            className="transition-all duration-700"
+            style={{ strokeDasharray: 500, strokeDashoffset: animate ? 0 : 500 }}
+          />
+
+          {/* Annotations */}
+          {animate && (
+            <>
+              <g className="animate-fade-in" style={{ animationDelay: "0.8s", animationFillMode: "both" }}>
+                <text x={pad.left + 40} y={12} fontSize="6" fill="hsl(152, 60%, 65%)" fontFamily="Space Grotesk">
+                  erratic fluctuations
+                </text>
+              </g>
+              <g className="animate-fade-in" style={{ animationDelay: "1.2s", animationFillMode: "both" }}>
+                <text x={W - pad.right - 4} y={H - pad.bottom - 4} textAnchor="end" fontSize="6" fill="hsl(270, 60%, 75%)" fontFamily="Space Grotesk">
+                  gradual decline
+                </text>
+              </g>
+            </>
+          )}
+
+          {/* Axis labels */}
+          <text x="4" y={pad.top + 4} fontSize="5" fill="hsl(210, 15%, 40%)" fontFamily="DM Sans">high</text>
+          <text x="4" y={H - pad.bottom - 2} fontSize="5" fill="hsl(210, 15%, 40%)" fontFamily="DM Sans">low</text>
+          <text x={pad.left} y={H - 6} fontSize="6" fill="hsl(210, 15%, 45%)" fontFamily="DM Sans">earlier</text>
+          <text x={W - pad.right} y={H - 6} textAnchor="end" fontSize="6" fill="hsl(210, 15%, 45%)" fontFamily="DM Sans">now</text>
+        </svg>
+      </div>
+
+      {/* Legend */}
+      <div className="flex gap-4 text-[10px]">
+        <span className="flex items-center gap-1.5">
+          <span className="w-5 h-[2px] rounded-full bg-phase-follicular inline-block" /> Estrogen — erratic, trending down
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-5 h-[2px] rounded-full bg-phase-luteal inline-block" /> Progesterone — steady decline
+        </span>
+      </div>
+
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        In this stage, hormones don't follow a predictable monthly cycle. Estrogen swings unpredictably while progesterone quietly falls — which is why symptoms can feel random. Logan learns your pattern instead of assuming one.
+      </p>
+    </div>
+  );
+}
+
 
 
 // ═══════════════════════════════════════════════════════════════════════════
