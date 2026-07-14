@@ -381,12 +381,12 @@ function DecliningHormonesCard({ animate }: { animate: boolean }) {
           {animate && (
             <>
               <g className="animate-fade-in" style={{ animationDelay: "0.8s", animationFillMode: "both" }}>
-                <text x={pad.left + 40} y={12} fontSize="6" fill="hsl(152, 60%, 65%)" fontFamily="Space Grotesk">
+                <text x={pad.left + 40} y={12} fontSize="6" fill="#F4F1EA" fontFamily="Space Grotesk">
                   erratic fluctuations
                 </text>
               </g>
               <g className="animate-fade-in" style={{ animationDelay: "1.2s", animationFillMode: "both" }}>
-                <text x={W - pad.right - 4} y={H - pad.bottom - 4} textAnchor="end" fontSize="6" fill="hsl(270, 60%, 75%)" fontFamily="Space Grotesk">
+                <text x={W - pad.right - 4} y={H - pad.bottom - 4} textAnchor="end" fontSize="6" fill="#F4F1EA" fontFamily="Space Grotesk">
                   gradual decline
                 </text>
               </g>
