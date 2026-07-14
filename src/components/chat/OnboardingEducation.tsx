@@ -152,7 +152,16 @@ export function CycleBasicsCard() {
 // 2. HORMONE TIMELINE — Annotated chart with labeled peaks + crossover
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function HormoneBasicsCard() {
+type HormoneLifeStage =
+  | "cycling"
+  | "irregular"
+  | "postpartum"
+  | "menopause"
+  | "perimenopause"
+  | "pregnancy_loss"
+  | "pregnant";
+
+export function HormoneBasicsCard({ lifeStage = "cycling" }: { lifeStage?: HormoneLifeStage } = {}) {
   const [animate, setAnimate] = useState(false);
   const [hoveredHormone, setHoveredHormone] = useState<string | null>(null);
 
@@ -160,6 +169,23 @@ export function HormoneBasicsCard() {
     const t = setTimeout(() => setAnimate(true), 300);
     return () => clearTimeout(t);
   }, []);
+
+  // Skip entirely for pregnancy states — hormone cycle graph is not relevant.
+  if (lifeStage === "pregnant" || lifeStage === "pregnancy_loss") {
+    return null;
+  }
+
+  // Menopause / perimenopause — declining, erratic hormones, no phase bands.
+  if (lifeStage === "menopause" || lifeStage === "perimenopause") {
+    return <DecliningHormonesCard animate={animate} />;
+  }
+
+  const stageNote =
+    lifeStage === "irregular"
+      ? "Your hormones follow a similar pattern, but the timing is less predictable."
+      : lifeStage === "postpartum"
+      ? "Your hormones are rebuilding — this pattern will return as your cycle regulates."
+      : null;
 
   const W = 280, H = 100;
   const pad = { top: 12, right: 10, bottom: 22, left: 10 };
