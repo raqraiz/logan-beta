@@ -251,7 +251,7 @@ serve(async (req) => {
       }
 
       // Welcome message
-      const welcomeMsg = `Hey ${userName}! I'm Logan — I help you understand how your cycle affects how you feel, think, and perform.\n\nLet me learn a few things about you so I can make this personal. It'll take about 2 minutes.`;
+      const welcomeMsg = `Hey ${userName}! I'm Logan — your cycle companion. Let me learn a few things about you so I can make this personal. It'll take about 2 minutes.`;
 
       await supabase.from("chat_messages").insert({
         user_id: user.id,
