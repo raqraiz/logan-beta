@@ -614,7 +614,7 @@ serve(async (req) => {
         const pLifeStage = (participant as any).life_stage || "cycling";
         
         // Perimenopause users are still cycling — route them through the cycling insight path.
-        if (pLifeStage !== "cycling" && pLifeStage !== "perimenopause" && pLifeStage !== "irregular") {
+        if (pLifeStage !== "cycling" && pLifeStage !== "perimenopause") {
           // Non-cycling first insight (postpartum / menopause / pregnant / pregnancy_loss)
           let stageInsight = "";
           if (pLifeStage === "postpartum") {
