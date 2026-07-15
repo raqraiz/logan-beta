@@ -83,6 +83,24 @@ const ONBOARDING_QUESTIONS = [
     requiresStage: "postpartum"
   },
   {
+    key: "due_date",
+    message: "When is your due date? Even a rough estimate is fine — I'll use it to track your pregnancy week and trimester. If you don't know your due date, share how far along you are and I'll work with that.",
+    field: "due_date",
+    parseType: "date",
+    inputType: "date_picker",
+    showNotSure: false,
+    requiresStage: "pregnant"
+  },
+  {
+    key: "loss_date",
+    message: "When did the loss happen? Take your time — even an approximate date helps me support your recovery. There's no rush here.",
+    field: "loss_date",
+    parseType: "date",
+    inputType: "date_picker",
+    showNotSure: false,
+    requiresStage: "pregnancy_loss"
+  },
+  {
     key: "cycle_length",
     message: "How many days is your cycle? (From the start of one period to the start of the next.)\n\nMost people are somewhere between 24 and 35 days. If your cycle is irregular or you're not sure, tap \"I'm not sure\" below.",
     field: "cycle_length_days",
@@ -318,12 +336,18 @@ serve(async (req) => {
 
       if (parseType === "life_stage") {
         const lower = (userMessage || "").toLowerCase();
-        if (lower.includes("postpartum") || lower.includes("post-partum") || lower.includes("just had")) {
+        if (lower.includes("pregnancy_loss") || lower.includes("pregnancy loss") || lower.includes("miscarriage") || lower.includes("lost the baby")) {
+          parsedValue = "pregnancy_loss";
+        } else if (lower.includes("postpartum") || lower.includes("post-partum") || lower.includes("just had")) {
           parsedValue = "postpartum";
+        } else if (lower.includes("pregnant") || lower === "pregnancy") {
+          parsedValue = "pregnant";
         } else if (lower.includes("peri")) {
           parsedValue = "perimenopause";
         } else if (lower.includes("menopause")) {
           parsedValue = "menopause";
+        } else if (lower.includes("irregular") || lower.includes("hormonal") || lower.includes("pcos") || lower.includes("iud") || lower.includes("pill")) {
+          parsedValue = "irregular";
         } else {
           parsedValue = "cycling";
         }
@@ -403,8 +427,9 @@ serve(async (req) => {
 
       // ─── Educational moments between steps ───────────────────────
 
-      // After LIFE_STAGE → show hormone basics (adapted for non-cycling)
-      if (currentQuestion.key === "life_stage") {
+      // After LIFE_STAGE → show hormone basics (adapted for non-cycling).
+      // Skip entirely for pregnant / pregnancy_loss — hormone cycle graph isn't relevant.
+      if (currentQuestion.key === "life_stage" && userLifeStage !== "pregnant" && userLifeStage !== "pregnancy_loss") {
         const stageContent = userLifeStage === "postpartum"
           ? "Your hormones are recalibrating after pregnancy. It takes time — Logan will adapt guidance to your recovery:"
           : userLifeStage === "menopause"
@@ -590,11 +615,18 @@ serve(async (req) => {
         
         // Perimenopause users are still cycling — route them through the cycling insight path.
         if (pLifeStage !== "cycling" && pLifeStage !== "perimenopause") {
-          // Non-cycling first insight (postpartum / menopause)
-          const stageLabel = pLifeStage === "postpartum" ? "Postpartum" : "Menopause";
-          const stageInsight = pLifeStage === "postpartum"
-            ? `Here's your first personal insight 👇\n\n**${stageLabel} — Recovery phase**\n\n- **Energy**: Variable — sleep deprivation and hormonal shifts are real\n- **What to expect**: Your body is rebuilding. Some days are harder than others\n${participant.anchor_symptom ? `- **Your anchor (${participant.anchor_symptom.toLowerCase()})**: may show up differently during recovery` : "- **Tip**: Be patient with your body — it did something extraordinary"}\n\nLogan adapts to where you are, not where a textbook says you should be.`
-            : `Here's your first personal insight 👇\n\n**${stageLabel} — Transition phase**\n\n- **Energy**: Fluctuating — estrogen and progesterone are declining\n- **What to expect**: Hot flashes, sleep changes, and mood shifts are common\n${participant.anchor_symptom ? `- **Your anchor (${participant.anchor_symptom.toLowerCase()})**: may intensify or shift during this transition` : "- **Tip**: This is a transition, not an ending"}\n\nLogan is here to help you navigate what's changing.`;
+          // Non-cycling first insight (postpartum / menopause / pregnant / pregnancy_loss)
+          let stageInsight = "";
+          if (pLifeStage === "postpartum") {
+            stageInsight = `Here's your first personal insight 👇\n\n**Postpartum — Recovery phase**\n\n- **Energy**: Variable — sleep deprivation and hormonal shifts are real\n- **What to expect**: Your body is rebuilding. Some days are harder than others\n${participant.anchor_symptom ? `- **Your anchor (${participant.anchor_symptom.toLowerCase()})**: may show up differently during recovery` : "- **Tip**: Be patient with your body — it did something extraordinary"}\n\nLogan adapts to where you are, not where a textbook says you should be.`;
+          } else if (pLifeStage === "pregnant") {
+            stageInsight = `Here's your first personal insight 👇\n\n**Pregnancy — Growing phase**\n\n- **Energy**: Shifting week by week as your body does extraordinary work\n- **What to expect**: Symptoms come in waves — nausea, fatigue, mood shifts, and stretches of feeling great\n${participant.anchor_symptom ? `- **Your anchor (${participant.anchor_symptom.toLowerCase()})**: I'll watch how it moves across your trimesters` : "- **Tip**: Rest is doing something, even when it feels like nothing"}\n\nLogan will track your week and trimester instead of a cycle — you're in a completely different rhythm now.`;
+          } else if (pLifeStage === "pregnancy_loss") {
+            stageInsight = `I'm so glad you're here 💚\n\nThere's no right timeline for this. Logan is switching into recovery mode — no cycle tracking, no pressure. I'll follow your lead on bleeding, energy, sleep, and how you're feeling.\n\nWhen you're ready to talk, I'm here. When you're not, that's okay too.`;
+          } else {
+            // menopause
+            stageInsight = `Here's your first personal insight 👇\n\n**Menopause — Transition phase**\n\n- **Energy**: Fluctuating — estrogen and progesterone are declining\n- **What to expect**: Hot flashes, sleep changes, and mood shifts are common\n${participant.anchor_symptom ? `- **Your anchor (${participant.anchor_symptom.toLowerCase()})**: may intensify or shift during this transition` : "- **Tip**: This is a transition, not an ending"}\n\nLogan is here to help you navigate what's changing.`;
+          }
 
           await new Promise(resolve => setTimeout(resolve, 1500));
           await supabase.from("chat_messages").insert({
