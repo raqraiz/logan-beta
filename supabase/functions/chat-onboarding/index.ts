@@ -427,8 +427,9 @@ serve(async (req) => {
 
       // ─── Educational moments between steps ───────────────────────
 
-      // After LIFE_STAGE → show hormone basics (adapted for non-cycling)
-      if (currentQuestion.key === "life_stage") {
+      // After LIFE_STAGE → show hormone basics (adapted for non-cycling).
+      // Skip entirely for pregnant / pregnancy_loss — hormone cycle graph isn't relevant.
+      if (currentQuestion.key === "life_stage" && userLifeStage !== "pregnant" && userLifeStage !== "pregnancy_loss") {
         const stageContent = userLifeStage === "postpartum"
           ? "Your hormones are recalibrating after pregnancy. It takes time — Logan will adapt guidance to your recovery:"
           : userLifeStage === "menopause"
