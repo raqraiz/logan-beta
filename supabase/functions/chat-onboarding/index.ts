@@ -336,12 +336,18 @@ serve(async (req) => {
 
       if (parseType === "life_stage") {
         const lower = (userMessage || "").toLowerCase();
-        if (lower.includes("postpartum") || lower.includes("post-partum") || lower.includes("just had")) {
+        if (lower.includes("pregnancy_loss") || lower.includes("pregnancy loss") || lower.includes("miscarriage") || lower.includes("lost the baby")) {
+          parsedValue = "pregnancy_loss";
+        } else if (lower.includes("postpartum") || lower.includes("post-partum") || lower.includes("just had")) {
           parsedValue = "postpartum";
+        } else if (lower.includes("pregnant") || lower === "pregnancy") {
+          parsedValue = "pregnant";
         } else if (lower.includes("peri")) {
           parsedValue = "perimenopause";
         } else if (lower.includes("menopause")) {
           parsedValue = "menopause";
+        } else if (lower.includes("irregular") || lower.includes("hormonal") || lower.includes("pcos") || lower.includes("iud") || lower.includes("pill")) {
+          parsedValue = "irregular";
         } else {
           parsedValue = "cycling";
         }
