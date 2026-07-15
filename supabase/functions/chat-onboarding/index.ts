@@ -83,6 +83,24 @@ const ONBOARDING_QUESTIONS = [
     requiresStage: "postpartum"
   },
   {
+    key: "due_date",
+    message: "When is your due date? Even a rough estimate is fine — I'll use it to track your pregnancy week and trimester. If you don't know your due date, share how far along you are and I'll work with that.",
+    field: "due_date",
+    parseType: "date",
+    inputType: "date_picker",
+    showNotSure: false,
+    requiresStage: "pregnant"
+  },
+  {
+    key: "loss_date",
+    message: "When did the loss happen? Take your time — even an approximate date helps me support your recovery. There's no rush here.",
+    field: "loss_date",
+    parseType: "date",
+    inputType: "date_picker",
+    showNotSure: false,
+    requiresStage: "pregnancy_loss"
+  },
+  {
     key: "cycle_length",
     message: "How many days is your cycle? (From the start of one period to the start of the next.)\n\nMost people are somewhere between 24 and 35 days. If your cycle is irregular or you're not sure, tap \"I'm not sure\" below.",
     field: "cycle_length_days",
