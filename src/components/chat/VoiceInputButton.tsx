@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -21,17 +21,9 @@ export const VoiceInputButton = ({ onTranscript, disabled, className }: VoiceInp
   const recognitionRef = useRef<any>(null);
   const deliveredRef = useRef(false);
   const finalTranscriptRef = useRef("");
+  const isIOSDevice = useMemo(() => isIOS(), []);
 
   const toggleListening = useCallback(() => {
-    if (isIOS()) {
-      toast({
-        title: "Voice input not available on iPhone",
-        description: "Voice-to-text isn't supported on iOS. Please type your message instead.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
@@ -106,6 +98,8 @@ export const VoiceInputButton = ({ onTranscript, disabled, className }: VoiceInp
 
     recognition.start();
   }, [isListening, onTranscript]);
+
+  if (isIOSDevice) return null;
 
   return (
     <Button
