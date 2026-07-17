@@ -2999,6 +2999,43 @@ serve(async (req) => {
       return out.replace(/^\s+/, "").trimEnd();
     };
     assistantMessage = sanitizeLeakedInstructions(assistantMessage);
+
+    // PHASE GUARD: rewrite any contradicting phase words to match cycleInfo.phase.
+    // Prevents phase drift on short affirmations ("yeah", "tell me more") where the
+    // LLM sometimes leans on generic phase framing that disagrees with the injected
+    // Current phase. Logs [phase_mismatch] so we can monitor frequency.
+    if (cycleInfo?.phase) {
+      const canonicalPhase = cycleInfo.phase as "Menstruation" | "Follicular" | "Ovulation" | "Luteal";
+      const phasePatterns: Record<string, RegExp[]> = {
+        Menstruation: [/\bmenstruation\b/gi, /\bmenstrual phase\b/gi],
+        Follicular: [/\bfollicular phase\b/gi, /\bfollicular\b/gi],
+        Ovulation: [/\bovulation phase\b/gi, /\bovulation\b/gi, /\bovulatory phase\b/gi, /\bovulatory\b/gi],
+        Luteal: [/\bluteal phase\b/gi, /\bluteal\b/gi],
+      };
+      const others = (Object.keys(phasePatterns) as (keyof typeof phasePatterns)[])
+        .filter((p) => p !== canonicalPhase);
+      const originalMessage = assistantMessage;
+      const mismatches: string[] = [];
+      for (const other of others) {
+        for (const re of phasePatterns[other]) {
+          if (re.test(assistantMessage)) {
+            mismatches.push(other);
+            assistantMessage = assistantMessage.replace(re, canonicalPhase);
+          }
+        }
+      }
+      if (mismatches.length > 0) {
+        console.warn("[phase_mismatch]", JSON.stringify({
+          user_id: user?.id,
+          canonical_phase: canonicalPhase,
+          cycle_day: cycleInfo.cycleDay,
+          contradicting_phases: Array.from(new Set(mismatches)),
+          user_message_preview: (userMessage || "").slice(0, 120),
+          rewritten: originalMessage !== assistantMessage,
+        }));
+      }
+    }
+
     if (isCurrentSymptomQuestion || isCurrentSymptomNegation) {
       assistantMessage = stripFalseSymptomLoggingClaim(assistantMessage);
     }
@@ -3470,6 +3507,8 @@ USER CONTEXT:
 - Cycle length: ${participant.cycle_length_days || 28} days
 
 PHASE AUTHORITY RULE (non-negotiable): The Current phase and cycle day above are authoritative. Never generate symptom explanations, hormone framing, or phase-specific guidance that contradicts this value, regardless of what earlier messages in this conversation discussed. If prior conversation mentioned a different phase, that context is outdated — the current phase value is always correct. Do not attribute today's symptoms to ovulation if the current phase is Luteal, and do not attribute them to Luteal if the current phase is Ovulation, etc. When in doubt, defer to Current phase.
+
+NEVER name a phase other than ${cycleInfo.phase} in your response. If you are tempted to reference Menstruation, Follicular, Ovulation, or Luteal other than ${cycleInfo.phase}, stop and reframe using ${cycleInfo.phase} instead. Short user affirmations ("yeah", "exactly", "tell me more", "okay", "sure", "mhm") do NOT change the phase context — stay anchored to ${cycleInfo.phase} regardless of how little content the user message contains. The phase word in your response MUST match ${cycleInfo.phase} exactly. This is non-negotiable.
 
 - Age: ${age || "unknown"}
 - Anchor symptom (most disruptive): ${participant.anchor_symptom || "not specified"}
