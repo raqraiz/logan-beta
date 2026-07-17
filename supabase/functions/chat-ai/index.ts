@@ -2999,6 +2999,43 @@ serve(async (req) => {
       return out.replace(/^\s+/, "").trimEnd();
     };
     assistantMessage = sanitizeLeakedInstructions(assistantMessage);
+
+    // PHASE GUARD: rewrite any contradicting phase words to match cycleInfo.phase.
+    // Prevents phase drift on short affirmations ("yeah", "tell me more") where the
+    // LLM sometimes leans on generic phase framing that disagrees with the injected
+    // Current phase. Logs [phase_mismatch] so we can monitor frequency.
+    if (cycleInfo?.phase) {
+      const canonicalPhase = cycleInfo.phase as "Menstruation" | "Follicular" | "Ovulation" | "Luteal";
+      const phasePatterns: Record<string, RegExp[]> = {
+        Menstruation: [/\bmenstruation\b/gi, /\bmenstrual phase\b/gi],
+        Follicular: [/\bfollicular phase\b/gi, /\bfollicular\b/gi],
+        Ovulation: [/\bovulation phase\b/gi, /\bovulation\b/gi, /\bovulatory phase\b/gi, /\bovulatory\b/gi],
+        Luteal: [/\bluteal phase\b/gi, /\bluteal\b/gi],
+      };
+      const others = (Object.keys(phasePatterns) as (keyof typeof phasePatterns)[])
+        .filter((p) => p !== canonicalPhase);
+      const originalMessage = assistantMessage;
+      const mismatches: string[] = [];
+      for (const other of others) {
+        for (const re of phasePatterns[other]) {
+          if (re.test(assistantMessage)) {
+            mismatches.push(other);
+            assistantMessage = assistantMessage.replace(re, canonicalPhase);
+          }
+        }
+      }
+      if (mismatches.length > 0) {
+        console.warn("[phase_mismatch]", JSON.stringify({
+          user_id: user?.id,
+          canonical_phase: canonicalPhase,
+          cycle_day: cycleInfo.cycleDay,
+          contradicting_phases: Array.from(new Set(mismatches)),
+          user_message_preview: (userMessage || "").slice(0, 120),
+          rewritten: originalMessage !== assistantMessage,
+        }));
+      }
+    }
+
     if (isCurrentSymptomQuestion || isCurrentSymptomNegation) {
       assistantMessage = stripFalseSymptomLoggingClaim(assistantMessage);
     }
