@@ -392,8 +392,12 @@ serve(async (req) => {
         if (metaFullName) userName = metaFullName;
       }
 
-      // Update participant record and refresh local object
-      if (participant && currentQuestion.field) {
+      // Update participant record and refresh local object.
+      // Skip persistence entirely if user opted to skip an optional date question.
+      const shouldSkipWrite = parseType === "date_optional" && parsedValue == null;
+      if (shouldSkipWrite) {
+        console.log("Skipping write for optional field:", currentQuestion.field);
+      } else if (participant && currentQuestion.field) {
         const updateData: Record<string, any> = {};
         updateData[currentQuestion.field] = parsedValue;
         await supabase.from("participants").update(updateData).eq("id", participant.id);
