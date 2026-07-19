@@ -118,6 +118,15 @@ const ONBOARDING_QUESTIONS = [
     showNotSure: true,
     requiresStage: ["cycling", "perimenopause"]
   },
+  {
+    key: "irregular_last_period",
+    message: "Do you know roughly when your last period started? (No worries if not — Logan works without it.)",
+    field: "last_period_start",
+    parseType: "date_optional",
+    inputType: "date_picker",
+    showNotSure: true,
+    requiresStage: "irregular"
+  },
 
   {
     key: "symptoms",
