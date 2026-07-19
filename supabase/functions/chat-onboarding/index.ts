@@ -754,7 +754,8 @@ serve(async (req) => {
         targetMetadata.available_symptoms = symptomsForAnchor;
       }
       if ((targetQuestion as any).showNotSure) {
-        targetMetadata.show_not_sure = (targetQuestion as any).key === "cycle_length" ? "cycle_length" : "last_period";
+        const tk = (targetQuestion as any).key;
+        targetMetadata.show_not_sure = tk === "cycle_length" ? "cycle_length" : tk === "irregular_last_period" ? "irregular_last_period" : "last_period";
       }
 
       await supabase.from("chat_messages").insert({
