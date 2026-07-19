@@ -362,6 +362,11 @@ serve(async (req) => {
         }
       } else if (parseType === "date") {
         parsedValue = selectedDate || parseNaturalDate(userMessage || "");
+      } else if (parseType === "date_optional") {
+        // Irregular users may skip — only persist a date if one was actually provided
+        const lowerMsg = (userMessage || "").toLowerCase();
+        const explicitSkip = lowerMsg.includes("not sure") || lowerMsg.includes("skip") || lowerMsg.includes("don't know") || lowerMsg.includes("dont know");
+        parsedValue = selectedDate || (explicitSkip ? null : parseNaturalDate(userMessage || ""));
       } else if (parseType === "number") {
         const match = (userMessage || "").match(/\d+/);
         parsedValue = match ? parseInt(match[0], 10) : (currentQuestion.field === "age" ? 30 : 28);
