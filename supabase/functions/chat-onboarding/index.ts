@@ -118,6 +118,15 @@ const ONBOARDING_QUESTIONS = [
     showNotSure: true,
     requiresStage: ["cycling", "perimenopause"]
   },
+  {
+    key: "irregular_last_period",
+    message: "Do you know roughly when your last period started? (No worries if not — Logan works without it.)",
+    field: "last_period_start",
+    parseType: "date_optional",
+    inputType: "date_picker",
+    showNotSure: true,
+    requiresStage: "irregular"
+  },
 
   {
     key: "symptoms",
@@ -353,6 +362,11 @@ serve(async (req) => {
         }
       } else if (parseType === "date") {
         parsedValue = selectedDate || parseNaturalDate(userMessage || "");
+      } else if (parseType === "date_optional") {
+        // Irregular users may skip — only persist a date if one was actually provided
+        const lowerMsg = (userMessage || "").toLowerCase();
+        const explicitSkip = lowerMsg.includes("not sure") || lowerMsg.includes("skip") || lowerMsg.includes("don't know") || lowerMsg.includes("dont know");
+        parsedValue = selectedDate || (explicitSkip ? null : parseNaturalDate(userMessage || ""));
       } else if (parseType === "number") {
         const match = (userMessage || "").match(/\d+/);
         parsedValue = match ? parseInt(match[0], 10) : (currentQuestion.field === "age" ? 30 : 28);
@@ -378,8 +392,12 @@ serve(async (req) => {
         if (metaFullName) userName = metaFullName;
       }
 
-      // Update participant record and refresh local object
-      if (participant && currentQuestion.field) {
+      // Update participant record and refresh local object.
+      // Skip persistence entirely if user opted to skip an optional date question.
+      const shouldSkipWrite = parseType === "date_optional" && parsedValue == null;
+      if (shouldSkipWrite) {
+        console.log("Skipping write for optional field:", currentQuestion.field);
+      } else if (participant && currentQuestion.field) {
         const updateData: Record<string, any> = {};
         updateData[currentQuestion.field] = parsedValue;
         await supabase.from("participants").update(updateData).eq("id", participant.id);
@@ -591,7 +609,8 @@ serve(async (req) => {
         nextMetadata.available_symptoms = symptomsForAnchor;
       }
       if ((nextQuestion as any).showNotSure) {
-        nextMetadata.show_not_sure = (nextQuestion as any).key === "cycle_length" ? "cycle_length" : "last_period";
+        const nk = (nextQuestion as any).key;
+        nextMetadata.show_not_sure = nk === "cycle_length" ? "cycle_length" : nk === "irregular_last_period" ? "irregular_last_period" : "last_period";
       }
 
       const { error: nextError } = await supabase.from("chat_messages").insert({
@@ -735,7 +754,8 @@ serve(async (req) => {
         targetMetadata.available_symptoms = symptomsForAnchor;
       }
       if ((targetQuestion as any).showNotSure) {
-        targetMetadata.show_not_sure = (targetQuestion as any).key === "cycle_length" ? "cycle_length" : "last_period";
+        const tk = (targetQuestion as any).key;
+        targetMetadata.show_not_sure = tk === "cycle_length" ? "cycle_length" : tk === "irregular_last_period" ? "irregular_last_period" : "last_period";
       }
 
       await supabase.from("chat_messages").insert({

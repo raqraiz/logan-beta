@@ -82,7 +82,7 @@ interface ChatMessage {
     period_checkin?: boolean;
     period_update?: boolean;
     new_period_start?: string;
-    show_not_sure?: "cycle_length" | "last_period";
+    show_not_sure?: "cycle_length" | "last_period" | "irregular_last_period";
     cheat_sheet?: {
       energy?: { level: string; note: string };
       focus?: { level: string; note: string };
@@ -494,6 +494,7 @@ const Chat = () => {
   // Scroll to bottom on initial load
   const hasScrolledToBottom = useRef(false);
   useEffect(() => {
+    if (isOnboarding) return; // Disable auto-scroll during onboarding — let users read at their own pace
     if (messages.length > 0 && !hasScrolledToBottom.current) {
       hasScrolledToBottom.current = true;
       // Use setTimeout to ensure DOM is rendered
@@ -501,10 +502,11 @@ const Chat = () => {
         scrollRef.current?.scrollIntoView({ behavior: "instant" });
       }, 50);
     }
-  }, [messages]);
+  }, [messages, isOnboarding]);
 
   // Auto-scroll on new messages
   useEffect(() => {
+    if (isOnboarding) return; // Disable auto-scroll during onboarding — let users read at their own pace
     if (messages.length === 0) return;
     if (!hasScrolledToBottom.current) return; // skip until initial scroll done
     const lastMsg = messages[messages.length - 1];
@@ -521,7 +523,7 @@ const Chat = () => {
     if (lastMsg.role === "user" && isNearBottomRef.current) {
       scrollRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages]);
+  }, [messages, isOnboarding]);
 
   // Track scroll position reliably for "jump to bottom" visibility
   useEffect(() => {
@@ -1778,6 +1780,9 @@ const Chat = () => {
                         onUseDefault={() => {
                           if (message.metadata?.show_not_sure === "cycle_length") {
                             sendOnboardingResponse("28");
+                          } else if (message.metadata?.show_not_sure === "irregular_last_period") {
+                            // Skip without persisting any date — Logan works without it for irregular users
+                            sendOnboardingResponse("Not sure — skip");
                           } else {
                             const twoWeeksAgo = new Date();
                             twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
