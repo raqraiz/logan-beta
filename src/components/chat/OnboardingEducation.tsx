@@ -607,7 +607,7 @@ export function AnchorExplainerCard() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 interface NotSureButtonProps {
-  field: "cycle_length" | "last_period";
+  field: "cycle_length" | "last_period" | "irregular_last_period";
   onUseDefault: (value: string) => void;
   disabled?: boolean;
 }
@@ -627,6 +627,12 @@ export function NotSureButton({ field, onUseDefault, disabled }: NotSureButtonPr
       explanation: "Try to think about your last period — even a rough guess helps Logan get started. You can always update this later as you track.",
       default: "approximate",
       defaultLabel: "It was about 2 weeks ago",
+    },
+    irregular_last_period: {
+      title: "No worries — you can skip this",
+      explanation: "Logan works without a last period date. If you remember later, you can add it anytime in settings.",
+      default: "not sure",
+      defaultLabel: "Skip this — I'm not sure",
     },
   };
 
