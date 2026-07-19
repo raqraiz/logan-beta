@@ -494,6 +494,7 @@ const Chat = () => {
   // Scroll to bottom on initial load
   const hasScrolledToBottom = useRef(false);
   useEffect(() => {
+    if (isOnboarding) return; // Disable auto-scroll during onboarding — let users read at their own pace
     if (messages.length > 0 && !hasScrolledToBottom.current) {
       hasScrolledToBottom.current = true;
       // Use setTimeout to ensure DOM is rendered
@@ -501,10 +502,11 @@ const Chat = () => {
         scrollRef.current?.scrollIntoView({ behavior: "instant" });
       }, 50);
     }
-  }, [messages]);
+  }, [messages, isOnboarding]);
 
   // Auto-scroll on new messages
   useEffect(() => {
+    if (isOnboarding) return; // Disable auto-scroll during onboarding — let users read at their own pace
     if (messages.length === 0) return;
     if (!hasScrolledToBottom.current) return; // skip until initial scroll done
     const lastMsg = messages[messages.length - 1];
@@ -521,7 +523,7 @@ const Chat = () => {
     if (lastMsg.role === "user" && isNearBottomRef.current) {
       scrollRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages]);
+  }, [messages, isOnboarding]);
 
   // Track scroll position reliably for "jump to bottom" visibility
   useEffect(() => {
