@@ -1780,6 +1780,9 @@ const Chat = () => {
                         onUseDefault={() => {
                           if (message.metadata?.show_not_sure === "cycle_length") {
                             sendOnboardingResponse("28");
+                          } else if (message.metadata?.show_not_sure === "irregular_last_period") {
+                            // Skip without persisting any date — Logan works without it for irregular users
+                            sendOnboardingResponse("Not sure — skip");
                           } else {
                             const twoWeeksAgo = new Date();
                             twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
