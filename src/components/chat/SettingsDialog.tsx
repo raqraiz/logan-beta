@@ -45,8 +45,8 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
   const [dueDate, setDueDate] = useState<string>("");
   const [pregnancyLmp, setPregnancyLmp] = useState<string>("");
   const [timezone, setTimezone] = useState<string>("");
-  const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const handleDeleteAccount = async () => {
     setDeleting(true);
@@ -55,7 +55,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
         body: { confirm: "DELETE" },
       });
       if (error) throw error;
-      toast({ title: "Account deleted", description: "Your account and data are gone. Sorry to see you go." });
+      toast({ title: "Account deleted", description: "Your account and all your data have been permanently deleted." });
       await supabase.auth.signOut();
       window.location.href = "/";
     } catch (e: any) {
@@ -371,19 +371,12 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
                 <AlertDialogTitle>Delete your account?</AlertDialogTitle>
                 <AlertDialogDescription>
                   This permanently removes your profile, chat history, cycle data, symptoms, widgets, and connected device tokens. There's no recovery.
-                  Type <span className="font-mono font-semibold">DELETE</span> below to confirm.
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              <Input
-                value={deleteConfirm}
-                onChange={(e) => setDeleteConfirm(e.target.value)}
-                placeholder="Type DELETE"
-                autoFocus
-              />
               <AlertDialogFooter>
-                <AlertDialogCancel disabled={deleting} onClick={() => setDeleteConfirm("")}>Cancel</AlertDialogCancel>
+                <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
                 <AlertDialogAction
-                  disabled={deleteConfirm !== "DELETE" || deleting}
+                  disabled={deleting}
                   onClick={handleDeleteAccount}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
