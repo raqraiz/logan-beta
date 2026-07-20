@@ -45,8 +45,8 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
   const [dueDate, setDueDate] = useState<string>("");
   const [pregnancyLmp, setPregnancyLmp] = useState<string>("");
   const [timezone, setTimezone] = useState<string>("");
-  const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const handleDeleteAccount = async () => {
     setDeleting(true);
@@ -55,7 +55,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
         body: { confirm: "DELETE" },
       });
       if (error) throw error;
-      toast({ title: "Account deleted", description: "Your account and data are gone. Sorry to see you go." });
+      toast({ title: "Account deleted", description: "Your account and all your data have been permanently deleted." });
       await supabase.auth.signOut();
       window.location.href = "/";
     } catch (e: any) {
