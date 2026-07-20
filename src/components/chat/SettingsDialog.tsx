@@ -371,19 +371,12 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
                 <AlertDialogTitle>Delete your account?</AlertDialogTitle>
                 <AlertDialogDescription>
                   This permanently removes your profile, chat history, cycle data, symptoms, widgets, and connected device tokens. There's no recovery.
-                  Type <span className="font-mono font-semibold">DELETE</span> below to confirm.
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              <Input
-                value={deleteConfirm}
-                onChange={(e) => setDeleteConfirm(e.target.value)}
-                placeholder="Type DELETE"
-                autoFocus
-              />
               <AlertDialogFooter>
-                <AlertDialogCancel disabled={deleting} onClick={() => setDeleteConfirm("")}>Cancel</AlertDialogCancel>
+                <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
                 <AlertDialogAction
-                  disabled={deleteConfirm !== "DELETE" || deleting}
+                  disabled={deleting}
                   onClick={handleDeleteAccount}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
