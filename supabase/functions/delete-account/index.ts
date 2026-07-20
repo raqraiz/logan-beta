@@ -51,6 +51,47 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Block admins and super admins from self-deleting
+    const { data: roles } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    const isAdmin = (roles ?? []).some((r: any) => r.role === "admin" || r.role === "super_admin");
+    if (isAdmin) {
+      return new Response(
+        JSON.stringify({ error: "Admin accounts can't be deleted this way. Contact Raquella directly." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Look up participant display name for the confirmation email
+    let displayName: string | null = null;
+    if (userEmail) {
+      const { data: p } = await supabaseAdmin
+        .from("participants")
+        .select("full_name")
+        .eq("email", userEmail)
+        .maybeSingle();
+      displayName = (p as any)?.full_name ?? null;
+    }
+
+    // Send deletion confirmation email BEFORE deleting the account,
+    // so we still have the address and the queue can look it up.
+    if (userEmail) {
+      try {
+        await supabaseAdmin.functions.invoke("send-transactional-email", {
+          body: {
+            templateName: "account-deleted",
+            recipientEmail: userEmail,
+            idempotencyKey: `account-deleted-${userId}`,
+            templateData: { name: displayName },
+          },
+        });
+      } catch (e) {
+        console.warn("account-deleted email invoke failed:", (e as any)?.message);
+      }
+    }
+
     // Delete user-owned rows (best-effort; ignore errors)
     const tablesByUserId = [
       "chat_messages",
@@ -58,12 +99,25 @@ Deno.serve(async (req) => {
       "user_roles",
       "tracker_logs",
       "symptom_logs",
-      "home_widgets",
-      "credits",
+      "custom_trackers",
+      "home_widget_preferences",
+      "user_credits",
       "credit_transactions",
-      "whoop_tokens",
-      "lab_results",
-      "meal_logs",
+      "user_integrations",
+      "lab_markers",
+      "lab_panels",
+      "meals",
+      "nutrition_goals",
+      "user_dietary_prefs",
+      "user_resources",
+      "resource_feedback",
+      "user_activity_events",
+      "feature_events",
+      "weight_logs",
+      "user_feedback",
+      "history_imports",
+      "email_opens",
+      "attribution_events",
     ];
     await Promise.all(
       tablesByUserId.map((t) =>
