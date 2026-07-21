@@ -1832,10 +1832,33 @@ serve(async (req) => {
           const lastAssistant = ((recent2 || []) as any[]).find(m => m.role === "assistant");
           if (lastAssistant && /\blibrary\b/i.test(String(lastAssistant.content))) {
             const content = String(lastAssistant.content);
-            const matches = Array.from(content.matchAll(/`([^`\n]{1,60})`/g));
+            // Only proceed if the assistant explicitly asked the shared-library question.
+            const askedLibraryQuestion = /\badd\b[^.?!\n]{0,80}\b(?:shared\s+)?(?:symptom\s+)?library\b/i.test(content);
+            const matches = askedLibraryQuestion
+              ? Array.from(content.matchAll(/`([^`\n]{1,40})`/g))
+              : [];
+            const isValidSymptomName = (s: string): boolean => {
+              if (!s) return false;
+              const t = s.trim();
+              if (t.length < 3 || t.length > 30) return false;
+              // Must be letters/spaces/hyphens only — no punctuation, digits, quotes
+              if (!/^[a-zA-Z][a-zA-Z\s-]*[a-zA-Z]$/.test(t)) return false;
+              const words = t.split(/\s+/);
+              if (words.length > 3) return false;
+              // Reject sentence-fragment starters (contraction remnants, connectors)
+              const firstWord = words[0].toLowerCase();
+              const badStarts = new Set([
+                "re","s","t","ll","ve","d","m","and","or","but","the","a","an",
+                "is","it","that","this","you","your","we","they","he","she",
+                "if","when","so","because","as","to","for","of","in","on","at",
+                "not","no","yes","up","down","out","in","also","just","really",
+              ]);
+              if (badStarts.has(firstWord)) return false;
+              return true;
+            };
             const candidates = matches
               .map(m => m[1].trim().replace(/^["'`]+|["'`]+$/g, ""))
-              .filter(s => s.length > 1 && s.length < 60 && /[a-zA-Z]/.test(s));
+              .filter(isValidSymptomName);
             const newOnes: string[] = [];
             const seen = new Set<string>();
             for (const c of candidates) {
