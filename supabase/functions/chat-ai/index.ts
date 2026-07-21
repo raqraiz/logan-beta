@@ -1994,15 +1994,15 @@ serve(async (req) => {
       }
 
       // --- Pregnancy loss / miscarriage detection ---
-      const lossSignal =
-        /\b(miscarriage|miscarried|misscarriage|misscarried|pregnancy\s+loss|lost\s+(the|my|our)\s+(baby|pregnancy)|lost\s+the\s+pregnancy|had\s+a\s+(loss|d&c|d\s*and\s*c)|stillbirth|stillborn|chemical\s+pregnancy|ectopic|missed\s+miscarriage|blighted\s+ovum)\b/i.test(userMessage);
+      const lossSignal = shouldSwitchToPregnancyLoss(userMessage);
       const lossExit =
-        /\b(i'?m\s+ready\s+to\s+(move\s+on|cycle\s+again|track\s+again)|switch\s+me\s+back\s+to\s+cycling|exit\s+(loss|recovery)\s+mode|i'?m\s+done\s+with\s+recovery)\b/i.test(userMessage)
+        (/\b(i'?m\s+ready\s+to\s+(move\s+on|cycle\s+again|track\s+again)|switch\s+me\s+back\s+to\s+cycling|exit\s+(loss|recovery)\s+mode|i'?m\s+done\s+with\s+recovery)\b/i.test(userMessage)
+          || isPregnancyLossCorrection(userMessage))
         && participant.life_stage === "pregnancy_loss";
 
       if (lossSignal && participant.life_stage !== "pregnancy_loss") {
-        // Try to extract a date; otherwise default to today
         const today = new Date().toISOString().slice(0, 10);
+        const previousLifeStage = isLifeStage(participant.life_stage) ? participant.life_stage : "cycling";
         await supabase
           .from("participants")
           .update({
@@ -2022,7 +2022,7 @@ serve(async (req) => {
           role: "assistant",
           content: msg,
           message_type: "text",
-          metadata: { life_stage_updated: "pregnancy_loss" },
+          metadata: { life_stage_updated: "pregnancy_loss", previous_life_stage: previousLifeStage },
         });
         return new Response(
           JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
@@ -2031,20 +2031,34 @@ serve(async (req) => {
       }
 
       if (lossExit) {
+        const { data: recentLifeStageMessages } = await supabase
+          .from("chat_messages")
+          .select("metadata")
+          .eq("user_id", user.id)
+          .eq("role", "assistant")
+          .order("created_at", { ascending: false })
+          .limit(25);
+        const previousLifeStage = extractPreviousLifeStageFromMessages(recentLifeStageMessages || [], "pregnancy_loss") || "cycling";
         await supabase
           .from("participants")
-          .update({ life_stage: "cycling", loss_date: null })
+          .update({
+            life_stage: previousLifeStage,
+            loss_date: null,
+            postpartum_active: previousLifeStage === "postpartum" ? participant.postpartum_active : false,
+          })
           .eq("id", participant.id);
         const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
         if (refreshed) participant = refreshed;
 
-        const msg = `Holding that with care. I've switched you back to **cycling mode** — your history here stays exactly as it is. When did your last period start? We'll pick up from there, gently.`;
+        const stageLabel = previousLifeStage === "irregular" ? "hormonal birth control / irregular cycle" : previousLifeStage;
+        const needsPeriodAnchor = previousLifeStage === "cycling" || previousLifeStage === "perimenopause";
+        const msg = `You're right — I misunderstood. I've switched you back to **${stageLabel}** mode.${needsPeriodAnchor ? " If your cycle date looks off, tell me your last period start and I'll update it." : ""}`;
         await supabase.from("chat_messages").insert({
           user_id: user.id,
           role: "assistant",
           content: msg,
           message_type: "text",
-          metadata: { life_stage_updated: "cycling", awaiting_period_date: true },
+          metadata: { life_stage_updated: previousLifeStage, corrected_from: "pregnancy_loss", awaiting_period_date: needsPeriodAnchor },
         });
         return new Response(
           JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
@@ -2103,7 +2117,7 @@ serve(async (req) => {
 
       if (pregnancyExit) {
         // If she said she lost the baby, switch to pregnancy_loss; otherwise postpartum.
-        const toLoss = /\b(lost\s+the\s+baby|miscarried|miscarriage)\b/i.test(userMessage);
+        const toLoss = shouldSwitchToPregnancyLoss(userMessage);
         const today = new Date().toISOString().slice(0, 10);
         await supabase
           .from("participants")
