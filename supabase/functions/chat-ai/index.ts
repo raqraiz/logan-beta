@@ -26,6 +26,57 @@ function cycleVisualMeta(userMessage: string) {
   return { has_cycle_visual: true, visual_type: "cycle_circle" } as const;
 }
 
+type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
+
+const LIFE_STAGES: LifeStage[] = ["cycling", "irregular", "postpartum", "menopause", "perimenopause", "pregnancy_loss", "pregnant"];
+
+function isLifeStage(value: unknown): value is LifeStage {
+  return typeof value === "string" && LIFE_STAGES.includes(value as LifeStage);
+}
+
+function isQuestionLike(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  return /\?\s*$/.test(t) || /^(why|what|how|when|where|who|does|do|did|can|could|would|should|is|are|am|will)\b/.test(t);
+}
+
+function hasThirdPartyLossContext(text: string): boolean {
+  return /\b(my\s+(mother|mom|mum|mama|sister|friend|aunt|cousin|daughter|wife|partner|coworker)|someone|somebody|a\s+woman|another\s+woman|people\s+who|women\s+who|friend\s+of\s+mine|not\s+me)\b/i.test(text);
+}
+
+function hasHypotheticalLossContext(text: string): boolean {
+  return /\b(what\s+if|could|might|would|in\s+theory|generally|hypothetically|can\s+someone|can\s+a\s+woman|what\s+causes|what\s+would|why\s+would|is\s+it\s+possible)\b/i.test(text);
+}
+
+function isPersonalPresentLossDisclosure(text: string): boolean {
+  return /\b(i\s+(had|have\s+had|just\s+had|recently\s+had)\s+(a\s+)?(miscarriage|misscarriage|pregnancy\s+loss|loss|chemical\s+pregnancy|ectopic|stillbirth|d\s*&\s*c|d\s*and\s*c)|i\s+(miscarried|misscarried)|i\s+lost\s+(my\s+)?(baby|pregnancy)|my\s+pregnancy\s+ended|we\s+lost\s+(the|our)\s+(baby|pregnancy))\b/i.test(text);
+}
+
+function shouldSwitchToPregnancyLoss(text: string): boolean {
+  if (!isPersonalPresentLossDisclosure(text)) return false;
+  if (isQuestionLike(text)) return false;
+  if (hasThirdPartyLossContext(text)) return false;
+  if (hasHypotheticalLossContext(text)) return false;
+  return true;
+}
+
+function isPregnancyLossCorrection(text: string): boolean {
+  return /\b(i\s+did\s+not\s+miscarry|i\s+didn'?t\s+miscarry|i\s+haven'?t\s+miscarried|i'?m\s+not\s+in\s+pregnancy\s+loss|not\s+pregnancy\s+loss|that\s+was\s+a\s+misunderstanding|you\s+misunderstood|return\s+to\s+(regular|cycle|cycling)\s+tracking|switch\s+me\s+back\s+to\s+(regular|cycle|cycling)|i\s+was\s+asking\s+about\s+my\s+(mother|mom|mum|sister|friend)|that\s+was\s+about\s+my\s+(mother|mom|mum|sister|friend)|asking\s+a\s+question)\b/i.test(text);
+}
+
+function extractPreviousLifeStageFromMessages(messages: any[], current: LifeStage): LifeStage | null {
+  for (const message of messages || []) {
+    const metadata = message?.metadata || {};
+    const previous = metadata.previous_life_stage || metadata.life_stage_before;
+    if (isLifeStage(previous) && previous !== current) return previous;
+  }
+  for (const message of messages || []) {
+    const metadata = message?.metadata || {};
+    const updated = metadata.life_stage_updated;
+    if (isLifeStage(updated) && updated !== current && updated !== "pregnancy_loss") return updated;
+  }
+  return null;
+}
+
 
 
 function parseExplicitCalendarDate(dateStr: string, referenceDate = new Date()): Date | null {
