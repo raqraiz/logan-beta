@@ -26,6 +26,57 @@ function cycleVisualMeta(userMessage: string) {
   return { has_cycle_visual: true, visual_type: "cycle_circle" } as const;
 }
 
+type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
+
+const LIFE_STAGES: LifeStage[] = ["cycling", "irregular", "postpartum", "menopause", "perimenopause", "pregnancy_loss", "pregnant"];
+
+function isLifeStage(value: unknown): value is LifeStage {
+  return typeof value === "string" && LIFE_STAGES.includes(value as LifeStage);
+}
+
+function isQuestionLike(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  return /\?\s*$/.test(t) || /^(why|what|how|when|where|who|does|do|did|can|could|would|should|is|are|am|will)\b/.test(t);
+}
+
+function hasThirdPartyLossContext(text: string): boolean {
+  return /\b(my\s+(mother|mom|mum|mama|sister|friend|aunt|cousin|daughter|wife|partner|coworker)|someone|somebody|a\s+woman|another\s+woman|people\s+who|women\s+who|friend\s+of\s+mine|not\s+me)\b/i.test(text);
+}
+
+function hasHypotheticalLossContext(text: string): boolean {
+  return /\b(what\s+if|could|might|would|in\s+theory|generally|hypothetically|can\s+someone|can\s+a\s+woman|what\s+causes|what\s+would|why\s+would|is\s+it\s+possible)\b/i.test(text);
+}
+
+function isPersonalPresentLossDisclosure(text: string): boolean {
+  return /\b(i\s+(had|have\s+had|just\s+had|recently\s+had)\s+(a\s+)?(miscarriage|misscarriage|pregnancy\s+loss|loss|chemical\s+pregnancy|ectopic|stillbirth|d\s*&\s*c|d\s*and\s*c)|i\s+(miscarried|misscarried)|i\s+lost\s+(my\s+)?(baby|pregnancy)|my\s+pregnancy\s+ended|we\s+lost\s+(the|our)\s+(baby|pregnancy))\b/i.test(text);
+}
+
+function shouldSwitchToPregnancyLoss(text: string): boolean {
+  if (!isPersonalPresentLossDisclosure(text)) return false;
+  if (isQuestionLike(text)) return false;
+  if (hasThirdPartyLossContext(text)) return false;
+  if (hasHypotheticalLossContext(text)) return false;
+  return true;
+}
+
+function isPregnancyLossCorrection(text: string): boolean {
+  return /\b(i\s+did\s+not\s+miscarry|i\s+didn'?t\s+miscarry|i\s+haven'?t\s+miscarried|i'?m\s+not\s+in\s+pregnancy\s+loss|not\s+pregnancy\s+loss|that\s+was\s+a\s+misunderstanding|you\s+misunderstood|return\s+to\s+(regular|cycle|cycling)\s+tracking|switch\s+me\s+back\s+to\s+(regular|cycle|cycling)|i\s+was\s+asking\s+about\s+my\s+(mother|mom|mum|sister|friend)|that\s+was\s+about\s+my\s+(mother|mom|mum|sister|friend)|asking\s+a\s+question)\b/i.test(text);
+}
+
+function extractPreviousLifeStageFromMessages(messages: any[], current: LifeStage): LifeStage | null {
+  for (const message of messages || []) {
+    const metadata = message?.metadata || {};
+    const previous = metadata.previous_life_stage || metadata.life_stage_before;
+    if (isLifeStage(previous) && previous !== current) return previous;
+  }
+  for (const message of messages || []) {
+    const metadata = message?.metadata || {};
+    const updated = metadata.life_stage_updated;
+    if (isLifeStage(updated) && updated !== current && updated !== "pregnancy_loss") return updated;
+  }
+  return null;
+}
+
 
 
 function parseExplicitCalendarDate(dateStr: string, referenceDate = new Date()): Date | null {
@@ -1943,15 +1994,15 @@ serve(async (req) => {
       }
 
       // --- Pregnancy loss / miscarriage detection ---
-      const lossSignal =
-        /\b(miscarriage|miscarried|misscarriage|misscarried|pregnancy\s+loss|lost\s+(the|my|our)\s+(baby|pregnancy)|lost\s+the\s+pregnancy|had\s+a\s+(loss|d&c|d\s*and\s*c)|stillbirth|stillborn|chemical\s+pregnancy|ectopic|missed\s+miscarriage|blighted\s+ovum)\b/i.test(userMessage);
+      const lossSignal = shouldSwitchToPregnancyLoss(userMessage);
       const lossExit =
-        /\b(i'?m\s+ready\s+to\s+(move\s+on|cycle\s+again|track\s+again)|switch\s+me\s+back\s+to\s+cycling|exit\s+(loss|recovery)\s+mode|i'?m\s+done\s+with\s+recovery)\b/i.test(userMessage)
+        (/\b(i'?m\s+ready\s+to\s+(move\s+on|cycle\s+again|track\s+again)|switch\s+me\s+back\s+to\s+cycling|exit\s+(loss|recovery)\s+mode|i'?m\s+done\s+with\s+recovery)\b/i.test(userMessage)
+          || isPregnancyLossCorrection(userMessage))
         && participant.life_stage === "pregnancy_loss";
 
       if (lossSignal && participant.life_stage !== "pregnancy_loss") {
-        // Try to extract a date; otherwise default to today
         const today = new Date().toISOString().slice(0, 10);
+        const previousLifeStage = isLifeStage(participant.life_stage) ? participant.life_stage : "cycling";
         await supabase
           .from("participants")
           .update({
@@ -1971,7 +2022,7 @@ serve(async (req) => {
           role: "assistant",
           content: msg,
           message_type: "text",
-          metadata: { life_stage_updated: "pregnancy_loss" },
+          metadata: { life_stage_updated: "pregnancy_loss", previous_life_stage: previousLifeStage },
         });
         return new Response(
           JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
@@ -1980,20 +2031,34 @@ serve(async (req) => {
       }
 
       if (lossExit) {
+        const { data: recentLifeStageMessages } = await supabase
+          .from("chat_messages")
+          .select("metadata")
+          .eq("user_id", user.id)
+          .eq("role", "assistant")
+          .order("created_at", { ascending: false })
+          .limit(25);
+        const previousLifeStage = extractPreviousLifeStageFromMessages(recentLifeStageMessages || [], "pregnancy_loss") || "cycling";
         await supabase
           .from("participants")
-          .update({ life_stage: "cycling", loss_date: null })
+          .update({
+            life_stage: previousLifeStage,
+            loss_date: null,
+            postpartum_active: previousLifeStage === "postpartum" ? participant.postpartum_active : false,
+          })
           .eq("id", participant.id);
         const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
         if (refreshed) participant = refreshed;
 
-        const msg = `Holding that with care. I've switched you back to **cycling mode** — your history here stays exactly as it is. When did your last period start? We'll pick up from there, gently.`;
+        const stageLabel = previousLifeStage === "irregular" ? "hormonal birth control / irregular cycle" : previousLifeStage;
+        const needsPeriodAnchor = previousLifeStage === "cycling" || previousLifeStage === "perimenopause";
+        const msg = `You're right — I misunderstood. I've switched you back to **${stageLabel}** mode.${needsPeriodAnchor ? " If your cycle date looks off, tell me your last period start and I'll update it." : ""}`;
         await supabase.from("chat_messages").insert({
           user_id: user.id,
           role: "assistant",
           content: msg,
           message_type: "text",
-          metadata: { life_stage_updated: "cycling", awaiting_period_date: true },
+          metadata: { life_stage_updated: previousLifeStage, corrected_from: "pregnancy_loss", awaiting_period_date: needsPeriodAnchor },
         });
         return new Response(
           JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
@@ -2052,7 +2117,7 @@ serve(async (req) => {
 
       if (pregnancyExit) {
         // If she said she lost the baby, switch to pregnancy_loss; otherwise postpartum.
-        const toLoss = /\b(lost\s+the\s+baby|miscarried|miscarriage)\b/i.test(userMessage);
+        const toLoss = shouldSwitchToPregnancyLoss(userMessage);
         const today = new Date().toISOString().slice(0, 10);
         await supabase
           .from("participants")
