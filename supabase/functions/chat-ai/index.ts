@@ -1810,6 +1810,7 @@ serve(async (req) => {
         const { data: commRows } = await supabase
           .from("community_symptoms")
           .select("name")
+          .is("deleted_at", null)
           .order("created_at", { ascending: false })
           .limit(500);
         for (const r of (commRows || []) as any[]) {
