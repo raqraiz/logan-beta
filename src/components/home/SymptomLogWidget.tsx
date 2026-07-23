@@ -594,7 +594,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                   {q && SYMPTOM_CATEGORIES.every(c => !c.symptoms.some(n => n.toLowerCase().includes(q)))
                     && !communitySymptoms.some(c => c.name.toLowerCase().includes(q)) && (
                     <div className="py-3 text-center">
-                      <p className="text-xs text-muted-foreground mb-2">No matches for "{search}"</p>
+                      <p className="text-xs text-muted-foreground mb-2">No symptoms found — try a different term</p>
                       <button
                         onClick={() => { setNewSymptom(search); setShowAddForm(true); setSearch(""); }}
                         className="text-xs text-primary hover:underline inline-flex items-center gap-1"
