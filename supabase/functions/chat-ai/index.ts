@@ -3246,7 +3246,7 @@ serve(async (req) => {
         const known = new Set<string>(SYMPTOM_KEYWORDS.map(s => s.name.toLowerCase()));
         try {
           const { data: commRows2 } = await supabase
-            .from("community_symptoms").select("name").limit(1000);
+            .from("community_symptoms").select("name").is("deleted_at", null).limit(1000);
           for (const r of (commRows2 || []) as any[]) {
             if (r?.name) known.add(String(r.name).toLowerCase());
           }
