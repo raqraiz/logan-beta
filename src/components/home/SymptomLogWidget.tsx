@@ -141,6 +141,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
     supabase
       .from("community_symptoms")
       .select("id, name, added_by, created_at, category")
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         if (data) {
@@ -226,7 +227,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
     if (!confirm(`Remove "${cs.name}" from the shared list?`)) return;
     const { error } = await supabase
       .from("community_symptoms")
-      .delete()
+      .update({ deleted_at: new Date().toISOString() } as any)
       .eq("id", cs.id);
     if (error) {
       toast({ title: "Couldn't delete", description: error.message, variant: "destructive" });
