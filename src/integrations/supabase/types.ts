@@ -137,18 +137,21 @@ export type Database = {
       community_symptoms: {
         Row: {
           added_by: string
+          category: string | null
           created_at: string
           id: string
           name: string
         }
         Insert: {
           added_by: string
+          category?: string | null
           created_at?: string
           id?: string
           name: string
         }
         Update: {
           added_by?: string
+          category?: string | null
           created_at?: string
           id?: string
           name?: string
