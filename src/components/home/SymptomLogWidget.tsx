@@ -117,11 +117,13 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
   useEffect(() => {
     supabase
       .from("community_symptoms")
-      .select("id, name, added_by, created_at")
+      .select("id, name, added_by, created_at, category")
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         if (data) {
-          const filtered = data.filter(s => !BUILT_IN_SET.has(s.name.trim().toLowerCase()));
+          const filtered = (data as any[])
+            .filter(s => !BUILT_IN_SET.has(s.name.trim().toLowerCase()))
+            .map(s => ({ ...s, category: s.category ?? null })) as CommunitySymptom[];
           setCommunitySymptoms(filtered);
         }
       });
