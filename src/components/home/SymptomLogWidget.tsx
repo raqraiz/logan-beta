@@ -38,6 +38,19 @@ const SYMPTOM_CATEGORIES: { label: string; symptoms: string[] }[] = [
   },
 ];
 
+// Shared symptom categories (community-contributed tags)
+const SHARED_CATEGORIES = [
+  "Skin & Body",
+  "Digestive",
+  "Ear/Nose/Throat",
+  "Sleep & Energy",
+  "Mood & Cognitive",
+  "Reproductive & Discharge",
+  "Pain",
+  "Other",
+] as const;
+type SharedCategory = typeof SHARED_CATEGORIES[number];
+
 const SYMPTOM_OPTIONS = SYMPTOM_CATEGORIES.flatMap(c => c.symptoms);
 const BUILT_IN_SET = new Set(SYMPTOM_OPTIONS.map(s => s.toLowerCase()));
 
