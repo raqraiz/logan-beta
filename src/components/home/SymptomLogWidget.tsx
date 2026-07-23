@@ -38,6 +38,19 @@ const SYMPTOM_CATEGORIES: { label: string; symptoms: string[] }[] = [
   },
 ];
 
+// Shared symptom categories (community-contributed tags)
+const SHARED_CATEGORIES = [
+  "Skin & Body",
+  "Digestive",
+  "Ear/Nose/Throat",
+  "Sleep & Energy",
+  "Mood & Cognitive",
+  "Reproductive & Discharge",
+  "Pain",
+  "Other",
+] as const;
+type SharedCategory = typeof SHARED_CATEGORIES[number];
+
 const SYMPTOM_OPTIONS = SYMPTOM_CATEGORIES.flatMap(c => c.symptoms);
 const BUILT_IN_SET = new Set(SYMPTOM_OPTIONS.map(s => s.toLowerCase()));
 
@@ -61,6 +74,7 @@ interface CommunitySymptom {
   name: string;
   added_by: string;
   created_at: string;
+  category: string | null;
 }
 
 export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cycleLengthDays, isNonCycling, onLogged }: SymptomLogWidgetProps) {
@@ -80,6 +94,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
   const [editValue, setEditValue] = useState("");
   const [search, setSearch] = useState("");
   const [collapsedCats, setCollapsedCats] = useState<Record<string, boolean>>({});
+  const [previouslyLoggedNames, setPreviouslyLoggedNames] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!userId) return;
@@ -100,14 +115,38 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
       });
   }, [userId]);
 
+  // Fetch user's previously-logged symptom names to decide which SHARED categories default-open
+  useEffect(() => {
+    if (!userId) return;
+    supabase
+      .from("symptom_logs")
+      .select("symptoms")
+      .eq("user_id", userId)
+      .order("logged_at", { ascending: false })
+      .limit(200)
+      .then(({ data }) => {
+        const names = new Set<string>();
+        (data ?? []).forEach((row: any) => {
+          const arr = Array.isArray(row.symptoms) ? row.symptoms : [];
+          arr.forEach((s: any) => {
+            const n = typeof s === "string" ? s : s?.name;
+            if (n) names.add(String(n).toLowerCase());
+          });
+        });
+        setPreviouslyLoggedNames(names);
+      });
+  }, [userId]);
+
   useEffect(() => {
     supabase
       .from("community_symptoms")
-      .select("id, name, added_by, created_at")
+      .select("id, name, added_by, created_at, category")
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         if (data) {
-          const filtered = data.filter(s => !BUILT_IN_SET.has(s.name.trim().toLowerCase()));
+          const filtered = (data as any[])
+            .filter(s => !BUILT_IN_SET.has(s.name.trim().toLowerCase()))
+            .map(s => ({ ...s, category: s.category ?? null })) as CommunitySymptom[];
           setCommunitySymptoms(filtered);
         }
       });
@@ -412,117 +451,150 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                     );
                   })}
 
-                  {/* Community section */}
+                  {/* Shared (community) symptoms — grouped by category, collapsible, searchable */}
                   {(() => {
                     const sortedCs = [...communitySymptoms].sort((a, b) => a.name.localeCompare(b.name));
                     const filteredCs = q ? sortedCs.filter(c => c.name.toLowerCase().includes(q)) : sortedCs;
-                    if (filteredCs.length === 0 && !showAddForm && q) return null;
-                    const isCollapsed = !q && collapsedCats["__community"];
-                    return (
-                      <div>
-                        <button
-                          onClick={() => setCollapsedCats(prev => ({ ...prev, __community: !prev.__community }))}
-                          className="w-full flex items-center justify-between mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/60 hover:text-foreground/80"
-                        >
-                          <span>Shared · {filteredCs.length}</span>
-                          {isCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
-                        </button>
-                        {!isCollapsed && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {filteredCs.map(cs => {
-                              const isSelected = selected.some(s => s.name === cs.name);
-                              const isMine = cs.added_by === userId;
-                              const isRecent = Date.now() - new Date(cs.created_at).getTime() < 1000 * 60 * 60 * 24 * 14;
-                              const isEditing = editingId === cs.id;
 
-                              if (isEditing) {
-                                return (
-                                  <div key={cs.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-primary/50 bg-card">
-                                    <Input
-                                      autoFocus
-                                      value={editValue}
-                                      onChange={e => setEditValue(e.target.value)}
-                                      onKeyDown={e => {
-                                        if (e.key === "Enter") handleSaveEdit(cs);
-                                        if (e.key === "Escape") cancelEdit();
-                                      }}
-                                      maxLength={50}
-                                      className="h-6 text-xs w-32 px-2"
-                                    />
-                                    <button onClick={() => handleSaveEdit(cs)} className="p-1 rounded-full text-primary hover:bg-primary/10" title="Save">
-                                      <Check className="w-3 h-3" />
-                                    </button>
-                                    <button onClick={cancelEdit} className="p-1 rounded-full text-muted-foreground hover:bg-muted" title="Cancel">
-                                      <X className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                );
-                              }
+                    // Group by category (fallback to "Other")
+                    const grouped: Record<string, CommunitySymptom[]> = {};
+                    SHARED_CATEGORIES.forEach(c => { grouped[c] = []; });
+                    filteredCs.forEach(cs => {
+                      const cat: SharedCategory = (SHARED_CATEGORIES as readonly string[]).includes(cs.category ?? "")
+                        ? (cs.category as SharedCategory)
+                        : "Other";
+                      grouped[cat].push(cs);
+                    });
 
-                              return (
-                                <div
-                                  key={cs.id}
-                                  className={cn(
-                                    "inline-flex items-center rounded-full border transition-all overflow-hidden",
-                                    isSelected
-                                      ? "bg-primary text-primary-foreground border-primary"
-                                      : "bg-card/60 border-border/40 hover:border-primary/40 text-foreground/70"
-                                  )}
-                                  title={isMine ? "You added this" : "Added by another user"}
-                                >
-                                  <button onClick={() => toggleSymptom(cs.name)} className="px-2.5 py-1 text-xs inline-flex items-center gap-1.5">
-                                    {cs.name}
-                                    {isRecent && (
-                                      <span className={cn(
-                                        "inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider px-1 py-0.5 rounded-full",
-                                        isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-accent/40 text-accent-foreground/80"
-                                      )}>
-                                        <Sparkles className="w-2 h-2" />
-                                        new
-                                      </span>
-                                    )}
-                                  </button>
-                                  {isMine && (
-                                    <>
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); startEdit(cs); }}
-                                        className={cn("px-1.5 py-1 hover:bg-black/10", isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-foreground")}
-                                        title="Edit"
-                                      >
-                                        <Pencil className="w-3 h-3" />
-                                      </button>
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); handleDeleteSymptom(cs); }}
-                                        className={cn("px-1.5 py-1 hover:bg-destructive/20", isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-destructive")}
-                                        title="Delete"
-                                      >
-                                        <Trash2 className="w-3 h-3" />
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              );
-                            })}
-                            {!showAddForm && (
-                              <button
-                                onClick={() => setShowAddForm(true)}
-                                className="px-2.5 py-1 text-xs rounded-full border border-dashed border-primary/40 text-primary/80 hover:bg-primary/5 transition-all inline-flex items-center gap-1"
-                              >
-                                <Plus className="w-3 h-3" />
-                                Add yours
-                              </button>
-                            )}
+                    const renderSharedChip = (cs: CommunitySymptom) => {
+                      const isSelected = selected.some(s => s.name === cs.name);
+                      const isMine = cs.added_by === userId;
+                      const isRecent = Date.now() - new Date(cs.created_at).getTime() < 1000 * 60 * 60 * 24 * 14;
+                      const isEditing = editingId === cs.id;
+
+                      if (isEditing) {
+                        return (
+                          <div key={cs.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-primary/50 bg-card">
+                            <Input
+                              autoFocus
+                              value={editValue}
+                              onChange={e => setEditValue(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === "Enter") handleSaveEdit(cs);
+                                if (e.key === "Escape") cancelEdit();
+                              }}
+                              maxLength={50}
+                              className="h-6 text-xs w-32 px-2"
+                            />
+                            <button onClick={() => handleSaveEdit(cs)} className="p-1 rounded-full text-primary hover:bg-primary/10" title="Save">
+                              <Check className="w-3 h-3" />
+                            </button>
+                            <button onClick={cancelEdit} className="p-1 rounded-full text-muted-foreground hover:bg-muted" title="Cancel">
+                              <X className="w-3 h-3" />
+                            </button>
                           </div>
+                        );
+                      }
+
+                      return (
+                        <div
+                          key={cs.id}
+                          className={cn(
+                            "inline-flex items-center rounded-full border transition-all overflow-hidden",
+                            isSelected
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-card/60 border-border/40 hover:border-primary/40 text-foreground/70"
+                          )}
+                          title={isMine ? "You added this" : "Added by another user"}
+                        >
+                          <button onClick={() => toggleSymptom(cs.name)} className="px-2.5 py-1 text-xs inline-flex items-center gap-1.5">
+                            {cs.name}
+                            {isRecent && (
+                              <span className={cn(
+                                "inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider px-1 py-0.5 rounded-full",
+                                isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-accent/40 text-accent-foreground/80"
+                              )}>
+                                <Sparkles className="w-2 h-2" />
+                                new
+                              </span>
+                            )}
+                          </button>
+                          {isMine && (
+                            <>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); startEdit(cs); }}
+                                className={cn("px-1.5 py-1 hover:bg-black/10", isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-foreground")}
+                                title="Edit"
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDeleteSymptom(cs); }}
+                                className={cn("px-1.5 py-1 hover:bg-destructive/20", isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-destructive")}
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      );
+                    };
+
+                    const totalShared = filteredCs.length;
+                    if (totalShared === 0 && q) return null;
+
+                    return (
+                      <div className="pt-1">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60 mb-2">
+                          Shared by the community · {totalShared}
+                        </p>
+                        <div className="space-y-2">
+                          {SHARED_CATEGORIES.map(cat => {
+                            const chips = grouped[cat];
+                            if (chips.length === 0) return null;
+                            const key = `__shared_${cat}`;
+                            // Default expanded if searching, or if any chip in this cat was previously logged
+                            const hasPrior = chips.some(c => previouslyLoggedNames.has(c.name.toLowerCase()));
+                            const userToggled = key in collapsedCats;
+                            const isCollapsed = q ? false : (userToggled ? collapsedCats[key] : !hasPrior);
+                            return (
+                              <div key={cat} className="pl-2 border-l border-border/20">
+                                <button
+                                  onClick={() => setCollapsedCats(prev => ({ ...prev, [key]: !isCollapsed }))}
+                                  className="w-full flex items-center justify-between mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/50 hover:text-foreground/80"
+                                >
+                                  <span>{cat} · {chips.length}</span>
+                                  {isCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+                                </button>
+                                {!isCollapsed && (
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {chips.map(renderSharedChip)}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {!showAddForm && !q && (
+                          <button
+                            onClick={() => setShowAddForm(true)}
+                            className="mt-2 px-2.5 py-1 text-xs rounded-full border border-dashed border-primary/40 text-primary/80 hover:bg-primary/5 transition-all inline-flex items-center gap-1"
+                          >
+                            <Plus className="w-3 h-3" />
+                            Add yours
+                          </button>
                         )}
                       </div>
                     );
                   })()}
 
+
                   {/* Empty search state */}
                   {q && SYMPTOM_CATEGORIES.every(c => !c.symptoms.some(n => n.toLowerCase().includes(q)))
                     && !communitySymptoms.some(c => c.name.toLowerCase().includes(q)) && (
                     <div className="py-3 text-center">
-                      <p className="text-xs text-muted-foreground mb-2">No matches for "{search}"</p>
+                      <p className="text-xs text-muted-foreground mb-2">No symptoms found — try a different term</p>
                       <button
                         onClick={() => { setNewSymptom(search); setShowAddForm(true); setSearch(""); }}
                         className="text-xs text-primary hover:underline inline-flex items-center gap-1"
