@@ -141,6 +141,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
     supabase
       .from("community_symptoms")
       .select("id, name, added_by, created_at, category")
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         if (data) {
