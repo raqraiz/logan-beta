@@ -139,6 +139,7 @@ export type Database = {
           added_by: string
           category: string | null
           created_at: string
+          deleted_at: string | null
           id: string
           name: string
         }
@@ -146,6 +147,7 @@ export type Database = {
           added_by: string
           category?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name: string
         }
@@ -153,6 +155,7 @@ export type Database = {
           added_by?: string
           category?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name?: string
         }
