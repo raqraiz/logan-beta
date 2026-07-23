@@ -115,6 +115,28 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
       });
   }, [userId]);
 
+  // Fetch user's previously-logged symptom names to decide which SHARED categories default-open
+  useEffect(() => {
+    if (!userId) return;
+    supabase
+      .from("symptom_logs")
+      .select("symptoms")
+      .eq("user_id", userId)
+      .order("logged_at", { ascending: false })
+      .limit(200)
+      .then(({ data }) => {
+        const names = new Set<string>();
+        (data ?? []).forEach((row: any) => {
+          const arr = Array.isArray(row.symptoms) ? row.symptoms : [];
+          arr.forEach((s: any) => {
+            const n = typeof s === "string" ? s : s?.name;
+            if (n) names.add(String(n).toLowerCase());
+          });
+        });
+        setPreviouslyLoggedNames(names);
+      });
+  }, [userId]);
+
   useEffect(() => {
     supabase
       .from("community_symptoms")
