@@ -479,8 +479,44 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                 );
               };
 
+              // Filter out hidden names from the pinned "Frequently logged" row
+              const hiddenNameSet = new Set(
+                communitySymptoms.filter(c => hiddenIds.has(c.id)).map(c => c.name.toLowerCase())
+              );
+              const visibleFrequent = frequentNames.filter(n => !hiddenNameSet.has(n.toLowerCase()));
+              const filteredFrequent = q ? visibleFrequent.filter(n => n.toLowerCase().includes(q)) : visibleFrequent;
+
               return (
                 <div className="space-y-2.5">
+                  {/* Frequently logged — pinned above all groups */}
+                  {filteredFrequent.length > 0 && (
+                    <div>
+                      <p className="mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/60 inline-flex items-center gap-1">
+                        <Star className="w-3 h-3 text-primary/70" />
+                        Frequently logged
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {filteredFrequent.map(name => {
+                          const isSelected = selected.some(s => s.name === name);
+                          return (
+                            <button
+                              key={`freq_${name}`}
+                              onClick={() => toggleSymptom(name)}
+                              className={cn(
+                                "px-2.5 py-1 text-xs rounded-full border transition-all",
+                                isSelected
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "bg-primary/5 border-primary/30 hover:border-primary/60 text-foreground/80"
+                              )}
+                            >
+                              {name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {SYMPTOM_CATEGORIES.map(cat => {
                     const sorted = [...cat.symptoms].sort((a, b) => a.localeCompare(b));
                     const filtered = q ? sorted.filter(n => n.toLowerCase().includes(q)) : sorted;
