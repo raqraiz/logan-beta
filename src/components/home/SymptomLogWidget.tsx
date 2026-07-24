@@ -95,6 +95,10 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
   const [search, setSearch] = useState("");
   const [collapsedCats, setCollapsedCats] = useState<Record<string, boolean>>({});
   const [previouslyLoggedNames, setPreviouslyLoggedNames] = useState<Set<string>>(new Set());
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  const [manageMode, setManageMode] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
+  const [frequentNames, setFrequentNames] = useState<string[]>([]);
 
   useEffect(() => {
     if (!userId) return;
