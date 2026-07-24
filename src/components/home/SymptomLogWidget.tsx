@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import { Check, ChevronDown, ChevronUp, Activity, Plus, Sparkles, Pencil, Trash2, X, CalendarIcon } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Activity, Plus, Sparkles, Pencil, Trash2, X, CalendarIcon, EyeOff, Eye, Star } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
