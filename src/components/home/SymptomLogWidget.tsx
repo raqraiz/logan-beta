@@ -122,22 +122,45 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
   // Fetch user's previously-logged symptom names to decide which SHARED categories default-open
   useEffect(() => {
     if (!userId) return;
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
     supabase
       .from("symptom_logs")
-      .select("symptoms")
+      .select("symptoms, logged_at")
       .eq("user_id", userId)
       .order("logged_at", { ascending: false })
-      .limit(200)
+      .limit(400)
       .then(({ data }) => {
         const names = new Set<string>();
+        const counts = new Map<string, number>();
         (data ?? []).forEach((row: any) => {
           const arr = Array.isArray(row.symptoms) ? row.symptoms : [];
+          const withinWindow = row.logged_at && row.logged_at >= ninetyDaysAgo;
           arr.forEach((s: any) => {
             const n = typeof s === "string" ? s : s?.name;
-            if (n) names.add(String(n).toLowerCase());
+            if (!n) return;
+            const key = String(n);
+            names.add(key.toLowerCase());
+            if (withinWindow) counts.set(key, (counts.get(key) || 0) + 1);
           });
         });
         setPreviouslyLoggedNames(names);
+        const top = [...counts.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 6)
+          .map(([n]) => n);
+        setFrequentNames(top);
+      });
+  }, [userId]);
+
+  // Fetch this user's hidden community symptoms
+  useEffect(() => {
+    if (!userId) return;
+    supabase
+      .from("user_hidden_symptoms" as any)
+      .select("community_symptom_id")
+      .eq("user_id", userId)
+      .then(({ data }) => {
+        setHiddenIds(new Set((data ?? []).map((r: any) => r.community_symptom_id)));
       });
   }, [userId]);
 
