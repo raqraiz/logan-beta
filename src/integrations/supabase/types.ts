@@ -1376,6 +1376,35 @@ export type Database = {
         }
         Relationships: []
       }
+      user_hidden_symptoms: {
+        Row: {
+          community_symptom_id: string
+          hidden_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          community_symptom_id: string
+          hidden_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          community_symptom_id?: string
+          hidden_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_hidden_symptoms_community_symptom_id_fkey"
+            columns: ["community_symptom_id"]
+            isOneToOne: false
+            referencedRelation: "community_symptoms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_integrations: {
         Row: {
           access_token: string
