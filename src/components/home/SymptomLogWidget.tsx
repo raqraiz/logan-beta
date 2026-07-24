@@ -265,6 +265,31 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
     }
   };
 
+  const handleHideSymptom = async (cs: CommunitySymptom) => {
+    setHiddenIds(prev => new Set(prev).add(cs.id));
+    setSelected(prev => prev.filter(s => s.name !== cs.name));
+    const { error } = await supabase
+      .from("user_hidden_symptoms" as any)
+      .insert({ user_id: userId, community_symptom_id: cs.id });
+    if (error && !/duplicate/i.test(error.message)) {
+      toast({ title: "Couldn't hide", description: error.message, variant: "destructive" });
+      setHiddenIds(prev => { const n = new Set(prev); n.delete(cs.id); return n; });
+    }
+  };
+
+  const handleUnhideSymptom = async (cs: CommunitySymptom) => {
+    setHiddenIds(prev => { const n = new Set(prev); n.delete(cs.id); return n; });
+    const { error } = await supabase
+      .from("user_hidden_symptoms" as any)
+      .delete()
+      .eq("user_id", userId)
+      .eq("community_symptom_id", cs.id);
+    if (error) {
+      toast({ title: "Couldn't unhide", description: error.message, variant: "destructive" });
+      setHiddenIds(prev => new Set(prev).add(cs.id));
+    }
+  };
+
   const toggleSymptom = useCallback((name: string) => {
     setSelected(prev => {
       const existing = prev.find(s => s.name === name);
