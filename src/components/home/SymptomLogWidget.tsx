@@ -543,23 +543,38 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                   {/* Shared (community) symptoms — grouped by category, collapsible, searchable */}
                   {(() => {
                     const sortedCs = [...communitySymptoms].sort((a, b) => a.name.localeCompare(b.name));
-                    const filteredCs = q ? sortedCs.filter(c => c.name.toLowerCase().includes(q)) : sortedCs;
+                    const searchMatched = q ? sortedCs.filter(c => c.name.toLowerCase().includes(q)) : sortedCs;
+                    // Split visible vs hidden for this user
+                    const visibleCs = searchMatched.filter(c => !hiddenIds.has(c.id));
+                    const hiddenCs = searchMatched.filter(c => hiddenIds.has(c.id));
 
-                    // Group by category (fallback to "Other")
+                    // Group visible by category (fallback to "Other")
                     const grouped: Record<string, CommunitySymptom[]> = {};
                     SHARED_CATEGORIES.forEach(c => { grouped[c] = []; });
-                    filteredCs.forEach(cs => {
+                    visibleCs.forEach(cs => {
                       const cat: SharedCategory = (SHARED_CATEGORIES as readonly string[]).includes(cs.category ?? "")
                         ? (cs.category as SharedCategory)
                         : "Other";
                       grouped[cat].push(cs);
                     });
 
-                    const renderSharedChip = (cs: CommunitySymptom) => {
+                    // Track which categories had entries before hiding, so we can show
+                    // "All hidden — manage hidden tags" instead of vanishing the group.
+                    const catsWithAnyContent: Record<string, boolean> = {};
+                    SHARED_CATEGORIES.forEach(c => { catsWithAnyContent[c] = false; });
+                    searchMatched.forEach(cs => {
+                      const cat: SharedCategory = (SHARED_CATEGORIES as readonly string[]).includes(cs.category ?? "")
+                        ? (cs.category as SharedCategory)
+                        : "Other";
+                      catsWithAnyContent[cat] = true;
+                    });
+
+                    const renderSharedChip = (cs: CommunitySymptom, opts?: { isHiddenRow?: boolean }) => {
                       const isSelected = selected.some(s => s.name === cs.name);
                       const isMine = cs.added_by === userId;
                       const isRecent = Date.now() - new Date(cs.created_at).getTime() < 1000 * 60 * 60 * 24 * 14;
                       const isEditing = editingId === cs.id;
+                      const inHiddenRow = !!opts?.isHiddenRow;
 
                       if (isEditing) {
                         return (
@@ -590,15 +605,21 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                           key={cs.id}
                           className={cn(
                             "inline-flex items-center rounded-full border transition-all overflow-hidden",
-                            isSelected
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-card/60 border-border/40 hover:border-primary/40 text-foreground/70"
+                            inHiddenRow
+                              ? "bg-muted/30 border-border/30 text-muted-foreground opacity-70"
+                              : isSelected
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-card/60 border-border/40 hover:border-primary/40 text-foreground/70"
                           )}
                           title={isMine ? "You added this" : "Added by another user"}
                         >
-                          <button onClick={() => toggleSymptom(cs.name)} className="px-2.5 py-1 text-xs inline-flex items-center gap-1.5">
+                          <button
+                            onClick={() => !inHiddenRow && toggleSymptom(cs.name)}
+                            className="px-2.5 py-1 text-xs inline-flex items-center gap-1.5"
+                            disabled={inHiddenRow}
+                          >
                             {cs.name}
-                            {isRecent && (
+                            {isRecent && !inHiddenRow && (
                               <span className={cn(
                                 "inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider px-1 py-0.5 rounded-full",
                                 isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-accent/40 text-accent-foreground/80"
@@ -608,7 +629,24 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                               </span>
                             )}
                           </button>
-                          {isMine && (
+                          {inHiddenRow ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleUnhideSymptom(cs); }}
+                              className="px-1.5 py-1 text-muted-foreground hover:text-foreground hover:bg-black/10"
+                              title="Unhide"
+                            >
+                              <Eye className="w-3 h-3" />
+                            </button>
+                          ) : manageMode ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleHideSymptom(cs); }}
+                              className={cn("px-1.5 py-1 hover:bg-black/10", isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-foreground")}
+                              title="Hide from my view"
+                            >
+                              <EyeOff className="w-3 h-3" />
+                            </button>
+                          ) : null}
+                          {isMine && !inHiddenRow && (
                             <>
                               <button
                                 onClick={(e) => { e.stopPropagation(); startEdit(cs); }}
@@ -630,23 +668,57 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                       );
                     };
 
-                    const totalShared = filteredCs.length;
-                    if (totalShared === 0 && q) return null;
+                    const totalShared = visibleCs.length;
+                    if (searchMatched.length === 0 && q) return null;
 
                     return (
                       <div className="pt-1">
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60 mb-2">
-                          Shared by the community · {totalShared}
-                        </p>
+                        <div className="flex items-center justify-between mb-2 gap-2">
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60">
+                            Shared by the community · {totalShared}
+                            {hiddenCs.length > 0 && (
+                              <span className="ml-1 text-muted-foreground/40 normal-case">({hiddenCs.length} hidden)</span>
+                            )}
+                          </p>
+                          <button
+                            onClick={() => setManageMode(m => !m)}
+                            className={cn(
+                              "text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border transition-colors",
+                              manageMode
+                                ? "border-primary/60 text-primary bg-primary/10"
+                                : "border-border/40 text-muted-foreground/70 hover:text-foreground hover:border-border"
+                            )}
+                          >
+                            {manageMode ? "Done" : "Manage"}
+                          </button>
+                        </div>
                         <div className="space-y-2">
                           {SHARED_CATEGORIES.map(cat => {
                             const chips = grouped[cat];
-                            if (chips.length === 0) return null;
+                            const catHadContent = catsWithAnyContent[cat];
+                            if (!catHadContent) return null;
                             const key = `__shared_${cat}`;
-                            // Default expanded if searching, or if any chip in this cat was previously logged
                             const hasPrior = chips.some(c => previouslyLoggedNames.has(c.name.toLowerCase()));
                             const userToggled = key in collapsedCats;
                             const isCollapsed = q ? false : (userToggled ? collapsedCats[key] : !hasPrior);
+
+                            if (chips.length === 0) {
+                              // Category exists but every chip is hidden
+                              return (
+                                <div key={cat} className="pl-2 border-l border-border/20">
+                                  <div className="flex items-center justify-between mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/40">
+                                    <span>{cat} · 0</span>
+                                    <button
+                                      onClick={() => setShowHidden(true)}
+                                      className="normal-case tracking-normal text-[10px] text-muted-foreground/60 hover:text-foreground underline underline-offset-2"
+                                    >
+                                      All hidden — manage
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            }
+
                             return (
                               <div key={cat} className="pl-2 border-l border-border/20">
                                 <button
@@ -658,13 +730,35 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                                 </button>
                                 {!isCollapsed && (
                                   <div className="flex flex-wrap gap-1.5">
-                                    {chips.map(renderSharedChip)}
+                                    {chips.map(cs => renderSharedChip(cs))}
                                   </div>
                                 )}
                               </div>
                             );
                           })}
                         </div>
+
+                        {/* Hidden (n) — collapsible */}
+                        {hiddenCs.length > 0 && (
+                          <div className="mt-3 pt-2 border-t border-border/20">
+                            <button
+                              onClick={() => setShowHidden(v => !v)}
+                              className="w-full flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground/60 hover:text-foreground/80"
+                            >
+                              <span className="inline-flex items-center gap-1">
+                                <EyeOff className="w-3 h-3" />
+                                Hidden · {hiddenCs.length}
+                              </span>
+                              {showHidden ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                            </button>
+                            {showHidden && (
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {hiddenCs.map(cs => renderSharedChip(cs, { isHiddenRow: true }))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {!showAddForm && !q && (
                           <button
                             onClick={() => setShowAddForm(true)}
@@ -677,6 +771,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                       </div>
                     );
                   })()}
+
 
 
                   {/* Empty search state */}
