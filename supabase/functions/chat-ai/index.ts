@@ -2875,6 +2875,22 @@ serve(async (req) => {
         )
       : null;
 
+    // Self-heal: if the sticky period_still_active flag is present but stale
+    // (past normal bleed window), clear it in the DB so downstream reads and
+    // the daily briefing agree with chat. Ignore errors — it's best-effort.
+    if (
+      cycleInfo &&
+      (participant as any).period_still_active &&
+      cycleInfo.phase !== "Menstruation"
+    ) {
+      await supabase
+        .from("participants")
+        .update({ period_still_active: false })
+        .eq("id", participant.id);
+      participant = { ...participant, period_still_active: false } as typeof participant;
+    }
+
+
     // Overdue plausibility check — if she's run well past her expected cycle
     // length with no new Day 1, no logged end date, and no confirmation her
     // period is still ongoing, don't let Logan pretend it's a normal luteal day.
