@@ -3652,7 +3652,13 @@ function calculateCycleInfo(
 
   // If she said her period is still ongoing past the default window, keep her
   // in Menstruation (capped at day 12) until she logs an end date or new Day 1.
-  const forceMenstruation = !!periodStillActive && cycleDay <= 12;
+  // Auto-expire: the flag is only meaningful during the actual bleed window.
+  // If we're past day 7 (normal max bleed length) or more than 7 days have
+  // elapsed since last_period_start, ignore the stale flag — it silently
+  // persisted and would force Menstruation while the briefing shows Follicular.
+  const flagExpired = !!periodStillActive && (cycleDay > 7 || daysSinceStart > 7);
+  const forceMenstruation = !!periodStillActive && !flagExpired && cycleDay <= 12;
+
 
   // periodPending is informational for prompt context — parity with the client
   // ring; we already don't wrap, so no behavior change here.
