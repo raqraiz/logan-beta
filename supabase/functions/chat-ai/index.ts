@@ -809,8 +809,15 @@ serve(async (req) => {
         /\bperiod\s+(?:is\s+)?(?:over|done|finished|ended)\b/i,
         /\b(?:i'?m\s+)?done\s+(?:with\s+)?(?:my\s+)?period\b/i,
         /\bperiod\s+ended\s+(?:today|yesterday)\b/i,
+        // User-declared transition into Follicular ⇒ period is over.
+        /\bfirst\s+day\s+of\s+(?:my\s+)?foll?icular\b/i,
+        /\b(?:moving|moved|going|gone|shifting|shifted|transitioning|transitioned)\s+(?:in)?to\s+(?:the\s+|my\s+)?foll?icular\b/i,
+        /\b(?:i'?m\s+)?(?:now\s+)?in\s+(?:the\s+|my\s+)?foll?icular(?:\s+phase)?\s*(?:now|today)?\b/i,
+        /\bfoll?icular\s+(?:phase\s+)?(?:has\s+)?(?:started|begun|kicked\s+in)\b/i,
+        /\b(?:started|entered|began|beginning)\s+(?:my\s+|the\s+)?foll?icular\b/i,
       ];
       const isEnded = !isStillBleeding && endedPatterns.some(p => p.test(userMessage));
+
 
       if (isStillBleeding && !(participant as any).period_still_active) {
         await supabase
