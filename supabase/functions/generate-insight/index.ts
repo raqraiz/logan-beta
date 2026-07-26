@@ -400,7 +400,9 @@ serve(async (req) => {
 function calculateCycleInfo(
   lastPeriodStart: string | null,
   cycleLengthDays: number | null,
-  timezone: string = "UTC"
+  timezone: string = "UTC",
+  currentPeriodEndDate?: string | null,
+  periodStillActive?: boolean,
 ): { cycleDay: number; phase: string; daysUntilNextPhase: number } | null {
   if (!lastPeriodStart || !cycleLengthDays) return null;
 
@@ -426,17 +428,29 @@ function calculateCycleInfo(
     ? daysSinceStart + 1
     : ((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
 
-  const menstruationEnd = 5;
+  // Mirror chat-ai: use logged end date to shift Follicular forward.
+  let menstruationEnd = 5;
+  if (currentPeriodEndDate && /^\d{4}-\d{2}-\d{2}$/.test(currentPeriodEndDate)) {
+    const [ey, em, ed] = currentPeriodEndDate.split("-").map(Number);
+    const endDate = new Date(Date.UTC(ey, em - 1, ed, 12, 0, 0));
+    const endDay = Math.round((endDate.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    if (endDay >= 1 && endDay <= cycleLengthDays) menstruationEnd = endDay;
+  }
   const ovulationDay = cycleLengthDays - 14;
   const ovulationStart = ovulationDay - 1;
   const ovulationEnd = ovulationDay + 2;
 
+  // Mirror chat-ai's forceMenstruation with the same auto-expiry so briefing
+  // and chat can never disagree on phase.
+  const flagExpired = !!periodStillActive && (cycleDay > 7 || daysSinceStart > 7);
+  const forceMenstruation = !!periodStillActive && !flagExpired && cycleDay <= 12;
+
   let phase: string;
   let daysUntilNextPhase: number;
 
-  if (cycleDay <= menstruationEnd) {
+  if (forceMenstruation || cycleDay <= menstruationEnd) {
     phase = "Menstruation";
-    daysUntilNextPhase = menstruationEnd - cycleDay + 1;
+    daysUntilNextPhase = Math.max(1, menstruationEnd - cycleDay + 1);
   } else if (cycleDay < ovulationStart) {
     phase = "Follicular";
     daysUntilNextPhase = ovulationStart - cycleDay;
@@ -450,6 +464,7 @@ function calculateCycleInfo(
 
   return { cycleDay, phase, daysUntilNextPhase };
 }
+
 
 function buildInsightPrompt(
   userName: string,
