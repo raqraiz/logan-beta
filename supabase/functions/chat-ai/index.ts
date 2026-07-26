@@ -809,8 +809,15 @@ serve(async (req) => {
         /\bperiod\s+(?:is\s+)?(?:over|done|finished|ended)\b/i,
         /\b(?:i'?m\s+)?done\s+(?:with\s+)?(?:my\s+)?period\b/i,
         /\bperiod\s+ended\s+(?:today|yesterday)\b/i,
+        // User-declared transition into Follicular ⇒ period is over.
+        /\bfirst\s+day\s+of\s+(?:my\s+)?foll?icular\b/i,
+        /\b(?:moving|moved|going|gone|shifting|shifted|transitioning|transitioned)\s+(?:in)?to\s+(?:the\s+|my\s+)?foll?icular\b/i,
+        /\b(?:i'?m\s+)?(?:now\s+)?in\s+(?:the\s+|my\s+)?foll?icular(?:\s+phase)?\s*(?:now|today)?\b/i,
+        /\bfoll?icular\s+(?:phase\s+)?(?:has\s+)?(?:started|begun|kicked\s+in)\b/i,
+        /\b(?:started|entered|began|beginning)\s+(?:my\s+|the\s+)?foll?icular\b/i,
       ];
       const isEnded = !isStillBleeding && endedPatterns.some(p => p.test(userMessage));
+
 
       if (isStillBleeding && !(participant as any).period_still_active) {
         await supabase
@@ -2868,6 +2875,22 @@ serve(async (req) => {
         )
       : null;
 
+    // Self-heal: if the sticky period_still_active flag is present but stale
+    // (past normal bleed window), clear it in the DB so downstream reads and
+    // the daily briefing agree with chat. Ignore errors — it's best-effort.
+    if (
+      cycleInfo &&
+      (participant as any).period_still_active &&
+      cycleInfo.phase !== "Menstruation"
+    ) {
+      await supabase
+        .from("participants")
+        .update({ period_still_active: false })
+        .eq("id", participant.id);
+      participant = { ...participant, period_still_active: false } as typeof participant;
+    }
+
+
     // Overdue plausibility check — if she's run well past her expected cycle
     // length with no new Day 1, no logged end date, and no confirmation her
     // period is still ongoing, don't let Logan pretend it's a normal luteal day.
@@ -3652,7 +3675,13 @@ function calculateCycleInfo(
 
   // If she said her period is still ongoing past the default window, keep her
   // in Menstruation (capped at day 12) until she logs an end date or new Day 1.
-  const forceMenstruation = !!periodStillActive && cycleDay <= 12;
+  // Auto-expire: the flag is only meaningful during the actual bleed window.
+  // If we're past day 7 (normal max bleed length) or more than 7 days have
+  // elapsed since last_period_start, ignore the stale flag — it silently
+  // persisted and would force Menstruation while the briefing shows Follicular.
+  const flagExpired = !!periodStillActive && (cycleDay > 7 || daysSinceStart > 7);
+  const forceMenstruation = !!periodStillActive && !flagExpired && cycleDay <= 12;
+
 
   // periodPending is informational for prompt context — parity with the client
   // ring; we already don't wrap, so no behavior change here.
