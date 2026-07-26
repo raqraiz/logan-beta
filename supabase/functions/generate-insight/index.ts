@@ -243,8 +243,11 @@ serve(async (req) => {
     const cycleInfo = calculateCycleInfo(
       participant.last_period_start,
       participant.cycle_length_days,
-      participant.timezone || "UTC"
+      participant.timezone || "UTC",
+      (participant as any).current_period_end_date ?? null,
+      !!(participant as any).period_still_active,
     );
+
 
     if (!cycleInfo) {
       await removePlaceholder();
