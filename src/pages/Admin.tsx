@@ -125,11 +125,15 @@ const Admin = () => {
 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList
-            className={`grid w-full max-w-3xl ${isSuperAdmin ? "grid-cols-6" : "grid-cols-4"} bg-muted border border-border`}
+            className={`grid w-full max-w-3xl ${isSuperAdmin ? "grid-cols-7" : "grid-cols-5"} bg-muted border border-border`}
           >
             <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="growth" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <LineChart className="w-4 h-4" />
+              <span className="hidden sm:inline">Growth</span>
             </TabsTrigger>
             <TabsTrigger value="attribution" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <TrendingUp className="w-4 h-4" />
@@ -159,6 +163,10 @@ const Admin = () => {
 
           <TabsContent value="overview">
             <OverviewTab />
+          </TabsContent>
+
+          <TabsContent value="growth">
+            <GrowthTrackerTab />
           </TabsContent>
 
           <TabsContent value="attribution">
