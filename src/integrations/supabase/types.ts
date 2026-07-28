@@ -519,6 +519,27 @@ export type Database = {
           },
         ]
       }
+      growth_tracker: {
+        Row: {
+          actual_user_count: number
+          created_at: string
+          date: string
+          id: string
+        }
+        Insert: {
+          actual_user_count: number
+          created_at?: string
+          date: string
+          id?: string
+        }
+        Update: {
+          actual_user_count?: number
+          created_at?: string
+          date?: string
+          id?: string
+        }
+        Relationships: []
+      }
       history_imports: {
         Row: {
           completed_at: string | null
