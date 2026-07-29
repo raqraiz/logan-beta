@@ -25,15 +25,22 @@ const START_COUNT = 100;
 const END_COUNT = 1000;
 const TOTAL_DAYS = differenceInDays(END_DATE, START_DATE);
 
-const projectedAt = (d: Date) => {
+const targetAt = (d: Date) => {
   const days = differenceInDays(d, START_DATE);
   if (days <= 0) return START_COUNT;
   if (days >= TOTAL_DAYS) return END_COUNT;
   return Math.round(START_COUNT + ((END_COUNT - START_COUNT) * days) / TOTAL_DAYS);
 };
 
+const toUTCDate = (s: string) => new Date(s + "T00:00:00Z");
+const todayUTCKey = () => {
+  const now = new Date();
+  return format(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())), "yyyy-MM-dd");
+};
+
 export const GrowthTrackerTab = () => {
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [signupsByDay, setSignupsByDay] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [count, setCount] = useState("");
@@ -43,23 +50,41 @@ export const GrowthTrackerTab = () => {
 
   const load = async () => {
     setLoading(true);
-    // Auto-snapshot today's total user count from profiles.
+
+    // Pull all signups since July 1 for the historical actual curve.
+    const { data: profs, error: profErr } = await supabase
+      .from("profiles")
+      .select("created_at")
+      .gte("created_at", START_DATE.toISOString());
+    if (profErr) {
+      console.error("Failed to load profiles for growth:", profErr);
+    }
+    const byDay = new Map<string, number>();
+    for (const p of profs ?? []) {
+      if (!p.created_at) continue;
+      const d = new Date(p.created_at);
+      const key = format(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())), "yyyy-MM-dd");
+      byDay.set(key, (byDay.get(key) ?? 0) + 1);
+    }
+    setSignupsByDay(byDay);
+
+    // Auto-snapshot today's total (baseline + signups) into growth_tracker.
     try {
-      const today = format(new Date(), "yyyy-MM-dd");
-      const { count: userCount } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true });
-      if (typeof userCount === "number") {
-        const { data: existing } = await supabase
+      const today = todayUTCKey();
+      const totalSignupsThroughToday = Array.from(byDay.entries())
+        .filter(([k]) => k <= today)
+        .reduce((s, [, v]) => s + v, 0);
+      const derivedToday = START_COUNT + totalSignupsThroughToday;
+
+      const { data: existing } = await supabase
+        .from("growth_tracker")
+        .select("id, actual_user_count")
+        .eq("date", today)
+        .maybeSingle();
+      if (!existing || existing.actual_user_count !== derivedToday) {
+        await supabase
           .from("growth_tracker")
-          .select("id, actual_user_count")
-          .eq("date", today)
-          .maybeSingle();
-        if (!existing || existing.actual_user_count !== userCount) {
-          await supabase
-            .from("growth_tracker")
-            .upsert({ date: today, actual_user_count: userCount }, { onConflict: "date" });
-        }
+          .upsert({ date: today, actual_user_count: derivedToday }, { onConflict: "date" });
       }
     } catch (e) {
       console.error("Auto-snapshot failed:", e);
@@ -123,36 +148,80 @@ export const GrowthTrackerTab = () => {
     load();
   };
 
-  const chartData = useMemo(() => {
-    // Build one point per week + endpoints + all actual dates
-    const points = new Map<string, { date: string; projected: number; actual?: number }>();
+  const { chartData, todayActual, todayKey } = useMemo(() => {
+    const today = todayUTCKey();
+    const overrides = new Map(entries.map((e) => [e.date, e.actual_user_count]));
+
+    // Build cumulative actual per day from July 1 through today.
+    const actualByDay = new Map<string, number>();
+    let cumulative = START_COUNT;
+    for (let d = new Date(START_DATE); format(d, "yyyy-MM-dd") <= today; d = addDays(d, 1)) {
+      const key = format(d, "yyyy-MM-dd");
+      cumulative += signupsByDay.get(key) ?? 0;
+      const value = overrides.has(key) ? (overrides.get(key) as number) : cumulative;
+      actualByDay.set(key, value);
+    }
+
+    const todayActualVal = actualByDay.get(today) ?? START_COUNT;
+
+    // Trend: average daily growth since July 1, extended from today → Jan 1.
+    const daysElapsed = Math.max(1, differenceInDays(toUTCDate(today), START_DATE));
+    const dailyRate = (todayActualVal - START_COUNT) / daysElapsed;
+
+    // Points: daily up to today (actual), then weekly + endpoint for trend/target.
+    const points = new Map<string, { date: string; target: number; actual?: number; trend?: number }>();
+
+    // Weekly target skeleton
     for (let d = new Date(START_DATE); d <= END_DATE; d = addDays(d, 7)) {
       const key = format(d, "yyyy-MM-dd");
-      points.set(key, { date: key, projected: projectedAt(d) });
+      points.set(key, { date: key, target: targetAt(d) });
     }
     const endKey = format(END_DATE, "yyyy-MM-dd");
-    points.set(endKey, { date: endKey, projected: END_COUNT });
-    for (const e of entries) {
-      const existing = points.get(e.date);
-      if (existing) {
-        existing.actual = e.actual_user_count;
-      } else {
-        points.set(e.date, {
-          date: e.date,
-          projected: projectedAt(parseISO(e.date)),
-          actual: e.actual_user_count,
-        });
-      }
-    }
-    return Array.from(points.values()).sort((a, b) => a.date.localeCompare(b.date));
-  }, [entries]);
+    points.set(endKey, { date: endKey, target: END_COUNT });
 
-  const maxActual = entries.reduce((m, e) => Math.max(m, e.actual_user_count), 0);
-  const yMax = Math.max(1000, Math.ceil(maxActual / 100) * 100);
+    // Overlay daily actuals
+    for (const [key, val] of actualByDay.entries()) {
+      const existing = points.get(key) ?? { date: key, target: targetAt(toUTCDate(key)) };
+      existing.actual = val;
+      points.set(key, existing);
+    }
+
+    // Trend line: from today (anchored to actual) forward, weekly + endpoint
+    const anchor = points.get(today) ?? { date: today, target: targetAt(toUTCDate(today)) };
+    anchor.actual = todayActualVal;
+    anchor.trend = todayActualVal;
+    points.set(today, anchor);
+
+    for (let d = addDays(toUTCDate(today), 7); d <= END_DATE; d = addDays(d, 7)) {
+      const key = format(d, "yyyy-MM-dd");
+      const days = differenceInDays(d, START_DATE);
+      const trendVal = Math.round(START_COUNT + dailyRate * days);
+      const existing = points.get(key) ?? { date: key, target: targetAt(d) };
+      existing.trend = trendVal;
+      points.set(key, existing);
+    }
+    // Endpoint
+    {
+      const days = differenceInDays(END_DATE, START_DATE);
+      const trendEnd = Math.round(START_COUNT + dailyRate * days);
+      const existing = points.get(endKey)!;
+      existing.trend = trendEnd;
+    }
+
+    const sorted = Array.from(points.values()).sort((a, b) => a.date.localeCompare(b.date));
+    return { chartData: sorted, todayActual: todayActualVal, todayKey: today };
+  }, [entries, signupsByDay]);
+
+  const maxVal = chartData.reduce(
+    (m, p) => Math.max(m, p.actual ?? 0, p.target ?? 0, p.trend ?? 0),
+    0
+  );
+  const yMax = Math.max(1000, Math.ceil(maxVal / 100) * 100);
 
   const chartConfig: ChartConfig = {
-    projected: { label: "Projected", color: "hsl(var(--muted-foreground))" },
+    target: { label: "Target", color: "hsl(var(--muted-foreground))" },
     actual: { label: "Actual", color: "hsl(var(--primary))" },
+    trend: { label: "Trend", color: "hsl(35 92% 55%)" },
   };
 
   return (
@@ -160,13 +229,12 @@ export const GrowthTrackerTab = () => {
       <Card>
         <CardHeader>
           <CardTitle>Growth toward 1,000 users by Jan 1, 2027</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Today: <span className="font-medium text-foreground">{todayActual}</span> users ·
+            {" "}Target today: <span className="font-medium">{targetAt(toUTCDate(todayKey))}</span>
+          </p>
         </CardHeader>
         <CardContent>
-          {entries.length === 0 && (
-            <p className="text-sm text-muted-foreground mb-4">
-              No actual data yet — add your first entry.
-            </p>
-          )}
           <ChartContainer config={chartConfig} className="h-[360px] w-full">
             <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
@@ -182,8 +250,8 @@ export const GrowthTrackerTab = () => {
               <Legend />
               <Line
                 type="monotone"
-                dataKey="projected"
-                name="Projected"
+                dataKey="target"
+                name="Target"
                 stroke="hsl(var(--muted-foreground))"
                 strokeDasharray="6 4"
                 strokeWidth={2}
@@ -191,11 +259,21 @@ export const GrowthTrackerTab = () => {
               />
               <Line
                 type="monotone"
+                dataKey="trend"
+                name="Trend"
+                stroke="hsl(35 92% 55%)"
+                strokeDasharray="4 4"
+                strokeWidth={2}
+                dot={false}
+                connectNulls
+              />
+              <Line
+                type="monotone"
                 dataKey="actual"
                 name="Actual"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2.5}
-                dot={{ r: 3 }}
+                dot={false}
                 connectNulls
               />
             </LineChart>
@@ -207,7 +285,7 @@ export const GrowthTrackerTab = () => {
         <CardHeader>
           <CardTitle>Backfill or correct a date</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            Today's count auto-updates from real user data. Use this for historical dates or manual overrides.
+            Historical actuals are derived live from signup data. Use this only to override a specific date if the reconstructed number is off.
           </p>
         </CardHeader>
         <CardContent>
@@ -236,26 +314,26 @@ export const GrowthTrackerTab = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Entries</CardTitle>
+          <CardTitle>Manual overrides</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
           ) : entries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No entries yet.</p>
+            <p className="text-sm text-muted-foreground">No overrides yet.</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Users</TableHead>
-                  <TableHead>Projected</TableHead>
+                  <TableHead>Target</TableHead>
                   <TableHead className="w-32 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {[...entries].reverse().map((e) => {
-                  const proj = projectedAt(parseISO(e.date));
+                  const proj = targetAt(parseISO(e.date));
                   const isEditing = editingId === e.id;
                   return (
                     <TableRow key={e.id}>
