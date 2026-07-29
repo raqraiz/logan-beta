@@ -205,7 +205,10 @@ export const GrowthTrackerTab = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Add entry</CardTitle>
+          <CardTitle>Backfill or correct a date</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Today's count auto-updates from real user data. Use this for historical dates or manual overrides.
+          </p>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
