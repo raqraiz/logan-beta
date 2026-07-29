@@ -43,6 +43,28 @@ export const GrowthTrackerTab = () => {
 
   const load = async () => {
     setLoading(true);
+    // Auto-snapshot today's total user count from profiles.
+    try {
+      const today = format(new Date(), "yyyy-MM-dd");
+      const { count: userCount } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true });
+      if (typeof userCount === "number") {
+        const { data: existing } = await supabase
+          .from("growth_tracker")
+          .select("id, actual_user_count")
+          .eq("date", today)
+          .maybeSingle();
+        if (!existing || existing.actual_user_count !== userCount) {
+          await supabase
+            .from("growth_tracker")
+            .upsert({ date: today, actual_user_count: userCount }, { onConflict: "date" });
+        }
+      }
+    } catch (e) {
+      console.error("Auto-snapshot failed:", e);
+    }
+
     const { data, error } = await supabase
       .from("growth_tracker")
       .select("id, date, actual_user_count")
@@ -183,7 +205,10 @@ export const GrowthTrackerTab = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Add entry</CardTitle>
+          <CardTitle>Backfill or correct a date</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Today's count auto-updates from real user data. Use this for historical dates or manual overrides.
+          </p>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
