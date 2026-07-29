@@ -43,6 +43,28 @@ export const GrowthTrackerTab = () => {
 
   const load = async () => {
     setLoading(true);
+    // Auto-snapshot today's total user count from profiles.
+    try {
+      const today = format(new Date(), "yyyy-MM-dd");
+      const { count: userCount } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true });
+      if (typeof userCount === "number") {
+        const { data: existing } = await supabase
+          .from("growth_tracker")
+          .select("id, actual_user_count")
+          .eq("date", today)
+          .maybeSingle();
+        if (!existing || existing.actual_user_count !== userCount) {
+          await supabase
+            .from("growth_tracker")
+            .upsert({ date: today, actual_user_count: userCount }, { onConflict: "date" });
+        }
+      }
+    } catch (e) {
+      console.error("Auto-snapshot failed:", e);
+    }
+
     const { data, error } = await supabase
       .from("growth_tracker")
       .select("id, date, actual_user_count")
