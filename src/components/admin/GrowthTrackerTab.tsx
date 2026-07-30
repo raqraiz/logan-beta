@@ -252,8 +252,11 @@ export const GrowthTrackerTab = () => {
         <CardHeader>
           <CardTitle>Growth toward 1,000 users by Jan 1, 2027</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            Today: <span className="font-medium text-foreground">{todayActual}</span> users ·
-            {" "}Target today: <span className="font-medium">{targetAt(toUTCDate(todayKey))}</span>
+            Today ({format(toUTCDate(todayKey), "MMM d, yyyy")}):{" "}
+            <span className="font-medium text-foreground">{todayActual}</span> users ·
+            {" "}Target today: <span className="font-medium">{targetAt(toUTCDate(todayKey))}</span> ·
+            {" "}<span className="font-medium">{todayActual - targetAt(toUTCDate(todayKey)) >= 0 ? "+" : ""}
+            {todayActual - targetAt(toUTCDate(todayKey))}</span> vs target
           </p>
         </CardHeader>
         <CardContent>
@@ -267,6 +270,7 @@ export const GrowthTrackerTab = () => {
               />
               <YAxis domain={[0, yMax]} tick={{ fontSize: 11 }} />
               <ChartTooltip
+                trigger="hover"
                 content={<ChartTooltipContent labelFormatter={(v) => format(parseISO(v as string), "MMM d, yyyy")} />}
               />
               <Legend />
@@ -278,6 +282,7 @@ export const GrowthTrackerTab = () => {
                 strokeDasharray="6 4"
                 strokeWidth={2}
                 dot={false}
+                activeDot={{ r: 5 }}
               />
               <Line
                 type="monotone"
@@ -288,6 +293,7 @@ export const GrowthTrackerTab = () => {
                 strokeWidth={2}
                 dot={false}
                 connectNulls
+                activeDot={{ r: 5 }}
               />
               <Line
                 type="monotone"
@@ -295,9 +301,29 @@ export const GrowthTrackerTab = () => {
                 name="Actual"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2.5}
-                dot={false}
                 connectNulls
+                // Invisible wide hit area on every point + a visible enlarged marker for today.
+                dot={(props: any) => {
+                  const isToday = props?.payload?.date === todayKey;
+                  return (
+                    <g key={`actual-dot-${props.payload?.date}`}>
+                      <circle cx={props.cx} cy={props.cy} r={18} fill="transparent" style={{ pointerEvents: "all" }} />
+                      {isToday && (
+                        <circle
+                          cx={props.cx}
+                          cy={props.cy}
+                          r={5}
+                          fill="hsl(var(--primary))"
+                          stroke="hsl(var(--background))"
+                          strokeWidth={2}
+                        />
+                      )}
+                    </g>
+                  );
+                }}
+                activeDot={{ r: 7 }}
               />
+
             </LineChart>
           </ChartContainer>
         </CardContent>
