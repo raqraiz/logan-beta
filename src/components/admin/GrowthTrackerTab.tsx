@@ -56,6 +56,17 @@ export const GrowthTrackerTab = () => {
   const load = async () => {
     setLoading(true);
 
+    // Same source as Overview's "Total Users": every row in `profiles`, unfiltered.
+    const [{ count: totalProfiles }, { count: preBaselineCount }] = await Promise.all([
+      supabase.from("profiles").select("*", { count: "exact", head: true }),
+      supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .lt("created_at", START_DATE.toISOString()),
+    ]);
+    const realBaseline = preBaselineCount ?? START_COUNT;
+    setBaseline(realBaseline);
+
     // Pull all signups since July 1 for the historical actual curve.
     const { data: profs, error: profErr } = await supabase
       .from("profiles")
@@ -73,13 +84,18 @@ export const GrowthTrackerTab = () => {
     }
     setSignupsByDay(byDay);
 
-    // Auto-snapshot today's total (baseline + signups) into growth_tracker.
+    // Auto-snapshot today's total into growth_tracker — must equal Overview exactly.
     try {
       const today = todayUTCKey();
       const totalSignupsThroughToday = Array.from(byDay.entries())
         .filter(([k]) => k <= today)
         .reduce((s, [, v]) => s + v, 0);
-      const derivedToday = START_COUNT + totalSignupsThroughToday;
+      const derivedToday = totalProfiles ?? realBaseline + totalSignupsThroughToday;
+
+      console.info(
+        `[GrowthTracker] total profiles=${totalProfiles} · pre-Jul-1 baseline=${realBaseline} ` +
+          `(hardcoded was ${START_COUNT}) · signups since Jul 1=${totalSignupsThroughToday}`
+      );
 
       const { data: existing } = await supabase
         .from("growth_tracker")
@@ -94,6 +110,7 @@ export const GrowthTrackerTab = () => {
     } catch (e) {
       console.error("Auto-snapshot failed:", e);
     }
+
 
     const { data, error } = await supabase
       .from("growth_tracker")
