@@ -1,23 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from "recharts";
-import { toast } from "@/hooks/use-toast";
-import { Trash2, Pencil, Check, X, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { format, parseISO, differenceInDays, addDays } from "date-fns";
-
-interface Entry {
-  id: string;
-  date: string;
-  actual_user_count: number;
-}
 
 const START_DATE = new Date(Date.UTC(2026, 6, 1)); // Jul 1 2026
 const END_DATE = new Date(Date.UTC(2027, 0, 1)); // Jan 1 2027
@@ -39,42 +29,27 @@ const todayUTCKey = () => {
 };
 
 export const GrowthTrackerTab = () => {
-  const [entries, setEntries] = useState<Entry[]>([]);
   const [signupsByDay, setSignupsByDay] = useState<Map<string, number>>(new Map());
-  // Real number of profiles that existed before Jul 1 2026 — the actual baseline.
-  // (The hardcoded 100 was the goal-line baseline, not the real one: it caused
-  // Growth Tracker to under-report by exactly `baseline - 100` vs Overview.)
   const [baseline, setBaseline] = useState<number>(START_COUNT);
   const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [count, setCount] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editCount, setEditCount] = useState("");
-
 
   const load = async () => {
     setLoading(true);
 
     // Same source as Overview's "Total Users": every row in `profiles`, unfiltered.
-    const [{ count: totalProfiles }, { count: preBaselineCount }] = await Promise.all([
-      supabase.from("profiles").select("*", { count: "exact", head: true }),
-      supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true })
-        .lt("created_at", START_DATE.toISOString()),
-    ]);
+    const { count: preBaselineCount } = await supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .lt("created_at", START_DATE.toISOString());
     const realBaseline = preBaselineCount ?? START_COUNT;
     setBaseline(realBaseline);
 
-    // Pull all signups since July 1 for the historical actual curve.
     const { data: profs, error: profErr } = await supabase
       .from("profiles")
       .select("created_at")
       .gte("created_at", START_DATE.toISOString());
-    if (profErr) {
-      console.error("Failed to load profiles for growth:", profErr);
-    }
+    if (profErr) console.error("Failed to load profiles for growth:", profErr);
+
     const byDay = new Map<string, number>();
     for (const p of profs ?? []) {
       if (!p.created_at) continue;
@@ -83,117 +58,30 @@ export const GrowthTrackerTab = () => {
       byDay.set(key, (byDay.get(key) ?? 0) + 1);
     }
     setSignupsByDay(byDay);
-
-    // Auto-snapshot today's total into growth_tracker — must equal Overview exactly.
-    try {
-      const today = todayUTCKey();
-      const totalSignupsThroughToday = Array.from(byDay.entries())
-        .filter(([k]) => k <= today)
-        .reduce((s, [, v]) => s + v, 0);
-      const derivedToday = totalProfiles ?? realBaseline + totalSignupsThroughToday;
-
-      console.info(
-        `[GrowthTracker] total profiles=${totalProfiles} · pre-Jul-1 baseline=${realBaseline} ` +
-          `(hardcoded was ${START_COUNT}) · signups since Jul 1=${totalSignupsThroughToday}`
-      );
-
-      const { data: existing } = await supabase
-        .from("growth_tracker")
-        .select("id, actual_user_count")
-        .eq("date", today)
-        .maybeSingle();
-      if (!existing || existing.actual_user_count !== derivedToday) {
-        await supabase
-          .from("growth_tracker")
-          .upsert({ date: today, actual_user_count: derivedToday }, { onConflict: "date" });
-      }
-    } catch (e) {
-      console.error("Auto-snapshot failed:", e);
-    }
-
-
-    const { data, error } = await supabase
-      .from("growth_tracker")
-      .select("id, date, actual_user_count")
-      .order("date", { ascending: true });
-    if (error) {
-      toast({ title: "Failed to load", description: error.message, variant: "destructive" });
-    } else {
-      setEntries(data ?? []);
-    }
     setLoading(false);
   };
 
   useEffect(() => { load(); }, []);
 
-  const handleAdd = async () => {
-    const n = parseInt(count, 10);
-    if (!date || isNaN(n) || n < 0) {
-      toast({ title: "Enter a valid date and user count", variant: "destructive" });
-      return;
-    }
-    setSaving(true);
-    const { error } = await supabase
-      .from("growth_tracker")
-      .upsert({ date, actual_user_count: n }, { onConflict: "date" });
-    setSaving(false);
-    if (error) {
-      toast({ title: "Save failed", description: error.message, variant: "destructive" });
-      return;
-    }
-    setCount("");
-    toast({ title: "Entry saved" });
-    load();
-  };
-
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("growth_tracker").delete().eq("id", id);
-    if (error) {
-      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
-      return;
-    }
-    load();
-  };
-
-  const handleEditSave = async (id: string) => {
-    const n = parseInt(editCount, 10);
-    if (isNaN(n) || n < 0) {
-      toast({ title: "Invalid count", variant: "destructive" });
-      return;
-    }
-    const { error } = await supabase.from("growth_tracker").update({ actual_user_count: n }).eq("id", id);
-    if (error) {
-      toast({ title: "Update failed", description: error.message, variant: "destructive" });
-      return;
-    }
-    setEditingId(null);
-    load();
-  };
-
-  const { chartData, todayActual, todayKey } = useMemo(() => {
+  const { chartData, dailyRows, todayActual, todayKey } = useMemo(() => {
     const today = todayUTCKey();
-    const overrides = new Map(entries.map((e) => [e.date, e.actual_user_count]));
 
-    // Build cumulative actual per day from July 1 through today.
+    // Live cumulative actual per day from July 1 through today.
     const actualByDay = new Map<string, number>();
     let cumulative = baseline;
     for (let d = new Date(START_DATE); format(d, "yyyy-MM-dd") <= today; d = addDays(d, 1)) {
       const key = format(d, "yyyy-MM-dd");
       cumulative += signupsByDay.get(key) ?? 0;
-      const value = overrides.has(key) ? (overrides.get(key) as number) : cumulative;
-      actualByDay.set(key, value);
+      actualByDay.set(key, cumulative);
     }
 
     const todayActualVal = actualByDay.get(today) ?? baseline;
 
-    // Trend: average daily growth since July 1, extended from today → Jan 1.
     const daysElapsed = Math.max(1, differenceInDays(toUTCDate(today), START_DATE));
     const dailyRate = (todayActualVal - baseline) / daysElapsed;
 
-    // Points: daily up to today (actual), then weekly + endpoint for trend/target.
     const points = new Map<string, { date: string; target: number; actual?: number; trend?: number }>();
 
-    // Weekly target skeleton
     for (let d = new Date(START_DATE); d <= END_DATE; d = addDays(d, 7)) {
       const key = format(d, "yyyy-MM-dd");
       points.set(key, { date: key, target: targetAt(d) });
@@ -201,14 +89,12 @@ export const GrowthTrackerTab = () => {
     const endKey = format(END_DATE, "yyyy-MM-dd");
     points.set(endKey, { date: endKey, target: END_COUNT });
 
-    // Overlay daily actuals
     for (const [key, val] of actualByDay.entries()) {
       const existing = points.get(key) ?? { date: key, target: targetAt(toUTCDate(key)) };
       existing.actual = val;
       points.set(key, existing);
     }
 
-    // Trend line: from today (anchored to actual) forward, weekly + endpoint
     const anchor = points.get(today) ?? { date: today, target: targetAt(toUTCDate(today)) };
     anchor.actual = todayActualVal;
     anchor.trend = todayActualVal;
@@ -222,7 +108,6 @@ export const GrowthTrackerTab = () => {
       existing.trend = trendVal;
       points.set(key, existing);
     }
-    // Endpoint
     {
       const days = differenceInDays(END_DATE, START_DATE);
       const trendEnd = Math.round(baseline + dailyRate * days);
@@ -231,8 +116,16 @@ export const GrowthTrackerTab = () => {
     }
 
     const sorted = Array.from(points.values()).sort((a, b) => a.date.localeCompare(b.date));
-    return { chartData: sorted, todayActual: todayActualVal, todayKey: today };
-  }, [entries, signupsByDay, baseline]);
+
+    const rows = Array.from(actualByDay.entries())
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([date, users]) => {
+        const target = targetAt(toUTCDate(date));
+        return { date, users, target, delta: users - target };
+      });
+
+    return { chartData: sorted, dailyRows: rows, todayActual: todayActualVal, todayKey: today };
+  }, [signupsByDay, baseline]);
 
   const maxVal = chartData.reduce(
     (m, p) => Math.max(m, p.actual ?? 0, p.target ?? 0, p.trend ?? 0),
@@ -246,6 +139,8 @@ export const GrowthTrackerTab = () => {
     trend: { label: "Trend", color: "hsl(35 92% 55%)" },
   };
 
+  const fmtDelta = (n: number) => (n >= 0 ? `+${n}` : `−${Math.abs(n)}`);
+
   return (
     <div className="space-y-6">
       <Card>
@@ -255,8 +150,7 @@ export const GrowthTrackerTab = () => {
             Today ({format(toUTCDate(todayKey), "MMM d, yyyy")}):{" "}
             <span className="font-medium text-foreground">{todayActual}</span> users ·
             {" "}Target today: <span className="font-medium">{targetAt(toUTCDate(todayKey))}</span> ·
-            {" "}<span className="font-medium">{todayActual - targetAt(toUTCDate(todayKey)) >= 0 ? "+" : ""}
-            {todayActual - targetAt(toUTCDate(todayKey))}</span> vs target
+            {" "}<span className="font-medium">{fmtDelta(todayActual - targetAt(toUTCDate(todayKey)))}</span> vs target
           </p>
         </CardHeader>
         <CardContent>
@@ -302,7 +196,6 @@ export const GrowthTrackerTab = () => {
                 stroke="hsl(var(--primary))"
                 strokeWidth={2.5}
                 connectNulls
-                // Invisible wide hit area on every point + a visible enlarged marker for today.
                 dot={(props: any) => {
                   const isToday = props?.payload?.date === todayKey;
                   return (
@@ -323,7 +216,6 @@ export const GrowthTrackerTab = () => {
                 }}
                 activeDot={{ r: 7 }}
               />
-
             </LineChart>
           </ChartContainer>
         </CardContent>
@@ -331,44 +223,14 @@ export const GrowthTrackerTab = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Backfill or correct a date</CardTitle>
+          <CardTitle>Daily log</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            Historical actuals are derived live from signup data. Use this only to override a specific date if the reconstructed number is off.
+            Live from signup data — one row per day since Jul 1, 2026.
           </p>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-            <div className="flex-1">
-              <Label htmlFor="gt-date">Date</Label>
-              <Input id="gt-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-            </div>
-            <div className="flex-1">
-              <Label htmlFor="gt-count">User count</Label>
-              <Input
-                id="gt-count"
-                type="number"
-                min={0}
-                value={count}
-                onChange={(e) => setCount(e.target.value)}
-                placeholder="e.g. 152"
-              />
-            </div>
-            <Button onClick={handleAdd} disabled={saving}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add entry"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Manual overrides</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
-          ) : entries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No overrides yet.</p>
           ) : (
             <Table>
               <TableHeader>
@@ -376,59 +238,20 @@ export const GrowthTrackerTab = () => {
                   <TableHead>Date</TableHead>
                   <TableHead>Users</TableHead>
                   <TableHead>Target</TableHead>
-                  <TableHead className="w-32 text-right">Actions</TableHead>
+                  <TableHead className="text-right">Delta</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {[...entries].reverse().map((e) => {
-                  const proj = targetAt(parseISO(e.date));
-                  const isEditing = editingId === e.id;
-                  return (
-                    <TableRow key={e.id}>
-                      <TableCell>{format(parseISO(e.date), "MMM d, yyyy")}</TableCell>
-                      <TableCell>
-                        {isEditing ? (
-                          <Input
-                            type="number"
-                            value={editCount}
-                            onChange={(ev) => setEditCount(ev.target.value)}
-                            className="w-24 h-8"
-                          />
-                        ) : (
-                          <span className={e.actual_user_count >= proj ? "text-primary font-medium" : ""}>
-                            {e.actual_user_count}
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{proj}</TableCell>
-                      <TableCell className="text-right">
-                        {isEditing ? (
-                          <div className="flex gap-1 justify-end">
-                            <Button size="icon" variant="ghost" onClick={() => handleEditSave(e.id)}>
-                              <Check className="w-4 h-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" onClick={() => setEditingId(null)}>
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex gap-1 justify-end">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => { setEditingId(e.id); setEditCount(String(e.actual_user_count)); }}
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" onClick={() => handleDelete(e.id)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {dailyRows.map((r) => (
+                  <TableRow key={r.date}>
+                    <TableCell>{format(toUTCDate(r.date), "MMM d, yyyy")}</TableCell>
+                    <TableCell className="font-medium">{r.users}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.target}</TableCell>
+                    <TableCell className={`text-right font-medium ${r.delta >= 0 ? "text-primary" : "text-muted-foreground"}`}>
+                      {fmtDelta(r.delta)}
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           )}
