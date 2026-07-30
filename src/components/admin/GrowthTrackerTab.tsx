@@ -41,6 +41,10 @@ const todayUTCKey = () => {
 export const GrowthTrackerTab = () => {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [signupsByDay, setSignupsByDay] = useState<Map<string, number>>(new Map());
+  // Real number of profiles that existed before Jul 1 2026 — the actual baseline.
+  // (The hardcoded 100 was the goal-line baseline, not the real one: it caused
+  // Growth Tracker to under-report by exactly `baseline - 100` vs Overview.)
+  const [baseline, setBaseline] = useState<number>(START_COUNT);
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [count, setCount] = useState("");
@@ -48,8 +52,20 @@ export const GrowthTrackerTab = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editCount, setEditCount] = useState("");
 
+
   const load = async () => {
     setLoading(true);
+
+    // Same source as Overview's "Total Users": every row in `profiles`, unfiltered.
+    const [{ count: totalProfiles }, { count: preBaselineCount }] = await Promise.all([
+      supabase.from("profiles").select("*", { count: "exact", head: true }),
+      supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .lt("created_at", START_DATE.toISOString()),
+    ]);
+    const realBaseline = preBaselineCount ?? START_COUNT;
+    setBaseline(realBaseline);
 
     // Pull all signups since July 1 for the historical actual curve.
     const { data: profs, error: profErr } = await supabase
@@ -68,13 +84,18 @@ export const GrowthTrackerTab = () => {
     }
     setSignupsByDay(byDay);
 
-    // Auto-snapshot today's total (baseline + signups) into growth_tracker.
+    // Auto-snapshot today's total into growth_tracker — must equal Overview exactly.
     try {
       const today = todayUTCKey();
       const totalSignupsThroughToday = Array.from(byDay.entries())
         .filter(([k]) => k <= today)
         .reduce((s, [, v]) => s + v, 0);
-      const derivedToday = START_COUNT + totalSignupsThroughToday;
+      const derivedToday = totalProfiles ?? realBaseline + totalSignupsThroughToday;
+
+      console.info(
+        `[GrowthTracker] total profiles=${totalProfiles} · pre-Jul-1 baseline=${realBaseline} ` +
+          `(hardcoded was ${START_COUNT}) · signups since Jul 1=${totalSignupsThroughToday}`
+      );
 
       const { data: existing } = await supabase
         .from("growth_tracker")
@@ -89,6 +110,7 @@ export const GrowthTrackerTab = () => {
     } catch (e) {
       console.error("Auto-snapshot failed:", e);
     }
+
 
     const { data, error } = await supabase
       .from("growth_tracker")
@@ -154,7 +176,7 @@ export const GrowthTrackerTab = () => {
 
     // Build cumulative actual per day from July 1 through today.
     const actualByDay = new Map<string, number>();
-    let cumulative = START_COUNT;
+    let cumulative = baseline;
     for (let d = new Date(START_DATE); format(d, "yyyy-MM-dd") <= today; d = addDays(d, 1)) {
       const key = format(d, "yyyy-MM-dd");
       cumulative += signupsByDay.get(key) ?? 0;
@@ -162,11 +184,11 @@ export const GrowthTrackerTab = () => {
       actualByDay.set(key, value);
     }
 
-    const todayActualVal = actualByDay.get(today) ?? START_COUNT;
+    const todayActualVal = actualByDay.get(today) ?? baseline;
 
     // Trend: average daily growth since July 1, extended from today → Jan 1.
     const daysElapsed = Math.max(1, differenceInDays(toUTCDate(today), START_DATE));
-    const dailyRate = (todayActualVal - START_COUNT) / daysElapsed;
+    const dailyRate = (todayActualVal - baseline) / daysElapsed;
 
     // Points: daily up to today (actual), then weekly + endpoint for trend/target.
     const points = new Map<string, { date: string; target: number; actual?: number; trend?: number }>();
@@ -195,7 +217,7 @@ export const GrowthTrackerTab = () => {
     for (let d = addDays(toUTCDate(today), 7); d <= END_DATE; d = addDays(d, 7)) {
       const key = format(d, "yyyy-MM-dd");
       const days = differenceInDays(d, START_DATE);
-      const trendVal = Math.round(START_COUNT + dailyRate * days);
+      const trendVal = Math.round(baseline + dailyRate * days);
       const existing = points.get(key) ?? { date: key, target: targetAt(d) };
       existing.trend = trendVal;
       points.set(key, existing);
@@ -203,14 +225,14 @@ export const GrowthTrackerTab = () => {
     // Endpoint
     {
       const days = differenceInDays(END_DATE, START_DATE);
-      const trendEnd = Math.round(START_COUNT + dailyRate * days);
+      const trendEnd = Math.round(baseline + dailyRate * days);
       const existing = points.get(endKey)!;
       existing.trend = trendEnd;
     }
 
     const sorted = Array.from(points.values()).sort((a, b) => a.date.localeCompare(b.date));
     return { chartData: sorted, todayActual: todayActualVal, todayKey: today };
-  }, [entries, signupsByDay]);
+  }, [entries, signupsByDay, baseline]);
 
   const maxVal = chartData.reduce(
     (m, p) => Math.max(m, p.actual ?? 0, p.target ?? 0, p.trend ?? 0),
@@ -230,8 +252,11 @@ export const GrowthTrackerTab = () => {
         <CardHeader>
           <CardTitle>Growth toward 1,000 users by Jan 1, 2027</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            Today: <span className="font-medium text-foreground">{todayActual}</span> users ·
-            {" "}Target today: <span className="font-medium">{targetAt(toUTCDate(todayKey))}</span>
+            Today ({format(toUTCDate(todayKey), "MMM d, yyyy")}):{" "}
+            <span className="font-medium text-foreground">{todayActual}</span> users ·
+            {" "}Target today: <span className="font-medium">{targetAt(toUTCDate(todayKey))}</span> ·
+            {" "}<span className="font-medium">{todayActual - targetAt(toUTCDate(todayKey)) >= 0 ? "+" : ""}
+            {todayActual - targetAt(toUTCDate(todayKey))}</span> vs target
           </p>
         </CardHeader>
         <CardContent>
@@ -245,6 +270,7 @@ export const GrowthTrackerTab = () => {
               />
               <YAxis domain={[0, yMax]} tick={{ fontSize: 11 }} />
               <ChartTooltip
+                trigger="hover"
                 content={<ChartTooltipContent labelFormatter={(v) => format(parseISO(v as string), "MMM d, yyyy")} />}
               />
               <Legend />
@@ -256,6 +282,7 @@ export const GrowthTrackerTab = () => {
                 strokeDasharray="6 4"
                 strokeWidth={2}
                 dot={false}
+                activeDot={{ r: 5 }}
               />
               <Line
                 type="monotone"
@@ -266,6 +293,7 @@ export const GrowthTrackerTab = () => {
                 strokeWidth={2}
                 dot={false}
                 connectNulls
+                activeDot={{ r: 5 }}
               />
               <Line
                 type="monotone"
@@ -273,9 +301,29 @@ export const GrowthTrackerTab = () => {
                 name="Actual"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2.5}
-                dot={false}
                 connectNulls
+                // Invisible wide hit area on every point + a visible enlarged marker for today.
+                dot={(props: any) => {
+                  const isToday = props?.payload?.date === todayKey;
+                  return (
+                    <g key={`actual-dot-${props.payload?.date}`}>
+                      <circle cx={props.cx} cy={props.cy} r={18} fill="transparent" style={{ pointerEvents: "all" }} />
+                      {isToday && (
+                        <circle
+                          cx={props.cx}
+                          cy={props.cy}
+                          r={5}
+                          fill="hsl(var(--primary))"
+                          stroke="hsl(var(--background))"
+                          strokeWidth={2}
+                        />
+                      )}
+                    </g>
+                  );
+                }}
+                activeDot={{ r: 7 }}
               />
+
             </LineChart>
           </ChartContainer>
         </CardContent>
