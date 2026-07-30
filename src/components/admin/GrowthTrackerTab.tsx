@@ -41,12 +41,17 @@ const todayUTCKey = () => {
 export const GrowthTrackerTab = () => {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [signupsByDay, setSignupsByDay] = useState<Map<string, number>>(new Map());
+  // Real number of profiles that existed before Jul 1 2026 — the actual baseline.
+  // (The hardcoded 100 was the goal-line baseline, not the real one: it caused
+  // Growth Tracker to under-report by exactly `baseline - 100` vs Overview.)
+  const [baseline, setBaseline] = useState<number>(START_COUNT);
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [count, setCount] = useState("");
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editCount, setEditCount] = useState("");
+
 
   const load = async () => {
     setLoading(true);
