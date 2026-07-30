@@ -176,7 +176,7 @@ export const GrowthTrackerTab = () => {
 
     // Build cumulative actual per day from July 1 through today.
     const actualByDay = new Map<string, number>();
-    let cumulative = START_COUNT;
+    let cumulative = baseline;
     for (let d = new Date(START_DATE); format(d, "yyyy-MM-dd") <= today; d = addDays(d, 1)) {
       const key = format(d, "yyyy-MM-dd");
       cumulative += signupsByDay.get(key) ?? 0;
@@ -184,11 +184,11 @@ export const GrowthTrackerTab = () => {
       actualByDay.set(key, value);
     }
 
-    const todayActualVal = actualByDay.get(today) ?? START_COUNT;
+    const todayActualVal = actualByDay.get(today) ?? baseline;
 
     // Trend: average daily growth since July 1, extended from today → Jan 1.
     const daysElapsed = Math.max(1, differenceInDays(toUTCDate(today), START_DATE));
-    const dailyRate = (todayActualVal - START_COUNT) / daysElapsed;
+    const dailyRate = (todayActualVal - baseline) / daysElapsed;
 
     // Points: daily up to today (actual), then weekly + endpoint for trend/target.
     const points = new Map<string, { date: string; target: number; actual?: number; trend?: number }>();
@@ -217,7 +217,7 @@ export const GrowthTrackerTab = () => {
     for (let d = addDays(toUTCDate(today), 7); d <= END_DATE; d = addDays(d, 7)) {
       const key = format(d, "yyyy-MM-dd");
       const days = differenceInDays(d, START_DATE);
-      const trendVal = Math.round(START_COUNT + dailyRate * days);
+      const trendVal = Math.round(baseline + dailyRate * days);
       const existing = points.get(key) ?? { date: key, target: targetAt(d) };
       existing.trend = trendVal;
       points.set(key, existing);
@@ -225,14 +225,14 @@ export const GrowthTrackerTab = () => {
     // Endpoint
     {
       const days = differenceInDays(END_DATE, START_DATE);
-      const trendEnd = Math.round(START_COUNT + dailyRate * days);
+      const trendEnd = Math.round(baseline + dailyRate * days);
       const existing = points.get(endKey)!;
       existing.trend = trendEnd;
     }
 
     const sorted = Array.from(points.values()).sort((a, b) => a.date.localeCompare(b.date));
     return { chartData: sorted, todayActual: todayActualVal, todayKey: today };
-  }, [entries, signupsByDay]);
+  }, [entries, signupsByDay, baseline]);
 
   const maxVal = chartData.reduce(
     (m, p) => Math.max(m, p.actual ?? 0, p.target ?? 0, p.trend ?? 0),
