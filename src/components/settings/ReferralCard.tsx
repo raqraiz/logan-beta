@@ -82,12 +82,13 @@ export function ReferralCard({ userId }: ReferralCardProps) {
   };
 
   const share = async () => {
-    if (!link) return;
+    if (!link || !code) return;
+    const shareText = `Been using this and it's honestly kind of scary how accurate it is. Try it → ${link}\n\n(If the link doesn't work, use code ${code} when you sign up)`;
     if (navigator.share) {
       try {
         await navigator.share({
           title: "Logan — health & performance for women",
-          text: "I've been using Logan. Thought you'd like it too.",
+          text: shareText,
           url: link,
         });
       } catch {
