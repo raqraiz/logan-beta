@@ -37,7 +37,15 @@ export function ReferralCard({ userId }: ReferralCardProps) {
           console.warn("[ReferralCard] missing referral_code for user", userId);
         }
 
-        const { data: joined, error: countError } = await supabase.rpc("get_referral_count");
+        // Admin "view as user" preview: the authenticated session belongs to the
+        // admin, so the zero-arg RPC would return the admin's own count.
+        const { data: authData } = await supabase.auth.getUser();
+        const authedId = authData?.user?.id ?? null;
+        const isPreview = !!authedId && !!userId && authedId !== userId;
+
+        const { data: joined, error: countError } = isPreview
+          ? await supabase.rpc("get_referral_count", { _user_id: userId } as any)
+          : await supabase.rpc("get_referral_count");
         if (countError) {
           console.error("[ReferralCard] count fetch failed:", countError);
           throw countError;
