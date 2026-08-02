@@ -15,6 +15,7 @@ export function ReferralCard({ userId }: ReferralCardProps) {
   const [code, setCode] = useState<string | null>(null);
   const [count, setCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   const [copied, setCopied] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
 
