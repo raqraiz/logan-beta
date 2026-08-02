@@ -101,6 +101,9 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
               consent_given: true,
               consent_given_at: new Date().toISOString(),
               timezone: detectedTimezone,
+              ...(referralCode.trim()
+                ? { manual_referral_code: referralCode.trim().toUpperCase() }
+                : {}),
             },
           },
         });
