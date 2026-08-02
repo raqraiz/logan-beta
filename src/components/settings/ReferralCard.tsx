@@ -24,6 +24,7 @@ export function ReferralCard({ userId }: ReferralCardProps) {
     let cancelled = false;
     (async () => {
       setLoading(true);
+      setError(null);
       try {
         const { data } = await supabase
           .from("profiles")
@@ -38,15 +39,18 @@ export function ReferralCard({ userId }: ReferralCardProps) {
 
         const { data: joined, error: countError } = await supabase.rpc("get_referral_count");
         if (countError) {
-          console.error("[ReferralCard] failed to load referral count", countError);
+          console.error("[ReferralCard] count fetch failed:", countError);
+          throw countError;
         }
 
         if (cancelled) return;
         setCode(refCode);
         setCount(typeof joined === "number" ? joined : 0);
       } catch (e) {
-        console.error("[ReferralCard] failed to load referral data", e);
-        if (!cancelled) setCount(0);
+        console.error("[ReferralCard] count fetch failed:", e);
+        if (!cancelled) {
+          setError(e instanceof Error ? e : new Error(String(e)));
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
