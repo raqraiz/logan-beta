@@ -34,6 +34,8 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
+  const [showReferralField, setShowReferralField] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
   
 
   const isSignUp = view === "signup";
