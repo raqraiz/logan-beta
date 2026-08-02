@@ -35,14 +35,14 @@ export function ReferralCard({ userId }: ReferralCardProps) {
           console.warn("[ReferralCard] missing referral_code for user", userId);
         }
 
-        const { count: joined } = await supabase
-          .from("profiles")
-          .select("id", { count: "exact", head: true })
-          .eq("referred_by", userId);
+        const { data: joined, error: countError } = await supabase.rpc("get_referral_count");
+        if (countError) {
+          console.error("[ReferralCard] failed to load referral count", countError);
+        }
 
         if (cancelled) return;
         setCode(refCode);
-        setCount(joined ?? 0);
+        setCount(typeof joined === "number" ? joined : 0);
       } catch (e) {
         console.error("[ReferralCard] failed to load referral data", e);
         if (!cancelled) setCount(0);
