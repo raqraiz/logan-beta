@@ -15,6 +15,7 @@ export function ReferralCard({ userId }: ReferralCardProps) {
   const [code, setCode] = useState<string | null>(null);
   const [count, setCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   const [copied, setCopied] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
 
@@ -23,6 +24,7 @@ export function ReferralCard({ userId }: ReferralCardProps) {
     let cancelled = false;
     (async () => {
       setLoading(true);
+      setError(null);
       try {
         const { data } = await supabase
           .from("profiles")
@@ -37,15 +39,18 @@ export function ReferralCard({ userId }: ReferralCardProps) {
 
         const { data: joined, error: countError } = await supabase.rpc("get_referral_count");
         if (countError) {
-          console.error("[ReferralCard] failed to load referral count", countError);
+          console.error("[ReferralCard] count fetch failed:", countError);
+          throw countError;
         }
 
         if (cancelled) return;
         setCode(refCode);
         setCount(typeof joined === "number" ? joined : 0);
       } catch (e) {
-        console.error("[ReferralCard] failed to load referral data", e);
-        if (!cancelled) setCount(0);
+        console.error("[ReferralCard] count fetch failed:", e);
+        if (!cancelled) {
+          setError(e instanceof Error ? e : new Error(String(e)));
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -111,10 +116,19 @@ export function ReferralCard({ userId }: ReferralCardProps) {
           <Sparkles className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          {loading || count === null ? (
+          {loading ? (
             <>
               <Skeleton className="h-5 w-40 mb-1.5" />
               <Skeleton className="h-3 w-28" />
+            </>
+          ) : error ? (
+            <>
+              <p className="text-base font-display font-semibold text-foreground leading-tight">
+                Couldn't load your referral count
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Pull to refresh or try again in a moment.
+              </p>
             </>
           ) : count === 0 ? (
             <>
