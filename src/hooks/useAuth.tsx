@@ -153,9 +153,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Profile creation is best-effort and should not block auth.
       }
       // Always attempt backfill — server only fills currently-null fields.
-      backfillAttribution().catch(() => { /* best-effort */ });
+      try {
+        await backfillAttribution();
+      } catch {
+        // best-effort
+      }
+      // Manual referral code fallback: only applies when automatic
+      // attribution produced nothing. Never overwrites an existing referrer.
+      try {
+        await applyManualReferralCode(user);
+      } catch {
+        // best-effort — must never block or surface an error at signup.
+      }
     })();
   }, [user?.id]);
+
 
   const signInWithMagicLink = async (email: string) => {
     const redirectUrl = `${window.location.origin}/auth/callback?next=/`;
