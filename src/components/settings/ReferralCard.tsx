@@ -116,10 +116,19 @@ export function ReferralCard({ userId }: ReferralCardProps) {
           <Sparkles className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          {loading || count === null ? (
+          {loading ? (
             <>
               <Skeleton className="h-5 w-40 mb-1.5" />
               <Skeleton className="h-3 w-28" />
+            </>
+          ) : error ? (
+            <>
+              <p className="text-base font-display font-semibold text-foreground leading-tight">
+                Couldn't load your referral count
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Pull to refresh or try again in a moment.
+              </p>
             </>
           ) : count === 0 ? (
             <>
