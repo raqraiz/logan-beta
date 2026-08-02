@@ -270,6 +270,38 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
             </div>
           )}
 
+          {/* Optional self-reported referral code (collapsed by default) */}
+          {isSignUp && !isForgotPassword && (
+            <div>
+              {!showReferralField ? (
+                <button
+                  type="button"
+                  onClick={() => setShowReferralField(true)}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors underline underline-offset-4"
+                >
+                  Have a referral code?
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="referralCode" className="text-muted-foreground text-sm">
+                    Referral code <span className="opacity-70">(optional)</span>
+                  </Label>
+                  <Input
+                    id="referralCode"
+                    type="text"
+                    placeholder="e.g. 3NTUDWM"
+                    value={referralCode}
+                    onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                    className="h-12 bg-background tracking-wider"
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+
           {/* Consent checkbox for signup */}
           {isSignUp && !isForgotPassword && (
             <div className="flex items-start gap-3 py-2">
