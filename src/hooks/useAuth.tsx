@@ -41,6 +41,41 @@ const ensureProfile = async (user: User) => {
   }
 };
 
+// Fallback for referral codes the user typed in manually at signup.
+// Only fills referred_by when automatic attribution left it null, so a
+// captured ?ref= click always wins and nobody gets double-credited.
+const applyManualReferralCode = async (user: User) => {
+  const raw = user.user_metadata?.manual_referral_code;
+  const code = typeof raw === "string" ? raw.trim().toUpperCase() : "";
+  if (!code) return;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, referred_by")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!profile || profile.referred_by) return;
+
+  const { data: referrerId, error } = await supabase.rpc("resolve_referral_code", { _code: code });
+  if (error) {
+    console.warn("manual referral code lookup failed:", error.message);
+    return;
+  }
+  if (!referrerId || referrerId === user.id) {
+    // Unknown or self-referral code — silently ignore, never block signup.
+    console.info("manual referral code not matched:", code);
+    return;
+  }
+
+  const { error: updateErr } = await supabase
+    .from("profiles")
+    .update({ referred_by: referrerId })
+    .eq("id", user.id)
+    .is("referred_by", null);
+  if (updateErr) console.warn("manual referral credit failed:", updateErr.message);
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -153,9 +188,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Profile creation is best-effort and should not block auth.
       }
       // Always attempt backfill — server only fills currently-null fields.
-      backfillAttribution().catch(() => { /* best-effort */ });
+      try {
+        await backfillAttribution();
+      } catch {
+        // best-effort
+      }
+      // Manual referral code fallback: only applies when automatic
+      // attribution produced nothing. Never overwrites an existing referrer.
+      try {
+        await applyManualReferralCode(user);
+      } catch {
+        // best-effort — must never block or surface an error at signup.
+      }
     })();
   }, [user?.id]);
+
 
   const signInWithMagicLink = async (email: string) => {
     const redirectUrl = `${window.location.origin}/auth/callback?next=/`;

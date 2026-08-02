@@ -34,6 +34,8 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
+  const [showReferralField, setShowReferralField] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
   
 
   const isSignUp = view === "signup";
@@ -99,6 +101,9 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
               consent_given: true,
               consent_given_at: new Date().toISOString(),
               timezone: detectedTimezone,
+              ...(referralCode.trim()
+                ? { manual_referral_code: referralCode.trim().toUpperCase() }
+                : {}),
             },
           },
         });
@@ -264,6 +269,38 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
               </button>
             </div>
           )}
+
+          {/* Optional self-reported referral code (collapsed by default) */}
+          {isSignUp && !isForgotPassword && (
+            <div>
+              {!showReferralField ? (
+                <button
+                  type="button"
+                  onClick={() => setShowReferralField(true)}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors underline underline-offset-4"
+                >
+                  Have a referral code?
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="referralCode" className="text-muted-foreground text-sm">
+                    Referral code <span className="opacity-70">(optional)</span>
+                  </Label>
+                  <Input
+                    id="referralCode"
+                    type="text"
+                    placeholder="e.g. 3NTUDWM"
+                    value={referralCode}
+                    onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                    className="h-12 bg-background tracking-wider"
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
 
           {/* Consent checkbox for signup */}
           {isSignUp && !isForgotPassword && (
