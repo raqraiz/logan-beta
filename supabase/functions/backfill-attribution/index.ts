@@ -201,11 +201,11 @@ Deno.serve(async (req) => {
   }
 
   // 3b. Time-window fallback: no anon_id, no inline attribution, nothing resolved.
-  // If exactly ONE unlinked attribution_event was captured in the 5 minutes
+  // If exactly ONE unlinked attribution_event was captured in the 2 minutes
   // before this signup, treat it as this user's click. Never guess on 0 or 2+.
   if (candidates.length === 0 && Object.keys(patch).length === 0) {
     const signupAt = user.created_at ? new Date(user.created_at) : new Date();
-    const windowStart = new Date(signupAt.getTime() - 5 * 60 * 1000).toISOString();
+    const windowStart = new Date(signupAt.getTime() - 2 * 60 * 1000).toISOString();
     // Small forward tolerance for clock skew between capture and signup rows.
     const windowEnd = new Date(signupAt.getTime() + 60 * 1000).toISOString();
 
