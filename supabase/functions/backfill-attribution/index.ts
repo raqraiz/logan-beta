@@ -125,12 +125,14 @@ Deno.serve(async (req) => {
   }
 
   // 2. Gather candidate sources.
+  const paths: string[] = [];
   const candidates: Array<Partial<Record<typeof ATTR_FIELDS[number], string | null>> & { landing_at?: string | null }> = [];
 
   // Inline candidate from the request body.
   const inline = sanitizeInline(body.attribution);
   if (Object.values(inline).some((v) => v)) {
     candidates.push({ ...inline, landing_at: truncate(body.attribution?.landing_at, 64) });
+    paths.push("inline_match");
   }
 
   // anon_id candidates — also link events to this user for future analysis.
@@ -162,6 +164,8 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
     if (anyEvent) candidates.push({ ...anyEvent, landing_at: anyEvent.captured_at });
+
+    if (utmEvent || anyEvent) paths.push("anon_id_match");
   }
 
   // 3. Resolve referral code → referred_by (first one wins, can't self-refer).
@@ -196,12 +200,87 @@ Deno.serve(async (req) => {
     }
   }
 
+  // 3b. Time-window fallback: no anon_id, no inline attribution, nothing resolved.
+  // If exactly ONE unlinked attribution_event was captured in the 5 minutes
+  // before this signup, treat it as this user's click. Never guess on 0 or 2+.
   if (candidates.length === 0 && Object.keys(patch).length === 0) {
+    const signupAt = user.created_at ? new Date(user.created_at) : new Date();
+    const windowStart = new Date(signupAt.getTime() - 5 * 60 * 1000).toISOString();
+    // Small forward tolerance for clock skew between capture and signup rows.
+    const windowEnd = new Date(signupAt.getTime() + 60 * 1000).toISOString();
+
+    const { data: windowEvents } = await admin
+      .from("attribution_events")
+      .select("id, anon_id, ref_code, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_path, captured_at, created_at")
+      .is("user_id", null)
+      .gte("created_at", windowStart)
+      .lte("created_at", windowEnd)
+      .order("created_at", { ascending: true })
+      .limit(3);
+
+    // Distinct anon_ids only — repeated pings from the same browser are one click.
+    const distinctAnonIds = Array.from(new Set((windowEvents ?? []).map((e: any) => e.anon_id)));
+
+    if (distinctAnonIds.length === 1 && windowEvents && windowEvents.length > 0) {
+      const match: any = windowEvents[0];
+
+      await admin
+        .from("attribution_events")
+        .update({ user_id: user.id })
+        .eq("anon_id", match.anon_id)
+        .is("user_id", null);
+
+      candidates.push({
+        utm_source: match.utm_source,
+        utm_medium: match.utm_medium,
+        utm_campaign: match.utm_campaign,
+        utm_term: match.utm_term,
+        utm_content: match.utm_content,
+        referrer: match.referrer,
+        landing_path: match.landing_path,
+        landing_at: match.captured_at ?? match.created_at,
+      });
+      paths.push("time_window_fallback");
+
+      if (needsReferral) {
+        const code = (windowEvents.find((e: any) => e.ref_code)?.ref_code ?? "").toString().trim().toUpperCase();
+        if (code) {
+          const { data: referrer } = await admin
+            .from("profiles")
+            .select("id")
+            .eq("referral_code", code)
+            .maybeSingle();
+          if (referrer?.id && referrer.id !== user.id) patch.referred_by = referrer.id;
+        }
+      }
+
+      console.log(JSON.stringify({
+        fn: "backfill-attribution",
+        path: "time_window_fallback",
+        user_id: user.id,
+        matched_anon_id: match.anon_id,
+        events_in_window: windowEvents.length,
+        referred_by: patch.referred_by ?? null,
+      }));
+    } else {
+      console.log(JSON.stringify({
+        fn: "backfill-attribution",
+        path: "time_window_fallback_skipped",
+        user_id: user.id,
+        distinct_anon_ids: distinctAnonIds.length,
+        reason: distinctAnonIds.length === 0 ? "no_events_in_window" : "ambiguous_multiple_anon_ids",
+      }));
+    }
+  }
+
+  if (candidates.length === 0 && Object.keys(patch).length === 0) {
+    console.log(JSON.stringify({ fn: "backfill-attribution", path: "no_candidates", user_id: user.id, missing }));
     return new Response(JSON.stringify({ status: "no_candidates", missing }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
 
   // 4. Build UTM patch: only fill currently-null fields, walking candidates in order.
   for (const field of missing) {
@@ -237,7 +316,14 @@ Deno.serve(async (req) => {
     });
   }
 
-  return new Response(JSON.stringify({ status: "backfilled", fields: Object.keys(patch) }), {
+  console.log(JSON.stringify({
+    fn: "backfill-attribution",
+    path: paths.length ? paths.join("+") : "referral_only",
+    user_id: user.id,
+    fields: Object.keys(patch),
+  }));
+
+  return new Response(JSON.stringify({ status: "backfilled", path: paths.join("+") || "referral_only", fields: Object.keys(patch) }), {
     status: 200,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
