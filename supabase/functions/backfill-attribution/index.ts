@@ -316,7 +316,14 @@ Deno.serve(async (req) => {
     });
   }
 
-  return new Response(JSON.stringify({ status: "backfilled", fields: Object.keys(patch) }), {
+  console.log(JSON.stringify({
+    fn: "backfill-attribution",
+    path: paths.length ? paths.join("+") : "referral_only",
+    user_id: user.id,
+    fields: Object.keys(patch),
+  }));
+
+  return new Response(JSON.stringify({ status: "backfilled", path: paths.join("+") || "referral_only", fields: Object.keys(patch) }), {
     status: 200,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
