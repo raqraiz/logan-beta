@@ -1927,13 +1927,33 @@ serve(async (req) => {
         || /\b(?:i'?m|i\s+am)\s+(?:still\s+)?cycling\b/i.test(userMessage)
         || /\bi'?m\s+not\s+postpartum\b/i.test(userMessage);
 
-      // Irregular / hormonal birth control: "I'm on the pill", "I have an IUD", "I'm on hormonal BC", "PCOS", "irregular cycle"
-      const irregularSignal =
+      // --- Hormonal birth control status (independent of life_stage) ---
+      // BC-POSITIVE: "I'm on the pill", "I got an IUD", "switch me to hormonal BC"
+      const bcPositiveSignal =
         /\b(?:i'?m|i\s+am|just\s+(?:started|got)|started|recently\s+started|switched\s+to|now\s+on|currently\s+on|going\s+on)\s+(?:on\s+)?(?:the\s+)?(?:pill|mini[-\s]?pill|combined\s+pill|birth\s+control(?:\s+pill)?|hormonal\s+(?:birth\s+control|bc|iud|contracepti(?:on|ve))|nuvaring|the\s+ring|the\s+patch|nexplanon|the\s+implant|depo(?:[-\s]provera)?|mirena|kyleena|skyla|liletta)\b/i.test(userMessage)
         || /\b(?:i\s+have|got|just\s+got|just\s+had)\s+(?:an?\s+)?(?:hormonal\s+)?(?:iud|implant|nexplanon|mirena|kyleena|skyla|liletta|nuvaring|patch)\s+(?:put\s+in|inserted|placed)?\b/i.test(userMessage)
-        || /\b(?:change|switch|update|set)\s+(?:my\s+)?(?:settings?|account|life\s+stage|profile)\s+(?:to|for)\s+(?:hormonal\s+(?:birth\s+control|bc)|birth\s+control|irregular|the\s+pill|iud)\b/i.test(userMessage)
+        || /\b(?:change|switch|update|set)\s+(?:my\s+)?(?:settings?|account|life\s+stage|profile)\s+(?:to|for)\s+(?:hormonal\s+(?:birth\s+control|bc)|birth\s+control|irregular|the\s+pill|iud)\b/i.test(userMessage);
+
+      // BC-NEGATIVE: "I'm not on birth control", "I came off the pill", "I had my IUD removed"
+      const bcTerm = `(?:the\\s+)?(?:pill|mini[-\\s]?pill|combined\\s+pill|birth\\s+control(?:\\s+pill)?|bc|hormonal\\s+(?:birth\\s+control|bc|iud|contracepti(?:on|ve))|contracepti(?:on|ves?)|nuvaring|the\\s+ring|the\\s+patch|nexplanon|the\\s+implant|implant|depo(?:[-\\s]provera)?|mirena|kyleena|skyla|liletta|iud|coil)`;
+      const bcNegativeSignal =
+        new RegExp(`\\b(?:i'?m|i\\s+am|i'?m\\s+really|no,?\\s*i'?m)\\s+not\\s+(?:currently\\s+)?(?:on|using|taking)\\s+(?:any\\s+)?${bcTerm}\\b`, "i").test(userMessage)
+        || new RegExp(`\\bi\\s+(?:don'?t|do\\s+not)\\s+(?:use|take|have)\\s+(?:any\\s+)?${bcTerm}\\b`, "i").test(userMessage)
+        || new RegExp(`\\bi\\s+(?:stopped|quit)\\s+(?:taking|using)?\\s*${bcTerm}\\b`, "i").test(userMessage)
+        || new RegExp(`\\bi\\s+(?:came|went|got)\\s+off\\s+(?:of\\s+)?${bcTerm}\\b`, "i").test(userMessage)
+        || new RegExp(`\\bi'?m\\s+off\\s+(?:of\\s+)?${bcTerm}\\b`, "i").test(userMessage)
+        || new RegExp(`\\b(?:i\\s+)?(?:had|got)\\s+(?:my|the)\\s+${bcTerm}\\s+(?:taken\\s+out|removed)\\b`, "i").test(userMessage)
+        || new RegExp(`\\bi\\s+removed\\s+(?:my|the)\\s+${bcTerm}\\b`, "i").test(userMessage)
+        || new RegExp(`\\b(?:no|never\\s+been\\s+on)\\s+${bcTerm}\\b`, "i").test(userMessage)
+        || /\bi'?m\s+(?:hormone|hormonally)\s*[-\s]?free\b/i.test(userMessage)
+        || /\bi'?m\s+not\s+on\s+(?:any\s+)?(?:hormones?|hormonal\s+anything)\b/i.test(userMessage);
+
+      // Irregular / hormonal birth control: BC-positive phrases, PCOS, or self-reported irregular cycles
+      const irregularSignal =
+        (bcPositiveSignal && !bcNegativeSignal)
         || /\b(?:i\s+have|i'?ve\s+got|diagnosed\s+with)\s+(?:pcos|hypothalamic\s+amenorrhea)\b/i.test(userMessage)
         || /\b(?:my\s+)?(?:cycles?\s+(?:are|is)|periods?\s+(?:are|is))\s+(?:really\s+)?irregular\b/i.test(userMessage);
+
 
       // Cycling wins over menopause if both somehow match
       if (cyclingSignal && participant.life_stage !== "cycling") {
@@ -1958,27 +1978,73 @@ serve(async (req) => {
         );
       }
 
-      if (irregularSignal && !cyclingSignal && !perimenopauseSignal && participant.life_stage !== "irregular") {
+      // BC-NEGATIVE: user says she is NOT on hormonal birth control.
+      // Only flips on_hormonal_bc — life_stage is deliberately left alone
+      // (an irregular cycle can be PCOS or hypothalamic, not BC).
+      if (bcNegativeSignal && (participant as any).on_hormonal_bc !== false) {
         await supabase
           .from("participants")
-          .update({ life_stage: "irregular", postpartum_start_date: null, last_period_start: null })
+          .update({ on_hormonal_bc: false })
           .eq("id", participant.id);
         const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
         if (refreshed) participant = refreshed;
 
-        const msg = `Done — switched your account to **hormonal birth control / irregular cycle** mode. I'll stop predicting natural phases and instead focus on steady-state levers: sleep, protein, strength, stress, hydration, and the micronutrients hormonal BC can deplete (B6, B12, magnesium, zinc, folate). Anything specific you want to dig into first?`;
+        const msg = participant.life_stage === "irregular"
+          ? `Got it — noted that you're **not on hormonal birth control**. I've dropped the BC framing from your Home tab and daily briefing. I'll keep your cycle marked as irregular, so I still won't predict exact phases — tell me if that's wrong too and I'll switch you to regular cycling.`
+          : `Got it — noted that you're **not on hormonal birth control**. I've dropped the BC framing from your Home tab and daily briefing.`;
         await supabase.from("chat_messages").insert({
           user_id: user.id,
           role: "assistant",
           content: msg,
           message_type: "text",
-          metadata: { life_stage_updated: "irregular" },
+          metadata: { on_hormonal_bc_updated: false },
         });
         return new Response(
           JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      if (irregularSignal && !cyclingSignal && !perimenopauseSignal && participant.life_stage !== "irregular") {
+        await supabase
+          .from("participants")
+          .update({
+            life_stage: "irregular",
+            postpartum_start_date: null,
+            last_period_start: null,
+            ...(bcPositiveSignal ? { on_hormonal_bc: true } : {}),
+          })
+          .eq("id", participant.id);
+        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshed) participant = refreshed;
+
+        const msg = bcPositiveSignal
+          ? `Done — switched your account to **hormonal birth control / irregular cycle** mode. I'll stop predicting natural phases and instead focus on steady-state levers: sleep, protein, strength, stress, hydration, and the micronutrients hormonal BC can deplete (B6, B12, magnesium, zinc, folate). Anything specific you want to dig into first?`
+          : `Done — switched your account to **irregular cycle** mode. I'll stop predicting exact phases and focus on steady-state levers instead: sleep, protein, strength, stress, and hydration. Anything specific you want to dig into first?`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: msg,
+          message_type: "text",
+          metadata: { life_stage_updated: "irregular", ...(bcPositiveSignal ? { on_hormonal_bc_updated: true } : {}) },
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Already in the right life stage, but BC status needs recording (e.g. irregular
+      // user who just started the pill, or a cycling user who did).
+      if (bcPositiveSignal && !bcNegativeSignal && !cyclingSignal && (participant as any).on_hormonal_bc !== true) {
+        await supabase
+          .from("participants")
+          .update({ on_hormonal_bc: true })
+          .eq("id", participant.id);
+        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshed) participant = refreshed;
+      }
+
 
       if (perimenopauseSignal && !cyclingSignal && participant.life_stage !== "perimenopause") {
         await supabase
@@ -3518,7 +3584,7 @@ MEAL PLANS / MENUS — STRICT RULES:
       userLifeStage === "postpartum" ? "Postpartum" :
       userLifeStage === "menopause" ? "Menopause" :
       userLifeStage === "perimenopause" ? "Perimenopause" :
-      userLifeStage === "irregular" ? "Irregular / hormonal birth control" :
+      userLifeStage === "irregular" ? ((participant as any).on_hormonal_bc === true ? "Irregular / hormonal birth control" : "Irregular cycle") :
       "Cycling";
     
     // Calculate postpartum timeline + stage-specific guidance bucket
@@ -3564,7 +3630,11 @@ MEAL PLANS / MENUS — STRICT RULES:
         ? `This user is in MENOPAUSE — their cycle has stopped (12+ months without a period). Their estrogen and progesterone are declining. Focus on: hot flashes, sleep disruption, mood changes, bone health, energy management, cognitive shifts, weight changes. Do NOT reference specific cycle days or ovulation windows. Instead, provide guidance relevant to hormonal transition and thriving through it.`
         : userLifeStage === "perimenopause"
           ? `This user is in PERIMENOPAUSE — she STILL HAS PERIODS and is still cycling, but the pattern is shifting (cycles getting shorter/longer, heavier/lighter, skipped months, new symptoms like hot flashes, sleep changes, mood swings). DO NOT call her menopausal. Reference her cycle day and phase when relevant, but acknowledge that hormone swings can be sharper and less predictable than they used to be. Focus on: tracking pattern shifts, sleep, hot flashes, mood, energy, bone/muscle health, and what's changed vs. her baseline. Be precise: perimenopause ≠ menopause.`
-          : `This user is on HORMONAL BIRTH CONTROL or has an IRREGULAR cycle. Their hormones are externally regulated (pill, IUD, implant, ring, patch) or unpredictable (PCOS, hypothalamic amenorrhea, etc.). They are NOT naturally cycling. RULES: Never reference a cycle "day number" or natural phase (follicular, luteal, ovulation, menstruation). Never invent rising/falling estrogen or progesterone language tied to a phase. Frame guidance around steady-state levers: sleep, protein, strength training, stress, hydration, and micronutrient depletion that hormonal BC can cause (B6, B12, magnesium, zinc, folate). If they ask about a phase, gently explain why phase-based predictions don't apply to them.`;
+          : ((participant as any).on_hormonal_bc === true
+            ? `This user is on HORMONAL BIRTH CONTROL. Their hormones are externally regulated (pill, IUD, implant, ring, patch). They are NOT naturally cycling. RULES: Never reference a cycle "day number" or natural phase (follicular, luteal, ovulation, menstruation). Never invent rising/falling estrogen or progesterone language tied to a phase. Frame guidance around steady-state levers: sleep, protein, strength training, stress, hydration, and micronutrient depletion that hormonal BC can cause (B6, B12, magnesium, zinc, folate). If they ask about a phase, gently explain why phase-based predictions don't apply to them.`
+            : (participant as any).on_hormonal_bc === false
+              ? `This user has an IRREGULAR cycle and has explicitly told us she is NOT on hormonal birth control (could be PCOS, hypothalamic amenorrhea, thyroid, stress, or simply unpredictable timing). ABSOLUTE RULE: NEVER mention the pill, IUD, implant, ring, patch, hormonal contraception, or BC-related nutrient depletion. Do not imply her hormones are externally regulated — they are her own, just unpredictable. Never quote a confident cycle "day number" or phase. Frame guidance around steady-state levers: sleep, protein, strength training, stress, hydration, and tracking her own observed patterns over calendar timing.`
+              : `This user has an IRREGULAR cycle and we do NOT know whether she is on hormonal birth control — it has never been confirmed. Do NOT assert or assume she is on the pill, an IUD, or any hormonal contraception, and do not give BC-specific nutrient-depletion advice as though it applies to her. Never quote a confident cycle "day number" or phase. Frame guidance around steady-state levers: sleep, protein, strength training, stress, hydration, and her own observed patterns. If BC status becomes genuinely relevant, you may ask once, naturally.`);
 
 
     const todayStr = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });

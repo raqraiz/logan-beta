@@ -916,6 +916,7 @@ export type Database = {
           last_period_start: string | null
           life_stage: string
           loss_date: string | null
+          on_hormonal_bc: boolean | null
           period_pending_since: string | null
           period_still_active: boolean
           postpartum_active: boolean
@@ -950,6 +951,7 @@ export type Database = {
           last_period_start?: string | null
           life_stage?: string
           loss_date?: string | null
+          on_hormonal_bc?: boolean | null
           period_pending_since?: string | null
           period_still_active?: boolean
           postpartum_active?: boolean
@@ -984,6 +986,7 @@ export type Database = {
           last_period_start?: string | null
           life_stage?: string
           loss_date?: string | null
+          on_hormonal_bc?: boolean | null
           period_pending_since?: string | null
           period_still_active?: boolean
           postpartum_active?: boolean

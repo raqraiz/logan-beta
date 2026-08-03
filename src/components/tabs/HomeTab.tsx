@@ -424,6 +424,7 @@ interface CycleData {
   cycleLengthDays: number;
   lastPeriodStart?: string;
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
+  onHormonalBc?: boolean | null;
   postpartumStartDate?: string;
   postpartumActive?: boolean;
   lossDate?: string;
@@ -643,6 +644,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
               phase={stagePhase}
               cycleLengthDays={cycleData.cycleLengthDays}
               lifeStage={cycleData.lifeStage}
+              onHormonalBc={cycleData.onHormonalBc}
               postpartumStartDate={cycleData.postpartumStartDate}
               postpartumActive={cycleData.postpartumActive}
               lossDate={cycleData.lossDate}

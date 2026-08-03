@@ -7,6 +7,8 @@ interface DailyBriefingHeroProps {
   phase: string;
   cycleLengthDays: number;
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
+  /** true = on hormonal BC, false = confirmed not on BC, null/undefined = unknown */
+  onHormonalBc?: boolean | null;
   postpartumStartDate?: string;
   postpartumActive?: boolean;
   lossDate?: string;
@@ -110,9 +112,11 @@ export function DailyBriefingHero({
   lossDate,
   dueDate,
   pregnancyLmp,
+  onHormonalBc,
   onCircleClick,
 }: DailyBriefingHeroProps) {
-  const isSteadyByPill = lifeStage === "irregular";
+  const isSteadyByPill = onHormonalBc === true;
+  const isIrregular = lifeStage === "irregular";
   const isLoss = lifeStage === "pregnancy_loss";
   const isPregnant = lifeStage === "pregnant";
   const isNonCycling = !!lifeStage && (lifeStage === "postpartum" || lifeStage === "menopause" || lifeStage === "pregnancy_loss" || lifeStage === "pregnant");
@@ -129,7 +133,9 @@ export function DailyBriefingHero({
       ? "Growing a human is a full-time job. Rest is part of the work."
       : isSteadyByPill
         ? "Hormonal birth control evens out your cycle. Let's focus on sleep, energy, and stress today."
-        : (PHASE_HEADLINE[phase] || "Your day, your rhythm.");
+        : isIrregular
+          ? "Your cycle runs its own way. Let's focus on sleep, energy, and stress today."
+          : (PHASE_HEADLINE[phase] || "Your day, your rhythm.");
   const metrics = !isNonCycling ? getDayMetrics(cycleDay, cycleLengthDays) : null;
 
   return (

@@ -663,12 +663,13 @@ function buildNonCyclingInsightPrompt(
     }
   }
 
+  const onHormonalBc = participant.on_hormonal_bc;
   const stageLabel =
     lifeStage === "postpartum" ? "Postpartum"
     : lifeStage === "perimenopause" ? "Perimenopause"
     : lifeStage === "pregnant" ? "Pregnancy"
     : lifeStage === "pregnancy_loss" ? "Pregnancy Loss"
-    : lifeStage === "irregular" ? "Irregular / Hormonal BC"
+    : lifeStage === "irregular" ? (onHormonalBc === true ? "Irregular / Hormonal BC" : "Irregular cycle")
     : "Menopause";
   const stageContext =
     lifeStage === "postpartum"
@@ -680,7 +681,11 @@ function buildNonCyclingInsightPrompt(
           : lifeStage === "pregnancy_loss"
             ? `${firstName} is navigating **pregnancy loss**. Lead with grief-aware, empathetic witnessing. Do NOT rush to cycle tracking, milestones, or "silver linings." Do NOT reference ovulation, phases, or menopause framing. Acknowledge the loss, name that the body is also recovering (hormones drop, bleeding, milk changes possible), and offer gentle presence — not fixes.`
             : lifeStage === "irregular"
-              ? `${firstName} is on **hormonal birth control or has an irregular cycle** (IUD, pill, implant, PCOS, etc.). Natural cycle phases don't apply cleanly — hormones are being modulated externally or unpredictably. DO NOT use menopause, perimenopause, postpartum, or pregnancy framing. DO NOT confidently quote a specific cycle phase. Focus on steady-state levers: sleep, protein, strength, stress, hydration, and micronutrients hormonal BC can deplete (B6, B12, magnesium, zinc, folate). Acknowledge symptoms in terms of daily patterns, not phase predictions.`
+              ? (onHormonalBc === true
+                  ? `${firstName} is on **hormonal birth control** (IUD, pill, implant, ring, or patch). Natural cycle phases don't apply — her hormones are externally modulated. DO NOT use menopause, perimenopause, postpartum, or pregnancy framing. DO NOT confidently quote a specific cycle phase. Focus on steady-state levers: sleep, protein, strength, stress, hydration, and micronutrients hormonal BC can deplete (B6, B12, magnesium, zinc, folate). Acknowledge symptoms in terms of daily patterns, not phase predictions.`
+                  : onHormonalBc === false
+                    ? `${firstName} has an **irregular cycle** and has explicitly confirmed she is NOT on hormonal birth control (could be PCOS, hypothalamic amenorrhea, thyroid, stress, or just unpredictable timing). ABSOLUTE RULE: NEVER mention the pill, IUD, implant, ring, patch, hormonal contraception, or BC-related nutrient depletion — she has told us this does not apply to her. DO NOT use menopause, perimenopause, postpartum, or pregnancy framing. DO NOT confidently quote a specific cycle phase. Focus on steady-state levers: sleep, protein, strength, stress, hydration, and her own observed patterns over calendar timing.`
+                    : `${firstName} has an **irregular cycle**. We do NOT know whether she is on hormonal birth control — never assert or assume that she is, and do not give BC-specific nutrient-depletion advice. DO NOT use menopause, perimenopause, postpartum, or pregnancy framing. DO NOT confidently quote a specific cycle phase. Focus on steady-state levers: sleep, protein, strength, stress, hydration, and daily patterns rather than phase predictions.`)
               : `${firstName} is navigating menopause. Estrogen and progesterone are declining. Focus on bone health, sleep quality, mood stability, and managing symptoms like hot flashes or brain fog.`;
 
 

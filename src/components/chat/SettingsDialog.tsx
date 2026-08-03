@@ -45,6 +45,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
   const [dueDate, setDueDate] = useState<string>("");
   const [pregnancyLmp, setPregnancyLmp] = useState<string>("");
   const [timezone, setTimezone] = useState<string>("");
+  const [onHormonalBc, setOnHormonalBc] = useState<boolean | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -75,7 +76,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
     (async () => {
       const { data } = await supabase
         .from("participants")
-        .select("postpartum_active, postpartum_start_date, loss_date, due_date, pregnancy_lmp, timezone")
+        .select("postpartum_active, postpartum_start_date, loss_date, due_date, pregnancy_lmp, timezone, on_hormonal_bc")
         .eq("email", userEmail)
         .maybeSingle();
       if (data) {
@@ -84,6 +85,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
         setLossDate((data as any).loss_date ?? "");
         setDueDate((data as any).due_date ?? "");
         setPregnancyLmp((data as any).pregnancy_lmp ?? "");
+        setOnHormonalBc((data as any).on_hormonal_bc ?? null);
         let tz = (data as any).timezone ?? "";
         if (!tz) {
           try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch { tz = ""; }
@@ -139,6 +141,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
       payload.loss_date = null;
       payload.due_date = null;
       payload.pregnancy_lmp = null;
+      payload.on_hormonal_bc = onHormonalBc;
     } else if (stage === "menopause") {
       payload.last_period_start = null;
       payload.postpartum_start_date = null;
@@ -186,8 +189,8 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
             <label className="flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:bg-accent/30 cursor-pointer">
               <RadioGroupItem value="irregular" id="stage-irregular" className="mt-0.5" />
               <div className="flex-1">
-                <div className="text-sm font-medium">Irregular cycle or on hormonal birth control</div>
-                <div className="text-xs text-muted-foreground">PCOS, hormonal imbalance, unpredictable cycles, or hormonal BC (pill, IUD, implant, ring, patch). Logan still tracks but adapts predictions.</div>
+                <div className="text-sm font-medium">Irregular cycle</div>
+                <div className="text-xs text-muted-foreground">PCOS, hormonal imbalance, or unpredictable timing. Logan still tracks but won't predict exact phases. (Birth control is a separate setting below.)</div>
               </div>
             </label>
             <label className="flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:bg-accent/30 cursor-pointer">
@@ -229,6 +232,33 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
           <p className="text-[11px] text-muted-foreground/80 mt-3">
             Tip: you can also just tell Logan in chat — e.g. "I'm actually still cycling" — and it'll switch automatically.
           </p>
+
+          {(stage === "cycling" || stage === "irregular" || stage === "perimenopause") && (
+            <div className="mt-4 p-3 rounded-lg border border-border/50 bg-accent/20 space-y-2">
+              <div className="text-sm font-medium">Hormonal birth control</div>
+              <div className="text-xs text-muted-foreground">
+                Pill, mini-pill, hormonal IUD, implant, ring, or patch. This changes how Logan talks about your hormones and nutrients.
+              </div>
+              <RadioGroup
+                value={onHormonalBc === true ? "yes" : onHormonalBc === false ? "no" : "unknown"}
+                onValueChange={(v) => setOnHormonalBc(v === "yes" ? true : v === "no" ? false : null)}
+                className="flex flex-wrap gap-4 pt-1"
+              >
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <RadioGroupItem value="yes" id="bc-yes" />
+                  <span className="text-sm">Yes</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <RadioGroupItem value="no" id="bc-no" />
+                  <span className="text-sm">No</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <RadioGroupItem value="unknown" id="bc-unknown" />
+                  <span className="text-sm">Prefer not to say</span>
+                </label>
+              </RadioGroup>
+            </div>
+          )}
 
           {(stage === "cycling" || stage === "irregular") && (
             <div className="mt-4 p-3 rounded-lg border border-pink-400/30 bg-pink-400/5 space-y-3">

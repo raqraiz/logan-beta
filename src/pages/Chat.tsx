@@ -110,6 +110,7 @@ interface CycleData {
   lastPeriodStart?: string;
   currentPeriodEndDate?: string | null;
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
+  onHormonalBc?: boolean | null;
   postpartumStartDate?: string;
   postpartumActive?: boolean;
   lossDate?: string;
@@ -138,6 +139,7 @@ const Chat = () => {
   const [lossDate, setLossDate] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState<string | null>(null);
   const [pregnancyLmp, setPregnancyLmp] = useState<string | null>(null);
+  const [onHormonalBc, setOnHormonalBc] = useState<boolean | null>(null);
   // Authoritative cycle data from `participants` table — wins over chat metadata
   const [participantCycle, setParticipantCycle] = useState<{
     lastPeriodStart: string | null;
@@ -381,6 +383,9 @@ const Chat = () => {
           if ((row as any).pregnancy_lmp !== undefined) {
             setPregnancyLmp((row as any).pregnancy_lmp ?? null);
           }
+          if ((row as any).on_hormonal_bc !== undefined) {
+            setOnHormonalBc((row as any).on_hormonal_bc ?? null);
+          }
         }
       )
       .subscribe();
@@ -409,6 +414,7 @@ const Chat = () => {
         lossDate: lossDate || undefined,
         dueDate: dueDate || undefined,
         pregnancyLmp: pregnancyLmp || undefined,
+        onHormonalBc,
       });
       return;
     }
@@ -462,6 +468,7 @@ const Chat = () => {
           phase: metadata.cycle_phase || "Unknown",
           cycleLengthDays: metadata.cycle_length_days,
           lifeStage: lifeStage === "irregular" ? "irregular" : "cycling",
+          onHormonalBc,
         });
         return;
       }
@@ -471,6 +478,7 @@ const Chat = () => {
         phase: "Unknown",
         cycleLengthDays: cycleLengthDays || 28,
         lifeStage: lifeStage === "irregular" ? "irregular" : "cycling",
+        onHormonalBc,
         needsPeriodStart: true,
       });
       return;
@@ -485,11 +493,12 @@ const Chat = () => {
         lastPeriodStart,
         currentPeriodEndDate: participantCycle?.currentPeriodEndDate ?? null,
         lifeStage: lifeStage === "irregular" ? "irregular" : "cycling",
+        onHormonalBc,
         postpartumStartDate: postpartumStartDate || undefined,
         postpartumActive: postpartumActive && !!postpartumStartDate,
       });
     }
-  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, postpartumActive, lossDate, dueDate, pregnancyLmp, participantCycle]);
+  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, postpartumActive, lossDate, dueDate, pregnancyLmp, onHormonalBc, participantCycle]);
 
   // Scroll to bottom on initial load
   const hasScrolledToBottom = useRef(false);
@@ -638,7 +647,7 @@ const Chat = () => {
     try {
       const { data } = await supabase
         .from("participants")
-        .select("life_stage, postpartum_start_date, postpartum_active, loss_date, due_date, pregnancy_lmp, last_period_start, cycle_length_days, timezone, current_period_end_date, period_pending_since, period_still_active")
+        .select("life_stage, on_hormonal_bc, postpartum_start_date, postpartum_active, loss_date, due_date, pregnancy_lmp, last_period_start, cycle_length_days, timezone, current_period_end_date, period_pending_since, period_still_active")
         .eq("email", user.email)
         .single();
       if (data?.life_stage) {
@@ -658,6 +667,9 @@ const Chat = () => {
       }
       if ((data as any)?.pregnancy_lmp !== undefined) {
         setPregnancyLmp((data as any).pregnancy_lmp ?? null);
+      }
+      if ((data as any)?.on_hormonal_bc !== undefined) {
+        setOnHormonalBc((data as any).on_hormonal_bc ?? null);
       }
       if (data) {
         let effectiveTimezone: string | null = data.timezone ?? null;
