@@ -230,6 +230,33 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
             Tip: you can also just tell Logan in chat — e.g. "I'm actually still cycling" — and it'll switch automatically.
           </p>
 
+          {(stage === "cycling" || stage === "irregular" || stage === "perimenopause") && (
+            <div className="mt-4 p-3 rounded-lg border border-border/50 bg-accent/20 space-y-2">
+              <div className="text-sm font-medium">Hormonal birth control</div>
+              <div className="text-xs text-muted-foreground">
+                Pill, mini-pill, hormonal IUD, implant, ring, or patch. This changes how Logan talks about your hormones and nutrients.
+              </div>
+              <RadioGroup
+                value={onHormonalBc === true ? "yes" : onHormonalBc === false ? "no" : "unknown"}
+                onValueChange={(v) => setOnHormonalBc(v === "yes" ? true : v === "no" ? false : null)}
+                className="flex flex-wrap gap-4 pt-1"
+              >
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <RadioGroupItem value="yes" id="bc-yes" />
+                  <span className="text-sm">Yes</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <RadioGroupItem value="no" id="bc-no" />
+                  <span className="text-sm">No</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <RadioGroupItem value="unknown" id="bc-unknown" />
+                  <span className="text-sm">Prefer not to say</span>
+                </label>
+              </RadioGroup>
+            </div>
+          )}
+
           {(stage === "cycling" || stage === "irregular") && (
             <div className="mt-4 p-3 rounded-lg border border-pink-400/30 bg-pink-400/5 space-y-3">
               <div className="flex items-start justify-between gap-3">
