@@ -383,6 +383,9 @@ const Chat = () => {
           if ((row as any).pregnancy_lmp !== undefined) {
             setPregnancyLmp((row as any).pregnancy_lmp ?? null);
           }
+          if ((row as any).on_hormonal_bc !== undefined) {
+            setOnHormonalBc((row as any).on_hormonal_bc ?? null);
+          }
         }
       )
       .subscribe();
