@@ -3584,7 +3584,7 @@ MEAL PLANS / MENUS — STRICT RULES:
       userLifeStage === "postpartum" ? "Postpartum" :
       userLifeStage === "menopause" ? "Menopause" :
       userLifeStage === "perimenopause" ? "Perimenopause" :
-      userLifeStage === "irregular" ? "Irregular / hormonal birth control" :
+      userLifeStage === "irregular" ? ((participant as any).on_hormonal_bc === true ? "Irregular / hormonal birth control" : "Irregular cycle") :
       "Cycling";
     
     // Calculate postpartum timeline + stage-specific guidance bucket
