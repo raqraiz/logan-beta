@@ -1927,13 +1927,33 @@ serve(async (req) => {
         || /\b(?:i'?m|i\s+am)\s+(?:still\s+)?cycling\b/i.test(userMessage)
         || /\bi'?m\s+not\s+postpartum\b/i.test(userMessage);
 
-      // Irregular / hormonal birth control: "I'm on the pill", "I have an IUD", "I'm on hormonal BC", "PCOS", "irregular cycle"
-      const irregularSignal =
+      // --- Hormonal birth control status (independent of life_stage) ---
+      // BC-POSITIVE: "I'm on the pill", "I got an IUD", "switch me to hormonal BC"
+      const bcPositiveSignal =
         /\b(?:i'?m|i\s+am|just\s+(?:started|got)|started|recently\s+started|switched\s+to|now\s+on|currently\s+on|going\s+on)\s+(?:on\s+)?(?:the\s+)?(?:pill|mini[-\s]?pill|combined\s+pill|birth\s+control(?:\s+pill)?|hormonal\s+(?:birth\s+control|bc|iud|contracepti(?:on|ve))|nuvaring|the\s+ring|the\s+patch|nexplanon|the\s+implant|depo(?:[-\s]provera)?|mirena|kyleena|skyla|liletta)\b/i.test(userMessage)
         || /\b(?:i\s+have|got|just\s+got|just\s+had)\s+(?:an?\s+)?(?:hormonal\s+)?(?:iud|implant|nexplanon|mirena|kyleena|skyla|liletta|nuvaring|patch)\s+(?:put\s+in|inserted|placed)?\b/i.test(userMessage)
-        || /\b(?:change|switch|update|set)\s+(?:my\s+)?(?:settings?|account|life\s+stage|profile)\s+(?:to|for)\s+(?:hormonal\s+(?:birth\s+control|bc)|birth\s+control|irregular|the\s+pill|iud)\b/i.test(userMessage)
+        || /\b(?:change|switch|update|set)\s+(?:my\s+)?(?:settings?|account|life\s+stage|profile)\s+(?:to|for)\s+(?:hormonal\s+(?:birth\s+control|bc)|birth\s+control|irregular|the\s+pill|iud)\b/i.test(userMessage);
+
+      // BC-NEGATIVE: "I'm not on birth control", "I came off the pill", "I had my IUD removed"
+      const bcTerm = `(?:the\\s+)?(?:pill|mini[-\\s]?pill|combined\\s+pill|birth\\s+control(?:\\s+pill)?|bc|hormonal\\s+(?:birth\\s+control|bc|iud|contracepti(?:on|ve))|contracepti(?:on|ves?)|nuvaring|the\\s+ring|the\\s+patch|nexplanon|the\\s+implant|implant|depo(?:[-\\s]provera)?|mirena|kyleena|skyla|liletta|iud|coil)`;
+      const bcNegativeSignal =
+        new RegExp(`\\b(?:i'?m|i\\s+am|i'?m\\s+really|no,?\\s*i'?m)\\s+not\\s+(?:currently\\s+)?(?:on|using|taking)\\s+(?:any\\s+)?${bcTerm}\\b`, "i").test(userMessage)
+        || new RegExp(`\\bi\\s+(?:don'?t|do\\s+not)\\s+(?:use|take|have)\\s+(?:any\\s+)?${bcTerm}\\b`, "i").test(userMessage)
+        || new RegExp(`\\bi\\s+(?:stopped|quit)\\s+(?:taking|using)?\\s*${bcTerm}\\b`, "i").test(userMessage)
+        || new RegExp(`\\bi\\s+(?:came|went|got)\\s+off\\s+(?:of\\s+)?${bcTerm}\\b`, "i").test(userMessage)
+        || new RegExp(`\\bi'?m\\s+off\\s+(?:of\\s+)?${bcTerm}\\b`, "i").test(userMessage)
+        || new RegExp(`\\b(?:i\\s+)?(?:had|got)\\s+(?:my|the)\\s+${bcTerm}\\s+(?:taken\\s+out|removed)\\b`, "i").test(userMessage)
+        || new RegExp(`\\bi\\s+removed\\s+(?:my|the)\\s+${bcTerm}\\b`, "i").test(userMessage)
+        || new RegExp(`\\b(?:no|never\\s+been\\s+on)\\s+${bcTerm}\\b`, "i").test(userMessage)
+        || /\bi'?m\s+(?:hormone|hormonally)\s*[-\s]?free\b/i.test(userMessage)
+        || /\bi'?m\s+not\s+on\s+(?:any\s+)?(?:hormones?|hormonal\s+anything)\b/i.test(userMessage);
+
+      // Irregular / hormonal birth control: BC-positive phrases, PCOS, or self-reported irregular cycles
+      const irregularSignal =
+        (bcPositiveSignal && !bcNegativeSignal)
         || /\b(?:i\s+have|i'?ve\s+got|diagnosed\s+with)\s+(?:pcos|hypothalamic\s+amenorrhea)\b/i.test(userMessage)
         || /\b(?:my\s+)?(?:cycles?\s+(?:are|is)|periods?\s+(?:are|is))\s+(?:really\s+)?irregular\b/i.test(userMessage);
+
 
       // Cycling wins over menopause if both somehow match
       if (cyclingSignal && participant.life_stage !== "cycling") {
