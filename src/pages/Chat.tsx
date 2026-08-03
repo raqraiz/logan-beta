@@ -139,6 +139,7 @@ const Chat = () => {
   const [lossDate, setLossDate] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState<string | null>(null);
   const [pregnancyLmp, setPregnancyLmp] = useState<string | null>(null);
+  const [onHormonalBc, setOnHormonalBc] = useState<boolean | null>(null);
   // Authoritative cycle data from `participants` table — wins over chat metadata
   const [participantCycle, setParticipantCycle] = useState<{
     lastPeriodStart: string | null;
