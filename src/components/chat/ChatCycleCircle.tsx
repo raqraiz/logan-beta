@@ -10,6 +10,8 @@ interface ChatCycleCircleProps {
   dueDate?: string;
   pregnancyLmp?: string;
   postpartumStartDate?: string;
+  /** Source of truth for birth-control copy. null/undefined = unknown -> no BC wording */
+  onHormonalBc?: boolean | null;
   /** When true (and lifeStage='cycling'), overlay a small postpartum recovery badge */
   postpartumActive?: boolean;
   lossDate?: string;
@@ -134,7 +136,7 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
 }
 
 // Static badge for non-cycling/steady life stages (postpartum, menopause, irregular/on-the-pill, pregnancy loss, pregnant, or stale cycling)
-function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDate, pregnancyLmp, steadyReason }: { lifeStage: "postpartum" | "menopause" | "irregular" | "steady" | "pregnancy_loss" | "pregnant"; size: "sm" | "md"; postpartumStartDate?: string; lossDate?: string; dueDate?: string; pregnancyLmp?: string; steadyReason?: "pill" | "stale" }) {
+function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDate, pregnancyLmp, steadyReason, onHormonalBc }: { lifeStage: "postpartum" | "menopause" | "irregular" | "steady" | "pregnancy_loss" | "pregnant"; size: "sm" | "md"; postpartumStartDate?: string; lossDate?: string; dueDate?: string; pregnancyLmp?: string; steadyReason?: "pill" | "stale"; onHormonalBc?: boolean | null }) {
   const stageKey =
     lifeStage === "postpartum" ? "Postpartum" :
     lifeStage === "menopause" ? "Menopause" :
@@ -157,12 +159,14 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
 
   // Calculate weeks postpartum (or a default number for menopause/irregular)
   let displayNumber = "—";
-  let subLabel = lifeStage === "postpartum" ? "Recovery" : lifeStage === "menopause" ? "Transition" : lifeStage === "pregnancy_loss" ? "Recovery" : "Hormonal BC";
+  // BC copy is driven ONLY by on_hormonal_bc. null/undefined = unknown -> neutral wording.
+  const bcLabel = onHormonalBc === true ? "Hormonal BC" : "Own rhythm";
+  let subLabel = lifeStage === "postpartum" ? "Recovery" : lifeStage === "menopause" ? "Transition" : lifeStage === "pregnancy_loss" ? "Recovery" : bcLabel;
   if (lifeStage === "steady") {
-    subLabel = steadyReason === "stale" ? "Period overdue" : "Hormonal BC";
+    subLabel = steadyReason === "stale" ? "Period overdue" : bcLabel;
   }
   if (lifeStage === "irregular") {
-    subLabel = "On the pill / irregular";
+    subLabel = onHormonalBc === true ? "On the pill / irregular" : "Irregular cycle";
   }
   if (lifeStage === "postpartum" && postpartumStartDate) {
     const start = new Date(postpartumStartDate + "T12:00:00Z");
@@ -461,7 +465,7 @@ function PregnancyCircle({ size, dueDate, pregnancyLmp }: { size: "sm" | "md"; d
 }
 
 
-export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling", postpartumStartDate, postpartumActive = false, lossDate, dueDate, pregnancyLmp }: ChatCycleCircleProps) {
+export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling", postpartumStartDate, postpartumActive = false, lossDate, dueDate, pregnancyLmp, onHormonalBc = null }: ChatCycleCircleProps) {
   // Postpartum/menopause/pregnancy-loss/pregnant/irregular users get a static badge.
   if (lifeStage === "postpartum" || lifeStage === "menopause") {
     return <LifeStageBadge lifeStage={lifeStage} size={size} postpartumStartDate={postpartumStartDate} />;
@@ -473,7 +477,7 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
     return <PregnancyCircle size={size} dueDate={dueDate} pregnancyLmp={pregnancyLmp} />;
   }
   if (lifeStage === "irregular") {
-    return <LifeStageBadge lifeStage="irregular" size={size} />;
+    return <LifeStageBadge lifeStage="irregular" size={size} onHormonalBc={onHormonalBc} />;
   }
   // Cycling users always wrap to their input cycle length — no "overdue" pseudo-state.
   // Proactive check-in messages before the assumed day 1 confirm whether the cycle has shifted.

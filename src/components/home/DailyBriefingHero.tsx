@@ -187,7 +187,7 @@ export function DailyBriefingHero({
                           ? "Recovery"
                           : lifeStage === "pregnant"
                             ? "Pregnant"
-                            : "On the pill")
+                            : (onHormonalBc === true ? "On the pill" : "Irregular"))
                   : phase}
               </span>
             </div>
