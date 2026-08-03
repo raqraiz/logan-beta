@@ -468,6 +468,7 @@ const Chat = () => {
           phase: metadata.cycle_phase || "Unknown",
           cycleLengthDays: metadata.cycle_length_days,
           lifeStage: lifeStage === "irregular" ? "irregular" : "cycling",
+          onHormonalBc,
         });
         return;
       }
@@ -477,6 +478,7 @@ const Chat = () => {
         phase: "Unknown",
         cycleLengthDays: cycleLengthDays || 28,
         lifeStage: lifeStage === "irregular" ? "irregular" : "cycling",
+        onHormonalBc,
         needsPeriodStart: true,
       });
       return;
@@ -491,11 +493,12 @@ const Chat = () => {
         lastPeriodStart,
         currentPeriodEndDate: participantCycle?.currentPeriodEndDate ?? null,
         lifeStage: lifeStage === "irregular" ? "irregular" : "cycling",
+        onHormonalBc,
         postpartumStartDate: postpartumStartDate || undefined,
         postpartumActive: postpartumActive && !!postpartumStartDate,
       });
     }
-  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, postpartumActive, lossDate, dueDate, pregnancyLmp, participantCycle]);
+  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, postpartumActive, lossDate, dueDate, pregnancyLmp, onHormonalBc, participantCycle]);
 
   // Scroll to bottom on initial load
   const hasScrolledToBottom = useRef(false);
@@ -644,7 +647,7 @@ const Chat = () => {
     try {
       const { data } = await supabase
         .from("participants")
-        .select("life_stage, postpartum_start_date, postpartum_active, loss_date, due_date, pregnancy_lmp, last_period_start, cycle_length_days, timezone, current_period_end_date, period_pending_since, period_still_active")
+        .select("life_stage, on_hormonal_bc, postpartum_start_date, postpartum_active, loss_date, due_date, pregnancy_lmp, last_period_start, cycle_length_days, timezone, current_period_end_date, period_pending_since, period_still_active")
         .eq("email", user.email)
         .single();
       if (data?.life_stage) {
@@ -664,6 +667,9 @@ const Chat = () => {
       }
       if ((data as any)?.pregnancy_lmp !== undefined) {
         setPregnancyLmp((data as any).pregnancy_lmp ?? null);
+      }
+      if ((data as any)?.on_hormonal_bc !== undefined) {
+        setOnHormonalBc((data as any).on_hormonal_bc ?? null);
       }
       if (data) {
         let effectiveTimezone: string | null = data.timezone ?? null;
