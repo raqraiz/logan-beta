@@ -7,6 +7,8 @@ interface DailyBriefingHeroProps {
   phase: string;
   cycleLengthDays: number;
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
+  /** true = on hormonal BC, false = confirmed not on BC, null/undefined = unknown */
+  onHormonalBc?: boolean | null;
   postpartumStartDate?: string;
   postpartumActive?: boolean;
   lossDate?: string;
