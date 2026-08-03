@@ -1978,27 +1978,73 @@ serve(async (req) => {
         );
       }
 
-      if (irregularSignal && !cyclingSignal && !perimenopauseSignal && participant.life_stage !== "irregular") {
+      // BC-NEGATIVE: user says she is NOT on hormonal birth control.
+      // Only flips on_hormonal_bc — life_stage is deliberately left alone
+      // (an irregular cycle can be PCOS or hypothalamic, not BC).
+      if (bcNegativeSignal && (participant as any).on_hormonal_bc !== false) {
         await supabase
           .from("participants")
-          .update({ life_stage: "irregular", postpartum_start_date: null, last_period_start: null })
+          .update({ on_hormonal_bc: false })
           .eq("id", participant.id);
         const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
         if (refreshed) participant = refreshed;
 
-        const msg = `Done — switched your account to **hormonal birth control / irregular cycle** mode. I'll stop predicting natural phases and instead focus on steady-state levers: sleep, protein, strength, stress, hydration, and the micronutrients hormonal BC can deplete (B6, B12, magnesium, zinc, folate). Anything specific you want to dig into first?`;
+        const msg = participant.life_stage === "irregular"
+          ? `Got it — noted that you're **not on hormonal birth control**. I've dropped the BC framing from your Home tab and daily briefing. I'll keep your cycle marked as irregular, so I still won't predict exact phases — tell me if that's wrong too and I'll switch you to regular cycling.`
+          : `Got it — noted that you're **not on hormonal birth control**. I've dropped the BC framing from your Home tab and daily briefing.`;
         await supabase.from("chat_messages").insert({
           user_id: user.id,
           role: "assistant",
           content: msg,
           message_type: "text",
-          metadata: { life_stage_updated: "irregular" },
+          metadata: { on_hormonal_bc_updated: false },
         });
         return new Response(
           JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      if (irregularSignal && !cyclingSignal && !perimenopauseSignal && participant.life_stage !== "irregular") {
+        await supabase
+          .from("participants")
+          .update({
+            life_stage: "irregular",
+            postpartum_start_date: null,
+            last_period_start: null,
+            ...(bcPositiveSignal ? { on_hormonal_bc: true } : {}),
+          })
+          .eq("id", participant.id);
+        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshed) participant = refreshed;
+
+        const msg = bcPositiveSignal
+          ? `Done — switched your account to **hormonal birth control / irregular cycle** mode. I'll stop predicting natural phases and instead focus on steady-state levers: sleep, protein, strength, stress, hydration, and the micronutrients hormonal BC can deplete (B6, B12, magnesium, zinc, folate). Anything specific you want to dig into first?`
+          : `Done — switched your account to **irregular cycle** mode. I'll stop predicting exact phases and focus on steady-state levers instead: sleep, protein, strength, stress, and hydration. Anything specific you want to dig into first?`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: msg,
+          message_type: "text",
+          metadata: { life_stage_updated: "irregular", ...(bcPositiveSignal ? { on_hormonal_bc_updated: true } : {}) },
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Already in the right life stage, but BC status needs recording (e.g. irregular
+      // user who just started the pill, or a cycling user who did).
+      if (bcPositiveSignal && !bcNegativeSignal && !cyclingSignal && (participant as any).on_hormonal_bc !== true) {
+        await supabase
+          .from("participants")
+          .update({ on_hormonal_bc: true })
+          .eq("id", participant.id);
+        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshed) participant = refreshed;
+      }
+
 
       if (perimenopauseSignal && !cyclingSignal && participant.life_stage !== "perimenopause") {
         await supabase
