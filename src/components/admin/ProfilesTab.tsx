@@ -726,6 +726,7 @@ export function ProfilesTab() {
                               lossDate={lossDate || undefined}
                               dueDate={due || undefined}
                               pregnancyLmp={pregLmp || undefined}
+                              onHormonalBc={(participant as any).on_hormonal_bc ?? null}
                             />
                           </div>
                         ) : cycleDay && phase ? (

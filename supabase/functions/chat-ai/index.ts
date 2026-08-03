@@ -404,14 +404,22 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const { userMessage } = body;
+    const rawUserMessage = body.userMessage;
 
-    if (!userMessage || typeof userMessage !== "string") {
+    if (!rawUserMessage || typeof rawUserMessage !== "string") {
       return new Response(
         JSON.stringify({ error: "Message is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Normalize smart/curly punctuation ONCE, upstream of every regex signal in this
+    // function (BC, irregular, cycling, menopause, period, symptoms...). iOS inserts
+    // U+2019 for apostrophes, which silently broke every `i'?m`-style pattern.
+    const userMessage = rawUserMessage
+      .replace(/[\u2018\u2019\u02BC\u055A\uFF07]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/[\u2013\u2014]/g, "-");
 
     if (userMessage.length > 4000) {
       return new Response(

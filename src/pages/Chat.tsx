@@ -1185,6 +1185,7 @@ const Chat = () => {
                    lossDate={cycleData.lossDate}
                    dueDate={cycleData.dueDate}
                    pregnancyLmp={cycleData.pregnancyLmp}
+                   onHormonalBc={cycleData.onHormonalBc}
                  />
              ) : (
                <LoganLogo size="sm" />
