@@ -45,6 +45,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
   const [dueDate, setDueDate] = useState<string>("");
   const [pregnancyLmp, setPregnancyLmp] = useState<string>("");
   const [timezone, setTimezone] = useState<string>("");
+  const [onHormonalBc, setOnHormonalBc] = useState<boolean | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -75,7 +76,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
     (async () => {
       const { data } = await supabase
         .from("participants")
-        .select("postpartum_active, postpartum_start_date, loss_date, due_date, pregnancy_lmp, timezone")
+        .select("postpartum_active, postpartum_start_date, loss_date, due_date, pregnancy_lmp, timezone, on_hormonal_bc")
         .eq("email", userEmail)
         .maybeSingle();
       if (data) {
@@ -84,6 +85,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
         setLossDate((data as any).loss_date ?? "");
         setDueDate((data as any).due_date ?? "");
         setPregnancyLmp((data as any).pregnancy_lmp ?? "");
+        setOnHormonalBc((data as any).on_hormonal_bc ?? null);
         let tz = (data as any).timezone ?? "";
         if (!tz) {
           try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch { tz = ""; }
@@ -139,6 +141,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
       payload.loss_date = null;
       payload.due_date = null;
       payload.pregnancy_lmp = null;
+      payload.on_hormonal_bc = onHormonalBc;
     } else if (stage === "menopause") {
       payload.last_period_start = null;
       payload.postpartum_start_date = null;
