@@ -355,7 +355,7 @@ serve(async (req) => {
           parsedValue = "perimenopause";
         } else if (lower.includes("menopause")) {
           parsedValue = "menopause";
-        } else if (lower.includes("irregular") || lower.includes("hormonal") || lower.includes("pcos") || lower.includes("iud") || lower.includes("pill")) {
+        } else if (lower.includes("irregular") || lower.includes("hormonal") || lower.includes("pcos") || lower.includes("pmos") || lower.includes("polyendocrine") || lower.includes("iud") || lower.includes("pill")) {
           parsedValue = "irregular";
         } else {
           parsedValue = "cycling";

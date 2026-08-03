@@ -190,7 +190,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
               <RadioGroupItem value="irregular" id="stage-irregular" className="mt-0.5" />
               <div className="flex-1">
                 <div className="text-sm font-medium">Irregular cycle</div>
-                <div className="text-xs text-muted-foreground">PCOS, hormonal imbalance, or unpredictable timing. Logan still tracks but won't predict exact phases. (Birth control is a separate setting below.)</div>
+                <div className="text-xs text-muted-foreground">PMOS (formerly PCOS), hormonal imbalance, or unpredictable timing. Logan still tracks but won't predict exact phases. (Birth control is a separate setting below.)</div>
               </div>
             </label>
             <label className="flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:bg-accent/30 cursor-pointer">

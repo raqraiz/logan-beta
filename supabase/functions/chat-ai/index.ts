@@ -1959,7 +1959,9 @@ serve(async (req) => {
       // Irregular / hormonal birth control: BC-positive phrases, PCOS, or self-reported irregular cycles
       const irregularSignal =
         (bcPositiveSignal && !bcNegativeSignal)
-        || /\b(?:i\s+have|i'?ve\s+got|diagnosed\s+with)\s+(?:pcos|hypothalamic\s+amenorrhea)\b/i.test(userMessage)
+        // PCOS was renamed PMOS (polyendocrine metabolic ovarian syndrome) in the 2026
+        // global consensus. Both terms stay matched — users will say PCOS for years.
+        || /\b(?:i\s+have|i'?ve\s+got|diagnosed\s+with)\s+(?:pcos|pmos|polycystic\s+ovar(?:y|ian)\s+syndrome|polyendocrine\s+metabolic\s+ovarian\s+syndrome|hypothalamic\s+amenorrhea)\b/i.test(userMessage)
         || /\b(?:my\s+)?(?:cycles?\s+(?:are|is)|periods?\s+(?:are|is))\s+(?:really\s+)?irregular\b/i.test(userMessage);
 
 
@@ -3025,7 +3027,7 @@ serve(async (req) => {
 
     // Bleed/spotting acknowledgment guards (set in the spotting block above).
     if (unreliableCycleNote) {
-      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user mentioned bleeding/spotting, but her cycle length is NOT reliably established (irregular, PCOS, hormonal birth control, brand-new account, or non-cycling life stage). Acknowledge what she shared warmly. Ask how heavy it is and how long it's lasted. DO NOT propose resetting her cycle. DO NOT infer or assign a phase from this single mention. DO NOT say "this sounds like your period starting."`;
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user mentioned bleeding/spotting, but her cycle length is NOT reliably established (irregular, PMOS/PCOS, hormonal birth control, brand-new account, or non-cycling life stage). Acknowledge what she shared warmly. Ask how heavy it is and how long it's lasted. DO NOT propose resetting her cycle. DO NOT infer or assign a phase from this single mention. DO NOT say "this sounds like your period starting."`;
     } else if (midCycleSpottingNote) {
       systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user mentioned bleeding/spotting, but based on her cycle day this is likely mid-cycle (ovulatory spotting, implantation, or breakthrough bleeding) — not her period starting. Acknowledge it gently, ask if it's heavier than usual or accompanied by cramps, and DO NOT propose a cycle reset or change her phase from this single mention.`;
     }
@@ -3641,7 +3643,7 @@ MEAL PLANS / MENUS — STRICT RULES:
           : ((participant as any).on_hormonal_bc === true
             ? `This user is on HORMONAL BIRTH CONTROL. Their hormones are externally regulated (pill, IUD, implant, ring, patch). They are NOT naturally cycling. RULES: Never reference a cycle "day number" or natural phase (follicular, luteal, ovulation, menstruation). Never invent rising/falling estrogen or progesterone language tied to a phase. Frame guidance around steady-state levers: sleep, protein, strength training, stress, hydration, and micronutrient depletion that hormonal BC can cause (B6, B12, magnesium, zinc, folate). If they ask about a phase, gently explain why phase-based predictions don't apply to them.`
             : (participant as any).on_hormonal_bc === false
-              ? `This user has an IRREGULAR cycle and has explicitly told us she is NOT on hormonal birth control (could be PCOS, hypothalamic amenorrhea, thyroid, stress, or simply unpredictable timing). ABSOLUTE RULE: NEVER mention the pill, IUD, implant, ring, patch, hormonal contraception, or BC-related nutrient depletion. Do not imply her hormones are externally regulated — they are her own, just unpredictable. Never quote a confident cycle "day number" or phase. Frame guidance around steady-state levers: sleep, protein, strength training, stress, hydration, and tracking her own observed patterns over calendar timing.`
+              ? `This user has an IRREGULAR cycle and has explicitly told us she is NOT on hormonal birth control (could be PMOS — formerly called PCOS; both names are in active use, so mirror whichever term she uses — hypothalamic amenorrhea, thyroid, stress, or simply unpredictable timing). ABSOLUTE RULE: NEVER mention the pill, IUD, implant, ring, patch, hormonal contraception, or BC-related nutrient depletion. Do not imply her hormones are externally regulated — they are her own, just unpredictable. Never quote a confident cycle "day number" or phase. Frame guidance around steady-state levers: sleep, protein, strength training, stress, hydration, and tracking her own observed patterns over calendar timing.`
               : `This user has an IRREGULAR cycle and we do NOT know whether she is on hormonal birth control — it has never been confirmed. Do NOT assert or assume she is on the pill, an IUD, or any hormonal contraception, and do not give BC-specific nutrient-depletion advice as though it applies to her. Never quote a confident cycle "day number" or phase. Frame guidance around steady-state levers: sleep, protein, strength training, stress, hydration, and her own observed patterns. If BC status becomes genuinely relevant, you may ask once, naturally.`);
 
 
