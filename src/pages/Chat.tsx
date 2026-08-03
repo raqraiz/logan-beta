@@ -414,6 +414,7 @@ const Chat = () => {
         lossDate: lossDate || undefined,
         dueDate: dueDate || undefined,
         pregnancyLmp: pregnancyLmp || undefined,
+        onHormonalBc,
       });
       return;
     }
