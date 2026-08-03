@@ -644,6 +644,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
               phase={stagePhase}
               cycleLengthDays={cycleData.cycleLengthDays}
               lifeStage={cycleData.lifeStage}
+              onHormonalBc={cycleData.onHormonalBc}
               postpartumStartDate={cycleData.postpartumStartDate}
               postpartumActive={cycleData.postpartumActive}
               lossDate={cycleData.lossDate}
