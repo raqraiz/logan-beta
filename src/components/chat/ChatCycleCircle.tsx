@@ -230,11 +230,15 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
     }
   }
   // Irregular / on-the-pill / steady: no day number, show a glyph instead.
-  // Pill 💊 only for irregular (BC) users; hourglass ⏳ for stale/overdue cycles.
+  // Pill 💊 only for irregular users explicitly on hormonal BC; hourglass ⏳ for stale/overdue cycles.
+  // Non-BC irregular users get the same neutral dot as steady non-stale users.
   const showGlyph = lifeStage === "irregular" || lifeStage === "steady";
-  const glyph = lifeStage === "irregular"
-    ? "💊"
-    : (steadyReason === "stale" ? "⏳" : "•");
+  const glyph =
+    lifeStage === "irregular"
+      ? onHormonalBc === true
+        ? "💊"
+        : "•"
+      : (steadyReason === "stale" ? "⏳" : "•");
 
   // Perforated (dashed) ring style
   const radius = 42;
