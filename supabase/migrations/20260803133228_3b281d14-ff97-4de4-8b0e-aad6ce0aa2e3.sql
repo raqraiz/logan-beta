@@ -1,0 +1,1 @@
+UPDATE public.participants SET on_hormonal_bc = false, updated_at = now() WHERE user_id = '96861bec-09b7-4511-9570-0415423a4fad';
