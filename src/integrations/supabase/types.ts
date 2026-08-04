@@ -519,6 +519,33 @@ export type Database = {
           },
         ]
       }
+      feedback_prompt_state: {
+        Row: {
+          created_at: string
+          last_dismissed_at: string | null
+          last_shown_at: string | null
+          sessions_since_shown: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          last_dismissed_at?: string | null
+          last_shown_at?: string | null
+          sessions_since_shown?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          last_dismissed_at?: string | null
+          last_shown_at?: string | null
+          sessions_since_shown?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       growth_tracker: {
         Row: {
           actual_user_count: number
