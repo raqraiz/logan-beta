@@ -3353,6 +3353,34 @@ serve(async (req) => {
       baseMeta.suggested_day1 = bleedDay1Prompt.suggestedDay1;
     }
 
+    // --- Pass 1: server-authored logging confirmation ---
+    // The ONLY place the user is told a symptom was saved. Appended to the main
+    // answer (above the deep-dive divider) after a confirmed symptom_logs write.
+    if (loggedSymptomNames.length > 0) {
+      const label = `Logged: ${loggedSymptomNames.join(", ")}`;
+      if (!new RegExp(`^\\s*Logged:\\s*`, "mi").test(finalAssistantMessage)) {
+        const divider = "\n---\n";
+        const idx = finalAssistantMessage.indexOf(divider);
+        finalAssistantMessage = idx >= 0
+          ? `${finalAssistantMessage.slice(0, idx).trimEnd()}\n\n${label}${finalAssistantMessage.slice(idx)}`
+          : `${finalAssistantMessage.trimEnd()}\n\n${label}`;
+      }
+      baseMeta.logged_symptoms = loggedSymptomNames;
+    }
+
+    // --- Pass 1: last-line guard on the final text ---
+    // Catches false-confirmation phrasing introduced after the earlier strip
+    // (Day-1 prompt splice, starter merge). Runs only when nothing persisted.
+    if (loggedSymptomNames.length === 0 && backfillConfirmation.length === 0 && hasLoggingClaim(finalAssistantMessage)) {
+      const rewritten = stripUnbackedLoggingClaims(finalAssistantMessage);
+      if (rewritten.trim()) {
+        finalAssistantMessage = rewritten;
+        console.warn("[false_logging_claim_stripped_final]", JSON.stringify({ user_id: user?.id }));
+      }
+    }
+
+
+
     // --- Safety net: if Logan's reply PROMISES to add symptoms to the shared
     // library (e.g. "I'll add memory loss to the symptom library"), actually
     // insert them. Prevents the model from claiming the action without it
