@@ -136,6 +136,18 @@ const Chat = () => {
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
+  // Live cycle values for message-bubble visuals. Null until participant data
+  // resolves — cards then fall back to their stored metadata snapshot, so no flicker.
+  const liveCycle = useMemo(() => {
+    if (!cycleData) return null;
+    if (!cycleData.cycleDay || cycleData.cycleDay <= 0) return null;
+    if (!cycleData.phase || cycleData.phase === "Unknown") return null;
+    return {
+      day: cycleData.cycleDay,
+      phase: cycleData.phase,
+      len: cycleData.cycleLengthDays || 28,
+    };
+  }, [cycleData]);
   const [lifeStage, setLifeStage] = useState<"cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant">("cycling");
   const [postpartumStartDate, setPostpartumStartDate] = useState<string | null>(null);
   const [postpartumActive, setPostpartumActive] = useState<boolean>(false);
