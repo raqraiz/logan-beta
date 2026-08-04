@@ -2012,25 +2012,9 @@ serve(async (req) => {
             const matches = askedLibraryQuestion
               ? Array.from(content.matchAll(/`([^`\n]{1,40})`/g))
               : [];
-            const isValidSymptomName = (s: string): boolean => {
-              if (!s) return false;
-              const t = s.trim();
-              if (t.length < 3 || t.length > 30) return false;
-              // Must be letters/spaces/hyphens only — no punctuation, digits, quotes
-              if (!/^[a-zA-Z][a-zA-Z\s-]*[a-zA-Z]$/.test(t)) return false;
-              const words = t.split(/\s+/);
-              if (words.length > 3) return false;
-              // Reject sentence-fragment starters (contraction remnants, connectors)
-              const firstWord = words[0].toLowerCase();
-              const badStarts = new Set([
-                "re","s","t","ll","ve","d","m","and","or","but","the","a","an",
-                "is","it","that","this","you","your","we","they","he","she",
-                "if","when","so","because","as","to","for","of","in","on","at",
-                "not","no","yes","up","down","out","in","also","just","really",
-              ]);
-              if (badStarts.has(firstWord)) return false;
-              return true;
-            };
+            // Validator hoisted to module scope (Pass 2) so the library add and
+            // the extraction path enforce the same contract.
+
             const candidates = matches
               .map(m => m[1].trim().replace(/^["'`]+|["'`]+$/g, ""))
               .filter(isValidSymptomName);
