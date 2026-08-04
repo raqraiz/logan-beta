@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { updateParticipant } from "@/lib/participantWrite";
 import { Loader2, Upload, Trash2 } from "lucide-react";
 import { HistoryImportDialog } from "./HistoryImportDialog";
 import { ProviderConnectCard } from "@/components/settings/ProviderConnectCard";
@@ -151,16 +152,10 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
       payload.pregnancy_lmp = null;
     }
 
-    const { error } = await supabase
-      .from("participants")
-      .update(payload)
-      .eq("email", userEmail);
+    const ok = await updateParticipant(userId, payload, "Couldn't update your settings");
 
     setSaving(false);
-    if (error) {
-      toast({ title: "Couldn't update", description: error.message, variant: "destructive" });
-      return;
-    }
+    if (!ok) return;
     toast({ title: "Updated", description: `Life stage saved.` });
     onUpdated?.(stage);
     onOpenChange(false);

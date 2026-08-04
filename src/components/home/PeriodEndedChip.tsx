@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Droplet, Check } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { updateParticipant } from "@/lib/participantWrite";
 
 interface Props {
   userId: string;
@@ -45,11 +46,8 @@ export function PeriodEndedChip({ userId, cycleDay, lastPeriodStart }: Props) {
       // Auto-clear stale end date: if a new period started after the stored
       // end date, it belongs to the previous cycle and shouldn't apply anymore.
       if (storedEnd && lastPeriodStart && storedEnd < lastPeriodStart) {
-        await supabase
-          .from("participants")
-          .update({ current_period_end_date: null })
-          .eq("id", participant!.id);
-        if (!cancelled) setEndDate(null);
+        const ok = await updateParticipant(userId, { current_period_end_date: null }, "Couldn't clear your period end date");
+        if (!cancelled && ok) setEndDate(null);
       } else {
         setEndDate(storedEnd);
       }
@@ -77,13 +75,10 @@ export function PeriodEndedChip({ userId, cycleDay, lastPeriodStart }: Props) {
       return;
     }
     setSaving(true);
-    const { error } = await supabase
-      .from("participants")
-      .update({ current_period_end_date: value })
-      .eq("id", participantId);
+    const ok = await updateParticipant(userId, { current_period_end_date: value }, "Couldn't save your period end date");
     setSaving(false);
-    if (error) {
-      toast({ title: "Couldn't save", description: error.message, variant: "destructive" });
+    if (!ok) {
+      // error already surfaced
     } else {
       setEndDate(value);
       setOpen(false);
@@ -94,13 +89,10 @@ export function PeriodEndedChip({ userId, cycleDay, lastPeriodStart }: Props) {
   const clear = async () => {
     if (!participantId) return;
     setSaving(true);
-    const { error } = await supabase
-      .from("participants")
-      .update({ current_period_end_date: null })
-      .eq("id", participantId);
+    const ok = await updateParticipant(userId, { current_period_end_date: null }, "Couldn't reset your period end date");
     setSaving(false);
-    if (error) {
-      toast({ title: "Couldn't reset", description: error.message, variant: "destructive" });
+    if (!ok) {
+      // error already surfaced
     } else {
       setEndDate(null);
       setOpen(false);
