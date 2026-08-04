@@ -316,7 +316,23 @@ export function SymptomHistory({
                       </div>
                     );
                   })}
+                  {notesOnlyCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setNotesOnly(true)}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left rounded-xl border border-border/30 bg-muted/20 hover:bg-muted/40 transition-colors"
+                    >
+                      <StickyNote className="w-3 h-3 text-muted-foreground shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-foreground/80 truncate">Notes only</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {notesOnlyCount}× · described in words, no severity rating
+                        </p>
+                      </div>
+                    </button>
+                  )}
                 </div>
+
                 <AllSymptomsChart
                   logs={logs}
                   symptomNames={topSymptoms.map(s => s.name)}
