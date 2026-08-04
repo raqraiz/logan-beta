@@ -22,6 +22,7 @@ import { DatePickerInput } from "@/components/chat/DatePickerInput";
 import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 import { ChatCycleCircle, calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
 import { inferCycleLengthForDeclaredPhase, autoCycleLengthFromHistory } from "@/lib/cyclePhase";
+import { updateParticipant } from "@/lib/participantWrite";
 import { HormoneChart } from "@/components/chat/HormoneChart";
 import { SymptomMap } from "@/components/chat/SymptomMap";
 import { PhaseCheatSheet } from "@/components/chat/PhaseCheatSheet";
@@ -895,10 +896,6 @@ const Chat = () => {
         });
         // Pull authoritative values from the DB so every tab stays in sync
         fetchLifeStage();
-        // Broadcast so HomeTab / PlanTab / CycleForecast invalidate their own caches.
-        window.dispatchEvent(new CustomEvent("cycle-data-updated", {
-          detail: { source: "chat-correction", cycleInfo: data.cycleInfo }
-        }));
       }
 
       await refreshMessages(user.id);
@@ -1249,19 +1246,19 @@ const Chat = () => {
           onPeriodUpdate={async (date: Date) => {
             if (!user?.id) return;
             const iso = format(date, "yyyy-MM-dd");
-            await supabase.from("participants").update({
+            await updateParticipant(user.id, {
               last_period_start: iso,
               period_pending_since: null,
               period_still_active: false,
               current_period_end_date: null,
-            }).eq("user_id", user.id);
+            });
           }}
           onCycleLengthUpdate={async (days: number) => {
             if (!user?.id) return;
-            await supabase.from("participants").update({
+            await updateParticipant(user.id, {
               cycle_length_days: days,
               cycle_length_user_override: true,
-            }).eq("user_id", user.id);
+            });
           }}
           onPhaseOverride={async (phase) => {
             if (!user?.id || !cycleData?.lastPeriodStart || !cycleData.cycleLengthDays) return;
@@ -1273,36 +1270,36 @@ const Chat = () => {
                 .order("created_at", { ascending: false })
                 .limit(6);
               const recomputed = autoCycleLengthFromHistory(hist ?? []);
-              await supabase.from("participants").update({
+              await updateParticipant(user.id, {
                 cycle_length_days: recomputed,
                 cycle_length_user_override: false,
-              }).eq("user_id", user.id);
+              });
               return;
             }
             const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
             const live = calculateCycleInfo(cycleData.lastPeriodStart, cycleData.cycleLengthDays, tz);
             const inferred = inferCycleLengthForDeclaredPhase(live?.cycleDay ?? 1, phase, cycleData.cycleLengthDays);
-            await supabase.from("participants").update({
+            await updateParticipant(user.id, {
               cycle_length_days: inferred,
               cycle_length_user_override: true,
               period_pending_since: null,
               period_still_active: false,
-            }).eq("user_id", user.id);
+            });
           }}
           onPostpartumDeclare={async () => {
             if (!user?.id) return;
-            await supabase.from("participants").update({
+            await updateParticipant(user.id, {
               life_stage: "postpartum",
               postpartum_active: true,
               postpartum_start_date: new Date().toISOString().slice(0, 10),
-            }).eq("user_id", user.id);
+            });
           }}
           onStillCyclingDeclare={async () => {
             if (!user?.id) return;
-            await supabase.from("participants").update({
+            await updateParticipant(user.id, {
               life_stage: "cycling",
               postpartum_active: false,
-            }).eq("user_id", user.id);
+            });
           }}
         />
       )}
@@ -1314,12 +1311,12 @@ const Chat = () => {
           onPeriodUpdate={async (date: Date) => {
             if (!user?.id) return;
             const iso = format(date, "yyyy-MM-dd");
-            await supabase.from("participants").update({
+            await updateParticipant(user.id, {
               last_period_start: iso,
               period_pending_since: null,
               period_still_active: false,
               current_period_end_date: null,
-            }).eq("user_id", user.id);
+            });
           }}
         />
       )}
