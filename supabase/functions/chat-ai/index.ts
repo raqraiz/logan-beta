@@ -345,17 +345,22 @@ function stripFalseSymptomLoggingClaim(text: string): string {
 function stripUnbackedLoggingClaims(text: string): string {
   const claimSentence =
     /[^.?!\n]*\b(?:(?:i|we|logan|the\s+system|it)\s*(?:'ve|'ll|\s+have|\s+has|\s+will|\s+am|'m)?\s*(?:already\s+)?(?:automatically\s+)?(?:log(?:ged|ging)?|not(?:ed|ing)?|track(?:ed|ing)?|sav(?:ed|ing|es)?|record(?:ed|ing|s)?|add(?:ed|ing)?|register(?:ed|ing|s)?|got\s+(?:that|those|this|it)\s+(?:down|noted|logged))\b)[^.?!\n]*(?:[.?!]+\s*|\n|$)/gi;
-  const gotItDown = /[^.?!\n]*\bgot\s+(?:that|those|this|it)\s+down\b[^.?!\n]*(?:[.?!]+\s*|\n|$)/gi;
+  const gotItDown = /[^.?!\n]*\bgot\s+(?:that|those|these|this|it|your)\s+(?:\w+\s+){0,2}down\b[^.?!\n]*(?:[.?!]+\s*|\n|$)/gi;
   const inHistory =
     /[^.?!\n]*\b(?:added|saved|noted|logged|recorded)\b[^.?!\n]*\b(?:to|in|into)\s+your\s+(?:symptom\s+)?(?:log|history|library|tracker|records?)\b[^.?!\n]*(?:[.?!]+\s*|\n|$)/gi;
 
   let out = text;
   for (const re of [inHistory, gotItDown, claimSentence]) out = out.replace(re, "");
-  return out.replace(/\n{3,}/g, "\n\n").replace(/^\s+/, "").trimEnd();
+  return out
+    .replace(/([.?!])(?=[A-Z])/g, "$1 ")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/^\s+/, "")
+    .trimEnd();
 }
 
 function hasLoggingClaim(text: string): boolean {
-  return /\b(?:(?:i|we|logan|the\s+system)\s*(?:'ve|'ll|\s+have|\s+has|\s+will)?\s*(?:already\s+)?(?:automatically\s+)?(?:log(?:ged|ging)?|not(?:ed|ing)?|sav(?:ed|ing|es)?|record(?:ed|ing|s)?|register(?:ed|ing|s)?)\b|\bgot\s+(?:that|those|this|it)\s+down\b)/i.test(text);
+  return /\b(?:(?:i|we|logan|the\s+system)\s*(?:'ve|'ll|\s+have|\s+has|\s+will)?\s*(?:already\s+)?(?:automatically\s+)?(?:log(?:ged|ging)?|not(?:ed|ing)?|sav(?:ed|ing|es)?|record(?:ed|ing|s)?|register(?:ed|ing|s)?)\b|\bgot\s+(?:that|those|these|this|it|your)\s+(?:\w+\s+){0,2}down\b)/i.test(text);
 }
 
 function clampNumber(value: number, min: number, max: number): number {
