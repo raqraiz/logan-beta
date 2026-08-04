@@ -272,7 +272,7 @@ export function SymptomHistory({
             })()}
 
             {/* Top patterns — hidden while searching */}
-            {!isSearching && topSymptoms.length > 0 && (
+            {!isSearching && (topSymptoms.length > 0 || notesOnlyCount > 0) && (
               <div>
                 <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                   Your Top Patterns (90 days)
