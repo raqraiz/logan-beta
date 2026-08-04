@@ -3385,10 +3385,14 @@ serve(async (req) => {
     // library (e.g. "I'll add memory loss to the symptom library"), actually
     // insert them. Prevents the model from claiming the action without it
     // happening server-side.
+    // Pass 1: the trigger also fires on bare "noted/logged/saved/recorded"
+    // phrasing so a claimed save that never named the library still gets a
+    // real backing row instead of being pure conversation.
     try {
       const replyText = finalAssistantMessage;
       const promisesAdd = /\b(?:add(?:ing|ed)?|including|put(?:ting)?|including|i'?ll\s+add|i\s+will\s+add|i'?ve\s+added)\b[^.?!\n]*\b(?:symptom\s+)?library\b/i.test(replyText)
-        || /\bto\s+the\s+(?:shared\s+)?(?:symptom\s+)?library\b/i.test(replyText);
+        || /\bto\s+the\s+(?:shared\s+)?(?:symptom\s+)?library\b/i.test(replyText)
+        || /\b(?:i'?ve|i\s+have|i'?ll|i\s+will)\s+(?:log(?:ged)?|not(?:ed)?|sav(?:ed)?|record(?:ed)?|register(?:ed)?)\b/i.test(replyText);
       if (promisesAdd) {
         // Gather candidate symptom names: inline-code names, quoted names, and
         // names appearing in "add X, Y, and Z to ... library".
