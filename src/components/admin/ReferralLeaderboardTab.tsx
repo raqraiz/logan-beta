@@ -302,6 +302,8 @@ export const ReferralLeaderboardTab = () => {
                                 ))}
                               </TableBody>
                             </Table>
+                            </div>
+
                           </TableCell>
                         </TableRow>
                       )}
