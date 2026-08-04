@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,6 +22,7 @@ import { DatePickerInput } from "@/components/chat/DatePickerInput";
 import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 import { ChatCycleCircle, calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
 import { inferCycleLengthForDeclaredPhase, autoCycleLengthFromHistory } from "@/lib/cyclePhase";
+import { updateParticipant } from "@/lib/participantWrite";
 import { HormoneChart } from "@/components/chat/HormoneChart";
 import { SymptomMap } from "@/components/chat/SymptomMap";
 import { PhaseCheatSheet } from "@/components/chat/PhaseCheatSheet";
@@ -135,6 +136,18 @@ const Chat = () => {
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
+  // Live cycle values for message-bubble visuals. Null until participant data
+  // resolves — cards then fall back to their stored metadata snapshot, so no flicker.
+  const liveCycle = useMemo(() => {
+    if (!cycleData) return null;
+    if (!cycleData.cycleDay || cycleData.cycleDay <= 0) return null;
+    if (!cycleData.phase || cycleData.phase === "Unknown") return null;
+    return {
+      day: cycleData.cycleDay,
+      phase: cycleData.phase,
+      len: cycleData.cycleLengthDays || 28,
+    };
+  }, [cycleData]);
   const [lifeStage, setLifeStage] = useState<"cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant">("cycling");
   const [postpartumStartDate, setPostpartumStartDate] = useState<string | null>(null);
   const [postpartumActive, setPostpartumActive] = useState<boolean>(false);
@@ -895,10 +908,6 @@ const Chat = () => {
         });
         // Pull authoritative values from the DB so every tab stays in sync
         fetchLifeStage();
-        // Broadcast so HomeTab / PlanTab / CycleForecast invalidate their own caches.
-        window.dispatchEvent(new CustomEvent("cycle-data-updated", {
-          detail: { source: "chat-correction", cycleInfo: data.cycleInfo }
-        }));
       }
 
       await refreshMessages(user.id);
@@ -1249,19 +1258,19 @@ const Chat = () => {
           onPeriodUpdate={async (date: Date) => {
             if (!user?.id) return;
             const iso = format(date, "yyyy-MM-dd");
-            await supabase.from("participants").update({
+            await updateParticipant(user.id, {
               last_period_start: iso,
               period_pending_since: null,
               period_still_active: false,
               current_period_end_date: null,
-            }).eq("user_id", user.id);
+            });
           }}
           onCycleLengthUpdate={async (days: number) => {
             if (!user?.id) return;
-            await supabase.from("participants").update({
+            await updateParticipant(user.id, {
               cycle_length_days: days,
               cycle_length_user_override: true,
-            }).eq("user_id", user.id);
+            });
           }}
           onPhaseOverride={async (phase) => {
             if (!user?.id || !cycleData?.lastPeriodStart || !cycleData.cycleLengthDays) return;
@@ -1273,36 +1282,36 @@ const Chat = () => {
                 .order("created_at", { ascending: false })
                 .limit(6);
               const recomputed = autoCycleLengthFromHistory(hist ?? []);
-              await supabase.from("participants").update({
+              await updateParticipant(user.id, {
                 cycle_length_days: recomputed,
                 cycle_length_user_override: false,
-              }).eq("user_id", user.id);
+              });
               return;
             }
             const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
             const live = calculateCycleInfo(cycleData.lastPeriodStart, cycleData.cycleLengthDays, tz);
             const inferred = inferCycleLengthForDeclaredPhase(live?.cycleDay ?? 1, phase, cycleData.cycleLengthDays);
-            await supabase.from("participants").update({
+            await updateParticipant(user.id, {
               cycle_length_days: inferred,
               cycle_length_user_override: true,
               period_pending_since: null,
               period_still_active: false,
-            }).eq("user_id", user.id);
+            });
           }}
           onPostpartumDeclare={async () => {
             if (!user?.id) return;
-            await supabase.from("participants").update({
+            await updateParticipant(user.id, {
               life_stage: "postpartum",
               postpartum_active: true,
               postpartum_start_date: new Date().toISOString().slice(0, 10),
-            }).eq("user_id", user.id);
+            });
           }}
           onStillCyclingDeclare={async () => {
             if (!user?.id) return;
-            await supabase.from("participants").update({
+            await updateParticipant(user.id, {
               life_stage: "cycling",
               postpartum_active: false,
-            }).eq("user_id", user.id);
+            });
           }}
         />
       )}
@@ -1314,12 +1323,12 @@ const Chat = () => {
           onPeriodUpdate={async (date: Date) => {
             if (!user?.id) return;
             const iso = format(date, "yyyy-MM-dd");
-            await supabase.from("participants").update({
+            await updateParticipant(user.id, {
               last_period_start: iso,
               period_pending_since: null,
               period_still_active: false,
               current_period_end_date: null,
-            }).eq("user_id", user.id);
+            });
           }}
         />
       )}
@@ -1564,35 +1573,42 @@ const Chat = () => {
                           : "bg-card border border-border"
                       } ${searching && isMatch ? "ring-2 ring-primary" : ""}`}
                     >
-                      {/* Cycle visual first for insight messages */}
-                      {message.metadata?.has_cycle_visual && message.metadata?.cycle_day && message.metadata?.cycle_phase && (
+                      {/* Cycle visual first for insight messages — recomputed live
+                          from participant data; stored metadata is the fallback while
+                          participant data loads (prevents flicker on initial open). */}
+                      {message.metadata?.has_cycle_visual && message.metadata?.cycle_day && message.metadata?.cycle_phase && (() => {
+                        const liveDay = liveCycle?.day ?? (message.metadata.cycle_day as number);
+                        const livePhase = liveCycle?.phase ?? (message.metadata.cycle_phase as string);
+                        const liveLen = liveCycle?.len ?? ((message.metadata.cycle_length_days as number) || 28);
+                        return (
                         <div className="mb-3">
                           {message.metadata.visual_type === "hormone_chart" ? (
                             <HormoneChart
-                              cycleDay={message.metadata.cycle_day}
-                              phase={message.metadata.cycle_phase}
-                              cycleLengthDays={message.metadata.cycle_length_days || 28}
+                              cycleDay={liveDay}
+                              phase={livePhase}
+                              cycleLengthDays={liveLen}
                             />
                           ) : message.metadata.visual_type === "symptom_map" ? (
                             <SymptomMap
                               symptoms={message.metadata.validated_symptoms as string[] | undefined}
                               anchorSymptom={message.metadata.anchor_symptom as string | undefined}
-                              cycleDay={message.metadata.cycle_day}
-                              cycleLengthDays={message.metadata.cycle_length_days || 28}
-                              phase={message.metadata.cycle_phase}
+                              cycleDay={liveDay}
+                              cycleLengthDays={liveLen}
+                              phase={livePhase}
                             />
                           ) : message.metadata.visual_type === "cycle_circle" ? (
                             <ChatCycleCircle
-                              cycleDay={message.metadata.cycle_day}
-                              phase={message.metadata.cycle_phase}
-                              cycleLengthDays={message.metadata.cycle_length_days || 28}
+                              cycleDay={liveDay}
+                              phase={livePhase}
+                              cycleLengthDays={liveLen}
                               lifeStage="cycling"
                               postpartumStartDate={postpartumStartDate || undefined}
                               postpartumActive={postpartumActive && !!postpartumStartDate}
                             />
                           ) : null}
                         </div>
-                      )}
+                        );
+                      })()}
 
                       {/* Message text (intro for proactive insights) */}
                       {message.role === "assistant" ? (
@@ -1624,9 +1640,9 @@ const Chat = () => {
                       {message.role === "assistant" && message.metadata?.insight_type === "proactive" && message.metadata?.cycle_day && message.metadata?.cycle_phase && (
                         <div className="mt-3">
                           <PhaseCheatSheet
-                            phase={message.metadata.cycle_phase}
-                            cycleDay={message.metadata.cycle_day}
-                            cycleLengthDays={message.metadata.cycle_length_days || 28}
+                            phase={liveCycle?.phase ?? message.metadata.cycle_phase}
+                            cycleDay={liveCycle?.day ?? message.metadata.cycle_day}
+                            cycleLengthDays={liveCycle?.len ?? (message.metadata.cycle_length_days || 28)}
                             personalizedData={message.metadata.cheat_sheet as any || null}
                             onDimensionResponse={(dim, response) => handleCheatSheetResponse(message.id, dim, response)}
                             savedResponses={(message.metadata?.cheat_sheet_responses as Record<string, string>) || undefined}
