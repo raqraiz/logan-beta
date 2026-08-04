@@ -1806,6 +1806,14 @@ serve(async (req) => {
     // Names written THIS turn — drives the server-authored "Logged: …" line and
     // the false-confirmation guard below. Empty array = nothing was persisted.
     const loggedSymptomNames: string[] = [];
+    // Pass 2: kicked off here, awaited AFTER the main chat completion so the
+    // extraction runs in parallel with the reply and costs the user no latency.
+    // Null when the vetoes already ruled out any write for this turn.
+    let symptomExtractionPromise: Promise<{ name: string; severity: number }[]> | null = null;
+    // Cycle stamp shared by the keyword write and the Pass 2 write below.
+    const symptomCycleInfo = participant?.last_period_start && participant?.cycle_length_days
+      ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
+      : null;
     {
       const trimmed = userMessage.trim();
 
@@ -1824,13 +1832,16 @@ serve(async (req) => {
         && /\b(history|historical|log|logs|logged|march|april|may|june|july|august|september|october|november|december|january|february|last\s+(?:month|cycle|time)|same\s+time)\b/i.test(userMessage);
 
       if (reportingIntent && !isHistoricalLookupQuestion && !isAboutSomeoneElse) {
+        // Same gate as the keyword path — the extractor only ever sees messages
+        // that already passed the question / third-party / negation vetoes.
+        if (lovableApiKey) {
+          symptomExtractionPromise = extractSymptomsViaLLM(userMessage, lovableApiKey);
+        }
 
         const detected = detectSymptomMentions(userMessage);
 
         if (detected.length > 0) {
-          const liveCycle = participant?.last_period_start && participant?.cycle_length_days
-            ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
-            : null;
+          const liveCycle = symptomCycleInfo;
 
           const { error: symLogErr } = await supabase.from("symptom_logs").insert({
             user_id: user.id,
@@ -1851,6 +1862,7 @@ serve(async (req) => {
       }
     }
     // --- End symptom logging ---
+
 
     // --- Backfill symptom logs for past dates (user asks Logan to add them) ---
     // e.g. "log insomnia for April 15 and April 22", "add insomnia on Apr 15, Apr 22",
