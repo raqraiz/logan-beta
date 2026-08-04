@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
   // 1. Load the current profile.
   const { data: profile, error: profileErr } = await admin
     .from("profiles")
-    .select("id, referred_by, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_path, landing_at")
+    .select("id, referred_by, created_at, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_path, landing_at")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -169,11 +169,29 @@ Deno.serve(async (req) => {
   }
 
   // 3. Resolve referral code → referred_by (first one wins, can't self-refer).
+  // Timing guard: only ref clicks captured BEFORE the account was created — or
+  // within a short grace window after it (normal signup-flow delay) — count as
+  // a genuine referral. A ref link clicked long after signup must never
+  // retroactively stamp referred_by.
+  const REF_GRACE_MS = 48 * 60 * 60 * 1000;
   const patch: Record<string, string | null> = {};
   if (needsReferral) {
+    const accountCreatedAt = profile.created_at
+      ? new Date(profile.created_at as string)
+      : (user.created_at ? new Date(user.created_at) : null);
+    const refDeadline = accountCreatedAt
+      ? new Date(accountCreatedAt.getTime() + REF_GRACE_MS)
+      : null;
+    const withinRefWindow = (ts: string | null | undefined): boolean => {
+      if (!refDeadline) return true; // unknown signup time — don't block
+      if (!ts) return false; // unknown click time — don't guess
+      const t = new Date(ts);
+      return !isNaN(t.getTime()) && t.getTime() <= refDeadline.getTime();
+    };
+
     const refCandidates: string[] = [];
     const inlineRef = typeof body.attribution?.ref_code === "string" ? body.attribution.ref_code.trim().toUpperCase() : "";
-    if (inlineRef) refCandidates.push(inlineRef);
+    if (inlineRef && withinRefWindow(body.attribution?.landing_at ?? null)) refCandidates.push(inlineRef);
 
     if (isUuid(body.anon_id)) {
       const { data: refEvent } = await admin
@@ -184,7 +202,9 @@ Deno.serve(async (req) => {
         .order("captured_at", { ascending: true })
         .limit(1)
         .maybeSingle();
-      if (refEvent?.ref_code) refCandidates.push(String(refEvent.ref_code).toUpperCase());
+      if (refEvent?.ref_code && withinRefWindow(refEvent.captured_at)) {
+        refCandidates.push(String(refEvent.ref_code).toUpperCase());
+      }
     }
 
     for (const code of refCandidates) {
