@@ -273,17 +273,19 @@ export const ReferralLeaderboardTab = () => {
                         <TableRow className="bg-muted/40 hover:bg-muted/40">
                           <TableCell />
                           <TableCell colSpan={7} className="py-3">
+                            <div className="max-h-[50vh] overflow-y-auto relative">
                             <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Referred user</TableHead>
-                                  <TableHead className="text-right">Signed up</TableHead>
-                                  <TableHead className="text-right">Symptom logs</TableHead>
-                                  <TableHead className="text-right">Chat msgs</TableHead>
-                                  <TableHead className="text-right">Engagement</TableHead>
-                                  <TableHead className="text-right">Last activity</TableHead>
+                              <TableHeader className="sticky top-0 z-10 bg-card [&_tr]:border-b">
+                                <TableRow className="bg-card hover:bg-card">
+                                  <TableHead className="bg-card">Referred user</TableHead>
+                                  <TableHead className="text-right bg-card">Signed up</TableHead>
+                                  <TableHead className="text-right bg-card">Symptom logs</TableHead>
+                                  <TableHead className="text-right bg-card">Chat msgs</TableHead>
+                                  <TableHead className="text-right bg-card">Engagement</TableHead>
+                                  <TableHead className="text-right bg-card">Last activity</TableHead>
                                 </TableRow>
                               </TableHeader>
+
                               <TableBody>
                                 {r.referred.map((u) => (
                                   <TableRow key={u.id}>
