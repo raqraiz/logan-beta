@@ -103,27 +103,13 @@ export function SymptomHistory({
         }));
         setLogs(typed);
 
-        // Compute top symptoms
-        const freq: Record<string, { count: number; totalSev: number }> = {};
-        typed.forEach(log => {
-          log.symptoms.forEach(s => {
-            if (!freq[s.name]) freq[s.name] = { count: 0, totalSev: 0 };
-            freq[s.name].count++;
-            freq[s.name].totalSev += s.severity;
-          });
-        });
-
-        const sorted = Object.entries(freq)
-          .map(([name, { count, totalSev }]) => ({
-            name,
-            count,
-            avgSeverity: Math.round((totalSev / count) * 10) / 10,
-          }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 8);
-
-        setTopSymptoms(sorted);
+        // Compute top symptoms. Notes-only logs (no named symptom, but a
+        // written note — e.g. logged from chat) used to vanish from this view;
+        // they're now counted so nothing she recorded goes unrepresented.
+        setTopSymptoms(aggregateSymptomPatterns(typed, 8));
+        setNotesOnlyCount(countNotesOnlyLogs(typed));
         setLoading(false);
+
       });
   }, [open, userId, refreshTick]);
 
