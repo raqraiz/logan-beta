@@ -222,9 +222,10 @@ export const ReferralLeaderboardTab = () => {
         ) : sorted.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">No referrals recorded yet</p>
         ) : (
-          <div className="overflow-x-auto overflow-y-auto max-h-[70vh] relative">
-            <Table>
+          <div className="relative">
+            <Table containerClassName="max-h-[70vh] overflow-y-auto overflow-x-auto">
               <TableHeader className="sticky top-0 z-20 bg-card [&_tr]:border-b">
+
                 <TableRow className="bg-card hover:bg-card">
                   <TableHead className="w-8 bg-card" />
                   <TableHead className="bg-card">Referrer</TableHead>
@@ -273,9 +274,10 @@ export const ReferralLeaderboardTab = () => {
                         <TableRow className="bg-muted/40 hover:bg-muted/40">
                           <TableCell />
                           <TableCell colSpan={7} className="py-3">
-                            <div className="max-h-[50vh] overflow-y-auto relative">
-                            <Table>
+                            <div className="relative">
+                            <Table containerClassName="max-h-[50vh] overflow-y-auto overflow-x-auto">
                               <TableHeader className="sticky top-0 z-10 bg-card [&_tr]:border-b">
+
                                 <TableRow className="bg-card hover:bg-card">
                                   <TableHead className="bg-card">Referred user</TableHead>
                                   <TableHead className="text-right bg-card">Signed up</TableHead>
