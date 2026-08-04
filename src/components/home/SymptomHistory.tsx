@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { format, subDays } from "date-fns";
+import { aggregateSymptomPatterns, countNotesOnlyLogs } from "@/lib/symptomAggregation";
 import { AllSymptomsChart } from "./AllSymptomsChart";
 import { SymptomHormoneChart } from "./SymptomHormoneChart";
 import { ChevronDown, Pencil, Trash2, X, Check, Search, StickyNote } from "lucide-react";
@@ -67,6 +68,7 @@ export function SymptomHistory({
   const [logs, setLogs] = useState<SymptomLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [topSymptoms, setTopSymptoms] = useState<{ name: string; count: number; avgSeverity: number }[]>([]);
+  const [notesOnlyCount, setNotesOnlyCount] = useState(0);
   const [expandedSymptom, setExpandedSymptom] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editSymptoms, setEditSymptoms] = useState<SymptomEntry[]>([]);
@@ -103,27 +105,13 @@ export function SymptomHistory({
         }));
         setLogs(typed);
 
-        // Compute top symptoms
-        const freq: Record<string, { count: number; totalSev: number }> = {};
-        typed.forEach(log => {
-          log.symptoms.forEach(s => {
-            if (!freq[s.name]) freq[s.name] = { count: 0, totalSev: 0 };
-            freq[s.name].count++;
-            freq[s.name].totalSev += s.severity;
-          });
-        });
-
-        const sorted = Object.entries(freq)
-          .map(([name, { count, totalSev }]) => ({
-            name,
-            count,
-            avgSeverity: Math.round((totalSev / count) * 10) / 10,
-          }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 8);
-
-        setTopSymptoms(sorted);
+        // Compute top symptoms. Notes-only logs (no named symptom, but a
+        // written note — e.g. logged from chat) used to vanish from this view;
+        // they're now counted so nothing she recorded goes unrepresented.
+        setTopSymptoms(aggregateSymptomPatterns(typed, 8));
+        setNotesOnlyCount(countNotesOnlyLogs(typed));
         setLoading(false);
+
       });
   }, [open, userId, refreshTick]);
 
@@ -284,7 +272,7 @@ export function SymptomHistory({
             })()}
 
             {/* Top patterns — hidden while searching */}
-            {!isSearching && topSymptoms.length > 0 && (
+            {!isSearching && (topSymptoms.length > 0 || notesOnlyCount > 0) && (
               <div>
                 <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                   Your Top Patterns (90 days)
@@ -328,7 +316,23 @@ export function SymptomHistory({
                       </div>
                     );
                   })}
+                  {notesOnlyCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setNotesOnly(true)}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left rounded-xl border border-border/30 bg-muted/20 hover:bg-muted/40 transition-colors"
+                    >
+                      <StickyNote className="w-3 h-3 text-muted-foreground shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-foreground/80 truncate">Notes only</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {notesOnlyCount}× · described in words, no severity rating
+                        </p>
+                      </div>
+                    </button>
+                  )}
                 </div>
+
                 <AllSymptomsChart
                   logs={logs}
                   symptomNames={topSymptoms.map(s => s.name)}

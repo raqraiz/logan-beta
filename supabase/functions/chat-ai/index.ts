@@ -242,6 +242,120 @@ function detectSymptomMentions(text: string): { name: string; severity: number }
   return detected;
 }
 
+// Shared name validator for anything that becomes a symptom row — the chat
+// keyword path, the LLM extraction path (Pass 2), and the shared-library add.
+// Hoisted to module scope so all three enforce the identical contract.
+function isValidSymptomName(s: string): boolean {
+  if (!s) return false;
+  const t = s.trim();
+  if (t.length < 3 || t.length > 30) return false;
+  // Must be letters/spaces/hyphens only — no punctuation, digits, quotes
+  if (!/^[a-zA-Z][a-zA-Z\s-]*[a-zA-Z]$/.test(t)) return false;
+  const words = t.split(/\s+/);
+  if (words.length > 3) return false;
+  // Reject sentence-fragment starters (contraction remnants, connectors)
+  const firstWord = words[0].toLowerCase();
+  const badStarts = new Set([
+    "re","s","t","ll","ve","d","m","and","or","but","the","a","an",
+    "is","it","that","this","you","your","we","they","he","she",
+    "if","when","so","because","as","to","for","of","in","on","at",
+    "not","no","yes","up","down","out","in","also","just","really",
+  ]);
+  if (badStarts.has(firstWord)) return false;
+  if (isSymptomStopword(t)) return false;
+  return true;
+}
+
+// --- Pass 2: catalog-independent symptom extraction ---
+// The keyword list can only ever see the ~30 symptoms someone thought to add.
+// This asks a cheap, fast model to pull ANY symptom the user described in this
+// one message. It is started in parallel with the main chat completion and
+// awaited afterwards, so it adds no latency to the reply (see the call site).
+// It NEVER decides on its own whether to write — every name still runs through
+// isValidSymptomName plus the question / third-party / negation vetoes.
+const SYMPTOM_EXTRACTION_TIMEOUT_MS = 7000;
+
+async function extractSymptomsViaLLM(
+  userMessage: string,
+  apiKey: string,
+): Promise<{ name: string; severity: number }[]> {
+  const started = Date.now();
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), SYMPTOM_EXTRACTION_TIMEOUT_MS);
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": apiKey,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        temperature: 0,
+        max_tokens: 300,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: [
+              "You extract physical or emotional symptoms a woman reports about HERSELF, right now or recently.",
+              "Return json of the form {\"symptoms\":[{\"name\":\"...\",\"severity\":1-5}]}.",
+              "Rules:",
+              "- name: 1-3 words, lowercase, plain English, no punctuation or digits (e.g. \"throbbing feet\", \"ear ringing\", \"jaw tension\").",
+              "- Use the common clinical-ish label, not her whole sentence.",
+              "- severity: 1 very mild, 3 default/unspecified, 5 severe.",
+              "- Extract ONLY symptoms she says she is experiencing. Return an empty list for questions,",
+              "  hypotheticals, someone else's symptoms, negations (\"I don't get headaches\"),",
+              "  past-history lookups, or general curiosity.",
+              "- Do NOT invent symptoms she did not describe. An empty list is the correct answer most of the time.",
+            ].join("\n"),
+          },
+          { role: "user", content: userMessage.slice(0, 1500) },
+        ],
+      }),
+    });
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      console.warn("[symptom_extraction] gateway error", res.status);
+      return [];
+    }
+    const json = await res.json();
+    const raw = json?.choices?.[0]?.message?.content;
+    if (!raw) return [];
+    let parsed: any;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      const m = String(raw).match(/\{[\s\S]*\}/);
+      if (!m) return [];
+      parsed = JSON.parse(m[0]);
+    }
+    const list = Array.isArray(parsed?.symptoms) ? parsed.symptoms : [];
+    const out: { name: string; severity: number }[] = [];
+    const seen = new Set<string>();
+    for (const item of list) {
+      const name = String(item?.name ?? "").trim().toLowerCase();
+      if (!isValidSymptomName(name)) continue;
+      if (seen.has(name)) continue;
+      seen.add(name);
+      let sev = Number(item?.severity);
+      if (!Number.isFinite(sev)) sev = 3;
+      out.push({ name, severity: Math.min(5, Math.max(1, Math.round(sev))) });
+      if (out.length >= 5) break;
+    }
+    console.log(`[symptom_extraction] ${Date.now() - started}ms ->`, out.map(o => o.name).join(", ") || "(none)");
+    return out;
+  } catch (e) {
+    console.warn("[symptom_extraction] failed:", (e as Error)?.message);
+    return [];
+  }
+}
+
+
+
 function normalizeSymptomText(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -1692,6 +1806,14 @@ serve(async (req) => {
     // Names written THIS turn — drives the server-authored "Logged: …" line and
     // the false-confirmation guard below. Empty array = nothing was persisted.
     const loggedSymptomNames: string[] = [];
+    // Pass 2: kicked off here, awaited AFTER the main chat completion so the
+    // extraction runs in parallel with the reply and costs the user no latency.
+    // Null when the vetoes already ruled out any write for this turn.
+    let symptomExtractionPromise: Promise<{ name: string; severity: number }[]> | null = null;
+    // Cycle stamp shared by the keyword write and the Pass 2 write below.
+    const symptomCycleInfo = participant?.last_period_start && participant?.cycle_length_days
+      ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
+      : null;
     {
       const trimmed = userMessage.trim();
 
@@ -1710,13 +1832,16 @@ serve(async (req) => {
         && /\b(history|historical|log|logs|logged|march|april|may|june|july|august|september|october|november|december|january|february|last\s+(?:month|cycle|time)|same\s+time)\b/i.test(userMessage);
 
       if (reportingIntent && !isHistoricalLookupQuestion && !isAboutSomeoneElse) {
+        // Same gate as the keyword path — the extractor only ever sees messages
+        // that already passed the question / third-party / negation vetoes.
+        if (lovableApiKey) {
+          symptomExtractionPromise = extractSymptomsViaLLM(userMessage, lovableApiKey);
+        }
 
         const detected = detectSymptomMentions(userMessage);
 
         if (detected.length > 0) {
-          const liveCycle = participant?.last_period_start && participant?.cycle_length_days
-            ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
-            : null;
+          const liveCycle = symptomCycleInfo;
 
           const { error: symLogErr } = await supabase.from("symptom_logs").insert({
             user_id: user.id,
@@ -1737,6 +1862,7 @@ serve(async (req) => {
       }
     }
     // --- End symptom logging ---
+
 
     // --- Backfill symptom logs for past dates (user asks Logan to add them) ---
     // e.g. "log insomnia for April 15 and April 22", "add insomnia on Apr 15, Apr 22",
@@ -1886,25 +2012,9 @@ serve(async (req) => {
             const matches = askedLibraryQuestion
               ? Array.from(content.matchAll(/`([^`\n]{1,40})`/g))
               : [];
-            const isValidSymptomName = (s: string): boolean => {
-              if (!s) return false;
-              const t = s.trim();
-              if (t.length < 3 || t.length > 30) return false;
-              // Must be letters/spaces/hyphens only — no punctuation, digits, quotes
-              if (!/^[a-zA-Z][a-zA-Z\s-]*[a-zA-Z]$/.test(t)) return false;
-              const words = t.split(/\s+/);
-              if (words.length > 3) return false;
-              // Reject sentence-fragment starters (contraction remnants, connectors)
-              const firstWord = words[0].toLowerCase();
-              const badStarts = new Set([
-                "re","s","t","ll","ve","d","m","and","or","but","the","a","an",
-                "is","it","that","this","you","your","we","they","he","she",
-                "if","when","so","because","as","to","for","of","in","on","at",
-                "not","no","yes","up","down","out","in","also","just","really",
-              ]);
-              if (badStarts.has(firstWord)) return false;
-              return true;
-            };
+            // Validator hoisted to module scope (Pass 2) so the library add and
+            // the extraction path enforce the same contract.
+
             const candidates = matches
               .map(m => m[1].trim().replace(/^["'`]+|["'`]+$/g, ""))
               .filter(isValidSymptomName);
@@ -3260,6 +3370,65 @@ serve(async (req) => {
     if (isCurrentSymptomQuestion || isCurrentSymptomNegation) {
       assistantMessage = stripFalseSymptomLoggingClaim(assistantMessage);
     }
+    // --- Pass 2: persist LLM-extracted symptoms (catalog-independent) ---
+    // Awaited here, after the main completion, so the extraction ran in
+    // parallel with the reply. Anything it found that the keyword list missed
+    // is written to symptom_logs (so it shows in her history) AND upserted into
+    // community_symptoms (so it shows in the picker) in the same step. The
+    // resulting names feed loggedSymptomNames, which drives Pass 1's
+    // server-authored "Logged: …" line and its false-confirmation guard.
+    if (symptomExtractionPromise) {
+      try {
+        const extracted = await symptomExtractionPromise;
+        const alreadyLogged = new Set(loggedSymptomNames.map(n => n.trim().toLowerCase()));
+        const novel = extracted.filter(s => !alreadyLogged.has(s.name.trim().toLowerCase()));
+
+        if (novel.length > 0) {
+          const { error: extLogErr } = await supabase.from("symptom_logs").insert({
+            user_id: user.id,
+            symptoms: novel,
+            notes: userMessage.length <= 500 ? userMessage : userMessage.slice(0, 500),
+            cycle_day: symptomCycleInfo?.cycleDay ?? null,
+            cycle_phase: symptomCycleInfo?.phase ?? null,
+          });
+
+          if (extLogErr) {
+            console.error("[symptom_extraction] symptom_logs insert failed:", extLogErr);
+          } else {
+            for (const s of novel) {
+              if (!loggedSymptomNames.includes(s.name)) loggedSymptomNames.push(s.name);
+            }
+
+            // Surface genuinely new names in the shared picker too. Categorization
+            // and soft-delete semantics are untouched: rows land uncategorized
+            // exactly like the existing library-add path, and a previously
+            // soft-deleted name is left alone.
+            const knownLower = new Set(knownLibraryNames.map(n => String(n).trim().toLowerCase()));
+            const brandNew = novel
+              .map(s => s.name.trim().toLowerCase())
+              .filter(n => !knownLower.has(n));
+            if (brandNew.length > 0) {
+              const { data: existing } = await supabase
+                .from("community_symptoms")
+                .select("name")
+                .in("name", brandNew);
+              const existingLower = new Set(((existing || []) as any[]).map(r => String(r.name).trim().toLowerCase()));
+              const toInsert = brandNew
+                .filter(n => !existingLower.has(n))
+                .map(name => ({ name, added_by: user.id }));
+              if (toInsert.length > 0) {
+                const { error: commErr } = await supabase.from("community_symptoms").insert(toInsert);
+                if (commErr) console.error("[symptom_extraction] community_symptoms insert failed:", commErr);
+                else console.log("[symptom_extraction] new library entries:", toInsert.map(r => r.name).join(", "));
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("[symptom_extraction] post-write failed:", (e as Error)?.message);
+      }
+    }
+
 
     // --- Pass 1: no false "I noted that" confirmations ---
     // Persistence is confirmed by the server, never narrated by the model.

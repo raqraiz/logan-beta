@@ -4,6 +4,7 @@ import { BarChart3, ChevronRight, Sparkles } from "lucide-react";
 import { subDays, format } from "date-fns";
 import { SymptomHistory } from "./SymptomHistory";
 import { SymptomPieChart } from "./SymptomPieChart";
+import { aggregateSymptomPatterns, countNotesOnlyLogs } from "@/lib/symptomAggregation";
 
 const COLORS = {
   border: "border-l-amber-500",
@@ -68,27 +69,14 @@ export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays,
       });
   }, [userId]);
 
-  // Compute top symptoms
-  const freq: Record<string, { count: number; totalSev: number }> = {};
-  logs.forEach((log) => {
-    log.symptoms.forEach((s) => {
-      if (!freq[s.name]) freq[s.name] = { count: 0, totalSev: 0 };
-      freq[s.name].count++;
-      freq[s.name].totalSev += s.severity;
-    });
-  });
-
-  const topSymptoms = Object.entries(freq)
-    .map(([name, { count, totalSev }]) => ({
-      name,
-      count,
-      avgSeverity: Math.round((totalSev / count) * 10) / 10,
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 4);
+  // Compute top symptoms. Logs with no named symptom but a written note are
+  // counted separately instead of being dropped from the patterns view.
+  const topSymptoms = aggregateSymptomPatterns(logs, 4);
+  const notesOnlyCount = countNotesOnlyLogs(logs);
 
   const totalLogs = logs.length;
   const latestLog = logs[0];
+
 
   return (
     <>
@@ -138,7 +126,16 @@ export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays,
                     </div>
                   </div>
                 ))}
+                {notesOnlyCount > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-muted-foreground/40" />
+                    <span className="text-xs text-foreground/60 truncate flex-1 italic">Notes only</span>
+                    <span className="text-[10px] text-muted-foreground tabular-nums">{notesOnlyCount}×</span>
+                    <div className="w-12 h-1" />
+                  </div>
+                )}
               </div>
+
 
               {/* Donut chart */}
               {logs.length > 0 && <SymptomPieChart logs={logs} compact />}
