@@ -8,8 +8,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
 
-import { Send, Loader2, LogOut, ChevronLeft, ChevronRight, ArrowDown, MessageSquarePlus, MessageCircle, Settings as SettingsIcon, Paperclip, Search, X, ChevronUp, ChevronDown } from "lucide-react";
+import { Send, Loader2, LogOut, ChevronLeft, ChevronRight, ArrowDown, MessageSquarePlus, MessageCircle, Settings as SettingsIcon, Paperclip, Search, X, ChevronUp, ChevronDown, Megaphone } from "lucide-react";
 import { FeedbackModal } from "@/components/chat/FeedbackModal";
+import { FeedbackPromptCard } from "@/components/chat/FeedbackPromptCard";
+import { useFeedbackPrompt } from "@/hooks/useFeedbackPrompt";
 import { SettingsDialog } from "@/components/chat/SettingsDialog";
 import { HistoryImportDialog } from "@/components/chat/HistoryImportDialog";
 import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
@@ -155,6 +157,7 @@ const Chat = () => {
   const [creditBalance, setCreditBalance] = useState<{ free: number; paid: number; total: number; hoursUntilReset?: number } | null>(null);
   const [outOfCredits, setOutOfCredits] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const { showFeedbackPrompt, dismissFeedbackPrompt } = useFeedbackPrompt(user?.id);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [showTopicPrompt, setShowTopicPrompt] = useState(false);
@@ -1217,7 +1220,7 @@ const Chat = () => {
               aria-label="Send feedback"
               title="Send feedback"
             >
-              <MessageCircle className="w-4 h-4 sm:mr-2" />
+              <Megaphone className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Feedback</span>
             </Button>
             <Button
@@ -1958,6 +1961,12 @@ const Chat = () => {
               </div>
             )}
           </div>
+          {!isOnboarding && showFeedbackPrompt && (
+            <FeedbackPromptCard
+              onGiveFeedback={() => { dismissFeedbackPrompt(); setFeedbackOpen(true); }}
+              onDismiss={dismissFeedbackPrompt}
+            />
+          )}
           <form onSubmit={sendMessage} className="max-w-3xl mx-auto px-4 py-4">
             <div className="flex gap-2">
               {!isOnboarding && (
@@ -2006,12 +2015,23 @@ const Chat = () => {
                 )}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground/60 text-center mt-2">
-              {isOnboarding 
-                ? "Answer Logan's questions to personalize your experience"
-                : "Logan is not a medical professional. Always consult your doctor for medical advice."
-              }
-            </p>
+            <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
+              <p className="text-xs text-muted-foreground/60 text-center">
+                {isOnboarding 
+                  ? "Answer Logan's questions to personalize your experience"
+                  : "Logan is not a medical professional. Always consult your doctor for medical advice."
+                }
+              </p>
+              {!isOnboarding && (
+                <button
+                  type="button"
+                  onClick={() => setFeedbackOpen(true)}
+                  className="text-xs text-primary/80 hover:text-primary underline underline-offset-2"
+                >
+                  Send feedback
+                </button>
+              )}
+            </div>
           </form>
 
           {/* PWA install prompt — below input bar, above bottom nav */}
