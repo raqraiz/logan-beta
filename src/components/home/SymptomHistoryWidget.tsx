@@ -4,6 +4,7 @@ import { BarChart3, ChevronRight, Sparkles } from "lucide-react";
 import { subDays, format } from "date-fns";
 import { SymptomHistory } from "./SymptomHistory";
 import { SymptomPieChart } from "./SymptomPieChart";
+import { aggregateSymptomPatterns, countNotesOnlyLogs } from "@/lib/symptomAggregation";
 
 const COLORS = {
   border: "border-l-amber-500",
