@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -241,9 +241,8 @@ export const ReferralLeaderboardTab = () => {
                   const isOpen = expanded.has(r.id);
                   const noActivity = r.engagementScore === 0;
                   return (
-                    <>
+                    <Fragment key={r.id}>
                       <TableRow
-                        key={r.id}
                         className="cursor-pointer"
                         onClick={() => toggleRow(r.id)}
                       >
@@ -270,7 +269,7 @@ export const ReferralLeaderboardTab = () => {
                         )}
                       </TableRow>
                       {isOpen && (
-                        <TableRow key={`${r.id}-detail`} className="bg-muted/40 hover:bg-muted/40">
+                        <TableRow className="bg-muted/40 hover:bg-muted/40">
                           <TableCell />
                           <TableCell colSpan={7} className="py-3">
                             <Table>
@@ -305,7 +304,7 @@ export const ReferralLeaderboardTab = () => {
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </TableBody>
