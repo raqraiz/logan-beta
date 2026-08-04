@@ -5,30 +5,10 @@ const SESSION_GAP_MS = 30 * 60 * 1000; // 30-minute inactivity = new session
 const SESSIONS_PER_PROMPT = 15;
 const MIN_DAYS_BETWEEN_PROMPTS = 7;
 
-type State = { lastShownAt?: string; lastPromptedSessionCount?: number };
-
-const storageKey = (userId: string) => `logan_feedback_prompt_${userId}`;
-
-function readState(userId: string): State {
-  try {
-    return JSON.parse(localStorage.getItem(storageKey(userId)) || "{}");
-  } catch {
-    return {};
-  }
-}
-
-function writeState(userId: string, state: State) {
-  try {
-    localStorage.setItem(storageKey(userId), JSON.stringify(state));
-  } catch {
-    /* ignore */
-  }
-}
-
 /**
  * Shows a lightweight in-chat feedback prompt after every 15 completed chat
- * sessions, at most once every 7 days. Dismissal is remembered per user and
- * the prompt never re-appears in the same session once dismissed.
+ * sessions, at most once every 7 days. State (last shown / dismissed / session
+ * count) is persisted server-side in `feedback_prompt_state`.
  */
 export function useFeedbackPrompt(userId?: string) {
   const [visible, setVisible] = useState(false);
@@ -38,11 +18,17 @@ export function useFeedbackPrompt(userId?: string) {
     let cancelled = false;
 
     (async () => {
-      const state = readState(userId);
+      const { data: state } = await supabase
+        .from("feedback_prompt_state")
+        .select("last_shown_at, last_dismissed_at, sessions_since_shown")
+        .eq("user_id", userId)
+        .maybeSingle();
 
-      if (state.lastShownAt) {
-        const daysSince =
-          (Date.now() - new Date(state.lastShownAt).getTime()) / 86400000;
+      if (cancelled) return;
+
+      const lastTouched = state?.last_dismissed_at || state?.last_shown_at;
+      if (lastTouched) {
+        const daysSince = (Date.now() - new Date(lastTouched).getTime()) / 86400000;
         if (daysSince < MIN_DAYS_BETWEEN_PROMPTS) return;
       }
 
@@ -67,15 +53,19 @@ export function useFeedbackPrompt(userId?: string) {
       // New users never see it
       if (sessions < SESSIONS_PER_PROMPT) return;
 
-      const milestone =
-        Math.floor(sessions / SESSIONS_PER_PROMPT) * SESSIONS_PER_PROMPT;
-      if (state.lastPromptedSessionCount === milestone) return;
+      const milestone = Math.floor(sessions / SESSIONS_PER_PROMPT) * SESSIONS_PER_PROMPT;
+      if ((state?.sessions_since_shown ?? -1) === milestone) return;
 
-      writeState(userId, {
-        lastShownAt: new Date().toISOString(),
-        lastPromptedSessionCount: milestone,
-      });
-      setVisible(true);
+      await supabase.from("feedback_prompt_state").upsert(
+        {
+          user_id: userId,
+          last_shown_at: new Date().toISOString(),
+          sessions_since_shown: milestone,
+        },
+        { onConflict: "user_id" },
+      );
+
+      if (!cancelled) setVisible(true);
     })();
 
     return () => {
@@ -83,7 +73,16 @@ export function useFeedbackPrompt(userId?: string) {
     };
   }, [userId]);
 
-  const dismiss = useCallback(() => setVisible(false), []);
+  const dismiss = useCallback(() => {
+    setVisible(false);
+    if (!userId) return;
+    void supabase
+      .from("feedback_prompt_state")
+      .upsert(
+        { user_id: userId, last_dismissed_at: new Date().toISOString() },
+        { onConflict: "user_id" },
+      );
+  }, [userId]);
 
   return { showFeedbackPrompt: visible, dismissFeedbackPrompt: dismiss };
 }
