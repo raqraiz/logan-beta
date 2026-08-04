@@ -3255,6 +3255,25 @@ serve(async (req) => {
     if (isCurrentSymptomQuestion || isCurrentSymptomNegation) {
       assistantMessage = stripFalseSymptomLoggingClaim(assistantMessage);
     }
+
+    // --- Pass 1: no false "I noted that" confirmations ---
+    // Persistence is confirmed by the server, never narrated by the model.
+    // If nothing was written to symptom_logs this turn, strip any claim that
+    // something was; the reply stays conversational (the science / explanation
+    // survives) but makes no promise the database can't back up.
+    {
+      const persistedThisTurn = loggedSymptomNames.length > 0 || backfillConfirmation.length > 0;
+      if (!persistedThisTurn && hasLoggingClaim(assistantMessage)) {
+        const before = assistantMessage;
+        assistantMessage = stripUnbackedLoggingClaims(assistantMessage);
+        console.warn("[false_logging_claim_stripped]", JSON.stringify({
+          user_id: user?.id,
+          user_message_preview: (userMessage || "").slice(0, 120),
+          removed_preview: before.slice(0, 160),
+        }));
+      }
+    }
+
     // Final safety net: if sanitizer stripped everything, fall back to a safe reply
     if (!assistantMessage.trim()) {
       assistantMessage = isCurrentSymptomQuestion
