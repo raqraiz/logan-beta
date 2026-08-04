@@ -3371,6 +3371,9 @@ serve(async (req) => {
     // --- Pass 1: last-line guard on the final text ---
     // Catches false-confirmation phrasing introduced after the earlier strip
     // (Day-1 prompt splice, starter merge). Runs only when nothing persisted.
+    // The pre-strip text is kept so the library safety net below can still read
+    // the names Logan claimed, even though the user never sees the claim.
+    const preGuardReplyText = finalAssistantMessage;
     if (loggedSymptomNames.length === 0 && backfillConfirmation.length === 0 && hasLoggingClaim(finalAssistantMessage)) {
       const rewritten = stripUnbackedLoggingClaims(finalAssistantMessage);
       if (rewritten.trim()) {
@@ -3378,8 +3381,6 @@ serve(async (req) => {
         console.warn("[false_logging_claim_stripped_final]", JSON.stringify({ user_id: user?.id }));
       }
     }
-
-
 
     // --- Safety net: if Logan's reply PROMISES to add symptoms to the shared
     // library (e.g. "I'll add memory loss to the symptom library"), actually
@@ -3389,7 +3390,7 @@ serve(async (req) => {
     // phrasing so a claimed save that never named the library still gets a
     // real backing row instead of being pure conversation.
     try {
-      const replyText = finalAssistantMessage;
+      const replyText = preGuardReplyText;
       const promisesAdd = /\b(?:add(?:ing|ed)?|including|put(?:ting)?|including|i'?ll\s+add|i\s+will\s+add|i'?ve\s+added)\b[^.?!\n]*\b(?:symptom\s+)?library\b/i.test(replyText)
         || /\bto\s+the\s+(?:shared\s+)?(?:symptom\s+)?library\b/i.test(replyText)
         || /\b(?:i'?ve|i\s+have|i'?ll|i\s+will)\s+(?:log(?:ged)?|not(?:ed)?|sav(?:ed)?|record(?:ed)?|register(?:ed)?)\b/i.test(replyText);
