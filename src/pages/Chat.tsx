@@ -157,7 +157,7 @@ const Chat = () => {
   const [creditBalance, setCreditBalance] = useState<{ free: number; paid: number; total: number; hoursUntilReset?: number } | null>(null);
   const [outOfCredits, setOutOfCredits] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const { showFeedbackPrompt, dismissFeedbackPrompt } = useFeedbackPrompt(user?.id);
+  
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [showTopicPrompt, setShowTopicPrompt] = useState(false);
