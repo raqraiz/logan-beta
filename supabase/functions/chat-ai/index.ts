@@ -1723,6 +1723,9 @@ serve(async (req) => {
           if (symLogErr) {
             console.error("Failed to insert symptom log from chat:", symLogErr);
           } else {
+            for (const d of detected) {
+              if (!loggedSymptomNames.includes(d.name)) loggedSymptomNames.push(d.name);
+            }
             console.log("Logged symptoms from chat:", detected.map(d => d.name).join(", "));
           }
         }
