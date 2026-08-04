@@ -69,27 +69,14 @@ export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays,
       });
   }, [userId]);
 
-  // Compute top symptoms
-  const freq: Record<string, { count: number; totalSev: number }> = {};
-  logs.forEach((log) => {
-    log.symptoms.forEach((s) => {
-      if (!freq[s.name]) freq[s.name] = { count: 0, totalSev: 0 };
-      freq[s.name].count++;
-      freq[s.name].totalSev += s.severity;
-    });
-  });
-
-  const topSymptoms = Object.entries(freq)
-    .map(([name, { count, totalSev }]) => ({
-      name,
-      count,
-      avgSeverity: Math.round((totalSev / count) * 10) / 10,
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 4);
+  // Compute top symptoms. Logs with no named symptom but a written note are
+  // counted separately instead of being dropped from the patterns view.
+  const topSymptoms = aggregateSymptomPatterns(logs, 4);
+  const notesOnlyCount = countNotesOnlyLogs(logs);
 
   const totalLogs = logs.length;
   const latestLog = logs[0];
+
 
   return (
     <>
