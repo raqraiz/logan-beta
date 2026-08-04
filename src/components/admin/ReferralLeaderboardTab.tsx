@@ -232,7 +232,7 @@ export const ReferralLeaderboardTab = () => {
                   <TableHead className="text-right bg-card"><SortHeader label="Active (14d)" k="activeReferrals" /></TableHead>
                   <TableHead className="text-right bg-card">Symptom logs</TableHead>
                   <TableHead className="text-right bg-card">Chat msgs</TableHead>
-                  <TableHead className="text-right bg-card"><SortHeader label="Engagement" k="engagementScore" /></TableHead>
+                  <TableHead className="text-right bg-card"><SortHeader label="Score" k="engagementScore" /></TableHead>
                   <TableHead className="text-right bg-card">Last activity</TableHead>
                 </TableRow>
               </TableHeader>
@@ -281,7 +281,7 @@ export const ReferralLeaderboardTab = () => {
                                   <TableHead className="text-right bg-card">Signed up</TableHead>
                                   <TableHead className="text-right bg-card">Symptom logs</TableHead>
                                   <TableHead className="text-right bg-card">Chat msgs</TableHead>
-                                  <TableHead className="text-right bg-card">Engagement</TableHead>
+                                  <TableHead className="text-right bg-card">Score</TableHead>
                                   <TableHead className="text-right bg-card">Last activity</TableHead>
                                 </TableRow>
                               </TableHeader>
