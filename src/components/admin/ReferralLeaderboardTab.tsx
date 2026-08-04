@@ -222,20 +222,21 @@ export const ReferralLeaderboardTab = () => {
         ) : sorted.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">No referrals recorded yet</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-auto max-h-[70vh] relative">
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-8" />
-                  <TableHead>Referrer</TableHead>
-                  <TableHead className="text-right"><SortHeader label="Referrals" k="totalReferrals" /></TableHead>
-                  <TableHead className="text-right"><SortHeader label="Active (14d)" k="activeReferrals" /></TableHead>
-                  <TableHead className="text-right">Symptom logs</TableHead>
-                  <TableHead className="text-right">Chat msgs</TableHead>
-                  <TableHead className="text-right"><SortHeader label="Engagement" k="engagementScore" /></TableHead>
-                  <TableHead className="text-right">Last activity</TableHead>
+              <TableHeader className="sticky top-0 z-20 bg-card [&_tr]:border-b">
+                <TableRow className="bg-card hover:bg-card">
+                  <TableHead className="w-8 bg-card" />
+                  <TableHead className="bg-card">Referrer</TableHead>
+                  <TableHead className="text-right bg-card"><SortHeader label="Referrals" k="totalReferrals" /></TableHead>
+                  <TableHead className="text-right bg-card"><SortHeader label="Active (14d)" k="activeReferrals" /></TableHead>
+                  <TableHead className="text-right bg-card">Symptom logs</TableHead>
+                  <TableHead className="text-right bg-card">Chat msgs</TableHead>
+                  <TableHead className="text-right bg-card"><SortHeader label="Engagement" k="engagementScore" /></TableHead>
+                  <TableHead className="text-right bg-card">Last activity</TableHead>
                 </TableRow>
               </TableHeader>
+
               <TableBody>
                 {sorted.map((r) => {
                   const isOpen = expanded.has(r.id);
