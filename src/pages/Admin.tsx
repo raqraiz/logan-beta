@@ -119,7 +119,7 @@ const Admin = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-display font-bold mb-2 text-foreground">Pilot Dashboard</h1>
           <p className="text-muted-foreground">
-            Manage participants and view chats
+            Manage participants
             {isSuperAdmin && <span className="ml-2 text-xs uppercase tracking-wider text-primary">· Super admin</span>}
           </p>
         </div>
