@@ -1684,6 +1684,9 @@ serve(async (req) => {
     // --- Symptom logging from chat ---
     // Detect symptoms mentioned in the user's message and persist to symptom_logs
     // so they sync with the Home tab's symptom widget / history.
+    // Names written THIS turn — drives the server-authored "Logged: …" line and
+    // the false-confirmation guard below. Empty array = nothing was persisted.
+    const loggedSymptomNames: string[] = [];
     {
       const trimmed = userMessage.trim();
 
