@@ -185,6 +185,7 @@ const Chat = () => {
   }, [searchOpen]);
   
   const { user, loading: authLoading, signOut } = useAuth();
+  const { showFeedbackPrompt, dismissFeedbackPrompt } = useFeedbackPrompt(user?.id);
   usePresence(user?.id, user?.email || undefined, user?.user_metadata?.full_name);
   const { trackTabSwitch, trackPageView } = useActivityTracker(user?.id);
 
