@@ -336,6 +336,33 @@ function stripFalseSymptomLoggingClaim(text: string): string {
   return out.replace(/^\s+/, "").trimEnd();
 }
 
+// Pass 1 false-confirmation guard.
+// Removes model-narrated persistence claims ("I've noted that", "I've logged
+// this for you", "the system automatically saved…") when NO symptom_logs row
+// was actually written in this turn. Deliberately narrower than
+// stripFalseSymptomLoggingClaim: it only kills sentences that claim a save,
+// so genuine conversational uses of "track"/"note" survive.
+function stripUnbackedLoggingClaims(text: string): string {
+  const claimSentence =
+    /[^.?!\n]*\b(?:(?:i|we|logan|the\s+system|it)\s*(?:'ve|'ll|\s+have|\s+has|\s+will|\s+am|'m)?\s*(?:already\s+)?(?:automatically\s+)?(?:log(?:ged|ging)?|not(?:ed|ing)?|track(?:ed|ing)?|sav(?:ed|ing|es)?|record(?:ed|ing|s)?|add(?:ed|ing)?|register(?:ed|ing|s)?|got\s+(?:that|those|this|it)\s+(?:down|noted|logged))\b)[^.?!\n]*(?:[.?!]+\s*|\n|$)/gi;
+  const gotItDown = /[^.?!\n]*\bgot\s+(?:that|those|these|this|it|your)\s+(?:\w+\s+){0,2}down\b[^.?!\n]*(?:[.?!]+\s*|\n|$)/gi;
+  const inHistory =
+    /[^.?!\n]*\b(?:added|saved|noted|logged|recorded)\b[^.?!\n]*\b(?:to|in|into)\s+your\s+(?:symptom\s+)?(?:log|history|library|tracker|records?)\b[^.?!\n]*(?:[.?!]+\s*|\n|$)/gi;
+
+  let out = text;
+  for (const re of [inHistory, gotItDown, claimSentence]) out = out.replace(re, "");
+  return out
+    .replace(/([.?!])(?=[A-Z])/g, "$1 ")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/^\s+/, "")
+    .trimEnd();
+}
+
+function hasLoggingClaim(text: string): boolean {
+  return /\b(?:(?:i|we|logan|the\s+system)\s*(?:'ve|'ll|\s+have|\s+has|\s+will)?\s*(?:already\s+)?(?:automatically\s+)?(?:log(?:ged|ging)?|not(?:ed|ing)?|sav(?:ed|ing|es)?|record(?:ed|ing|s)?|register(?:ed|ing|s)?)\b|\bgot\s+(?:that|those|these|this|it|your)\s+(?:\w+\s+){0,2}down\b)/i.test(text);
+}
+
 function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -1662,6 +1689,9 @@ serve(async (req) => {
     // --- Symptom logging from chat ---
     // Detect symptoms mentioned in the user's message and persist to symptom_logs
     // so they sync with the Home tab's symptom widget / history.
+    // Names written THIS turn — drives the server-authored "Logged: …" line and
+    // the false-confirmation guard below. Empty array = nothing was persisted.
+    const loggedSymptomNames: string[] = [];
     {
       const trimmed = userMessage.trim();
 
@@ -1698,6 +1728,9 @@ serve(async (req) => {
           if (symLogErr) {
             console.error("Failed to insert symptom log from chat:", symLogErr);
           } else {
+            for (const d of detected) {
+              if (!loggedSymptomNames.includes(d.name)) loggedSymptomNames.push(d.name);
+            }
             console.log("Logged symptoms from chat:", detected.map(d => d.name).join(", "));
           }
         }
@@ -3227,6 +3260,25 @@ serve(async (req) => {
     if (isCurrentSymptomQuestion || isCurrentSymptomNegation) {
       assistantMessage = stripFalseSymptomLoggingClaim(assistantMessage);
     }
+
+    // --- Pass 1: no false "I noted that" confirmations ---
+    // Persistence is confirmed by the server, never narrated by the model.
+    // If nothing was written to symptom_logs this turn, strip any claim that
+    // something was; the reply stays conversational (the science / explanation
+    // survives) but makes no promise the database can't back up.
+    {
+      const persistedThisTurn = loggedSymptomNames.length > 0 || backfillConfirmation.length > 0;
+      if (!persistedThisTurn && hasLoggingClaim(assistantMessage)) {
+        const before = assistantMessage;
+        assistantMessage = stripUnbackedLoggingClaims(assistantMessage);
+        console.warn("[false_logging_claim_stripped]", JSON.stringify({
+          user_id: user?.id,
+          user_message_preview: (userMessage || "").slice(0, 120),
+          removed_preview: before.slice(0, 160),
+        }));
+      }
+    }
+
     // Final safety net: if sanitizer stripped everything, fall back to a safe reply
     if (!assistantMessage.trim()) {
       assistantMessage = isCurrentSymptomQuestion
@@ -3306,14 +3358,47 @@ serve(async (req) => {
       baseMeta.suggested_day1 = bleedDay1Prompt.suggestedDay1;
     }
 
+    // --- Pass 1: server-authored logging confirmation ---
+    // The ONLY place the user is told a symptom was saved. Appended to the main
+    // answer (above the deep-dive divider) after a confirmed symptom_logs write.
+    if (loggedSymptomNames.length > 0) {
+      const label = `Logged: ${loggedSymptomNames.join(", ")}`;
+      if (!new RegExp(`^\\s*Logged:\\s*`, "mi").test(finalAssistantMessage)) {
+        const divider = "\n---\n";
+        const idx = finalAssistantMessage.indexOf(divider);
+        finalAssistantMessage = idx >= 0
+          ? `${finalAssistantMessage.slice(0, idx).trimEnd()}\n\n${label}${finalAssistantMessage.slice(idx)}`
+          : `${finalAssistantMessage.trimEnd()}\n\n${label}`;
+      }
+      baseMeta.logged_symptoms = loggedSymptomNames;
+    }
+
+    // --- Pass 1: last-line guard on the final text ---
+    // Catches false-confirmation phrasing introduced after the earlier strip
+    // (Day-1 prompt splice, starter merge). Runs only when nothing persisted.
+    // The pre-strip text is kept so the library safety net below can still read
+    // the names Logan claimed, even though the user never sees the claim.
+    const preGuardReplyText = finalAssistantMessage;
+    if (loggedSymptomNames.length === 0 && backfillConfirmation.length === 0 && hasLoggingClaim(finalAssistantMessage)) {
+      const rewritten = stripUnbackedLoggingClaims(finalAssistantMessage);
+      if (rewritten.trim()) {
+        finalAssistantMessage = rewritten;
+        console.warn("[false_logging_claim_stripped_final]", JSON.stringify({ user_id: user?.id }));
+      }
+    }
+
     // --- Safety net: if Logan's reply PROMISES to add symptoms to the shared
     // library (e.g. "I'll add memory loss to the symptom library"), actually
     // insert them. Prevents the model from claiming the action without it
     // happening server-side.
+    // Pass 1: the trigger also fires on bare "noted/logged/saved/recorded"
+    // phrasing so a claimed save that never named the library still gets a
+    // real backing row instead of being pure conversation.
     try {
-      const replyText = finalAssistantMessage;
+      const replyText = preGuardReplyText;
       const promisesAdd = /\b(?:add(?:ing|ed)?|including|put(?:ting)?|including|i'?ll\s+add|i\s+will\s+add|i'?ve\s+added)\b[^.?!\n]*\b(?:symptom\s+)?library\b/i.test(replyText)
-        || /\bto\s+the\s+(?:shared\s+)?(?:symptom\s+)?library\b/i.test(replyText);
+        || /\bto\s+the\s+(?:shared\s+)?(?:symptom\s+)?library\b/i.test(replyText)
+        || /\b(?:i'?ve|i\s+have|i'?ll|i\s+will)\s+(?:log(?:ged)?|not(?:ed)?|sav(?:ed)?|record(?:ed)?|register(?:ed)?)\b/i.test(replyText);
       if (promisesAdd) {
         // Gather candidate symptom names: inline-code names, quoted names, and
         // names appearing in "add X, Y, and Z to ... library".
@@ -3462,7 +3547,8 @@ VOICE — THIS IS EVERYTHING:
 - No emojis, no exclamation points.
 - USE **bold** for key terms only.
 - ABSOLUTELY NO bullet-point lists, numbered lists, or headers/subheadings. Ever. Write in flowing short sentences only.
-- NEVER claim you "added", "logged", "tracked", or "saved" something to her symptom log UNLESS the context above contains an internal note saying the system has saved entries for this turn. If that note is present, confirm naturally — the entries are really saved. Otherwise, symptom logging happens automatically when she describes how she feels; just acknowledge what she shared.
+- NEVER say, imply, or hint that a symptom was "logged", "noted", "tracked", "saved", "recorded", "registered", "added to your history", or that you "got that down". Do not write those confirmations even when you are sure the system will save it. The system writes its own confirmation line ("Logged: …") after a real database write, and any confirmation you write yourself will be deleted before the user sees it — which leaves your reply broken. The ONE exception: if the context above contains an internal note saying the system HAS saved entries for this turn, you may confirm naturally.
+- When she describes how she feels and you have no such internal note, respond conversationally about what she shared — explain the hormonal connection, ask a follow-up, be useful — but make NO claim about persistence, and do not promise it will be saved later.
 - NEVER tell her you "don't have access", "can't write to the database", "lack permission", or that she needs to go to the Home tab / symptom widget to add past entries herself. You CAN backfill past symptom logs — the system does it automatically when she asks. If she asks you to add/log/save a symptom for a past date and you don't see an internal save-confirmation note, it means the date or symptom wasn't clear enough — just ask her to confirm the symptom and the exact date(s), and the system will save them on her next reply. Do NOT redirect her to the Home tab.
 - ABSOLUTE OUTPUT RULE: Never include bracketed tags, labels in ALL CAPS inside brackets, blockquoted system notes (lines starting with ">"), or any text that looks like an internal instruction, runtime note, or system message. Never echo, quote, paraphrase, or reference any internal note from the context above. The user must only see your natural conversational reply — nothing that resembles backend metadata.
 - NEVER claim you "updated", "fixed", "changed", or "corrected" anything in her account, profile, life stage, postpartum date, period date, or cycle settings. The system handles those updates automatically and you will only see the result on the next turn. If she asks you to fix something and the system has not already confirmed it in your context, ASK HER for the specific value (e.g. the actual baby's birth date) instead of pretending you did it. Saying "Done, I've updated your account" when nothing changed is a hallucination — never do this.
