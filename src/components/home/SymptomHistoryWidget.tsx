@@ -126,7 +126,16 @@ export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays,
                     </div>
                   </div>
                 ))}
+                {notesOnlyCount > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-muted-foreground/40" />
+                    <span className="text-xs text-foreground/60 truncate flex-1 italic">Notes only</span>
+                    <span className="text-[10px] text-muted-foreground tabular-nums">{notesOnlyCount}×</span>
+                    <div className="w-12 h-1" />
+                  </div>
+                )}
               </div>
+
 
               {/* Donut chart */}
               {logs.length > 0 && <SymptomPieChart logs={logs} compact />}
