@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { format, subDays } from "date-fns";
+import { aggregateSymptomPatterns, countNotesOnlyLogs } from "@/lib/symptomAggregation";
 import { AllSymptomsChart } from "./AllSymptomsChart";
 import { SymptomHormoneChart } from "./SymptomHormoneChart";
 import { ChevronDown, Pencil, Trash2, X, Check, Search, StickyNote } from "lucide-react";
