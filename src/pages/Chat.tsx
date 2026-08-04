@@ -1561,35 +1561,42 @@ const Chat = () => {
                           : "bg-card border border-border"
                       } ${searching && isMatch ? "ring-2 ring-primary" : ""}`}
                     >
-                      {/* Cycle visual first for insight messages */}
-                      {message.metadata?.has_cycle_visual && message.metadata?.cycle_day && message.metadata?.cycle_phase && (
+                      {/* Cycle visual first for insight messages — recomputed live
+                          from participant data; stored metadata is the fallback while
+                          participant data loads (prevents flicker on initial open). */}
+                      {message.metadata?.has_cycle_visual && message.metadata?.cycle_day && message.metadata?.cycle_phase && (() => {
+                        const liveDay = liveCycle?.day ?? (message.metadata.cycle_day as number);
+                        const livePhase = liveCycle?.phase ?? (message.metadata.cycle_phase as string);
+                        const liveLen = liveCycle?.len ?? ((message.metadata.cycle_length_days as number) || 28);
+                        return (
                         <div className="mb-3">
                           {message.metadata.visual_type === "hormone_chart" ? (
                             <HormoneChart
-                              cycleDay={message.metadata.cycle_day}
-                              phase={message.metadata.cycle_phase}
-                              cycleLengthDays={message.metadata.cycle_length_days || 28}
+                              cycleDay={liveDay}
+                              phase={livePhase}
+                              cycleLengthDays={liveLen}
                             />
                           ) : message.metadata.visual_type === "symptom_map" ? (
                             <SymptomMap
                               symptoms={message.metadata.validated_symptoms as string[] | undefined}
                               anchorSymptom={message.metadata.anchor_symptom as string | undefined}
-                              cycleDay={message.metadata.cycle_day}
-                              cycleLengthDays={message.metadata.cycle_length_days || 28}
-                              phase={message.metadata.cycle_phase}
+                              cycleDay={liveDay}
+                              cycleLengthDays={liveLen}
+                              phase={livePhase}
                             />
                           ) : message.metadata.visual_type === "cycle_circle" ? (
                             <ChatCycleCircle
-                              cycleDay={message.metadata.cycle_day}
-                              phase={message.metadata.cycle_phase}
-                              cycleLengthDays={message.metadata.cycle_length_days || 28}
+                              cycleDay={liveDay}
+                              phase={livePhase}
+                              cycleLengthDays={liveLen}
                               lifeStage="cycling"
                               postpartumStartDate={postpartumStartDate || undefined}
                               postpartumActive={postpartumActive && !!postpartumStartDate}
                             />
                           ) : null}
                         </div>
-                      )}
+                        );
+                      })()}
 
                       {/* Message text (intro for proactive insights) */}
                       {message.role === "assistant" ? (
@@ -1621,9 +1628,9 @@ const Chat = () => {
                       {message.role === "assistant" && message.metadata?.insight_type === "proactive" && message.metadata?.cycle_day && message.metadata?.cycle_phase && (
                         <div className="mt-3">
                           <PhaseCheatSheet
-                            phase={message.metadata.cycle_phase}
-                            cycleDay={message.metadata.cycle_day}
-                            cycleLengthDays={message.metadata.cycle_length_days || 28}
+                            phase={liveCycle?.phase ?? message.metadata.cycle_phase}
+                            cycleDay={liveCycle?.day ?? message.metadata.cycle_day}
+                            cycleLengthDays={liveCycle?.len ?? (message.metadata.cycle_length_days || 28)}
                             personalizedData={message.metadata.cheat_sheet as any || null}
                             onDimensionResponse={(dim, response) => handleCheatSheetResponse(message.id, dim, response)}
                             savedResponses={(message.metadata?.cheat_sheet_responses as Record<string, string>) || undefined}
