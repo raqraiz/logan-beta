@@ -3370,6 +3370,65 @@ serve(async (req) => {
     if (isCurrentSymptomQuestion || isCurrentSymptomNegation) {
       assistantMessage = stripFalseSymptomLoggingClaim(assistantMessage);
     }
+    // --- Pass 2: persist LLM-extracted symptoms (catalog-independent) ---
+    // Awaited here, after the main completion, so the extraction ran in
+    // parallel with the reply. Anything it found that the keyword list missed
+    // is written to symptom_logs (so it shows in her history) AND upserted into
+    // community_symptoms (so it shows in the picker) in the same step. The
+    // resulting names feed loggedSymptomNames, which drives Pass 1's
+    // server-authored "Logged: …" line and its false-confirmation guard.
+    if (symptomExtractionPromise) {
+      try {
+        const extracted = await symptomExtractionPromise;
+        const alreadyLogged = new Set(loggedSymptomNames.map(n => n.trim().toLowerCase()));
+        const novel = extracted.filter(s => !alreadyLogged.has(s.name.trim().toLowerCase()));
+
+        if (novel.length > 0) {
+          const { error: extLogErr } = await supabase.from("symptom_logs").insert({
+            user_id: user.id,
+            symptoms: novel,
+            notes: userMessage.length <= 500 ? userMessage : userMessage.slice(0, 500),
+            cycle_day: symptomCycleInfo?.cycleDay ?? null,
+            cycle_phase: symptomCycleInfo?.phase ?? null,
+          });
+
+          if (extLogErr) {
+            console.error("[symptom_extraction] symptom_logs insert failed:", extLogErr);
+          } else {
+            for (const s of novel) {
+              if (!loggedSymptomNames.includes(s.name)) loggedSymptomNames.push(s.name);
+            }
+
+            // Surface genuinely new names in the shared picker too. Categorization
+            // and soft-delete semantics are untouched: rows land uncategorized
+            // exactly like the existing library-add path, and a previously
+            // soft-deleted name is left alone.
+            const knownLower = new Set(knownLibraryNames.map(n => String(n).trim().toLowerCase()));
+            const brandNew = novel
+              .map(s => s.name.trim().toLowerCase())
+              .filter(n => !knownLower.has(n));
+            if (brandNew.length > 0) {
+              const { data: existing } = await supabase
+                .from("community_symptoms")
+                .select("name")
+                .in("name", brandNew);
+              const existingLower = new Set(((existing || []) as any[]).map(r => String(r.name).trim().toLowerCase()));
+              const toInsert = brandNew
+                .filter(n => !existingLower.has(n))
+                .map(name => ({ name, added_by: user.id }));
+              if (toInsert.length > 0) {
+                const { error: commErr } = await supabase.from("community_symptoms").insert(toInsert);
+                if (commErr) console.error("[symptom_extraction] community_symptoms insert failed:", commErr);
+                else console.log("[symptom_extraction] new library entries:", toInsert.map(r => r.name).join(", "));
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("[symptom_extraction] post-write failed:", (e as Error)?.message);
+      }
+    }
+
 
     // --- Pass 1: no false "I noted that" confirmations ---
     // Persistence is confirmed by the server, never narrated by the model.
