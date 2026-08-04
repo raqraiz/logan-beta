@@ -5,7 +5,7 @@ import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { LogOut, RefreshCw, Shield, User, BarChart3, Megaphone, TrendingUp, Mail, LineChart } from "lucide-react";
+import { LogOut, RefreshCw, Shield, User, BarChart3, Megaphone, TrendingUp, Mail, LineChart, Trophy } from "lucide-react";
 import { AdminManagement } from "@/components/admin/AdminManagement";
 import { ProfilesTab } from "@/components/admin/ProfilesTab";
 import { OverviewTab } from "@/components/admin/OverviewTab";
@@ -13,6 +13,7 @@ import { NotificationsTab } from "@/components/admin/NotificationsTab";
 import { AttributionTab } from "@/components/admin/AttributionTab";
 import { EmailsTab } from "@/components/admin/EmailsTab";
 import { GrowthTrackerTab } from "@/components/admin/GrowthTrackerTab";
+import { ReferralLeaderboardTab } from "@/components/admin/ReferralLeaderboardTab";
 import { LoganFullLogo } from "@/components/LoganFullLogo";
 
 const Admin = () => {
@@ -125,7 +126,7 @@ const Admin = () => {
 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList
-            className={`grid w-full max-w-3xl ${isSuperAdmin ? "grid-cols-7" : "grid-cols-5"} bg-muted border border-border`}
+            className={`grid w-full max-w-3xl ${isSuperAdmin ? "grid-cols-8" : "grid-cols-6"} bg-muted border border-border`}
           >
             <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BarChart3 className="w-4 h-4" />
@@ -134,6 +135,10 @@ const Admin = () => {
             <TabsTrigger value="growth" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <LineChart className="w-4 h-4" />
               <span className="hidden sm:inline">Growth</span>
+            </TabsTrigger>
+            <TabsTrigger value="referrals" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Trophy className="w-4 h-4" />
+              <span className="hidden sm:inline">Referrals</span>
             </TabsTrigger>
             <TabsTrigger value="attribution" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <TrendingUp className="w-4 h-4" />
@@ -167,6 +172,10 @@ const Admin = () => {
 
           <TabsContent value="growth">
             <GrowthTrackerTab />
+          </TabsContent>
+
+          <TabsContent value="referrals">
+            <ReferralLeaderboardTab />
           </TabsContent>
 
           <TabsContent value="attribution">
