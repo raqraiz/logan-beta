@@ -618,15 +618,19 @@ export function calculateCycleInfo(
   const ovulationEnd = ovulationDay + 2;
 
   // If she told Logan her period is still ongoing past the default window,
-  // keep showing Menstruation up to a sane cap (12 days) until she logs an
-  // end date or starts a new cycle. This OVERRIDES the ovulation window —
+  // keep showing Menstruation up to a sane cap (12 days) until she logs an end
+  // date or starts a new cycle. This OVERRIDES the ovulation window —
   // a short cycle (e.g. 21d → ovulationStart=6) should not flip her into
   // Ovulation while she's still bleeding.
-  const forceMenstruation = !!periodStillActive && cycleDay <= 12;
+  // Match server-side expiry guard (chat-ai / generate-insight) so the ring
+  // does not visually lag behind: flag expires once we're past day 7.
+  const flagExpired = periodStillActive === true && (cycleDay > 7 || daysSinceStart > 7);
 
   let phase: string;
 
-  if (forceMenstruation || cycleDay <= menstruationEnd) {
+  if (cycleDay <= menstruationEnd) {
+    phase = "Menstruation";
+  } else if (periodStillActive === true && !flagExpired && cycleDay <= 12) {
     phase = "Menstruation";
   } else if (cycleDay < ovulationStart) {
     phase = "Follicular";
@@ -635,6 +639,7 @@ export function calculateCycleInfo(
   } else {
     phase = "Luteal";
   }
+
 
   return { cycleDay, phase };
 }
