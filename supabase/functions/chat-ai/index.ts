@@ -139,6 +139,57 @@ function parseDateOnly(dateStr: string): Date | null {
   return parseExplicitCalendarDate(dateStr);
 }
 
+/**
+ * Explicit calendar-date period-start correction.
+ *
+ * "Aug 1 was my first day", "my period started August 1st", "day 1 was 8/1".
+ * These messages contain a month name / numeric date, which the historical-date
+ * veto used to swallow — so the deterministic write never ran and the model was
+ * left to narrate a save that never happened. Returns YYYY-MM-DD or null.
+ */
+function parseStatedPeriodStartDate(message: string, timezone: string): string | null {
+  const mentionsStart =
+    /\b(period|bleed(?:ing)?|menstruation|cycle|day\s*1|first\s+day)\b/i.test(message) &&
+    /\b(start(?:ed|s|ing)?|began|begin|was|is|came|arrived|on)\b/i.test(message);
+  if (!mentionsStart) return null;
+
+  const monthWord =
+    /\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?\b/i;
+  const dayThenMonth =
+    /\b(\d{1,2})(?:st|nd|rd|th)?\s+of\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:,?\s*(\d{4}))?\b/i;
+  const isoDate = /\b(\d{4}-\d{2}-\d{2})\b/;
+  const numeric = /\b(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?\b/;
+
+  let token: string | null = null;
+  let m: RegExpMatchArray | null;
+  if ((m = message.match(isoDate))) token = m[1];
+  else if ((m = message.match(monthWord))) token = `${m[1]} ${m[2]}${m[3] ? `, ${m[3]}` : ""}`;
+  else if ((m = message.match(dayThenMonth))) token = `${m[2]} ${m[1]}${m[3] ? `, ${m[3]}` : ""}`;
+  else if ((m = message.match(numeric))) {
+    // Ambiguous d/m vs m/d — treat as month/day when the first number can't be a day-of-month-only value.
+    const a = +m[1];
+    const b = +m[2];
+    const year = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : new Date().getUTCFullYear();
+    const month = a <= 12 ? a : b;
+    const day = a <= 12 ? b : a;
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    token = `${String(year)}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
+  if (!token) return null;
+
+  const parsed = parseExplicitCalendarDate(token);
+  if (!parsed) return null;
+
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: timezone || "UTC" });
+  const [ty, tm, td] = todayStr.split("-").map(Number);
+  const todayUtc = Date.UTC(ty, tm - 1, td, 12);
+  const diffDays = Math.round((todayUtc - parsed.getTime()) / 86400000);
+  // Only accept a plausible current-cycle start: today back to ~4 months.
+  if (diffDays < 0 || diffDays > 120) return null;
+  return parsed.toISOString().split("T")[0];
+}
+
+
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
