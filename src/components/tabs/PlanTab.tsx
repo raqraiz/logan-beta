@@ -425,7 +425,9 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
         const lps = participantRes.data.last_period_start;
         const cld = participantRes.data.cycle_length_days;
         if (lps && cld) {
+          const tz = participantRes.data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
           const p = participantRes.data as any;
+
           const info = calculateCycleInfo(
             lps,
             cld,
