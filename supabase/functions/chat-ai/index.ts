@@ -1922,13 +1922,17 @@ serve(async (req) => {
 
         const tz = participant.timezone || "UTC";
         const currentDay = participant.last_period_start ? getCycleDayForToday(participant.last_period_start, tz) : null;
-        const inferredLength = currentDay
-          ? inferCycleLengthForDeclaredPhase(currentDay, phaseLabel as "Menstruation" | "Follicular" | "Ovulation" | "Luteal", cycLen)
-          : null;
 
         // If the user is already in the phase she's declaring, just confirm — don't touch the cycle.
         const calculatedPhaseNow = participant.last_period_start
-          ? calculateCycleInfo(participant.last_period_start, cycLen, tz).phase
+          ? calculateCycleInfo(
+              participant.last_period_start,
+              cycLen,
+              tz,
+              (participant as any).current_period_end_date ?? null,
+              false,
+              !!(participant as any).period_still_active,
+            ).phase
           : null;
         if (calculatedPhaseNow === phaseLabel && (statedDay === null || statedDay === currentDay)) {
           const msg = `You're already logged as **${phaseLabel}** (Day ${currentDay}). I'm trusting your read — nothing to change.`;
@@ -1939,112 +1943,97 @@ serve(async (req) => {
           return new Response(JSON.stringify({ success: true, message: msg }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
 
-        // Only keep Day 1 fixed when she named a phase with no conflicting day.
-        // If she stated a day different from today's computed day, that day wins
-        // and we shift Day 1 instead (handled further below).
-        const shouldPreserveDayOne = !!participant.last_period_start
-          && inferredLength !== null && inferredLength !== cycLen
-          && (statedDay === null || statedDay === currentDay);
+        // Keep Day 1 exactly where she logged it unless she stated a different day.
+        const preserveDayOne = !!participant.last_period_start && (statedDay === null || statedDay === currentDay);
+        let startStr: string;
+        let dayForPhase: number;
+        if (preserveDayOne) {
+          startStr = participant.last_period_start;
+          dayForPhase = currentDay ?? targetDay;
+        } else {
+          const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
+          const [ty, tm, td] = todayStr.split("-").map(Number);
+          const todayLocal = new Date(Date.UTC(ty, tm - 1, td, 12, 0, 0));
+          todayLocal.setUTCDate(todayLocal.getUTCDate() - (targetDay - 1));
+          startStr = todayLocal.toISOString().split("T")[0];
+          dayForPhase = targetDay;
+        }
 
-        if (shouldPreserveDayOne) {
-          const { data: lenRows, error: updErr } = await supabase
+        // The stated phase is an override: build the write that actually yields it.
+        const plan = planDeclaredPhaseWrite(
+          phaseLabel as "Menstruation" | "Follicular" | "Ovulation" | "Luteal",
+          dayForPhase,
+          startStr,
+          cycLen,
+          tz,
+        );
+
+        if (plan) {
+          const { data: updRows, error: updErr } = await supabase
             .from("participants")
-            .update({ cycle_length_days: inferredLength, cycle_length_user_override: true })
+            .update(plan.patch)
             .eq("id", participant.id)
             .select("id");
 
-          if (!updErr && (lenRows?.length ?? 0) > 0) {
+          if (!updErr && (updRows?.length ?? 0) > 0) {
             const { data: refreshed } = await supabase
               .from("participants").select("*").eq("id", participant.id).single();
             if (refreshed) participant = refreshed;
 
-            const updatedCycleInfo = calculateCycleInfo(participant.last_period_start, inferredLength, tz);
-            const msg = `Got it — **Day ${updatedCycleInfo.cycleDay}, ${updatedCycleInfo.phase}**. Locking that in. I kept your Day 1 (**${participant.last_period_start}**) exactly where you logged it. Want me to update Day 1 too, or leave it as is?`;
-
-            await supabase.from("cycle_updates").insert({
-              participant_id: participant.id,
-              update_type: "phase_adjustment",
-              category: "cycle",
-              description: `User declared ${phaseLabel}; cycle length adjusted from ${cycLen} to ${inferredLength} days based on current Day ${currentDay}.`,
-            });
-
-
-            await supabase.from("chat_messages").insert({
-              user_id: user.id,
-              role: "assistant",
-              content: msg,
-              message_type: "text",
-              metadata: {
-                cycle_day: updatedCycleInfo.cycleDay,
-                cycle_phase: updatedCycleInfo.phase,
-                ...cycleVisualMeta(userMessage),
-                cycle_length_days: inferredLength,
-                previous_cycle_length_days: cycLen,
-                last_period_start: participant.last_period_start,
-                timezone: tz,
-                cycle_length_update: true,
-                phase_declared: phaseLabel,
-                preserved_period_start: true,
-              }
-            });
-
-            return new Response(
-              JSON.stringify({ success: true, message: msg, cycleInfo: updatedCycleInfo, cycleLengthUpdated: true }),
-              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            // Verify against what's actually stored — confirm day AND phase or nothing.
+            const verified = calculateCycleInfo(
+              participant.last_period_start,
+              participant.cycle_length_days || cycLen,
+              tz,
+              (participant as any).current_period_end_date ?? null,
+              false,
+              !!(participant as any).period_still_active,
             );
+
+            if (verified.phase === phaseLabel) {
+              await supabase.from("cycle_updates").insert({
+                participant_id: participant.id,
+                update_type: "phase_adjustment",
+                category: "cycle",
+                description: `User declared ${phaseLabel}; saved Day ${verified.cycleDay} (start ${participant.last_period_start}, bleed end ${(participant as any).current_period_end_date ?? "none"}, length ${participant.cycle_length_days}).`,
+              });
+
+              const msg = statedDay !== null || preserveDayOne
+                ? `Got it — you're **Day ${verified.cycleDay}, ${verified.phase}**. Updated everywhere.`
+                : `Got it — logging you as **${verified.phase}**, starting at **Day ${verified.cycleDay}** (the first day of that phase). If you're further along, tell me the day and I'll fix it exactly.`;
+
+              await supabase.from("chat_messages").insert({
+                user_id: user.id,
+                role: "assistant",
+                content: msg,
+                message_type: "text",
+                metadata: {
+                  cycle_day: verified.cycleDay,
+                  cycle_phase: verified.phase,
+                  ...cycleVisualMeta(userMessage),
+                  cycle_length_days: participant.cycle_length_days || cycLen,
+                  last_period_start: participant.last_period_start,
+                  current_period_end_date: (participant as any).current_period_end_date ?? null,
+                  timezone: tz,
+                  period_update: true,
+                  new_period_start: participant.last_period_start,
+                  phase_declared: phaseLabel,
+                  stated_day: statedDay,
+                  preserved_period_start: preserveDayOne,
+                }
+              });
+
+              return new Response(
+                JSON.stringify({ success: true, message: msg, cycleInfo: verified, periodUpdated: true }),
+                { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              );
+            }
           }
         }
 
-        const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
-        const [ty, tm, td] = todayStr.split("-").map(Number);
-        const todayLocal = new Date(Date.UTC(ty, tm - 1, td, 12, 0, 0));
-        todayLocal.setUTCDate(todayLocal.getUTCDate() - (targetDay - 1));
-        const formattedDate = todayLocal.toISOString().split("T")[0];
-
-        const { data: updRows, error: updErr } = await supabase
-          .from("participants")
-          .update({ last_period_start: formattedDate })
-          .eq("id", participant.id)
-          .select("id");
-
-        if (!updErr && (updRows?.length ?? 0) > 0) {
-          const { data: refreshed } = await supabase
-            .from("participants").select("*").eq("id", participant.id).single();
-          if (refreshed) participant = refreshed;
-
-          const updatedCycleInfo = calculateCycleInfo(formattedDate, cycLen, tz);
-          const msg = statedDay !== null
-            ? `Got it — you're **Day ${updatedCycleInfo.cycleDay}, ${updatedCycleInfo.phase}**. Updated everywhere.`
-            : `Got it — logging you as **${updatedCycleInfo.phase}**, starting at **Day ${updatedCycleInfo.cycleDay}** (the first day of that phase). If you're further along, tell me the day and I'll fix it exactly.`;
-
-          await supabase.from("chat_messages").insert({
-            user_id: user.id,
-            role: "assistant",
-            content: msg,
-            message_type: "text",
-            metadata: {
-              cycle_day: updatedCycleInfo.cycleDay,
-              cycle_phase: updatedCycleInfo.phase,
-              ...cycleVisualMeta(userMessage),
-              cycle_length_days: cycLen,
-              last_period_start: formattedDate,
-              timezone: tz,
-              period_update: true,
-              new_period_start: formattedDate,
-              phase_declared: phaseLabel,
-              stated_day: statedDay,
-            }
-          });
-
-          return new Response(
-            JSON.stringify({ success: true, message: msg, cycleInfo: updatedCycleInfo, periodUpdated: true }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        // Write failed — never confirm a change we didn't make.
+        // Write failed or didn't produce the declared phase — never confirm a change we didn't make.
         {
-          const failMsg = "I couldn't save that change just now — nothing was updated on your record. Try again in a moment and I'll lock it in.";
+          const failMsg = `I couldn't lock in **${phaseLabel}** just now — nothing was changed on your record. Tell me the day you're on and I'll set it exactly.`;
           await supabase.from("chat_messages").insert({
             user_id: user.id, role: "assistant", content: failMsg, message_type: "text",
             metadata: { phase_declared: phaseLabel, write_failed: true },
