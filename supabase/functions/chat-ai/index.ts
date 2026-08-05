@@ -795,10 +795,20 @@ serve(async (req) => {
     // still pass on their own. Generic confirm patterns must also mention a
     // period-related word OR follow a check-in, to avoid hijacking unrelated yeses.
     const mentionsPeriodWord = /\b(period|bleed|bleeding|day\s*1|menstruation|menstruating|spotting)\b/i.test(userMessage);
-    const isPeriodConfirmation = !referencesHistoricalDate && !isPeriodStartQuestion && (
-      (periodConfirmPatterns.some(p => p.test(userMessage)) && (wasPeridCheckin || mentionsPeriodWord)) ||
-      (isBareYes && wasPeridCheckin)
+    // Explicit calendar-date correction ("Aug 1 was my first day"). This bypasses
+    // the historical-date veto on purpose — otherwise the write never runs and the
+    // model is left free to fabricate a confirmation.
+    const statedPeriodStart = isPeriodStartQuestion
+      ? null
+      : parseStatedPeriodStartDate(userMessage, participant?.timezone || "UTC");
+    const isPeriodConfirmation = !isPeriodStartQuestion && (
+      !!statedPeriodStart ||
+      (!referencesHistoricalDate && (
+        (periodConfirmPatterns.some(p => p.test(userMessage)) && (wasPeridCheckin || mentionsPeriodWord)) ||
+        (isBareYes && wasPeridCheckin)
+      ))
     );
+
 
     // Helper: resolve a day-of-week name to the most recent past date
     function resolveDayOfWeek(dayName: string): Date {
