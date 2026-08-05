@@ -1842,7 +1842,9 @@ serve(async (req) => {
         || /\bcan\s+you\s+(?:update|change|set|fix|adjust|correct|switch)\b[^.?!]{0,50}\b(?:my\s+)?(?:phase|cycle)\b/i.test(userMessage);
 
       const isHypotheticalPhase = /\b(?:thought|think|expected|expect|hoped|wonder(?:ed|ing)?|guess(?:ed|ing)?|supposed\s+to|would\s+(?:be|have|mean)|should\s+be|might\s+be|maybe|if\s+i)\b/i.test(userMessage);
-      const isQuestionPhase = /\?/.test(userMessage);
+      // "can you switch me to follicular?" is a request, not a question about phases.
+      const isPhaseChangeRequest = /\b(?:switch|put|move|set|change|correct)\s+me\s+(?:to|into|back\s+to)\s+(?:my\s+|the\s+)?(?:menstrual|menstruation|period|follicular|ovulation|ovulating|ovulatory|fertile|luteal)\b/i.test(userMessage);
+      const isQuestionPhase = /\?/.test(userMessage) && !isPhaseChangeRequest;
 
       const dayOnlyWithPhaseInThread = !!declaredPhaseInThread
         && extractStatedCycleDay(userMessage) !== null
