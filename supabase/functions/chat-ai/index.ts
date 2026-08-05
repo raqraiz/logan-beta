@@ -836,7 +836,9 @@ serve(async (req) => {
 
       const dayOfWeekMatch = userMessage.match(dayOfWeekPattern);
       const daysAgoMatch = userMessage.match(/(\d+)\s+days?\s+ago/i);
-      if (dayOfWeekMatch) {
+      if (statedPeriodStart) {
+        periodStartDate = new Date(`${statedPeriodStart}T12:00:00Z`);
+      } else if (dayOfWeekMatch) {
         periodStartDate = resolveDayOfWeek(dayOfWeekMatch[1]);
       } else if (daysAgoMatch) {
         periodStartDate.setDate(periodStartDate.getDate() - parseInt(daysAgoMatch[1]));
@@ -845,10 +847,11 @@ serve(async (req) => {
       } else if (/this morning/i.test(userMessage) || /last night/i.test(userMessage) || /today/i.test(userMessage)) {
         // stays today
       }
-      if (/a few days ago/i.test(userMessage) && !daysAgoMatch) {
+      if (!statedPeriodStart && /a few days ago/i.test(userMessage) && !daysAgoMatch) {
         periodStartDate.setDate(periodStartDate.getDate() - 2);
       }
-      const formattedDate = periodStartDate.toISOString().split("T")[0];
+      const formattedDate = statedPeriodStart || periodStartDate.toISOString().split("T")[0];
+
 
       let previousCycleLength: number | null = null;
       if (participant.last_period_start) {
