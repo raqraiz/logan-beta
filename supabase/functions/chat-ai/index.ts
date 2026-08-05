@@ -1241,10 +1241,13 @@ serve(async (req) => {
           || userMessage.match(/\b(?:i\s+)?bled\s+(\d{1,2})\s+days?\b/i);
         const endedRelMatch = userMessage.match(/\b(?:bleed(?:ing)?|period|bled)\s+(?:ended|stopped|finished|over|done)\s+(today|yesterday)\b/i)
           || userMessage.match(/\b(?:period|bleed(?:ing)?)\s+(?:is\s+)?(?:over|done|finished|ended)\s+(?:as\s+of\s+)?(today|yesterday)\b/i);
+        // "my bleed is done, can you switch me to follicular?" — the assertion
+        // before the question mark still counts as a reported bleed end.
+        const assertedEnd = /\b(?:my\s+)?(?:period|bleed(?:ing)?)\s+(?:is\s+|has\s+)?(?:over|done|finished|ended|stopped)\b/i;
         const endedNoDateMatch = !endedDayMatch && !lastedDaysMatch && !endedRelMatch
-          && /\b(?:my\s+)?(?:period|bleed(?:ing)?)\s+(?:is\s+)?(?:over|done|finished|ended)\b/i.test(userMessage)
+          && assertedEnd.test(userMessage)
           && !/\b(?:not|isn'?t|still|almost|nearly)\b/i.test(userMessage)
-          && !/\?/.test(userMessage);
+          && (!/\?/.test(userMessage) || assertedEnd.test(userMessage.split("?")[0]));
 
         const addDays = (base: Date, n: number) => {
           const d = new Date(base.getTime());
