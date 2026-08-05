@@ -398,9 +398,10 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
           .limit(50),
         supabase
           .from("participants")
-          .select("anchor_symptom, last_period_start, cycle_length_days, timezone, current_period_end_date")
+          .select("anchor_symptom, last_period_start, cycle_length_days, timezone, current_period_end_date, period_pending_since, period_still_active")
           .eq("user_id", userId)
           .maybeSingle(),
+
       ]);
 
       if (!checkinsRes.error && checkinsRes.data) {
@@ -425,7 +426,18 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
         const cld = participantRes.data.cycle_length_days;
         if (lps && cld) {
           const tz = participantRes.data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-          const info = calculateCycleInfo(lps, cld, tz);
+          const p = participantRes.data as any;
+
+          const info = calculateCycleInfo(
+            lps,
+            cld,
+            tz,
+            undefined,
+            p.current_period_end_date ?? null,
+            !!p.period_pending_since,
+            !!p.period_still_active,
+          );
+
           if (info) {
             setLiveCycle({
               cycleDay: info.cycleDay,
@@ -459,7 +471,16 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             if (row.anchor_symptom !== undefined) setAnchorSymptom(row.anchor_symptom);
             if (lps && cld) {
               const tz = row.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-              const info = calculateCycleInfo(lps, cld, tz);
+              const info = calculateCycleInfo(
+                lps,
+                cld,
+                tz,
+                undefined,
+                row.current_period_end_date ?? null,
+                !!row.period_pending_since,
+                !!row.period_still_active,
+              );
+
               if (info) {
                 setLiveCycle({
                   cycleDay: info.cycleDay,

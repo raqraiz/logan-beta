@@ -139,6 +139,57 @@ function parseDateOnly(dateStr: string): Date | null {
   return parseExplicitCalendarDate(dateStr);
 }
 
+/**
+ * Explicit calendar-date period-start correction.
+ *
+ * "Aug 1 was my first day", "my period started August 1st", "day 1 was 8/1".
+ * These messages contain a month name / numeric date, which the historical-date
+ * veto used to swallow — so the deterministic write never ran and the model was
+ * left to narrate a save that never happened. Returns YYYY-MM-DD or null.
+ */
+function parseStatedPeriodStartDate(message: string, timezone: string): string | null {
+  const mentionsStart =
+    /\b(period|bleed(?:ing)?|menstruation|cycle|day\s*1|first\s+day)\b/i.test(message) &&
+    /\b(start(?:ed|s|ing)?|began|begin|was|is|came|arrived|on)\b/i.test(message);
+  if (!mentionsStart) return null;
+
+  const monthWord =
+    /\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?\b/i;
+  const dayThenMonth =
+    /\b(\d{1,2})(?:st|nd|rd|th)?\s+of\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:,?\s*(\d{4}))?\b/i;
+  const isoDate = /\b(\d{4}-\d{2}-\d{2})\b/;
+  const numeric = /\b(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?\b/;
+
+  let token: string | null = null;
+  let m: RegExpMatchArray | null;
+  if ((m = message.match(isoDate))) token = m[1];
+  else if ((m = message.match(monthWord))) token = `${m[1]} ${m[2]}${m[3] ? `, ${m[3]}` : ""}`;
+  else if ((m = message.match(dayThenMonth))) token = `${m[2]} ${m[1]}${m[3] ? `, ${m[3]}` : ""}`;
+  else if ((m = message.match(numeric))) {
+    // Ambiguous d/m vs m/d — treat as month/day when the first number can't be a day-of-month-only value.
+    const a = +m[1];
+    const b = +m[2];
+    const year = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : new Date().getUTCFullYear();
+    const month = a <= 12 ? a : b;
+    const day = a <= 12 ? b : a;
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    token = `${String(year)}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
+  if (!token) return null;
+
+  const parsed = parseExplicitCalendarDate(token);
+  if (!parsed) return null;
+
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: timezone || "UTC" });
+  const [ty, tm, td] = todayStr.split("-").map(Number);
+  const todayUtc = Date.UTC(ty, tm - 1, td, 12);
+  const diffDays = Math.round((todayUtc - parsed.getTime()) / 86400000);
+  // Only accept a plausible current-cycle start: today back to ~4 months.
+  if (diffDays < 0 || diffDays > 120) return null;
+  return parsed.toISOString().split("T")[0];
+}
+
+
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
@@ -477,6 +528,33 @@ function hasLoggingClaim(text: string): boolean {
   return /\b(?:(?:i|we|logan|the\s+system)\s*(?:'ve|'ll|\s+have|\s+has|\s+will)?\s*(?:already\s+)?(?:automatically\s+)?(?:log(?:ged|ging)?|not(?:ed|ing)?|sav(?:ed|ing|es)?|record(?:ed|ing|s)?|register(?:ed|ing|s)?)\b|\bgot\s+(?:that|those|these|this|it|your)\s+(?:\w+\s+){0,2}down\b)/i.test(text);
 }
 
+/**
+ * Cycle-data write claims ("locked in August 1", "I've updated your Day 1",
+ * "your cycle now shows Day 5"). Every genuine cycle write returns its own
+ * server-authored reply and never reaches the model path, so a claim in an
+ * LLM-generated reply is by definition unbacked.
+ */
+function hasCycleUpdateClaim(text: string): boolean {
+  return /\b(?:locked?\s+(?:that\s+)?in|updated|adjust(?:ed)?|chang(?:ed)?|correct(?:ed)?|reset|set|shift(?:ed)?|sync(?:ed|ed\s+up)?|fixed)\b[^.?!\n]{0,80}\b(?:day\s*1|start\s+date|period\s+(?:start|date)|cycle\s+(?:day|date|start)|your\s+cycle)\b/i.test(text)
+    || /\b(?:day\s*1|period\s+start|start\s+date|cycle)\b[^.?!\n]{0,60}\b(?:is\s+now|now\s+(?:shows|reads|set)|has\s+been\s+(?:updated|changed|set|locked))\b/i.test(text)
+    || /\b(?:i'?ve|i\s+have|i'?ll|i\s+will|logan\s+has)\b[^.?!\n]{0,40}\b(?:updat(?:e|ed)|chang(?:e|ed)|lock(?:ed)?\s+in|set)\b[^.?!\n]{0,40}\b(?:everywhere|across\s+(?:the\s+)?(?:app|tabs?)|your\s+(?:cycle|period|dates?))\b/i.test(text);
+}
+
+function stripUnbackedCycleClaims(text: string): string {
+  const claimSentence = /[^.?!\n]*\b(?:locked?\s+(?:that\s+)?in|updated|adjust(?:ed)?|chang(?:ed)?|correct(?:ed)?|reset|set|shift(?:ed)?|sync(?:ed)?|fixed|is\s+now|now\s+shows)\b[^.?!\n]*\b(?:day\s*1|start\s+date|period|cycle)\b[^.?!\n]*(?:[.?!]+\s*|\n|$)/gi;
+  const claimSentence2 = /[^.?!\n]*\b(?:day\s*1|period\s+start|start\s+date|cycle)\b[^.?!\n]*\b(?:locked?\s+in|updated|changed|set|reset|is\s+now|now\s+shows|everywhere)\b[^.?!\n]*(?:[.?!]+\s*|\n|$)/gi;
+  let out = text;
+  for (const re of [claimSentence, claimSentence2]) out = out.replace(re, "");
+  return out
+    .replace(/([.?!])(?=[A-Z])/g, "$1 ")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/^\s+/, "")
+    .trimEnd();
+}
+
+
+
 function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -744,10 +822,20 @@ serve(async (req) => {
     // still pass on their own. Generic confirm patterns must also mention a
     // period-related word OR follow a check-in, to avoid hijacking unrelated yeses.
     const mentionsPeriodWord = /\b(period|bleed|bleeding|day\s*1|menstruation|menstruating|spotting)\b/i.test(userMessage);
-    const isPeriodConfirmation = !referencesHistoricalDate && !isPeriodStartQuestion && (
-      (periodConfirmPatterns.some(p => p.test(userMessage)) && (wasPeridCheckin || mentionsPeriodWord)) ||
-      (isBareYes && wasPeridCheckin)
+    // Explicit calendar-date correction ("Aug 1 was my first day"). This bypasses
+    // the historical-date veto on purpose — otherwise the write never runs and the
+    // model is left free to fabricate a confirmation.
+    const statedPeriodStart = isPeriodStartQuestion
+      ? null
+      : parseStatedPeriodStartDate(userMessage, participant?.timezone || "UTC");
+    const isPeriodConfirmation = !isPeriodStartQuestion && (
+      !!statedPeriodStart ||
+      (!referencesHistoricalDate && (
+        (periodConfirmPatterns.some(p => p.test(userMessage)) && (wasPeridCheckin || mentionsPeriodWord)) ||
+        (isBareYes && wasPeridCheckin)
+      ))
     );
+
 
     // Helper: resolve a day-of-week name to the most recent past date
     function resolveDayOfWeek(dayName: string): Date {
@@ -775,7 +863,9 @@ serve(async (req) => {
 
       const dayOfWeekMatch = userMessage.match(dayOfWeekPattern);
       const daysAgoMatch = userMessage.match(/(\d+)\s+days?\s+ago/i);
-      if (dayOfWeekMatch) {
+      if (statedPeriodStart) {
+        periodStartDate = new Date(`${statedPeriodStart}T12:00:00Z`);
+      } else if (dayOfWeekMatch) {
         periodStartDate = resolveDayOfWeek(dayOfWeekMatch[1]);
       } else if (daysAgoMatch) {
         periodStartDate.setDate(periodStartDate.getDate() - parseInt(daysAgoMatch[1]));
@@ -784,10 +874,11 @@ serve(async (req) => {
       } else if (/this morning/i.test(userMessage) || /last night/i.test(userMessage) || /today/i.test(userMessage)) {
         // stays today
       }
-      if (/a few days ago/i.test(userMessage) && !daysAgoMatch) {
+      if (!statedPeriodStart && /a few days ago/i.test(userMessage) && !daysAgoMatch) {
         periodStartDate.setDate(periodStartDate.getDate() - 2);
       }
-      const formattedDate = periodStartDate.toISOString().split("T")[0];
+      const formattedDate = statedPeriodStart || periodStartDate.toISOString().split("T")[0];
+
 
       let previousCycleLength: number | null = null;
       if (participant.last_period_start) {
@@ -825,7 +916,25 @@ serve(async (req) => {
         .update(periodUpdatePayload)
         .eq("id", participant.id);
 
+      // Never confirm a save that didn't happen.
+      if (updateError) {
+        console.error("[period_update_failed]", JSON.stringify({ user_id: user?.id, formattedDate, error: updateError.message }));
+        const failMsg = `I couldn't save that change just now — nothing was updated on your cycle. Try again in a moment, or set your period start date from the Home tab.`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: failMsg,
+          message_type: "text",
+          metadata: { period_update: false, period_update_failed: true },
+        });
+        return new Response(
+          JSON.stringify({ success: false, message: failMsg }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       if (!updateError) {
+
         const { data: refreshed } = await supabase
           .from("participants")
           .select("*")
@@ -3555,6 +3664,23 @@ serve(async (req) => {
         console.warn("[false_logging_claim_stripped_final]", JSON.stringify({ user_id: user?.id }));
       }
     }
+
+    // --- Cycle-date guard: no fabricated "locked in / updated your Day 1" ---
+    // Every real cycle write returns earlier with a server-authored reply, so any
+    // such claim reaching here was invented by the model. Strip it and state the
+    // truth from the database instead.
+    if (hasCycleUpdateClaim(finalAssistantMessage)) {
+      const stripped = stripUnbackedCycleClaims(finalAssistantMessage);
+      const truth = cycleInfo
+        ? `I haven't changed anything on your cycle. Right now your record shows Day 1 as **${participant?.last_period_start ?? "not set"}** (**Day ${cycleInfo.cycleDay}, ${cycleInfo.phase}** today). If that's wrong, tell me the exact date your period started and I'll set it.`
+        : `I haven't changed anything on your cycle. Tell me the exact date your period started and I'll set it.`;
+      finalAssistantMessage = stripped.trim() ? `${stripped}\n\n${truth}` : truth;
+      console.warn("[false_cycle_update_claim_stripped]", JSON.stringify({
+        user_id: user?.id,
+        user_message_preview: (userMessage || "").slice(0, 120),
+      }));
+    }
+
 
     // --- Safety net: if Logan's reply PROMISES to add symptoms to the shared
     // library (e.g. "I'll add memory loss to the symptom library"), actually
