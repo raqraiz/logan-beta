@@ -667,7 +667,6 @@ function getCycleDayForToday(lastPeriodStart: string, timezone: string): number 
   return daysSinceStart >= 0 ? daysSinceStart + 1 : 1;
 }
 
-import { inferCycleLengthForDeclaredPhase } from "../_shared/cyclePhase.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
