@@ -176,7 +176,9 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
 
     setSaving(false);
     if (!ok) return;
-    toast({ title: "Updated", description: `Life stage saved.` });
+    setPhaseLengthPrefs(phaseLens);
+    toast({ title: "Updated", description: `Settings saved.` });
+
     onUpdated?.(stage);
     onOpenChange(false);
   };
