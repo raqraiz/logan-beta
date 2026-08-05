@@ -1858,15 +1858,21 @@ serve(async (req) => {
           return new Response(JSON.stringify({ success: true, message: msg }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
 
-        const shouldPreserveDayOne = !!participant.last_period_start && inferredLength !== null && inferredLength !== cycLen;
+        // Only keep Day 1 fixed when she named a phase with no conflicting day.
+        // If she stated a day different from today's computed day, that day wins
+        // and we shift Day 1 instead (handled further below).
+        const shouldPreserveDayOne = !!participant.last_period_start
+          && inferredLength !== null && inferredLength !== cycLen
+          && (statedDay === null || statedDay === currentDay);
 
         if (shouldPreserveDayOne) {
-          const { error: updErr } = await supabase
+          const { data: lenRows, error: updErr } = await supabase
             .from("participants")
             .update({ cycle_length_days: inferredLength, cycle_length_user_override: true })
-            .eq("id", participant.id);
+            .eq("id", participant.id)
+            .select("id");
 
-          if (!updErr) {
+          if (!updErr && (lenRows?.length ?? 0) > 0) {
             const { data: refreshed } = await supabase
               .from("participants").select("*").eq("id", participant.id).single();
             if (refreshed) participant = refreshed;
