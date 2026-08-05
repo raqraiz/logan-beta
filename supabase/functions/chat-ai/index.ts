@@ -528,6 +528,33 @@ function hasLoggingClaim(text: string): boolean {
   return /\b(?:(?:i|we|logan|the\s+system)\s*(?:'ve|'ll|\s+have|\s+has|\s+will)?\s*(?:already\s+)?(?:automatically\s+)?(?:log(?:ged|ging)?|not(?:ed|ing)?|sav(?:ed|ing|es)?|record(?:ed|ing|s)?|register(?:ed|ing|s)?)\b|\bgot\s+(?:that|those|these|this|it|your)\s+(?:\w+\s+){0,2}down\b)/i.test(text);
 }
 
+/**
+ * Cycle-data write claims ("locked in August 1", "I've updated your Day 1",
+ * "your cycle now shows Day 5"). Every genuine cycle write returns its own
+ * server-authored reply and never reaches the model path, so a claim in an
+ * LLM-generated reply is by definition unbacked.
+ */
+function hasCycleUpdateClaim(text: string): boolean {
+  return /\b(?:locked?\s+(?:that\s+)?in|updated|adjust(?:ed)?|chang(?:ed)?|correct(?:ed)?|reset|set|shift(?:ed)?|sync(?:ed|ed\s+up)?|fixed)\b[^.?!\n]{0,80}\b(?:day\s*1|start\s+date|period\s+(?:start|date)|cycle\s+(?:day|date|start)|your\s+cycle)\b/i.test(text)
+    || /\b(?:day\s*1|period\s+start|start\s+date|cycle)\b[^.?!\n]{0,60}\b(?:is\s+now|now\s+(?:shows|reads|set)|has\s+been\s+(?:updated|changed|set|locked))\b/i.test(text)
+    || /\b(?:i'?ve|i\s+have|i'?ll|i\s+will|logan\s+has)\b[^.?!\n]{0,40}\b(?:updat(?:e|ed)|chang(?:e|ed)|lock(?:ed)?\s+in|set)\b[^.?!\n]{0,40}\b(?:everywhere|across\s+(?:the\s+)?(?:app|tabs?)|your\s+(?:cycle|period|dates?))\b/i.test(text);
+}
+
+function stripUnbackedCycleClaims(text: string): string {
+  const claimSentence = /[^.?!\n]*\b(?:locked?\s+(?:that\s+)?in|updated|adjust(?:ed)?|chang(?:ed)?|correct(?:ed)?|reset|set|shift(?:ed)?|sync(?:ed)?|fixed|is\s+now|now\s+shows)\b[^.?!\n]*\b(?:day\s*1|start\s+date|period|cycle)\b[^.?!\n]*(?:[.?!]+\s*|\n|$)/gi;
+  const claimSentence2 = /[^.?!\n]*\b(?:day\s*1|period\s+start|start\s+date|cycle)\b[^.?!\n]*\b(?:locked?\s+in|updated|changed|set|reset|is\s+now|now\s+shows|everywhere)\b[^.?!\n]*(?:[.?!]+\s*|\n|$)/gi;
+  let out = text;
+  for (const re of [claimSentence, claimSentence2]) out = out.replace(re, "");
+  return out
+    .replace(/([.?!])(?=[A-Z])/g, "$1 ")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/^\s+/, "")
+    .trimEnd();
+}
+
+
+
 function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
