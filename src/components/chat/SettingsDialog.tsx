@@ -77,7 +77,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
     (async () => {
       const { data } = await supabase
         .from("participants")
-        .select("postpartum_active, postpartum_start_date, loss_date, due_date, pregnancy_lmp, timezone, on_hormonal_bc")
+        .select("postpartum_active, postpartum_start_date, loss_date, due_date, pregnancy_lmp, timezone, on_hormonal_bc, cycle_length_days, menstruation_days, follicular_days, ovulation_window_days, luteal_days")
         .eq("email", userEmail)
         .maybeSingle();
       if (data) {
@@ -87,12 +87,22 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
         setDueDate((data as any).due_date ?? "");
         setPregnancyLmp((data as any).pregnancy_lmp ?? "");
         setOnHormonalBc((data as any).on_hormonal_bc ?? null);
+        const cl = (data as any).cycle_length_days ?? 28;
+        setCycleLen(cl);
+        const d = defaultPhaseLengths(cl);
+        setPhaseLens({
+          menstruation_days: (data as any).menstruation_days ?? d.menstruation_days,
+          follicular_days: (data as any).follicular_days ?? d.follicular_days,
+          ovulation_window_days: (data as any).ovulation_window_days ?? d.ovulation_window_days,
+          luteal_days: (data as any).luteal_days ?? d.luteal_days,
+        });
         let tz = (data as any).timezone ?? "";
         if (!tz) {
           try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch { tz = ""; }
         }
         setTimezone(tz);
       }
+
     })();
   }, [open, userEmail, currentLifeStage]);
 
