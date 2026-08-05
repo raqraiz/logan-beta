@@ -398,9 +398,10 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
           .limit(50),
         supabase
           .from("participants")
-          .select("anchor_symptom, last_period_start, cycle_length_days, timezone, current_period_end_date")
+          .select("anchor_symptom, last_period_start, cycle_length_days, timezone, current_period_end_date, period_pending_since, period_still_active")
           .eq("user_id", userId)
           .maybeSingle(),
+
       ]);
 
       if (!checkinsRes.error && checkinsRes.data) {
