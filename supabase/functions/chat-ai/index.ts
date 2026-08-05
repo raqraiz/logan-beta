@@ -889,7 +889,25 @@ serve(async (req) => {
         .update(periodUpdatePayload)
         .eq("id", participant.id);
 
+      // Never confirm a save that didn't happen.
+      if (updateError) {
+        console.error("[period_update_failed]", JSON.stringify({ user_id: user?.id, formattedDate, error: updateError.message }));
+        const failMsg = `I couldn't save that change just now — nothing was updated on your cycle. Try again in a moment, or set your period start date from the Home tab.`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: failMsg,
+          message_type: "text",
+          metadata: { period_update: false, period_update_failed: true },
+        });
+        return new Response(
+          JSON.stringify({ success: false, message: failMsg }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       if (!updateError) {
+
         const { data: refreshed } = await supabase
           .from("participants")
           .select("*")
