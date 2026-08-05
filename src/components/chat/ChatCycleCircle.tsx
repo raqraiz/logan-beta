@@ -1,5 +1,7 @@
+import { type PhaseLengths, getPhaseLengthPrefs, defaultPhaseLengths } from "@/lib/phaseLengths";
 
 type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
+
 
 interface ChatCycleCircleProps {
   cycleDay: number;
