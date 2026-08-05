@@ -689,6 +689,15 @@ const Chat = () => {
         setOnHormonalBc((data as any).on_hormonal_bc ?? null);
       }
       if (data) {
+        setPhaseLengthPrefs({
+          menstruation_days: (data as any).menstruation_days ?? null,
+          follicular_days: (data as any).follicular_days ?? null,
+          ovulation_window_days: (data as any).ovulation_window_days ?? null,
+          luteal_days: (data as any).luteal_days ?? null,
+        });
+      }
+      if (data) {
+
         let effectiveTimezone: string | null = data.timezone ?? null;
         // Silent one-time backfill: if the user has no timezone set, detect and persist.
         if (!effectiveTimezone) {
