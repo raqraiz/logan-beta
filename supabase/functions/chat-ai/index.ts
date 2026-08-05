@@ -890,6 +890,23 @@ serve(async (req) => {
       .map((m) => (typeof m.content === "string" ? m.content : ""))
       .filter(Boolean);
 
+    // An explicit phase word the user stated now, or asked for in the last few
+    // turns ("switch me to follicular" → then "no, I'm day 5"). It is an
+    // override that must survive a later day-only correction.
+    const declaredPhaseInThread: "Menstruation" | "Follicular" | "Ovulation" | "Luteal" | null = (() => {
+      if (!/\?/.test(userMessage)) {
+        const own = explicitPhaseWord(userMessage);
+        if (own) return own;
+      }
+      for (const t of recentUserTexts.slice(0, 3)) {
+        if (/\?/.test(t)) continue;
+        if (!/\b(?:switch|put|move|set|change|correct)\s+me\s+(?:to|into|back\s+to)|i['’]?m\s+(?:in|on)\s+|i\s+am\s+(?:in|on)\s+/i.test(t)) continue;
+        const p = explicitPhaseWord(t);
+        if (p) return p;
+      }
+      return null;
+    })();
+
     const referencesHistoricalDate = /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/i.test(userMessage)
       || /last (month|cycle|time)/i.test(userMessage)
       || /\d{4}/.test(userMessage);
