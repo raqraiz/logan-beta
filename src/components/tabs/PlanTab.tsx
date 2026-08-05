@@ -471,7 +471,16 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             if (row.anchor_symptom !== undefined) setAnchorSymptom(row.anchor_symptom);
             if (lps && cld) {
               const tz = row.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-              const info = calculateCycleInfo(lps, cld, tz);
+              const info = calculateCycleInfo(
+                lps,
+                cld,
+                tz,
+                undefined,
+                row.current_period_end_date ?? null,
+                !!row.period_pending_since,
+                !!row.period_still_active,
+              );
+
               if (info) {
                 setLiveCycle({
                   cycleDay: info.cycleDay,
