@@ -128,6 +128,11 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
     setSaving(true);
     const payload: Record<string, unknown> = { life_stage: stage };
     if (timezone && timezone.trim()) payload.timezone = timezone.trim();
+    payload.menstruation_days = phaseLens.menstruation_days;
+    payload.follicular_days = phaseLens.follicular_days;
+    payload.ovulation_window_days = phaseLens.ovulation_window_days;
+    payload.luteal_days = phaseLens.luteal_days;
+
 
     if (stage === "postpartum") {
       payload.postpartum_active = false;
