@@ -1804,15 +1804,40 @@ serve(async (req) => {
           );
         }
 
-        if (phaseLabel === "Menstruation") {
-          targetDay = 3; phaseLabel = "Menstruation";
-        } else if (phaseLabel === "Follicular") {
-          targetDay = Math.max(7, Math.round((6 + (ovDay - 2)) / 2)); phaseLabel = "Follicular";
-        } else if (phaseLabel === "Ovulation") {
-          targetDay = ovDay; phaseLabel = "Ovulation";
-        } else {
-          targetDay = Math.min(cycLen - 2, Math.round((ovDay + 3 + cycLen) / 2)); phaseLabel = "Luteal";
+        // A day number stated in THIS message, or anywhere in the recent thread,
+        // always beats a phase default. Never silently pick a "typical" mid-phase day.
+        const tzForDay = participant.timezone || "UTC";
+        let statedDay = extractStatedCycleDay(userMessage);
+        if (statedDay === null) {
+          for (const t of recentUserTexts) {
+            const d = extractStatedCycleDay(t);
+            if (d !== null) { statedDay = d; break; }
+          }
         }
+
+        // Respect a logged bleed end so Follicular starts the day after it.
+        let menstruationEndDay = 5;
+        if (participant.current_period_end_date && participant.last_period_start) {
+          const s = parseDateOnly(participant.last_period_start);
+          const e = parseDateOnly(participant.current_period_end_date);
+          if (s && e) {
+            const d = Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
+            if (d >= 1 && d <= cycLen) menstruationEndDay = d;
+          }
+        }
+
+        if (statedDay !== null) {
+          targetDay = clampNumber(statedDay, 1, cycLen);
+        } else {
+          // No day anywhere in context → boundary day of the phase, the most
+          // defensible baseline (never an arbitrary mid-phase guess).
+          targetDay = firstDayOfPhase(
+            phaseLabel as "Menstruation" | "Follicular" | "Ovulation" | "Luteal",
+            cycLen,
+            menstruationEndDay,
+          );
+        }
+        void tzForDay;
 
         const tz = participant.timezone || "UTC";
         const currentDay = participant.last_period_start ? getCycleDayForToday(participant.last_period_start, tz) : null;
