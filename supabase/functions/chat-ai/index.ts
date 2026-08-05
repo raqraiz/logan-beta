@@ -567,6 +567,43 @@ function getDeclaredPhaseFromText(text: string): "Menstruation" | "Follicular" |
   return null;
 }
 
+/**
+ * Pulls an explicitly stated cycle day out of free text.
+ * Matches "day 5", "cycle day 5", "on day 5", "i'm day 5", "follicular day 5".
+ * Ignores day-of-week words and durations like "5 days ago" / "4 day bleed".
+ */
+function extractStatedCycleDay(text: string): number | null {
+  if (!text) return null;
+  const patterns = [
+    /\bcycle\s+day\s+(\d{1,2})\b/i,
+    /\bday\s+(\d{1,2})\s+of\s+(?:my\s+)?(?:cycle|follicular|luteal|ovulation|menstruation|period)\b/i,
+    /\b(?:i['’]?m|im|i\s+am|on|at|to|switch\s+me\s+to)\s+(?:\w+\s+)?day\s+(\d{1,2})\b/i,
+    /\b(?:follicular|luteal|ovulation|ovulatory|menstrual|menstruation)\s+day\s+(\d{1,2})\b/i,
+    /\bday\s+(\d{1,2})\b/i,
+  ];
+  for (const p of patterns) {
+    const m = text.match(p);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (Number.isFinite(n) && n >= 1 && n <= 60) return n;
+    }
+  }
+  return null;
+}
+
+/** First day of a phase given cycle length and (optional) actual bleed end day. */
+function firstDayOfPhase(
+  phase: "Menstruation" | "Follicular" | "Ovulation" | "Luteal",
+  cycleLengthDays: number,
+  menstruationEndDay = 5,
+): number {
+  const ovulationDay = cycleLengthDays - 14;
+  if (phase === "Menstruation") return 1;
+  if (phase === "Follicular") return Math.max(2, menstruationEndDay + 1);
+  if (phase === "Ovulation") return Math.max(2, ovulationDay - 1);
+  return Math.min(cycleLengthDays - 1, ovulationDay + 3);
+}
+
 function getCycleDayForToday(lastPeriodStart: string, timezone: string): number {
   const periodStart = parseDateOnly(lastPeriodStart);
   if (!periodStart) return 1;
