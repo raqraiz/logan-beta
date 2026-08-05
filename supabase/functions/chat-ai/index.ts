@@ -1841,12 +1841,16 @@ serve(async (req) => {
       const isHypotheticalPhase = /\b(?:thought|think|expected|expect|hoped|wonder(?:ed|ing)?|guess(?:ed|ing)?|supposed\s+to|would\s+(?:be|have|mean)|should\s+be|might\s+be|maybe|if\s+i)\b/i.test(userMessage);
       const isQuestionPhase = /\?/.test(userMessage);
 
-      if ((phaseDeclMatch && !isHypotheticalPhase && !isQuestionPhase) || phaseUpdateRequest || (implicitPastPhaseCorrection && !isQuestionPhase)) {
+      const dayOnlyWithPhaseInThread = !!declaredPhaseInThread
+        && extractStatedCycleDay(userMessage) !== null
+        && !isHypotheticalPhase && !isQuestionPhase;
+
+      if ((phaseDeclMatch && !isHypotheticalPhase && !isQuestionPhase) || phaseUpdateRequest || (implicitPastPhaseCorrection && !isQuestionPhase) || dayOnlyWithPhaseInThread) {
         const declared = phaseDeclMatch?.[1]?.toLowerCase();
         const cycLen = participant.cycle_length_days;
         const ovDay = cycLen - 14;
         let targetDay: number;
-        let phaseLabel = declared ? getDeclaredPhaseFromText(declared) : getDeclaredPhaseFromText(lastAssistantContent);
+        let phaseLabel = declared ? getDeclaredPhaseFromText(declared) : (explicitPhaseWord(userMessage) || declaredPhaseInThread || getDeclaredPhaseFromText(lastAssistantContent));
 
         if (!phaseLabel) {
           phaseLabel = getDeclaredPhaseFromText(userMessage);
