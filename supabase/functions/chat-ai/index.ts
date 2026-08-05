@@ -1733,7 +1733,10 @@ serve(async (req) => {
       // Skip if the user is speaking hypothetically / rhetorically / about expectations rather than asserting today's day
       // e.g. "I thought I'd be day 2 today", "would mean I'm on day 36", "how can that be?", "if I'm on day 5"
       const isHypothetical = /\b(?:thought|think|expected|expect|hoped|hope|wish|wished|wonder(?:ed|ing)?|figured|assumed|guess(?:ed|ing)?|supposed\s+to|would\s+(?:be|have|mean|put|make)|that\s+would|that\s+means?|means?\s+(?:i|that)|should\s+(?:be|have)|might\s+be|maybe|imagined?|if\s+i|how\s+can|how\s+is|how\s+could|why\s+(?:am|would|is)|does\s+that\s+mean|doesn'?t\s+that\s+mean)\b/i.test(userMessage);
-      if (cycleDayCorrectionMatch && !isHypothetical && !isQuestion) {
+      // If a phase name is in play, let the phase-override branch below handle
+      // this (day + phase together) — a day-only write would silently re-derive
+      // and discard the phase she explicitly asked for.
+      if (cycleDayCorrectionMatch && !isHypothetical && !isQuestion && !declaredPhaseInThread) {
         const targetDay = parseInt(cycleDayCorrectionMatch[1]);
         if (targetDay >= 1 && targetDay <= 60) {
           // Compute new last_period_start = today - (targetDay - 1) days, in user's tz
