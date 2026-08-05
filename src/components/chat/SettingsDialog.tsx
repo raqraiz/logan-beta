@@ -353,6 +353,57 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
           )}
         </div>
 
+        {(stage === "cycling" || stage === "irregular" || stage === "perimenopause") && (
+          <div className="border-t border-border/50 pt-4">
+            <Label className="text-sm font-medium mb-2 block">Phase lengths</Label>
+            <p className="text-xs text-muted-foreground mb-3">
+              Logan assumes typical phase lengths. If you know yours run longer or shorter, set them here and every prediction adapts.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {([
+                ["menstruation_days", "Menstruation"],
+                ["follicular_days", "Follicular"],
+                ["ovulation_window_days", "Ovulation"],
+                ["luteal_days", "Luteal"],
+              ] as const).map(([key, label]) => (
+                <div key={key}>
+                  <Label htmlFor={`pl-${key}`} className="text-xs text-muted-foreground">
+                    {label} ({PHASE_LENGTH_BOUNDS[key].min}–{PHASE_LENGTH_BOUNDS[key].max} days)
+                  </Label>
+                  <Input
+                    id={`pl-${key}`}
+                    type="number"
+                    inputMode="numeric"
+                    min={PHASE_LENGTH_BOUNDS[key].min}
+                    max={PHASE_LENGTH_BOUNDS[key].max}
+                    value={phaseLens[key]}
+                    onChange={(e) => {
+                      const raw = Number(e.target.value);
+                      setPhaseLens((p) => ({ ...p, [key]: Number.isFinite(raw) ? raw : p[key] }));
+                    }}
+                    onBlur={() =>
+                      setPhaseLens((p) => ({ ...p, [key]: clampPhaseLength(key, Number(p[key]) || PHASE_LENGTH_BOUNDS[key].min) }))
+                    }
+                    className="mt-1"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-between mt-3 text-xs">
+              <span className="text-muted-foreground">Total cycle length</span>
+              <span className="font-medium">{totalCycleLength(phaseLens, cycleLen)} days</span>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              className="mt-2 h-8 px-2 text-xs text-muted-foreground"
+              onClick={() => setPhaseLens(defaultPhaseLengths(cycleLen))}
+            >
+              Reset to defaults
+            </Button>
+          </div>
+        )}
+
 
         <div className="border-t border-border/50 pt-4">
           <Label htmlFor="timezone" className="text-sm font-medium mb-2 block">Timezone</Label>
