@@ -425,8 +425,17 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
         const lps = participantRes.data.last_period_start;
         const cld = participantRes.data.cycle_length_days;
         if (lps && cld) {
-          const tz = participantRes.data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-          const info = calculateCycleInfo(lps, cld, tz);
+          const p = participantRes.data as any;
+          const info = calculateCycleInfo(
+            lps,
+            cld,
+            tz,
+            undefined,
+            p.current_period_end_date ?? null,
+            !!p.period_pending_since,
+            !!p.period_still_active,
+          );
+
           if (info) {
             setLiveCycle({
               cycleDay: info.cycleDay,
