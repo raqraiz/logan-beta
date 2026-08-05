@@ -604,6 +604,59 @@ function firstDayOfPhase(
   return Math.min(cycleLengthDays - 1, ovulationDay + 3);
 }
 
+/** Explicit phase words the user can use to override the derived phase. */
+function explicitPhaseWord(text: string): "Menstruation" | "Follicular" | "Ovulation" | "Luteal" | null {
+  if (!text) return null;
+  if (/\bfollicular\b/i.test(text)) return "Follicular";
+  if (/\b(?:ovulation|ovulating|ovulatory)\b/i.test(text)) return "Ovulation";
+  if (/\bluteal\b/i.test(text)) return "Luteal";
+  if (/\b(?:menstruation|menstrual)\b/i.test(text)) return "Menstruation";
+  return null;
+}
+
+/**
+ * A stated phase name is an OVERRIDE, not a hint: build the participant patch
+ * that makes calculateCycleInfo actually return that phase for the target day.
+ * A reported bleed end always beats the menstruation_days estimate.
+ */
+function planDeclaredPhaseWrite(
+  phase: "Menstruation" | "Follicular" | "Ovulation" | "Luteal",
+  targetDay: number,
+  startStr: string,
+  cycleLengthDays: number,
+  timezone: string,
+): { patch: Record<string, unknown>; info: { cycleDay: number; phase: string } } | null {
+  const addDays = (base: string, n: number): string | null => {
+    const d = parseDateOnly(base);
+    if (!d) return null;
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().split("T")[0];
+  };
+  const isMenses = phase === "Menstruation";
+  const endDateStr = isMenses ? null : addDays(startStr, Math.max(0, Math.min(targetDay - 2, 13)));
+  const stillActive = isMenses;
+
+  const candidates = [cycleLengthDays];
+  for (let l = 18; l <= 45; l++) if (l !== cycleLengthDays) candidates.push(l);
+
+  for (const len of candidates) {
+    const info = calculateCycleInfo(startStr, len, timezone, endDateStr, false, stillActive);
+    if (info.phase === phase) {
+      const patch: Record<string, unknown> = {
+        last_period_start: startStr,
+        current_period_end_date: endDateStr,
+        period_still_active: stillActive,
+      };
+      if (len !== cycleLengthDays) {
+        patch.cycle_length_days = len;
+        patch.cycle_length_user_override = true;
+      }
+      return { patch, info };
+    }
+  }
+  return null;
+}
+
 function getCycleDayForToday(lastPeriodStart: string, timezone: string): number {
   const periodStart = parseDateOnly(lastPeriodStart);
   if (!periodStart) return 1;
