@@ -806,6 +806,10 @@ serve(async (req) => {
       .eq("email", user.email)
       .single();
 
+    // Respect the user's custom phase lengths for every cycle calc this request.
+    setActivePhaseLengths(participant);
+
+
     // --- Period confirmation detection ---
     const { data: lastAssistantMsg } = await supabase
       .from("chat_messages")
@@ -4189,6 +4193,24 @@ Use this context to make your responses personally relevant. Reference their cur
   return basePrompt + userContext;
 }
 
+// Per-user phase lengths for the current request. Set once the participant row
+// is loaded so every calculateCycleInfo call in this function respects them.
+type PhaseLengths = {
+  menstruation_days?: number | null;
+  follicular_days?: number | null;
+  ovulation_window_days?: number | null;
+  luteal_days?: number | null;
+};
+let ACTIVE_PHASE_LENGTHS: PhaseLengths = {};
+function setActivePhaseLengths(p: any) {
+  ACTIVE_PHASE_LENGTHS = {
+    menstruation_days: p?.menstruation_days ?? null,
+    follicular_days: p?.follicular_days ?? null,
+    ovulation_window_days: p?.ovulation_window_days ?? null,
+    luteal_days: p?.luteal_days ?? null,
+  };
+}
+
 function calculateCycleInfo(
   lastPeriodStart: string,
   cycleLengthDays: number,
@@ -4196,6 +4218,7 @@ function calculateCycleInfo(
   currentPeriodEndDate?: string | null,
   periodPending?: boolean,
   periodStillActive?: boolean,
+  phaseLengths?: PhaseLengths | null,
 ): { cycleDay: number; phase: string } {
   let periodStart: Date;
   if (/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodStart)) {
@@ -4217,8 +4240,14 @@ function calculateCycleInfo(
   // Day-1 confirmation instead of silently pretending a new cycle started.
   const cycleDay = daysSinceStart >= 0 ? daysSinceStart + 1 : 1;
 
+  const prefs: PhaseLengths = phaseLengths ?? ACTIVE_PHASE_LENGTHS ?? {};
+  const defMenstruation = 5;
+  const defOvDay = cycleLengthDays - 14;
+  const defFollicular = Math.max(1, (defOvDay - 1) - defMenstruation - 1 + 1);
+  const defOvWindow = 4;
+
   // If she reported her period ended early, shift Follicular forward.
-  let menstruationEnd = 5;
+  let menstruationEnd = prefs.menstruation_days ?? defMenstruation;
   if (currentPeriodEndDate && /^\d{4}-\d{2}-\d{2}$/.test(currentPeriodEndDate)) {
     const [ey, em, ed] = currentPeriodEndDate.split("-").map(Number);
     const endDate = new Date(Date.UTC(ey, em - 1, ed, 12, 0, 0));
@@ -4226,9 +4255,19 @@ function calculateCycleInfo(
     if (endDay >= 1 && endDay <= cycleLengthDays) menstruationEnd = endDay;
   }
 
-  const ovulationDay = cycleLengthDays - 14;
-  const ovulationStart = ovulationDay - 1;
-  const ovulationEnd = ovulationDay + 2;
+  const hasCustomWindow =
+    prefs.follicular_days != null || prefs.ovulation_window_days != null || prefs.menstruation_days != null;
+
+  let ovulationStart: number;
+  let ovulationEnd: number;
+  if (hasCustomWindow) {
+    ovulationStart = menstruationEnd + (prefs.follicular_days ?? defFollicular) + 1;
+    ovulationEnd = ovulationStart + (prefs.ovulation_window_days ?? defOvWindow) - 1;
+  } else {
+    ovulationStart = defOvDay - 1;
+    ovulationEnd = defOvDay + 2;
+  }
+
 
   // If she said her period is still ongoing past the default window, keep her
   // in Menstruation (capped at day 12) until she logs an end date or new Day 1.

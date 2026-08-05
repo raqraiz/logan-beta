@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { setPhaseLengthPrefs } from "@/lib/phaseLengths";
+
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -664,7 +666,7 @@ const Chat = () => {
     try {
       const { data } = await supabase
         .from("participants")
-        .select("life_stage, on_hormonal_bc, postpartum_start_date, postpartum_active, loss_date, due_date, pregnancy_lmp, last_period_start, cycle_length_days, timezone, current_period_end_date, period_pending_since, period_still_active")
+        .select("life_stage, on_hormonal_bc, postpartum_start_date, postpartum_active, loss_date, due_date, pregnancy_lmp, last_period_start, cycle_length_days, timezone, current_period_end_date, period_pending_since, period_still_active, menstruation_days, follicular_days, ovulation_window_days, luteal_days")
         .eq("email", user.email)
         .single();
       if (data?.life_stage) {
@@ -689,6 +691,15 @@ const Chat = () => {
         setOnHormonalBc((data as any).on_hormonal_bc ?? null);
       }
       if (data) {
+        setPhaseLengthPrefs({
+          menstruation_days: (data as any).menstruation_days ?? null,
+          follicular_days: (data as any).follicular_days ?? null,
+          ovulation_window_days: (data as any).ovulation_window_days ?? null,
+          luteal_days: (data as any).luteal_days ?? null,
+        });
+      }
+      if (data) {
+
         let effectiveTimezone: string | null = data.timezone ?? null;
         // Silent one-time backfill: if the user has no timezone set, detect and persist.
         if (!effectiveTimezone) {

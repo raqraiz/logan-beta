@@ -246,7 +246,14 @@ serve(async (req) => {
       participant.timezone || "UTC",
       (participant as any).current_period_end_date ?? null,
       !!(participant as any).period_still_active,
+      {
+        menstruation_days: (participant as any).menstruation_days ?? null,
+        follicular_days: (participant as any).follicular_days ?? null,
+        ovulation_window_days: (participant as any).ovulation_window_days ?? null,
+        luteal_days: (participant as any).luteal_days ?? null,
+      },
     );
+
 
 
     if (!cycleInfo) {
@@ -397,12 +404,20 @@ serve(async (req) => {
   }
 });
 
+type PhaseLengths = {
+  menstruation_days?: number | null;
+  follicular_days?: number | null;
+  ovulation_window_days?: number | null;
+  luteal_days?: number | null;
+};
+
 function calculateCycleInfo(
   lastPeriodStart: string | null,
   cycleLengthDays: number | null,
   timezone: string = "UTC",
   currentPeriodEndDate?: string | null,
   periodStillActive?: boolean,
+  phaseLengths?: PhaseLengths | null,
 ): { cycleDay: number; phase: string; daysUntilNextPhase: number } | null {
   if (!lastPeriodStart || !cycleLengthDays) return null;
 
@@ -428,17 +443,34 @@ function calculateCycleInfo(
     ? daysSinceStart + 1
     : ((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
 
+  const prefs: PhaseLengths = phaseLengths ?? {};
+  const defMenstruation = 5;
+  const defOvDay = cycleLengthDays - 14;
+  const defFollicular = Math.max(1, (defOvDay - 1) - defMenstruation - 1 + 1);
+  const defOvWindow = 4;
+
   // Mirror chat-ai: use logged end date to shift Follicular forward.
-  let menstruationEnd = 5;
+  let menstruationEnd = prefs.menstruation_days ?? defMenstruation;
   if (currentPeriodEndDate && /^\d{4}-\d{2}-\d{2}$/.test(currentPeriodEndDate)) {
     const [ey, em, ed] = currentPeriodEndDate.split("-").map(Number);
     const endDate = new Date(Date.UTC(ey, em - 1, ed, 12, 0, 0));
     const endDay = Math.round((endDate.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     if (endDay >= 1 && endDay <= cycleLengthDays) menstruationEnd = endDay;
   }
-  const ovulationDay = cycleLengthDays - 14;
-  const ovulationStart = ovulationDay - 1;
-  const ovulationEnd = ovulationDay + 2;
+
+  const hasCustomWindow =
+    prefs.follicular_days != null || prefs.ovulation_window_days != null || prefs.menstruation_days != null;
+
+  let ovulationStart: number;
+  let ovulationEnd: number;
+  if (hasCustomWindow) {
+    ovulationStart = menstruationEnd + (prefs.follicular_days ?? defFollicular) + 1;
+    ovulationEnd = ovulationStart + (prefs.ovulation_window_days ?? defOvWindow) - 1;
+  } else {
+    ovulationStart = defOvDay - 1;
+    ovulationEnd = defOvDay + 2;
+  }
+
 
   // Mirror chat-ai's forceMenstruation with the same auto-expiry so briefing
   // and chat can never disagree on phase.

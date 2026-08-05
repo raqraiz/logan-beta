@@ -12,6 +12,8 @@ import { Loader2, Upload, Trash2 } from "lucide-react";
 import { HistoryImportDialog } from "./HistoryImportDialog";
 import { ProviderConnectCard } from "@/components/settings/ProviderConnectCard";
 import { ReferralCard } from "@/components/settings/ReferralCard";
+import { setPhaseLengthPrefs, defaultPhaseLengths, clampPhaseLength, totalCycleLength, PHASE_LENGTH_BOUNDS, type PhaseLengths } from "@/lib/phaseLengths";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +51,9 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
   const [onHormonalBc, setOnHormonalBc] = useState<boolean | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [cycleLen, setCycleLen] = useState<number>(28);
+  const [phaseLens, setPhaseLens] = useState<Required<PhaseLengths>>(() => defaultPhaseLengths(28));
+
 
   const handleDeleteAccount = async () => {
     setDeleting(true);
@@ -77,7 +82,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
     (async () => {
       const { data } = await supabase
         .from("participants")
-        .select("postpartum_active, postpartum_start_date, loss_date, due_date, pregnancy_lmp, timezone, on_hormonal_bc")
+        .select("postpartum_active, postpartum_start_date, loss_date, due_date, pregnancy_lmp, timezone, on_hormonal_bc, cycle_length_days, menstruation_days, follicular_days, ovulation_window_days, luteal_days")
         .eq("email", userEmail)
         .maybeSingle();
       if (data) {
@@ -87,12 +92,22 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
         setDueDate((data as any).due_date ?? "");
         setPregnancyLmp((data as any).pregnancy_lmp ?? "");
         setOnHormonalBc((data as any).on_hormonal_bc ?? null);
+        const cl = (data as any).cycle_length_days ?? 28;
+        setCycleLen(cl);
+        const d = defaultPhaseLengths(cl);
+        setPhaseLens({
+          menstruation_days: (data as any).menstruation_days ?? d.menstruation_days,
+          follicular_days: (data as any).follicular_days ?? d.follicular_days,
+          ovulation_window_days: (data as any).ovulation_window_days ?? d.ovulation_window_days,
+          luteal_days: (data as any).luteal_days ?? d.luteal_days,
+        });
         let tz = (data as any).timezone ?? "";
         if (!tz) {
           try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch { tz = ""; }
         }
         setTimezone(tz);
       }
+
     })();
   }, [open, userEmail, currentLifeStage]);
 
@@ -113,6 +128,11 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
     setSaving(true);
     const payload: Record<string, unknown> = { life_stage: stage };
     if (timezone && timezone.trim()) payload.timezone = timezone.trim();
+    payload.menstruation_days = phaseLens.menstruation_days;
+    payload.follicular_days = phaseLens.follicular_days;
+    payload.ovulation_window_days = phaseLens.ovulation_window_days;
+    payload.luteal_days = phaseLens.luteal_days;
+
 
     if (stage === "postpartum") {
       payload.postpartum_active = false;
@@ -156,7 +176,9 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
 
     setSaving(false);
     if (!ok) return;
-    toast({ title: "Updated", description: `Life stage saved.` });
+    setPhaseLengthPrefs(phaseLens);
+    toast({ title: "Updated", description: `Settings saved.` });
+
     onUpdated?.(stage);
     onOpenChange(false);
   };
@@ -330,6 +352,57 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
             </div>
           )}
         </div>
+
+        {(stage === "cycling" || stage === "irregular" || stage === "perimenopause") && (
+          <div className="border-t border-border/50 pt-4">
+            <Label className="text-sm font-medium mb-2 block">Phase lengths</Label>
+            <p className="text-xs text-muted-foreground mb-3">
+              Logan assumes typical phase lengths. If you know yours run longer or shorter, set them here and every prediction adapts.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {([
+                ["menstruation_days", "Menstruation"],
+                ["follicular_days", "Follicular"],
+                ["ovulation_window_days", "Ovulation"],
+                ["luteal_days", "Luteal"],
+              ] as const).map(([key, label]) => (
+                <div key={key}>
+                  <Label htmlFor={`pl-${key}`} className="text-xs text-muted-foreground">
+                    {label} ({PHASE_LENGTH_BOUNDS[key].min}–{PHASE_LENGTH_BOUNDS[key].max} days)
+                  </Label>
+                  <Input
+                    id={`pl-${key}`}
+                    type="number"
+                    inputMode="numeric"
+                    min={PHASE_LENGTH_BOUNDS[key].min}
+                    max={PHASE_LENGTH_BOUNDS[key].max}
+                    value={phaseLens[key]}
+                    onChange={(e) => {
+                      const raw = Number(e.target.value);
+                      setPhaseLens((p) => ({ ...p, [key]: Number.isFinite(raw) ? raw : p[key] }));
+                    }}
+                    onBlur={() =>
+                      setPhaseLens((p) => ({ ...p, [key]: clampPhaseLength(key, Number(p[key]) || PHASE_LENGTH_BOUNDS[key].min) }))
+                    }
+                    className="mt-1"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-between mt-3 text-xs">
+              <span className="text-muted-foreground">Total cycle length</span>
+              <span className="font-medium">{totalCycleLength(phaseLens, cycleLen)} days</span>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              className="mt-2 h-8 px-2 text-xs text-muted-foreground"
+              onClick={() => setPhaseLens(defaultPhaseLengths(cycleLen))}
+            >
+              Reset to defaults
+            </Button>
+          </div>
+        )}
 
 
         <div className="border-t border-border/50 pt-4">

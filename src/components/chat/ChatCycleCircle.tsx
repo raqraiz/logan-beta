@@ -1,5 +1,7 @@
+import { type PhaseLengths, getPhaseLengthPrefs, defaultPhaseLengths } from "@/lib/phaseLengths";
 
 type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
+
 
 interface ChatCycleCircleProps {
   cycleDay: number;
@@ -549,8 +551,12 @@ export function calculateCycleInfo(
   /** When true, the user has told Logan her period is still ongoing past the
    * default 5-day window — keep phase as Menstruation until she logs an end
    * date or starts a new cycle. */
-  periodStillActive?: boolean
+  periodStillActive?: boolean,
+  /** Per-user phase lengths. Falls back to the global prefs, then to the
+   * historical hardcoded defaults, per field. */
+  phaseLengths?: PhaseLengths | null
 ): { cycleDay: number; phase: string } | null {
+
   if (!lastPeriodStart || !cycleLengthDays) return null;
 
   // Parse date-only string safely: treat YYYY-MM-DD as noon UTC to avoid timezone shift
@@ -600,10 +606,14 @@ export function calculateCycleInfo(
         ? (daysSinceStart % cycleLengthDays) + 1
         : (((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays) + 1);
 
+  // Per-user phase lengths (explicit arg > global prefs > hardcoded defaults).
+  const prefs: PhaseLengths = phaseLengths ?? getPhaseLengthPrefs() ?? {};
+  const fallback = defaultPhaseLengths(cycleLengthDays);
+
   // Derive menstruationEnd. If the user reported her period ended early
   // (currentPeriodEndDate), use that to shift Follicular forward. Only honor
   // it when the end date is on/after period start and within this cycle.
-  let menstruationEnd = 5;
+  let menstruationEnd = prefs.menstruation_days ?? fallback.menstruation_days;
   if (currentPeriodEndDate && /^\d{4}-\d{2}-\d{2}$/.test(currentPeriodEndDate)) {
     const [ey, em, ed] = currentPeriodEndDate.split("-").map(Number);
     const endDate = new Date(Date.UTC(ey, em - 1, ed, 12, 0, 0));
@@ -613,9 +623,20 @@ export function calculateCycleInfo(
     }
   }
 
-  const ovulationDay = cycleLengthDays - 14;
-  const ovulationStart = ovulationDay - 1;
-  const ovulationEnd = ovulationDay + 2;
+  const hasCustomWindow =
+    prefs.follicular_days != null || prefs.ovulation_window_days != null || prefs.menstruation_days != null;
+
+  let ovulationStart: number;
+  let ovulationEnd: number;
+  if (hasCustomWindow) {
+    ovulationStart = menstruationEnd + (prefs.follicular_days ?? fallback.follicular_days) + 1;
+    ovulationEnd = ovulationStart + (prefs.ovulation_window_days ?? fallback.ovulation_window_days) - 1;
+  } else {
+    const ovulationDay = cycleLengthDays - 14;
+    ovulationStart = ovulationDay - 1;
+    ovulationEnd = ovulationDay + 2;
+  }
+
 
   // If she told Logan her period is still ongoing past the default window,
   // keep showing Menstruation up to a sane cap (12 days) until she logs an end
