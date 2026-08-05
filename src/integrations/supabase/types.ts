@@ -936,6 +936,7 @@ export type Database = {
           cycle_regularity: string | null
           due_date: string | null
           email: string | null
+          follicular_days: number | null
           full_name: string
           goals: string[] | null
           id: string
@@ -943,7 +944,10 @@ export type Database = {
           last_period_start: string | null
           life_stage: string
           loss_date: string | null
+          luteal_days: number | null
+          menstruation_days: number | null
           on_hormonal_bc: boolean | null
+          ovulation_window_days: number | null
           period_pending_since: string | null
           period_still_active: boolean
           postpartum_active: boolean
@@ -971,6 +975,7 @@ export type Database = {
           cycle_regularity?: string | null
           due_date?: string | null
           email?: string | null
+          follicular_days?: number | null
           full_name: string
           goals?: string[] | null
           id?: string
@@ -978,7 +983,10 @@ export type Database = {
           last_period_start?: string | null
           life_stage?: string
           loss_date?: string | null
+          luteal_days?: number | null
+          menstruation_days?: number | null
           on_hormonal_bc?: boolean | null
+          ovulation_window_days?: number | null
           period_pending_since?: string | null
           period_still_active?: boolean
           postpartum_active?: boolean
@@ -1006,6 +1014,7 @@ export type Database = {
           cycle_regularity?: string | null
           due_date?: string | null
           email?: string | null
+          follicular_days?: number | null
           full_name?: string
           goals?: string[] | null
           id?: string
@@ -1013,7 +1022,10 @@ export type Database = {
           last_period_start?: string | null
           life_stage?: string
           loss_date?: string | null
+          luteal_days?: number | null
+          menstruation_days?: number | null
           on_hormonal_bc?: boolean | null
+          ovulation_window_days?: number | null
           period_pending_since?: string | null
           period_still_active?: boolean
           postpartum_active?: boolean
