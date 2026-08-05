@@ -1849,7 +1849,7 @@ serve(async (req) => {
         const calculatedPhaseNow = participant.last_period_start
           ? calculateCycleInfo(participant.last_period_start, cycLen, tz).phase
           : null;
-        if (calculatedPhaseNow === phaseLabel) {
+        if (calculatedPhaseNow === phaseLabel && (statedDay === null || statedDay === currentDay)) {
           const msg = `You're already logged as **${phaseLabel}** (Day ${currentDay}). I'm trusting your read — nothing to change.`;
           await supabase.from("chat_messages").insert({
             user_id: user.id, role: "assistant", content: msg, message_type: "text",
