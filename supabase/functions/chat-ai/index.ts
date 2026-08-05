@@ -819,6 +819,20 @@ serve(async (req) => {
     const wasPeridCheckin = (lastAssistantMsg?.metadata as any)?.period_checkin === true;
     const lastAssistantContent = typeof lastAssistantMsg?.content === "string" ? lastAssistantMsg.content : "";
 
+    // Recent user turns — used so a day number stated earlier in the thread
+    // ("my bleed ended day 4") carries forward when a later message only names
+    // a phase ("switch me to follicular").
+    const { data: recentUserTurns } = await supabase
+      .from("chat_messages")
+      .select("content, created_at")
+      .eq("user_id", user.id)
+      .eq("role", "user")
+      .order("created_at", { ascending: false })
+      .limit(6);
+    const recentUserTexts: string[] = ((recentUserTurns || []) as any[])
+      .map((m) => (typeof m.content === "string" ? m.content : ""))
+      .filter(Boolean);
+
     const referencesHistoricalDate = /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/i.test(userMessage)
       || /last (month|cycle|time)/i.test(userMessage)
       || /\d{4}/.test(userMessage);
