@@ -3665,6 +3665,23 @@ serve(async (req) => {
       }
     }
 
+    // --- Cycle-date guard: no fabricated "locked in / updated your Day 1" ---
+    // Every real cycle write returns earlier with a server-authored reply, so any
+    // such claim reaching here was invented by the model. Strip it and state the
+    // truth from the database instead.
+    if (hasCycleUpdateClaim(finalAssistantMessage)) {
+      const stripped = stripUnbackedCycleClaims(finalAssistantMessage);
+      const truth = cycleInfo
+        ? `I haven't changed anything on your cycle. Right now your record shows Day 1 as **${participant?.last_period_start ?? "not set"}** (**Day ${cycleInfo.cycleDay}, ${cycleInfo.phase}** today). If that's wrong, tell me the exact date your period started and I'll set it.`
+        : `I haven't changed anything on your cycle. Tell me the exact date your period started and I'll set it.`;
+      finalAssistantMessage = stripped.trim() ? `${stripped}\n\n${truth}` : truth;
+      console.warn("[false_cycle_update_claim_stripped]", JSON.stringify({
+        user_id: user?.id,
+        user_message_preview: (userMessage || "").slice(0, 120),
+      }));
+    }
+
+
     // --- Safety net: if Logan's reply PROMISES to add symptoms to the shared
     // library (e.g. "I'll add memory loss to the symptom library"), actually
     // insert them. Prevents the model from claiming the action without it
