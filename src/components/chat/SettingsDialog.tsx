@@ -12,6 +12,8 @@ import { Loader2, Upload, Trash2 } from "lucide-react";
 import { HistoryImportDialog } from "./HistoryImportDialog";
 import { ProviderConnectCard } from "@/components/settings/ProviderConnectCard";
 import { ReferralCard } from "@/components/settings/ReferralCard";
+import { setPhaseLengthPrefs, defaultPhaseLengths, clampPhaseLength, totalCycleLength, PHASE_LENGTH_BOUNDS, type PhaseLengths } from "@/lib/phaseLengths";
+
 import {
   AlertDialog,
   AlertDialogAction,
