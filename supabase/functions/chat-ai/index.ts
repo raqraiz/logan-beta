@@ -1914,18 +1914,21 @@ serve(async (req) => {
         todayLocal.setUTCDate(todayLocal.getUTCDate() - (targetDay - 1));
         const formattedDate = todayLocal.toISOString().split("T")[0];
 
-        const { error: updErr } = await supabase
+        const { data: updRows, error: updErr } = await supabase
           .from("participants")
           .update({ last_period_start: formattedDate })
-          .eq("id", participant.id);
+          .eq("id", participant.id)
+          .select("id");
 
-        if (!updErr) {
+        if (!updErr && (updRows?.length ?? 0) > 0) {
           const { data: refreshed } = await supabase
             .from("participants").select("*").eq("id", participant.id).single();
           if (refreshed) participant = refreshed;
 
           const updatedCycleInfo = calculateCycleInfo(formattedDate, cycLen, tz);
-          const msg = `Got it — logging you as **${updatedCycleInfo.phase}** (around Day ${updatedCycleInfo.cycleDay}). Updated everywhere. If you remember your actual last period start date, share it and I'll dial it in exactly.`;
+          const msg = statedDay !== null
+            ? `Got it — you're **Day ${updatedCycleInfo.cycleDay}, ${updatedCycleInfo.phase}**. Updated everywhere.`
+            : `Got it — logging you as **${updatedCycleInfo.phase}**, starting at **Day ${updatedCycleInfo.cycleDay}** (the first day of that phase). If you're further along, tell me the day and I'll fix it exactly.`;
 
           await supabase.from("chat_messages").insert({
             user_id: user.id,
@@ -1942,6 +1945,7 @@ serve(async (req) => {
               period_update: true,
               new_period_start: formattedDate,
               phase_declared: phaseLabel,
+              stated_day: statedDay,
             }
           });
 
@@ -1949,6 +1953,16 @@ serve(async (req) => {
             JSON.stringify({ success: true, message: msg, cycleInfo: updatedCycleInfo, periodUpdated: true }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
+        }
+
+        // Write failed — never confirm a change we didn't make.
+        {
+          const failMsg = "I couldn't save that change just now — nothing was updated on your record. Try again in a moment and I'll lock it in.";
+          await supabase.from("chat_messages").insert({
+            user_id: user.id, role: "assistant", content: failMsg, message_type: "text",
+            metadata: { phase_declared: phaseLabel, write_failed: true },
+          });
+          return new Response(JSON.stringify({ success: true, message: failMsg }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
       }
     }
