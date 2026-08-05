@@ -806,6 +806,10 @@ serve(async (req) => {
       .eq("email", user.email)
       .single();
 
+    // Respect the user's custom phase lengths for every cycle calc this request.
+    setActivePhaseLengths(participant);
+
+
     // --- Period confirmation detection ---
     const { data: lastAssistantMsg } = await supabase
       .from("chat_messages")
