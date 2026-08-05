@@ -567,6 +567,43 @@ function getDeclaredPhaseFromText(text: string): "Menstruation" | "Follicular" |
   return null;
 }
 
+/**
+ * Pulls an explicitly stated cycle day out of free text.
+ * Matches "day 5", "cycle day 5", "on day 5", "i'm day 5", "follicular day 5".
+ * Ignores day-of-week words and durations like "5 days ago" / "4 day bleed".
+ */
+function extractStatedCycleDay(text: string): number | null {
+  if (!text) return null;
+  const patterns = [
+    /\bcycle\s+day\s+(\d{1,2})\b/i,
+    /\bday\s+(\d{1,2})\s+of\s+(?:my\s+)?(?:cycle|follicular|luteal|ovulation|menstruation|period)\b/i,
+    /\b(?:i['’]?m|im|i\s+am|on|at|to|switch\s+me\s+to)\s+(?:\w+\s+)?day\s+(\d{1,2})\b/i,
+    /\b(?:follicular|luteal|ovulation|ovulatory|menstrual|menstruation)\s+day\s+(\d{1,2})\b/i,
+    /\bday\s+(\d{1,2})\b/i,
+  ];
+  for (const p of patterns) {
+    const m = text.match(p);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (Number.isFinite(n) && n >= 1 && n <= 60) return n;
+    }
+  }
+  return null;
+}
+
+/** First day of a phase given cycle length and (optional) actual bleed end day. */
+function firstDayOfPhase(
+  phase: "Menstruation" | "Follicular" | "Ovulation" | "Luteal",
+  cycleLengthDays: number,
+  menstruationEndDay = 5,
+): number {
+  const ovulationDay = cycleLengthDays - 14;
+  if (phase === "Menstruation") return 1;
+  if (phase === "Follicular") return Math.max(2, menstruationEndDay + 1);
+  if (phase === "Ovulation") return Math.max(2, ovulationDay - 1);
+  return Math.min(cycleLengthDays - 1, ovulationDay + 3);
+}
+
 function getCycleDayForToday(lastPeriodStart: string, timezone: string): number {
   const periodStart = parseDateOnly(lastPeriodStart);
   if (!periodStart) return 1;
@@ -781,6 +818,20 @@ serve(async (req) => {
     
     const wasPeridCheckin = (lastAssistantMsg?.metadata as any)?.period_checkin === true;
     const lastAssistantContent = typeof lastAssistantMsg?.content === "string" ? lastAssistantMsg.content : "";
+
+    // Recent user turns — used so a day number stated earlier in the thread
+    // ("my bleed ended day 4") carries forward when a later message only names
+    // a phase ("switch me to follicular").
+    const { data: recentUserTurns } = await supabase
+      .from("chat_messages")
+      .select("content, created_at")
+      .eq("user_id", user.id)
+      .eq("role", "user")
+      .order("created_at", { ascending: false })
+      .limit(6);
+    const recentUserTexts: string[] = ((recentUserTurns || []) as any[])
+      .map((m) => (typeof m.content === "string" ? m.content : ""))
+      .filter(Boolean);
 
     const referencesHistoricalDate = /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/i.test(userMessage)
       || /last (month|cycle|time)/i.test(userMessage)
@@ -1753,15 +1804,40 @@ serve(async (req) => {
           );
         }
 
-        if (phaseLabel === "Menstruation") {
-          targetDay = 3; phaseLabel = "Menstruation";
-        } else if (phaseLabel === "Follicular") {
-          targetDay = Math.max(7, Math.round((6 + (ovDay - 2)) / 2)); phaseLabel = "Follicular";
-        } else if (phaseLabel === "Ovulation") {
-          targetDay = ovDay; phaseLabel = "Ovulation";
-        } else {
-          targetDay = Math.min(cycLen - 2, Math.round((ovDay + 3 + cycLen) / 2)); phaseLabel = "Luteal";
+        // A day number stated in THIS message, or anywhere in the recent thread,
+        // always beats a phase default. Never silently pick a "typical" mid-phase day.
+        const tzForDay = participant.timezone || "UTC";
+        let statedDay = extractStatedCycleDay(userMessage);
+        if (statedDay === null) {
+          for (const t of recentUserTexts) {
+            const d = extractStatedCycleDay(t);
+            if (d !== null) { statedDay = d; break; }
+          }
         }
+
+        // Respect a logged bleed end so Follicular starts the day after it.
+        let menstruationEndDay = 5;
+        if (participant.current_period_end_date && participant.last_period_start) {
+          const s = parseDateOnly(participant.last_period_start);
+          const e = parseDateOnly(participant.current_period_end_date);
+          if (s && e) {
+            const d = Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
+            if (d >= 1 && d <= cycLen) menstruationEndDay = d;
+          }
+        }
+
+        if (statedDay !== null) {
+          targetDay = clampNumber(statedDay, 1, cycLen);
+        } else {
+          // No day anywhere in context → boundary day of the phase, the most
+          // defensible baseline (never an arbitrary mid-phase guess).
+          targetDay = firstDayOfPhase(
+            phaseLabel as "Menstruation" | "Follicular" | "Ovulation" | "Luteal",
+            cycLen,
+            menstruationEndDay,
+          );
+        }
+        void tzForDay;
 
         const tz = participant.timezone || "UTC";
         const currentDay = participant.last_period_start ? getCycleDayForToday(participant.last_period_start, tz) : null;
@@ -1773,7 +1849,7 @@ serve(async (req) => {
         const calculatedPhaseNow = participant.last_period_start
           ? calculateCycleInfo(participant.last_period_start, cycLen, tz).phase
           : null;
-        if (calculatedPhaseNow === phaseLabel) {
+        if (calculatedPhaseNow === phaseLabel && (statedDay === null || statedDay === currentDay)) {
           const msg = `You're already logged as **${phaseLabel}** (Day ${currentDay}). I'm trusting your read — nothing to change.`;
           await supabase.from("chat_messages").insert({
             user_id: user.id, role: "assistant", content: msg, message_type: "text",
@@ -1782,15 +1858,21 @@ serve(async (req) => {
           return new Response(JSON.stringify({ success: true, message: msg }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
 
-        const shouldPreserveDayOne = !!participant.last_period_start && inferredLength !== null && inferredLength !== cycLen;
+        // Only keep Day 1 fixed when she named a phase with no conflicting day.
+        // If she stated a day different from today's computed day, that day wins
+        // and we shift Day 1 instead (handled further below).
+        const shouldPreserveDayOne = !!participant.last_period_start
+          && inferredLength !== null && inferredLength !== cycLen
+          && (statedDay === null || statedDay === currentDay);
 
         if (shouldPreserveDayOne) {
-          const { error: updErr } = await supabase
+          const { data: lenRows, error: updErr } = await supabase
             .from("participants")
             .update({ cycle_length_days: inferredLength, cycle_length_user_override: true })
-            .eq("id", participant.id);
+            .eq("id", participant.id)
+            .select("id");
 
-          if (!updErr) {
+          if (!updErr && (lenRows?.length ?? 0) > 0) {
             const { data: refreshed } = await supabase
               .from("participants").select("*").eq("id", participant.id).single();
             if (refreshed) participant = refreshed;
@@ -1838,18 +1920,21 @@ serve(async (req) => {
         todayLocal.setUTCDate(todayLocal.getUTCDate() - (targetDay - 1));
         const formattedDate = todayLocal.toISOString().split("T")[0];
 
-        const { error: updErr } = await supabase
+        const { data: updRows, error: updErr } = await supabase
           .from("participants")
           .update({ last_period_start: formattedDate })
-          .eq("id", participant.id);
+          .eq("id", participant.id)
+          .select("id");
 
-        if (!updErr) {
+        if (!updErr && (updRows?.length ?? 0) > 0) {
           const { data: refreshed } = await supabase
             .from("participants").select("*").eq("id", participant.id).single();
           if (refreshed) participant = refreshed;
 
           const updatedCycleInfo = calculateCycleInfo(formattedDate, cycLen, tz);
-          const msg = `Got it — logging you as **${updatedCycleInfo.phase}** (around Day ${updatedCycleInfo.cycleDay}). Updated everywhere. If you remember your actual last period start date, share it and I'll dial it in exactly.`;
+          const msg = statedDay !== null
+            ? `Got it — you're **Day ${updatedCycleInfo.cycleDay}, ${updatedCycleInfo.phase}**. Updated everywhere.`
+            : `Got it — logging you as **${updatedCycleInfo.phase}**, starting at **Day ${updatedCycleInfo.cycleDay}** (the first day of that phase). If you're further along, tell me the day and I'll fix it exactly.`;
 
           await supabase.from("chat_messages").insert({
             user_id: user.id,
@@ -1866,6 +1951,7 @@ serve(async (req) => {
               period_update: true,
               new_period_start: formattedDate,
               phase_declared: phaseLabel,
+              stated_day: statedDay,
             }
           });
 
@@ -1873,6 +1959,16 @@ serve(async (req) => {
             JSON.stringify({ success: true, message: msg, cycleInfo: updatedCycleInfo, periodUpdated: true }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
+        }
+
+        // Write failed — never confirm a change we didn't make.
+        {
+          const failMsg = "I couldn't save that change just now — nothing was updated on your record. Try again in a moment and I'll lock it in.";
+          await supabase.from("chat_messages").insert({
+            user_id: user.id, role: "assistant", content: failMsg, message_type: "text",
+            metadata: { phase_declared: phaseLabel, write_failed: true },
+          });
+          return new Response(JSON.stringify({ success: true, message: failMsg }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
       }
     }
