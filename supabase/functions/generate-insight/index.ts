@@ -246,7 +246,14 @@ serve(async (req) => {
       participant.timezone || "UTC",
       (participant as any).current_period_end_date ?? null,
       !!(participant as any).period_still_active,
+      {
+        menstruation_days: (participant as any).menstruation_days ?? null,
+        follicular_days: (participant as any).follicular_days ?? null,
+        ovulation_window_days: (participant as any).ovulation_window_days ?? null,
+        luteal_days: (participant as any).luteal_days ?? null,
+      },
     );
+
 
 
     if (!cycleInfo) {
