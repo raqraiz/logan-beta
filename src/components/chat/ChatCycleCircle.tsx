@@ -549,8 +549,12 @@ export function calculateCycleInfo(
   /** When true, the user has told Logan her period is still ongoing past the
    * default 5-day window — keep phase as Menstruation until she logs an end
    * date or starts a new cycle. */
-  periodStillActive?: boolean
+  periodStillActive?: boolean,
+  /** Per-user phase lengths. Falls back to the global prefs, then to the
+   * historical hardcoded defaults, per field. */
+  phaseLengths?: PhaseLengths | null
 ): { cycleDay: number; phase: string } | null {
+
   if (!lastPeriodStart || !cycleLengthDays) return null;
 
   // Parse date-only string safely: treat YYYY-MM-DD as noon UTC to avoid timezone shift
