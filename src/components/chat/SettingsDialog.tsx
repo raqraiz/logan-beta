@@ -51,6 +51,9 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
   const [onHormonalBc, setOnHormonalBc] = useState<boolean | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [cycleLen, setCycleLen] = useState<number>(28);
+  const [phaseLens, setPhaseLens] = useState<Required<PhaseLengths>>(() => defaultPhaseLengths(28));
+
 
   const handleDeleteAccount = async () => {
     setDeleting(true);
