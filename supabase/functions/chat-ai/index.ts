@@ -293,6 +293,11 @@ function detectSymptomMentions(text: string): { name: string; severity: number }
   return detected;
 }
 
+// Strips markdown syntax from a candidate symptom name before validation.
+function stripMarkdown(s: string): string {
+  return s.replace(/[`*_~#]/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").trim();
+}
+
 // Shared name validator for anything that becomes a symptom row — the chat
 // keyword path, the LLM extraction path (Pass 2), and the shared-library add.
 // Hoisted to module scope so all three enforce the identical contract.
@@ -3869,7 +3874,7 @@ serve(async (req) => {
         // names appearing in "add X, Y, and Z to ... library".
         const candidates: string[] = [];
         for (const m of replyText.matchAll(/`([^`\n]{2,50})`/g)) candidates.push(m[1]);
-        for (const m of replyText.matchAll(/["'“”‘’]([^"'“”‘’\n]{2,50})["'“”‘’]/g)) candidates.push(m[1]);
+        for (const m of replyText.matchAll(/["“”]([^"“”\n]{2,50})["“”]/g)) candidates.push(m[1]);
         const listMatch = replyText.match(/\badd(?:ing|ed)?\s+([^.?!\n]+?)\s+to\s+the\s+(?:shared\s+)?(?:symptom\s+)?library/i);
         if (listMatch) {
           const segment = listMatch[1].replace(/\band\b/gi, ",");
@@ -3903,9 +3908,8 @@ serve(async (req) => {
         const seen = new Set<string>();
         const toAdd: string[] = [];
         for (const raw of candidates) {
-          const name = raw.trim().toLowerCase().replace(/\s+/g, " ");
-          if (name.length < 2 || name.length > 50) continue;
-          if (!/[a-z]/i.test(name)) continue;
+          const name = stripMarkdown(raw).trim().toLowerCase().replace(/\s+/g, " ");
+          if (!isValidSymptomName(name)) continue;
           // Skip generic words that aren't symptoms
           if (/^(?:the|a|an|them|those|these|it|this|that|some|any|new|symptom|symptoms|library|home|log|track|tracker|trackers|things|stuff)$/i.test(name)) continue;
           if (seen.has(name) || known.has(name)) continue;
