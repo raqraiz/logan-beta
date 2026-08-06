@@ -11,6 +11,7 @@ import { calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import { cleanSymptomLabel, truncateAtWord } from "@/lib/symptomLabel";
 
 const SYMPTOM_CATEGORIES: { label: string; symptoms: string[] }[] = [
   {
@@ -543,7 +544,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                   {/* Shared (community) symptoms — grouped by category, collapsible, searchable */}
                   {(() => {
                     const sortedCs = [...communitySymptoms].sort((a, b) => a.name.localeCompare(b.name));
-                    const searchMatched = q ? sortedCs.filter(c => c.name.toLowerCase().includes(q)) : sortedCs;
+                    const searchMatched = q ? sortedCs.filter(c => cleanSymptomLabel(c.name).toLowerCase().includes(q)) : sortedCs;
                     // Split visible vs hidden for this user
                     const visibleCs = searchMatched.filter(c => !hiddenIds.has(c.id));
                     const hiddenCs = searchMatched.filter(c => hiddenIds.has(c.id));
@@ -611,14 +612,20 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                                 ? "bg-primary text-primary-foreground border-primary"
                                 : "bg-card/60 border-border/40 hover:border-primary/40 text-foreground/70"
                           )}
-                          title={isMine ? "You added this" : "Added by another user"}
+                          title={
+                            cleanSymptomLabel(cs.name) !== truncateAtWord(cleanSymptomLabel(cs.name))
+                              ? cleanSymptomLabel(cs.name)
+                              : isMine ? "You added this" : "Added by another user"
+                          }
                         >
                           <button
                             onClick={() => !inHiddenRow && toggleSymptom(cs.name)}
                             className="px-2.5 py-1 text-xs inline-flex items-center gap-1.5"
                             disabled={inHiddenRow}
                           >
-                            {cs.name}
+                            <span className="max-w-[14rem] truncate">
+                              {truncateAtWord(cleanSymptomLabel(cs.name))}
+                            </span>
                             {isRecent && !inHiddenRow && (
                               <span className={cn(
                                 "inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider px-1 py-0.5 rounded-full",
