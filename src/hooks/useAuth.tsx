@@ -28,8 +28,23 @@ const ensureProfile = async (user: User) => {
   if (!existingProfile) {
     // Strip ref_code — it's not a column on profiles; it's resolved to
     // referred_by by the backfill-attribution edge function.
-    const attribution = getAttribution();
+    // Priority: user_metadata (captured at signUp, survives cross-browser
+    // email confirmation) > localStorage (same-browser) > backfill (later).
+    const metaAttribution = getAttributionFromUserMetadata(user.user_metadata);
+    const localAttribution = getAttribution();
+    if (
+      import.meta.env.DEV &&
+      metaAttribution?.utm_source &&
+      localAttribution?.utm_source &&
+      metaAttribution.utm_source !== localAttribution.utm_source
+    ) {
+      console.warn(
+        `attribution conflict: user_metadata=${metaAttribution.utm_source} localStorage=${localAttribution.utm_source}`
+      );
+    }
+    const attribution = metaAttribution ?? localAttribution;
     const { ref_code: _refCode, ...attributionForProfile } = attribution ?? {};
+
     const { error } = await supabase.from("profiles").upsert(
       {
         id: user.id,
