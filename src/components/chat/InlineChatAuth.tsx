@@ -98,6 +98,7 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
           options: {
             emailRedirectTo: `${window.location.origin}/`,
             data: { 
+              ...getSignupAttributionMetadata(),
               full_name: fullName.trim(),
               consent_given: true,
               consent_given_at: new Date().toISOString(),
