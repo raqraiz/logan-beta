@@ -153,7 +153,7 @@ const Auth = () => {
             password,
             options: {
               emailRedirectTo: `${window.location.origin}/admin`,
-              data: { timezone: detectedTimezone },
+              data: { timezone: detectedTimezone, ...getSignupAttributionMetadata() },
             },
           });
           if (error) {
