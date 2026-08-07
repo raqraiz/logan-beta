@@ -231,8 +231,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email,
       options: {
         emailRedirectTo: redirectUrl,
+        data: { ...getSignupAttributionMetadata() },
       },
     });
+
 
     return { error };
   };
