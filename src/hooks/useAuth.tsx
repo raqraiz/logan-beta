@@ -1,7 +1,12 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { User, Session, type EmailOtpType } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { backfillAttribution, getAttribution } from "@/lib/attribution";
+import {
+  backfillAttribution,
+  getAttribution,
+  getAttributionFromUserMetadata,
+  getSignupAttributionMetadata,
+} from "@/lib/attribution";
 
 interface AuthContextType {
   user: User | null;
