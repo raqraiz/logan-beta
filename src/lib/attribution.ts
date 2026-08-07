@@ -153,3 +153,33 @@ export const backfillAttribution = async (): Promise<void> => {
     console.warn("backfill-attribution invoke failed:", e);
   }
 };
+
+const METADATA_ATTRIBUTION_KEY = "logan_attribution_v1";
+const METADATA_ANON_ID_KEY = "logan_anon_id_v1";
+
+/**
+ * Attribution payload to pass into `options.data` (user_metadata) on
+ * signUp()/signInWithOtp(). Persists server-side in auth.users immediately,
+ * so it survives confirming the email in a different browser or app.
+ */
+export const getSignupAttributionMetadata = (): Record<string, unknown> => {
+  const meta: Record<string, unknown> = {};
+  try {
+    const attribution = getAttribution();
+    if (attribution) meta[METADATA_ATTRIBUTION_KEY] = attribution;
+    const anonId = getAnonId();
+    if (anonId) meta[METADATA_ANON_ID_KEY] = anonId;
+  } catch {
+    // best-effort
+  }
+  return meta;
+};
+
+/** Read the attribution payload previously stashed in user_metadata. */
+export const getAttributionFromUserMetadata = (
+  userMetadata: Record<string, unknown> | undefined | null
+): Attribution | null => {
+  const raw = userMetadata?.[METADATA_ATTRIBUTION_KEY];
+  if (!raw || typeof raw !== "object") return null;
+  return raw as Attribution;
+};
