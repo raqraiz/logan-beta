@@ -73,13 +73,20 @@ export const captureAttribution = (): void => {
     const hasRef = !!refCode;
 
     const anonId = getAnonId();
-    const existing = localStorage.getItem(STORAGE_KEY);
+    let existing: string | null = null;
+    try {
+      existing = localStorage.getItem(STORAGE_KEY);
+    } catch {
+      existing = null;
+    }
 
     // Log any UTM- or ref-bearing visit to the server, so even users who clear
-    // localStorage between visit and signup can be backfilled.
-    if ((hasUtm || hasRef) && anonId) {
+    // (or block) localStorage between visit and signup still leave a row with
+    // UTM data. When localStorage is blocked we mint a session-only anon id —
+    // it can never be linked back to a user, but the campaign data survives.
+    if (hasUtm || hasRef) {
       const event = {
-        anon_id: anonId,
+        anon_id: anonId || generateUuid(),
         utm_source: truncate(params.get("utm_source")),
         utm_medium: truncate(params.get("utm_medium")),
         utm_campaign: truncate(params.get("utm_campaign")),
@@ -145,4 +152,34 @@ export const backfillAttribution = async (): Promise<void> => {
   } catch (e) {
     console.warn("backfill-attribution invoke failed:", e);
   }
+};
+
+const METADATA_ATTRIBUTION_KEY = "logan_attribution_v1";
+const METADATA_ANON_ID_KEY = "logan_anon_id_v1";
+
+/**
+ * Attribution payload to pass into `options.data` (user_metadata) on
+ * signUp()/signInWithOtp(). Persists server-side in auth.users immediately,
+ * so it survives confirming the email in a different browser or app.
+ */
+export const getSignupAttributionMetadata = (): Record<string, unknown> => {
+  const meta: Record<string, unknown> = {};
+  try {
+    const attribution = getAttribution();
+    if (attribution) meta[METADATA_ATTRIBUTION_KEY] = attribution;
+    const anonId = getAnonId();
+    if (anonId) meta[METADATA_ANON_ID_KEY] = anonId;
+  } catch {
+    // best-effort
+  }
+  return meta;
+};
+
+/** Read the attribution payload previously stashed in user_metadata. */
+export const getAttributionFromUserMetadata = (
+  userMetadata: Record<string, unknown> | undefined | null
+): Attribution | null => {
+  const raw = userMetadata?.[METADATA_ATTRIBUTION_KEY];
+  if (!raw || typeof raw !== "object") return null;
+  return raw as Attribution;
 };
