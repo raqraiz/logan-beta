@@ -73,13 +73,20 @@ export const captureAttribution = (): void => {
     const hasRef = !!refCode;
 
     const anonId = getAnonId();
-    const existing = localStorage.getItem(STORAGE_KEY);
+    let existing: string | null = null;
+    try {
+      existing = localStorage.getItem(STORAGE_KEY);
+    } catch {
+      existing = null;
+    }
 
     // Log any UTM- or ref-bearing visit to the server, so even users who clear
-    // localStorage between visit and signup can be backfilled.
-    if ((hasUtm || hasRef) && anonId) {
+    // (or block) localStorage between visit and signup still leave a row with
+    // UTM data. When localStorage is blocked we mint a session-only anon id —
+    // it can never be linked back to a user, but the campaign data survives.
+    if (hasUtm || hasRef) {
       const event = {
-        anon_id: anonId,
+        anon_id: anonId || generateUuid(),
         utm_source: truncate(params.get("utm_source")),
         utm_medium: truncate(params.get("utm_medium")),
         utm_campaign: truncate(params.get("utm_campaign")),
