@@ -3648,7 +3648,10 @@ serve(async (req) => {
       for (const other of others) {
         for (const re of phasePatterns[other]) {
           const pattern = new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g");
-          assistantMessage = assistantMessage.replace(pattern, (match, offset: number, full: string) => {
+          assistantMessage = assistantMessage.replace(pattern, (...args: any[]) => {
+            const match = args[0] as string;
+            const offset = args[args.length - 2] as number;
+            const full = args[args.length - 1] as string;
             if (isComparative(full, offset)) {
               comparativeSkips.push(`${other}:${match}`);
               return match; // leave the contrast phase intact
@@ -3687,7 +3690,12 @@ serve(async (req) => {
       const wrongDays: number[] = [];
       assistantMessage = assistantMessage.replace(
         /\b(day\s*#?\s*)(\d{1,2})\b/gi,
-        (match, prefix: string, num: string, offset: number, full: string) => {
+        (...args: any[]) => {
+          const match = args[0] as string;
+          const prefix = args[1] as string;
+          const num = args[2] as string;
+          const offset = args[3] as number;
+          const full = args[4] as string;
           const n = parseInt(num, 10);
           if (n === canonicalDay) return match;
           // Skip ranges / non-current references: "day 1 of your period", "days 10-14",
