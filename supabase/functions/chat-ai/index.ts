@@ -3619,6 +3619,12 @@ serve(async (req) => {
     // Prevents phase drift on short affirmations ("yeah", "tell me more") where the
     // LLM sometimes leans on generic phase framing that disagrees with the injected
     // Current phase. Logs [phase_mismatch] so we can monitor frequency.
+    //
+    // EXCEPTION: a phase word inside a comparative/contrastive construction
+    // ("compared to those restless follicular nights", "unlike ovulation") is
+    // intentionally naming a DIFFERENT phase as the contrast point. Rewriting it
+    // to the canonical phase produces self-contradicting nonsense, so those
+    // occurrences are left alone and logged as [phase_guard_comparative_skip].
     if (cycleInfo?.phase) {
       const canonicalPhase = cycleInfo.phase as "Menstruation" | "Follicular" | "Ovulation" | "Luteal";
       const phasePatterns: Record<string, RegExp[]> = {
@@ -3627,16 +3633,29 @@ serve(async (req) => {
         Ovulation: [/\bovulation phase\b/gi, /\bovulation\b/gi, /\bovulatory phase\b/gi, /\bovulatory\b/gi],
         Luteal: [/\bluteal phase\b/gi, /\bluteal\b/gi],
       };
+      // "compared to", "unlike", "vs", "versus", "instead of", "rather than",
+      // "as opposed to", "not like" occurring within ~5 words before the match.
+      const COMPARATIVE_LEAD =
+        /\b(?:compared (?:to|with)|unlike|vs\.?|versus|instead of|rather than|as opposed to|not like|in contrast to|different from)\b(?:\W+\w+){0,5}\W*$/i;
+      const isComparative = (text: string, matchIndex: number) =>
+        COMPARATIVE_LEAD.test(text.slice(Math.max(0, matchIndex - 120), matchIndex));
+
       const others = (Object.keys(phasePatterns) as (keyof typeof phasePatterns)[])
         .filter((p) => p !== canonicalPhase);
       const originalMessage = assistantMessage;
       const mismatches: string[] = [];
+      const comparativeSkips: string[] = [];
       for (const other of others) {
         for (const re of phasePatterns[other]) {
-          if (re.test(assistantMessage)) {
+          const pattern = new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g");
+          assistantMessage = assistantMessage.replace(pattern, (match, offset: number, full: string) => {
+            if (isComparative(full, offset)) {
+              comparativeSkips.push(`${other}:${match}`);
+              return match; // leave the contrast phase intact
+            }
             mismatches.push(other);
-            assistantMessage = assistantMessage.replace(re, canonicalPhase);
-          }
+            return canonicalPhase;
+          });
         }
       }
       if (mismatches.length > 0) {
@@ -3649,7 +3668,47 @@ serve(async (req) => {
           rewritten: originalMessage !== assistantMessage,
         }));
       }
+      if (comparativeSkips.length > 0) {
+        console.warn("[phase_guard_comparative_skip]", JSON.stringify({
+          user_id: user?.id,
+          canonical_phase: canonicalPhase,
+          preserved: Array.from(new Set(comparativeSkips)),
+          user_message_preview: (userMessage || "").slice(0, 120),
+        }));
+      }
     }
+
+    // DAY GUARD: the LLM sometimes states a "day within phase" (or a textbook
+    // 28-day-derived number) as if it were the absolute cycle day. Any "Day N"
+    // in the reply must equal cycleInfo.cycleDay — rewrite the number in place
+    // so sentence flow is preserved, and log [cycle_day_mismatch] for auditing.
+    if (typeof cycleInfo?.cycleDay === "number" && cycleInfo.cycleDay > 0) {
+      const canonicalDay = cycleInfo.cycleDay;
+      const wrongDays: number[] = [];
+      assistantMessage = assistantMessage.replace(
+        /\b(day\s*#?\s*)(\d{1,2})\b/gi,
+        (match, prefix: string, num: string, offset: number, full: string) => {
+          const n = parseInt(num, 10);
+          if (n === canonicalDay) return match;
+          // Skip ranges / non-current references: "day 1 of your period", "days 10-14",
+          // "day 3 to day 5" — only correct standalone present-tense day claims.
+          const after = full.slice(offset + match.length, offset + match.length + 3);
+          if (/^\s*[-–—]\s*\d/.test(after)) return match;
+          wrongDays.push(n);
+          return `${prefix}${canonicalDay}`;
+        },
+      );
+      if (wrongDays.length > 0) {
+        console.warn("[cycle_day_mismatch]", JSON.stringify({
+          user_id: user?.id,
+          canonical_day: canonicalDay,
+          canonical_phase: cycleInfo.phase,
+          stated_days: Array.from(new Set(wrongDays)),
+          user_message_preview: (userMessage || "").slice(0, 120),
+        }));
+      }
+    }
+
 
     if (isCurrentSymptomQuestion || isCurrentSymptomNegation) {
       assistantMessage = stripFalseSymptomLoggingClaim(assistantMessage);
