@@ -3637,8 +3637,13 @@ serve(async (req) => {
       // "as opposed to", "not like" occurring within ~5 words before the match.
       const COMPARATIVE_LEAD =
         /\b(?:compared (?:to|with)|unlike|vs\.?|versus|instead of|rather than|as opposed to|not like|in contrast to|different from)\b(?:\W+\w+){0,5}\W*$/i;
-      const isComparative = (text: string, matchIndex: number) =>
-        COMPARATIVE_LEAD.test(text.slice(Math.max(0, matchIndex - 120), matchIndex));
+      const isComparative = (text: string, matchIndex: number) => {
+        let lead = text.slice(Math.max(0, matchIndex - 120), matchIndex);
+        // never look across a sentence boundary
+        const lastStop = Math.max(lead.lastIndexOf("."), lead.lastIndexOf("!"), lead.lastIndexOf("?"), lead.lastIndexOf("\n"));
+        if (lastStop >= 0) lead = lead.slice(lastStop + 1);
+        return COMPARATIVE_LEAD.test(lead);
+      };
 
       const others = (Object.keys(phasePatterns) as (keyof typeof phasePatterns)[])
         .filter((p) => p !== canonicalPhase);
