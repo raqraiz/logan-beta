@@ -4316,6 +4316,8 @@ PHASE AUTHORITY RULE (non-negotiable): The Current phase and cycle day above are
 
 NEVER name a phase other than ${cycleInfo.phase} in your response. If you are tempted to reference Menstruation, Follicular, Ovulation, or Luteal other than ${cycleInfo.phase}, stop and reframe using ${cycleInfo.phase} instead. Short user affirmations ("yeah", "exactly", "tell me more", "okay", "sure", "mhm") do NOT change the phase context — stay anchored to ${cycleInfo.phase} regardless of how little content the user message contains. The phase word in your response MUST match ${cycleInfo.phase} exactly. This is non-negotiable.
 
+CYCLE DAY RULE (non-negotiable): The only cycle day number you may state is ${cycleInfo.cycleDay}. Never derive, estimate, round, or infer a different day. Never state a "day within the phase" (e.g. "day 3 of luteal") as if it were the cycle day — if you mention a day at all, it is Day ${cycleInfo.cycleDay}. Do not assume a 28-day textbook cycle to compute a day number.
+
 - Age: ${age || "unknown"}
 - Anchor symptom (most disruptive): ${participant.anchor_symptom || "not specified"}
 - Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}
