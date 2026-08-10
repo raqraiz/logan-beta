@@ -408,6 +408,9 @@ serve(async (req) => {
         const { data: newParticipant, error: createError } = await supabase
           .from("participants")
           .insert({
+            // Service-role client => auth.uid() is NULL inside the
+            // participants_set_user_id trigger. Always set user_id explicitly.
+            user_id: user.id,
             full_name: userName || user.email?.split("@")[0] || "User",
             email: user.email,
             whatsapp_number: user.email || "web-user",

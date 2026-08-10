@@ -37,7 +37,8 @@ export async function updateParticipant(
     console.error("[participants] update affected 0 rows", { userId, payload });
     toast({
       title: label,
-      description: "We couldn't find your profile record. Please contact support.",
+      description:
+        "Your change didn't save because your cycle record isn't linked to your account yet. Try again in a moment — we're fixing this on our end.",
       variant: "destructive",
     });
     return false;
