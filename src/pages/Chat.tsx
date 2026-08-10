@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { setPhaseLengthPrefs } from "@/lib/phaseLengths";
