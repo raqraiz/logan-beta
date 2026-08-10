@@ -1588,9 +1588,12 @@ const Chat = () => {
                           from participant data; stored metadata is the fallback while
                           participant data loads (prevents flicker on initial open). */}
                       {message.metadata?.has_cycle_visual && message.metadata?.cycle_day && message.metadata?.cycle_phase && (() => {
-                        const liveDay = liveCycle?.day ?? (message.metadata.cycle_day as number);
-                        const livePhase = liveCycle?.phase ?? (message.metadata.cycle_phase as string);
-                        const liveLen = liveCycle?.len ?? ((message.metadata.cycle_length_days as number) || 28);
+                        // Only today's messages may show live values; older messages
+                        // keep the snapshot captured when they were generated.
+                        const live = isMessageFromToday(message.created_at) ? liveCycle : null;
+                        const liveDay = live?.day ?? (message.metadata.cycle_day as number);
+                        const livePhase = live?.phase ?? (message.metadata.cycle_phase as string);
+                        const liveLen = live?.len ?? ((message.metadata.cycle_length_days as number) || 28);
                         return (
                         <div className="mb-3">
                           {message.metadata.visual_type === "hormone_chart" ? (
