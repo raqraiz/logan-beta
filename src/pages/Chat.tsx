@@ -1663,12 +1663,14 @@ const Chat = () => {
                       )}
 
                       {/* Phase cheat sheet for proactive insights — between intro and question */}
-                      {message.role === "assistant" && message.metadata?.insight_type === "proactive" && message.metadata?.cycle_day && message.metadata?.cycle_phase && (
+                      {message.role === "assistant" && message.metadata?.insight_type === "proactive" && message.metadata?.cycle_day && message.metadata?.cycle_phase && (() => {
+                        const live = isMessageFromToday(message.created_at) ? liveCycle : null;
+                        return (
                         <div className="mt-3">
                           <PhaseCheatSheet
-                            phase={liveCycle?.phase ?? message.metadata.cycle_phase}
-                            cycleDay={liveCycle?.day ?? message.metadata.cycle_day}
-                            cycleLengthDays={liveCycle?.len ?? (message.metadata.cycle_length_days || 28)}
+                            phase={live?.phase ?? message.metadata.cycle_phase}
+                            cycleDay={live?.day ?? message.metadata.cycle_day}
+                            cycleLengthDays={live?.len ?? (message.metadata.cycle_length_days || 28)}
                             personalizedData={message.metadata.cheat_sheet as any || null}
                             onDimensionResponse={(dim, response) => handleCheatSheetResponse(message.id, dim, response)}
                             savedResponses={(message.metadata?.cheat_sheet_responses as Record<string, string>) || undefined}
