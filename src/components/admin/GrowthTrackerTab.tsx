@@ -22,11 +22,12 @@ const targetAt = (d: Date) => {
   return Math.round(START_COUNT + ((END_COUNT - START_COUNT) * days) / TOTAL_DAYS);
 };
 
-const toUTCDate = (s: string) => new Date(s + "T00:00:00Z");
-const todayUTCKey = () => {
-  const now = new Date();
-  return format(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())), "yyyy-MM-dd");
-};
+// Parse a yyyy-MM-dd key at noon UTC so local-timezone display never shifts the day.
+const toUTCDate = (s: string) => new Date(s + "T12:00:00Z");
+// Timezone-safe key: always the UTC calendar day of the given instant.
+const utcKey = (d: Date) => d.toISOString().slice(0, 10);
+const todayUTCKey = () => utcKey(new Date());
+
 
 export const GrowthTrackerTab = () => {
   const [signupsByDay, setSignupsByDay] = useState<Map<string, number>>(new Map());
