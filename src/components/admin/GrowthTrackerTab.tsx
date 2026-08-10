@@ -7,7 +7,7 @@ import {
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from "recharts";
 import { Loader2 } from "lucide-react";
-import { format, parseISO, differenceInDays, addDays } from "date-fns";
+import { format, differenceInDays, addDays } from "date-fns";
 
 const START_DATE = new Date(Date.UTC(2026, 6, 1)); // Jul 1 2026
 const END_DATE = new Date(Date.UTC(2027, 0, 1)); // Jan 1 2027
@@ -22,11 +22,12 @@ const targetAt = (d: Date) => {
   return Math.round(START_COUNT + ((END_COUNT - START_COUNT) * days) / TOTAL_DAYS);
 };
 
-const toUTCDate = (s: string) => new Date(s + "T00:00:00Z");
-const todayUTCKey = () => {
-  const now = new Date();
-  return format(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())), "yyyy-MM-dd");
-};
+// Parse a yyyy-MM-dd key at noon UTC so local-timezone display never shifts the day.
+const toUTCDate = (s: string) => new Date(s + "T12:00:00Z");
+// Timezone-safe key: always the UTC calendar day of the given instant.
+const utcKey = (d: Date) => d.toISOString().slice(0, 10);
+const todayUTCKey = () => utcKey(new Date());
+
 
 export const GrowthTrackerTab = () => {
   const [signupsByDay, setSignupsByDay] = useState<Map<string, number>>(new Map());
@@ -54,7 +55,7 @@ export const GrowthTrackerTab = () => {
     for (const p of profs ?? []) {
       if (!p.created_at) continue;
       const d = new Date(p.created_at);
-      const key = format(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())), "yyyy-MM-dd");
+      const key = utcKey(d);
       byDay.set(key, (byDay.get(key) ?? 0) + 1);
     }
     setSignupsByDay(byDay);
@@ -69,8 +70,8 @@ export const GrowthTrackerTab = () => {
     // Live cumulative actual per day from July 1 through today.
     const actualByDay = new Map<string, number>();
     let cumulative = baseline;
-    for (let d = new Date(START_DATE); format(d, "yyyy-MM-dd") <= today; d = addDays(d, 1)) {
-      const key = format(d, "yyyy-MM-dd");
+    for (let d = new Date(START_DATE); utcKey(d) <= today; d = addDays(d, 1)) {
+      const key = utcKey(d);
       cumulative += signupsByDay.get(key) ?? 0;
       actualByDay.set(key, cumulative);
     }
@@ -83,10 +84,10 @@ export const GrowthTrackerTab = () => {
     const points = new Map<string, { date: string; target: number; actual?: number; trend?: number }>();
 
     for (let d = new Date(START_DATE); d <= END_DATE; d = addDays(d, 7)) {
-      const key = format(d, "yyyy-MM-dd");
+      const key = utcKey(d);
       points.set(key, { date: key, target: targetAt(d) });
     }
-    const endKey = format(END_DATE, "yyyy-MM-dd");
+    const endKey = utcKey(END_DATE);
     points.set(endKey, { date: endKey, target: END_COUNT });
 
     for (const [key, val] of actualByDay.entries()) {
@@ -101,7 +102,7 @@ export const GrowthTrackerTab = () => {
     points.set(today, anchor);
 
     for (let d = addDays(toUTCDate(today), 7); d <= END_DATE; d = addDays(d, 7)) {
-      const key = format(d, "yyyy-MM-dd");
+      const key = utcKey(d);
       const days = differenceInDays(d, START_DATE);
       const trendVal = Math.round(baseline + dailyRate * days);
       const existing = points.get(key) ?? { date: key, target: targetAt(d) };
@@ -159,13 +160,13 @@ export const GrowthTrackerTab = () => {
               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
               <XAxis
                 dataKey="date"
-                tickFormatter={(v) => format(parseISO(v), "MMM d")}
+                tickFormatter={(v) => format(toUTCDate(v), "MMM d")}
                 tick={{ fontSize: 11 }}
               />
               <YAxis domain={[0, yMax]} tick={{ fontSize: 11 }} />
               <ChartTooltip
                 trigger="hover"
-                content={<ChartTooltipContent labelFormatter={(v) => format(parseISO(v as string), "MMM d, yyyy")} />}
+                content={<ChartTooltipContent labelFormatter={(v) => format(toUTCDate(v as string), "MMM d, yyyy")} />}
               />
               <Legend />
               <Line
