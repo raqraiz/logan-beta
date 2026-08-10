@@ -29,10 +29,48 @@ const utcKey = (d: Date) => d.toISOString().slice(0, 10);
 const todayUTCKey = () => utcKey(new Date());
 
 
+type DayActivity = {
+  dau: number;
+  wau: number;
+  msgsPerUser: number | null;
+  sessionsPerUser: number | null;
+};
+
+const SESSION_GAP_MS = 30 * 60 * 1000;
+const PAGE = 1000;
+
+// Paged fetch so we never silently truncate at Supabase's 1000-row default.
+const fetchAll = async <T,>(
+  table: "chat_messages" | "symptom_logs",
+  columns: string,
+  tsColumn: string,
+  since: string
+): Promise<T[]> => {
+  const out: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(columns)
+      .gte(tsColumn, since)
+      .order(tsColumn, { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) {
+      console.error(`Failed to load ${table} for growth activity:`, error);
+      break;
+    }
+    const rows = (data ?? []) as unknown as T[];
+    out.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return out;
+};
+
 export const GrowthTrackerTab = () => {
   const [signupsByDay, setSignupsByDay] = useState<Map<string, number>>(new Map());
   const [baseline, setBaseline] = useState<number>(START_COUNT);
   const [loading, setLoading] = useState(true);
+  const [activity, setActivity] = useState<Map<string, DayActivity>>(new Map());
+  const [activityLoading, setActivityLoading] = useState(true);
 
   const load = async () => {
     setLoading(true);
@@ -62,7 +100,95 @@ export const GrowthTrackerTab = () => {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  const loadActivity = async () => {
+    setActivityLoading(true);
+    const since = START_DATE.toISOString();
+
+    const [msgs, symptoms] = await Promise.all([
+      fetchAll<{ user_id: string; created_at: string }>(
+        "chat_messages",
+        "user_id, created_at",
+        "created_at",
+        since
+      ),
+      fetchAll<{ user_id: string; logged_at: string }>(
+        "symptom_logs",
+        "user_id, logged_at",
+        "logged_at",
+        since
+      ),
+    ]);
+
+    // day -> user -> sorted message timestamps
+    const msgsByDay = new Map<string, Map<string, number[]>>();
+    const activeByDay = new Map<string, Set<string>>();
+
+    const markActive = (key: string, userId: string) => {
+      if (!userId) return;
+      let set = activeByDay.get(key);
+      if (!set) { set = new Set(); activeByDay.set(key, set); }
+      set.add(userId);
+    };
+
+    for (const m of msgs) {
+      if (!m.created_at) continue;
+      const key = utcKey(new Date(m.created_at));
+      markActive(key, m.user_id);
+      let byUser = msgsByDay.get(key);
+      if (!byUser) { byUser = new Map(); msgsByDay.set(key, byUser); }
+      const arr = byUser.get(m.user_id) ?? [];
+      arr.push(new Date(m.created_at).getTime());
+      byUser.set(m.user_id, arr);
+    }
+
+    for (const s of symptoms) {
+      if (!s.logged_at) continue;
+      markActive(utcKey(new Date(s.logged_at)), s.user_id);
+    }
+
+    const dayKeys = Array.from(activeByDay.keys()).sort();
+    const result = new Map<string, DayActivity>();
+
+    for (const key of dayKeys) {
+      const active = activeByDay.get(key)!;
+      const dau = active.size;
+
+      // Rolling 7-day window ending on this day.
+      const windowStart = utcKey(addDays(toUTCDate(key), -6));
+      const wauSet = new Set<string>();
+      for (const [k, set] of activeByDay.entries()) {
+        if (k >= windowStart && k <= key) for (const u of set) wauSet.add(u);
+      }
+
+      const byUser = msgsByDay.get(key);
+      let totalMsgs = 0;
+      let totalSessions = 0;
+      if (byUser) {
+        for (const times of byUser.values()) {
+          totalMsgs += times.length;
+          times.sort((a, b) => a - b);
+          let sessions = times.length > 0 ? 1 : 0;
+          for (let i = 1; i < times.length; i++) {
+            if (times[i] - times[i - 1] >= SESSION_GAP_MS) sessions++;
+          }
+          totalSessions += sessions;
+        }
+      }
+
+      result.set(key, {
+        dau,
+        wau: wauSet.size,
+        msgsPerUser: dau > 0 ? totalMsgs / dau : null,
+        sessionsPerUser: dau > 0 ? totalSessions / dau : null,
+      });
+    }
+
+    setActivity(result);
+    setActivityLoading(false);
+  };
+
+  useEffect(() => { load(); loadActivity(); }, []);
+
 
   const { chartData, dailyRows, todayActual, todayKey } = useMemo(() => {
     const today = todayUTCKey();
@@ -239,22 +365,47 @@ export const GrowthTrackerTab = () => {
                   <TableHead>Date</TableHead>
                   <TableHead>Users</TableHead>
                   <TableHead>Target</TableHead>
+                  <TableHead>Active users</TableHead>
+                  <TableHead>Active this week</TableHead>
+                  <TableHead>Msgs/user</TableHead>
+                  <TableHead>Sessions/user</TableHead>
                   <TableHead className="text-right">Delta</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {dailyRows.map((r) => (
-                  <TableRow key={r.date}>
-                    <TableCell>{format(toUTCDate(r.date), "MMM d, yyyy")}</TableCell>
-                    <TableCell className="font-medium">{r.users}</TableCell>
-                    <TableCell className="text-muted-foreground">{r.target}</TableCell>
-                    <TableCell className={`text-right font-medium ${r.delta >= 0 ? "text-primary" : "text-muted-foreground"}`}>
-                      {fmtDelta(r.delta)}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {dailyRows.map((r) => {
+                  const a = activity.get(r.date);
+                  const cell = (value: string | number | null | undefined) =>
+                    activityLoading ? (
+                      <span className="inline-block h-4 w-8 rounded bg-muted animate-pulse align-middle" />
+                    ) : (
+                      <span>{value ?? "—"}</span>
+                    );
+                  const dau = a?.dau ?? 0;
+                  return (
+                    <TableRow key={r.date}>
+                      <TableCell>{format(toUTCDate(r.date), "MMM d, yyyy")}</TableCell>
+                      <TableCell className="font-medium">{r.users}</TableCell>
+                      <TableCell className="text-muted-foreground">{r.target}</TableCell>
+                      <TableCell className="font-medium">{cell(dau > 0 ? dau : null)}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {cell(dau > 0 ? a?.wau ?? null : null)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {cell(a?.msgsPerUser != null ? a.msgsPerUser.toFixed(1) : null)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {cell(a?.sessionsPerUser != null ? a.sessionsPerUser.toFixed(1) : null)}
+                      </TableCell>
+                      <TableCell className={`text-right font-medium ${r.delta >= 0 ? "text-primary" : "text-muted-foreground"}`}>
+                        {fmtDelta(r.delta)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
+
           )}
         </CardContent>
       </Card>
