@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { updateParticipant } from "@/lib/participantWrite";
-import { Loader2, Upload, Trash2 } from "lucide-react";
+import { Loader2, Upload, Trash2, FileText } from "lucide-react";
 import { HistoryImportDialog } from "./HistoryImportDialog";
 import { ProviderConnectCard } from "@/components/settings/ProviderConnectCard";
 import { ReferralCard } from "@/components/settings/ReferralCard";
@@ -485,6 +485,23 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
             </AlertDialogContent>
           </AlertDialog>
         </div>
+
+        <div className="border-t border-border/50 pt-4">
+          <Label className="text-sm font-medium mb-2 block">Legal</Label>
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+          >
+            <FileText className="w-4 h-4" /> Privacy Policy
+          </a>
+          <p className="text-xs text-muted-foreground mt-1">
+            How Logan collects, uses, and protects your data.
+          </p>
+        </div>
+
+
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
