@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { setPhaseLengthPrefs } from "@/lib/phaseLengths";
@@ -166,6 +166,18 @@ const Chat = () => {
     periodPendingSince: string | null;
     periodStillActive: boolean;
   } | null>(null);
+  // A message may only render live cycle values if it was created today (in the
+  // user's timezone). Older messages keep their stored per-message snapshot.
+  const isMessageFromToday = useCallback((createdAt?: string) => {
+    if (!createdAt) return false;
+    const tz = participantCycle?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    try {
+      const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" });
+      return fmt.format(new Date(createdAt)) === fmt.format(new Date());
+    } catch {
+      return new Date(createdAt).toDateString() === new Date().toDateString();
+    }
+  }, [participantCycle?.timezone]);
   const [showForecast, setShowForecast] = useState(false);
   
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -1588,9 +1600,12 @@ const Chat = () => {
                           from participant data; stored metadata is the fallback while
                           participant data loads (prevents flicker on initial open). */}
                       {message.metadata?.has_cycle_visual && message.metadata?.cycle_day && message.metadata?.cycle_phase && (() => {
-                        const liveDay = liveCycle?.day ?? (message.metadata.cycle_day as number);
-                        const livePhase = liveCycle?.phase ?? (message.metadata.cycle_phase as string);
-                        const liveLen = liveCycle?.len ?? ((message.metadata.cycle_length_days as number) || 28);
+                        // Only today's messages may show live values; older messages
+                        // keep the snapshot captured when they were generated.
+                        const live = isMessageFromToday(message.created_at) ? liveCycle : null;
+                        const liveDay = live?.day ?? (message.metadata.cycle_day as number);
+                        const livePhase = live?.phase ?? (message.metadata.cycle_phase as string);
+                        const liveLen = live?.len ?? ((message.metadata.cycle_length_days as number) || 28);
                         return (
                         <div className="mb-3">
                           {message.metadata.visual_type === "hormone_chart" ? (
@@ -1648,18 +1663,21 @@ const Chat = () => {
                       )}
 
                       {/* Phase cheat sheet for proactive insights — between intro and question */}
-                      {message.role === "assistant" && message.metadata?.insight_type === "proactive" && message.metadata?.cycle_day && message.metadata?.cycle_phase && (
+                      {message.role === "assistant" && message.metadata?.insight_type === "proactive" && message.metadata?.cycle_day && message.metadata?.cycle_phase && (() => {
+                        const live = isMessageFromToday(message.created_at) ? liveCycle : null;
+                        return (
                         <div className="mt-3">
                           <PhaseCheatSheet
-                            phase={liveCycle?.phase ?? message.metadata.cycle_phase}
-                            cycleDay={liveCycle?.day ?? message.metadata.cycle_day}
-                            cycleLengthDays={liveCycle?.len ?? (message.metadata.cycle_length_days || 28)}
+                            phase={live?.phase ?? message.metadata.cycle_phase}
+                            cycleDay={live?.day ?? message.metadata.cycle_day}
+                            cycleLengthDays={live?.len ?? (message.metadata.cycle_length_days || 28)}
                             personalizedData={message.metadata.cheat_sheet as any || null}
                             onDimensionResponse={(dim, response) => handleCheatSheetResponse(message.id, dim, response)}
                             savedResponses={(message.metadata?.cheat_sheet_responses as Record<string, string>) || undefined}
                           />
                         </div>
-                      )}
+                        );
+                      })()}
 
                       {/* Engagement question after the cheat sheet */}
                       {message.metadata?.engagement_question && (
