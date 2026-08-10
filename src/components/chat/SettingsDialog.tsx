@@ -486,6 +486,23 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
           </AlertDialog>
         </div>
 
+        <div className="border-t border-border/50 pt-4">
+          <Label className="text-sm font-medium mb-2 block">Legal</Label>
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+          >
+            <FileText className="w-4 h-4" /> Privacy Policy
+          </a>
+          <p className="text-xs text-muted-foreground mt-1">
+            How Logan collects, uses, and protects your data.
+          </p>
+        </div>
+
+
+
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving}>
