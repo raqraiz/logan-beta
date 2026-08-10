@@ -1930,7 +1930,7 @@ const Chat = () => {
       </ScrollArea>
 
       {/* Scroll to bottom button */}
-      {showScrollButton && (
+      {showScrollButton && !settingsOpen && (
         <div className={`fixed right-4 md:right-8 ${shouldShowInteractivePicker() ? "bottom-20" : isOnboarding ? "bottom-28" : "bottom-40"} z-[60]`}>
           <Button
             type="button"
