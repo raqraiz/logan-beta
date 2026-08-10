@@ -150,6 +150,18 @@ const Chat = () => {
       len: cycleData.cycleLengthDays || 28,
     };
   }, [cycleData]);
+  // A message may only render live cycle values if it was created today (in the
+  // user's timezone). Older messages keep their stored per-message snapshot.
+  const isMessageFromToday = useCallback((createdAt?: string) => {
+    if (!createdAt) return false;
+    const tz = participantCycle?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    try {
+      const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" });
+      return fmt.format(new Date(createdAt)) === fmt.format(new Date());
+    } catch {
+      return new Date(createdAt).toDateString() === new Date().toDateString();
+    }
+  }, [participantCycle?.timezone]);
   const [lifeStage, setLifeStage] = useState<"cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant">("cycling");
   const [postpartumStartDate, setPostpartumStartDate] = useState<string | null>(null);
   const [postpartumActive, setPostpartumActive] = useState<boolean>(false);
