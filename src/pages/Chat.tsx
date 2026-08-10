@@ -1676,7 +1676,8 @@ const Chat = () => {
                             savedResponses={(message.metadata?.cheat_sheet_responses as Record<string, string>) || undefined}
                           />
                         </div>
-                      )}
+                        );
+                      })()}
 
                       {/* Engagement question after the cheat sheet */}
                       {message.metadata?.engagement_question && (
