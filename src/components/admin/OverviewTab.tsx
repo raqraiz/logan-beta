@@ -550,7 +550,7 @@ export const OverviewTab = () => {
       setSessionsLoading(false);
     }
 
-  }, [fetchAllRows, getProfiles]);
+  }, [fetchAllRows, getProfiles, fromIso, toIso, rangeTo, rangeDayCount]);
 
   // ----- ADOPTION CHART (slowest — feature_events table) -----
   const loadAdoption = useCallback(async () => {
