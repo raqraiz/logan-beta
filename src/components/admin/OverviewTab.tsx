@@ -669,23 +669,18 @@ export const OverviewTab = () => {
   // Instant top-stats prefetch — cheap HEAD count queries so the stats row
   // shows numbers immediately, before the heavy row-by-row loaders finish.
   const loadFastCounts = useCallback(async () => {
-    const thirtyDaysAgoIso = subDays(new Date(), 30).toISOString();
-    const [usersRes, msgsRes, recentActivityRes] = await Promise.all([
-      supabase.from("profiles").select("*", { count: "exact", head: true }),
-      supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("role", "user"),
-      supabase.from("user_activity_events").select("*", { count: "exact", head: true })
-        .gte("created_at", thirtyDaysAgoIso),
+    const [usersRes, msgsRes] = await Promise.all([
+      supabase.from("profiles").select("*", { count: "exact", head: true })
+        .gte("created_at", fromIso).lte("created_at", toIso),
+      supabase.from("chat_messages").select("*", { count: "exact", head: true })
+        .eq("role", "user").gte("created_at", fromIso).lte("created_at", toIso),
     ]);
     setTotals(t => ({
       ...t,
       totalUsers: usersRes.count ?? t.totalUsers,
       totalMessages: msgsRes.count ?? t.totalMessages,
     }));
-    // Rough proxy for "activity in the last 30d" until the real session loader finishes.
-    if (recentActivityRes.count != null) {
-      setSessionTotals(s => s.totalSessions > 0 ? s : { ...s, totalSessions: recentActivityRes.count ?? 0 });
-    }
-  }, []);
+  }, [fromIso, toIso]);
 
   const refreshAll = useCallback(async () => {
     profilesPromiseRef.current = null;
