@@ -214,9 +214,11 @@ export const OverviewTab = () => {
   const [feedbackLoading, setFeedbackLoading] = useState(true);
   const [menuLoading, setMenuLoading] = useState(true);
 
-  // Date range filter — default: last 30 days (preserves previous behaviour)
+  // Date range filter — default: all time (earliest profile → now)
   const [rangeFrom, setRangeFrom] = useState<Date>(() => startOfDay(subDays(new Date(), 30)));
   const [rangeTo, setRangeTo] = useState<Date>(() => new Date());
+  const [earliestProfileDate, setEarliestProfileDate] = useState<Date | null>(null);
+  const [rangeReady, setRangeReady] = useState(false);
   const fromIso = useMemo(() => rangeFrom.toISOString(), [rangeFrom]);
   const toIso = useMemo(() => rangeTo.toISOString(), [rangeTo]);
   const rangeDayCount = useMemo(
@@ -320,6 +322,23 @@ export const OverviewTab = () => {
     }
     return profilesPromiseRef.current;
   }, []);
+
+  // All-time range helper: earliest profile → now
+  const applyAllTime = useCallback(async () => {
+    if (earliestProfileDate) {
+      setRangeFrom(earliestProfileDate);
+      setRangeTo(new Date());
+    } else {
+      const profiles = await getProfiles();
+      const earliest = profiles.length > 0
+        ? startOfDay(parseISO(profiles.reduce((min, p) => p.created_at < min ? p.created_at : min, profiles[0].created_at)))
+        : startOfDay(subDays(new Date(), 30));
+      setEarliestProfileDate(earliest);
+      setRangeFrom(earliest);
+      setRangeTo(new Date());
+    }
+  }, [earliestProfileDate, getProfiles]);
+
 
   // ----- ENGAGEMENT + DAILY ACTIVITY + LEADERBOARD -----
   const loadEngagement = useCallback(async () => {
@@ -696,7 +715,21 @@ export const OverviewTab = () => {
     loadAdoption();
   }, [loadFastCounts, loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
 
-  useEffect(() => { refreshAll(); }, [refreshAll]);
+  // Initialize default range to all time (earliest profile → now), then load data
+  useEffect(() => {
+    (async () => {
+      const profiles = await getProfiles();
+      const earliest = profiles.length > 0
+        ? startOfDay(parseISO(profiles.reduce((min, p) => p.created_at < min ? p.created_at : min, profiles[0].created_at)))
+        : startOfDay(subDays(new Date(), 30));
+      setEarliestProfileDate(earliest);
+      setRangeFrom(earliest);
+      setRangeTo(new Date());
+      setRangeReady(true);
+    })();
+  }, [getProfiles]);
+
+  useEffect(() => { if (rangeReady) refreshAll(); }, [refreshAll, rangeReady]);
 
   const activeTodayUsers = useMemo(() => {
     const start = startOfDay(new Date());
@@ -769,6 +802,13 @@ export const OverviewTab = () => {
             </Button>
           );
         })}
+        <Button
+          variant={earliestProfileDate && rangeFrom.getTime() === earliestProfileDate.getTime() ? "default" : "outline"}
+          size="sm"
+          onClick={applyAllTime}
+        >
+          All time
+        </Button>
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm">
