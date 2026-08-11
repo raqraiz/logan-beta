@@ -229,20 +229,6 @@ export const OverviewTab = () => {
     setRangeFrom(startOfDay(subDays(new Date(), days)));
     setRangeTo(new Date());
   };
-  const applyAllTime = useCallback(async () => {
-    if (earliestProfileDate) {
-      setRangeFrom(earliestProfileDate);
-      setRangeTo(new Date());
-    } else {
-      const profiles = await getProfiles();
-      const earliest = profiles.length > 0
-        ? startOfDay(parseISO(profiles.reduce((min, p) => p.created_at < min ? p.created_at : min, profiles[0].created_at)))
-        : startOfDay(subDays(new Date(), 30));
-      setEarliestProfileDate(earliest);
-      setRangeFrom(earliest);
-      setRangeTo(new Date());
-    }
-  }, [earliestProfileDate, getProfiles]);
 
   // Engagement state
   const [users, setUsers] = useState<UserEngagement[]>([]);
