@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -213,6 +214,20 @@ export const OverviewTab = () => {
   const [feedbackLoading, setFeedbackLoading] = useState(true);
   const [menuLoading, setMenuLoading] = useState(true);
 
+  // Date range filter — default: last 30 days (preserves previous behaviour)
+  const [rangeFrom, setRangeFrom] = useState<Date>(() => startOfDay(subDays(new Date(), 30)));
+  const [rangeTo, setRangeTo] = useState<Date>(() => new Date());
+  const fromIso = useMemo(() => rangeFrom.toISOString(), [rangeFrom]);
+  const toIso = useMemo(() => rangeTo.toISOString(), [rangeTo]);
+  const rangeDayCount = useMemo(
+    () => Math.max(1, Math.min(365, Math.ceil((rangeTo.getTime() - rangeFrom.getTime()) / 86400000) + 1)),
+    [rangeFrom, rangeTo],
+  );
+  const applyPreset = (days: number) => {
+    setRangeFrom(startOfDay(subDays(new Date(), days)));
+    setRangeTo(new Date());
+  };
+
   // Engagement state
   const [users, setUsers] = useState<UserEngagement[]>([]);
   const [dailyActivity, setDailyActivity] = useState<DailyActivity[]>([]);
@@ -234,11 +249,9 @@ export const OverviewTab = () => {
   const [page, setPage] = useState(0);
   const [leaderboardPage, setLeaderboardPage] = useState(0);
   const [sessionTotals, setSessionTotals] = useState({
-    totalSessions: 0,
     avgDuration: 0,
     longestSession: 0,
     longestSessionUser: "",
-    peakHour: "",
   });
 
   // Features state
@@ -319,16 +332,22 @@ export const OverviewTab = () => {
           (from, to) => supabase.from("chat_messages")
             .select("user_id, created_at")
             .eq("role", "user")
+            .gte("created_at", fromIso)
+            .lte("created_at", toIso)
             .order("created_at", { ascending: true })
             .range(from, to),
-          () => supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("role", "user"),
+          () => supabase.from("chat_messages").select("*", { count: "exact", head: true })
+            .eq("role", "user").gte("created_at", fromIso).lte("created_at", toIso),
         ),
         fetchAllRows<{ user_id: string; created_at: string }>(
           (from, to) => supabase.from("user_activity_events")
             .select("user_id, created_at")
+            .gte("created_at", fromIso)
+            .lte("created_at", toIso)
             .order("created_at", { ascending: true })
             .range(from, to),
-          () => supabase.from("user_activity_events").select("*", { count: "exact", head: true }),
+          () => supabase.from("user_activity_events").select("*", { count: "exact", head: true })
+            .gte("created_at", fromIso).lte("created_at", toIso),
         ),
       ]);
       if (!profiles.length) return;
@@ -383,8 +402,8 @@ export const OverviewTab = () => {
       engagements.sort((a, b) => b.totalMessages - a.totalMessages);
 
       const dailyMap = new Map<string, { messages: number; users: Set<string> }>();
-      for (let i = 0; i < 30; i++) {
-        const d = format(subDays(now, i), "yyyy-MM-dd");
+      for (let i = 0; i < rangeDayCount; i++) {
+        const d = format(subDays(rangeTo, i), "yyyy-MM-dd");
         dailyMap.set(d, { messages: 0, users: new Set() });
       }
       for (const m of allChatMsgs) {
@@ -405,11 +424,16 @@ export const OverviewTab = () => {
         ? Math.round((daily.reduce((s, d) => s + d.activeUsers, 0) / daily.length) * 10) / 10
         : 0;
 
+      const newUsersInRange = profiles.filter((p: any) => {
+        const t = new Date(p.created_at).getTime();
+        return t >= rangeFrom.getTime() && t <= rangeTo.getTime();
+      }).length;
+
       setUsers(engagements);
       setLeaderboardPage(0);
       setDailyActivity(daily);
       setTotals({
-        totalUsers: profiles.length,
+        totalUsers: newUsersInRange,
         totalMessages: allChatMsgs.length,
         activeToday,
         activeThisWeek,
@@ -422,35 +446,34 @@ export const OverviewTab = () => {
     } finally {
       setEngagementLoading(false);
     }
-  }, [fetchAllRows, getProfiles]);
+  }, [fetchAllRows, getProfiles, fromIso, toIso, rangeFrom, rangeTo, rangeDayCount]);
 
-  // ----- SESSIONS (last 30 days only — server-side filter) -----
+  // ----- SESSIONS (selected date range — server-side filter) -----
   const loadSessions = useCallback(async () => {
     setSessionsLoading(true);
     try {
-      const now = new Date();
-      const thirtyDaysAgoIso = subDays(now, 30).toISOString();
-
       const [profiles, recentChat, recentActivity] = await Promise.all([
         getProfiles(),
         fetchAllRows<{ user_id: string; created_at: string }>(
           (from, to) => supabase.from("chat_messages")
             .select("user_id, created_at")
             .eq("role", "user")
-            .gte("created_at", thirtyDaysAgoIso)
+            .gte("created_at", fromIso)
+            .lte("created_at", toIso)
             .order("created_at", { ascending: true })
             .range(from, to),
           () => supabase.from("chat_messages").select("*", { count: "exact", head: true })
-            .eq("role", "user").gte("created_at", thirtyDaysAgoIso),
+            .eq("role", "user").gte("created_at", fromIso).lte("created_at", toIso),
         ),
         fetchAllRows<{ user_id: string; created_at: string }>(
           (from, to) => supabase.from("user_activity_events")
             .select("user_id, created_at")
-            .gte("created_at", thirtyDaysAgoIso)
+            .gte("created_at", fromIso)
+            .lte("created_at", toIso)
             .order("created_at", { ascending: true })
             .range(from, to),
           () => supabase.from("user_activity_events").select("*", { count: "exact", head: true })
-            .gte("created_at", thirtyDaysAgoIso),
+            .gte("created_at", fromIso).lte("created_at", toIso),
         ),
       ]);
       const profileMap = new Map(profiles.map((p: any) => [p.id, p]));
@@ -461,7 +484,6 @@ export const OverviewTab = () => {
         tsByUser.get(e.user_id)!.push(e.created_at);
       }
       const sessions: SessionRecord[] = [];
-      const hourCounts = new Array(24).fill(0);
       for (const [userId, timestamps] of tsByUser.entries()) {
         const sorted = timestamps.map(t => new Date(t).getTime()).sort();
         const profile: any = profileMap.get(userId);
@@ -476,7 +498,6 @@ export const OverviewTab = () => {
               startTime: new Date(sessionStart).toISOString(), endTime: new Date(sessionEnd).toISOString(),
               durationMin: dur, messageCount: msgCount,
             });
-            hourCounts[new Date(sessionStart).getHours()]++;
             sessionStart = sorted[i]; sessionEnd = sorted[i]; msgCount = 1;
           } else {
             sessionEnd = sorted[i]; msgCount++;
@@ -488,13 +509,12 @@ export const OverviewTab = () => {
           startTime: new Date(sessionStart).toISOString(), endTime: new Date(sessionEnd).toISOString(),
           durationMin: dur, messageCount: msgCount,
         });
-        hourCounts[new Date(sessionStart).getHours()]++;
       }
       sessions.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
 
       const sessionDailyMap = new Map<string, { sessions: number; totalDuration: number }>();
-      for (let i = 0; i < 30; i++) {
-        const d = format(subDays(now, i), "yyyy-MM-dd");
+      for (let i = 0; i < rangeDayCount; i++) {
+        const d = format(subDays(rangeTo, i), "yyyy-MM-dd");
         sessionDailyMap.set(d, { sessions: 0, totalDuration: 0 });
       }
       for (const s of sessions) {
@@ -512,8 +532,6 @@ export const OverviewTab = () => {
         }))
         .reverse();
 
-      const peakHourIdx = hourCounts.indexOf(Math.max(...hourCounts));
-      const peakHour = `${peakHourIdx.toString().padStart(2, "0")}:00`;
       const totalDuration = sessions.reduce((a, s) => a + s.durationMin, 0);
       const longestSession = sessions.length > 0 ? Math.max(...sessions.map(s => s.durationMin)) : 0;
       const longestRecord = sessions.find(s => s.durationMin === longestSession);
@@ -523,18 +541,17 @@ export const OverviewTab = () => {
       setExpandedIdx(null);
       setDailyStats(sessionDaily);
       setSessionTotals({
-        totalSessions: sessions.length,
         avgDuration: sessions.length > 0 ? Math.round(totalDuration / sessions.length) : 0,
         longestSession,
         longestSessionUser: longestRecord?.fullName || "",
-        peakHour,
       });
     } catch (err) {
       console.error("Sessions load error:", err);
     } finally {
       setSessionsLoading(false);
     }
-  }, [fetchAllRows, getProfiles]);
+
+  }, [fetchAllRows, getProfiles, fromIso, toIso, rangeTo, rangeDayCount]);
 
   // ----- ADOPTION CHART (slowest — feature_events table) -----
   const loadAdoption = useCallback(async () => {
@@ -653,23 +670,18 @@ export const OverviewTab = () => {
   // Instant top-stats prefetch — cheap HEAD count queries so the stats row
   // shows numbers immediately, before the heavy row-by-row loaders finish.
   const loadFastCounts = useCallback(async () => {
-    const thirtyDaysAgoIso = subDays(new Date(), 30).toISOString();
-    const [usersRes, msgsRes, recentActivityRes] = await Promise.all([
-      supabase.from("profiles").select("*", { count: "exact", head: true }),
-      supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("role", "user"),
-      supabase.from("user_activity_events").select("*", { count: "exact", head: true })
-        .gte("created_at", thirtyDaysAgoIso),
+    const [usersRes, msgsRes] = await Promise.all([
+      supabase.from("profiles").select("*", { count: "exact", head: true })
+        .gte("created_at", fromIso).lte("created_at", toIso),
+      supabase.from("chat_messages").select("*", { count: "exact", head: true })
+        .eq("role", "user").gte("created_at", fromIso).lte("created_at", toIso),
     ]);
     setTotals(t => ({
       ...t,
       totalUsers: usersRes.count ?? t.totalUsers,
       totalMessages: msgsRes.count ?? t.totalMessages,
     }));
-    // Rough proxy for "activity in the last 30d" until the real session loader finishes.
-    if (recentActivityRes.count != null) {
-      setSessionTotals(s => s.totalSessions > 0 ? s : { ...s, totalSessions: recentActivityRes.count ?? 0 });
-    }
-  }, []);
+  }, [fromIso, toIso]);
 
   const refreshAll = useCallback(async () => {
     profilesPromiseRef.current = null;
@@ -741,20 +753,62 @@ export const OverviewTab = () => {
       </div>
 
 
-      {/* Top stats: 7 engagement + 4 session = 11 cards */}
+      {/* Date range filter */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-muted-foreground uppercase tracking-wider mr-1">Range</span>
+        {[7, 30, 90].map((d) => {
+          const active = Math.abs(rangeDayCount - (d + 1)) <= 1;
+          return (
+            <Button
+              key={d}
+              variant={active ? "default" : "outline"}
+              size="sm"
+              onClick={() => applyPreset(d)}
+            >
+              {d}d
+            </Button>
+          );
+        })}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm">
+              {format(rangeFrom, "MMM d, yyyy")} — {format(rangeTo, "MMM d, yyyy")}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <div className="flex flex-col sm:flex-row">
+              <div className="p-2">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 pb-1">Start</p>
+                <Calendar
+                  mode="single"
+                  selected={rangeFrom}
+                  onSelect={(d) => d && setRangeFrom(startOfDay(d))}
+                  disabled={(d) => d > new Date()}
+                  className="p-3 pointer-events-auto"
+                />
+              </div>
+              <div className="p-2 border-t sm:border-t-0 sm:border-l border-border">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 pb-1">End</p>
+                <Calendar
+                  mode="single"
+                  selected={rangeTo}
+                  onSelect={(d) => d && setRangeTo(new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59))}
+                  disabled={(d) => d > new Date()}
+                  className="p-3 pointer-events-auto"
+                />
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* Top stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6 gap-3">
         <Card>
           <CardContent className="p-4 text-center">
             <Users className="w-5 h-5 mx-auto mb-1 text-primary" />
             <p className="text-2xl font-bold text-foreground">{totals.totalUsers}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Users</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <MessageSquare className="w-5 h-5 mx-auto mb-1 text-primary" />
-            <p className="text-2xl font-bold text-foreground">{totals.totalMessages}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Messages</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">New Users</p>
           </CardContent>
         </Card>
         <Popover>
@@ -794,9 +848,9 @@ export const OverviewTab = () => {
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <Clock className="w-5 h-5 mx-auto mb-1 text-orange-500" />
-            <p className="text-2xl font-bold text-foreground">{totals.avgSessionsPerUser}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Sessions/User</p>
+            <MessageSquare className="w-5 h-5 mx-auto mb-1 text-primary" />
+            <p className="text-2xl font-bold text-foreground">{totals.totalMessages}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Messages</p>
           </CardContent>
         </Card>
         <Card>
@@ -808,9 +862,9 @@ export const OverviewTab = () => {
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <Activity className="w-5 h-5 mx-auto mb-1 text-primary" />
-            <p className="text-2xl font-bold text-foreground">{sessionTotals.totalSessions}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Sessions (30d)</p>
+            <Clock className="w-5 h-5 mx-auto mb-1 text-orange-500" />
+            <p className="text-2xl font-bold text-foreground">{totals.avgSessionsPerUser}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Sessions/User</p>
           </CardContent>
         </Card>
         <Card>
@@ -838,13 +892,6 @@ export const OverviewTab = () => {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <Clock className="w-5 h-5 mx-auto mb-1 text-primary" />
-            <p className="text-2xl font-bold text-foreground">{sessionTotals.peakHour}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Peak Hour</p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Live online users */}
