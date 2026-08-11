@@ -333,16 +333,22 @@ export const OverviewTab = () => {
           (from, to) => supabase.from("chat_messages")
             .select("user_id, created_at")
             .eq("role", "user")
+            .gte("created_at", fromIso)
+            .lte("created_at", toIso)
             .order("created_at", { ascending: true })
             .range(from, to),
-          () => supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("role", "user"),
+          () => supabase.from("chat_messages").select("*", { count: "exact", head: true })
+            .eq("role", "user").gte("created_at", fromIso).lte("created_at", toIso),
         ),
         fetchAllRows<{ user_id: string; created_at: string }>(
           (from, to) => supabase.from("user_activity_events")
             .select("user_id, created_at")
+            .gte("created_at", fromIso)
+            .lte("created_at", toIso)
             .order("created_at", { ascending: true })
             .range(from, to),
-          () => supabase.from("user_activity_events").select("*", { count: "exact", head: true }),
+          () => supabase.from("user_activity_events").select("*", { count: "exact", head: true })
+            .gte("created_at", fromIso).lte("created_at", toIso),
         ),
       ]);
       if (!profiles.length) return;
