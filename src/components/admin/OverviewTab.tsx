@@ -802,6 +802,13 @@ export const OverviewTab = () => {
             </Button>
           );
         })}
+        <Button
+          variant={earliestProfileDate && rangeFrom.getTime() === earliestProfileDate.getTime() ? "default" : "outline"}
+          size="sm"
+          onClick={applyAllTime}
+        >
+          All time
+        </Button>
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm">
