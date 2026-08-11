@@ -248,11 +248,9 @@ export const OverviewTab = () => {
   const [page, setPage] = useState(0);
   const [leaderboardPage, setLeaderboardPage] = useState(0);
   const [sessionTotals, setSessionTotals] = useState({
-    totalSessions: 0,
     avgDuration: 0,
     longestSession: 0,
     longestSessionUser: "",
-    peakHour: "",
   });
 
   // Features state
