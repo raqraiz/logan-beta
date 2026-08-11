@@ -403,8 +403,8 @@ export const OverviewTab = () => {
       engagements.sort((a, b) => b.totalMessages - a.totalMessages);
 
       const dailyMap = new Map<string, { messages: number; users: Set<string> }>();
-      for (let i = 0; i < 30; i++) {
-        const d = format(subDays(now, i), "yyyy-MM-dd");
+      for (let i = 0; i < rangeDayCount; i++) {
+        const d = format(subDays(rangeTo, i), "yyyy-MM-dd");
         dailyMap.set(d, { messages: 0, users: new Set() });
       }
       for (const m of allChatMsgs) {
@@ -425,11 +425,16 @@ export const OverviewTab = () => {
         ? Math.round((daily.reduce((s, d) => s + d.activeUsers, 0) / daily.length) * 10) / 10
         : 0;
 
+      const newUsersInRange = profiles.filter((p: any) => {
+        const t = new Date(p.created_at).getTime();
+        return t >= rangeFrom.getTime() && t <= rangeTo.getTime();
+      }).length;
+
       setUsers(engagements);
       setLeaderboardPage(0);
       setDailyActivity(daily);
       setTotals({
-        totalUsers: profiles.length,
+        totalUsers: newUsersInRange,
         totalMessages: allChatMsgs.length,
         activeToday,
         activeThisWeek,
@@ -442,7 +447,7 @@ export const OverviewTab = () => {
     } finally {
       setEngagementLoading(false);
     }
-  }, [fetchAllRows, getProfiles]);
+  }, [fetchAllRows, getProfiles, fromIso, toIso, rangeFrom, rangeTo, rangeDayCount]);
 
   // ----- SESSIONS (last 30 days only — server-side filter) -----
   const loadSessions = useCallback(async () => {
