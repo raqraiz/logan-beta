@@ -752,20 +752,62 @@ export const OverviewTab = () => {
       </div>
 
 
-      {/* Top stats: 7 engagement + 4 session = 11 cards */}
+      {/* Date range filter */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-muted-foreground uppercase tracking-wider mr-1">Range</span>
+        {[7, 30, 90].map((d) => {
+          const active = Math.abs(rangeDayCount - (d + 1)) <= 1;
+          return (
+            <Button
+              key={d}
+              variant={active ? "default" : "outline"}
+              size="sm"
+              onClick={() => applyPreset(d)}
+            >
+              {d}d
+            </Button>
+          );
+        })}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm">
+              {format(rangeFrom, "MMM d, yyyy")} — {format(rangeTo, "MMM d, yyyy")}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <div className="flex flex-col sm:flex-row">
+              <div className="p-2">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 pb-1">Start</p>
+                <Calendar
+                  mode="single"
+                  selected={rangeFrom}
+                  onSelect={(d) => d && setRangeFrom(startOfDay(d))}
+                  disabled={(d) => d > new Date()}
+                  className="p-3 pointer-events-auto"
+                />
+              </div>
+              <div className="p-2 border-t sm:border-t-0 sm:border-l border-border">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 pb-1">End</p>
+                <Calendar
+                  mode="single"
+                  selected={rangeTo}
+                  onSelect={(d) => d && setRangeTo(new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59))}
+                  disabled={(d) => d > new Date()}
+                  className="p-3 pointer-events-auto"
+                />
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* Top stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6 gap-3">
         <Card>
           <CardContent className="p-4 text-center">
             <Users className="w-5 h-5 mx-auto mb-1 text-primary" />
             <p className="text-2xl font-bold text-foreground">{totals.totalUsers}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Users</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <MessageSquare className="w-5 h-5 mx-auto mb-1 text-primary" />
-            <p className="text-2xl font-bold text-foreground">{totals.totalMessages}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Messages</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">New Users</p>
           </CardContent>
         </Card>
         <Popover>
@@ -805,9 +847,9 @@ export const OverviewTab = () => {
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <Clock className="w-5 h-5 mx-auto mb-1 text-orange-500" />
-            <p className="text-2xl font-bold text-foreground">{totals.avgSessionsPerUser}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Sessions/User</p>
+            <MessageSquare className="w-5 h-5 mx-auto mb-1 text-primary" />
+            <p className="text-2xl font-bold text-foreground">{totals.totalMessages}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Messages</p>
           </CardContent>
         </Card>
         <Card>
@@ -819,9 +861,9 @@ export const OverviewTab = () => {
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <Activity className="w-5 h-5 mx-auto mb-1 text-primary" />
-            <p className="text-2xl font-bold text-foreground">{sessionTotals.totalSessions}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Sessions (30d)</p>
+            <Clock className="w-5 h-5 mx-auto mb-1 text-orange-500" />
+            <p className="text-2xl font-bold text-foreground">{totals.avgSessionsPerUser}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Sessions/User</p>
           </CardContent>
         </Card>
         <Card>
@@ -849,13 +891,6 @@ export const OverviewTab = () => {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <Clock className="w-5 h-5 mx-auto mb-1 text-primary" />
-            <p className="text-2xl font-bold text-foreground">{sessionTotals.peakHour}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Peak Hour</p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Live online users */}
