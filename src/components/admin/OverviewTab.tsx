@@ -715,7 +715,21 @@ export const OverviewTab = () => {
     loadAdoption();
   }, [loadFastCounts, loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
 
-  useEffect(() => { refreshAll(); }, [refreshAll]);
+  // Initialize default range to all time (earliest profile → now), then load data
+  useEffect(() => {
+    (async () => {
+      const profiles = await getProfiles();
+      const earliest = profiles.length > 0
+        ? startOfDay(parseISO(profiles.reduce((min, p) => p.created_at < min ? p.created_at : min, profiles[0].created_at)))
+        : startOfDay(subDays(new Date(), 30));
+      setEarliestProfileDate(earliest);
+      setRangeFrom(earliest);
+      setRangeTo(new Date());
+      setRangeReady(true);
+    })();
+  }, [getProfiles]);
+
+  useEffect(() => { if (rangeReady) refreshAll(); }, [refreshAll, rangeReady]);
 
   const activeTodayUsers = useMemo(() => {
     const start = startOfDay(new Date());
