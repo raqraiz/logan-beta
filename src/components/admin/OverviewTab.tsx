@@ -449,33 +449,32 @@ export const OverviewTab = () => {
     }
   }, [fetchAllRows, getProfiles, fromIso, toIso, rangeFrom, rangeTo, rangeDayCount]);
 
-  // ----- SESSIONS (last 30 days only — server-side filter) -----
+  // ----- SESSIONS (selected date range — server-side filter) -----
   const loadSessions = useCallback(async () => {
     setSessionsLoading(true);
     try {
-      const now = new Date();
-      const thirtyDaysAgoIso = subDays(now, 30).toISOString();
-
       const [profiles, recentChat, recentActivity] = await Promise.all([
         getProfiles(),
         fetchAllRows<{ user_id: string; created_at: string }>(
           (from, to) => supabase.from("chat_messages")
             .select("user_id, created_at")
             .eq("role", "user")
-            .gte("created_at", thirtyDaysAgoIso)
+            .gte("created_at", fromIso)
+            .lte("created_at", toIso)
             .order("created_at", { ascending: true })
             .range(from, to),
           () => supabase.from("chat_messages").select("*", { count: "exact", head: true })
-            .eq("role", "user").gte("created_at", thirtyDaysAgoIso),
+            .eq("role", "user").gte("created_at", fromIso).lte("created_at", toIso),
         ),
         fetchAllRows<{ user_id: string; created_at: string }>(
           (from, to) => supabase.from("user_activity_events")
             .select("user_id, created_at")
-            .gte("created_at", thirtyDaysAgoIso)
+            .gte("created_at", fromIso)
+            .lte("created_at", toIso)
             .order("created_at", { ascending: true })
             .range(from, to),
           () => supabase.from("user_activity_events").select("*", { count: "exact", head: true })
-            .gte("created_at", thirtyDaysAgoIso),
+            .gte("created_at", fromIso).lte("created_at", toIso),
         ),
       ]);
       const profileMap = new Map(profiles.map((p: any) => [p.id, p]));
