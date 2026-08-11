@@ -213,6 +213,20 @@ export const OverviewTab = () => {
   const [feedbackLoading, setFeedbackLoading] = useState(true);
   const [menuLoading, setMenuLoading] = useState(true);
 
+  // Date range filter — default: last 30 days (preserves previous behaviour)
+  const [rangeFrom, setRangeFrom] = useState<Date>(() => startOfDay(subDays(new Date(), 30)));
+  const [rangeTo, setRangeTo] = useState<Date>(() => new Date());
+  const fromIso = useMemo(() => rangeFrom.toISOString(), [rangeFrom]);
+  const toIso = useMemo(() => rangeTo.toISOString(), [rangeTo]);
+  const rangeDayCount = useMemo(
+    () => Math.max(1, Math.min(365, Math.ceil((rangeTo.getTime() - rangeFrom.getTime()) / 86400000) + 1)),
+    [rangeFrom, rangeTo],
+  );
+  const applyPreset = (days: number) => {
+    setRangeFrom(startOfDay(subDays(new Date(), days)));
+    setRangeTo(new Date());
+  };
+
   // Engagement state
   const [users, setUsers] = useState<UserEngagement[]>([]);
   const [dailyActivity, setDailyActivity] = useState<DailyActivity[]>([]);
