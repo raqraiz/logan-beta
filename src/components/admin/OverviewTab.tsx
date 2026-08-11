@@ -485,7 +485,6 @@ export const OverviewTab = () => {
         tsByUser.get(e.user_id)!.push(e.created_at);
       }
       const sessions: SessionRecord[] = [];
-      const hourCounts = new Array(24).fill(0);
       for (const [userId, timestamps] of tsByUser.entries()) {
         const sorted = timestamps.map(t => new Date(t).getTime()).sort();
         const profile: any = profileMap.get(userId);
@@ -500,7 +499,6 @@ export const OverviewTab = () => {
               startTime: new Date(sessionStart).toISOString(), endTime: new Date(sessionEnd).toISOString(),
               durationMin: dur, messageCount: msgCount,
             });
-            hourCounts[new Date(sessionStart).getHours()]++;
             sessionStart = sorted[i]; sessionEnd = sorted[i]; msgCount = 1;
           } else {
             sessionEnd = sorted[i]; msgCount++;
@@ -512,13 +510,12 @@ export const OverviewTab = () => {
           startTime: new Date(sessionStart).toISOString(), endTime: new Date(sessionEnd).toISOString(),
           durationMin: dur, messageCount: msgCount,
         });
-        hourCounts[new Date(sessionStart).getHours()]++;
       }
       sessions.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
 
       const sessionDailyMap = new Map<string, { sessions: number; totalDuration: number }>();
-      for (let i = 0; i < 30; i++) {
-        const d = format(subDays(now, i), "yyyy-MM-dd");
+      for (let i = 0; i < rangeDayCount; i++) {
+        const d = format(subDays(rangeTo, i), "yyyy-MM-dd");
         sessionDailyMap.set(d, { sessions: 0, totalDuration: 0 });
       }
       for (const s of sessions) {
@@ -536,8 +533,6 @@ export const OverviewTab = () => {
         }))
         .reverse();
 
-      const peakHourIdx = hourCounts.indexOf(Math.max(...hourCounts));
-      const peakHour = `${peakHourIdx.toString().padStart(2, "0")}:00`;
       const totalDuration = sessions.reduce((a, s) => a + s.durationMin, 0);
       const longestSession = sessions.length > 0 ? Math.max(...sessions.map(s => s.durationMin)) : 0;
       const longestRecord = sessions.find(s => s.durationMin === longestSession);
@@ -547,17 +542,16 @@ export const OverviewTab = () => {
       setExpandedIdx(null);
       setDailyStats(sessionDaily);
       setSessionTotals({
-        totalSessions: sessions.length,
         avgDuration: sessions.length > 0 ? Math.round(totalDuration / sessions.length) : 0,
         longestSession,
         longestSessionUser: longestRecord?.fullName || "",
-        peakHour,
       });
     } catch (err) {
       console.error("Sessions load error:", err);
     } finally {
       setSessionsLoading(false);
     }
+
   }, [fetchAllRows, getProfiles]);
 
   // ----- ADOPTION CHART (slowest — feature_events table) -----
