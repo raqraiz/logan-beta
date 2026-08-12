@@ -235,46 +235,27 @@ export const GrowthTrackerTab = () => {
                   <TableHead>Date</TableHead>
                   <TableHead>Users</TableHead>
                   <TableHead>Target</TableHead>
-                  <TableHead>Active users</TableHead>
-                  <TableHead>Active this week</TableHead>
-                  <TableHead>Msgs/user</TableHead>
-                  <TableHead>Sessions/user</TableHead>
-                  <TableHead className="text-right">Delta</TableHead>
+                  <TableHead>Delta</TableHead>
+                  <TableHead className="text-right">New Users Today</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {dailyRows.map((r) => {
-                  const a = activity.get(r.date);
-                  const cell = (value: string | number | null | undefined) =>
-                    activityLoading ? (
-                      <span className="inline-block h-4 w-8 rounded bg-muted animate-pulse align-middle" />
-                    ) : (
-                      <span>{value ?? "—"}</span>
-                    );
-                  const dau = a?.dau ?? 0;
-                  return (
-                    <TableRow key={r.date}>
-                      <TableCell>{format(toUTCDate(r.date), "MMM d, yyyy")}</TableCell>
-                      <TableCell className="font-medium">{r.users}</TableCell>
-                      <TableCell className="text-muted-foreground">{r.target}</TableCell>
-                      <TableCell className="font-medium">{cell(dau > 0 ? dau : null)}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {cell(dau > 0 ? a?.wau ?? null : null)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {cell(a?.msgsPerUser != null ? a.msgsPerUser.toFixed(1) : null)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {cell(a?.sessionsPerUser != null ? a.sessionsPerUser.toFixed(1) : null)}
-                      </TableCell>
-                      <TableCell className={`text-right font-medium ${r.delta >= 0 ? "text-primary" : "text-muted-foreground"}`}>
-                        {fmtDelta(r.delta)}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {dailyRows.map((r) => (
+                  <TableRow key={r.date}>
+                    <TableCell>{format(toUTCDate(r.date), "MMM d, yyyy")}</TableCell>
+                    <TableCell className="font-medium">{r.users}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.target}</TableCell>
+                    <TableCell className={`font-medium ${r.delta >= 0 ? "text-primary" : "text-muted-foreground"}`}>
+                      {fmtDelta(r.delta)}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {signupsByDay.get(r.date) ?? 0}
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
+
 
           )}
         </CardContent>
