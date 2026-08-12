@@ -1854,7 +1854,14 @@ serve(async (req) => {
         && extractStatedCycleDay(userMessage) !== null
         && !isHypotheticalPhase && !isQuestionPhase;
 
-      if ((phaseDeclMatch && !isHypotheticalPhase && !isQuestionPhase) || phaseUpdateRequest || (implicitPastPhaseCorrection && !isQuestionPhase) || dayOnlyWithPhaseInThread) {
+      // A long or emotionally-loaded message is never JUST a phase declaration.
+      // Reuse the same signal that suppresses the cycle visual, plus a length proxy.
+      // When true we still apply the phase state change, but skip the canned
+      // confirmation reply and fall through to normal LLM generation.
+      const phaseNarrativeMessage =
+        isEmotionalOrHeavyMessage(userMessage) || userMessage.trim().length > 150;
+
+      phaseBlock: if ((phaseDeclMatch && !isHypotheticalPhase && !isQuestionPhase) || phaseUpdateRequest || (implicitPastPhaseCorrection && !isQuestionPhase) || dayOnlyWithPhaseInThread) {
         const declared = phaseDeclMatch?.[1]?.toLowerCase();
         const cycLen = participant.cycle_length_days;
         const ovDay = cycLen - 14;
@@ -1885,6 +1892,8 @@ serve(async (req) => {
 
 
         if (!phaseLabel) {
+          // Narrative message: don't hijack the turn with a clarifier.
+          if (phaseNarrativeMessage) break phaseBlock;
           return new Response(
             JSON.stringify({
               success: true,
@@ -1944,6 +1953,9 @@ serve(async (req) => {
             ).phase
           : null;
         if (calculatedPhaseNow === phaseLabel && (statedDay === null || statedDay === currentDay)) {
+          // Nothing to write — the record already matches. If the message carried
+          // real content beyond the declaration, let the model answer it.
+          if (phaseNarrativeMessage) break phaseBlock;
           const msg = `You're already logged as **${phaseLabel}** (Day ${currentDay}). I'm trusting your read — nothing to change.`;
           await supabase.from("chat_messages").insert({
             user_id: user.id, role: "assistant", content: msg, message_type: "text",
@@ -2007,6 +2019,10 @@ serve(async (req) => {
                 description: `User declared ${phaseLabel}; saved Day ${verified.cycleDay} (start ${participant.last_period_start}, bleed end ${(participant as any).current_period_end_date ?? "none"}, length ${participant.cycle_length_days}).`,
               });
 
+              // State is written and verified. For narrative messages, skip the
+              // canned confirmation and let the model reply to the real content.
+              if (phaseNarrativeMessage) break phaseBlock;
+
               const msg = statedDay !== null || preserveDayOne
                 ? `Got it — you're **Day ${verified.cycleDay}, ${verified.phase}**. Updated everywhere.`
                 : `Got it — logging you as **${verified.phase}**, starting at **Day ${verified.cycleDay}** (the first day of that phase). If you're further along, tell me the day and I'll fix it exactly.`;
@@ -2042,6 +2058,7 @@ serve(async (req) => {
 
         // Write failed or didn't produce the declared phase — never confirm a change we didn't make.
         {
+          if (phaseNarrativeMessage) break phaseBlock;
           const failMsg = `I couldn't lock in **${phaseLabel}** just now — nothing was changed on your record. Tell me the day you're on and I'll set it exactly.`;
           await supabase.from("chat_messages").insert({
             user_id: user.id, role: "assistant", content: failMsg, message_type: "text",
