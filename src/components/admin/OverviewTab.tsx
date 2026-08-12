@@ -828,7 +828,6 @@ export const OverviewTab = () => {
       }
 
       // Non-overlapping 7-day buckets aligned to range start; partial trailing week excluded.
-      const days = utcDayKeysBetween(rangeFrom, rangeTo);
       if (days.length >= 7) {
         const buckets: number[] = [];
         for (let i = 0; i + 7 <= days.length; i += 7) {
