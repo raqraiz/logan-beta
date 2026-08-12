@@ -3576,6 +3576,19 @@ serve(async (req) => {
       systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user is correcting or negating a symptom log. Do NOT log, note, track, or save the symptom mentioned in this correction. Do NOT treat it as today's lived symptom. Apologize briefly and clarify that you won't count that symptom from this message.`;
     }
 
+    // Emotional context persistence: a short follow-up right after an emotionally
+    // loaded turn is still part of that exchange. Keep the support framing and
+    // de-prioritise (for this turn only) the standing phase-coaching instruction.
+    const emotionalFollowUp = isEmotionalFollowUp(userMessage, recentMessages as any);
+    if (isEmotionalOrHeavyMessage(userMessage) || emotionalFollowUp) {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only) — EMOTIONAL CONTEXT ACTIVE: ${emotionalFollowUp
+        ? `The user's message is a short follow-up to the emotionally loaded thing she said moments ago. It is NOT a new topic. Read the last few turns and answer THAT situation specifically — the people, the conflict, the constraint she described.`
+        : `The user just shared something emotionally heavy. Respond to what she actually said.`
+      } This instruction OVERRIDES the standing guidance to reference her cycle phase and give phase-appropriate tips: for this turn, do NOT open with her cycle day, do NOT offer generic phase lifestyle advice (workouts, meals, macros, "lean into your energy"), and do NOT turn this into a physiology lesson. The PHASE AUTHORITY RULE still applies to any phase you DO mention (never contradict the current phase/day) — but mentioning the phase at all is optional here and should be at most one short line of validation, not the substance of the reply. Give a concrete, practical, human answer to her actual situation.`;
+    }
+
+
+
 
     // Smart truncation: keep first 10 (onboarding/profile context) + last 50 (recent conversation)
     const allMessages = (recentMessages || [])
