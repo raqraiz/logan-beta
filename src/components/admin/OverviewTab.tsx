@@ -917,10 +917,18 @@ export const OverviewTab = () => {
       </div>
 
       {/* Top stats */}
+      <TooltipProvider delayDuration={0}>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6 gap-3">
         <Card>
           <CardContent className="p-4 text-center">
             <Users className="w-5 h-5 mx-auto mb-1 text-primary" />
+            <p className="text-2xl font-bold text-foreground">{allTimeUsers ?? "—"}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Users</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <Users className="w-5 h-5 mx-auto mb-1 text-teal-500" />
             <p className="text-2xl font-bold text-foreground">{totals.totalUsers}</p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">New Users</p>
           </CardContent>
@@ -930,36 +938,83 @@ export const OverviewTab = () => {
             <Card className="cursor-pointer hover:border-primary/50 transition-colors">
               <CardContent className="p-4 text-center">
                 <Activity className="w-5 h-5 mx-auto mb-1 text-green-500" />
-                <p className="text-2xl font-bold text-foreground">{totals.activeToday}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active Today</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {activityLoading ? "…" : activeMetrics.activeToday}
+                </p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active Users</p>
               </CardContent>
             </Card>
           </PopoverTrigger>
           <PopoverContent className="w-64">
-            <UserListPopover userList={activeTodayUsers} label="Active Today" />
+            <UserListPopover userList={activeTodayUsers} label="Active today" />
           </PopoverContent>
         </Popover>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <BarChart3 className="w-5 h-5 mx-auto mb-1 text-teal-500" />
+            <p className="text-2xl font-bold text-foreground">
+              {activityLoading ? "…" : activeMetrics.avgDailyUsers}
+            </p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Daily Users</p>
+          </CardContent>
+        </Card>
         <Popover>
           <PopoverTrigger asChild>
             <Card className="cursor-pointer hover:border-primary/50 transition-colors">
               <CardContent className="p-4 text-center">
                 <TrendingUp className="w-5 h-5 mx-auto mb-1 text-blue-500" />
-                <p className="text-2xl font-bold text-foreground">{totals.activeThisWeek}</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {activityLoading ? "…" : activeMetrics.activeThisWeek}
+                </p>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active This Week</p>
               </CardContent>
             </Card>
           </PopoverTrigger>
           <PopoverContent className="w-64">
-            <UserListPopover userList={activeWeekUsers} label="Active This Week" />
+            <UserListPopover userList={activeWeekUsers} label="Active this week" />
           </PopoverContent>
         </Popover>
         <Card>
           <CardContent className="p-4 text-center">
-            <Users className="w-5 h-5 mx-auto mb-1 text-teal-500" />
-            <p className="text-2xl font-bold text-foreground">{totals.avgDailyUsers}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Daily Users</p>
+            <TrendingUp className="w-5 h-5 mx-auto mb-1 text-purple-500" />
+            <p className="text-2xl font-bold text-foreground">
+              {activityLoading ? "…" : activeMetrics.avgWeeklyUsers ?? "—"}
+            </p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Weekly Active Users</p>
           </CardContent>
         </Card>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card className="h-full cursor-help">
+              <CardContent className="p-4 text-center">
+                <MessageSquare className="w-5 h-5 mx-auto mb-1 text-purple-500" />
+                <p className="text-2xl font-bold text-foreground">
+                  {activityLoading ? "…" : activeMetrics.avgMsgsPerUser}
+                </p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Msgs/User</p>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Average messages per active user, per day — not cumulative.</p>
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card className="h-full cursor-help">
+              <CardContent className="p-4 text-center">
+                <Clock className="w-5 h-5 mx-auto mb-1 text-orange-500" />
+                <p className="text-2xl font-bold text-foreground">
+                  {activityLoading ? "…" : activeMetrics.avgSessionsPerUser}
+                </p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Sessions/User</p>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Average sessions per active user, per day — not cumulative.</p>
+          </TooltipContent>
+        </Tooltip>
         <Card>
           <CardContent className="p-4 text-center">
             <MessageSquare className="w-5 h-5 mx-auto mb-1 text-primary" />
@@ -967,46 +1022,9 @@ export const OverviewTab = () => {
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Messages</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <BarChart3 className="w-5 h-5 mx-auto mb-1 text-purple-500" />
-            <p className="text-2xl font-bold text-foreground">{totals.avgMessagesPerUser}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Msgs/User</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <Clock className="w-5 h-5 mx-auto mb-1 text-orange-500" />
-            <p className="text-2xl font-bold text-foreground">{totals.avgSessionsPerUser}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Sessions/User</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <Clock className="w-5 h-5 mx-auto mb-1 text-primary" />
-            <p className="text-2xl font-bold text-foreground">{sessionTotals.avgDuration}m</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Duration (Global)</p>
-          </CardContent>
-        </Card>
-        <TooltipProvider delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button type="button" className="text-left w-full h-full">
-                <Card className="h-full">
-                  <CardContent className="p-4 text-center">
-                    <TrendingUp className="w-5 h-5 mx-auto mb-1 text-primary" />
-                    <p className="text-2xl font-bold text-foreground">{sessionTotals.longestSession}m</p>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Longest Session</p>
-                  </CardContent>
-                </Card>
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{sessionTotals.longestSessionUser || "Unknown user"}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
       </div>
+      </TooltipProvider>
+
 
       {/* Live online users */}
       <Card className="border-accent/30 bg-accent/5">
