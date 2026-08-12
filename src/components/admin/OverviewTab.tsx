@@ -765,19 +765,72 @@ export const OverviewTab = () => {
 
   useEffect(() => { if (rangeReady) refreshAll(); }, [refreshAll, rangeReady]);
 
-  const activeTodayUsers = useMemo(() => {
-    const start = startOfDay(new Date());
-    return users
-      .filter((u) => u.lastActive && new Date(u.lastActive) >= start)
-      .sort((a, b) => new Date(b.lastActive!).getTime() - new Date(a.lastActive!).getTime());
-  }, [users]);
+  // Active-user metrics, all derived from the shared index so Overview and the
+  // Growth "Daily log" agree by construction.
+  const activeMetrics = useMemo(() => {
+    if (!activityIndex) {
+      return { activeTodayIds: new Set<string>(), activeToday: 0, activeThisWeek: 0, avgDailyUsers: 0, avgWeeklyUsers: null as number | null, avgMsgsPerUser: 0, avgSessionsPerUser: 0 };
+    }
+    const today = utcKey(new Date());
+    const activeTodayIds = activityIndex.getActiveUsersForDay(today);
+    const days = utcDayKeysBetween(rangeFrom, rangeTo);
+
+    const perDayActive = days.map((d) => activityIndex.getActiveUsersForDay(d).size);
+    const avgDailyUsers = perDayActive.length
+      ? Math.round((perDayActive.reduce((a, b) => a + b, 0) / perDayActive.length) * 10) / 10
+      : 0;
+
+    // Non-overlapping 7-day buckets aligned to range start; partial trailing week excluded.
+    let avgWeeklyUsers: number | null = null;
+    if (days.length >= 7) {
+      const buckets: number[] = [];
+      for (let i = 0; i + 7 <= days.length; i += 7) {
+        const set = new Set<string>();
+        for (const d of days.slice(i, i + 7)) {
+          for (const u of activityIndex.getActiveUsersForDay(d)) set.add(u);
+        }
+        buckets.push(set.size);
+      }
+      if (buckets.length) {
+        avgWeeklyUsers = Math.round((buckets.reduce((a, b) => a + b, 0) / buckets.length) * 10) / 10;
+      }
+    }
+
+    // Per-day ratio, then averaged across days (not cumulative).
+    const msgRatios: number[] = [];
+    const sessionRatios: number[] = [];
+    for (const d of days) {
+      const active = activityIndex.getActiveUsersForDay(d).size;
+      if (active === 0) continue;
+      msgRatios.push(activityIndex.getUserMessagesForDay(d) / active);
+      sessionRatios.push(activityIndex.getSessionsForDay(d) / active);
+    }
+    const mean = (arr: number[]) =>
+      arr.length ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : 0;
+
+    return {
+      activeTodayIds,
+      activeToday: activeTodayIds.size,
+      activeThisWeek: activityIndex.getActiveThisWeek(today).size,
+      avgDailyUsers,
+      avgWeeklyUsers,
+      avgMsgsPerUser: mean(msgRatios),
+      avgSessionsPerUser: mean(sessionRatios),
+    };
+  }, [activityIndex, rangeFrom, rangeTo]);
+
+  const activeTodayUsers = useMemo(
+    () => users.filter((u) => activeMetrics.activeTodayIds.has(u.userId)),
+    [users, activeMetrics],
+  );
 
   const activeWeekUsers = useMemo(() => {
-    const start = subDays(new Date(), 7);
-    return users
-      .filter((u) => u.lastActive && new Date(u.lastActive) >= start)
-      .sort((a, b) => new Date(b.lastActive!).getTime() - new Date(a.lastActive!).getTime());
-  }, [users]);
+    if (!activityIndex) return [];
+    const ids = activityIndex.getActiveThisWeek(utcKey(new Date()));
+    return users.filter((u) => ids.has(u.userId));
+  }, [users, activityIndex]);
+
+
 
 
 
