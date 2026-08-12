@@ -2019,6 +2019,10 @@ serve(async (req) => {
                 description: `User declared ${phaseLabel}; saved Day ${verified.cycleDay} (start ${participant.last_period_start}, bleed end ${(participant as any).current_period_end_date ?? "none"}, length ${participant.cycle_length_days}).`,
               });
 
+              // State is written and verified. For narrative messages, skip the
+              // canned confirmation and let the model reply to the real content.
+              if (phaseNarrativeMessage) break phaseBlock;
+
               const msg = statedDay !== null || preserveDayOne
                 ? `Got it — you're **Day ${verified.cycleDay}, ${verified.phase}**. Updated everywhere.`
                 : `Got it — logging you as **${verified.phase}**, starting at **Day ${verified.cycleDay}** (the first day of that phase). If you're further along, tell me the day and I'll fix it exactly.`;
