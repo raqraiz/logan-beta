@@ -1854,7 +1854,14 @@ serve(async (req) => {
         && extractStatedCycleDay(userMessage) !== null
         && !isHypotheticalPhase && !isQuestionPhase;
 
-      if ((phaseDeclMatch && !isHypotheticalPhase && !isQuestionPhase) || phaseUpdateRequest || (implicitPastPhaseCorrection && !isQuestionPhase) || dayOnlyWithPhaseInThread) {
+      // A long or emotionally-loaded message is never JUST a phase declaration.
+      // Reuse the same signal that suppresses the cycle visual, plus a length proxy.
+      // When true we still apply the phase state change, but skip the canned
+      // confirmation reply and fall through to normal LLM generation.
+      const phaseNarrativeMessage =
+        isEmotionalOrHeavyMessage(userMessage) || userMessage.trim().length > 150;
+
+      phaseBlock: if ((phaseDeclMatch && !isHypotheticalPhase && !isQuestionPhase) || phaseUpdateRequest || (implicitPastPhaseCorrection && !isQuestionPhase) || dayOnlyWithPhaseInThread) {
         const declared = phaseDeclMatch?.[1]?.toLowerCase();
         const cycLen = participant.cycle_length_days;
         const ovDay = cycLen - 14;
