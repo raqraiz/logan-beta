@@ -1953,6 +1953,9 @@ serve(async (req) => {
             ).phase
           : null;
         if (calculatedPhaseNow === phaseLabel && (statedDay === null || statedDay === currentDay)) {
+          // Nothing to write — the record already matches. If the message carried
+          // real content beyond the declaration, let the model answer it.
+          if (phaseNarrativeMessage) break phaseBlock;
           const msg = `You're already logged as **${phaseLabel}** (Day ${currentDay}). I'm trusting your read — nothing to change.`;
           await supabase.from("chat_messages").insert({
             user_id: user.id, role: "assistant", content: msg, message_type: "text",
