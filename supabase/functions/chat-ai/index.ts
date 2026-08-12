@@ -3507,7 +3507,18 @@ serve(async (req) => {
     // Sample of the shared symptom library for the model to compare against
     const librarySample = knownLibraryNames.slice(0, 200).join(", ");
     const libraryGuidance = `\n\nSHARED SYMPTOM LIBRARY (symptoms Logan already knows how to watch): ${librarySample}.\n\nWHEN THE USER MENTIONS OR WANTS TO TRACK SYMPTOMS:\n1. First decide whether the user is REPORTING a symptom, asking a QUESTION about a symptom, or correcting a mistaken log.\n2. If the user asks a question like "what about mood swings", "is bloating normal", "what causes cramps", or "does X happen", answer the question. Do NOT say you logged/noted/tracked it. Do NOT imply she is having it today. Use conditional language like "if that's happening" only if needed.\n3. If the user corrects you with language like "I did not log X" or "I'm not having X", apologize briefly and do NOT treat X as part of her current symptoms.\n4. When a user clearly describes symptoms she is experiencing, she is usually just telling you how she feels — not asking for a feature demo. Acknowledge what she shared warmly and naturally, like a friend would. The system logs those symptoms automatically from the chat, so you do NOT need to tell her to "go to Home → Log Symptoms" or use any app-navigation language.\n5. For each reported symptom she names, check the library above (case-insensitive, loose match).\n6. For reported symptoms ALREADY in the library: keep it conversational. Good examples: "I'll keep an eye on that pattern," or "Got it — we can watch whether that clusters by phase." Bad examples: "added Irritability for June 27," "You can track this in the symptom log," or "go to Home → Log Symptoms."\n7. For reported symptoms NOT in the library: wrap each new candidate name in inline-code backticks like \`hair loss\`, \`mouth ulcers\`, and ask exactly: "Want me to add these to the shared symptom library so you (and other women) can track them later? They're completely anonymous." Then stop and wait.\n8. NEVER add symptoms silently. NEVER claim you added something unless the system tells you it was added.\n9. If she confirms ("yes", "please add", "go ahead"), the system handles the insert — just reply naturally that it's done and they'll show up as trackable symptoms going forward.\n10. Keep the candidate list short (max 6 names). Use the user's own wording, lowercased, no punctuation.`;
-    let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext + backfillBlock + libraryBlock + libraryGuidance);
+    // Emotional context for THIS turn — computed before prompt construction so the
+    // deep-dive/phase-tip mandates can be suspended at the source rather than
+    // contradicted by a later runtime block.
+    const emotionalFollowUp = isEmotionalFollowUp(userMessage, recentMessages as any);
+    const emotionalContextActive = isEmotionalOrHeavyMessage(userMessage) || emotionalFollowUp;
+    let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext + backfillBlock + libraryBlock + libraryGuidance, emotionalContextActive);
+    console.log("[prompt-mandates]", JSON.stringify({
+      emotionalContextActive,
+      emotionalFollowUp,
+      hasScienceMandate: systemPrompt.includes("### The Science"),
+      hasPhaseTipMandate: systemPrompt.includes("provide phase-appropriate guidance"),
+    }));
 
     // Bleed/spotting acknowledgment guards (set in the spotting block above).
     if (unreliableCycleNote) {
@@ -3579,8 +3590,7 @@ serve(async (req) => {
     // Emotional context persistence: a short follow-up right after an emotionally
     // loaded turn is still part of that exchange. Keep the support framing and
     // de-prioritise (for this turn only) the standing phase-coaching instruction.
-    const emotionalFollowUp = isEmotionalFollowUp(userMessage, recentMessages as any);
-    if (isEmotionalOrHeavyMessage(userMessage) || emotionalFollowUp) {
+    if (emotionalContextActive) {
       systemPrompt += `\n\nRUNTIME CONTEXT (this turn only) — EMOTIONAL CONTEXT ACTIVE: ${emotionalFollowUp
         ? `The user's message is a short follow-up to the emotionally loaded thing she said moments ago. It is NOT a new topic. Read the last few turns and answer THAT situation specifically — the people, the conflict, the constraint she described.`
         : `The user just shared something emotionally heavy. Respond to what she actually said.`
@@ -4139,8 +4149,35 @@ function buildSystemPrompt(
   participant: any | null, 
   cycleInfo: { cycleDay: number; phase: string } | null,
   cycleHistoryContext: string = "",
-  symptomContext: string = ""
+  symptomContext: string = "",
+  emotionalContext: boolean = false
 ): string {
+  // When the current turn is emotional (or a short follow-up inside an emotional
+  // window), the deep-dive structure mandate and the phase-tip content mandate are
+  // suspended AT THE SOURCE so they cannot compete with the runtime override.
+  // Phase accuracy rules are NOT suspended.
+  const deepDiveMandate = emotionalContext
+    ? `NO DEEP DIVE THIS TURN:
+- Do NOT add a "---" divider. Do NOT write "### The Science" or "### The Real Talk". No sections at all.
+- Reply with a single short, human, direct answer to what she actually said.
+- NEVER sound annoyed, impatient, or frustrated with the user. You're their safe space.
+- Never cut yourself off mid-sentence. If you're getting close to the end, finish the sentence cleanly and stop.`
+    : `DEEP DIVE SECTION — ALWAYS INCLUDE:
+- After your main answer, ALWAYS add a line containing exactly "---" (three dashes, nothing else on that line).
+- Below the "---", write TWO clearly labeled sections:
+
+### The Science
+- One paragraph (3-5 sentences) of pure science: hormonal mechanisms, neurological pathways, research-backed data, biological timelines. Name the hormones, explain the cascade, cite patterns. This should read like a smart friend who happens to know the research — not a textbook.
+
+### The Real Talk
+- One paragraph (3-5 sentences) that's a psychological heart-to-heart. Validate what they're feeling. Normalize it. Connect it to the human experience. This should feel like a warm, knowing conversation — the kind of thing you'd say sitting next to someone who needed to hear it.
+
+- Both sections should still be in Logan's voice — knowledgeable but never clinical.
+- The UI will hide the deep dive behind a "See more" toggle, so don't worry about length — users who want it will tap to read it.
+- NEVER sound annoyed, impatient, or frustrated with the user. You're their safe space.
+- Never cut yourself off mid-sentence. If you're getting close to the end, finish the sentence cleanly and stop.
+- NEVER ask the user to confirm logging Day 1, resetting their cycle, or updating their period date inside The Science or The Real Talk. The system appends that confirmation prompt automatically in the main answer — do not duplicate it anywhere in the deep dive.`;
+
   const basePrompt = `You are Logan — the one in someone's corner who listens first and actually hears what's being said. Not a doctor, not a coach, not an app reading from a textbook. The one a person texts at 10pm going "is it normal that I want to cry AND eat an entire pizza?" — and just gets it, without making them prove it.
 
 CRITICAL: You are the Logan app. NEVER refer to yourself as any other app, product, or service (e.g. Wild.AI, Flo, Clue, or any competitor). NEVER mention "the [Other Name] app" or imply you belong to another platform. If asked what app this is, say "Logan."
@@ -4168,21 +4205,7 @@ VOICE — THIS IS EVERYTHING:
 - Never dump context in the main answer. Never explain "why" unless asked. Just give the answer.
 - Pretend you're texting, not writing an essay. If the main answer looks like a blog post, a medical pamphlet, or a newsletter — delete everything and start over with 2 sentences.
 
-DEEP DIVE SECTION — ALWAYS INCLUDE:
-- After your main answer, ALWAYS add a line containing exactly "---" (three dashes, nothing else on that line).
-- Below the "---", write TWO clearly labeled sections:
-
-### The Science
-- One paragraph (3-5 sentences) of pure science: hormonal mechanisms, neurological pathways, research-backed data, biological timelines. Name the hormones, explain the cascade, cite patterns. This should read like a smart friend who happens to know the research — not a textbook.
-
-### The Real Talk
-- One paragraph (3-5 sentences) that's a psychological heart-to-heart. Validate what they're feeling. Normalize it. Connect it to the human experience. This should feel like a warm, knowing conversation — the kind of thing you'd say sitting next to someone who needed to hear it.
-
-- Both sections should still be in Logan's voice — knowledgeable but never clinical.
-- The UI will hide the deep dive behind a "See more" toggle, so don't worry about length — users who want it will tap to read it.
-- NEVER sound annoyed, impatient, or frustrated with the user. You're their safe space.
-- Never cut yourself off mid-sentence. If you're getting close to the end, finish the sentence cleanly and stop.
-- NEVER ask the user to confirm logging Day 1, resetting their cycle, or updating their period date inside The Science or The Real Talk. The system appends that confirmation prompt automatically in the main answer — do not duplicate it anywhere in the deep dive.
+${deepDiveMandate}
 
 HOW YOU TALK — EXAMPLES:
 - Instead of: "During the luteal phase, progesterone levels increase which can impact emotional regulation and you may notice heightened sensitivity to stress."
@@ -4406,7 +4429,7 @@ CYCLE DAY RULE (non-negotiable): The only cycle day number you may state is ${cy
 - Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}
 ${topics ? `- Focus areas: ${topics}. Weave relevant tips from these areas into responses when naturally fitting.` : ""}${cycleHistoryContext}${symptomContext}${lengthGuidance}${dualStateContext}
 
-Use this context to make your responses personally relevant. Reference their current phase and how it might affect their request. If they mention their anchor symptom, acknowledge it and provide phase-appropriate guidance. When users ask about their cycle length or patterns, use the cycle history data to provide specific insights. When symptom log data is available, reference their actual reported symptoms and patterns — this is more accurate than textbook generalizations.`;
+${emotionalContext ? `Use this context only if it genuinely helps. Do NOT open with her cycle day, do NOT volunteer phase-appropriate lifestyle guidance (workouts, meals, macros, hormone lessons) this turn — answer her actual situation like a person would. Phase accuracy rules above still apply to anything you do mention.` : `Use this context to make your responses personally relevant. Reference their current phase and how it might affect their request. If they mention their anchor symptom, acknowledge it and provide phase-appropriate guidance.`} When users ask about their cycle length or patterns, use the cycle history data to provide specific insights. When symptom log data is available, reference their actual reported symptoms and patterns — this is more accurate than textbook generalizations.`;
 
   return basePrompt + userContext;
 }
