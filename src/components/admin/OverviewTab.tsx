@@ -786,19 +786,6 @@ export const OverviewTab = () => {
       {/* Date range filter */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-muted-foreground uppercase tracking-wider mr-1">Range</span>
-        {[7, 30, 90].map((d) => {
-          const active = Math.abs(rangeDayCount - (d + 1)) <= 1;
-          return (
-            <Button
-              key={d}
-              variant={active ? "default" : "outline"}
-              size="sm"
-              onClick={() => applyPreset(d)}
-            >
-              {d}d
-            </Button>
-          );
-        })}
         <Button
           variant={earliestProfileDate && rangeFrom.getTime() === earliestProfileDate.getTime() ? "default" : "outline"}
           size="sm"
