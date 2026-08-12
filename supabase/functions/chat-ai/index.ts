@@ -2058,6 +2058,7 @@ serve(async (req) => {
 
         // Write failed or didn't produce the declared phase — never confirm a change we didn't make.
         {
+          if (phaseNarrativeMessage) break phaseBlock;
           const failMsg = `I couldn't lock in **${phaseLabel}** just now — nothing was changed on your record. Tell me the day you're on and I'll set it exactly.`;
           await supabase.from("chat_messages").insert({
             user_id: user.id, role: "assistant", content: failMsg, message_type: "text",
