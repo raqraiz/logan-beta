@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const SESSION_GAP_MS = 30 * 60 * 1000;
 const PAGE = 1000;
+const CHUNK_DAYS = 14;
 
 /** Timezone-safe key: the UTC calendar day of the given instant. */
 export const utcKey = (d: Date) => d.toISOString().slice(0, 10);
@@ -19,7 +20,8 @@ export const toUTCDate = (s: string) => new Date(s + "T12:00:00Z");
 export const todayUTCKey = () => utcKey(new Date());
 const addDaysUTC = (d: Date, n: number) => new Date(d.getTime() + n * 86400000);
 
-// Paged fetch so we never silently truncate at the Data API's 1000-row default.
+// Paged fetch in time chunks so a single massive range query can't time out.
+// Each chunk is half-open [chunkStart, chunkEnd) to avoid duplicate rows.
 const fetchAll = async <T,>(
   table: "chat_messages" | "symptom_logs" | "profiles",
   columns: string,
@@ -27,20 +29,28 @@ const fetchAll = async <T,>(
   since: string,
 ): Promise<T[]> => {
   const out: T[] = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await supabase
-      .from(table)
-      .select(columns)
-      .gte(tsColumn, since)
-      .order(tsColumn, { ascending: true })
-      .range(from, from + PAGE - 1);
-    if (error) {
-      console.error(`Failed to load ${table} for activity index:`, error);
-      break;
+  const now = new Date();
+  let chunkStart = new Date(since);
+  while (chunkStart < now) {
+    let chunkEnd = addDaysUTC(chunkStart, CHUNK_DAYS);
+    if (chunkEnd > now) chunkEnd = new Date(now.getTime() + 1); // include current instant
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from(table)
+        .select(columns)
+        .gte(tsColumn, chunkStart.toISOString())
+        .lt(tsColumn, chunkEnd.toISOString())
+        .order(tsColumn, { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (error) {
+        console.error(`Failed to load ${table} chunk ${chunkStart.toISOString()}–${chunkEnd.toISOString()}:`, error);
+        break;
+      }
+      const rows = (data ?? []) as unknown as T[];
+      out.push(...rows);
+      if (rows.length < PAGE) break;
     }
-    const rows = (data ?? []) as unknown as T[];
-    out.push(...rows);
-    if (rows.length < PAGE) break;
+    chunkStart = chunkEnd;
   }
   return out;
 };
