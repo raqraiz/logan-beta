@@ -222,13 +222,10 @@ export const OverviewTab = () => {
   const fromIso = useMemo(() => rangeFrom.toISOString(), [rangeFrom]);
   const toIso = useMemo(() => rangeTo.toISOString(), [rangeTo]);
   const rangeDayCount = useMemo(
-    () => Math.max(1, Math.min(365, Math.ceil((rangeTo.getTime() - rangeFrom.getTime()) / 86400000) + 1)),
+    () => Math.max(1, Math.ceil((rangeTo.getTime() - rangeFrom.getTime()) / 86400000) + 1),
     [rangeFrom, rangeTo],
   );
-  const applyPreset = (days: number) => {
-    setRangeFrom(startOfDay(subDays(new Date(), days)));
-    setRangeTo(new Date());
-  };
+
 
   // Engagement state
   const [users, setUsers] = useState<UserEngagement[]>([]);
