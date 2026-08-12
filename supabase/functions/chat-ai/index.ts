@@ -3533,7 +3533,9 @@ serve(async (req) => {
     console.log("[prompt-mandates]", JSON.stringify({
       emotionalContextActive,
       emotionalFollowUp,
-      hasScienceMandate: systemPrompt.includes("### The Science"),
+      // Sentinel must be the mandate's own directive text — "### The Science" also
+      // appears inside the suppression instruction ("Do NOT write ### The Science").
+      hasScienceMandate: systemPrompt.includes("DEEP DIVE SECTION — ALWAYS INCLUDE"),
       hasPhaseTipMandate: systemPrompt.includes("provide phase-appropriate guidance"),
     }));
 
