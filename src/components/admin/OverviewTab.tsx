@@ -737,14 +737,17 @@ export const OverviewTab = () => {
     profilesPromiseRef.current = null;
     // 1) Instant counts so the top stats row paints immediately
     loadFastCounts();
+    loadAllTimeUsers();
     // 2) Fast/light loaders in parallel
     loadFeedback();
     loadMenu();
+    loadActivityIndex();
     // 3) Main heavy loaders — render top stats + sessions before adoption
     await Promise.all([loadEngagement(), loadSessions()]);
     // 4) Defer the slowest query (feature_events scan) so it stops competing
     loadAdoption();
-  }, [loadFastCounts, loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
+  }, [loadFastCounts, loadAllTimeUsers, loadActivityIndex, loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
+
 
   // Initialize default range to all time (earliest profile → now), then load data
   useEffect(() => {
