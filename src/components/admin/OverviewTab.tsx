@@ -781,85 +781,93 @@ export const OverviewTab = () => {
 
   useEffect(() => { if (rangeReady) refreshAll(); }, [refreshAll, rangeReady]);
 
-  // Active-user metrics, all derived from the shared index so Overview and the
-  // Growth "Daily log" agree by construction.
+  // Active-user metrics:
+  // - "Active Users" and "Active This Week" are fixed to today and come from
+  //   the rolling todayIndex (independent of the selected range).
+  // - Averages are computed from the range-scoped activityIndex.
   const activeMetrics = useMemo(() => {
-    if (!activityIndex) {
-      return { activeTodayIds: new Set<string>(), activeToday: 0, activeThisWeek: 0, avgDailyUsers: null as number | null, avgWeeklyUsers: null as number | null, avgMsgsPerUser: 0, avgSessionsPerUser: 0 };
-    }
     const today = utcKey(new Date());
-    const activeTodayIds = activityIndex.getActiveUsersForDay(today);
-    const days = utcDayKeysBetween(rangeFrom, rangeTo);
+    const activeTodayIds = todayIndex ? todayIndex.getActiveUsersForDay(today) : new Set<string>();
 
-    // Monthly-cycle average: only complete calendar months inside the range.
     let avgDailyUsers: number | null = null;
-    if (days.length > 0) {
-      const firstKey = days[0];
-      const lastKey = days[days.length - 1];
-      const monthlyAvgs: number[] = [];
-      let y = parseInt(firstKey.slice(0, 4), 10);
-      let m = parseInt(firstKey.slice(5, 7), 10) - 1;
-      const endY = parseInt(lastKey.slice(0, 4), 10);
-      const endM = parseInt(lastKey.slice(5, 7), 10) - 1;
-      while (true) {
-        const dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
-        const monthStart = `${String(y).padStart(4, "0")}-${String(m + 1).padStart(2, "0")}-01`;
-        const monthEnd = `${String(y).padStart(4, "0")}-${String(m + 1).padStart(2, "0")}-${String(dim).padStart(2, "0")}`;
-        if (monthStart >= firstKey && monthEnd <= lastKey) {
-          let sum = 0;
-          for (let d = 1; d <= dim; d++) {
-            const key = `${String(y).padStart(4, "0")}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-            sum += activityIndex.getActiveUsersForDay(key).size;
-          }
-          monthlyAvgs.push(sum / dim);
-        }
-        if (y === endY && m === endM) break;
-        m++;
-        if (m > 11) { m = 0; y++; }
-      }
-      if (monthlyAvgs.length > 0) {
-        avgDailyUsers = Math.round((monthlyAvgs.reduce((a, b) => a + b, 0) / monthlyAvgs.length) * 10) / 10;
-      }
-    }
-
-    // Non-overlapping 7-day buckets aligned to range start; partial trailing week excluded.
     let avgWeeklyUsers: number | null = null;
-    if (days.length >= 7) {
-      const buckets: number[] = [];
-      for (let i = 0; i + 7 <= days.length; i += 7) {
-        const set = new Set<string>();
-        for (const d of days.slice(i, i + 7)) {
-          for (const u of activityIndex.getActiveUsersForDay(d)) set.add(u);
-        }
-        buckets.push(set.size);
-      }
-      if (buckets.length) {
-        avgWeeklyUsers = Math.round((buckets.reduce((a, b) => a + b, 0) / buckets.length) * 10) / 10;
-      }
-    }
+    let avgMsgsPerUser = 0;
+    let avgSessionsPerUser = 0;
 
-    // Per-day ratio, then averaged across days (not cumulative).
-    const msgRatios: number[] = [];
-    const sessionRatios: number[] = [];
-    for (const d of days) {
-      const active = activityIndex.getActiveUsersForDay(d).size;
-      if (active === 0) continue;
-      msgRatios.push(activityIndex.getUserMessagesForDay(d) / active);
-      sessionRatios.push(activityIndex.getSessionsForDay(d) / active);
+    if (activityIndex) {
+      const days = utcDayKeysBetween(rangeFrom, rangeTo);
+
+      // Monthly-cycle average: only complete calendar months inside the range.
+      if (days.length > 0) {
+        const firstKey = days[0];
+        const lastKey = days[days.length - 1];
+        const monthlyAvgs: number[] = [];
+        let y = parseInt(firstKey.slice(0, 4), 10);
+        let m = parseInt(firstKey.slice(5, 7), 10) - 1;
+        const endY = parseInt(lastKey.slice(0, 4), 10);
+        const endM = parseInt(lastKey.slice(5, 7), 10) - 1;
+        while (true) {
+          const dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+          const monthStart = `${String(y).padStart(4, "0")}-${String(m + 1).padStart(2, "0")}-01`;
+          const monthEnd = `${String(y).padStart(4, "0")}-${String(m + 1).padStart(2, "0")}-${String(dim).padStart(2, "0")}`;
+          if (monthStart >= firstKey && monthEnd <= lastKey) {
+            let sum = 0;
+            for (let d = 1; d <= dim; d++) {
+              const key = `${String(y).padStart(4, "0")}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+              sum += activityIndex.getActiveUsersForDay(key).size;
+            }
+            monthlyAvgs.push(sum / dim);
+          }
+          if (y === endY && m === endM) break;
+          m++;
+          if (m > 11) { m = 0; y++; }
+        }
+        if (monthlyAvgs.length > 0) {
+          avgDailyUsers = Math.round((monthlyAvgs.reduce((a, b) => a + b, 0) / monthlyAvgs.length) * 10) / 10;
+        }
+      }
+
+      // Non-overlapping 7-day buckets aligned to range start; partial trailing week excluded.
+      const days = utcDayKeysBetween(rangeFrom, rangeTo);
+      if (days.length >= 7) {
+        const buckets: number[] = [];
+        for (let i = 0; i + 7 <= days.length; i += 7) {
+          const set = new Set<string>();
+          for (const d of days.slice(i, i + 7)) {
+            for (const u of activityIndex.getActiveUsersForDay(d)) set.add(u);
+          }
+          buckets.push(set.size);
+        }
+        if (buckets.length) {
+          avgWeeklyUsers = Math.round((buckets.reduce((a, b) => a + b, 0) / buckets.length) * 10) / 10;
+        }
+      }
+
+      // Per-day ratio, then averaged across days (not cumulative).
+      const msgRatios: number[] = [];
+      const sessionRatios: number[] = [];
+      for (const d of days) {
+        const active = activityIndex.getActiveUsersForDay(d).size;
+        if (active === 0) continue;
+        msgRatios.push(activityIndex.getUserMessagesForDay(d) / active);
+        sessionRatios.push(activityIndex.getSessionsForDay(d) / active);
+      }
+      const mean = (arr: number[]) =>
+        arr.length ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : 0;
+      avgMsgsPerUser = mean(msgRatios);
+      avgSessionsPerUser = mean(sessionRatios);
     }
-    const mean = (arr: number[]) =>
-      arr.length ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : 0;
 
     return {
       activeTodayIds,
       activeToday: activeTodayIds.size,
-      activeThisWeek: activityIndex.getActiveThisWeek(today).size,
+      activeThisWeek: todayIndex ? todayIndex.getActiveThisWeek(today).size : 0,
       avgDailyUsers,
       avgWeeklyUsers,
-      avgMsgsPerUser: mean(msgRatios),
-      avgSessionsPerUser: mean(sessionRatios),
+      avgMsgsPerUser,
+      avgSessionsPerUser,
     };
-  }, [activityIndex, rangeFrom, rangeTo]);
+  }, [todayIndex, activityIndex, rangeFrom, rangeTo]);
 
   const activeTodayUsers = useMemo(
     () => users.filter((u) => activeMetrics.activeTodayIds.has(u.userId)),
