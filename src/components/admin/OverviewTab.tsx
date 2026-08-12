@@ -981,7 +981,7 @@ export const OverviewTab = () => {
               <CardContent className="p-4 text-center">
                 <Activity className="w-5 h-5 mx-auto mb-1 text-green-500" />
                 <p className="text-2xl font-bold text-foreground">
-                  {activityLoading ? "…" : activeMetrics.activeToday}
+                  {todayIndexLoading ? "…" : activeMetrics.activeToday}
                 </p>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active Users</p>
               </CardContent>
@@ -1006,7 +1006,7 @@ export const OverviewTab = () => {
               <CardContent className="p-4 text-center">
                 <TrendingUp className="w-5 h-5 mx-auto mb-1 text-blue-500" />
                 <p className="text-2xl font-bold text-foreground">
-                  {activityLoading ? "…" : activeMetrics.activeThisWeek}
+                  {todayIndexLoading ? "…" : activeMetrics.activeThisWeek}
                 </p>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active This Week</p>
               </CardContent>
