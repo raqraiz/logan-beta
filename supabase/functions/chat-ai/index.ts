@@ -26,6 +26,46 @@ function cycleVisualMeta(userMessage: string) {
   return { has_cycle_visual: true, visual_type: "cycle_circle" } as const;
 }
 
+// A short, low-content follow-up ("what do I do", "and then?", "why") carries no
+// emotional keywords of its own, so isEmotionalOrHeavyMessage() returns false and
+// the standing phase-coaching instructions take over. Reuse the SAME length proxy
+// used elsewhere (<= 150 chars = not a narrative message) to detect these.
+function isShortFollowUp(text: string): boolean {
+  const t = (text || "").trim();
+  if (!t) return false;
+  return t.length <= 150 && t.split(/\s+/).filter(Boolean).length <= 20;
+}
+
+// Explicit topic-shift markers: if a short follow-up names a concrete new subject,
+// it is NOT a continuation of the emotional thread.
+function introducesNewTopic(text: string): boolean {
+  const t = (text || "").toLowerCase();
+  return /\b(dinner|lunch|breakfast|snack|recipe|meal|eat|eating|food|protein|calories|workout|exercise|gym|run|surf|training|weight|sleep|supplement|vitamin|cycle length|period start|log|track|symptom|widget|settings|subscription|credits|price|weather)\b/.test(t);
+}
+
+// Emotional context persists for a short window: if a recent user turn was
+// emotionally loaded and happened within EMOTIONAL_WINDOW_MS, a short follow-up
+// is still part of that exchange.
+const EMOTIONAL_WINDOW_MS = 10 * 60 * 1000;
+const EMOTIONAL_TURN_LOOKBACK = 2; // last 2 user turns
+
+function isEmotionalFollowUp(
+  userMessage: string,
+  priorMessages: { role: string; content: string; created_at: string }[] | null | undefined,
+): boolean {
+  if (!isShortFollowUp(userMessage) || introducesNewTopic(userMessage)) return false;
+  const priorUserTurns = (priorMessages || [])
+    .filter((m) => m.role === "user")
+    .slice(-EMOTIONAL_TURN_LOOKBACK);
+  if (priorUserTurns.length === 0) return false;
+  const now = Date.now();
+  return priorUserTurns.some((m) => {
+    const ts = new Date(m.created_at).getTime();
+    if (!Number.isFinite(ts) || now - ts > EMOTIONAL_WINDOW_MS) return false;
+    return isEmotionalOrHeavyMessage(m.content);
+  });
+}
+
 type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
 
 const LIFE_STAGES: LifeStage[] = ["cycling", "irregular", "postpartum", "menopause", "perimenopause", "pregnancy_loss", "pregnant"];
@@ -3535,6 +3575,19 @@ serve(async (req) => {
     if (isCurrentSymptomNegation) {
       systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user is correcting or negating a symptom log. Do NOT log, note, track, or save the symptom mentioned in this correction. Do NOT treat it as today's lived symptom. Apologize briefly and clarify that you won't count that symptom from this message.`;
     }
+
+    // Emotional context persistence: a short follow-up right after an emotionally
+    // loaded turn is still part of that exchange. Keep the support framing and
+    // de-prioritise (for this turn only) the standing phase-coaching instruction.
+    const emotionalFollowUp = isEmotionalFollowUp(userMessage, recentMessages as any);
+    if (isEmotionalOrHeavyMessage(userMessage) || emotionalFollowUp) {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only) — EMOTIONAL CONTEXT ACTIVE: ${emotionalFollowUp
+        ? `The user's message is a short follow-up to the emotionally loaded thing she said moments ago. It is NOT a new topic. Read the last few turns and answer THAT situation specifically — the people, the conflict, the constraint she described.`
+        : `The user just shared something emotionally heavy. Respond to what she actually said.`
+      } This instruction OVERRIDES the standing guidance to reference her cycle phase and give phase-appropriate tips: for this turn, do NOT open with her cycle day, do NOT offer generic phase lifestyle advice (workouts, meals, macros, "lean into your energy"), and do NOT turn this into a physiology lesson. The PHASE AUTHORITY RULE still applies to any phase you DO mention (never contradict the current phase/day) — but mentioning the phase at all is optional here and should be at most one short line of validation, not the substance of the reply. Give a concrete, practical, human answer to her actual situation.`;
+    }
+
+
 
 
     // Smart truncation: keep first 10 (onboarding/profile context) + last 50 (recent conversation)
