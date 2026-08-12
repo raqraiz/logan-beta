@@ -769,16 +769,42 @@ export const OverviewTab = () => {
   // Growth "Daily log" agree by construction.
   const activeMetrics = useMemo(() => {
     if (!activityIndex) {
-      return { activeTodayIds: new Set<string>(), activeToday: 0, activeThisWeek: 0, avgDailyUsers: 0, avgWeeklyUsers: null as number | null, avgMsgsPerUser: 0, avgSessionsPerUser: 0 };
+      return { activeTodayIds: new Set<string>(), activeToday: 0, activeThisWeek: 0, avgDailyUsers: null as number | null, avgWeeklyUsers: null as number | null, avgMsgsPerUser: 0, avgSessionsPerUser: 0 };
     }
     const today = utcKey(new Date());
     const activeTodayIds = activityIndex.getActiveUsersForDay(today);
     const days = utcDayKeysBetween(rangeFrom, rangeTo);
 
-    const perDayActive = days.map((d) => activityIndex.getActiveUsersForDay(d).size);
-    const avgDailyUsers = perDayActive.length
-      ? Math.round((perDayActive.reduce((a, b) => a + b, 0) / perDayActive.length) * 10) / 10
-      : 0;
+    // Monthly-cycle average: only complete calendar months inside the range.
+    let avgDailyUsers: number | null = null;
+    if (days.length > 0) {
+      const firstKey = days[0];
+      const lastKey = days[days.length - 1];
+      const monthlyAvgs: number[] = [];
+      let y = parseInt(firstKey.slice(0, 4), 10);
+      let m = parseInt(firstKey.slice(5, 7), 10) - 1;
+      const endY = parseInt(lastKey.slice(0, 4), 10);
+      const endM = parseInt(lastKey.slice(5, 7), 10) - 1;
+      while (true) {
+        const dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+        const monthStart = `${String(y).padStart(4, "0")}-${String(m + 1).padStart(2, "0")}-01`;
+        const monthEnd = `${String(y).padStart(4, "0")}-${String(m + 1).padStart(2, "0")}-${String(dim).padStart(2, "0")}`;
+        if (monthStart >= firstKey && monthEnd <= lastKey) {
+          let sum = 0;
+          for (let d = 1; d <= dim; d++) {
+            const key = `${String(y).padStart(4, "0")}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+            sum += activityIndex.getActiveUsersForDay(key).size;
+          }
+          monthlyAvgs.push(sum / dim);
+        }
+        if (y === endY && m === endM) break;
+        m++;
+        if (m > 11) { m = 0; y++; }
+      }
+      if (monthlyAvgs.length > 0) {
+        avgDailyUsers = Math.round((monthlyAvgs.reduce((a, b) => a + b, 0) / monthlyAvgs.length) * 10) / 10;
+      }
+    }
 
     // Non-overlapping 7-day buckets aligned to range start; partial trailing week excluded.
     let avgWeeklyUsers: number | null = null;
@@ -918,19 +944,12 @@ export const OverviewTab = () => {
 
       {/* Top stats */}
       <TooltipProvider delayDuration={0}>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8 gap-3">
         <Card>
           <CardContent className="p-4 text-center">
             <Users className="w-5 h-5 mx-auto mb-1 text-primary" />
             <p className="text-2xl font-bold text-foreground">{allTimeUsers ?? "—"}</p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Users</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <Users className="w-5 h-5 mx-auto mb-1 text-teal-500" />
-            <p className="text-2xl font-bold text-foreground">{totals.totalUsers}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">New Users</p>
           </CardContent>
         </Card>
         <Popover>
@@ -953,7 +972,7 @@ export const OverviewTab = () => {
           <CardContent className="p-4 text-center">
             <BarChart3 className="w-5 h-5 mx-auto mb-1 text-teal-500" />
             <p className="text-2xl font-bold text-foreground">
-              {activityLoading ? "…" : activeMetrics.avgDailyUsers}
+              {activityLoading ? "…" : activeMetrics.avgDailyUsers ?? "—"}
             </p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Daily Users</p>
           </CardContent>
@@ -980,7 +999,7 @@ export const OverviewTab = () => {
             <p className="text-2xl font-bold text-foreground">
               {activityLoading ? "…" : activeMetrics.avgWeeklyUsers ?? "—"}
             </p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Weekly Active Users</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Weekly Users</p>
           </CardContent>
         </Card>
         <Tooltip>
