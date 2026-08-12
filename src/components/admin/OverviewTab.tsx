@@ -22,6 +22,10 @@ import {
   Circle, ChevronDown, ChevronRight, MessageCircle, ChefHat,
 } from "lucide-react";
 import { format, subDays, startOfDay, parseISO, differenceInMinutes, eachWeekOfInterval } from "date-fns";
+import {
+  buildActivityIndex, utcKey, utcDayKeysBetween, type ActivityIndex,
+} from "@/lib/activeUsers";
+
 
 const SESSION_GAP_MS = 30 * 60 * 1000;
 const ITEMS_PER_PAGE = 10;
@@ -222,13 +226,10 @@ export const OverviewTab = () => {
   const fromIso = useMemo(() => rangeFrom.toISOString(), [rangeFrom]);
   const toIso = useMemo(() => rangeTo.toISOString(), [rangeTo]);
   const rangeDayCount = useMemo(
-    () => Math.max(1, Math.min(365, Math.ceil((rangeTo.getTime() - rangeFrom.getTime()) / 86400000) + 1)),
+    () => Math.max(1, Math.ceil((rangeTo.getTime() - rangeFrom.getTime()) / 86400000) + 1),
     [rangeFrom, rangeTo],
   );
-  const applyPreset = (days: number) => {
-    setRangeFrom(startOfDay(subDays(new Date(), days)));
-    setRangeTo(new Date());
-  };
+
 
   // Engagement state
   const [users, setUsers] = useState<UserEngagement[]>([]);
@@ -242,6 +243,13 @@ export const OverviewTab = () => {
     avgSessionsPerUser: 0,
     avgMessagesPerUser: 0,
   });
+
+  // Shared active-user index (src/lib/activeUsers.ts) — single source of truth
+  // for active-user counts, shared with the Growth "Daily log".
+  const [activityIndex, setActivityIndex] = useState<ActivityIndex | null>(null);
+  const [activityLoading, setActivityLoading] = useState(true);
+  const [allTimeUsers, setAllTimeUsers] = useState<number | null>(null);
+
 
   // Sessions state
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
@@ -702,18 +710,44 @@ export const OverviewTab = () => {
     }));
   }, [fromIso, toIso]);
 
+  // True all-time cumulative signups — never scoped by the range selector.
+  const loadAllTimeUsers = useCallback(async () => {
+    const { count } = await supabase.from("profiles").select("*", { count: "exact", head: true });
+    if (count != null) setAllTimeUsers(count);
+  }, []);
+
+  // ----- SHARED ACTIVE-USER INDEX -----
+  const loadActivityIndex = useCallback(async () => {
+    setActivityLoading(true);
+    try {
+      // Cover the selected range plus the fixed rolling-7-day "today" windows.
+      const since = new Date(Math.min(rangeFrom.getTime(), subDays(new Date(), 8).getTime()));
+      const index = await buildActivityIndex(startOfDay(since).toISOString());
+      setActivityIndex(index);
+    } catch (err) {
+      console.error("Activity index load error:", err);
+    } finally {
+      setActivityLoading(false);
+    }
+  }, [rangeFrom]);
+
+
+
   const refreshAll = useCallback(async () => {
     profilesPromiseRef.current = null;
     // 1) Instant counts so the top stats row paints immediately
     loadFastCounts();
+    loadAllTimeUsers();
     // 2) Fast/light loaders in parallel
     loadFeedback();
     loadMenu();
+    loadActivityIndex();
     // 3) Main heavy loaders — render top stats + sessions before adoption
     await Promise.all([loadEngagement(), loadSessions()]);
     // 4) Defer the slowest query (feature_events scan) so it stops competing
     loadAdoption();
-  }, [loadFastCounts, loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
+  }, [loadFastCounts, loadAllTimeUsers, loadActivityIndex, loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
+
 
   // Initialize default range to all time (earliest profile → now), then load data
   useEffect(() => {
@@ -731,19 +765,72 @@ export const OverviewTab = () => {
 
   useEffect(() => { if (rangeReady) refreshAll(); }, [refreshAll, rangeReady]);
 
-  const activeTodayUsers = useMemo(() => {
-    const start = startOfDay(new Date());
-    return users
-      .filter((u) => u.lastActive && new Date(u.lastActive) >= start)
-      .sort((a, b) => new Date(b.lastActive!).getTime() - new Date(a.lastActive!).getTime());
-  }, [users]);
+  // Active-user metrics, all derived from the shared index so Overview and the
+  // Growth "Daily log" agree by construction.
+  const activeMetrics = useMemo(() => {
+    if (!activityIndex) {
+      return { activeTodayIds: new Set<string>(), activeToday: 0, activeThisWeek: 0, avgDailyUsers: 0, avgWeeklyUsers: null as number | null, avgMsgsPerUser: 0, avgSessionsPerUser: 0 };
+    }
+    const today = utcKey(new Date());
+    const activeTodayIds = activityIndex.getActiveUsersForDay(today);
+    const days = utcDayKeysBetween(rangeFrom, rangeTo);
+
+    const perDayActive = days.map((d) => activityIndex.getActiveUsersForDay(d).size);
+    const avgDailyUsers = perDayActive.length
+      ? Math.round((perDayActive.reduce((a, b) => a + b, 0) / perDayActive.length) * 10) / 10
+      : 0;
+
+    // Non-overlapping 7-day buckets aligned to range start; partial trailing week excluded.
+    let avgWeeklyUsers: number | null = null;
+    if (days.length >= 7) {
+      const buckets: number[] = [];
+      for (let i = 0; i + 7 <= days.length; i += 7) {
+        const set = new Set<string>();
+        for (const d of days.slice(i, i + 7)) {
+          for (const u of activityIndex.getActiveUsersForDay(d)) set.add(u);
+        }
+        buckets.push(set.size);
+      }
+      if (buckets.length) {
+        avgWeeklyUsers = Math.round((buckets.reduce((a, b) => a + b, 0) / buckets.length) * 10) / 10;
+      }
+    }
+
+    // Per-day ratio, then averaged across days (not cumulative).
+    const msgRatios: number[] = [];
+    const sessionRatios: number[] = [];
+    for (const d of days) {
+      const active = activityIndex.getActiveUsersForDay(d).size;
+      if (active === 0) continue;
+      msgRatios.push(activityIndex.getUserMessagesForDay(d) / active);
+      sessionRatios.push(activityIndex.getSessionsForDay(d) / active);
+    }
+    const mean = (arr: number[]) =>
+      arr.length ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : 0;
+
+    return {
+      activeTodayIds,
+      activeToday: activeTodayIds.size,
+      activeThisWeek: activityIndex.getActiveThisWeek(today).size,
+      avgDailyUsers,
+      avgWeeklyUsers,
+      avgMsgsPerUser: mean(msgRatios),
+      avgSessionsPerUser: mean(sessionRatios),
+    };
+  }, [activityIndex, rangeFrom, rangeTo]);
+
+  const activeTodayUsers = useMemo(
+    () => users.filter((u) => activeMetrics.activeTodayIds.has(u.userId)),
+    [users, activeMetrics],
+  );
 
   const activeWeekUsers = useMemo(() => {
-    const start = subDays(new Date(), 7);
-    return users
-      .filter((u) => u.lastActive && new Date(u.lastActive) >= start)
-      .sort((a, b) => new Date(b.lastActive!).getTime() - new Date(a.lastActive!).getTime());
-  }, [users]);
+    if (!activityIndex) return [];
+    const ids = activityIndex.getActiveThisWeek(utcKey(new Date()));
+    return users.filter((u) => ids.has(u.userId));
+  }, [users, activityIndex]);
+
+
 
 
 
@@ -789,19 +876,6 @@ export const OverviewTab = () => {
       {/* Date range filter */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-muted-foreground uppercase tracking-wider mr-1">Range</span>
-        {[7, 30, 90].map((d) => {
-          const active = Math.abs(rangeDayCount - (d + 1)) <= 1;
-          return (
-            <Button
-              key={d}
-              variant={active ? "default" : "outline"}
-              size="sm"
-              onClick={() => applyPreset(d)}
-            >
-              {d}d
-            </Button>
-          );
-        })}
         <Button
           variant={earliestProfileDate && rangeFrom.getTime() === earliestProfileDate.getTime() ? "default" : "outline"}
           size="sm"
@@ -843,10 +917,18 @@ export const OverviewTab = () => {
       </div>
 
       {/* Top stats */}
+      <TooltipProvider delayDuration={0}>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6 gap-3">
         <Card>
           <CardContent className="p-4 text-center">
             <Users className="w-5 h-5 mx-auto mb-1 text-primary" />
+            <p className="text-2xl font-bold text-foreground">{allTimeUsers ?? "—"}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Users</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <Users className="w-5 h-5 mx-auto mb-1 text-teal-500" />
             <p className="text-2xl font-bold text-foreground">{totals.totalUsers}</p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">New Users</p>
           </CardContent>
@@ -856,36 +938,83 @@ export const OverviewTab = () => {
             <Card className="cursor-pointer hover:border-primary/50 transition-colors">
               <CardContent className="p-4 text-center">
                 <Activity className="w-5 h-5 mx-auto mb-1 text-green-500" />
-                <p className="text-2xl font-bold text-foreground">{totals.activeToday}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active Today</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {activityLoading ? "…" : activeMetrics.activeToday}
+                </p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active Users</p>
               </CardContent>
             </Card>
           </PopoverTrigger>
           <PopoverContent className="w-64">
-            <UserListPopover userList={activeTodayUsers} label="Active Today" />
+            <UserListPopover userList={activeTodayUsers} label="Active today" />
           </PopoverContent>
         </Popover>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <BarChart3 className="w-5 h-5 mx-auto mb-1 text-teal-500" />
+            <p className="text-2xl font-bold text-foreground">
+              {activityLoading ? "…" : activeMetrics.avgDailyUsers}
+            </p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Daily Users</p>
+          </CardContent>
+        </Card>
         <Popover>
           <PopoverTrigger asChild>
             <Card className="cursor-pointer hover:border-primary/50 transition-colors">
               <CardContent className="p-4 text-center">
                 <TrendingUp className="w-5 h-5 mx-auto mb-1 text-blue-500" />
-                <p className="text-2xl font-bold text-foreground">{totals.activeThisWeek}</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {activityLoading ? "…" : activeMetrics.activeThisWeek}
+                </p>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active This Week</p>
               </CardContent>
             </Card>
           </PopoverTrigger>
           <PopoverContent className="w-64">
-            <UserListPopover userList={activeWeekUsers} label="Active This Week" />
+            <UserListPopover userList={activeWeekUsers} label="Active this week" />
           </PopoverContent>
         </Popover>
         <Card>
           <CardContent className="p-4 text-center">
-            <Users className="w-5 h-5 mx-auto mb-1 text-teal-500" />
-            <p className="text-2xl font-bold text-foreground">{totals.avgDailyUsers}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Daily Users</p>
+            <TrendingUp className="w-5 h-5 mx-auto mb-1 text-purple-500" />
+            <p className="text-2xl font-bold text-foreground">
+              {activityLoading ? "…" : activeMetrics.avgWeeklyUsers ?? "—"}
+            </p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Weekly Active Users</p>
           </CardContent>
         </Card>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card className="h-full cursor-help">
+              <CardContent className="p-4 text-center">
+                <MessageSquare className="w-5 h-5 mx-auto mb-1 text-purple-500" />
+                <p className="text-2xl font-bold text-foreground">
+                  {activityLoading ? "…" : activeMetrics.avgMsgsPerUser}
+                </p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Msgs/User</p>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Average messages per active user, per day — not cumulative.</p>
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card className="h-full cursor-help">
+              <CardContent className="p-4 text-center">
+                <Clock className="w-5 h-5 mx-auto mb-1 text-orange-500" />
+                <p className="text-2xl font-bold text-foreground">
+                  {activityLoading ? "…" : activeMetrics.avgSessionsPerUser}
+                </p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Sessions/User</p>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Average sessions per active user, per day — not cumulative.</p>
+          </TooltipContent>
+        </Tooltip>
         <Card>
           <CardContent className="p-4 text-center">
             <MessageSquare className="w-5 h-5 mx-auto mb-1 text-primary" />
@@ -893,46 +1022,9 @@ export const OverviewTab = () => {
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Messages</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <BarChart3 className="w-5 h-5 mx-auto mb-1 text-purple-500" />
-            <p className="text-2xl font-bold text-foreground">{totals.avgMessagesPerUser}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Msgs/User</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <Clock className="w-5 h-5 mx-auto mb-1 text-orange-500" />
-            <p className="text-2xl font-bold text-foreground">{totals.avgSessionsPerUser}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Sessions/User</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <Clock className="w-5 h-5 mx-auto mb-1 text-primary" />
-            <p className="text-2xl font-bold text-foreground">{sessionTotals.avgDuration}m</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Duration (Global)</p>
-          </CardContent>
-        </Card>
-        <TooltipProvider delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button type="button" className="text-left w-full h-full">
-                <Card className="h-full">
-                  <CardContent className="p-4 text-center">
-                    <TrendingUp className="w-5 h-5 mx-auto mb-1 text-primary" />
-                    <p className="text-2xl font-bold text-foreground">{sessionTotals.longestSession}m</p>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Longest Session</p>
-                  </CardContent>
-                </Card>
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{sessionTotals.longestSessionUser || "Unknown user"}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
       </div>
+      </TooltipProvider>
+
 
       {/* Live online users */}
       <Card className="border-accent/30 bg-accent/5">
