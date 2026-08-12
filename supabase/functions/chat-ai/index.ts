@@ -54,9 +54,15 @@ function isEmotionalFollowUp(
   priorMessages: { role: string; content: string; created_at: string }[] | null | undefined,
 ): boolean {
   if (!isShortFollowUp(userMessage) || introducesNewTopic(userMessage)) return false;
-  const priorUserTurns = (priorMessages || [])
-    .filter((m) => m.role === "user")
-    .slice(-EMOTIONAL_TURN_LOOKBACK);
+  // The client inserts the current user message BEFORE invoking this function, so
+  // the history array normally ends with the current turn. Drop it so the lookback
+  // reaches real prior turns instead of counting the message we're responding to.
+  const userTurns = (priorMessages || []).filter((m) => m.role === "user");
+  const normalized = userMessage.trim();
+  if (userTurns.length > 0 && (userTurns[userTurns.length - 1].content || "").trim() === normalized) {
+    userTurns.pop();
+  }
+  const priorUserTurns = userTurns.slice(-EMOTIONAL_TURN_LOOKBACK);
   if (priorUserTurns.length === 0) return false;
   const now = Date.now();
   return priorUserTurns.some((m) => {
