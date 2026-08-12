@@ -22,6 +22,10 @@ import {
   Circle, ChevronDown, ChevronRight, MessageCircle, ChefHat,
 } from "lucide-react";
 import { format, subDays, startOfDay, parseISO, differenceInMinutes, eachWeekOfInterval } from "date-fns";
+import {
+  buildActivityIndex, utcKey, utcDayKeysBetween, type ActivityIndex,
+} from "@/lib/activeUsers";
+
 
 const SESSION_GAP_MS = 30 * 60 * 1000;
 const ITEMS_PER_PAGE = 10;
