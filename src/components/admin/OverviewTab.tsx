@@ -874,10 +874,10 @@ export const OverviewTab = () => {
   );
 
   const activeWeekUsers = useMemo(() => {
-    if (!activityIndex) return [];
-    const ids = activityIndex.getActiveThisWeek(utcKey(new Date()));
+    if (!todayIndex) return [];
+    const ids = todayIndex.getActiveThisWeek(utcKey(new Date()));
     return users.filter((u) => ids.has(u.userId));
-  }, [users, activityIndex]);
+  }, [users, todayIndex]);
 
 
 
