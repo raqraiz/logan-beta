@@ -3513,6 +3513,12 @@ serve(async (req) => {
     const emotionalFollowUp = isEmotionalFollowUp(userMessage, recentMessages as any);
     const emotionalContextActive = isEmotionalOrHeavyMessage(userMessage) || emotionalFollowUp;
     let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext + backfillBlock + libraryBlock + libraryGuidance, emotionalContextActive);
+    console.log("[prompt-mandates]", JSON.stringify({
+      emotionalContextActive,
+      emotionalFollowUp,
+      hasScienceMandate: systemPrompt.includes("### The Science"),
+      hasPhaseTipMandate: systemPrompt.includes("provide phase-appropriate guidance"),
+    }));
 
     // Bleed/spotting acknowledgment guards (set in the spotting block above).
     if (unreliableCycleNote) {
