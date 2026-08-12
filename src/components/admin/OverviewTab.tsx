@@ -240,6 +240,13 @@ export const OverviewTab = () => {
     avgMessagesPerUser: 0,
   });
 
+  // Shared active-user index (src/lib/activeUsers.ts) — single source of truth
+  // for active-user counts, shared with the Growth "Daily log".
+  const [activityIndex, setActivityIndex] = useState<ActivityIndex | null>(null);
+  const [activityLoading, setActivityLoading] = useState(true);
+  const [allTimeUsers, setAllTimeUsers] = useState<number | null>(null);
+
+
   // Sessions state
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [allSessions, setAllSessions] = useState<SessionRecord[]>([]);
