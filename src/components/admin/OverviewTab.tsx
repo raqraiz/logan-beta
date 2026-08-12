@@ -724,9 +724,7 @@ export const OverviewTab = () => {
   const loadActivityIndex = useCallback(async () => {
     setActivityLoading(true);
     try {
-      // Cover the selected range plus the fixed rolling-7-day "today" windows.
-      const since = new Date(Math.min(rangeFrom.getTime(), subDays(new Date(), 8).getTime()));
-      const index = await buildActivityIndex(startOfDay(since).toISOString());
+      const index = await buildActivityIndex(startOfDay(rangeFrom).toISOString());
       setActivityIndex(index);
     } catch (err) {
       console.error("Activity index load error:", err);
@@ -735,7 +733,20 @@ export const OverviewTab = () => {
     }
   }, [rangeFrom]);
 
-
+  // Fixed rolling window for "today" cards — always covers the last 8 days so
+  // Active Users / Active This Week never depend on the selected range.
+  const loadTodayIndex = useCallback(async () => {
+    setTodayIndexLoading(true);
+    try {
+      const since = startOfDay(subDays(new Date(), 8)).toISOString();
+      const index = await buildActivityIndex(since);
+      setTodayIndex(index);
+    } catch (err) {
+      console.error("Today index load error:", err);
+    } finally {
+      setTodayIndexLoading(false);
+    }
+  }, []);
 
   const refreshAll = useCallback(async () => {
     profilesPromiseRef.current = null;
@@ -746,11 +757,12 @@ export const OverviewTab = () => {
     loadFeedback();
     loadMenu();
     loadActivityIndex();
+    loadTodayIndex();
     // 3) Main heavy loaders — render top stats + sessions before adoption
     await Promise.all([loadEngagement(), loadSessions()]);
     // 4) Defer the slowest query (feature_events scan) so it stops competing
     loadAdoption();
-  }, [loadFastCounts, loadAllTimeUsers, loadActivityIndex, loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
+  }, [loadFastCounts, loadAllTimeUsers, loadActivityIndex, loadTodayIndex, loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
 
 
   // Initialize default range to all time (earliest profile → now), then load data
