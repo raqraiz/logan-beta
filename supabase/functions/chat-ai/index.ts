@@ -54,9 +54,15 @@ function isEmotionalFollowUp(
   priorMessages: { role: string; content: string; created_at: string }[] | null | undefined,
 ): boolean {
   if (!isShortFollowUp(userMessage) || introducesNewTopic(userMessage)) return false;
-  const priorUserTurns = (priorMessages || [])
-    .filter((m) => m.role === "user")
-    .slice(-EMOTIONAL_TURN_LOOKBACK);
+  // The client inserts the current user message BEFORE invoking this function, so
+  // the history array normally ends with the current turn. Drop it so the lookback
+  // reaches real prior turns instead of counting the message we're responding to.
+  const userTurns = (priorMessages || []).filter((m) => m.role === "user");
+  const normalized = userMessage.trim();
+  if (userTurns.length > 0 && (userTurns[userTurns.length - 1].content || "").trim() === normalized) {
+    userTurns.pop();
+  }
+  const priorUserTurns = userTurns.slice(-EMOTIONAL_TURN_LOOKBACK);
   if (priorUserTurns.length === 0) return false;
   const now = Date.now();
   return priorUserTurns.some((m) => {
@@ -3039,12 +3045,23 @@ serve(async (req) => {
     }
     // --- End postpartum detection ---
 
-    // Get full chat history
-    const { data: recentMessages } = await supabase
+    // Get recent chat history. NOTE: an unbounded ascending select is silently
+    // capped at 1000 rows by the Data API, which for long threads returns the
+    // OLDEST 1000 messages and drops the entire current conversation. Fetch the
+    // newest slice explicitly, then restore chronological order.
+    const HISTORY_FETCH_LIMIT = 200;
+    const { data: recentMessagesDesc } = await supabase
       .from("chat_messages")
       .select("role, content, created_at")
       .eq("user_id", user.id)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: false })
+      .limit(HISTORY_FETCH_LIMIT);
+    const recentMessages = (recentMessagesDesc || []).slice().reverse();
+    console.log("[history-window]", JSON.stringify({
+      fetched: recentMessages.length,
+      oldest: recentMessages[0]?.created_at ?? null,
+      newest: recentMessages[recentMessages.length - 1]?.created_at ?? null,
+    }));
 
     // Fetch cycle history for context
     let cycleHistoryContext = "";
@@ -3516,7 +3533,9 @@ serve(async (req) => {
     console.log("[prompt-mandates]", JSON.stringify({
       emotionalContextActive,
       emotionalFollowUp,
-      hasScienceMandate: systemPrompt.includes("### The Science"),
+      // Sentinel must be the mandate's own directive text — "### The Science" also
+      // appears inside the suppression instruction ("Do NOT write ### The Science").
+      hasScienceMandate: systemPrompt.includes("DEEP DIVE SECTION — ALWAYS INCLUDE"),
       hasPhaseTipMandate: systemPrompt.includes("provide phase-appropriate guidance"),
     }));
 
@@ -4271,7 +4290,7 @@ Use this to inform your answers. Do NOT recite phase details unless directly ask
 EXTERNAL FACTORS — DO NOT BLAME EVERYTHING ON HORMONES:
 - Symptoms are not always cyclical. Sleep debt, stress, illness, travel, alcohol, caffeine, dehydration, under-eating, new medications, big life events, grief, work pressure, and relationship stuff all show up as fatigue, mood swings, brain fog, low libido, headaches, bloating, breakouts, or anxiety.
 - Before defaulting to "it's your luteal phase / your hormones," briefly consider whether something external could be driving it. If the timing or intensity doesn't fit the phase, name that possibility plainly in your answer ("this could just as easily be sleep debt or stress, not your cycle") — do NOT turn it into a follow-up question. Any follow-up still has to clear the EXCEPTION bar in CONVERSATION FLOW above; the external-factors rule does not earn its own question.
-- When an external factor is likely the bigger driver, say so plainly — then layer in how her current phase is amplifying or buffering it. Both can be true.
+- When an external factor is likely the bigger driver, say so plainly.${emotionalContext ? ` You MAY note how her current phase is amplifying or buffering it, but it is optional and must not be foregrounded — never let phase framing lead or dominate the answer.` : ` Then layer in how her current phase is amplifying or buffering it. Both can be true.`}
 - Still offer ONE concrete suggestion that helps with the hormonal piece (e.g. magnesium for luteal anxiety, protein-forward breakfast for follicular energy, electrolytes during menstruation) — but frame it as support, not a fix-all.
 - Never make her feel like her hormones are broken or that everything wrong is "just her cycle." Real life is messy and overlapping.
 
@@ -4429,7 +4448,9 @@ CYCLE DAY RULE (non-negotiable): The only cycle day number you may state is ${cy
 - Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}
 ${topics ? `- Focus areas: ${topics}. Weave relevant tips from these areas into responses when naturally fitting.` : ""}${cycleHistoryContext}${symptomContext}${lengthGuidance}${dualStateContext}
 
-${emotionalContext ? `Use this context only if it genuinely helps. Do NOT open with her cycle day, do NOT volunteer phase-appropriate lifestyle guidance (workouts, meals, macros, hormone lessons) this turn — answer her actual situation like a person would. Phase accuracy rules above still apply to anything you do mention.` : `Use this context to make your responses personally relevant. Reference their current phase and how it might affect their request. If they mention their anchor symptom, acknowledge it and provide phase-appropriate guidance.`} When users ask about their cycle length or patterns, use the cycle history data to provide specific insights. When symptom log data is available, reference their actual reported symptoms and patterns — this is more accurate than textbook generalizations.`;
+${emotionalContext ? `Use this context only if it genuinely helps. Do NOT open with her cycle day, do NOT volunteer phase-appropriate lifestyle guidance (workouts, meals, macros, hormone lessons) this turn — answer her actual situation like a person would. Phase accuracy rules above still apply to anything you do mention.
+
+PHASE SALIENCE (this turn only): The PHASE AUTHORITY RULE and CYCLE DAY RULE above remain fully binding — never state a phase or day that contradicts them. But they govern ACCURACY, not PROMINENCE. This turn: mention her phase or cycle day AT MOST ONCE, positioned late in the reply, in passing, as a single short clause. NEVER as the opening sentence, the opening clause, or the frame the answer is built around. Do not begin with "While you're on Day ${cycleInfo?.cycleDay ?? "N"}...", "In your ${cycleInfo?.phase ?? "current"} phase...", or any equivalent lead-in. If the phase adds nothing to her actual situation, omit it entirely — omitting is always allowed, contradicting never is.` : `Use this context to make your responses personally relevant. Reference their current phase and how it might affect their request. If they mention their anchor symptom, acknowledge it and provide phase-appropriate guidance.`} When users ask about their cycle length or patterns, use the cycle history data to provide specific insights. When symptom log data is available, reference their actual reported symptoms and patterns — this is more accurate than textbook generalizations.`;
 
   return basePrompt + userContext;
 }
