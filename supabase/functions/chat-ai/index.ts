@@ -1892,6 +1892,8 @@ serve(async (req) => {
 
 
         if (!phaseLabel) {
+          // Narrative message: don't hijack the turn with a clarifier.
+          if (phaseNarrativeMessage) break phaseBlock;
           return new Response(
             JSON.stringify({
               success: true,
