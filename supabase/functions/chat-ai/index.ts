@@ -3045,12 +3045,23 @@ serve(async (req) => {
     }
     // --- End postpartum detection ---
 
-    // Get full chat history
-    const { data: recentMessages } = await supabase
+    // Get recent chat history. NOTE: an unbounded ascending select is silently
+    // capped at 1000 rows by the Data API, which for long threads returns the
+    // OLDEST 1000 messages and drops the entire current conversation. Fetch the
+    // newest slice explicitly, then restore chronological order.
+    const HISTORY_FETCH_LIMIT = 200;
+    const { data: recentMessagesDesc } = await supabase
       .from("chat_messages")
       .select("role, content, created_at")
       .eq("user_id", user.id)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: false })
+      .limit(HISTORY_FETCH_LIMIT);
+    const recentMessages = (recentMessagesDesc || []).slice().reverse();
+    console.log("[history-window]", JSON.stringify({
+      fetched: recentMessages.length,
+      oldest: recentMessages[0]?.created_at ?? null,
+      newest: recentMessages[recentMessages.length - 1]?.created_at ?? null,
+    }));
 
     // Fetch cycle history for context
     let cycleHistoryContext = "";
