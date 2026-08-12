@@ -250,6 +250,10 @@ export const OverviewTab = () => {
   const [activityLoading, setActivityLoading] = useState(true);
   const [allTimeUsers, setAllTimeUsers] = useState<number | null>(null);
 
+  // Fixed rolling window for today's cards — independent of the selected range.
+  const [todayIndex, setTodayIndex] = useState<ActivityIndex | null>(null);
+  const [todayIndexLoading, setTodayIndexLoading] = useState(true);
+
 
   // Sessions state
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
@@ -720,9 +724,7 @@ export const OverviewTab = () => {
   const loadActivityIndex = useCallback(async () => {
     setActivityLoading(true);
     try {
-      // Cover the selected range plus the fixed rolling-7-day "today" windows.
-      const since = new Date(Math.min(rangeFrom.getTime(), subDays(new Date(), 8).getTime()));
-      const index = await buildActivityIndex(startOfDay(since).toISOString());
+      const index = await buildActivityIndex(startOfDay(rangeFrom).toISOString());
       setActivityIndex(index);
     } catch (err) {
       console.error("Activity index load error:", err);
@@ -731,7 +733,20 @@ export const OverviewTab = () => {
     }
   }, [rangeFrom]);
 
-
+  // Fixed rolling window for "today" cards — always covers the last 8 days so
+  // Active Users / Active This Week never depend on the selected range.
+  const loadTodayIndex = useCallback(async () => {
+    setTodayIndexLoading(true);
+    try {
+      const since = startOfDay(subDays(new Date(), 8)).toISOString();
+      const index = await buildActivityIndex(since);
+      setTodayIndex(index);
+    } catch (err) {
+      console.error("Today index load error:", err);
+    } finally {
+      setTodayIndexLoading(false);
+    }
+  }, []);
 
   const refreshAll = useCallback(async () => {
     profilesPromiseRef.current = null;
@@ -742,11 +757,12 @@ export const OverviewTab = () => {
     loadFeedback();
     loadMenu();
     loadActivityIndex();
+    loadTodayIndex();
     // 3) Main heavy loaders — render top stats + sessions before adoption
     await Promise.all([loadEngagement(), loadSessions()]);
     // 4) Defer the slowest query (feature_events scan) so it stops competing
     loadAdoption();
-  }, [loadFastCounts, loadAllTimeUsers, loadActivityIndex, loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
+  }, [loadFastCounts, loadAllTimeUsers, loadActivityIndex, loadTodayIndex, loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
 
 
   // Initialize default range to all time (earliest profile → now), then load data
@@ -765,59 +781,92 @@ export const OverviewTab = () => {
 
   useEffect(() => { if (rangeReady) refreshAll(); }, [refreshAll, rangeReady]);
 
-  // Active-user metrics, all derived from the shared index so Overview and the
-  // Growth "Daily log" agree by construction.
+  // Active-user metrics:
+  // - "Active Users" and "Active This Week" are fixed to today and come from
+  //   the rolling todayIndex (independent of the selected range).
+  // - Averages are computed from the range-scoped activityIndex.
   const activeMetrics = useMemo(() => {
-    if (!activityIndex) {
-      return { activeTodayIds: new Set<string>(), activeToday: 0, activeThisWeek: 0, avgDailyUsers: 0, avgWeeklyUsers: null as number | null, avgMsgsPerUser: 0, avgSessionsPerUser: 0 };
-    }
     const today = utcKey(new Date());
-    const activeTodayIds = activityIndex.getActiveUsersForDay(today);
-    const days = utcDayKeysBetween(rangeFrom, rangeTo);
+    const activeTodayIds = todayIndex ? todayIndex.getActiveUsersForDay(today) : new Set<string>();
 
-    const perDayActive = days.map((d) => activityIndex.getActiveUsersForDay(d).size);
-    const avgDailyUsers = perDayActive.length
-      ? Math.round((perDayActive.reduce((a, b) => a + b, 0) / perDayActive.length) * 10) / 10
-      : 0;
-
-    // Non-overlapping 7-day buckets aligned to range start; partial trailing week excluded.
+    let avgDailyUsers: number | null = null;
     let avgWeeklyUsers: number | null = null;
-    if (days.length >= 7) {
-      const buckets: number[] = [];
-      for (let i = 0; i + 7 <= days.length; i += 7) {
-        const set = new Set<string>();
-        for (const d of days.slice(i, i + 7)) {
-          for (const u of activityIndex.getActiveUsersForDay(d)) set.add(u);
-        }
-        buckets.push(set.size);
-      }
-      if (buckets.length) {
-        avgWeeklyUsers = Math.round((buckets.reduce((a, b) => a + b, 0) / buckets.length) * 10) / 10;
-      }
-    }
+    let avgMsgsPerUser = 0;
+    let avgSessionsPerUser = 0;
 
-    // Per-day ratio, then averaged across days (not cumulative).
-    const msgRatios: number[] = [];
-    const sessionRatios: number[] = [];
-    for (const d of days) {
-      const active = activityIndex.getActiveUsersForDay(d).size;
-      if (active === 0) continue;
-      msgRatios.push(activityIndex.getUserMessagesForDay(d) / active);
-      sessionRatios.push(activityIndex.getSessionsForDay(d) / active);
+    if (activityIndex) {
+      const days = utcDayKeysBetween(rangeFrom, rangeTo);
+
+      // Monthly-cycle average: only complete calendar months inside the range.
+      if (days.length > 0) {
+        const firstKey = days[0];
+        const lastKey = days[days.length - 1];
+        const monthlyAvgs: number[] = [];
+        let y = parseInt(firstKey.slice(0, 4), 10);
+        let m = parseInt(firstKey.slice(5, 7), 10) - 1;
+        const endY = parseInt(lastKey.slice(0, 4), 10);
+        const endM = parseInt(lastKey.slice(5, 7), 10) - 1;
+        while (true) {
+          const dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+          const monthStart = `${String(y).padStart(4, "0")}-${String(m + 1).padStart(2, "0")}-01`;
+          const monthEnd = `${String(y).padStart(4, "0")}-${String(m + 1).padStart(2, "0")}-${String(dim).padStart(2, "0")}`;
+          if (monthStart >= firstKey && monthEnd <= lastKey) {
+            let sum = 0;
+            for (let d = 1; d <= dim; d++) {
+              const key = `${String(y).padStart(4, "0")}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+              sum += activityIndex.getActiveUsersForDay(key).size;
+            }
+            monthlyAvgs.push(sum / dim);
+          }
+          if (y === endY && m === endM) break;
+          m++;
+          if (m > 11) { m = 0; y++; }
+        }
+        if (monthlyAvgs.length > 0) {
+          avgDailyUsers = Math.round((monthlyAvgs.reduce((a, b) => a + b, 0) / monthlyAvgs.length) * 10) / 10;
+        }
+      }
+
+      // Non-overlapping 7-day buckets aligned to range start; partial trailing week excluded.
+      if (days.length >= 7) {
+        const buckets: number[] = [];
+        for (let i = 0; i + 7 <= days.length; i += 7) {
+          const set = new Set<string>();
+          for (const d of days.slice(i, i + 7)) {
+            for (const u of activityIndex.getActiveUsersForDay(d)) set.add(u);
+          }
+          buckets.push(set.size);
+        }
+        if (buckets.length) {
+          avgWeeklyUsers = Math.round((buckets.reduce((a, b) => a + b, 0) / buckets.length) * 10) / 10;
+        }
+      }
+
+      // Per-day ratio, then averaged across days (not cumulative).
+      const msgRatios: number[] = [];
+      const sessionRatios: number[] = [];
+      for (const d of days) {
+        const active = activityIndex.getActiveUsersForDay(d).size;
+        if (active === 0) continue;
+        msgRatios.push(activityIndex.getUserMessagesForDay(d) / active);
+        sessionRatios.push(activityIndex.getSessionsForDay(d) / active);
+      }
+      const mean = (arr: number[]) =>
+        arr.length ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : 0;
+      avgMsgsPerUser = mean(msgRatios);
+      avgSessionsPerUser = mean(sessionRatios);
     }
-    const mean = (arr: number[]) =>
-      arr.length ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : 0;
 
     return {
       activeTodayIds,
       activeToday: activeTodayIds.size,
-      activeThisWeek: activityIndex.getActiveThisWeek(today).size,
+      activeThisWeek: todayIndex ? todayIndex.getActiveThisWeek(today).size : 0,
       avgDailyUsers,
       avgWeeklyUsers,
-      avgMsgsPerUser: mean(msgRatios),
-      avgSessionsPerUser: mean(sessionRatios),
+      avgMsgsPerUser,
+      avgSessionsPerUser,
     };
-  }, [activityIndex, rangeFrom, rangeTo]);
+  }, [todayIndex, activityIndex, rangeFrom, rangeTo]);
 
   const activeTodayUsers = useMemo(
     () => users.filter((u) => activeMetrics.activeTodayIds.has(u.userId)),
@@ -825,10 +874,10 @@ export const OverviewTab = () => {
   );
 
   const activeWeekUsers = useMemo(() => {
-    if (!activityIndex) return [];
-    const ids = activityIndex.getActiveThisWeek(utcKey(new Date()));
+    if (!todayIndex) return [];
+    const ids = todayIndex.getActiveThisWeek(utcKey(new Date()));
     return users.filter((u) => ids.has(u.userId));
-  }, [users, activityIndex]);
+  }, [users, todayIndex]);
 
 
 
@@ -918,19 +967,12 @@ export const OverviewTab = () => {
 
       {/* Top stats */}
       <TooltipProvider delayDuration={0}>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8 gap-3">
         <Card>
           <CardContent className="p-4 text-center">
             <Users className="w-5 h-5 mx-auto mb-1 text-primary" />
             <p className="text-2xl font-bold text-foreground">{allTimeUsers ?? "—"}</p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Users</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <Users className="w-5 h-5 mx-auto mb-1 text-teal-500" />
-            <p className="text-2xl font-bold text-foreground">{totals.totalUsers}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">New Users</p>
           </CardContent>
         </Card>
         <Popover>
@@ -939,7 +981,7 @@ export const OverviewTab = () => {
               <CardContent className="p-4 text-center">
                 <Activity className="w-5 h-5 mx-auto mb-1 text-green-500" />
                 <p className="text-2xl font-bold text-foreground">
-                  {activityLoading ? "…" : activeMetrics.activeToday}
+                  {todayIndexLoading ? "…" : activeMetrics.activeToday}
                 </p>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active Users</p>
               </CardContent>
@@ -953,7 +995,7 @@ export const OverviewTab = () => {
           <CardContent className="p-4 text-center">
             <BarChart3 className="w-5 h-5 mx-auto mb-1 text-teal-500" />
             <p className="text-2xl font-bold text-foreground">
-              {activityLoading ? "…" : activeMetrics.avgDailyUsers}
+              {activityLoading ? "…" : activeMetrics.avgDailyUsers ?? "—"}
             </p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Daily Users</p>
           </CardContent>
@@ -964,7 +1006,7 @@ export const OverviewTab = () => {
               <CardContent className="p-4 text-center">
                 <TrendingUp className="w-5 h-5 mx-auto mb-1 text-blue-500" />
                 <p className="text-2xl font-bold text-foreground">
-                  {activityLoading ? "…" : activeMetrics.activeThisWeek}
+                  {todayIndexLoading ? "…" : activeMetrics.activeThisWeek}
                 </p>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active This Week</p>
               </CardContent>
@@ -980,7 +1022,7 @@ export const OverviewTab = () => {
             <p className="text-2xl font-bold text-foreground">
               {activityLoading ? "…" : activeMetrics.avgWeeklyUsers ?? "—"}
             </p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Weekly Active Users</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Weekly Users</p>
           </CardContent>
         </Card>
         <Tooltip>
