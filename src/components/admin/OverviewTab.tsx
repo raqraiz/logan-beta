@@ -710,6 +710,29 @@ export const OverviewTab = () => {
     }));
   }, [fromIso, toIso]);
 
+  // True all-time cumulative signups — never scoped by the range selector.
+  const loadAllTimeUsers = useCallback(async () => {
+    const { count } = await supabase.from("profiles").select("*", { count: "exact", head: true });
+    if (count != null) setAllTimeUsers(count);
+  }, []);
+
+  // ----- SHARED ACTIVE-USER INDEX -----
+  const loadActivityIndex = useCallback(async () => {
+    setActivityLoading(true);
+    try {
+      // Cover the selected range plus the fixed rolling-7-day "today" windows.
+      const since = new Date(Math.min(rangeFrom.getTime(), subDays(new Date(), 8).getTime()));
+      const index = await buildActivityIndex(startOfDay(since).toISOString());
+      setActivityIndex(index);
+    } catch (err) {
+      console.error("Activity index load error:", err);
+    } finally {
+      setActivityLoading(false);
+    }
+  }, [rangeFrom]);
+
+
+
   const refreshAll = useCallback(async () => {
     profilesPromiseRef.current = null;
     // 1) Instant counts so the top stats row paints immediately
