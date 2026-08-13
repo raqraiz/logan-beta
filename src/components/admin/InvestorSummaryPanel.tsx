@@ -268,7 +268,9 @@ export const InvestorSummaryPanel = () => {
                   <XAxis
                     dataKey="date"
                     tick={{ fontSize: 10 }}
-                    interval={Math.max(1, Math.floor(chartData.length / 8))}
+                    ticks={xTicks}
+                    interval={0}
+
                     tickFormatter={(v: string) => format(toUTCDate(v), "MMM d")}
                     className="text-muted-foreground"
                   />
