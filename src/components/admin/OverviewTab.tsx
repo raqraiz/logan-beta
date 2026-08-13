@@ -15,9 +15,10 @@ import {
   ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig,
 } from "@/components/ui/chart";
 import {
-import { InvestorSummaryPanel } from "@/components/admin/InvestorSummaryPanel";
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area,
 } from "recharts";
+import { InvestorSummaryPanel } from "@/components/admin/InvestorSummaryPanel";
+
 import {
   RefreshCw, Users, MessageSquare, Activity, TrendingUp, Clock, BarChart3,
   Circle, ChevronDown, ChevronRight, MessageCircle, ChefHat,
