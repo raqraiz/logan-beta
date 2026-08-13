@@ -165,7 +165,26 @@ export const InvestorSummaryPanel = () => {
     }));
   }, [metrics, usersAsOf]);
 
+  // Explicit ticks so the final point (goal date) always renders.
+  const xTicks = useMemo(() => {
+    if (chartData.length === 0) return [];
+    const target = 8;
+    const step = Math.max(1, Math.ceil((chartData.length - 1) / target));
+    const ticks: string[] = [];
+    for (let i = 0; i < chartData.length; i += step) ticks.push(chartData[i].date);
+    const last = chartData[chartData.length - 1].date;
+    if (ticks[ticks.length - 1] !== last) {
+      // Replace a crowded penultimate tick rather than overlapping the last one.
+      const lastIdx = chartData.length - 1;
+      const prevIdx = chartData.findIndex((d) => d.date === ticks[ticks.length - 1]);
+      if (lastIdx - prevIdx < step / 2) ticks.pop();
+      ticks.push(last);
+    }
+    return ticks;
+  }, [chartData]);
+
   const monthLabel = format(rangeFrom, "MMMM");
+
 
   return (
     <Card className="border-primary/30 bg-card">
