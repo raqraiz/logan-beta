@@ -1067,6 +1067,11 @@ export const OverviewTab = () => {
       </div>
       </TooltipProvider>
 
+      {/* Investor Summary (additive — independent range) */}
+      <InvestorSummaryPanel />
+
+
+
 
       {/* Live online users */}
       <Card className="border-accent/30 bg-accent/5">
