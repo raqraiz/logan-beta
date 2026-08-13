@@ -245,7 +245,11 @@ export const InvestorSummaryPanel = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 { label: "Avg daily active users", value: fmt(metrics.avgDaily) },
-                { label: "Avg weekly active users", value: fmt(metrics.avgWeekly) },
+                {
+                  label: `Avg weekly active users${metrics.weeklyFullCount > 0 ? ` (${metrics.weeklyFullCount} full Mon–Sun wks)` : " (day-weighted)"}`,
+                  value: fmt(metrics.avgWeekly),
+                },
+
                 { label: "Avg messages per user", value: fmt(metrics.avgMsgsPerUser) },
                 { label: "Avg session per user", value: fmt(metrics.avgSessionsPerUser) },
               ].map((s) => (
