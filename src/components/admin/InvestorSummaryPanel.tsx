@@ -37,13 +37,15 @@ export const InvestorSummaryPanel = () => {
 
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState<ActivityIndex | null>(null);
-  // Cumulative user count by UTC day (all profiles, ever).
+  // Cumulative user count by UTC day (all profiles up to a frozen snapshot instant).
   const [signupDays, setSignupDays] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
+      // Freeze the read horizon once so paging can't shift while new signups land.
+      const snapshotISO = new Date(Math.max(endOfDay(rangeTo).getTime(), Date.now())).toISOString();
       const [idx, profiles] = await Promise.all([
         buildActivityIndex(startOfDay(rangeFrom).toISOString()),
         (async () => {
@@ -51,8 +53,10 @@ export const InvestorSummaryPanel = () => {
           for (let from = 0; ; from += 1000) {
             const { data, error } = await supabase
               .from("profiles")
-              .select("created_at")
+              .select("created_at, id")
+              .lte("created_at", snapshotISO)
               .order("created_at", { ascending: true })
+              .order("id", { ascending: true })
               .range(from, from + 999);
             if (error) { console.error("Investor summary profiles load failed:", error); break; }
             const rows = data ?? [];
@@ -71,6 +75,7 @@ export const InvestorSummaryPanel = () => {
   }, [rangeFrom, rangeTo]);
 
   const usersAsOf = useMemo(() => {
+    // signupDays is sorted ascending; count of signups through end of dayKey.
     return (dayKey: string) => signupDays.reduce((acc, k) => (k <= dayKey ? acc + 1 : acc), 0);
   }, [signupDays]);
 
@@ -96,12 +101,32 @@ export const InvestorSummaryPanel = () => {
       totalSessions += index.getSessionsForDay(d);
     }
 
-    // Distinct active users per calendar week (7-day buckets aligned to range start).
-    const weekly: number[] = [];
-    for (let i = 0; i < days.length; i += 7) {
-      const set = new Set<string>();
-      for (const d of days.slice(i, i + 7)) for (const u of index.getActiveUsersForDay(d)) set.add(u);
-      weekly.push(set.size);
+    // Distinct active users per ISO calendar week (Monday–Sunday, UTC),
+    // matching the Monday-start convention used elsewhere in the admin dashboard.
+    const buckets = new Map<string, { days: string[]; users: Set<string> }>();
+    for (const d of days) {
+      const dt = toUTCDate(d);
+      const dow = (dt.getUTCDay() + 6) % 7; // 0 = Monday
+      const monday = new Date(dt.getTime() - dow * 86400000);
+      const wk = utcKey(monday);
+      let b = buckets.get(wk);
+      if (!b) { b = { days: [], users: new Set<string>() }; buckets.set(wk, b); }
+      b.days.push(d);
+      for (const u of index.getActiveUsersForDay(d)) b.users.add(u);
+    }
+    const weekly = Array.from(buckets.entries())
+      .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+      .map(([weekStart, b]) => ({ weekStart, dayCount: b.days.length, activeUsers: b.users.size }));
+
+    // Full weeks only. If the range contains no full week, fall back to
+    // day-weighted partial weeks so a 3-day stub isn't treated as a full week.
+    const full = weekly.filter((w) => w.dayCount === 7);
+    let avgWeekly: number | null = null;
+    if (full.length > 0) {
+      avgWeekly = full.reduce((a, w) => a + w.activeUsers, 0) / full.length;
+    } else if (weekly.length > 0) {
+      const wsum = weekly.reduce((a, w) => a + w.dayCount / 7, 0);
+      avgWeekly = wsum > 0 ? weekly.reduce((a, w) => a + w.activeUsers * (w.dayCount / 7), 0) / wsum : null;
     }
 
     return {
@@ -111,11 +136,14 @@ export const InvestorSummaryPanel = () => {
       totalAtStart,
       hasData: anyActivity || totalAtEnd > 0,
       avgDaily: dailySum / days.length,
-      avgWeekly: weekly.length ? weekly.reduce((a, b) => a + b, 0) / weekly.length : null,
+      weekly,
+      weeklyFullCount: full.length,
+      avgWeekly,
       avgMsgsPerUser: totalAtEnd > 0 ? totalMessages / totalAtEnd : null,
       avgSessionsPerUser: totalAtEnd > 0 ? totalSessions / totalAtEnd : null,
     };
   }, [index, rangeFrom, rangeTo, usersAsOf]);
+
 
   const chartData = useMemo(() => {
     if (!metrics) return [];
