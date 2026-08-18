@@ -536,6 +536,27 @@ async function logSymptomRejections(
   }
 }
 
+// Grounding check: the candidate phrase must actually appear (as a contiguous,
+// stem-tolerant token sequence) in what the user wrote. This blocks model
+// paraphrases and invented combos ("saturated", "full legs") without needing an
+// ever-growing blocklist.
+function isGroundedInUserText(candidate: string, userText: string): boolean {
+  const toks = (s: string) =>
+    String(s || "").toLowerCase().replace(/[^a-z\s-]/g, " ").split(/[\s-]+/).filter(Boolean).map(stemWord);
+  const cand = toks(candidate).filter(w => !DEDUP_FILLER_WORDS.has(w));
+  if (!cand.length) return false;
+  const hay = toks(userText);
+  if (!hay.length) return false;
+  for (let i = 0; i + cand.length <= hay.length; i++) {
+    let ok = true;
+    for (let j = 0; j < cand.length; j++) {
+      if (hay[i + j] !== cand[j]) { ok = false; break; }
+    }
+    if (ok) return true;
+  }
+  return false;
+}
+
 // Single gate every community_symptoms insert path runs through.
 // Returns the names that may be inserted; logs everything it blocks.
 async function screenLibraryCandidates(
@@ -544,6 +565,7 @@ async function screenLibraryCandidates(
   source: string,
   candidates: string[],
   existingNames: string[],
+  userText?: string,
 ): Promise<string[]> {
   const rejections: { name: string; reason: string; matched?: string | null }[] = [];
   const accepted: string[] = [];
@@ -555,6 +577,9 @@ async function screenLibraryCandidates(
     if (!name) continue;
     const reason = symptomNameRejection(name);
     if (reason) { rejections.push({ name: raw, reason }); continue; }
+    if (userText && !isGroundedInUserText(name, userText)) {
+      rejections.push({ name: raw, reason: "not_user_stated" }); continue;
+    }
     const key = canonicalSymptomKey(name);
     if (acceptedKeys.has(key)) { rejections.push({ name: raw, reason: "duplicate_in_batch" }); continue; }
     const dupe = findNearDuplicate(name, pool);
@@ -567,6 +592,7 @@ async function screenLibraryCandidates(
   await logSymptomRejections(supabase, userId, source, rejections);
   return accepted;
 }
+
 
 
 // --- Pass 2: catalog-independent symptom extraction ---
