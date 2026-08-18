@@ -1,0 +1,1 @@
+UPDATE public.community_symptoms SET deleted_at = now() WHERE lower(trim(name)) = 'full' AND deleted_at IS NULL;
