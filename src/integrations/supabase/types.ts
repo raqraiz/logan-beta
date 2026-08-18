@@ -1233,6 +1233,39 @@ export type Database = {
         }
         Relationships: []
       }
+      symptom_candidate_rejections: {
+        Row: {
+          candidate_name: string
+          created_at: string
+          id: string
+          matched_existing: string | null
+          normalized_name: string | null
+          reason: string
+          source: string
+          user_id: string | null
+        }
+        Insert: {
+          candidate_name: string
+          created_at?: string
+          id?: string
+          matched_existing?: string | null
+          normalized_name?: string | null
+          reason: string
+          source?: string
+          user_id?: string | null
+        }
+        Update: {
+          candidate_name?: string
+          created_at?: string
+          id?: string
+          matched_existing?: string | null
+          normalized_name?: string | null
+          reason?: string
+          source?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       symptom_logs: {
         Row: {
           created_at: string
