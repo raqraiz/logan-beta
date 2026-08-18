@@ -4084,7 +4084,7 @@ serve(async (req) => {
             // soft-deleted name is left alone.
             const knownLower = Array.from(new Set(knownLibraryNames.map(n => String(n).trim().toLowerCase())));
             const accepted = await screenLibraryCandidates(
-              supabase, user.id, "llm_extraction", novel.map(s => s.name), knownLower,
+              supabase, user.id, "llm_extraction", novel.map(s => s.name), knownLower, userMessage,
             );
             if (accepted.length > 0) {
               const { data: existing } = await supabase
