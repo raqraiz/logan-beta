@@ -370,6 +370,11 @@ const NON_SYMPTOM_SINGLE_WORDS = new Set([
   "problems","note","notes","update","updates","random","normal","weird",
   "okay","fine","good","bad","better","worse","much","little","lot","lots",
   "maybe","kinda","sorta","stuff","everything","nothing","something",
+  // bare states / adjectives that are not symptoms on their own
+  "full","empty","rest","resting","hungry","thirsty","busy","quiet","calm",
+  "late","early","ready","awake","asleep","active","relaxed","happy","fun",
+  "hot","cold","warm","alright","great","ok",
+
 ]);
 
 function symptomNameRejection(s: string): string | null {
@@ -390,7 +395,9 @@ function symptomNameRejection(s: string): string | null {
   ]);
   if (badStarts.has(firstWord)) return "fragment_start";
   if (isSymptomStopword(t)) return "stopword";
-  if (words.length === 1 && NON_SYMPTOM_SINGLE_WORDS.has(firstWord)) return "not_a_symptom_noun";
+  if (words.length === 1 && (NON_SYMPTOM_SINGLE_WORDS.has(firstWord)
+      || NON_SYMPTOM_SINGLE_WORDS.has(stemWord(firstWord)))) return "not_a_symptom_noun";
+
   // A bare gerund on its own ("throbbing", "aching" are fine as descriptors but
   // "wondering", "wandering" style verbs are not) — only block gerunds that are
   // in the verb list above; anything else is allowed through.
@@ -531,6 +538,27 @@ async function logSymptomRejections(
   }
 }
 
+// Grounding check: the candidate phrase must actually appear (as a contiguous,
+// stem-tolerant token sequence) in what the user wrote. This blocks model
+// paraphrases and invented combos ("saturated", "full legs") without needing an
+// ever-growing blocklist.
+function isGroundedInUserText(candidate: string, userText: string): boolean {
+  const toks = (s: string) =>
+    String(s || "").toLowerCase().replace(/[^a-z\s-]/g, " ").split(/[\s-]+/).filter(Boolean).map(stemWord);
+  const cand = toks(candidate).filter(w => !DEDUP_FILLER_WORDS.has(w));
+  if (!cand.length) return false;
+  const hay = toks(userText);
+  if (!hay.length) return false;
+  for (let i = 0; i + cand.length <= hay.length; i++) {
+    let ok = true;
+    for (let j = 0; j < cand.length; j++) {
+      if (hay[i + j] !== cand[j]) { ok = false; break; }
+    }
+    if (ok) return true;
+  }
+  return false;
+}
+
 // Single gate every community_symptoms insert path runs through.
 // Returns the names that may be inserted; logs everything it blocks.
 async function screenLibraryCandidates(
@@ -539,6 +567,7 @@ async function screenLibraryCandidates(
   source: string,
   candidates: string[],
   existingNames: string[],
+  userText?: string,
 ): Promise<string[]> {
   const rejections: { name: string; reason: string; matched?: string | null }[] = [];
   const accepted: string[] = [];
@@ -550,6 +579,9 @@ async function screenLibraryCandidates(
     if (!name) continue;
     const reason = symptomNameRejection(name);
     if (reason) { rejections.push({ name: raw, reason }); continue; }
+    if (userText && !isGroundedInUserText(name, userText)) {
+      rejections.push({ name: raw, reason: "not_user_stated" }); continue;
+    }
     const key = canonicalSymptomKey(name);
     if (acceptedKeys.has(key)) { rejections.push({ name: raw, reason: "duplicate_in_batch" }); continue; }
     const dupe = findNearDuplicate(name, pool);
@@ -562,6 +594,7 @@ async function screenLibraryCandidates(
   await logSymptomRejections(supabase, userId, source, rejections);
   return accepted;
 }
+
 
 
 // --- Pass 2: catalog-independent symptom extraction ---
@@ -4053,7 +4086,7 @@ serve(async (req) => {
             // soft-deleted name is left alone.
             const knownLower = Array.from(new Set(knownLibraryNames.map(n => String(n).trim().toLowerCase())));
             const accepted = await screenLibraryCandidates(
-              supabase, user.id, "llm_extraction", novel.map(s => s.name), knownLower,
+              supabase, user.id, "llm_extraction", novel.map(s => s.name), knownLower, userMessage,
             );
             if (accepted.length > 0) {
               const { data: existing } = await supabase
@@ -4271,7 +4304,7 @@ serve(async (req) => {
           }
         } catch (_) {}
         const toAdd = await screenLibraryCandidates(
-          supabase, user.id, "post_reply_guard", candidates, Array.from(known),
+          supabase, user.id, "post_reply_guard", candidates, Array.from(known), userMessage,
         );
 
         if (toAdd.length > 0) {

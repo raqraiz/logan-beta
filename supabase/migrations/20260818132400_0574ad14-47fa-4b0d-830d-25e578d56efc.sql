@@ -1,0 +1,1 @@
+UPDATE public.community_symptoms SET deleted_at = now() WHERE lower(trim(name)) IN ('saturated','heavy','full legs','feeling full') AND deleted_at IS NULL;
