@@ -246,13 +246,32 @@ serve(async (req) => {
     const chatBlurb = parentResourceId
       ? `Reworking your menu with your tweaks — give me a few seconds.`
       : `Putting together your ${title.toLowerCase()} — back in a few seconds.`;
-    await supabase.from("chat_messages").insert({
-      user_id: user.id,
-      role: "assistant",
-      content: chatBlurb,
-      message_type: "resource",
-      metadata: { resource_id: resource.id, resource_type: "meal_plan" },
-    });
+
+    // Dedup: skip the placeholder if an identical one landed in the last 60s.
+    const { data: recentBlurbs } = await supabase
+      .from("chat_messages")
+      .select("id, content, message_type, created_at")
+      .eq("user_id", user.id)
+      .eq("role", "assistant")
+      .gte("created_at", new Date(Date.now() - 60_000).toISOString())
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    const blurbDuplicate = (recentBlurbs || []).some(
+      (m: any) => m.message_type === "resource" && m.content === chatBlurb
+    );
+
+    if (blurbDuplicate) {
+      console.log("[dedup] suppressed duplicate meal-plan placeholder bubble");
+    } else {
+      await supabase.from("chat_messages").insert({
+        user_id: user.id,
+        role: "assistant",
+        content: chatBlurb,
+        message_type: "resource",
+        metadata: { resource_id: resource.id, resource_type: "meal_plan" },
+      });
+    }
 
     // Background generation
     const task = generatePreview({
