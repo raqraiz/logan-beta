@@ -395,7 +395,9 @@ function symptomNameRejection(s: string): string | null {
   ]);
   if (badStarts.has(firstWord)) return "fragment_start";
   if (isSymptomStopword(t)) return "stopword";
-  if (words.length === 1 && NON_SYMPTOM_SINGLE_WORDS.has(firstWord)) return "not_a_symptom_noun";
+  if (words.length === 1 && (NON_SYMPTOM_SINGLE_WORDS.has(firstWord)
+      || NON_SYMPTOM_SINGLE_WORDS.has(stemWord(firstWord)))) return "not_a_symptom_noun";
+
   // A bare gerund on its own ("throbbing", "aching" are fine as descriptors but
   // "wondering", "wandering" style verbs are not) — only block gerunds that are
   // in the verb list above; anything else is allowed through.
