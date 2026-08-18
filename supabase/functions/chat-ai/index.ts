@@ -4302,7 +4302,7 @@ serve(async (req) => {
           }
         } catch (_) {}
         const toAdd = await screenLibraryCandidates(
-          supabase, user.id, "post_reply_guard", candidates, Array.from(known),
+          supabase, user.id, "post_reply_guard", candidates, Array.from(known), userMessage,
         );
 
         if (toAdd.length > 0) {
