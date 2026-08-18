@@ -4270,17 +4270,10 @@ serve(async (req) => {
             if (r?.name) known.add(String(r.name).toLowerCase());
           }
         } catch (_) {}
-        const seen = new Set<string>();
-        const toAdd: string[] = [];
-        for (const raw of candidates) {
-          const name = stripMarkdown(raw).trim().toLowerCase().replace(/\s+/g, " ");
-          if (!isValidSymptomName(name)) continue;
-          // Skip generic words that aren't symptoms
-          if (/^(?:the|a|an|them|those|these|it|this|that|some|any|new|symptom|symptoms|library|home|log|track|tracker|trackers|things|stuff)$/i.test(name)) continue;
-          if (seen.has(name) || known.has(name)) continue;
-          seen.add(name);
-          toAdd.push(name);
-        }
+        const toAdd = await screenLibraryCandidates(
+          supabase, user.id, "post_reply_guard", candidates, Array.from(known),
+        );
+
         if (toAdd.length > 0) {
           const rows = toAdd.map(name => ({ name, added_by: user.id }));
           const { error: addErr } = await supabase
