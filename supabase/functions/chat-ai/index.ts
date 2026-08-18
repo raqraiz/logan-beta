@@ -4051,17 +4051,17 @@ serve(async (req) => {
             // and soft-delete semantics are untouched: rows land uncategorized
             // exactly like the existing library-add path, and a previously
             // soft-deleted name is left alone.
-            const knownLower = new Set(knownLibraryNames.map(n => String(n).trim().toLowerCase()));
-            const brandNew = novel
-              .map(s => s.name.trim().toLowerCase())
-              .filter(n => !knownLower.has(n));
-            if (brandNew.length > 0) {
+            const knownLower = Array.from(new Set(knownLibraryNames.map(n => String(n).trim().toLowerCase())));
+            const accepted = await screenLibraryCandidates(
+              supabase, user.id, "llm_extraction", novel.map(s => s.name), knownLower,
+            );
+            if (accepted.length > 0) {
               const { data: existing } = await supabase
                 .from("community_symptoms")
                 .select("name")
-                .in("name", brandNew);
+                .in("name", accepted);
               const existingLower = new Set(((existing || []) as any[]).map(r => String(r.name).trim().toLowerCase()));
-              const toInsert = brandNew
+              const toInsert = accepted
                 .filter(n => !existingLower.has(n))
                 .map(name => ({ name, added_by: user.id }));
               if (toInsert.length > 0) {
@@ -4070,6 +4070,7 @@ serve(async (req) => {
                 else console.log("[symptom_extraction] new library entries:", toInsert.map(r => r.name).join(", "));
               }
             }
+
           }
         }
       } catch (e) {
