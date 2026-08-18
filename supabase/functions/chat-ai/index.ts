@@ -3501,12 +3501,12 @@ serve(async (req) => {
                     return t >= start.getTime() && t < end.getTime();
                   })
                 )
-                .map((l: any) => l.id)
+                .map((l: any) => `${l.source || "symptom_log"}:${l.logged_at}`)
             : []
         );
 
         const datedLog = symptomLogs
-          .filter((l: any) => !coveredLogIds.has(l.id))
+          .filter((l: any) => !coveredLogIds.has(`${l.source || "symptom_log"}:${l.logged_at}`))
           .slice(0, isHistoricalLookup ? symptomLogs.length : 40)
           .map((l: any) => {
             const d = formatUtcDate(l.logged_at);
