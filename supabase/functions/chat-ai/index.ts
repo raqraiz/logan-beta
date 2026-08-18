@@ -4374,18 +4374,38 @@ serve(async (req) => {
       // Tiny delay so the offer arrives just after the main answer (better UX)
       await new Promise(r => setTimeout(r, 400));
 
-      await supabase.from("chat_messages").insert({
-        user_id: user.id,
-        role: "assistant",
-        content: "Tap below and I'll build your cycle-synced plan — every meal mapped to your phase, with a grocery list.",
-        message_type: "resource_offer",
-        metadata: {
-          resource_type: "meal_plan",
-          cycle_day: liveCycle?.cycleDay,
-          cycle_phase: liveCycle?.phase,
-          cycle_length_days: participant?.cycle_length_days || 28,
-        },
-      });
+      const ctaContent = "Tap below and I'll build your cycle-synced plan — every meal mapped to your phase, with a grocery list.";
+
+      // Dedup: skip if an identical CTA bubble already landed in the last 60s.
+      const { data: recentCta } = await supabase
+        .from("chat_messages")
+        .select("id, content, message_type, created_at")
+        .eq("user_id", user.id)
+        .eq("role", "assistant")
+        .gte("created_at", new Date(Date.now() - 60_000).toISOString())
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      const ctaDuplicate = (recentCta || []).some(
+        (m: any) => m.message_type === "resource_offer" && m.content === ctaContent
+      );
+
+      if (ctaDuplicate) {
+        console.log("[dedup] suppressed duplicate meal-plan CTA bubble");
+      } else {
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: ctaContent,
+          message_type: "resource_offer",
+          metadata: {
+            resource_type: "meal_plan",
+            cycle_day: liveCycle?.cycleDay,
+            cycle_phase: liveCycle?.phase,
+            cycle_length_days: participant?.cycle_length_days || 28,
+          },
+        });
+      }
     }
 
     // Get updated credit balance to return to frontend (disabled during alpha)
