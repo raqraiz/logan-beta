@@ -370,6 +370,11 @@ const NON_SYMPTOM_SINGLE_WORDS = new Set([
   "problems","note","notes","update","updates","random","normal","weird",
   "okay","fine","good","bad","better","worse","much","little","lot","lots",
   "maybe","kinda","sorta","stuff","everything","nothing","something",
+  // bare states / adjectives that are not symptoms on their own
+  "full","empty","rest","resting","hungry","thirsty","busy","quiet","calm",
+  "late","early","ready","awake","asleep","active","relaxed","happy","fun",
+  "hot","cold","warm","alright","great","ok",
+
 ]);
 
 function symptomNameRejection(s: string): string | null {
