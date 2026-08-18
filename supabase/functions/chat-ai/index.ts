@@ -3492,7 +3492,21 @@ serve(async (req) => {
         const latestTime = formatUtcDate(latest.logged_at);
 
         // Per-log dated history so the model can answer date-based questions accurately
+        const coveredLogIds = new Set<string>(
+          referencedMonths.length > 0
+            ? symptomLogs
+                .filter((l: any) =>
+                  referencedMonths.some(({ start, end }) => {
+                    const t = new Date(l.logged_at).getTime();
+                    return t >= start.getTime() && t < end.getTime();
+                  })
+                )
+                .map((l: any) => `${l.source || "symptom_log"}:${l.logged_at}`)
+            : []
+        );
+
         const datedLog = symptomLogs
+          .filter((l: any) => !coveredLogIds.has(`${l.source || "symptom_log"}:${l.logged_at}`))
           .slice(0, isHistoricalLookup ? symptomLogs.length : 40)
           .map((l: any) => {
             const d = formatUtcDate(l.logged_at);
@@ -3506,7 +3520,7 @@ serve(async (req) => {
         const contextLabel = referencedMonths.length > 0
           ? `last 30 days plus requested month history (${symptomLogs.length} entries)`
           : `last 30 days (${symptomLogs.length} entries)`;
-        symptomContext = `\n\nSYMPTOM HISTORY DATA (${contextLabel}; includes structured symptom logs AND symptom reports found in chat):\n- Most frequent: ${topSymptoms.join(", ")}\n- Latest entry (${latestTime}): ${latestSymptoms}${latest.source === "chat_report" ? " [from chat]" : ""}${latest.notes ? ` — "${latest.notes}"` : ""}${historicalCoverage ? `\n- Requested month coverage:\n${historicalCoverage}` : ""}\n- Dated entries (most recent first):\n${datedLog}`;
+        symptomContext = `\n\nSYMPTOM HISTORY DATA (${contextLabel}; includes structured symptom logs AND symptom reports found in chat):\n- Most frequent: ${topSymptoms.join(", ")}\n- Latest entry (${latestTime}): ${latestSymptoms}${latest.source === "chat_report" ? " [from chat]" : ""}${latest.notes ? ` — "${latest.notes}"` : ""}${historicalCoverage ? `\n- Requested month coverage:\n${historicalCoverage}` : ""}\n${datedLog ? `\n- Other dated entries (most recent first):\n${datedLog}` : ""}`;
         symptomContext += `\nUSE THIS HISTORY AS BACKGROUND ONLY — DO NOT RECITE IT. Witness and validate what the user just said first. Do NOT list back, summarize, count, or quote their symptom history as if you're building a case or proving you've been paying attention. Do NOT open with "I see you've logged X three times this month" or anything that reads like a chart review. The user came to be heard, not diagnosed. ONLY surface specific past entries when the user EXPLICITLY asks for a review, a date, a count, or a pattern. When they DO ask about a specific date or month, check the Requested month coverage and dated entries above against TODAY'S DATE before answering. Chat reports marked [from chat] are real historical evidence. If a requested month has entries, NEVER say there are none. If no entries fall in the period they asked about, say so honestly — do NOT fabricate a date.`;
       }
     }
@@ -3869,7 +3883,19 @@ serve(async (req) => {
       ];
     }
 
-    conversationHistory.push({ role: "user", content: userMessage });
+    // The current user turn is already persisted in chat_messages by the client before
+    // this function runs, so it normally arrives via the fetched history. Only append it
+    // when the fetched history does not already end with it (avoids double-sending it to
+    // the model, which caused duplicated phrasing in replies).
+    const lastHistoryTurn = conversationHistory[conversationHistory.length - 1];
+    const alreadyHasCurrentTurn =
+      !!lastHistoryTurn &&
+      lastHistoryTurn.role === "user" &&
+      (lastHistoryTurn.content || "").trim() === (userMessage || "").trim();
+    if (!alreadyHasCurrentTurn) {
+      conversationHistory.push({ role: "user", content: userMessage });
+    }
+    console.log("[chat-ai] gemini turns:", conversationHistory.length, "currentTurnFromHistory:", alreadyHasCurrentTurn);
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
