@@ -2559,16 +2559,13 @@ serve(async (req) => {
             // the extraction path enforce the same contract.
 
             const candidates = matches
-              .map(m => m[1].trim().replace(/^["'`]+|["'`]+$/g, ""))
-              .filter(isValidSymptomName);
-            const newOnes: string[] = [];
-            const seen = new Set<string>();
-            for (const c of candidates) {
-              const lc = c.toLowerCase();
-              if (seen.has(lc) || knownLower.has(lc)) continue;
-              seen.add(lc);
-              newOnes.push(c);
-            }
+              .map(m => m[1].trim().replace(/^["'`]+|["'`]+$/g, ""));
+            // Validation + fuzzy dedup against the whole known library; every
+            // blocked candidate is written to symptom_candidate_rejections.
+            const newOnes = await screenLibraryCandidates(
+              supabase, user.id, "library_confirmation", candidates, Array.from(knownLower),
+            );
+
             if (newOnes.length > 0) {
               const rows = newOnes.map(name => ({ name: name.toLowerCase(), added_by: user.id }));
               const { error: addErr } = await supabase
