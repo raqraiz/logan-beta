@@ -350,13 +350,47 @@ const Chat = () => {
               return updated;
             }
 
-            const fallbackIdx = prev.findIndex(
-              (m) => m.id.startsWith("fallback-") && m.role === incomingMessage.role && m.content === incomingMessage.content
+            // Reconcile optimistic "fallback-" bubbles. Exact content match is too
+            // strict (server may sanitize/trim), which let duplicates slip through as
+            // distinct rows — fall back to the newest unreconciled fallback of the
+            // same role within a short window.
+            const isSameRoleFallback = (m: ChatMessage) =>
+              m.id.startsWith("fallback-") && m.role === incomingMessage.role;
+            const withinWindow = (m: ChatMessage) => {
+              const t = new Date(m.created_at).getTime();
+              const incoming = new Date(incomingMessage.created_at).getTime();
+              return Number.isFinite(t) && Math.abs(incoming - t) < 60_000;
+            };
+            let fallbackIdx = prev.findIndex(
+              (m) => isSameRoleFallback(m) && m.content === incomingMessage.content
             );
+            if (fallbackIdx === -1) {
+              for (let i = prev.length - 1; i >= 0; i--) {
+                if (isSameRoleFallback(prev[i]) && withinWindow(prev[i])) {
+                  fallbackIdx = i;
+                  break;
+                }
+              }
+            }
             if (fallbackIdx !== -1) {
               const updated = [...prev];
               updated[fallbackIdx] = incomingMessage;
               return updated;
+            }
+
+            // Suppress consecutive identical assistant bubbles (CTA / placeholder
+            // double-inserts) that arrive within a short window.
+            if (incomingMessage.role === "assistant") {
+              const last = [...prev].reverse().find((m) => m.role === "assistant");
+              if (
+                last &&
+                last.id !== incomingMessage.id &&
+                last.content === incomingMessage.content &&
+                (last.message_type ?? "text") === (incomingMessage.message_type ?? "text") &&
+                withinWindow(last)
+              ) {
+                return prev;
+              }
             }
 
             return [...prev, incomingMessage];
