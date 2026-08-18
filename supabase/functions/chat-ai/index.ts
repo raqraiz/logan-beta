@@ -347,14 +347,39 @@ function stripMarkdown(s: string): string {
 // Shared name validator for anything that becomes a symptom row — the chat
 // keyword path, the LLM extraction path (Pass 2), and the shared-library add.
 // Hoisted to module scope so all three enforce the identical contract.
-function isValidSymptomName(s: string): boolean {
-  if (!s) return false;
+// symptomNameRejection returns null when the name is acceptable, otherwise a
+// short machine-readable reason used for the weekly audit log.
+
+// Single words that are actions / fillers / states rather than symptom nouns.
+// Multi-word names ("feeling dizzy") are still allowed; this only blocks a bare
+// verb or filler standing alone as a library entry.
+const NON_SYMPTOM_SINGLE_WORDS = new Set([
+  // verbs
+  "feel","feeling","feels","felt","have","having","had","get","getting","got",
+  "go","going","went","take","taking","took","need","needing","want","wanting",
+  "log","logging","track","tracking","add","adding","record","recording",
+  "start","starting","stop","stopping","try","trying","think","thinking",
+  "know","knowing","say","saying","tell","telling","ask","asking","help",
+  "eat","eating","drink","drinking","sleep","sleeping","work","working",
+  "walk","walking","run","running","sit","sitting","stand","standing",
+  "wake","waking","being","been","doing","done","make","making","seem",
+  // fillers / meta
+  "symptom","symptoms","library","today","yesterday","tomorrow","morning",
+  "evening","night","day","days","week","weeks","month","months","period",
+  "cycle","phase","thing","things","stuff","issue","issues","problem",
+  "problems","note","notes","update","updates","random","normal","weird",
+  "okay","fine","good","bad","better","worse","much","little","lot","lots",
+  "maybe","kinda","sorta","stuff","everything","nothing","something",
+]);
+
+function symptomNameRejection(s: string): string | null {
+  if (!s) return "empty";
   const t = s.trim();
-  if (t.length < 3 || t.length > 30) return false;
+  if (t.length < 3 || t.length > 30) return "length";
   // Must be letters/spaces/hyphens only — no punctuation, digits, quotes
-  if (!/^[a-zA-Z][a-zA-Z\s-]*[a-zA-Z]$/.test(t)) return false;
+  if (!/^[a-zA-Z][a-zA-Z\s-]*[a-zA-Z]$/.test(t)) return "invalid_characters";
   const words = t.split(/\s+/);
-  if (words.length > 3) return false;
+  if (words.length > 3) return "too_many_words";
   // Reject sentence-fragment starters (contraction remnants, connectors)
   const firstWord = words[0].toLowerCase();
   const badStarts = new Set([
@@ -363,10 +388,181 @@ function isValidSymptomName(s: string): boolean {
     "if","when","so","because","as","to","for","of","in","on","at",
     "not","no","yes","up","down","out","in","also","just","really",
   ]);
-  if (badStarts.has(firstWord)) return false;
-  if (isSymptomStopword(t)) return false;
-  return true;
+  if (badStarts.has(firstWord)) return "fragment_start";
+  if (isSymptomStopword(t)) return "stopword";
+  if (words.length === 1 && NON_SYMPTOM_SINGLE_WORDS.has(firstWord)) return "not_a_symptom_noun";
+  // A bare gerund on its own ("throbbing", "aching" are fine as descriptors but
+  // "wondering", "wandering" style verbs are not) — only block gerunds that are
+  // in the verb list above; anything else is allowed through.
+  return null;
 }
+
+function isValidSymptomName(s: string): boolean {
+  return symptomNameRejection(s) === null;
+}
+
+// --- Fuzzy / normalized dedup against the existing shared library ---
+// The DB only has a unique index on LOWER(TRIM(name)), so "exhaustion",
+// "exhausted" and "feeling tired" all slipped in as separate rows. These
+// helpers collapse morphology + common synonyms and then fall back to an
+// edit-distance check so near-duplicates are blocked before insert.
+
+const SYMPTOM_SYNONYM_ROOTS: Record<string, string> = {
+  tired: "fatigue", tiredness: "fatigue", exhausted: "fatigue", exhaustion: "fatigue",
+  fatigued: "fatigue", drained: "fatigue", sleepy: "fatigue", knackered: "fatigue",
+  lethargy: "fatigue", lethargic: "fatigue", wiped: "fatigue", worn: "fatigue",
+  ache: "pain", aching: "pain", achy: "pain", sore: "pain", soreness: "pain",
+  painful: "pain", hurting: "pain", hurt: "pain",
+  nauseous: "nausea", nauseated: "nausea", queasy: "nausea", sick: "nausea",
+  anxious: "anxiety", anxiousness: "anxiety", nervy: "anxiety", worried: "anxiety",
+  worry: "anxiety", panicky: "anxiety",
+  sad: "low mood", sadness: "low mood", depressed: "low mood", down: "low mood",
+  blue: "low mood", low: "low mood", weepy: "low mood", tearful: "low mood",
+  irritable: "irritability", irritated: "irritability", cranky: "irritability",
+  angry: "irritability", rage: "irritability", snappy: "irritability",
+  bloated: "bloating", bloat: "bloating", puffy: "bloating",
+  cramp: "cramps", cramping: "cramps", crampy: "cramps",
+  dizzy: "dizziness", lightheaded: "dizziness", woozy: "dizziness",
+  headachy: "headache", migraine: "headache", migraines: "headache",
+  insomnia: "poor sleep", sleepless: "poor sleep", restless: "poor sleep",
+  foggy: "brain fog", fog: "brain fog", fuzzy: "brain fog", unfocused: "brain fog",
+  craving: "cravings", hungry: "cravings", hunger: "cravings",
+};
+
+// A tiny suffix stemmer — enough to collapse plural / -ing / -ed / -ness forms.
+function stemWord(w: string): string {
+  let x = w.toLowerCase();
+  if (SYMPTOM_SYNONYM_ROOTS[x]) return SYMPTOM_SYNONYM_ROOTS[x];
+  for (const suf of ["iness", "ness", "ings", "ing", "ies", "ied", "eds", "ed", "es", "s"]) {
+    if (x.length - suf.length >= 4 && x.endsWith(suf)) {
+      x = x.slice(0, x.length - suf.length);
+      if (suf === "ies" || suf === "ied") x += "y";
+      break;
+    }
+  }
+  // collapse doubled final consonant ("throbb" -> "throb")
+  if (/([bdgklmnprt])\1$/.test(x)) x = x.slice(0, -1);
+  return SYMPTOM_SYNONYM_ROOTS[x] ?? x;
+}
+
+const DEDUP_FILLER_WORDS = new Set([
+  "feeling","feel","felt","a","an","the","of","my","some","very","really",
+  "so","too","being","is","are","and","in","on","at","lots","lot",
+]);
+
+// Canonical key: filler-stripped, stemmed, synonym-mapped, alphabetised words.
+function canonicalSymptomKey(name: string): string {
+  const words = String(name || "")
+    .toLowerCase()
+    .replace(/[^a-z\s-]/g, " ")
+    .split(/[\s-]+/)
+    .filter(Boolean)
+    .filter(w => !DEDUP_FILLER_WORDS.has(w))
+    .map(stemWord)
+    .flatMap(w => w.split(/\s+/));
+  const uniq = Array.from(new Set(words)).sort();
+  return (uniq.length ? uniq : [String(name || "").trim().toLowerCase()]).join(" ");
+}
+
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  const m = a.length, n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) {
+      cur[j] = Math.min(
+        prev[j] + 1,
+        cur[j - 1] + 1,
+        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+
+function similarity(a: string, b: string): number {
+  const longest = Math.max(a.length, b.length);
+  if (!longest) return 1;
+  return 1 - levenshtein(a, b) / longest;
+}
+
+// Returns the existing library name that this candidate duplicates, or null.
+function findNearDuplicate(candidate: string, existing: string[]): string | null {
+  const key = canonicalSymptomKey(candidate);
+  if (!key) return null;
+  for (const e of existing) {
+    const ek = canonicalSymptomKey(e);
+    if (!ek) continue;
+    if (ek === key) return e;
+    if (Math.abs(ek.length - key.length) <= 4 && similarity(ek, key) >= 0.85) return e;
+    // one-word candidate contained in a one-word existing stem (e.g. "cramp"/"cramps")
+    if (!ek.includes(" ") && !key.includes(" ") && (ek.startsWith(key) || key.startsWith(ek))
+        && Math.min(ek.length, key.length) >= 5) return e;
+  }
+  return null;
+}
+
+// Fire-and-forget audit trail of everything blocked from the shared library.
+async function logSymptomRejections(
+  supabase: any,
+  userId: string | null,
+  source: string,
+  rows: { name: string; reason: string; matched?: string | null }[],
+) {
+  if (!rows.length) return;
+  try {
+    await supabase.from("symptom_candidate_rejections").insert(
+      rows.map(r => ({
+        candidate_name: String(r.name).slice(0, 100),
+        normalized_name: canonicalSymptomKey(r.name).slice(0, 100),
+        user_id: userId,
+        source,
+        reason: r.reason,
+        matched_existing: r.matched ?? null,
+      })),
+    );
+    console.log(`[symptom_rejections] ${source}:`, rows.map(r => `${r.name} (${r.reason})`).join(", "));
+  } catch (e) {
+    console.warn("[symptom_rejections] log failed:", (e as Error)?.message);
+  }
+}
+
+// Single gate every community_symptoms insert path runs through.
+// Returns the names that may be inserted; logs everything it blocks.
+async function screenLibraryCandidates(
+  supabase: any,
+  userId: string | null,
+  source: string,
+  candidates: string[],
+  existingNames: string[],
+): Promise<string[]> {
+  const rejections: { name: string; reason: string; matched?: string | null }[] = [];
+  const accepted: string[] = [];
+  const acceptedKeys = new Set<string>();
+  const pool = existingNames.slice();
+
+  for (const raw of candidates) {
+    const name = stripMarkdown(String(raw || "")).trim().toLowerCase().replace(/\s+/g, " ");
+    if (!name) continue;
+    const reason = symptomNameRejection(name);
+    if (reason) { rejections.push({ name: raw, reason }); continue; }
+    const key = canonicalSymptomKey(name);
+    if (acceptedKeys.has(key)) { rejections.push({ name: raw, reason: "duplicate_in_batch" }); continue; }
+    const dupe = findNearDuplicate(name, pool);
+    if (dupe) { rejections.push({ name: raw, reason: "near_duplicate", matched: dupe }); continue; }
+    acceptedKeys.add(key);
+    accepted.push(name);
+    pool.push(name);
+  }
+
+  await logSymptomRejections(supabase, userId, source, rejections);
+  return accepted;
+}
+
 
 // --- Pass 2: catalog-independent symptom extraction ---
 // The keyword list can only ever see the ~30 symptoms someone thought to add.
