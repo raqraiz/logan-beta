@@ -285,7 +285,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
 
           {(stage === "cycling" || stage === "irregular" || stage === "perimenopause") && (
             <div className="mt-4 p-3 rounded-lg border border-border/50 bg-accent/20 space-y-2">
-              <div className="text-sm font-medium">Uterus removed, ovaries intact?</div>
+              <div className="text-sm font-medium">Had a hysterectomy?</div>
               <div className="text-xs text-muted-foreground">
                 If your uterus was removed but your ovaries are still there, you still cycle hormonally — you just won't bleed. Logan will stop asking you for period dates.
               </div>
