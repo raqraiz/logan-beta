@@ -4626,7 +4626,10 @@ MEAL PLANS / MENUS — STRICT RULES:
       userLifeStage === "postpartum" ? "Postpartum" :
       userLifeStage === "menopause" ? "Menopause" :
       userLifeStage === "perimenopause" ? "Perimenopause" :
-      userLifeStage === "irregular" ? ((participant as any).on_hormonal_bc === true ? "Irregular / hormonal birth control" : "Irregular cycle") :
+      userLifeStage === "irregular" ? (
+        (participant as any).has_uterus === false ? "Irregular / no uterus (ovaries intact)" :
+        (participant as any).on_hormonal_bc === true ? "Irregular / hormonal birth control" : "Irregular cycle"
+      ) :
       "Cycling";
     
     // Calculate postpartum timeline + stage-specific guidance bucket
@@ -4682,7 +4685,7 @@ MEAL PLANS / MENUS — STRICT RULES:
     const todayStr = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
     let userContext = `\n\nUSER CONTEXT:\n- TODAY'S DATE: ${todayStr} (anchor for all time/date reasoning — "last month", "yesterday", etc. NEVER guess or invent dates. If data doesn't cover the period asked about, say so plainly.)\n- Life stage: ${stageLabel}\n- Age: ${age || "unknown"}${ppTimeline}\n- Anchor symptom: ${participant.anchor_symptom || "not specified"}\n- Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}\n${topics ? `- Focus areas: ${topics}` : ""}\n\n${stageContext}${symptomContext}`;
     
-    return basePrompt + userContext;
+    return basePrompt + userContext + noUterusBlock;
   }
 
   if (!cycleInfo) {
@@ -4747,7 +4750,7 @@ ${emotionalContext ? `Use this context only if it genuinely helps. Do NOT open w
 
 PHASE SALIENCE (this turn only): The PHASE AUTHORITY RULE and CYCLE DAY RULE above remain fully binding — never state a phase or day that contradicts them. But they govern ACCURACY, not PROMINENCE. This turn: mention her phase or cycle day AT MOST ONCE, positioned late in the reply, in passing, as a single short clause. NEVER as the opening sentence, the opening clause, or the frame the answer is built around. Do not begin with "While you're on Day ${cycleInfo?.cycleDay ?? "N"}...", "In your ${cycleInfo?.phase ?? "current"} phase...", or any equivalent lead-in. If the phase adds nothing to her actual situation, omit it entirely — omitting is always allowed, contradicting never is.` : `Use this context to make your responses personally relevant. Reference their current phase and how it might affect their request. If they mention their anchor symptom, acknowledge it and provide phase-appropriate guidance.`} When users ask about their cycle length or patterns, use the cycle history data to provide specific insights. When symptom log data is available, reference their actual reported symptoms and patterns — this is more accurate than textbook generalizations.`;
 
-  return basePrompt + userContext;
+  return basePrompt + userContext + noUterusBlock;
 }
 
 // Per-user phase lengths for the current request. Set once the participant row
