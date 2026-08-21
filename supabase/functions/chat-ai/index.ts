@@ -1662,7 +1662,8 @@ serve(async (req) => {
     }
 
     // --- Cycle edit detection (cycle length or period date changes via chat) ---
-    if (participant && !noUterus) {
+    if (participant) {
+
 
       // Detect cycle length change: "change my cycle length to 30", "my cycle is 32 days", "set cycle to 26 days"
       const cycleLengthMatch = userMessage.match(
