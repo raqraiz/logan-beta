@@ -1141,6 +1141,15 @@ serve(async (req) => {
     // Respect the user's custom phase lengths for every cycle calc this request.
     setActivePhaseLengths(participant);
 
+    // --- No-uterus support (hysterectomy with ovaries retained) ---
+    // has_uterus === false => her ovaries still cycle hormonally, but no bleed signal
+    // will ever exist. Independent of life_stage and of on_hormonal_bc.
+    // NOT HANDLED HERE: "no uterus AND no ovaries" (surgical menopause) — that case is
+    // deliberately left as has_uterus = null, never false.
+    const noUterus = (participant as any)?.has_uterus === false;
+
+
+
 
     // --- Period confirmation detection ---
     const { data: lastAssistantMsg } = await supabase
