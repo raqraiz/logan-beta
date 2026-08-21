@@ -1882,9 +1882,9 @@ const Chat = () => {
                   {showInteractiveInput && inputType === "uterus_picker" && (
                     <div className="mt-3 flex flex-col gap-2 max-w-xs">
                       {[
-                        { value: "uterus_yes", label: "Yes", desc: "I still have my uterus" },
-                        { value: "uterus_no_ovaries_yes", label: "No, but I have my ovaries", desc: "Hysterectomy — no periods, but your hormones still cycle" },
-                        { value: "uterus_none", label: "No uterus or ovaries", desc: "Logan will check in with you about this in chat" },
+                        { value: "uterus_removed_yes", label: "Yes", desc: "Uterus removed, ovaries still there — no periods, but your hormones still cycle" },
+                        { value: "uterus_removed_no", label: "No", desc: "My uterus is intact" },
+                        { value: "uterus_prefer_not", label: "Prefer not to say", desc: "Logan won't assume either way" },
                       ].map((option) => (
                         <button
                           key={option.value}
