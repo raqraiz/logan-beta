@@ -285,13 +285,14 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
 
           {(stage === "cycling" || stage === "irregular" || stage === "perimenopause") && (
             <div className="mt-4 p-3 rounded-lg border border-border/50 bg-accent/20 space-y-2">
-              <div className="text-sm font-medium">Do you have your uterus?</div>
+              <div className="text-sm font-medium">Uterus removed, ovaries intact?</div>
               <div className="text-xs text-muted-foreground">
                 If your uterus was removed but your ovaries are still there, you still cycle hormonally — you just won't bleed. Logan will stop asking you for period dates.
               </div>
+              {/* POLARITY: "Yes" = uterus removed => has_uterus = false. "No" = intact => true. */}
               <RadioGroup
-                value={hasUterus === true ? "yes" : hasUterus === false ? "no" : "unknown"}
-                onValueChange={(v) => setHasUterus(v === "yes" ? true : v === "no" ? false : null)}
+                value={hasUterus === false ? "yes" : hasUterus === true ? "no" : "unknown"}
+                onValueChange={(v) => setHasUterus(v === "yes" ? false : v === "no" ? true : null)}
                 className="flex flex-wrap gap-4 pt-1"
               >
                 <label className="flex items-center gap-2 cursor-pointer">
