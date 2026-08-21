@@ -132,7 +132,7 @@ const ONBOARDING_QUESTIONS = [
     // Only for irregular users who explicitly said they are NOT on hormonal BC —
     // hysterectomy context is irrelevant when hormones are externally regulated.
     key: "has_uterus",
-    message: "One more thing so I don't ask you for period dates you can't give me — do you still have your uterus?",
+    message: "Uterus removed, ovaries intact?\n\nIf your uterus was removed but your ovaries are still there, you still cycle hormonally — you just won't bleed. Logan will stop asking you for period dates.",
     field: "has_uterus",
     parseType: "has_uterus",
     inputType: "uterus_picker",
