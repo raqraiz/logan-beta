@@ -119,14 +119,38 @@ const ONBOARDING_QUESTIONS = [
     requiresStage: ["cycling", "perimenopause"]
   },
   {
+    // Asked before the uterus question so the has_uterus gate (irregular + NOT on BC)
+    // is actually reachable during onboarding. Writes on_hormonal_bc only.
+    key: "irregular_bc",
+    message: "Are you on hormonal birth control right now? (Pill, mini-pill, hormonal IUD, implant, ring, or patch.)",
+    field: "on_hormonal_bc",
+    parseType: "bc",
+    inputType: "bc_picker",
+    requiresStage: "irregular"
+  },
+  {
+    // Only for irregular users who explicitly said they are NOT on hormonal BC —
+    // hysterectomy context is irrelevant when hormones are externally regulated.
+    key: "has_uterus",
+    message: "One more thing so I don't ask you for period dates you can't give me — do you still have your uterus?",
+    field: "has_uterus",
+    parseType: "has_uterus",
+    inputType: "uterus_picker",
+    requiresStage: "irregular",
+    requiresBcFalse: true
+  },
+  {
     key: "irregular_last_period",
     message: "Do you know roughly when your last period started? (No worries if not — Logan works without it.)",
     field: "last_period_start",
     parseType: "date_optional",
     inputType: "date_picker",
     showNotSure: true,
-    requiresStage: "irregular"
+    requiresStage: "irregular",
+    // Skipped entirely when the user has no uterus — she will never have a bleed date.
+    requiresUterus: true
   },
+
 
   {
     key: "symptoms",
