@@ -558,6 +558,12 @@ function buildInsightPrompt(
     ? `\n- LIFE STAGE: **Perimenopause**. ${firstName} STILL HAS PERIODS and is still cycling, but the pattern is shifting (cycles getting shorter/longer, heavier/lighter, skipped months, new symptoms like hot flashes, sleep changes, sharper mood swings). DO NOT call her menopausal — perimenopause ≠ menopause. Reference her cycle day and phase as usual, but acknowledge swings can be sharper and less predictable than her baseline. Weave in awareness of sleep, hot flashes, mood, energy, and bone/muscle health where it fits naturally.`
     : "";
 
+  // NO-UTERUS BRANCH (hysterectomy, ovaries retained) — layered on top of life_stage,
+  // mirroring the on_hormonal_bc pattern. Not a life_stage value.
+  const noUterusNote = participant.has_uterus === false
+    ? `\n- NO UTERUS (hysterectomy, ovaries intact): She is NOT menopausal — her ovaries still cycle, so hormone patterns still apply. But she will NEVER bleed again: never ask for, reference, or imply a period date, Day 1, a late/due period, or "when your period starts". Any cycle day or phase here is an ESTIMATE with no bleed anchor — hedge it ("roughly", "estimated") and lean on her tracked symptoms over calendar timing.`
+    : "";
+
   return `You are Logan. You know ${firstName}'s cycle so well you can name what she's feeling before she does. You're not giving advice or instructions. You're the person who just gets it.
 
 CONTEXT:
@@ -566,7 +572,7 @@ CONTEXT:
 - Age: ${age || "unknown"}
 - Anchor symptom: ${anchorSymptom || "not set"}
 - Other symptoms: ${symptoms.join(", ") || "none"}
-- PHASE STRENGTHS: ${strengthContext}${perimenopauseContext}
+- PHASE STRENGTHS: ${strengthContext}${perimenopauseContext}${noUterusNote}
 ${anchorContext ? `- ${anchorContext}` : ""}
 ${topicContext}
 ${age && age <= 16 ? "- TONE: User is young. Use simple, relatable language. Keep intro under 25 words. Make the question feel like a text from a friend." : ""}
@@ -701,7 +707,9 @@ function buildNonCyclingInsightPrompt(
     : lifeStage === "perimenopause" ? "Perimenopause"
     : lifeStage === "pregnant" ? "Pregnancy"
     : lifeStage === "pregnancy_loss" ? "Pregnancy Loss"
-    : lifeStage === "irregular" ? (onHormonalBc === true ? "Irregular / Hormonal BC" : "Irregular cycle")
+    : lifeStage === "irregular" ? (
+        participant.has_uterus === false ? "Irregular / no uterus (ovaries intact)"
+        : onHormonalBc === true ? "Irregular / Hormonal BC" : "Irregular cycle")
     : "Menopause";
   const stageContext =
     lifeStage === "postpartum"
@@ -721,12 +729,18 @@ function buildNonCyclingInsightPrompt(
               : `${firstName} is navigating menopause. Estrogen and progesterone are declining. Focus on bone health, sleep quality, mood stability, and managing symptoms like hot flashes or brain fog.`;
 
 
+  // NO-UTERUS BRANCH (hysterectomy, ovaries retained) — layered on top of life_stage,
+  // mirroring the on_hormonal_bc pattern. Not a life_stage value.
+  const noUterusNote = participant.has_uterus === false
+    ? `\n- NO UTERUS (hysterectomy, ovaries intact): She is NOT menopausal — her ovaries still cycle, so hormone patterns still apply. But she will NEVER bleed again: never ask for, reference, or imply a period date, Day 1, a late/due period, or "when your period starts". Any cycle day or phase here is an ESTIMATE with no bleed anchor — hedge it ("roughly", "estimated") and lean on her tracked symptoms over calendar timing.`
+    : "";
+
   return `You are Logan. You're ${firstName}'s companion through her ${stageLabel.toLowerCase()} journey. You're not clinical — you're the friend who just gets it.
 
 CONTEXT:
 - Life stage: **${stageLabel}**
 ${timelineContext ? `- Timeline: ${timelineContext}` : ""}
-- ${stageContext}
+- ${stageContext}${noUterusNote}
 - Age: ${age || "unknown"}
 - Anchor symptom: ${anchorSymptom || "not set"}
 - Other symptoms: ${symptoms.join(", ") || "none"}
