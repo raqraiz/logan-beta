@@ -3798,11 +3798,14 @@ serve(async (req) => {
     }));
 
     // Bleed/spotting acknowledgment guards (set in the spotting block above).
-    if (unreliableCycleNote) {
+    if (noUterusBleedNote) {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): This user has NO UTERUS (hysterectomy, ovaries retained). She will never bleed again, but her ovaries still cycle hormonally. She mentioned a period/bleeding word. NEVER log, propose, or ask for a period date or Day 1. NEVER treat this as her period starting. If she is describing actual bleeding, gently note that bleeding isn't expected after a hysterectomy and suggest she check in with her clinician. Otherwise just answer the underlying question using her hormonal phase estimate, without any period-date talk.`;
+    } else if (unreliableCycleNote) {
       systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user mentioned bleeding/spotting, but her cycle length is NOT reliably established (irregular, PMOS/PCOS, hormonal birth control, brand-new account, or non-cycling life stage). Acknowledge what she shared warmly. Ask how heavy it is and how long it's lasted. DO NOT propose resetting her cycle. DO NOT infer or assign a phase from this single mention. DO NOT say "this sounds like your period starting."`;
     } else if (midCycleSpottingNote) {
       systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user mentioned bleeding/spotting, but based on her cycle day this is likely mid-cycle (ovulatory spotting, implantation, or breakthrough bleeding) — not her period starting. Acknowledge it gently, ask if it's heavier than usual or accompanied by cramps, and DO NOT propose a cycle reset or change her phase from this single mention.`;
     }
+
     if (overdueNote) {
       systemPrompt += overdueNote;
     }
