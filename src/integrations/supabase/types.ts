@@ -939,6 +939,7 @@ export type Database = {
           follicular_days: number | null
           full_name: string
           goals: string[] | null
+          has_uterus: boolean | null
           id: string
           is_active: boolean | null
           last_period_start: string | null
@@ -978,6 +979,7 @@ export type Database = {
           follicular_days?: number | null
           full_name: string
           goals?: string[] | null
+          has_uterus?: boolean | null
           id?: string
           is_active?: boolean | null
           last_period_start?: string | null
@@ -1017,6 +1019,7 @@ export type Database = {
           follicular_days?: number | null
           full_name?: string
           goals?: string[] | null
+          has_uterus?: boolean | null
           id?: string
           is_active?: boolean | null
           last_period_start?: string | null
