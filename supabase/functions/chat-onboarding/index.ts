@@ -132,7 +132,7 @@ const ONBOARDING_QUESTIONS = [
     // Only for irregular users who explicitly said they are NOT on hormonal BC —
     // hysterectomy context is irrelevant when hormones are externally regulated.
     key: "has_uterus",
-    message: "One more thing so I don't ask you for period dates you can't give me — do you still have your uterus?",
+    message: "Uterus removed, ovaries intact?\n\nIf your uterus was removed but your ovaries are still there, you still cycle hormonally — you just won't bleed. Logan will stop asking you for period dates.",
     field: "has_uterus",
     parseType: "has_uterus",
     inputType: "uterus_picker",
@@ -373,16 +373,21 @@ serve(async (req) => {
         else if (/^(no|nope|nah|false)\b/.test(lower) || lower.includes("bc_no")) parsedValue = false;
         else parsedValue = null; // prefer not to say / unclear
       } else if (parseType === "has_uterus") {
-        const lower = (userMessage || "").toLowerCase().trim();
+        // QUESTION AS WORDED: "Uterus removed, ovaries intact?"
+        // "Yes" => uterus IS removed => has_uterus = false
+        // "No"  => uterus intact     => has_uterus = true (default path)
         // EDGE CASE — NOT HANDLED IN THIS PASS: "no uterus AND no ovaries" is surgical
         // menopause and needs its own flow. Do NOT silently set has_uterus = false for
         // her (that would imply ovaries are still cycling). Leave the flag unknown.
-        if (lower.includes("uterus_none") || /no\s+uterus\s+or\s+ovaries/.test(lower) || (lower.includes("no") && lower.includes("ovaries") && !lower.includes("have my ovaries") && !lower.includes("but"))) {
+        const lower = (userMessage || "").toLowerCase().trim();
+        if (/no\s+uterus\s+or\s+ovaries/.test(lower) || /ovaries\s+(were\s+)?(removed|out|gone)/.test(lower)) {
           parsedValue = null;
-        } else if (lower.includes("uterus_no_ovaries_yes") || lower.includes("have my ovaries") || (/^no\b/.test(lower) && lower.includes("ovaries"))) {
-          parsedValue = false;
-        } else if (/^(yes|yep|yeah)\b/.test(lower) || lower.includes("uterus_yes")) {
-          parsedValue = true;
+        } else if (lower.includes("uterus_prefer_not") || /prefer not/.test(lower)) {
+          parsedValue = null;
+        } else if (lower.includes("uterus_removed_yes") || /^(yes|yep|yeah|correct|true)\b/.test(lower)) {
+          parsedValue = false; // uterus removed
+        } else if (lower.includes("uterus_removed_no") || /^(no|nope|nah|false)\b/.test(lower)) {
+          parsedValue = true; // uterus intact
         } else {
           parsedValue = true; // default path — no behavior change
         }
