@@ -1596,7 +1596,10 @@ serve(async (req) => {
     let bleedDay1Prompt: { text: string; suggestedDay1: string } | null = null;
     let midCycleSpottingNote = false;
     let unreliableCycleNote = false;
-    if (participant && !isPeriodConfirmation) {
+    // Set when a no-uterus user mentions bleeding/period — never log a phantom period.
+    let noUterusBleedNote = false;
+    if (participant && !isPeriodConfirmation && !noUterus) {
+
       const bleedMentionPatterns: RegExp[] = [
         /\b(spotting|spot of blood|some blood|slightest blood|little blood|bit of blood|light bleed(?:ing)?|brown discharge|pink discharge)\b/i,
         /\b(i'?m bleeding|started bleeding|started to bleed|first sign of (?:my )?period|got the first (?:bit|sign))\b/i,
