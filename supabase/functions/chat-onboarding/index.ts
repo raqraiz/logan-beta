@@ -367,7 +367,27 @@ serve(async (req) => {
       let parsedValue: any = userMessage?.trim() || "";
       const parseType = currentQuestion.parseType;
 
-      if (parseType === "life_stage") {
+      if (parseType === "bc") {
+        const lower = (userMessage || "").toLowerCase().trim();
+        if (/^(yes|yep|yeah|true)\b/.test(lower) || lower.includes("bc_yes")) parsedValue = true;
+        else if (/^(no|nope|nah|false)\b/.test(lower) || lower.includes("bc_no")) parsedValue = false;
+        else parsedValue = null; // prefer not to say / unclear
+      } else if (parseType === "has_uterus") {
+        const lower = (userMessage || "").toLowerCase().trim();
+        // EDGE CASE — NOT HANDLED IN THIS PASS: "no uterus AND no ovaries" is surgical
+        // menopause and needs its own flow. Do NOT silently set has_uterus = false for
+        // her (that would imply ovaries are still cycling). Leave the flag unknown.
+        if (lower.includes("uterus_none") || /no\s+uterus\s+or\s+ovaries/.test(lower) || (lower.includes("no") && lower.includes("ovaries") && !lower.includes("have my ovaries") && !lower.includes("but"))) {
+          parsedValue = null;
+        } else if (lower.includes("uterus_no_ovaries_yes") || lower.includes("have my ovaries") || (/^no\b/.test(lower) && lower.includes("ovaries"))) {
+          parsedValue = false;
+        } else if (/^(yes|yep|yeah)\b/.test(lower) || lower.includes("uterus_yes")) {
+          parsedValue = true;
+        } else {
+          parsedValue = true; // default path — no behavior change
+        }
+      } else if (parseType === "life_stage") {
+
         const lower = (userMessage || "").toLowerCase();
         if (lower.includes("pregnancy_loss") || lower.includes("pregnancy loss") || lower.includes("miscarriage") || lower.includes("lost the baby")) {
           parsedValue = "pregnancy_loss";
