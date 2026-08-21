@@ -1655,11 +1655,15 @@ serve(async (req) => {
     }
     // --- End spotting detection ---
 
-
-
+    // No-uterus users: any period/bleed mention gets a gentle clarification instead of a
+    // Day-1 prompt or a phantom period log.
+    if (participant && noUterus) {
+      noUterusBleedNote = /\b(period|bleed(?:ing)?|spotting|blood|day\s*1|day\s*one|menstruat\w*|flow)\b/i.test(userMessage);
+    }
 
     // --- Cycle edit detection (cycle length or period date changes via chat) ---
-    if (participant) {
+    if (participant && !noUterus) {
+
       // Detect cycle length change: "change my cycle length to 30", "my cycle is 32 days", "set cycle to 26 days"
       const cycleLengthMatch = userMessage.match(
         /(?:change|set|update|make|switch)\s+(?:my\s+)?cycle\s*(?:length)?\s*(?:to|=)\s*(\d{2,})/i
