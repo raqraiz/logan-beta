@@ -476,17 +476,30 @@ serve(async (req) => {
       }
 
       // Determine next step, skipping questions that don't apply to this user's life stage
+      // or to her flag state (on_hormonal_bc / has_uterus).
       let nextStep = currentStep + 1;
       const userLifeStage = (participant as any)?.life_stage || "cycling";
+      const shouldSkipQuestion = (q: any): boolean => {
+        if (!q) return false;
+        if (q.requiresStage) {
+          const ok = Array.isArray(q.requiresStage)
+            ? (q.requiresStage as string[]).includes(userLifeStage)
+            : q.requiresStage === userLifeStage;
+          if (!ok) return true;
+        }
+        // Uterus question only for users who explicitly answered "not on hormonal BC"
+        if (q.requiresBcFalse && (participant as any)?.on_hormonal_bc !== false) return true;
+        // Bleed-date questions are meaningless without a uterus
+        if (q.requiresUterus && (participant as any)?.has_uterus === false) return true;
+        return false;
+      };
       while (
         nextStep < ONBOARDING_QUESTIONS.length - 1 &&
-        (ONBOARDING_QUESTIONS[nextStep] as any).requiresStage &&
-        (Array.isArray((ONBOARDING_QUESTIONS[nextStep] as any).requiresStage)
-          ? !((ONBOARDING_QUESTIONS[nextStep] as any).requiresStage as string[]).includes(userLifeStage)
-          : (ONBOARDING_QUESTIONS[nextStep] as any).requiresStage !== userLifeStage)
+        shouldSkipQuestion(ONBOARDING_QUESTIONS[nextStep])
       ) {
         nextStep++;
       }
+
 
       const nextQuestion = ONBOARDING_QUESTIONS[nextStep];
 
