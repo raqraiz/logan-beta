@@ -1788,7 +1788,8 @@ serve(async (req) => {
         }
       }
 
-      if (periodDateMatch && !isPeriodStartQuestion) {
+      // noUterus: never write a last_period_start — she has no bleed to anchor to.
+      if (periodDateMatch && !isPeriodStartQuestion && !noUterus) {
         const dateStr = periodDateMatch[1];
         const parsed = parseExplicitCalendarDate(dateStr);
         if (parsed && parsed <= new Date()) {
