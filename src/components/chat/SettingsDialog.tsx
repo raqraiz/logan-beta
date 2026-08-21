@@ -49,6 +49,8 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
   const [pregnancyLmp, setPregnancyLmp] = useState<string>("");
   const [timezone, setTimezone] = useState<string>("");
   const [onHormonalBc, setOnHormonalBc] = useState<boolean | null>(null);
+  const [hasUterus, setHasUterus] = useState<boolean | null>(null);
+
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [cycleLen, setCycleLen] = useState<number>(28);
@@ -82,7 +84,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
     (async () => {
       const { data } = await supabase
         .from("participants")
-        .select("postpartum_active, postpartum_start_date, loss_date, due_date, pregnancy_lmp, timezone, on_hormonal_bc, cycle_length_days, menstruation_days, follicular_days, ovulation_window_days, luteal_days")
+        .select("postpartum_active, postpartum_start_date, loss_date, due_date, pregnancy_lmp, timezone, on_hormonal_bc, has_uterus, cycle_length_days, menstruation_days, follicular_days, ovulation_window_days, luteal_days")
         .eq("email", userEmail)
         .maybeSingle();
       if (data) {
@@ -92,6 +94,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
         setDueDate((data as any).due_date ?? "");
         setPregnancyLmp((data as any).pregnancy_lmp ?? "");
         setOnHormonalBc((data as any).on_hormonal_bc ?? null);
+        setHasUterus((data as any).has_uterus ?? null);
         const cl = (data as any).cycle_length_days ?? 28;
         setCycleLen(cl);
         const d = defaultPhaseLengths(cl);
@@ -163,6 +166,9 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
       payload.due_date = null;
       payload.pregnancy_lmp = null;
       payload.on_hormonal_bc = onHormonalBc;
+      payload.has_uterus = hasUterus;
+      // No uterus => no bleed anchor will ever exist. Clear any stale period date.
+      if (hasUterus === false) payload.last_period_start = null;
     } else if (stage === "menopause") {
       payload.last_period_start = null;
       payload.postpartum_start_date = null;
