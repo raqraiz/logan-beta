@@ -1141,6 +1141,15 @@ serve(async (req) => {
     // Respect the user's custom phase lengths for every cycle calc this request.
     setActivePhaseLengths(participant);
 
+    // --- No-uterus support (hysterectomy with ovaries retained) ---
+    // has_uterus === false => her ovaries still cycle hormonally, but no bleed signal
+    // will ever exist. Independent of life_stage and of on_hormonal_bc.
+    // NOT HANDLED HERE: "no uterus AND no ovaries" (surgical menopause) — that case is
+    // deliberately left as has_uterus = null, never false.
+    const noUterus = (participant as any)?.has_uterus === false;
+
+
+
 
     // --- Period confirmation detection ---
     const { data: lastAssistantMsg } = await supabase
@@ -1587,7 +1596,10 @@ serve(async (req) => {
     let bleedDay1Prompt: { text: string; suggestedDay1: string } | null = null;
     let midCycleSpottingNote = false;
     let unreliableCycleNote = false;
-    if (participant && !isPeriodConfirmation) {
+    // Set when a no-uterus user mentions bleeding/period — never log a phantom period.
+    let noUterusBleedNote = false;
+    if (participant && !isPeriodConfirmation && !noUterus) {
+
       const bleedMentionPatterns: RegExp[] = [
         /\b(spotting|spot of blood|some blood|slightest blood|little blood|bit of blood|light bleed(?:ing)?|brown discharge|pink discharge)\b/i,
         /\b(i'?m bleeding|started bleeding|started to bleed|first sign of (?:my )?period|got the first (?:bit|sign))\b/i,
@@ -1643,11 +1655,16 @@ serve(async (req) => {
     }
     // --- End spotting detection ---
 
-
-
+    // No-uterus users: any period/bleed mention gets a gentle clarification instead of a
+    // Day-1 prompt or a phantom period log.
+    if (participant && noUterus) {
+      noUterusBleedNote = /\b(period|bleed(?:ing)?|spotting|blood|day\s*1|day\s*one|menstruat\w*|flow)\b/i.test(userMessage);
+    }
 
     // --- Cycle edit detection (cycle length or period date changes via chat) ---
     if (participant) {
+
+
       // Detect cycle length change: "change my cycle length to 30", "my cycle is 32 days", "set cycle to 26 days"
       const cycleLengthMatch = userMessage.match(
         /(?:change|set|update|make|switch)\s+(?:my\s+)?cycle\s*(?:length)?\s*(?:to|=)\s*(\d{2,})/i
@@ -1771,7 +1788,8 @@ serve(async (req) => {
         }
       }
 
-      if (periodDateMatch && !isPeriodStartQuestion) {
+      // noUterus: never write a last_period_start — she has no bleed to anchor to.
+      if (periodDateMatch && !isPeriodStartQuestion && !noUterus) {
         const dateStr = periodDateMatch[1];
         const parsed = parseExplicitCalendarDate(dateStr);
         if (parsed && parsed <= new Date()) {
@@ -3780,11 +3798,14 @@ serve(async (req) => {
     }));
 
     // Bleed/spotting acknowledgment guards (set in the spotting block above).
-    if (unreliableCycleNote) {
+    if (noUterusBleedNote) {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): This user has NO UTERUS (hysterectomy, ovaries retained). She will never bleed again, but her ovaries still cycle hormonally. She mentioned a period/bleeding word. NEVER log, propose, or ask for a period date or Day 1. NEVER treat this as her period starting. If she is describing actual bleeding, gently note that bleeding isn't expected after a hysterectomy and suggest she check in with her clinician. Otherwise just answer the underlying question using her hormonal phase estimate, without any period-date talk.`;
+    } else if (unreliableCycleNote) {
       systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user mentioned bleeding/spotting, but her cycle length is NOT reliably established (irregular, PMOS/PCOS, hormonal birth control, brand-new account, or non-cycling life stage). Acknowledge what she shared warmly. Ask how heavy it is and how long it's lasted. DO NOT propose resetting her cycle. DO NOT infer or assign a phase from this single mention. DO NOT say "this sounds like your period starting."`;
     } else if (midCycleSpottingNote) {
       systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user mentioned bleeding/spotting, but based on her cycle day this is likely mid-cycle (ovulatory spotting, implantation, or breakthrough bleeding) — not her period starting. Acknowledge it gently, ask if it's heavier than usual or accompanied by cramps, and DO NOT propose a cycle reset or change her phase from this single mention.`;
     }
+
     if (overdueNote) {
       systemPrompt += overdueNote;
     }
@@ -4437,6 +4458,12 @@ function buildSystemPrompt(
   symptomContext: string = "",
   emotionalContext: boolean = false
 ): string {
+  // NO-UTERUS BRANCH (hysterectomy, ovaries retained) — layered on top of life_stage,
+  // exactly like on_hormonal_bc. Not a life_stage value.
+  const noUterusBlock = participant?.has_uterus === false
+    ? `\n\nSTAGE AUTHORITY — NO UTERUS (hysterectomy, ovaries retained): This user's uterus was removed but her OVARIES ARE INTACT. She is NOT menopausal and her hormones are NOT declining — estrogen and progesterone still rise and fall in a roughly cyclical pattern, so phase-based guidance still applies to her. What does NOT exist is any bleed signal: she will never have a period again. ABSOLUTE RULES: never ask for, request, suggest logging, or reference a period date, Day 1, last period, or "when your period starts". Never tell her a period is due, late, or coming. Never treat absence of bleeding as a problem or as menopause. Any phase or cycle-day figure you see is an ESTIMATE without a bleed anchor — say so plainly if you reference it ("roughly", "estimated"), and lean on her own tracked symptoms and patterns over calendar timing. If she mentions bleeding, gently note that isn't expected after a hysterectomy and suggest she check with her clinician.`
+    : "";
+
   // When the current turn is emotional (or a short follow-up inside an emotional
   // window), the deep-dive structure mandate and the phase-tip content mandate are
   // suspended AT THE SOURCE so they cannot compete with the runtime override.
@@ -4599,7 +4626,10 @@ MEAL PLANS / MENUS — STRICT RULES:
       userLifeStage === "postpartum" ? "Postpartum" :
       userLifeStage === "menopause" ? "Menopause" :
       userLifeStage === "perimenopause" ? "Perimenopause" :
-      userLifeStage === "irregular" ? ((participant as any).on_hormonal_bc === true ? "Irregular / hormonal birth control" : "Irregular cycle") :
+      userLifeStage === "irregular" ? (
+        (participant as any).has_uterus === false ? "Irregular / no uterus (ovaries intact)" :
+        (participant as any).on_hormonal_bc === true ? "Irregular / hormonal birth control" : "Irregular cycle"
+      ) :
       "Cycling";
     
     // Calculate postpartum timeline + stage-specific guidance bucket
@@ -4655,7 +4685,7 @@ MEAL PLANS / MENUS — STRICT RULES:
     const todayStr = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
     let userContext = `\n\nUSER CONTEXT:\n- TODAY'S DATE: ${todayStr} (anchor for all time/date reasoning — "last month", "yesterday", etc. NEVER guess or invent dates. If data doesn't cover the period asked about, say so plainly.)\n- Life stage: ${stageLabel}\n- Age: ${age || "unknown"}${ppTimeline}\n- Anchor symptom: ${participant.anchor_symptom || "not specified"}\n- Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}\n${topics ? `- Focus areas: ${topics}` : ""}\n\n${stageContext}${symptomContext}`;
     
-    return basePrompt + userContext;
+    return basePrompt + userContext + noUterusBlock;
   }
 
   if (!cycleInfo) {
@@ -4720,7 +4750,7 @@ ${emotionalContext ? `Use this context only if it genuinely helps. Do NOT open w
 
 PHASE SALIENCE (this turn only): The PHASE AUTHORITY RULE and CYCLE DAY RULE above remain fully binding — never state a phase or day that contradicts them. But they govern ACCURACY, not PROMINENCE. This turn: mention her phase or cycle day AT MOST ONCE, positioned late in the reply, in passing, as a single short clause. NEVER as the opening sentence, the opening clause, or the frame the answer is built around. Do not begin with "While you're on Day ${cycleInfo?.cycleDay ?? "N"}...", "In your ${cycleInfo?.phase ?? "current"} phase...", or any equivalent lead-in. If the phase adds nothing to her actual situation, omit it entirely — omitting is always allowed, contradicting never is.` : `Use this context to make your responses personally relevant. Reference their current phase and how it might affect their request. If they mention their anchor symptom, acknowledge it and provide phase-appropriate guidance.`} When users ask about their cycle length or patterns, use the cycle history data to provide specific insights. When symptom log data is available, reference their actual reported symptoms and patterns — this is more accurate than textbook generalizations.`;
 
-  return basePrompt + userContext;
+  return basePrompt + userContext + noUterusBlock;
 }
 
 // Per-user phase lengths for the current request. Set once the participant row

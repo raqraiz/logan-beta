@@ -119,14 +119,38 @@ const ONBOARDING_QUESTIONS = [
     requiresStage: ["cycling", "perimenopause"]
   },
   {
+    // Asked before the uterus question so the has_uterus gate (irregular + NOT on BC)
+    // is actually reachable during onboarding. Writes on_hormonal_bc only.
+    key: "irregular_bc",
+    message: "Are you on hormonal birth control right now? (Pill, mini-pill, hormonal IUD, implant, ring, or patch.)",
+    field: "on_hormonal_bc",
+    parseType: "bc",
+    inputType: "bc_picker",
+    requiresStage: "irregular"
+  },
+  {
+    // Only for irregular users who explicitly said they are NOT on hormonal BC —
+    // hysterectomy context is irrelevant when hormones are externally regulated.
+    key: "has_uterus",
+    message: "One more thing so I don't ask you for period dates you can't give me — do you still have your uterus?",
+    field: "has_uterus",
+    parseType: "has_uterus",
+    inputType: "uterus_picker",
+    requiresStage: "irregular",
+    requiresBcFalse: true
+  },
+  {
     key: "irregular_last_period",
     message: "Do you know roughly when your last period started? (No worries if not — Logan works without it.)",
     field: "last_period_start",
     parseType: "date_optional",
     inputType: "date_picker",
     showNotSure: true,
-    requiresStage: "irregular"
+    requiresStage: "irregular",
+    // Skipped entirely when the user has no uterus — she will never have a bleed date.
+    requiresUterus: true
   },
+
 
   {
     key: "symptoms",
@@ -343,7 +367,27 @@ serve(async (req) => {
       let parsedValue: any = userMessage?.trim() || "";
       const parseType = currentQuestion.parseType;
 
-      if (parseType === "life_stage") {
+      if (parseType === "bc") {
+        const lower = (userMessage || "").toLowerCase().trim();
+        if (/^(yes|yep|yeah|true)\b/.test(lower) || lower.includes("bc_yes")) parsedValue = true;
+        else if (/^(no|nope|nah|false)\b/.test(lower) || lower.includes("bc_no")) parsedValue = false;
+        else parsedValue = null; // prefer not to say / unclear
+      } else if (parseType === "has_uterus") {
+        const lower = (userMessage || "").toLowerCase().trim();
+        // EDGE CASE — NOT HANDLED IN THIS PASS: "no uterus AND no ovaries" is surgical
+        // menopause and needs its own flow. Do NOT silently set has_uterus = false for
+        // her (that would imply ovaries are still cycling). Leave the flag unknown.
+        if (lower.includes("uterus_none") || /no\s+uterus\s+or\s+ovaries/.test(lower) || (lower.includes("no") && lower.includes("ovaries") && !lower.includes("have my ovaries") && !lower.includes("but"))) {
+          parsedValue = null;
+        } else if (lower.includes("uterus_no_ovaries_yes") || lower.includes("have my ovaries") || (/^no\b/.test(lower) && lower.includes("ovaries"))) {
+          parsedValue = false;
+        } else if (/^(yes|yep|yeah)\b/.test(lower) || lower.includes("uterus_yes")) {
+          parsedValue = true;
+        } else {
+          parsedValue = true; // default path — no behavior change
+        }
+      } else if (parseType === "life_stage") {
+
         const lower = (userMessage || "").toLowerCase();
         if (lower.includes("pregnancy_loss") || lower.includes("pregnancy loss") || lower.includes("miscarriage") || lower.includes("lost the baby")) {
           parsedValue = "pregnancy_loss";
@@ -432,17 +476,30 @@ serve(async (req) => {
       }
 
       // Determine next step, skipping questions that don't apply to this user's life stage
+      // or to her flag state (on_hormonal_bc / has_uterus).
       let nextStep = currentStep + 1;
       const userLifeStage = (participant as any)?.life_stage || "cycling";
+      const shouldSkipQuestion = (q: any): boolean => {
+        if (!q) return false;
+        if (q.requiresStage) {
+          const ok = Array.isArray(q.requiresStage)
+            ? (q.requiresStage as string[]).includes(userLifeStage)
+            : q.requiresStage === userLifeStage;
+          if (!ok) return true;
+        }
+        // Uterus question only for users who explicitly answered "not on hormonal BC"
+        if (q.requiresBcFalse && (participant as any)?.on_hormonal_bc !== false) return true;
+        // Bleed-date questions are meaningless without a uterus
+        if (q.requiresUterus && (participant as any)?.has_uterus === false) return true;
+        return false;
+      };
       while (
         nextStep < ONBOARDING_QUESTIONS.length - 1 &&
-        (ONBOARDING_QUESTIONS[nextStep] as any).requiresStage &&
-        (Array.isArray((ONBOARDING_QUESTIONS[nextStep] as any).requiresStage)
-          ? !((ONBOARDING_QUESTIONS[nextStep] as any).requiresStage as string[]).includes(userLifeStage)
-          : (ONBOARDING_QUESTIONS[nextStep] as any).requiresStage !== userLifeStage)
+        shouldSkipQuestion(ONBOARDING_QUESTIONS[nextStep])
       ) {
         nextStep++;
       }
+
 
       const nextQuestion = ONBOARDING_QUESTIONS[nextStep];
 
