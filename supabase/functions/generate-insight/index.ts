@@ -707,7 +707,9 @@ function buildNonCyclingInsightPrompt(
     : lifeStage === "perimenopause" ? "Perimenopause"
     : lifeStage === "pregnant" ? "Pregnancy"
     : lifeStage === "pregnancy_loss" ? "Pregnancy Loss"
-    : lifeStage === "irregular" ? (onHormonalBc === true ? "Irregular / Hormonal BC" : "Irregular cycle")
+    : lifeStage === "irregular" ? (
+        participant.has_uterus === false ? "Irregular / no uterus (ovaries intact)"
+        : onHormonalBc === true ? "Irregular / Hormonal BC" : "Irregular cycle")
     : "Menopause";
   const stageContext =
     lifeStage === "postpartum"
