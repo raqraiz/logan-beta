@@ -4458,6 +4458,12 @@ function buildSystemPrompt(
   symptomContext: string = "",
   emotionalContext: boolean = false
 ): string {
+  // NO-UTERUS BRANCH (hysterectomy, ovaries retained) — layered on top of life_stage,
+  // exactly like on_hormonal_bc. Not a life_stage value.
+  const noUterusBlock = participant?.has_uterus === false
+    ? `\n\nSTAGE AUTHORITY — NO UTERUS (hysterectomy, ovaries retained): This user's uterus was removed but her OVARIES ARE INTACT. She is NOT menopausal and her hormones are NOT declining — estrogen and progesterone still rise and fall in a roughly cyclical pattern, so phase-based guidance still applies to her. What does NOT exist is any bleed signal: she will never have a period again. ABSOLUTE RULES: never ask for, request, suggest logging, or reference a period date, Day 1, last period, or "when your period starts". Never tell her a period is due, late, or coming. Never treat absence of bleeding as a problem or as menopause. Any phase or cycle-day figure you see is an ESTIMATE without a bleed anchor — say so plainly if you reference it ("roughly", "estimated"), and lean on her own tracked symptoms and patterns over calendar timing. If she mentions bleeding, gently note that isn't expected after a hysterectomy and suggest she check with her clinician.`
+    : "";
+
   // When the current turn is emotional (or a short follow-up inside an emotional
   // window), the deep-dive structure mandate and the phase-tip content mandate are
   // suspended AT THE SOURCE so they cannot compete with the runtime override.
