@@ -283,6 +283,35 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
             </div>
           )}
 
+          {(stage === "cycling" || stage === "irregular" || stage === "perimenopause") && (
+            <div className="mt-4 p-3 rounded-lg border border-border/50 bg-accent/20 space-y-2">
+              <div className="text-sm font-medium">Do you have your uterus?</div>
+              <div className="text-xs text-muted-foreground">
+                If your uterus was removed but your ovaries are still there, you still cycle hormonally — you just won't bleed. Logan will stop asking you for period dates.
+              </div>
+              <RadioGroup
+                value={hasUterus === true ? "yes" : hasUterus === false ? "no" : "unknown"}
+                onValueChange={(v) => setHasUterus(v === "yes" ? true : v === "no" ? false : null)}
+                className="flex flex-wrap gap-4 pt-1"
+              >
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <RadioGroupItem value="yes" id="uterus-yes" />
+                  <span className="text-sm">Yes</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <RadioGroupItem value="no" id="uterus-no" />
+                  <span className="text-sm">No</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <RadioGroupItem value="unknown" id="uterus-unknown" />
+                  <span className="text-sm">Prefer not to say</span>
+                </label>
+              </RadioGroup>
+            </div>
+          )}
+
+
+
           {(stage === "cycling" || stage === "irregular") && (
             <div className="mt-4 p-3 rounded-lg border border-pink-400/30 bg-pink-400/5 space-y-3">
               <div className="flex items-start justify-between gap-3">
