@@ -17,7 +17,7 @@ import { useFeedbackPrompt } from "@/hooks/useFeedbackPrompt";
 import { SettingsDialog } from "@/components/chat/SettingsDialog";
 import { HistoryImportDialog } from "@/components/chat/HistoryImportDialog";
 import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
-import { format } from "date-fns";
+import { format, addWeeks } from "date-fns";
 import { SymptomPicker } from "@/components/chat/SymptomPicker";
 import { AnchorPicker } from "@/components/chat/AnchorPicker";
 import { DatePickerInput } from "@/components/chat/DatePickerInput";
@@ -71,6 +71,7 @@ interface ChatMessage {
     onboarding_complete?: boolean;
     reaction_to?: string;
     input_type?: string;
+    expecting_field?: string;
     symptom_categories?: SymptomCategories;
     available_symptoms?: string[];
     has_cycle_visual?: boolean;
@@ -1827,6 +1828,9 @@ const Chat = () => {
                       <DatePickerInput
                         onSubmit={handleDateSubmit}
                         isSubmitting={isSending}
+                        {...(message.metadata?.expecting_field === "due_date"
+                          ? { minDate: new Date(), maxDate: addWeeks(new Date(), 42) }
+                          : {})}
                       />
                     </div>
                   )}

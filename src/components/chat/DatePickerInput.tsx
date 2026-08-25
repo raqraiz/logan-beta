@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import { CalendarIcon, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -13,9 +13,11 @@ import {
 interface DatePickerInputProps {
   onSubmit: (date: Date) => void;
   isSubmitting: boolean;
+  minDate?: Date;
+  maxDate?: Date;
 }
 
-export const DatePickerInput = ({ onSubmit, isSubmitting }: DatePickerInputProps) => {
+export const DatePickerInput = ({ onSubmit, isSubmitting, minDate, maxDate }: DatePickerInputProps) => {
   const [date, setDate] = useState<Date | undefined>(undefined);
 
   const handleSubmit = () => {
@@ -44,7 +46,14 @@ export const DatePickerInput = ({ onSubmit, isSubmitting }: DatePickerInputProps
             mode="single"
             selected={date}
             onSelect={setDate}
-            disabled={(d) => d > new Date()}
+            disabled={(d) => {
+              if (minDate || maxDate) {
+                if (minDate && d < startOfDay(minDate)) return true;
+                if (maxDate && d > maxDate) return true;
+                return false;
+              }
+              return d > new Date();
+            }}
             initialFocus
             className={cn("p-3 pointer-events-auto")}
           />
