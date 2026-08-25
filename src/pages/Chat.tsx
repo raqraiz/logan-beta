@@ -17,7 +17,7 @@ import { useFeedbackPrompt } from "@/hooks/useFeedbackPrompt";
 import { SettingsDialog } from "@/components/chat/SettingsDialog";
 import { HistoryImportDialog } from "@/components/chat/HistoryImportDialog";
 import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
-import { format } from "date-fns";
+import { format, addWeeks } from "date-fns";
 import { SymptomPicker } from "@/components/chat/SymptomPicker";
 import { AnchorPicker } from "@/components/chat/AnchorPicker";
 import { DatePickerInput } from "@/components/chat/DatePickerInput";

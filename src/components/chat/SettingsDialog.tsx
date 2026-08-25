@@ -382,6 +382,8 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
+                  min={new Date().toISOString().slice(0, 10)}
+                  max={new Date(Date.now() + 42 * 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)}
                   className="mt-1"
                 />
               </div>

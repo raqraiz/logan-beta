@@ -410,12 +410,12 @@ serve(async (req) => {
           parsedValue = "cycling";
         }
       } else if (parseType === "date") {
-        parsedValue = selectedDate || parseNaturalDate(userMessage || "");
+        parsedValue = selectedDate || parseNaturalDate(userMessage || "", (currentQuestion as any).key);
       } else if (parseType === "date_optional") {
         // Irregular users may skip — only persist a date if one was actually provided
         const lowerMsg = (userMessage || "").toLowerCase();
         const explicitSkip = lowerMsg.includes("not sure") || lowerMsg.includes("skip") || lowerMsg.includes("don't know") || lowerMsg.includes("dont know");
-        parsedValue = selectedDate || (explicitSkip ? null : parseNaturalDate(userMessage || ""));
+        parsedValue = selectedDate || (explicitSkip ? null : parseNaturalDate(userMessage || "", (currentQuestion as any).key));
       } else if (parseType === "number") {
         const match = (userMessage || "").match(/\d+/);
         parsedValue = match ? parseInt(match[0], 10) : (currentQuestion.field === "age" ? 30 : 28);
@@ -853,10 +853,47 @@ serve(async (req) => {
   }
 });
 
+const MONTHS: Record<string, number> = {
+  jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2,
+  apr: 3, april: 3, may: 4, jun: 5, june: 5, jul: 6, july: 6,
+  aug: 7, august: 7, sep: 8, sept: 8, september: 8, oct: 9, october: 9,
+  nov: 10, november: 10, dec: 11, december: 11
+};
+
 // Helper: Parse natural language date
-function parseNaturalDate(input: string): string {
+function parseNaturalDate(input: string, step?: string): string {
   const now = new Date();
   const lower = input.toLowerCase();
+  const isDueDate = step === "due_date";
+
+  if (isDueDate) {
+    // Future-aware parsing for pregnancy due dates
+    const inMatch = lower.match(/(?:in\s*)?(\d+)\s*(day|week|month)s?(?:\s*(?:from now|away|to go|left))?/);
+    if (inMatch) {
+      const num = parseInt(inMatch[1], 10);
+      const unit = inMatch[2];
+      const d = new Date(now);
+      if (unit === "week") d.setDate(d.getDate() + num * 7);
+      else if (unit === "month") d.setMonth(d.getMonth() + num);
+      else d.setDate(d.getDate() + num);
+      return d.toISOString().split("T")[0];
+    }
+    if (lower.includes("today") || lower.includes("any day")) {
+      return now.toISOString().split("T")[0];
+    }
+    for (const [monthName, monthIndex] of Object.entries(MONTHS)) {
+      if (lower.includes(monthName)) {
+        const dayMatch = input.match(/\d{1,2}/);
+        const day = dayMatch ? parseInt(dayMatch[0], 10) : 15;
+        const d = new Date(now.getFullYear(), monthIndex, day);
+        if (d < now) d.setFullYear(d.getFullYear() + 1);
+        return d.toISOString().split("T")[0];
+      }
+    }
+    const fallback = new Date(now);
+    fallback.setDate(fallback.getDate() + 20 * 7);
+    return fallback.toISOString().split("T")[0];
+  }
 
   if (lower.includes("approximate") || lower.includes("not sure") || lower.includes("2 weeks")) {
     const date = new Date(now);
@@ -887,14 +924,7 @@ function parseNaturalDate(input: string): string {
     return now.toISOString().split("T")[0];
   }
 
-  const months: Record<string, number> = {
-    jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2,
-    apr: 3, april: 3, may: 4, jun: 5, june: 5, jul: 6, july: 6,
-    aug: 7, august: 7, sep: 8, sept: 8, september: 8, oct: 9, october: 9,
-    nov: 10, november: 10, dec: 11, december: 11
-  };
-
-  for (const [monthName, monthIndex] of Object.entries(months)) {
+  for (const [monthName, monthIndex] of Object.entries(MONTHS)) {
     if (lower.includes(monthName)) {
       const dayMatch = input.match(/\d{1,2}/);
       if (dayMatch) {
