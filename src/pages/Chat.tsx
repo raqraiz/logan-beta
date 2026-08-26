@@ -132,6 +132,9 @@ const Chat = () => {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [onboardingError, setOnboardingError] = useState<string | null>(null);
+  const [onboardingRetry, setOnboardingRetry] = useState<(() => void) | null>(null);
+  const onboardingRequestIdRef = useRef(0);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   
@@ -988,9 +991,13 @@ const Chat = () => {
     symptoms?: string[],
     anchor?: string,
     date?: Date,
+    skipMessageInsert = false,
   ) => {
     if (!user || isSending) return;
-    
+
+    const requestId = ++onboardingRequestIdRef.current;
+    setOnboardingError(null);
+    setOnboardingRetry(null);
     setInputValue("");
     setIsSending(true);
 
@@ -1004,14 +1011,16 @@ const Chat = () => {
             ? `${lifeStage === "postpartum" ? "Birth date" : "Last period"}: ${format(date, "PPP")}`
             : messageContent;
 
-      const { error } = await supabase.from("chat_messages").insert({
-        user_id: user.id,
-        role: "user",
-        content: displayContent,
-        message_type: "text",
-      });
+      if (!skipMessageInsert) {
+        const { error } = await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "user",
+          content: displayContent,
+          message_type: "text",
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+      }
 
       // Trigger the onboarding response
       const body: Record<string, any> = { action: "respond", userMessage: messageContent };
@@ -1027,26 +1036,40 @@ const Chat = () => {
         body.selectedDate = format(date, "yyyy-MM-dd");
       }
 
-      const { data, error: onboardingError } = await supabase.functions.invoke("chat-onboarding", {
-        body,
-      });
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 20_000);
+      let result;
+      try {
+        result = await supabase.functions.invoke("chat-onboarding", {
+          body,
+          signal: controller.signal,
+        });
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
 
-      if (onboardingError) {
-        console.error("Onboarding error:", onboardingError);
-      } else {
-        await refreshMessages(user.id);
-        if (data?.onboardingComplete) {
-          setIsOnboarding(false);
-        }
+      if (requestId !== onboardingRequestIdRef.current) return;
+      const { data, error: invokeError } = result;
+
+      if (invokeError) throw invokeError;
+
+      await refreshMessages(user.id);
+      if (requestId !== onboardingRequestIdRef.current) return;
+      if (data?.onboardingComplete) {
+        setIsOnboarding(false);
       }
       
       inputRef.current?.focus();
     } catch (error) {
+      if (requestId !== onboardingRequestIdRef.current) return;
       console.error("Error sending message:", error);
-      toast({ title: "Failed to send message", variant: "destructive" });
+      setOnboardingError("Something went wrong — try again");
+      setOnboardingRetry(() => () => {
+        void sendOnboardingResponse(messageContent, symptoms, anchor, date, true);
+      });
       setInputValue(messageContent);
     } finally {
-      setIsSending(false);
+      if (requestId === onboardingRequestIdRef.current) setIsSending(false);
     }
   };
 
@@ -1070,41 +1093,75 @@ const Chat = () => {
     sendOnboardingResponseWithBody(`Focus areas: ${topics.join(", ")}`, body);
   };
 
-  const sendOnboardingResponseWithBody = async (displayContent: string, body: Record<string, any>) => {
+  const sendOnboardingResponseWithBody = async (displayContent: string, body: Record<string, any>, skipMessageInsert = false) => {
     if (!user || isSending) return;
+    const requestId = ++onboardingRequestIdRef.current;
+    setOnboardingError(null);
+    setOnboardingRetry(null);
     setInputValue("");
     setIsSending(true);
     try {
-      await supabase.from("chat_messages").insert({
-        user_id: user.id, role: "user", content: displayContent, message_type: "text",
-      });
-      const { data, error: onboardingError } = await supabase.functions.invoke("chat-onboarding", { body });
-      if (onboardingError) console.error("Onboarding error:", onboardingError);
-      else {
-        await refreshMessages(user.id);
-        if (data?.onboardingComplete) setIsOnboarding(false);
+      if (!skipMessageInsert) {
+        const { error } = await supabase.from("chat_messages").insert({
+          user_id: user.id, role: "user", content: displayContent, message_type: "text",
+        });
+        if (error) throw error;
       }
+
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 20_000);
+      let result;
+      try {
+        result = await supabase.functions.invoke("chat-onboarding", { body, signal: controller.signal });
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+
+      if (requestId !== onboardingRequestIdRef.current) return;
+      const { data, error: invokeError } = result;
+      if (invokeError) throw invokeError;
+
+      await refreshMessages(user.id);
+      if (requestId !== onboardingRequestIdRef.current) return;
+      if (data?.onboardingComplete) setIsOnboarding(false);
       inputRef.current?.focus();
     } catch (error) {
+      if (requestId !== onboardingRequestIdRef.current) return;
       console.error("Error sending message:", error);
-      toast({ title: "Failed to send message", variant: "destructive" });
+      setOnboardingError("Something went wrong — try again");
+      setOnboardingRetry(() => () => {
+        void sendOnboardingResponseWithBody(displayContent, body, true);
+      });
     } finally {
-      setIsSending(false);
+      if (requestId === onboardingRequestIdRef.current) setIsSending(false);
     }
   };
 
   const goBackToStep = async (targetStep: number) => {
     if (!user || isSending) return;
+    const requestId = ++onboardingRequestIdRef.current;
+    setOnboardingError(null);
+    setOnboardingRetry(null);
     setIsSending(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("chat-onboarding", {
-        body: { action: "go_back", targetStep },
-      });
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 20_000);
+      let result;
+      try {
+        result = await supabase.functions.invoke("chat-onboarding", {
+          body: { action: "go_back", targetStep },
+          signal: controller.signal,
+        });
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+
+      if (requestId !== onboardingRequestIdRef.current) return;
+      const { error } = result;
 
       if (error) {
-        console.error("Go back error:", error);
-        toast({ title: "Couldn't go back", variant: "destructive" });
+        throw error;
       } else {
         // Refresh messages
         const { data: freshMessages } = await supabase
@@ -1114,6 +1171,7 @@ const Chat = () => {
           .order("created_at", { ascending: true });
 
         if (freshMessages) {
+          if (requestId !== onboardingRequestIdRef.current) return;
           const typedMessages = freshMessages.map((m) => ({
             ...m,
             role: m.role as "user" | "assistant" | "system",
@@ -1125,9 +1183,50 @@ const Chat = () => {
         }
       }
     } catch (error) {
+      if (requestId !== onboardingRequestIdRef.current) return;
       console.error("Go back error:", error);
+      setOnboardingError("Something went wrong — try again");
+      setOnboardingRetry(() => () => {
+        void goBackToStep(targetStep);
+      });
     } finally {
-      setIsSending(false);
+      if (requestId === onboardingRequestIdRef.current) setIsSending(false);
+    }
+  };
+
+  const saveInlineTopics = async (topics: string[]) => {
+    if (!user || isSending) return;
+    const requestId = ++onboardingRequestIdRef.current;
+    setOnboardingError(null);
+    setOnboardingRetry(null);
+    setIsSending(true);
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 20_000);
+      let result;
+      try {
+        result = await supabase.functions.invoke("chat-onboarding", {
+          body: { action: "set_topics", selectedTopics: topics },
+          signal: controller.signal,
+        });
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+
+      if (requestId !== onboardingRequestIdRef.current) return;
+      if (result.error) throw result.error;
+      setShowTopicPrompt(false);
+      toast({ title: "Focus areas saved!", description: "Your insights will now be tailored to these topics." });
+    } catch (error) {
+      if (requestId !== onboardingRequestIdRef.current) return;
+      console.error("Error saving topics:", error);
+      setOnboardingError("Something went wrong — try again");
+      setOnboardingRetry(() => () => {
+        void saveInlineTopics(topics);
+      });
+    } finally {
+      if (requestId === onboardingRequestIdRef.current) setIsSending(false);
     }
   };
 
@@ -1509,6 +1608,24 @@ const Chat = () => {
             <div className="flex-1">
               <OnboardingProgress currentStep={onboardingStep} totalSteps={5} />
             </div>
+          </div>
+        </div>
+      )}
+
+      {onboardingError && (
+        <div className="z-20 border-b border-destructive/30 bg-destructive/10 px-4 py-3">
+          <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
+            <p className="text-sm text-foreground">{onboardingError}</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onboardingRetry?.()}
+              disabled={isSending || !onboardingRetry}
+            >
+              {isSending && <Loader2 className="w-4 h-4 animate-spin" />}
+              Retry
+            </Button>
           </div>
         </div>
       )}
@@ -2065,23 +2182,7 @@ const Chat = () => {
                 <p className="text-sm font-medium text-foreground">Choose your Focus Areas</p>
                 <p className="text-xs text-muted-foreground">Pick the topics you want Logan to focus on — diet, exercise, sleep, and more.</p>
                 <TopicPicker
-                  onSubmit={async (topics) => {
-                    if (!user) return;
-                    try {
-                      setIsSending(true);
-                      const { error } = await supabase.functions.invoke("chat-onboarding", {
-                        body: { action: "set_topics", selectedTopics: topics },
-                      });
-                      if (error) throw error;
-                      setShowTopicPrompt(false);
-                      toast({ title: "Focus areas saved!", description: "Your insights will now be tailored to these topics." });
-                    } catch (e) {
-                      console.error("Error saving topics:", e);
-                      toast({ title: "Failed to save", variant: "destructive" });
-                    } finally {
-                      setIsSending(false);
-                    }
-                  }}
+                  onSubmit={saveInlineTopics}
                   isSubmitting={isSending}
                 />
               </div>
