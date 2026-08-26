@@ -1000,6 +1000,7 @@ const Chat = () => {
     setOnboardingRetry(null);
     setInputValue("");
     setIsSending(true);
+    let messageStored = skipMessageInsert;
 
     try {
       // First, insert the user's message
@@ -1020,6 +1021,7 @@ const Chat = () => {
         });
 
         if (error) throw error;
+        messageStored = true;
       }
 
       // Trigger the onboarding response
@@ -1065,7 +1067,7 @@ const Chat = () => {
       console.error("Error sending message:", error);
       setOnboardingError("Something went wrong — try again");
       setOnboardingRetry(() => () => {
-        void sendOnboardingResponse(messageContent, symptoms, anchor, date, true);
+        void sendOnboardingResponse(messageContent, symptoms, anchor, date, messageStored);
       });
       setInputValue(messageContent);
     } finally {
@@ -1100,12 +1102,14 @@ const Chat = () => {
     setOnboardingRetry(null);
     setInputValue("");
     setIsSending(true);
+    let messageStored = skipMessageInsert;
     try {
       if (!skipMessageInsert) {
         const { error } = await supabase.from("chat_messages").insert({
           user_id: user.id, role: "user", content: displayContent, message_type: "text",
         });
         if (error) throw error;
+        messageStored = true;
       }
 
       const controller = new AbortController();
@@ -1130,7 +1134,7 @@ const Chat = () => {
       console.error("Error sending message:", error);
       setOnboardingError("Something went wrong — try again");
       setOnboardingRetry(() => () => {
-        void sendOnboardingResponseWithBody(displayContent, body, true);
+        void sendOnboardingResponseWithBody(displayContent, body, messageStored);
       });
     } finally {
       if (requestId === onboardingRequestIdRef.current) setIsSending(false);
