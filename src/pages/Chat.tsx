@@ -135,6 +135,7 @@ const Chat = () => {
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
   const [onboardingRetry, setOnboardingRetry] = useState<(() => void) | null>(null);
   const onboardingRequestIdRef = useRef(0);
+  const onboardingRequestInFlightRef = useRef(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   
@@ -993,9 +994,10 @@ const Chat = () => {
     date?: Date,
     skipMessageInsert = false,
   ) => {
-    if (!user || isSending) return;
+    if (!user || isSending || onboardingRequestInFlightRef.current) return;
 
     const requestId = ++onboardingRequestIdRef.current;
+    onboardingRequestInFlightRef.current = true;
     setOnboardingError(null);
     setOnboardingRetry(null);
     setInputValue("");
@@ -1071,7 +1073,10 @@ const Chat = () => {
       });
       setInputValue(messageContent);
     } finally {
-      if (requestId === onboardingRequestIdRef.current) setIsSending(false);
+      if (requestId === onboardingRequestIdRef.current) {
+        onboardingRequestInFlightRef.current = false;
+        setIsSending(false);
+      }
     }
   };
 
@@ -1096,8 +1101,9 @@ const Chat = () => {
   };
 
   const sendOnboardingResponseWithBody = async (displayContent: string, body: Record<string, any>, skipMessageInsert = false) => {
-    if (!user || isSending) return;
+    if (!user || isSending || onboardingRequestInFlightRef.current) return;
     const requestId = ++onboardingRequestIdRef.current;
+    onboardingRequestInFlightRef.current = true;
     setOnboardingError(null);
     setOnboardingRetry(null);
     setInputValue("");
@@ -1137,13 +1143,17 @@ const Chat = () => {
         void sendOnboardingResponseWithBody(displayContent, body, messageStored);
       });
     } finally {
-      if (requestId === onboardingRequestIdRef.current) setIsSending(false);
+      if (requestId === onboardingRequestIdRef.current) {
+        onboardingRequestInFlightRef.current = false;
+        setIsSending(false);
+      }
     }
   };
 
   const goBackToStep = async (targetStep: number) => {
-    if (!user || isSending) return;
+    if (!user || isSending || onboardingRequestInFlightRef.current) return;
     const requestId = ++onboardingRequestIdRef.current;
+    onboardingRequestInFlightRef.current = true;
     setOnboardingError(null);
     setOnboardingRetry(null);
     setIsSending(true);
@@ -1194,13 +1204,17 @@ const Chat = () => {
         void goBackToStep(targetStep);
       });
     } finally {
-      if (requestId === onboardingRequestIdRef.current) setIsSending(false);
+      if (requestId === onboardingRequestIdRef.current) {
+        onboardingRequestInFlightRef.current = false;
+        setIsSending(false);
+      }
     }
   };
 
   const saveInlineTopics = async (topics: string[]) => {
-    if (!user || isSending) return;
+    if (!user || isSending || onboardingRequestInFlightRef.current) return;
     const requestId = ++onboardingRequestIdRef.current;
+    onboardingRequestInFlightRef.current = true;
     setOnboardingError(null);
     setOnboardingRetry(null);
     setIsSending(true);
@@ -1230,7 +1244,10 @@ const Chat = () => {
         void saveInlineTopics(topics);
       });
     } finally {
-      if (requestId === onboardingRequestIdRef.current) setIsSending(false);
+      if (requestId === onboardingRequestIdRef.current) {
+        onboardingRequestInFlightRef.current = false;
+        setIsSending(false);
+      }
     }
   };
 
