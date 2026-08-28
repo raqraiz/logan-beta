@@ -85,6 +85,16 @@ const PHASE_STYLES: Record<string, { color: string; ringColor: string; hex: stri
     ringColor: "stroke-amber-400",
     hex: "#FBBF24",
   },
+  Perimenopause: {
+    color: "text-amber-300",
+    ringColor: "stroke-amber-300",
+    hex: "#FCD34D",
+  },
+  Overdue: {
+    color: "text-amber-300",
+    ringColor: "stroke-amber-300",
+    hex: "#FCD34D",
+  },
 };
 
 function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, labelSize, showPhase = false }: {
@@ -138,10 +148,11 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
 }
 
 // Static badge for non-cycling/steady life stages (postpartum, menopause, irregular/on-the-pill, pregnancy loss, pregnant, or stale cycling)
-function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDate, pregnancyLmp, steadyReason, onHormonalBc }: { lifeStage: "postpartum" | "menopause" | "irregular" | "steady" | "pregnancy_loss" | "pregnant"; size: "sm" | "md"; postpartumStartDate?: string; lossDate?: string; dueDate?: string; pregnancyLmp?: string; steadyReason?: "pill" | "stale"; onHormonalBc?: boolean | null }) {
+function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDate, pregnancyLmp, steadyReason, onHormonalBc }: { lifeStage: "postpartum" | "menopause" | "perimenopause" | "irregular" | "steady" | "pregnancy_loss" | "pregnant"; size: "sm" | "md"; postpartumStartDate?: string; lossDate?: string; dueDate?: string; pregnancyLmp?: string; steadyReason?: "pill" | "stale"; onHormonalBc?: boolean | null }) {
   const stageKey =
     lifeStage === "postpartum" ? "Postpartum" :
     lifeStage === "menopause" ? "Menopause" :
+    lifeStage === "perimenopause" ? "Perimenopause" :
     "Follicular"; // reuse a calm teal-ish for irregular/steady
   const styles = lifeStage === "irregular" || lifeStage === "steady"
     ? { color: "text-primary", ringColor: "stroke-primary", hex: "#15B88C" }
