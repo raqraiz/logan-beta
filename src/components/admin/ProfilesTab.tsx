@@ -704,7 +704,7 @@ export function ProfilesTab() {
                       }
                     }
 
-                    const showNonCyclingRing = ls === "postpartum" || ls === "menopause" || isPregnant || isLoss;
+                    const showNonCyclingRing = ls === "postpartum" || ls === "menopause" || ls === "perimenopause" || isPregnant || isLoss;
                     const nonCyclingPhase =
                       ls === "postpartum" ? "Postpartum" :
                       ls === "menopause" ? "Menopause" :

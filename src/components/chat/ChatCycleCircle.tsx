@@ -85,6 +85,16 @@ const PHASE_STYLES: Record<string, { color: string; ringColor: string; hex: stri
     ringColor: "stroke-amber-400",
     hex: "#FBBF24",
   },
+  Perimenopause: {
+    color: "text-amber-300",
+    ringColor: "stroke-amber-300",
+    hex: "#FCD34D",
+  },
+  Overdue: {
+    color: "text-amber-300",
+    ringColor: "stroke-amber-300",
+    hex: "#FCD34D",
+  },
 };
 
 function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, labelSize, showPhase = false }: {
@@ -138,10 +148,11 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
 }
 
 // Static badge for non-cycling/steady life stages (postpartum, menopause, irregular/on-the-pill, pregnancy loss, pregnant, or stale cycling)
-function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDate, pregnancyLmp, steadyReason, onHormonalBc }: { lifeStage: "postpartum" | "menopause" | "irregular" | "steady" | "pregnancy_loss" | "pregnant"; size: "sm" | "md"; postpartumStartDate?: string; lossDate?: string; dueDate?: string; pregnancyLmp?: string; steadyReason?: "pill" | "stale"; onHormonalBc?: boolean | null }) {
+function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDate, pregnancyLmp, steadyReason, onHormonalBc }: { lifeStage: "postpartum" | "menopause" | "perimenopause" | "irregular" | "steady" | "pregnancy_loss" | "pregnant"; size: "sm" | "md"; postpartumStartDate?: string; lossDate?: string; dueDate?: string; pregnancyLmp?: string; steadyReason?: "pill" | "stale"; onHormonalBc?: boolean | null }) {
   const stageKey =
     lifeStage === "postpartum" ? "Postpartum" :
     lifeStage === "menopause" ? "Menopause" :
+    lifeStage === "perimenopause" ? "Perimenopause" :
     "Follicular"; // reuse a calm teal-ish for irregular/steady
   const styles = lifeStage === "irregular" || lifeStage === "steady"
     ? { color: "text-primary", ringColor: "stroke-primary", hex: "#15B88C" }
@@ -153,6 +164,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
   const label =
     lifeStage === "postpartum" ? "Postpartum" :
     lifeStage === "menopause" ? "Menopause" :
+    lifeStage === "perimenopause" ? "Perimenopause" :
     lifeStage === "pregnancy_loss" ? "Healing" :
     lifeStage === "pregnant" ? "Pregnant" :
     lifeStage === "steady" ? (steadyReason === "stale" ? "Overdue" : "Steady") :
@@ -163,7 +175,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
   let displayNumber = "—";
   // BC copy is driven ONLY by on_hormonal_bc. null/undefined = unknown -> neutral wording.
   const bcLabel = onHormonalBc === true ? "Hormonal BC" : "Own rhythm";
-  let subLabel = lifeStage === "postpartum" ? "Recovery" : lifeStage === "menopause" ? "Transition" : lifeStage === "pregnancy_loss" ? "Recovery" : bcLabel;
+  let subLabel = lifeStage === "postpartum" ? "Recovery" : lifeStage === "menopause" ? "Transition" : lifeStage === "perimenopause" ? "Transition" : lifeStage === "pregnancy_loss" ? "Recovery" : bcLabel;
   if (lifeStage === "steady") {
     subLabel = steadyReason === "stale" ? "Period overdue" : bcLabel;
   }
@@ -473,7 +485,7 @@ function PregnancyCircle({ size, dueDate, pregnancyLmp }: { size: "sm" | "md"; d
 
 export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling", postpartumStartDate, postpartumActive = false, lossDate, dueDate, pregnancyLmp, onHormonalBc = null }: ChatCycleCircleProps) {
   // Postpartum/menopause/pregnancy-loss/pregnant/irregular users get a static badge.
-  if (lifeStage === "postpartum" || lifeStage === "menopause") {
+  if (lifeStage === "postpartum" || lifeStage === "menopause" || lifeStage === "perimenopause") {
     return <LifeStageBadge lifeStage={lifeStage} size={size} postpartumStartDate={postpartumStartDate} />;
   }
   if (lifeStage === "pregnancy_loss") {
@@ -661,6 +673,17 @@ export function calculateCycleInfo(
     phase = "Luteal";
   }
 
+  // Overdue ceiling: when periodPending disables wrapping, the true day count
+  // can run unbounded (e.g. day 560 with a stale last_period_start). Keep the
+  // true count for internal math above, but cap what is displayed/derived so
+  // the ring shows a distinct "significantly overdue" state instead of an
+  // ever-growing Luteal day count.
+  if (periodPending) {
+    const OVERDUE_CAP = Math.max(90, cycleLengthDays * 3);
+    if (cycleDay > OVERDUE_CAP) {
+      return { cycleDay: OVERDUE_CAP, phase: "Overdue" };
+    }
+  }
 
   return { cycleDay, phase };
 }
