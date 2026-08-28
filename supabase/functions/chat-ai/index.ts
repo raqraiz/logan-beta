@@ -3142,6 +3142,63 @@ serve(async (req) => {
         );
       }
 
+      // --- Soft postpartum confirmation follow-up (answer to our own question) ---
+      const awaitingPpConfirm = (lastAssistantMsg?.metadata as any)?.awaiting_postpartum_confirm === true;
+      if (awaitingPpConfirm && participant.life_stage !== "postpartum") {
+        const affirmative = /^\s*(yes|yep|yeah|yup|sure|ok(ay)?|please\s+do|do\s+it|confirm(ed)?|correct|that'?s\s+right|switch\s+me)\b/i.test(userMessage)
+          || /\b(yes\s+please|go\s+ahead|sounds\s+good)\b/i.test(userMessage);
+        const negative = /\b(no|nope|nah|don'?t|do\s+not|not\s+postpartum|leave\s+it|keep\s+it)\b/i.test(userMessage);
+
+        if (affirmative && !negative) {
+          const suggested = (lastAssistantMsg?.metadata as any)?.suggested_postpartum_start_date as string | undefined;
+          let startDate = suggested || null;
+          let needsReview = false;
+          if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate) || new Date(startDate + "T12:00:00Z") > new Date()) {
+            startDate = dateOnly(new Date());
+            needsReview = true;
+          }
+
+          const { error: ppSoftErr } = await supabase
+            .from("participants")
+            .update({ life_stage: "postpartum", postpartum_start_date: startDate, postpartum_active: true })
+            .eq("id", participant.id);
+
+          if (!ppSoftErr) {
+            const { data: refreshed } = await supabase
+              .from("participants").select("*").eq("id", participant.id).single();
+            if (refreshed) participant = refreshed;
+
+            const friendlyDate = new Date(startDate + "T12:00:00Z").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+            const msg = needsReview
+              ? `Done — you're on **postpartum** tracking now. I didn't have a clear birth date, so what's your baby's actual birth date? I'll lock it in.`
+              : `Done — you're on **postpartum** tracking now, with **${friendlyDate}** as your baby's birth date. Your recovery timeline runs from there.`;
+
+            await supabase.from("chat_messages").insert({
+              user_id: user.id,
+              role: "assistant",
+              content: msg,
+              message_type: "text",
+              metadata: {
+                ...cycleVisualMeta(userMessage),
+                life_stage: "postpartum",
+                postpartum_start_date: startDate,
+                postpartum_update: true,
+                awaiting_birth_date: needsReview,
+                needs_manual_review: needsReview || undefined,
+              },
+            });
+
+            return new Response(
+              JSON.stringify({ success: true, message: msg, lifeStageUpdated: true, postpartumStartDate: startDate }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+        // Declined or ignored: write nothing, fall through to normal chat.
+      }
+      // --- End soft postpartum confirmation follow-up ---
+
+
       // Patterns for "X months/weeks/days postpartum" or "X months/weeks after giving birth"
       const ppDurationMatch = userMessage.match(
         /(\d{1,2})\s*(month|months|week|weeks|day|days)\s*(?:postpartum|pp|after\s+(?:giving\s+)?birth|after\s+(?:my\s+)?baby|since\s+(?:i\s+)?(?:gave\s+birth|had\s+(?:my\s+)?baby))/i
