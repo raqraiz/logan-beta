@@ -673,6 +673,17 @@ export function calculateCycleInfo(
     phase = "Luteal";
   }
 
+  // Overdue ceiling: when periodPending disables wrapping, the true day count
+  // can run unbounded (e.g. day 560 with a stale last_period_start). Keep the
+  // true count for internal math above, but cap what is displayed/derived so
+  // the ring shows a distinct "significantly overdue" state instead of an
+  // ever-growing Luteal day count.
+  if (periodPending) {
+    const OVERDUE_CAP = Math.max(90, cycleLengthDays * 3);
+    if (cycleDay > OVERDUE_CAP) {
+      return { cycleDay: OVERDUE_CAP, phase: "Overdue" };
+    }
+  }
 
   return { cycleDay, phase };
 }
