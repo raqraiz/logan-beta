@@ -2698,12 +2698,29 @@ serve(async (req) => {
         || /\b(?:i\s+have|i'?ve\s+got|diagnosed\s+with)\s+(?:pcos|pmos|polycystic\s+ovar(?:y|ian)\s+syndrome|polyendocrine\s+metabolic\s+ovarian\s+syndrome|hypothalamic\s+amenorrhea)\b/i.test(userMessage)
         || /\b(?:my\s+)?(?:cycles?\s+(?:are|is)|periods?\s+(?:are|is))\s+(?:really\s+)?irregular\b/i.test(userMessage);
 
+      // --- Postpartum-recency veto ---------------------------------------
+      // If she gave birth within the last 18 months, automatic life-stage
+      // detectors (cycling / irregular / perimenopause / menopause) must NOT
+      // flip her profile or ask a period-date question. Postpartum symptoms
+      // mimic all of these. She falls through to a normal conversational reply.
+      const ppStart = participant.postpartum_start_date
+        ? new Date(`${String(participant.postpartum_start_date).slice(0, 10)}T12:00:00Z`)
+        : null;
+      const recentPostpartumVeto = !!ppStart
+        && !isNaN(ppStart.getTime())
+        && (Date.now() - ppStart.getTime()) < 18 * 30.44 * 24 * 60 * 60 * 1000;
+
+      // "no periods yet" / breastfeeding phrasing — never ask for a last-period date
+      const noPeriodsPhrase =
+        /\b(?:no|haven'?t\s+had|havent\s+had|not\s+had|don'?t\s+(?:have|get)|dont\s+(?:have|get)|without)\s+(?:a\s+|my\s+|any\s+)?periods?\b/i.test(userMessage)
+        || /\bperiods?\s+(?:haven'?t|hasn'?t|have\s+not|has\s+not)\s+(?:come\s+back|returned|started)\b/i.test(userMessage)
+        || /\b(?:breast\s*feed|breastfeeding|nursing|chestfeeding|lactating|exclusively\s+pumping)\b/i.test(userMessage);
 
       // Cycling wins over menopause if both somehow match
-      if (cyclingSignal && participant.life_stage !== "cycling") {
+      if (cyclingSignal && !recentPostpartumVeto && participant.life_stage !== "cycling") {
         await supabase
           .from("participants")
-          .update({ life_stage: "cycling", postpartum_start_date: null })
+          .update({ life_stage: "cycling" })
           .eq("id", participant.id);
         const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
         if (refreshed) participant = refreshed;
@@ -2749,13 +2766,11 @@ serve(async (req) => {
         );
       }
 
-      if (irregularSignal && !cyclingSignal && !perimenopauseSignal && participant.life_stage !== "irregular") {
+      if (irregularSignal && !cyclingSignal && !perimenopauseSignal && !recentPostpartumVeto && participant.life_stage !== "irregular") {
         await supabase
           .from("participants")
           .update({
             life_stage: "irregular",
-            postpartum_start_date: null,
-            last_period_start: null,
             ...(bcPositiveSignal ? { on_hormonal_bc: true } : {}),
           })
           .eq("id", participant.id);
@@ -2790,21 +2805,23 @@ serve(async (req) => {
       }
 
 
-      if (perimenopauseSignal && !cyclingSignal && participant.life_stage !== "perimenopause") {
+      if (perimenopauseSignal && !cyclingSignal && !recentPostpartumVeto && participant.life_stage !== "perimenopause") {
         await supabase
           .from("participants")
-          .update({ life_stage: "perimenopause", postpartum_start_date: null })
+          .update({ life_stage: "perimenopause" })
           .eq("id", participant.id);
         const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
         if (refreshed) participant = refreshed;
 
-        const msg = `Got it — noting you're in **perimenopause**. You're still cycling, so I'll keep tracking your phases while factoring in the hormonal shifts (irregular cycles, sleep changes, mood swings, hot flashes) that come with this stage. When did your last period start?`;
+        const msg = noPeriodsPhrase
+          ? `Got it — noting you're in **perimenopause**. I'll factor in the hormonal shifts that come with this stage (irregular cycles, sleep changes, mood swings, hot flashes) and won't assume a predictable phase pattern for now.`
+          : `Got it — noting you're in **perimenopause**. You're still cycling, so I'll keep tracking your phases while factoring in the hormonal shifts (irregular cycles, sleep changes, mood swings, hot flashes) that come with this stage. When did your last period start?`;
         await supabase.from("chat_messages").insert({
           user_id: user.id,
           role: "assistant",
           content: msg,
           message_type: "text",
-          metadata: { life_stage_updated: "perimenopause", awaiting_period_date: true },
+          metadata: { life_stage_updated: "perimenopause", ...(noPeriodsPhrase ? {} : { awaiting_period_date: true }) },
         });
         return new Response(
           JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
@@ -2812,10 +2829,10 @@ serve(async (req) => {
         );
       }
 
-      if (menopauseSignal && !cyclingSignal && !perimenopauseSignal && participant.life_stage !== "menopause") {
+      if (menopauseSignal && !cyclingSignal && !perimenopauseSignal && !recentPostpartumVeto && participant.life_stage !== "menopause") {
         await supabase
           .from("participants")
-          .update({ life_stage: "menopause", last_period_start: null, postpartum_start_date: null })
+          .update({ life_stage: "menopause" })
           .eq("id", participant.id);
         const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
         if (refreshed) participant = refreshed;
