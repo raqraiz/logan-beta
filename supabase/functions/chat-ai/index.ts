@@ -2698,12 +2698,29 @@ serve(async (req) => {
         || /\b(?:i\s+have|i'?ve\s+got|diagnosed\s+with)\s+(?:pcos|pmos|polycystic\s+ovar(?:y|ian)\s+syndrome|polyendocrine\s+metabolic\s+ovarian\s+syndrome|hypothalamic\s+amenorrhea)\b/i.test(userMessage)
         || /\b(?:my\s+)?(?:cycles?\s+(?:are|is)|periods?\s+(?:are|is))\s+(?:really\s+)?irregular\b/i.test(userMessage);
 
+      // --- Postpartum-recency veto ---------------------------------------
+      // If she gave birth within the last 18 months, automatic life-stage
+      // detectors (cycling / irregular / perimenopause / menopause) must NOT
+      // flip her profile or ask a period-date question. Postpartum symptoms
+      // mimic all of these. She falls through to a normal conversational reply.
+      const ppStart = participant.postpartum_start_date
+        ? new Date(`${String(participant.postpartum_start_date).slice(0, 10)}T12:00:00Z`)
+        : null;
+      const recentPostpartumVeto = !!ppStart
+        && !isNaN(ppStart.getTime())
+        && (Date.now() - ppStart.getTime()) < 18 * 30.44 * 24 * 60 * 60 * 1000;
+
+      // "no periods yet" / breastfeeding phrasing — never ask for a last-period date
+      const noPeriodsPhrase =
+        /\b(?:no|haven'?t\s+had|havent\s+had|not\s+had|don'?t\s+(?:have|get)|dont\s+(?:have|get)|without)\s+(?:a\s+|my\s+|any\s+)?periods?\b/i.test(userMessage)
+        || /\bperiods?\s+(?:haven'?t|hasn'?t|have\s+not|has\s+not)\s+(?:come\s+back|returned|started)\b/i.test(userMessage)
+        || /\b(?:breast\s*feed|breastfeeding|nursing|chestfeeding|lactating|exclusively\s+pumping)\b/i.test(userMessage);
 
       // Cycling wins over menopause if both somehow match
-      if (cyclingSignal && participant.life_stage !== "cycling") {
+      if (cyclingSignal && !recentPostpartumVeto && participant.life_stage !== "cycling") {
         await supabase
           .from("participants")
-          .update({ life_stage: "cycling", postpartum_start_date: null })
+          .update({ life_stage: "cycling" })
           .eq("id", participant.id);
         const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
         if (refreshed) participant = refreshed;
