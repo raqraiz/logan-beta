@@ -2805,21 +2805,23 @@ serve(async (req) => {
       }
 
 
-      if (perimenopauseSignal && !cyclingSignal && participant.life_stage !== "perimenopause") {
+      if (perimenopauseSignal && !cyclingSignal && !recentPostpartumVeto && participant.life_stage !== "perimenopause") {
         await supabase
           .from("participants")
-          .update({ life_stage: "perimenopause", postpartum_start_date: null })
+          .update({ life_stage: "perimenopause" })
           .eq("id", participant.id);
         const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
         if (refreshed) participant = refreshed;
 
-        const msg = `Got it — noting you're in **perimenopause**. You're still cycling, so I'll keep tracking your phases while factoring in the hormonal shifts (irregular cycles, sleep changes, mood swings, hot flashes) that come with this stage. When did your last period start?`;
+        const msg = noPeriodsPhrase
+          ? `Got it — noting you're in **perimenopause**. I'll factor in the hormonal shifts that come with this stage (irregular cycles, sleep changes, mood swings, hot flashes) and won't assume a predictable phase pattern for now.`
+          : `Got it — noting you're in **perimenopause**. You're still cycling, so I'll keep tracking your phases while factoring in the hormonal shifts (irregular cycles, sleep changes, mood swings, hot flashes) that come with this stage. When did your last period start?`;
         await supabase.from("chat_messages").insert({
           user_id: user.id,
           role: "assistant",
           content: msg,
           message_type: "text",
-          metadata: { life_stage_updated: "perimenopause", awaiting_period_date: true },
+          metadata: { life_stage_updated: "perimenopause", ...(noPeriodsPhrase ? {} : { awaiting_period_date: true }) },
         });
         return new Response(
           JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
@@ -2827,10 +2829,10 @@ serve(async (req) => {
         );
       }
 
-      if (menopauseSignal && !cyclingSignal && !perimenopauseSignal && participant.life_stage !== "menopause") {
+      if (menopauseSignal && !cyclingSignal && !perimenopauseSignal && !recentPostpartumVeto && participant.life_stage !== "menopause") {
         await supabase
           .from("participants")
-          .update({ life_stage: "menopause", last_period_start: null, postpartum_start_date: null })
+          .update({ life_stage: "menopause" })
           .eq("id", participant.id);
         const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
         if (refreshed) participant = refreshed;
