@@ -2766,13 +2766,11 @@ serve(async (req) => {
         );
       }
 
-      if (irregularSignal && !cyclingSignal && !perimenopauseSignal && participant.life_stage !== "irregular") {
+      if (irregularSignal && !cyclingSignal && !perimenopauseSignal && !recentPostpartumVeto && participant.life_stage !== "irregular") {
         await supabase
           .from("participants")
           .update({
             life_stage: "irregular",
-            postpartum_start_date: null,
-            last_period_start: null,
             ...(bcPositiveSignal ? { on_hormonal_bc: true } : {}),
           })
           .eq("id", participant.id);
