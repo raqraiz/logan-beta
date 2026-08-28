@@ -3307,6 +3307,74 @@ serve(async (req) => {
         }
       }
 
+      // --- Softer postpartum detection: ask, never write silently ---
+      // Fires only when the explicit switch phrasing did NOT fire and the user is
+      // not already postpartum. Postpartum only — no other life stage uses this.
+      if (!explicitSwitchIntent && participant.life_stage !== "postpartum") {
+        const thirdParty = /\b(my\s+(sister|friend|mom|mother|daughter|cousin|colleague|coworker|wife|partner)|she|her)\b[^.?!]{0,40}\b(had|gave\s+birth|is\s+postpartum|baby)\b/i.test(userMessage);
+
+        const birthDateOrPostpartumMention =
+          !!ppDateMatch
+          || !!ppDurationMatch
+          || /\bpost[\s-]?partum\b/i.test(userMessage)
+          || /\bbreast[\s-]?feed(ing|ings)?\b|\bnursing\b|\bpumping\b/i.test(userMessage)
+          || /\b(gave\s+birth|had\s+(?:my\s+)?baby|my\s+baby|my\s+newborn|c[\s-]?section|delivered\s+(?:my\s+)?baby)\b/i.test(userMessage);
+
+        if (birthDateOrPostpartumMention && !thirdParty) {
+          // Only ask once per session (nothing asked in the last 24h).
+          const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+          const { data: priorAsk } = await supabase
+            .from("chat_messages")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("role", "assistant")
+            .gte("created_at", since)
+            .eq("metadata->>awaiting_postpartum_confirm", "true")
+            .limit(1);
+
+          if (!priorAsk || priorAsk.length === 0) {
+            let suggested: string | null = null;
+            if (ppDateMatch) {
+              const parsed = parseExplicitCalendarDate(ppDateMatch[1]);
+              if (parsed && parsed <= new Date()) suggested = dateOnly(parsed);
+            } else if (ppDurationMatch) {
+              const n = parseInt(ppDurationMatch[1]);
+              const unit = ppDurationMatch[2].toLowerCase();
+              const days = unit.startsWith("month") ? n * 30 : unit.startsWith("week") ? n * 7 : n;
+              const d = new Date();
+              d.setDate(d.getDate() - days);
+              suggested = dateOnly(d);
+            }
+
+            const friendly = suggested
+              ? new Date(suggested + "T12:00:00Z").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+              : null;
+            const msg = friendly
+              ? `Sounds like you may be postpartum — want me to switch your profile to postpartum tracking from **${friendly}**? Just say yes and I'll set it up.`
+              : `Sounds like you may be postpartum — want me to switch your profile to postpartum tracking? If yes, tell me your baby's birth date and I'll set it up.`;
+
+            await supabase.from("chat_messages").insert({
+              user_id: user.id,
+              role: "assistant",
+              content: msg,
+              message_type: "text",
+              metadata: {
+                ...cycleVisualMeta(userMessage),
+                awaiting_postpartum_confirm: true,
+                suggested_postpartum_start_date: suggested || undefined,
+              },
+            });
+
+            return new Response(
+              JSON.stringify({ success: true, message: msg, awaitingPostpartumConfirm: true }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+      }
+      // --- End softer postpartum detection ---
+
+
       // Standalone birth date follow-up — when last assistant msg was awaiting it
       const wasAwaitingBirthDate = (lastAssistantMsg?.metadata as any)?.awaiting_birth_date === true;
       if (wasAwaitingBirthDate && participant.life_stage === "postpartum") {
