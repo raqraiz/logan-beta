@@ -2717,6 +2717,10 @@ serve(async (req) => {
         || /\bperiods?\s+(?:haven'?t|hasn'?t|have\s+not|has\s+not)\s+(?:come\s+back|returned|started)\b/i.test(userMessage)
         || /\b(?:breast\s*feed|breastfeeding|nursing|chestfeeding|lactating|exclusively\s+pumping)\b/i.test(userMessage);
 
+      // Remember if the veto suppressed an automatic stage detector this turn.
+      postpartumVetoBlockedStageSignal = recentPostpartumVeto
+        && (cyclingSignal || irregularSignal || perimenopauseSignal || menopauseSignal);
+
       // Cycling wins over menopause if both somehow match
       if (cyclingSignal && !recentPostpartumVeto && participant.life_stage !== "cycling") {
         await supabase
