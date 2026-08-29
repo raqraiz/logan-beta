@@ -4014,6 +4014,13 @@ serve(async (req) => {
       systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user is correcting or negating a symptom log. Do NOT log, note, track, or save the symptom mentioned in this correction. Do NOT treat it as today's lived symptom. Apologize briefly and clarify that you won't count that symptom from this message.`;
     }
 
+    // Recent postpartum veto: she mentioned a possible other life stage while still
+    // within 18 months postpartum. The stage change was intentionally suppressed.
+    // Hedge her self-reported possibility rather than stating it as fact.
+    if (postpartumVetoBlockedStageSignal) {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user is within 18 months postpartum and mentioned something that could imply a different life stage (cycling, irregular, perimenopause, or menopause). Her profile was NOT changed. Do NOT say she "is" in that stage or confirm the switch. Reflect it only as a possibility she raised — e.g. "possible perimenopause signs," "some overlap with perimenopause symptoms," or "it makes sense you're wondering about that while breastfeeding." Keep the response focused on what she actually shared (symptom, feeling, or question). Do not ask for a last-period date or suggest resetting her cycle.`;
+    }
+
     // Emotional context persistence: a short follow-up right after an emotionally
     // loaded turn is still part of that exchange. Keep the support framing and
     // de-prioritise (for this turn only) the standing phase-coaching instruction.
