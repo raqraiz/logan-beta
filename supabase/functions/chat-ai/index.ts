@@ -2644,8 +2644,9 @@ serve(async (req) => {
     const isCurrentSymptomQuestion = currentMessageMentionsKnownSymptom && isSymptomQuestionOrHypothetical(userMessage) && !hasPersonalSymptomContext(userMessage);
     const isCurrentSymptomNegation = currentMessageMentionsKnownSymptom && isSymptomNegationOrCorrection(userMessage);
 
-
-
+    // Tracks whether the 18-month postpartum veto suppressed an automatic
+    // life-stage detector this turn, so the prose can hedge instead of assert.
+    let postpartumVetoBlockedStageSignal = false;
 
     // --- Manual life-stage corrections (menopause / perimenopause / cycling) ---
     if (participant) {
