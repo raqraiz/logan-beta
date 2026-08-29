@@ -2644,8 +2644,9 @@ serve(async (req) => {
     const isCurrentSymptomQuestion = currentMessageMentionsKnownSymptom && isSymptomQuestionOrHypothetical(userMessage) && !hasPersonalSymptomContext(userMessage);
     const isCurrentSymptomNegation = currentMessageMentionsKnownSymptom && isSymptomNegationOrCorrection(userMessage);
 
-
-
+    // Tracks whether the 18-month postpartum veto suppressed an automatic
+    // life-stage detector this turn, so the prose can hedge instead of assert.
+    let postpartumVetoBlockedStageSignal = false;
 
     // --- Manual life-stage corrections (menopause / perimenopause / cycling) ---
     if (participant) {
@@ -2715,6 +2716,10 @@ serve(async (req) => {
         /\b(?:no|haven'?t\s+had|havent\s+had|not\s+had|don'?t\s+(?:have|get)|dont\s+(?:have|get)|without)\s+(?:a\s+|my\s+|any\s+)?periods?\b/i.test(userMessage)
         || /\bperiods?\s+(?:haven'?t|hasn'?t|have\s+not|has\s+not)\s+(?:come\s+back|returned|started)\b/i.test(userMessage)
         || /\b(?:breast\s*feed|breastfeeding|nursing|chestfeeding|lactating|exclusively\s+pumping)\b/i.test(userMessage);
+
+      // Remember if the veto suppressed an automatic stage detector this turn.
+      postpartumVetoBlockedStageSignal = recentPostpartumVeto
+        && (cyclingSignal || irregularSignal || perimenopauseSignal || menopauseSignal);
 
       // Cycling wins over menopause if both somehow match
       if (cyclingSignal && !recentPostpartumVeto && participant.life_stage !== "cycling") {
@@ -4007,6 +4012,13 @@ serve(async (req) => {
 
     if (isCurrentSymptomNegation) {
       systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user is correcting or negating a symptom log. Do NOT log, note, track, or save the symptom mentioned in this correction. Do NOT treat it as today's lived symptom. Apologize briefly and clarify that you won't count that symptom from this message.`;
+    }
+
+    // Recent postpartum veto: she mentioned a possible other life stage while still
+    // within 18 months postpartum. The stage change was intentionally suppressed.
+    // Hedge her self-reported possibility rather than stating it as fact.
+    if (postpartumVetoBlockedStageSignal) {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): The user is within 18 months postpartum and mentioned something that could imply a different life stage (cycling, irregular, perimenopause, or menopause). Her profile was NOT changed. Do NOT say she "is" in that stage or confirm the switch. Reflect it only as a possibility she raised — e.g. "possible perimenopause signs," "some overlap with perimenopause symptoms," or "it makes sense you're wondering about that while breastfeeding." Keep the response focused on what she actually shared (symptom, feeling, or question). Do not ask for a last-period date or suggest resetting her cycle.`;
     }
 
     // Emotional context persistence: a short follow-up right after an emotionally
