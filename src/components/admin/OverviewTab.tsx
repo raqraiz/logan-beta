@@ -985,7 +985,7 @@ export const OverviewTab = () => {
                 <p className="text-2xl font-bold text-foreground">
                   {todayIndexLoading ? "…" : activeMetrics.activeToday}
                 </p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active Users</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active users today</p>
               </CardContent>
             </Card>
           </PopoverTrigger>
