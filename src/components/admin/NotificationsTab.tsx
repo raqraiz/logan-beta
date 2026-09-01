@@ -188,6 +188,7 @@ export function NotificationsTab() {
       title: title.trim() || null,
       content: content.trim(),
       filters: {
+        audience: filters.audience,
         life_stage: filters.life_stage.length > 0 ? filters.life_stage : undefined,
         activity: filters.activity || undefined,
         most_active: filters.most_active || undefined,
@@ -491,6 +492,38 @@ export function NotificationsTab() {
           {/* Filters */}
           <div className="space-y-4 pt-2 border-t border-border">
             <h4 className="text-sm font-semibold text-foreground">Segment filters</h4>
+
+            {/* Audience — onboarding completion targeting */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-muted-foreground">Audience</Label>
+                {filters.participant_ids.length === 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    {isPreviewing
+                      ? "Counting…"
+                      : previewCount !== null
+                        ? `${previewCount} recipient${previewCount === 1 ? "" : "s"}`
+                        : ""}
+                  </span>
+                )}
+              </div>
+              <Select
+                value={filters.audience}
+                onValueChange={(v) => {
+                  setFilters((f) => ({ ...f, audience: v as Audience }));
+                }}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="onboarded">Onboarded only</SelectItem>
+                  <SelectItem value="incomplete">Incomplete onboarding only</SelectItem>
+                  <SelectItem value="all">All signups</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                "Onboarded only" targets users who finished onboarding. "Incomplete" reaches people who signed up but never finished — ignored when specific users are selected.
+              </p>
+            </div>
 
             {/* Specific users — overrides other filters when used */}
             <div className="space-y-2">
