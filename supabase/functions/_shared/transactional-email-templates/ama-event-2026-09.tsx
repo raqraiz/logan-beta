@@ -21,7 +21,19 @@ const AmaEventEmail = ({ name }: AmaEventProps) => {
     name && name.trim().length > 0 ? name.trim().split(/\s+/)[0] : 'there'
   return (
     <Html lang="en" dir="ltr">
-      <Head />
+      <Head>
+        {/*
+          Some clients (iOS Mail / Gmail) auto-detect messaging + calendar URLs
+          and inject their own rich-link chip: an app icon plus a second,
+          auto-generated label next to the real anchor. Disabling data
+          detectors keeps every URL inline as plain authored text, regardless
+          of domain — no per-domain special casing.
+        */}
+        <meta name="format-detection" content="telephone=no,date=no,address=no,email=no,url=no" />
+        <meta name="x-apple-disable-message-reformatting" />
+        <style>{noAutoLinkCss}</style>
+      </Head>
+
       <Preview>
         This Thursday: ask an endocrinologist anything about your hormones
       </Preview>
@@ -85,7 +97,7 @@ const AmaEventEmail = ({ name }: AmaEventProps) => {
               href="https://chat.whatsapp.com/LCDSbBllryl68cM7Op21pt?mode=gi_t"
               style={link}
             >
-              WhatsApp community
+              chat.whatsapp.com
             </Link>
           </Text>
           <Text style={bullet}>
@@ -178,3 +190,18 @@ const ps = {
   borderTop: '1px solid #e5e7eb',
   paddingTop: '16px',
 }
+// Neutralizes client-generated data-detector chips (icon + duplicate label)
+// around auto-detected URLs so anchors render exactly as authored.
+// Rendered as a text child, which React may HTML-escape: keep this CSS free of >, &, and quotes.
+const noAutoLinkCss = `
+  a[x-apple-data-detectors] {
+    color: inherit !important;
+    text-decoration: inherit !important;
+    font-size: inherit !important;
+    font-family: inherit !important;
+    font-weight: inherit !important;
+    line-height: inherit !important;
+  }
+  .aBn { border-bottom: 0 !important; text-decoration: none !important; }
+  .aBn span, .aQy { display: none !important; }
+`
