@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.45.0'
 import { sendAppEmail } from '../_shared/send-app-email.ts'
+import { getMarketingOptOuts } from '../_shared/marketing-opt-out.ts'
 
 
 const corsHeaders = {
@@ -80,7 +81,12 @@ Deno.serve(async (req) => {
       .eq('policy_version', POLICY_VERSION)
       .in('recipient_email', emails)
     const alreadySet = new Set((already ?? []).map((r: any) => (r.recipient_email as string).toLowerCase()))
-    const allToSend = Array.from(byEmail.entries()).filter(([em]) => !alreadySet.has(em))
+
+    // Announcement email: skip anyone who opted out of marketing/announcements
+    // (or is suppressed for bounce/complaint/unsubscribe).
+    const optedOut = await getMarketingOptOuts(admin, emails)
+    const allToSend = Array.from(byEmail.entries())
+      .filter(([em]) => !alreadySet.has(em) && !optedOut.has(em))
 
     // Cap per invocation to stay within Edge Function wall-time limits.
     // Remaining recipients will be picked up on the next click (dedup via policy_notifications).
@@ -94,6 +100,7 @@ Deno.serve(async (req) => {
         eligible: allToSend.length,
         totalParticipants: byEmail.size,
         alreadySent: alreadySet.size,
+        optedOut: optedOut.size,
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 })
     }
 
