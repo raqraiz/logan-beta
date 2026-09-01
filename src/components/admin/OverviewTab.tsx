@@ -1001,10 +1001,12 @@ export const OverviewTab = () => {
               >
                 Failed — retry
               </button>
+            ) : allTimeUsersLoading && allTimeUsers === null ? (
+              <div className="h-8 flex items-center justify-center">
+                <RefreshCw className="w-4 h-4 animate-spin text-primary" />
+              </div>
             ) : (
-              <p className="text-2xl font-bold text-foreground">
-                {allTimeUsersLoading && allTimeUsers === null ? "…" : allTimeUsers ?? 0}
-              </p>
+              <p className="text-2xl font-bold text-foreground">{allTimeUsers ?? 0}</p>
             )}
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Users</p>
           </CardContent>
