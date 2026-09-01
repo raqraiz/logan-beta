@@ -190,3 +190,18 @@ const ps = {
   borderTop: '1px solid #e5e7eb',
   paddingTop: '16px',
 }
+// Neutralizes client-generated data-detector chips (icon + duplicate label)
+// around auto-detected URLs so anchors render exactly as authored.
+// Rendered as a text child, which React may HTML-escape: keep this CSS free of >, &, and quotes.
+const noAutoLinkCss = `
+  a[x-apple-data-detectors] {
+    color: inherit !important;
+    text-decoration: inherit !important;
+    font-size: inherit !important;
+    font-family: inherit !important;
+    font-weight: inherit !important;
+    line-height: inherit !important;
+  }
+  .aBn { border-bottom: 0 !important; text-decoration: none !important; }
+  .aBn span, .aQy { display: none !important; }
+`
