@@ -1755,6 +1755,7 @@ export type Database = {
       }
     }
     Functions: {
+      count_onboarded_users: { Args: never; Returns: number }
       generate_referral_code: { Args: never; Returns: string }
       get_auth_email: { Args: never; Returns: string }
       get_referral_count:
