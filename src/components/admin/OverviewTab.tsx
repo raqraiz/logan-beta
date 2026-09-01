@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { onboardedProfiles } from "@/lib/onboardedUsers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -328,8 +329,7 @@ export const OverviewTab = () => {
   const getProfiles = useCallback(() => {
     if (!profilesPromiseRef.current) {
       profilesPromiseRef.current = Promise.resolve(
-        supabase
-          .from("profiles")
+        onboardedProfiles()
           .select("id, email, full_name, created_at")
       ).then((r: any) => r.data || []);
 
@@ -704,7 +704,7 @@ export const OverviewTab = () => {
   // shows numbers immediately, before the heavy row-by-row loaders finish.
   const loadFastCounts = useCallback(async () => {
     const [usersRes, msgsRes] = await Promise.all([
-      supabase.from("profiles").select("*", { count: "exact", head: true })
+      onboardedProfiles().select("*", { count: "exact", head: true })
         .gte("created_at", fromIso).lte("created_at", toIso),
       supabase.from("chat_messages").select("*", { count: "exact", head: true })
         .eq("role", "user").gte("created_at", fromIso).lte("created_at", toIso),
@@ -718,7 +718,7 @@ export const OverviewTab = () => {
 
   // True all-time cumulative signups — never scoped by the range selector.
   const loadAllTimeUsers = useCallback(async () => {
-    const { count } = await supabase.from("profiles").select("*", { count: "exact", head: true });
+    const { count } = await onboardedProfiles().select("*", { count: "exact", head: true });
     if (count != null) setAllTimeUsers(count);
   }, []);
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { onboardedProfiles } from "@/lib/onboardedUsers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -151,8 +152,7 @@ export function ProfilesTab() {
     setLoading(true);
     try {
       // Fetch profiles
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
+      const { data: profilesData, error: profilesError } = await onboardedProfiles()
         .select("*")
         .order("created_at", { ascending: false });
 
