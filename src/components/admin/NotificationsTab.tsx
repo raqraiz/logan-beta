@@ -219,6 +219,14 @@ export function NotificationsTab() {
     }
   };
 
+  // Auto-refresh the recipient count when the audience changes
+  // (skipped while specific users are selected — audience is ignored then).
+  useEffect(() => {
+    if (filters.participant_ids.length > 0) return;
+    handlePreview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.audience]);
+
   const handleSend = async () => {
     if (!content.trim()) {
       toast({ title: "Message required", description: "Please write a message.", variant: "destructive" });
