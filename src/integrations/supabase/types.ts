@@ -1081,6 +1081,7 @@ export type Database = {
           id: string
           landing_at: string | null
           landing_path: string | null
+          marketing_opt_out: boolean
           phone: string | null
           referral_code: string | null
           referred_by: string | null
@@ -1100,6 +1101,7 @@ export type Database = {
           id: string
           landing_at?: string | null
           landing_path?: string | null
+          marketing_opt_out?: boolean
           phone?: string | null
           referral_code?: string | null
           referred_by?: string | null
@@ -1119,6 +1121,7 @@ export type Database = {
           id?: string
           landing_at?: string | null
           landing_path?: string | null
+          marketing_opt_out?: boolean
           phone?: string | null
           referral_code?: string | null
           referred_by?: string | null
