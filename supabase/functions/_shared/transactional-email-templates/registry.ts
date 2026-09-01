@@ -3,6 +3,7 @@ import { template as welcomeTemplate } from './welcome.tsx'
 import { template as day3CheckinTemplate } from './day-3-checkin.tsx'
 import { template as policyUpdate202607Template } from './policy-update-2026-07.tsx'
 import { template as accountDeletedTemplate } from './account-deleted.tsx'
+import { template as amaEvent202609Template } from './ama-event-2026-09.tsx'
 
 export interface TemplateEntry {
   component: React.ComponentType<any>
