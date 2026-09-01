@@ -18,4 +18,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'day-3-checkin': day3CheckinTemplate,
   'policy-update-2026-07': policyUpdate202607Template,
   'account-deleted': accountDeletedTemplate,
+  'ama-event-2026-09': amaEvent202609Template,
 }
