@@ -16,8 +16,10 @@ import { format } from "date-fns";
 
 type Activity = "" | "today" | "week" | "month" | "dormant";
 type Credits = "" | "out" | "free_only" | "paid";
+type Audience = "all" | "onboarded" | "incomplete";
 
 interface Filters {
+  audience: Audience;
   life_stage: string[];
   activity: Activity;
   most_active: number | null;
