@@ -1135,6 +1135,13 @@ export type Database = {
             foreignKeyName: "profiles_referred_by_fkey"
             columns: ["referred_by"]
             isOneToOne: false
+            referencedRelation: "onboarded_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1668,7 +1675,81 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      onboarded_profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string | null
+          landing_at: string | null
+          landing_path: string | null
+          phone: string | null
+          referral_code: string | null
+          referred_by: string | null
+          referrer: string | null
+          updated_at: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string | null
+          landing_at?: string | null
+          landing_path?: string | null
+          phone?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
+          referrer?: string | null
+          updated_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string | null
+          landing_at?: string | null
+          landing_path?: string | null
+          phone?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
+          referrer?: string | null
+          updated_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "onboarded_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       delete_email: {

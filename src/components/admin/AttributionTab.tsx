@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { onboardedProfiles } from "@/lib/onboardedUsers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -50,8 +51,7 @@ export const AttributionTab = () => {
   const load = async () => {
     setLoading(true);
     try {
-      let q = supabase
-        .from("profiles")
+      let q = onboardedProfiles()
         .select("id, email, created_at, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_path, referred_by")
         .order("created_at", { ascending: false })
         .limit(5000);

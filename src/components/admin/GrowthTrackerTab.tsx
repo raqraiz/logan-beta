@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { onboardedProfiles } from "@/lib/onboardedUsers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -32,15 +33,13 @@ export const GrowthTrackerTab = () => {
     setLoading(true);
 
     // Same source as Overview's "Total Users": every row in `profiles`, unfiltered.
-    const { count: preBaselineCount } = await supabase
-      .from("profiles")
+    const { count: preBaselineCount } = await onboardedProfiles()
       .select("*", { count: "exact", head: true })
       .lt("created_at", START_DATE.toISOString());
     const realBaseline = preBaselineCount ?? START_COUNT;
     setBaseline(realBaseline);
 
-    const { data: profs, error: profErr } = await supabase
-      .from("profiles")
+    const { data: profs, error: profErr } = await onboardedProfiles()
       .select("created_at")
       .gte("created_at", START_DATE.toISOString());
     if (profErr) console.error("Failed to load profiles for growth:", profErr);

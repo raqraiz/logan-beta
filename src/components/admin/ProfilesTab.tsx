@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { onboardedProfiles } from "@/lib/onboardedUsers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -151,8 +152,7 @@ export function ProfilesTab() {
     setLoading(true);
     try {
       // Fetch profiles
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
+      const { data: profilesData, error: profilesError } = await onboardedProfiles()
         .select("*")
         .order("created_at", { ascending: false });
 
@@ -173,7 +173,7 @@ export function ProfilesTab() {
 
       // Fetch exact chat stats per profile to avoid aggregate mismatches in admin UI
       const profileStatsEntries = await Promise.all(
-        (profilesData || []).map(async (profile) => {
+        ((profilesData || []) as any[]).map(async (profile) => {
           const { data: userMessages, error: userMessagesError } = await supabase
             .from("chat_messages")
             .select("created_at, role")
@@ -201,7 +201,7 @@ export function ProfilesTab() {
       const profileStatsById = new Map(profileStatsEntries);
 
       // Combine data
-      const enrichedProfiles: ProfileWithData[] = (profilesData || []).map((profile) => {
+      const enrichedProfiles: ProfileWithData[] = ((profilesData || []) as any[]).map((profile) => {
         const participant = participantsByEmail.get(profile.email.toLowerCase());
         const stats = profileStatsById.get(profile.id);
         return {

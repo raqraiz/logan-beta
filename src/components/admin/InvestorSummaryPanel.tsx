@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { onboardedProfiles } from "@/lib/onboardedUsers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -51,8 +52,7 @@ export const InvestorSummaryPanel = () => {
         (async () => {
           const out: string[] = [];
           for (let from = 0; ; from += 1000) {
-            const { data, error } = await supabase
-              .from("profiles")
+            const { data, error } = await onboardedProfiles()
               .select("created_at, id")
               .lte("created_at", snapshotISO)
               .order("created_at", { ascending: true })
