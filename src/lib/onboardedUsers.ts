@@ -22,12 +22,17 @@ export const ONBOARDED_PROFILES_VIEW = "onboarded_profiles" as const;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const onboardedProfiles = () => (supabase as any).from(ONBOARDED_PROFILES_VIEW);
 
-/** Total number of onboarded users (all time). */
-export const countOnboardedUsers = async (): Promise<number | null> => {
-  const { count, error } = await onboardedProfiles().select("*", { count: "exact", head: true });
-  if (error) {
-    console.error("countOnboardedUsers failed:", error);
-    return null;
-  }
-  return count ?? null;
+/**
+ * Total number of onboarded users (all time).
+ * Uses the `count_onboarded_users` security-definer RPC: the view is
+ * security_invoker, so counting through it re-evaluates the chat_messages
+ * admin RLS check per row (~26k rows) and is orders of magnitude slower.
+ */
+export const countOnboardedUsers = async (): Promise<number> => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any).rpc("count_onboarded_users");
+  if (error) throw error;
+  if (data === null || data === undefined) throw new Error("Not authorized to count users");
+  return Number(data);
 };
+

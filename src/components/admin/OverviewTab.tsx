@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { onboardedProfiles } from "@/lib/onboardedUsers";
+import { onboardedProfiles, countOnboardedUsers } from "@/lib/onboardedUsers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -719,19 +719,28 @@ export const OverviewTab = () => {
   }, [fromIso, toIso]);
 
   // True all-time cumulative signups — never scoped by the range selector.
+  // Single fast RPC (indexed, security-definer) with a hard timeout so a stalled
+  // request surfaces as an error instead of an endless loading state.
   const loadAllTimeUsers = useCallback(async () => {
     setAllTimeUsersLoading(true);
-    const { count, error } = await onboardedProfiles().select("*", { count: "exact", head: true });
-    if (error) {
-      console.error("Total users load error:", error);
-      setAllTimeUsersError(error.message ?? "Failed to load");
+    setAllTimeUsersError(null);
+    try {
+      const count = await Promise.race([
+        countOnboardedUsers(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Timed out after 15s")), 15000),
+        ),
+      ]);
+      setAllTimeUsers(count);
+    } catch (err) {
+      console.error("Total users load error:", err);
+      setAllTimeUsersError(err instanceof Error ? err.message : "Failed to load");
       setAllTimeUsers(null);
-    } else {
-      setAllTimeUsersError(null);
-      setAllTimeUsers(count ?? 0);
+    } finally {
+      setAllTimeUsersLoading(false);
     }
-    setAllTimeUsersLoading(false);
   }, []);
+
 
   // ----- SHARED ACTIVE-USER INDEX -----
   const loadActivityIndex = useCallback(async () => {
@@ -992,10 +1001,12 @@ export const OverviewTab = () => {
               >
                 Failed — retry
               </button>
+            ) : allTimeUsersLoading && allTimeUsers === null ? (
+              <div className="h-8 flex items-center justify-center">
+                <RefreshCw className="w-4 h-4 animate-spin text-primary" />
+              </div>
             ) : (
-              <p className="text-2xl font-bold text-foreground">
-                {allTimeUsersLoading && allTimeUsers === null ? "…" : allTimeUsers ?? 0}
-              </p>
+              <p className="text-2xl font-bold text-foreground">{allTimeUsers ?? 0}</p>
             )}
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Users</p>
           </CardContent>
