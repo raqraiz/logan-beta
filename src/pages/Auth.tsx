@@ -169,14 +169,8 @@ const Auth = () => {
             }
           } else {
             try {
-              const userId = data?.user?.id;
-              supabase.functions.invoke("send-transactional-email", {
-                body: {
-                  templateName: "welcome",
-                  recipientEmail: email,
-                  idempotencyKey: userId ? `welcome-${userId}` : `welcome-${email}`,
-                  templateData: { name: null },
-                },
+              supabase.functions.invoke("send-welcome-email", {
+                body: { templateData: { name: null } },
               }).catch((e) => console.error("Welcome email send failed:", e));
             } catch (e) {
               console.error("Welcome email invoke error:", e);

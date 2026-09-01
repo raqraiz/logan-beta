@@ -1,4 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.45.0'
+import { sendAppEmail } from '../_shared/send-app-email.ts'
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -101,24 +103,13 @@ Deno.serve(async (req) => {
     async function sendOne([em, info]: [string, { user_id: string | null; email: string; full_name: string | null }]) {
       const idempotencyKey = `policy-update-2026-07-${em}`
       try {
-        const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-            apikey: SERVICE_ROLE_KEY,
-          },
-          body: JSON.stringify({
-            templateName: 'policy-update-2026-07',
-            recipientEmail: info.email,
-            idempotencyKey,
-            templateData: { name: info.full_name },
-            purpose: 'transactional',
-          }),
+        const result = await sendAppEmail('policy-update-2026-07', info.email, {
+          templateData: { name: info.full_name },
+          idempotencyKey,
         })
-        if (!resp.ok) {
-          const text = await resp.text().catch(() => '')
-          errors.push(`${em}: ${resp.status} ${text.slice(0, 200)}`)
+        if (!result.sent) {
+          // Recipient bounced, complained or unsubscribed earlier — expected outcome.
+          errors.push(`${em}: ${result.reason}`)
           return
         }
         await admin.from('policy_notifications').insert({
@@ -131,6 +122,7 @@ Deno.serve(async (req) => {
         errors.push(`${em}: ${(e as Error).message}`)
       }
     }
+
 
     // Parallelize in small chunks so we don't hammer the queue or hit resource limits.
     for (let i = 0; i < toSend.length; i += CHUNK_SIZE) {
