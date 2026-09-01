@@ -252,6 +252,8 @@ export const OverviewTab = () => {
   const [activityIndex, setActivityIndex] = useState<ActivityIndex | null>(null);
   const [activityLoading, setActivityLoading] = useState(true);
   const [allTimeUsers, setAllTimeUsers] = useState<number | null>(null);
+  const [allTimeUsersLoading, setAllTimeUsersLoading] = useState(true);
+  const [allTimeUsersError, setAllTimeUsersError] = useState<string | null>(null);
 
   // Fixed rolling window for today's cards — independent of the selected range.
   const [todayIndex, setTodayIndex] = useState<ActivityIndex | null>(null);
