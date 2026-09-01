@@ -79,18 +79,15 @@ Deno.serve(async (req) => {
     // so we still have the address and the queue can look it up.
     if (userEmail) {
       try {
-        await supabaseAdmin.functions.invoke("send-transactional-email", {
-          body: {
-            templateName: "account-deleted",
-            recipientEmail: userEmail,
-            idempotencyKey: `account-deleted-${userId}`,
-            templateData: { name: displayName },
-          },
+        await sendAppEmail("account-deleted", userEmail, {
+          templateData: { name: displayName },
+          idempotencyKey: `account-deleted-${userId}`,
         });
       } catch (e) {
-        console.warn("account-deleted email invoke failed:", (e as any)?.message);
+        console.warn("account-deleted email send failed:", (e as any)?.message);
       }
     }
+
 
     // Delete user-owned rows (best-effort; ignore errors)
     const tablesByUserId = [
