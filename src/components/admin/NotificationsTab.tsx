@@ -16,8 +16,10 @@ import { format } from "date-fns";
 
 type Activity = "" | "today" | "week" | "month" | "dormant";
 type Credits = "" | "out" | "free_only" | "paid";
+type Audience = "all" | "onboarded" | "incomplete";
 
 interface Filters {
+  audience: Audience;
   life_stage: string[];
   activity: Activity;
   most_active: number | null;
@@ -48,6 +50,7 @@ const LIFE_STAGES = ["cycling", "postpartum", "menopause"];
 const PHASES = ["menstrual", "follicular", "ovulation", "luteal"];
 
 const emptyFilters: Filters = {
+  audience: "onboarded",
   life_stage: [],
   activity: "",
   most_active: null,
@@ -185,6 +188,7 @@ export function NotificationsTab() {
       title: title.trim() || null,
       content: content.trim(),
       filters: {
+        audience: filters.audience,
         life_stage: filters.life_stage.length > 0 ? filters.life_stage : undefined,
         activity: filters.activity || undefined,
         most_active: filters.most_active || undefined,
@@ -214,6 +218,14 @@ export function NotificationsTab() {
       setIsPreviewing(false);
     }
   };
+
+  // Auto-refresh the recipient count when the audience changes
+  // (skipped while specific users are selected — audience is ignored then).
+  useEffect(() => {
+    if (filters.participant_ids.length > 0) return;
+    handlePreview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.audience]);
 
   const handleSend = async () => {
     if (!content.trim()) {
@@ -273,6 +285,7 @@ export function NotificationsTab() {
     setContent(d.content);
     const f = d.segment_filters || {};
     setFilters({
+      audience: f.audience ?? "all",
       life_stage: f.life_stage ?? [],
       activity: f.activity ?? "",
       most_active: f.most_active ?? null,
@@ -487,6 +500,38 @@ export function NotificationsTab() {
           {/* Filters */}
           <div className="space-y-4 pt-2 border-t border-border">
             <h4 className="text-sm font-semibold text-foreground">Segment filters</h4>
+
+            {/* Audience — onboarding completion targeting */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-muted-foreground">Audience</Label>
+                {filters.participant_ids.length === 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    {isPreviewing
+                      ? "Counting…"
+                      : previewCount !== null
+                        ? `${previewCount} recipient${previewCount === 1 ? "" : "s"}`
+                        : ""}
+                  </span>
+                )}
+              </div>
+              <Select
+                value={filters.audience}
+                onValueChange={(v) => {
+                  setFilters((f) => ({ ...f, audience: v as Audience }));
+                }}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="onboarded">Onboarded only</SelectItem>
+                  <SelectItem value="incomplete">Incomplete onboarding only</SelectItem>
+                  <SelectItem value="all">All signups</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                "Onboarded only" targets users who finished onboarding. "Incomplete" reaches people who signed up but never finished — ignored when specific users are selected.
+              </p>
+            </div>
 
             {/* Specific users — overrides other filters when used */}
             <div className="space-y-2">
