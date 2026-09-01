@@ -720,8 +720,17 @@ export const OverviewTab = () => {
 
   // True all-time cumulative signups — never scoped by the range selector.
   const loadAllTimeUsers = useCallback(async () => {
-    const { count } = await onboardedProfiles().select("*", { count: "exact", head: true });
-    if (count != null) setAllTimeUsers(count);
+    setAllTimeUsersLoading(true);
+    const { count, error } = await onboardedProfiles().select("*", { count: "exact", head: true });
+    if (error) {
+      console.error("Total users load error:", error);
+      setAllTimeUsersError(error.message ?? "Failed to load");
+      setAllTimeUsers(null);
+    } else {
+      setAllTimeUsersError(null);
+      setAllTimeUsers(count ?? 0);
+    }
+    setAllTimeUsersLoading(false);
   }, []);
 
   // ----- SHARED ACTIVE-USER INDEX -----
