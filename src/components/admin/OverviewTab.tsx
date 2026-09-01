@@ -719,19 +719,28 @@ export const OverviewTab = () => {
   }, [fromIso, toIso]);
 
   // True all-time cumulative signups — never scoped by the range selector.
+  // Single fast RPC (indexed, security-definer) with a hard timeout so a stalled
+  // request surfaces as an error instead of an endless loading state.
   const loadAllTimeUsers = useCallback(async () => {
     setAllTimeUsersLoading(true);
-    const { count, error } = await onboardedProfiles().select("*", { count: "exact", head: true });
-    if (error) {
-      console.error("Total users load error:", error);
-      setAllTimeUsersError(error.message ?? "Failed to load");
+    setAllTimeUsersError(null);
+    try {
+      const count = await Promise.race([
+        countOnboardedUsers(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Timed out after 15s")), 15000),
+        ),
+      ]);
+      setAllTimeUsers(count);
+    } catch (err) {
+      console.error("Total users load error:", err);
+      setAllTimeUsersError(err instanceof Error ? err.message : "Failed to load");
       setAllTimeUsers(null);
-    } else {
-      setAllTimeUsersError(null);
-      setAllTimeUsers(count ?? 0);
+    } finally {
+      setAllTimeUsersLoading(false);
     }
-    setAllTimeUsersLoading(false);
   }, []);
+
 
   // ----- SHARED ACTIVE-USER INDEX -----
   const loadActivityIndex = useCallback(async () => {
