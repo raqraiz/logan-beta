@@ -50,6 +50,7 @@ const LIFE_STAGES = ["cycling", "postpartum", "menopause"];
 const PHASES = ["menstrual", "follicular", "ovulation", "luteal"];
 
 const emptyFilters: Filters = {
+  audience: "onboarded",
   life_stage: [],
   activity: "",
   most_active: null,
@@ -275,6 +276,7 @@ export function NotificationsTab() {
     setContent(d.content);
     const f = d.segment_filters || {};
     setFilters({
+      audience: f.audience ?? "all",
       life_stage: f.life_stage ?? [],
       activity: f.activity ?? "",
       most_active: f.most_active ?? null,
