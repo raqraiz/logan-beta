@@ -120,7 +120,6 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
         } else {
           // Fire-and-forget welcome email
           try {
-            const userId = data?.user?.id;
             supabase.functions.invoke("send-welcome-email", {
               body: { templateData: { name: fullName.trim() || null } },
             }).catch((e) => console.error("Welcome email send failed:", e));
