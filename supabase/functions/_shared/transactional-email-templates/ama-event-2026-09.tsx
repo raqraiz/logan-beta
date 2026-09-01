@@ -97,7 +97,7 @@ const AmaEventEmail = ({ name }: AmaEventProps) => {
               href="https://chat.whatsapp.com/LCDSbBllryl68cM7Op21pt?mode=gi_t"
               style={link}
             >
-              chat.whatsapp.com
+              Logan Founder's Circle
             </Link>
           </Text>
           <Text style={bullet}>
