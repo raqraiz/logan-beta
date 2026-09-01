@@ -92,7 +92,7 @@ const AmaEventEmail = ({ name }: AmaEventProps) => {
           <Text style={text}>Here's how to sign up:</Text>
 
           <Text style={bullet}>
-            1. Join the WhatsApp community →{' '}
+            1. Join the WhatsApp community{' → '}
             <Link
               href="https://chat.whatsapp.com/LCDSbBllryl68cM7Op21pt?mode=gi_t"
               style={link}
