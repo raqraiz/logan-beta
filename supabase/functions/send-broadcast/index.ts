@@ -132,6 +132,22 @@ Deno.serve(async (req) => {
       }))
       .filter((p) => p.user_id);
 
+    // Audience filter (onboarding completion) — canonical marker:
+    // chat_messages.metadata->>'onboarding_complete' = 'true'
+    // Skipped when targeting specific users; defaults to "all" for legacy callers.
+    const audience = filters.audience ?? "all";
+    if (!hasSpecific && audience !== "all") {
+      const { data: onboardedRows } = await admin
+        .from("chat_messages")
+        .select("user_id")
+        .eq("metadata->>onboarding_complete", "true")
+        .limit(10000);
+      const onboardedIds = new Set((onboardedRows ?? []).map((r) => r.user_id));
+      candidates = candidates.filter((c) =>
+        audience === "onboarded" ? onboardedIds.has(c.user_id!) : !onboardedIds.has(c.user_id!),
+      );
+    }
+
     // Cycle-phase filter (in-memory) — skipped when targeting specific users
     if (!hasSpecific && filters.cycle_phase && filters.cycle_phase.length > 0) {
       candidates = candidates.filter((p) => {
