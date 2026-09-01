@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { RefreshCw, Search, Mail, MailOpen, AlertTriangle } from "lucide-react";
 import { PolicyUpdateSender } from "./PolicyUpdateSender";
+import { AmaInviteSender } from "./AmaInviteSender";
 import { formatDistanceToNow } from "date-fns";
 
 interface LogRow {
@@ -148,6 +149,7 @@ export const EmailsTab = () => {
 
   return (
     <div className="space-y-6">
+      <AmaInviteSender />
       <PolicyUpdateSender />
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="p-4">

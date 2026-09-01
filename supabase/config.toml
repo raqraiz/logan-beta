@@ -37,5 +37,7 @@ project_id = "tpohsmxpcqqgxcgectfs"
     verify_jwt = false
   [functions.send-policy-update]
     verify_jwt = false
+  [functions.send-ama-invite]
+    verify_jwt = false
 
 
