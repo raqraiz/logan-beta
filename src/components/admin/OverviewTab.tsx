@@ -252,6 +252,8 @@ export const OverviewTab = () => {
   const [activityIndex, setActivityIndex] = useState<ActivityIndex | null>(null);
   const [activityLoading, setActivityLoading] = useState(true);
   const [allTimeUsers, setAllTimeUsers] = useState<number | null>(null);
+  const [allTimeUsersLoading, setAllTimeUsersLoading] = useState(true);
+  const [allTimeUsersError, setAllTimeUsersError] = useState<string | null>(null);
 
   // Fixed rolling window for today's cards — independent of the selected range.
   const [todayIndex, setTodayIndex] = useState<ActivityIndex | null>(null);
@@ -718,8 +720,17 @@ export const OverviewTab = () => {
 
   // True all-time cumulative signups — never scoped by the range selector.
   const loadAllTimeUsers = useCallback(async () => {
-    const { count } = await onboardedProfiles().select("*", { count: "exact", head: true });
-    if (count != null) setAllTimeUsers(count);
+    setAllTimeUsersLoading(true);
+    const { count, error } = await onboardedProfiles().select("*", { count: "exact", head: true });
+    if (error) {
+      console.error("Total users load error:", error);
+      setAllTimeUsersError(error.message ?? "Failed to load");
+      setAllTimeUsers(null);
+    } else {
+      setAllTimeUsersError(null);
+      setAllTimeUsers(count ?? 0);
+    }
+    setAllTimeUsersLoading(false);
   }, []);
 
   // ----- SHARED ACTIVE-USER INDEX -----
@@ -973,7 +984,19 @@ export const OverviewTab = () => {
         <Card>
           <CardContent className="p-4 text-center">
             <Users className="w-5 h-5 mx-auto mb-1 text-primary" />
-            <p className="text-2xl font-bold text-foreground">{allTimeUsers ?? "—"}</p>
+            {allTimeUsersError ? (
+              <button
+                onClick={loadAllTimeUsers}
+                className="text-xs font-medium text-destructive underline underline-offset-2"
+                title={allTimeUsersError}
+              >
+                Failed — retry
+              </button>
+            ) : (
+              <p className="text-2xl font-bold text-foreground">
+                {allTimeUsersLoading && allTimeUsers === null ? "…" : allTimeUsers ?? 0}
+              </p>
+            )}
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Users</p>
           </CardContent>
         </Card>
