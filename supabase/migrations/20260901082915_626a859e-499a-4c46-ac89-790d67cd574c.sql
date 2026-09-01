@@ -1,0 +1,2 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS marketing_opt_out boolean NOT NULL DEFAULT false;
+CREATE INDEX IF NOT EXISTS profiles_marketing_opt_out_idx ON public.profiles (marketing_opt_out) WHERE marketing_opt_out;

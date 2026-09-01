@@ -79,6 +79,21 @@ async function record(
       })
       throw new Error('Failed to stamp unsubscribe token')
     }
+
+    // Flip the app-side marketing opt-out so announcement broadcasts skip them.
+    const { error: optOutError } = await supabase
+      .from('profiles')
+      .update({ marketing_opt_out: true })
+      .ilike('email', email)
+
+    if (optOutError) {
+      console.error('Failed to set marketing_opt_out', {
+        code: optOutError.code,
+        message: optOutError.message,
+        event_id: event.event_id,
+      })
+      throw new Error('Failed to set marketing opt-out')
+    }
   }
 }
 
