@@ -9,6 +9,7 @@ const corsHeaders = {
 };
 
 interface SegmentFilters {
+  audience?: "all" | "onboarded" | "incomplete" | null; // onboarding-completion targeting
   life_stage?: string[]; // cycling | postpartum | menopause
   activity?: "today" | "week" | "month" | "dormant" | null;
   most_active?: number | null; // top N
