@@ -84,7 +84,7 @@ async function record(
     const { error: optOutError } = await supabase
       .from('profiles')
       .update({ marketing_opt_out: true })
-      .eq('email', email)
+      .ilike('email', email)
 
     if (optOutError) {
       console.error('Failed to set marketing_opt_out', {
