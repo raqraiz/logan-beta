@@ -984,7 +984,19 @@ export const OverviewTab = () => {
         <Card>
           <CardContent className="p-4 text-center">
             <Users className="w-5 h-5 mx-auto mb-1 text-primary" />
-            <p className="text-2xl font-bold text-foreground">{allTimeUsers ?? "—"}</p>
+            {allTimeUsersError ? (
+              <button
+                onClick={loadAllTimeUsers}
+                className="text-xs font-medium text-destructive underline underline-offset-2"
+                title={allTimeUsersError}
+              >
+                Failed — retry
+              </button>
+            ) : (
+              <p className="text-2xl font-bold text-foreground">
+                {allTimeUsersLoading && allTimeUsers === null ? "…" : allTimeUsers ?? 0}
+              </p>
+            )}
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Users</p>
           </CardContent>
         </Card>
