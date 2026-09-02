@@ -894,30 +894,6 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
             </p>
           </div>
 
-          {/* Severity sliders for selected symptoms */}
-          {selected.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50">
-                Severity (0 = not feeling it, 5 = severe)
-              </p>
-              {selected.map(entry => (
-                <div key={entry.name} className="flex items-center gap-3">
-                  <span className="text-xs text-foreground/70 w-28 truncate">{entry.name}</span>
-                  <Slider
-                    min={0}
-                    max={5}
-                    step={1}
-                    value={[entry.severity]}
-                    onValueChange={([v]) => setSeverity(entry.name, v)}
-                    className="flex-1"
-                  />
-                  <span className="text-xs font-medium text-muted-foreground w-4 text-right">
-                    {entry.severity}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
 
           {/* Notes */}
           <div className="space-y-1">
