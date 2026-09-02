@@ -293,6 +293,71 @@ export const OverviewTab = () => {
       allSessions[0].startTime,
     );
   }, [allSessions]);
+  // "Today" chip on the Total Time Spent card — always today's UTC calendar
+  // day (same convention as utcKey/active metrics), independent of the
+  // selected range. Loaded separately so it never blocks the main number.
+  const [todayTimeMin, setTodayTimeMin] = useState<number | null>(null);
+  const [todayTimeLoading, setTodayTimeLoading] = useState(true);
+  const [todayTimeError, setTodayTimeError] = useState<string | null>(null);
+
+  const loadTodayTime = useCallback(async () => {
+    setTodayTimeLoading(true);
+    try {
+      const fromIso = new Date().toISOString().slice(0, 10) + "T00:00:00.000Z";
+      const [chat, activity] = await Promise.all([
+        fetchAllRows<{ user_id: string; created_at: string }>(
+          (from, to) => supabase.from("chat_messages")
+            .select("user_id, created_at")
+            .eq("role", "user")
+            .gte("created_at", fromIso)
+            .order("created_at", { ascending: true })
+            .range(from, to),
+          () => supabase.from("chat_messages").select("*", { count: "exact", head: true })
+            .eq("role", "user").gte("created_at", fromIso),
+        ),
+        fetchAllRows<{ user_id: string; created_at: string }>(
+          (from, to) => supabase.from("user_activity_events")
+            .select("user_id, created_at")
+            .gte("created_at", fromIso)
+            .order("created_at", { ascending: true })
+            .range(from, to),
+          () => supabase.from("user_activity_events").select("*", { count: "exact", head: true })
+            .gte("created_at", fromIso),
+        ),
+      ]);
+      // Same 30-min-gap reconstruction as loadSessions, per user so
+      // overlapping tabs/devices can't double-count.
+      const tsByUser = new Map<string, number[]>();
+      for (const e of [...chat, ...activity]) {
+        const arr = tsByUser.get(e.user_id) ?? [];
+        arr.push(new Date(e.created_at).getTime());
+        tsByUser.set(e.user_id, arr);
+      }
+      let total = 0;
+      for (const times of tsByUser.values()) {
+        times.sort((a, b) => a - b);
+        let start = times[0];
+        let end = times[0];
+        for (let i = 1; i < times.length; i++) {
+          if (times[i] - times[i - 1] > SESSION_GAP_MS) {
+            total += Math.max(1, Math.round((end - start) / 60000));
+            start = times[i];
+          }
+          end = times[i];
+        }
+        total += Math.max(1, Math.round((end - start) / 60000));
+      }
+      setTodayTimeMin(total);
+      setTodayTimeError(null);
+    } catch (err) {
+      console.error("Today time load error:", err);
+      setTodayTimeError(err instanceof Error ? err.message : "Failed to load");
+      setTodayTimeMin(null);
+    } finally {
+      setTodayTimeLoading(false);
+    }
+  }, []);
+
   const formatDuration = (mins: number) => {
     if (mins < 60) return `${mins}m`;
     const h = Math.floor(mins / 60);
