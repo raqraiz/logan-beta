@@ -580,8 +580,11 @@ export const OverviewTab = () => {
         longestSession,
         longestSessionUser: longestRecord?.fullName || "",
       });
+      setSessionsError(null);
     } catch (err) {
       console.error("Sessions load error:", err);
+      setSessionsError(err instanceof Error ? err.message : "Failed to load sessions");
+
     } finally {
       setSessionsLoading(false);
     }
