@@ -78,6 +78,8 @@ export const SavedCampaignLinks = () => {
     loadSignupCounts();
   }, []);
 
+  // There is no campaign entity in the schema — launch date is derived as the
+  // earliest created_at among the campaign's saved short links.
   const grouped = useMemo(() => {
     const f = filter.trim().toLowerCase();
     const filtered = f
@@ -94,15 +96,40 @@ export const SavedCampaignLinks = () => {
       arr.push(l);
       map.set(key, arr);
     }
-    return Array.from(map.entries())
+    const rows = Array.from(map.entries())
       .filter(([, items]) => items.length > 0) // never render an empty accordion
-      .sort((a, b) => a[0].localeCompare(b[0]));
-  }, [links, filter]);
+      .map(([campaign, items]) => {
+        const launchedAt = Math.min(...items.map((l) => new Date(l.created_at).getTime()));
+        // Campaign total = sum over the distinct utm triples its links encode.
+        let conversions: number | null = null;
+        if (signupCounts) {
+          const seen = new Set<string>();
+          conversions = 0;
+          for (const l of items) {
+            const k = utmKey(l.utm_campaign, l.utm_source, l.utm_medium);
+            if (seen.has(k)) continue;
+            seen.add(k);
+            conversions += signupCounts.get(k) ?? 0;
+          }
+        }
+        return { campaign, items, launchedAt, conversions };
+      });
+
+    if (sortMode === "newest") {
+      rows.sort((a, b) => b.launchedAt - a.launchedAt || a.campaign.localeCompare(b.campaign));
+    } else {
+      // Ties broken by launch date (newest first) so ordering stays stable.
+      rows.sort(
+        (a, b) => (b.conversions ?? 0) - (a.conversions ?? 0) || b.launchedAt - a.launchedAt
+      );
+    }
+    return rows;
+  }, [links, filter, signupCounts, sortMode]);
 
   const isFiltering = filter.trim().length > 0;
   // While filtering, every group with matches auto-expands so results stay visible.
   const isOpen = (campaign: string) => isFiltering || openGroups.has(campaign);
-  const allOpen = grouped.length > 0 && grouped.every(([c]) => openGroups.has(c));
+  const allOpen = grouped.length > 0 && grouped.every((g) => openGroups.has(g.campaign));
 
   const toggleGroup = (campaign: string) =>
     setOpenGroups((prev) => {
@@ -113,7 +140,8 @@ export const SavedCampaignLinks = () => {
     });
 
   const toggleAll = () =>
-    setOpenGroups(allOpen ? new Set() : new Set(grouped.map(([c]) => c)));
+    setOpenGroups(allOpen ? new Set() : new Set(grouped.map((g) => g.campaign)));
+
 
   const copy = async (text: string) => {
     try {
