@@ -217,6 +217,8 @@ export const OverviewTab = () => {
   // Per-section loading flags for progressive rendering
   const [engagementLoading, setEngagementLoading] = useState(true);
   const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [sessionsError, setSessionsError] = useState<string | null>(null);
+
   const [adoptionLoading, setAdoptionLoading] = useState(true);
   const [feedbackLoading, setFeedbackLoading] = useState(true);
   const [menuLoading, setMenuLoading] = useState(true);
@@ -272,6 +274,34 @@ export const OverviewTab = () => {
     longestSession: 0,
     longestSessionUser: "",
   });
+
+  // "Total time spent on Logan" — derived from the same reconstructed sessions
+  // used by the Sessions section (30-min inactivity gap over chat_messages +
+  // user_activity_events). Sessions are built per user from merged timestamps,
+  // so multiple tabs/devices can't double-count overlapping time, and an
+  // abandoned session can never exceed its last event (no infinite tail).
+  const totalTimeMin = useMemo(
+    () => allSessions.reduce((a, s) => a + s.durationMin, 0),
+    [allSessions],
+  );
+  // Activity-event tracking started when the first event landed; earlier data
+  // relies on chat messages only, so surface the earliest observed session date.
+  const trackingSince = useMemo(() => {
+    if (allSessions.length === 0) return null;
+    return allSessions.reduce(
+      (min, s) => (s.startTime < min ? s.startTime : min),
+      allSessions[0].startTime,
+    );
+  }, [allSessions]);
+  const formatDuration = (mins: number) => {
+    if (mins < 60) return `${mins}m`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h < 100 && m > 0) return `${h}h ${m}m`;
+    return `${h.toLocaleString()}h`;
+  };
+
+
 
   // Features state
   const [weeklyAdoption, setWeeklyAdoption] = useState<WeeklyAdoption[]>([]);
@@ -580,8 +610,11 @@ export const OverviewTab = () => {
         longestSession,
         longestSessionUser: longestRecord?.fullName || "",
       });
+      setSessionsError(null);
     } catch (err) {
       console.error("Sessions load error:", err);
+      setSessionsError(err instanceof Error ? err.message : "Failed to load sessions");
+
     } finally {
       setSessionsLoading(false);
     }
@@ -1011,6 +1044,44 @@ export const OverviewTab = () => {
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Users</p>
           </CardContent>
         </Card>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card className="h-full cursor-help">
+              <CardContent className="p-4 text-center">
+                <Clock className="w-5 h-5 mx-auto mb-1 text-amber-500" />
+                {sessionsError ? (
+                  <button
+                    onClick={loadSessions}
+                    className="text-xs font-medium text-destructive underline underline-offset-2"
+                    title={sessionsError}
+                  >
+                    Failed — retry
+                  </button>
+                ) : sessionsLoading ? (
+                  <div className="h-8 flex items-center justify-center">
+                    <RefreshCw className="w-4 h-4 animate-spin text-amber-500" />
+                  </div>
+                ) : (
+                  <p className="text-2xl font-bold text-foreground">{formatDuration(totalTimeMin)}</p>
+                )}
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total time spent</p>
+                {!sessionsError && !sessionsLoading && trackingSince && (
+                  <p className="text-[9px] text-muted-foreground/70">
+                    since {format(new Date(trackingSince), "MMM d, yyyy")}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="max-w-[220px]">
+              Sum of all users' session durations in the selected range. Sessions are
+              reconstructed from chat and in-app activity with a 30-minute inactivity
+              cut-off, so overlapping tabs aren't double-counted.
+            </p>
+          </TooltipContent>
+        </Tooltip>
+
         <Popover>
           <PopoverTrigger asChild>
             <Card className="cursor-pointer hover:border-primary/50 transition-colors">
