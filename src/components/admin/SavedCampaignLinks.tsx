@@ -185,8 +185,8 @@ export const SavedCampaignLinks = () => {
   };
 
   return (
-    <Card className="bg-card border-border">
-      <CardHeader className="flex flex-row items-center justify-between gap-2">
+    <Card className="bg-card border-border flex flex-col max-h-[32rem]">
+      <CardHeader className="flex flex-row items-start justify-between gap-2 sticky top-0 z-10 bg-card rounded-t-lg border-b border-border">
         <div>
           <CardTitle className="text-foreground flex items-center gap-2">
             <FolderOpen className="w-4 h-4" /> Saved campaign links
@@ -194,6 +194,20 @@ export const SavedCampaignLinks = () => {
           <p className="text-sm text-muted-foreground mt-1">
             Reuse any short link below. Grouped by campaign.
           </p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <Tabs value={sortMode} onValueChange={(v) => setSortMode(v as "newest" | "top")}>
+              <TabsList className="h-8">
+                <TabsTrigger value="newest" className="text-xs">Newest</TabsTrigger>
+                <TabsTrigger value="top" className="text-xs">Top performing</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Input
+              placeholder="Filter by campaign, source, medium, slug…"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="h-8 w-56"
+            />
+          </div>
         </div>
         <div className="flex items-center gap-1">
           {grouped.length > 0 && (
@@ -206,13 +220,7 @@ export const SavedCampaignLinks = () => {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <Input
-          placeholder="Filter by campaign, source, medium, slug…"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
-
+      <CardContent ref={scrollRef} className="space-y-4 overflow-y-auto flex-1 pt-4">
         {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
         {!loading && grouped.length === 0 && (
           <p className="text-sm text-muted-foreground">
@@ -222,7 +230,7 @@ export const SavedCampaignLinks = () => {
           </p>
         )}
 
-        {grouped.map(([campaign, items]) => {
+        {grouped.map(({ campaign, items, conversions }) => {
           const open = isOpen(campaign);
           return (
             <div key={campaign} className="space-y-2">
@@ -240,7 +248,20 @@ export const SavedCampaignLinks = () => {
                 <span className="text-xs font-normal text-muted-foreground">
                   {items.length} link{items.length === 1 ? "" : "s"}
                 </span>
+                <span className="text-xs font-normal text-muted-foreground flex items-center">
+                  ·&nbsp;
+                  {countsError ? (
+                    <span className="text-destructive">conversions unavailable</span>
+                  ) : conversions === null ? (
+                    <Skeleton className="inline-block h-3 w-20 align-middle" />
+                  ) : (
+                    <span className={conversions > 0 ? "text-foreground font-medium" : undefined}>
+                      {conversions} conversion{conversions === 1 ? "" : "s"}
+                    </span>
+                  )}
+                </span>
               </button>
+
               {open && (
                 <div className="space-y-2">
                   {items.map((l) => {
