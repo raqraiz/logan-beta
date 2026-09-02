@@ -125,6 +125,13 @@ export const ReferralsPanel = () => {
 
   const maxWeek = useMemo(() => Math.max(1, ...weekRows.map((w) => w.total)), [weekRows]);
 
+  // Expand only the newest week by default.
+  useEffect(() => {
+    if (weekRows.length) setExpanded(new Set([weekRows[0].weekStart.toISOString()]));
+  }, [weekRows]);
+
+  const pagedWeeks = useMemo(() => weekRows.slice(0, visibleWeeks), [weekRows, visibleWeeks]);
+
   const totalReferred = referred.length;
 
   return (
