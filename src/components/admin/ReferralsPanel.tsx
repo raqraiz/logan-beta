@@ -48,7 +48,9 @@ export const ReferralsPanel = () => {
   const [referred, setReferred] = useState<ReferredSignup[]>([]);
   const [referrerMap, setReferrerMap] = useState<Map<string, any>>(new Map());
   const [loading, setLoading] = useState(true);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // Weeks are collapsed by default; only the most recent week starts expanded.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [visibleWeeks, setVisibleWeeks] = useState(8);
 
   useEffect(() => {
     (async () => {
