@@ -193,8 +193,20 @@ const Admin = () => {
           {isSuperAdmin && (
             <>
               <TabsContent value="users">
-                <ProfilesTab />
+                <Tabs defaultValue="directory" className="space-y-4">
+                  <TabsList className="bg-muted border border-border">
+                    <TabsTrigger value="directory">Directory</TabsTrigger>
+                    <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="directory">
+                    <ProfilesTab />
+                  </TabsContent>
+                  <TabsContent value="leaderboard">
+                    <UsersLeaderboard />
+                  </TabsContent>
+                </Tabs>
               </TabsContent>
+
               <TabsContent value="admins">
                 <AdminManagement />
               </TabsContent>
