@@ -12,6 +12,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cleanSymptomLabel, truncateAtWord } from "@/lib/symptomLabel";
+import { findNearDuplicate } from "@/lib/symptomDedupe";
+
 
 const SYMPTOM_CATEGORIES: { label: string; symptoms: string[] }[] = [
   {
