@@ -14,7 +14,9 @@ import { AttributionTab } from "@/components/admin/AttributionTab";
 import { EmailsTab } from "@/components/admin/EmailsTab";
 import { GrowthTrackerTab } from "@/components/admin/GrowthTrackerTab";
 import { ReferralLeaderboardTab } from "@/components/admin/ReferralLeaderboardTab";
+import { UsersLeaderboard } from "@/components/admin/UsersLeaderboard";
 import { LoganFullLogo } from "@/components/LoganFullLogo";
+
 
 const Admin = () => {
   const navigate = useNavigate();
