@@ -1044,6 +1044,44 @@ export const OverviewTab = () => {
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Users</p>
           </CardContent>
         </Card>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card className="h-full cursor-help">
+              <CardContent className="p-4 text-center">
+                <Clock className="w-5 h-5 mx-auto mb-1 text-amber-500" />
+                {sessionsError ? (
+                  <button
+                    onClick={loadSessions}
+                    className="text-xs font-medium text-destructive underline underline-offset-2"
+                    title={sessionsError}
+                  >
+                    Failed — retry
+                  </button>
+                ) : sessionsLoading ? (
+                  <div className="h-8 flex items-center justify-center">
+                    <RefreshCw className="w-4 h-4 animate-spin text-amber-500" />
+                  </div>
+                ) : (
+                  <p className="text-2xl font-bold text-foreground">{formatDuration(totalTimeMin)}</p>
+                )}
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total time spent</p>
+                {!sessionsError && !sessionsLoading && trackingSince && (
+                  <p className="text-[9px] text-muted-foreground/70">
+                    since {format(new Date(trackingSince), "MMM d, yyyy")}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="max-w-[220px]">
+              Sum of all users' session durations in the selected range. Sessions are
+              reconstructed from chat and in-app activity with a 30-minute inactivity
+              cut-off, so overlapping tabs aren't double-counted.
+            </p>
+          </TooltipContent>
+        </Tooltip>
+
         <Popover>
           <PopoverTrigger asChild>
             <Card className="cursor-pointer hover:border-primary/50 transition-colors">
