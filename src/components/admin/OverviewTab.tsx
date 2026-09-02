@@ -878,11 +878,12 @@ export const OverviewTab = () => {
     loadMenu();
     loadActivityIndex();
     loadTodayIndex();
+    loadTodayTime();
     // 3) Main heavy loaders — render top stats + sessions before adoption
     await Promise.all([loadEngagement(), loadSessions()]);
     // 4) Defer the slowest query (feature_events scan) so it stops competing
     loadAdoption();
-  }, [loadFastCounts, loadAllTimeUsers, loadActivityIndex, loadTodayIndex, loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
+  }, [loadFastCounts, loadAllTimeUsers, loadActivityIndex, loadTodayIndex, loadTodayTime, loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
 
 
   // Initialize default range to all time (earliest profile → now), then load data
@@ -1130,6 +1131,26 @@ export const OverviewTab = () => {
                   <p className="text-2xl font-bold text-foreground">{formatDuration(totalTimeMin)}</p>
                 )}
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total time spent</p>
+                {/* "Today" chip — independent loader/range, never blocks the main number */}
+                <div className="mt-1 flex justify-center">
+                  {todayTimeError ? (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); loadTodayTime(); }}
+                      className="inline-flex items-center rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive"
+                      title={todayTimeError}
+                    >
+                      Today: failed — retry
+                    </button>
+                  ) : todayTimeLoading ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground">
+                      <RefreshCw className="w-2.5 h-2.5 animate-spin" /> Today
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                      Today: {formatDuration(todayTimeMin ?? 0)}
+                    </span>
+                  )}
+                </div>
                 {!sessionsError && !sessionsLoading && trackingSince && (
                   <p className="text-[9px] text-muted-foreground/70">
                     since {format(new Date(trackingSince), "MMM d, yyyy")}
