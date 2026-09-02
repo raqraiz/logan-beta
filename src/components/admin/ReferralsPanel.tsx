@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchReferredSignups } from "@/lib/referralCounts";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -56,15 +58,10 @@ export const ReferralsPanel = () => {
     (async () => {
       setLoading(true);
       try {
-        const { data } = await supabase
-          .from("profiles")
-          .select("id, email, created_at, referred_by")
-          .not("referred_by", "is", null)
-          .order("created_at", { ascending: false })
-          .limit(5000);
-
-        const list = (data ?? []) as ReferredSignup[];
+        // Shared source of truth (also used by the Users leaderboard).
+        const list = (await fetchReferredSignups()) as ReferredSignup[];
         setReferred(list);
+
 
         const ids = Array.from(new Set(list.map((r) => r.referred_by)));
         if (ids.length) {

@@ -14,7 +14,9 @@ import { AttributionTab } from "@/components/admin/AttributionTab";
 import { EmailsTab } from "@/components/admin/EmailsTab";
 import { GrowthTrackerTab } from "@/components/admin/GrowthTrackerTab";
 import { ReferralLeaderboardTab } from "@/components/admin/ReferralLeaderboardTab";
+import { UsersLeaderboard } from "@/components/admin/UsersLeaderboard";
 import { LoganFullLogo } from "@/components/LoganFullLogo";
+
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -193,8 +195,20 @@ const Admin = () => {
           {isSuperAdmin && (
             <>
               <TabsContent value="users">
-                <ProfilesTab />
+                <Tabs defaultValue="directory" className="space-y-4">
+                  <TabsList className="bg-muted border border-border">
+                    <TabsTrigger value="directory">Directory</TabsTrigger>
+                    <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="directory">
+                    <ProfilesTab />
+                  </TabsContent>
+                  <TabsContent value="leaderboard">
+                    <UsersLeaderboard />
+                  </TabsContent>
+                </Tabs>
               </TabsContent>
+
               <TabsContent value="admins">
                 <AdminManagement />
               </TabsContent>
