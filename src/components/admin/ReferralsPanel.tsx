@@ -196,7 +196,10 @@ export const ReferralsPanel = () => {
                           {isCollapsed ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronUp className="w-4 h-4 text-muted-foreground" />}
                         </div>
                       </Button>
-                      {!isCollapsed && (
+                      {!isCollapsed && groups.length === 0 && (
+                        <p className="text-sm text-muted-foreground px-2 pb-2">No signups this week.</p>
+                      )}
+                      {!isCollapsed && groups.length > 0 && (
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -230,8 +233,16 @@ export const ReferralsPanel = () => {
                     </div>
                   );
                 })}
+                {weekRows.length > pagedWeeks.length && (
+                  <div className="pt-2 text-center">
+                    <Button variant="outline" size="sm" onClick={() => setVisibleWeeks((n) => n + 8)}>
+                      Load more weeks ({weekRows.length - pagedWeeks.length} older)
+                    </Button>
+                  </div>
+                )}
               </div>
             </TabsContent>
+
 
             <TabsContent value="referrer">
               <Table>
