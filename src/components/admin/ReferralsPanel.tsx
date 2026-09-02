@@ -56,15 +56,10 @@ export const ReferralsPanel = () => {
     (async () => {
       setLoading(true);
       try {
-        const { data } = await supabase
-          .from("profiles")
-          .select("id, email, created_at, referred_by")
-          .not("referred_by", "is", null)
-          .order("created_at", { ascending: false })
-          .limit(5000);
-
-        const list = (data ?? []) as ReferredSignup[];
+        // Shared source of truth (also used by the Users leaderboard).
+        const list = (await fetchReferredSignups()) as ReferredSignup[];
         setReferred(list);
+
 
         const ids = Array.from(new Set(list.map((r) => r.referred_by)));
         if (ids.length) {
