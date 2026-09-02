@@ -275,6 +275,34 @@ export const OverviewTab = () => {
     longestSessionUser: "",
   });
 
+  // "Total time spent on Logan" — derived from the same reconstructed sessions
+  // used by the Sessions section (30-min inactivity gap over chat_messages +
+  // user_activity_events). Sessions are built per user from merged timestamps,
+  // so multiple tabs/devices can't double-count overlapping time, and an
+  // abandoned session can never exceed its last event (no infinite tail).
+  const totalTimeMin = useMemo(
+    () => allSessions.reduce((a, s) => a + s.durationMin, 0),
+    [allSessions],
+  );
+  // Activity-event tracking started when the first event landed; earlier data
+  // relies on chat messages only, so surface the earliest observed session date.
+  const trackingSince = useMemo(() => {
+    if (allSessions.length === 0) return null;
+    return allSessions.reduce(
+      (min, s) => (s.startTime < min ? s.startTime : min),
+      allSessions[0].startTime,
+    );
+  }, [allSessions]);
+  const formatDuration = (mins: number) => {
+    if (mins < 60) return `${mins}m`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h < 100 && m > 0) return `${h}h ${m}m`;
+    return `${h.toLocaleString()}h`;
+  };
+
+
+
   // Features state
   const [weeklyAdoption, setWeeklyAdoption] = useState<WeeklyAdoption[]>([]);
   const [feedbackItems, setFeedbackItems] = useState<{ id: string; name: string; email: string; category: string; message: string; created_at: string }[]>([]);
