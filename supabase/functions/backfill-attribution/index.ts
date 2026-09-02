@@ -293,6 +293,31 @@ Deno.serve(async (req) => {
     }
   }
 
+  // 3c. Referral → UTM reconciliation.
+  // A referral signup IS a traffic source. Historically the referral-code path
+  // and the UTM path were independent, so referred users with no UTM params in
+  // the URL fell into "(direct / none)". Stamp canonical UTM values instead.
+  // PRECEDENCE: real UTM params win. If the referral link carried its own UTMs
+  // (e.g. shared on LinkedIn with utm_source=linkedin), we keep those — they
+  // describe the channel, and `referred_by` still records who referred them.
+  // We only stamp source/medium when no UTM source was captured at all.
+  {
+    const effectiveReferredBy = (patch.referred_by ?? profile.referred_by) as string | null;
+    const capturedSource = profile.utm_source || candidates.find((c) => c.utm_source)?.utm_source || null;
+    if (effectiveReferredBy && !capturedSource) {
+      const { data: referrerProfile } = await admin
+        .from("profiles")
+        .select("referral_code")
+        .eq("id", effectiveReferredBy)
+        .maybeSingle();
+      patch.utm_source = "referral";
+      patch.utm_medium = "referral";
+      if (!profile.utm_campaign) {
+        patch.utm_campaign = referrerProfile?.referral_code ?? "referral";
+      }
+    }
+  }
+
   if (candidates.length === 0 && Object.keys(patch).length === 0) {
     console.log(JSON.stringify({ fn: "backfill-attribution", path: "no_candidates", user_id: user.id, missing }));
     return new Response(JSON.stringify({ status: "no_candidates", missing }), {
