@@ -38,6 +38,13 @@ export const SavedCampaignLinks = () => {
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const [signupCounts, setSignupCounts] = useState<Map<string, number> | null>(null);
   const [countsError, setCountsError] = useState(false);
+  const [sortMode, setSortMode] = useState<"newest" | "top">("newest");
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Filtering while scrolled down should reveal matches from the top.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [filter, sortMode]);
 
   const load = async () => {
     setLoading(true);
