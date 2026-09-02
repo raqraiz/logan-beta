@@ -221,10 +221,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Manual referral code fallback: only applies when automatic
       // attribution produced nothing. Never overwrites an existing referrer.
       try {
-        await applyManualReferralCode(user);
+        const credited = await applyManualReferralCode(user);
+        // If the manual code was what established referred_by, the reconciliation
+        // pass above ran too early to see it. Re-run it now so the referral
+        // source is stamped live at signup instead of waiting for a batch job.
+        // (Precedence unchanged: real UTM params still win over the fallback.)
+        if (credited) await backfillAttribution();
       } catch {
         // best-effort — must never block or surface an error at signup.
       }
+
     })();
   }, [user?.id]);
 
