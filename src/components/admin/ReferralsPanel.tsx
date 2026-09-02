@@ -135,8 +135,8 @@ export const ReferralsPanel = () => {
   const totalReferred = referred.length;
 
   return (
-    <Card className="bg-card border-border">
-      <CardHeader>
+    <Card className="bg-card border-border flex flex-col max-h-[32rem]">
+      <CardHeader className="sticky top-0 z-10 bg-card rounded-t-lg border-b border-border">
         <CardTitle className="text-foreground">Referrals</CardTitle>
         <p className="text-sm text-muted-foreground mt-1">
           {loading
@@ -144,7 +144,7 @@ export const ReferralsPanel = () => {
             : `${totalReferred} signup${totalReferred === 1 ? "" : "s"} from ${referrerRows.length} referrer${referrerRows.length === 1 ? "" : "s"}`}
         </p>
       </CardHeader>
-      <CardContent>
+      <CardContent className="overflow-y-auto flex-1 pt-4">
         {!loading && referred.length === 0 ? (
           <p className="text-sm text-muted-foreground py-8 text-center">No referrals yet. Share your link from Settings.</p>
         ) : (
