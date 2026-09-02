@@ -477,19 +477,42 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
               const q = search.trim().toLowerCase();
               const renderBuiltInChip = (name: string) => {
                 const isSelected = selected.some(s => s.name === name);
+                const entry = selected.find(s => s.name === name);
                 return (
-                  <button
-                    key={name}
-                    onClick={() => toggleSymptom(name)}
-                    className={cn(
-                      "px-2.5 py-1 text-xs rounded-full border transition-all",
-                      isSelected
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-card/60 border-border/40 hover:border-primary/40 text-foreground/70"
+                  <div key={name} className={cn("flex flex-col", isSelected ? "w-full items-start" : "inline-flex")}>
+                    <button
+                      onClick={() => toggleSymptom(name)}
+                      className={cn(
+                        "px-2.5 py-1 text-xs rounded-full border transition-all",
+                        isSelected
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-card/60 border-border/40 hover:border-primary/40 text-foreground/70"
+                      )}
+                    >
+                      {name}
+                    </button>
+                    {isSelected && entry && (
+                      <div className="w-full pl-3 border-l border-primary/30 mt-1.5 mb-1 space-y-1">
+                        <div className="flex items-center gap-3">
+                          <Slider
+                            min={0}
+                            max={5}
+                            step={1}
+                            value={[entry.severity]}
+                            onValueChange={([v]) => setSeverity(entry.name, v)}
+                            className="flex-1"
+                          />
+                          <span className="text-xs font-medium text-muted-foreground w-4 text-right">
+                            {entry.severity}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-[9px] uppercase tracking-wider text-muted-foreground/50">
+                          <span>Not feeling it</span>
+                          <span>Severe</span>
+                        </div>
+                      </div>
                     )}
-                  >
-                    {name}
-                  </button>
+                  </div>
                 );
               };
 
@@ -585,6 +608,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
 
                     const renderSharedChip = (cs: CommunitySymptom, opts?: { isHiddenRow?: boolean }) => {
                       const isSelected = selected.some(s => s.name === cs.name);
+                      const entry = selected.find(s => s.name === cs.name);
                       const isMine = cs.added_by === userId;
                       const isRecent = Date.now() - new Date(cs.created_at).getTime() < 1000 * 60 * 60 * 24 * 14;
                       const isEditing = editingId === cs.id;
@@ -615,74 +639,96 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                       }
 
                       return (
-                        <div
-                          key={cs.id}
-                          className={cn(
-                            "inline-flex items-center rounded-full border transition-all overflow-hidden",
-                            inHiddenRow
-                              ? "bg-muted/30 border-border/30 text-muted-foreground opacity-70"
-                              : isSelected
-                                ? "bg-primary text-primary-foreground border-primary"
-                                : "bg-card/60 border-border/40 hover:border-primary/40 text-foreground/70"
-                          )}
-                          title={
-                            cleanSymptomLabel(cs.name) !== truncateAtWord(cleanSymptomLabel(cs.name))
-                              ? cleanSymptomLabel(cs.name)
-                              : isMine ? "You added this" : "Added by another user"
-                          }
-                        >
-                          <button
-                            onClick={() => !inHiddenRow && toggleSymptom(cs.name)}
-                            className="px-2.5 py-1 text-xs inline-flex items-center gap-1.5"
-                            disabled={inHiddenRow}
-                          >
-                            <span className="max-w-[14rem] truncate">
-                              {truncateAtWord(cleanSymptomLabel(cs.name))}
-                            </span>
-                            {isRecent && !inHiddenRow && (
-                              <span className={cn(
-                                "inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider px-1 py-0.5 rounded-full",
-                                isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-accent/40 text-accent-foreground/80"
-                              )}>
-                                <Sparkles className="w-2 h-2" />
-                                new
-                              </span>
+                        <div key={cs.id} className={cn("flex flex-col", isSelected && !inHiddenRow ? "w-full items-start" : "inline-flex")}>
+                          <div
+                            className={cn(
+                              "inline-flex items-center rounded-full border transition-all overflow-hidden",
+                              inHiddenRow
+                                ? "bg-muted/30 border-border/30 text-muted-foreground opacity-70"
+                                : isSelected
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "bg-card/60 border-border/40 hover:border-primary/40 text-foreground/70"
                             )}
-                          </button>
-                          {inHiddenRow ? (
+                            title={
+                              cleanSymptomLabel(cs.name) !== truncateAtWord(cleanSymptomLabel(cs.name))
+                                ? cleanSymptomLabel(cs.name)
+                                : isMine ? "You added this" : "Added by another user"
+                            }
+                          >
                             <button
-                              onClick={(e) => { e.stopPropagation(); handleUnhideSymptom(cs); }}
-                              className="px-1.5 py-1 text-muted-foreground hover:text-foreground hover:bg-black/10"
-                              title="Unhide"
+                              onClick={() => !inHiddenRow && toggleSymptom(cs.name)}
+                              className="px-2.5 py-1 text-xs inline-flex items-center gap-1.5"
+                              disabled={inHiddenRow}
                             >
-                              <Eye className="w-3 h-3" />
+                              <span className="max-w-[14rem] truncate">
+                                {truncateAtWord(cleanSymptomLabel(cs.name))}
+                              </span>
+                              {isRecent && !inHiddenRow && (
+                                <span className={cn(
+                                  "inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider px-1 py-0.5 rounded-full",
+                                  isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-accent/40 text-accent-foreground/80"
+                                )}>
+                                  <Sparkles className="w-2 h-2" />
+                                  new
+                                </span>
+                              )}
                             </button>
-                          ) : manageMode ? (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleHideSymptom(cs); }}
-                              className={cn("px-1.5 py-1 hover:bg-black/10", isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-foreground")}
-                              title="Hide from my view"
-                            >
-                              <EyeOff className="w-3 h-3" />
-                            </button>
-                          ) : null}
-                          {isMine && !inHiddenRow && (
-                            <>
+                            {inHiddenRow ? (
                               <button
-                                onClick={(e) => { e.stopPropagation(); startEdit(cs); }}
+                                onClick={(e) => { e.stopPropagation(); handleUnhideSymptom(cs); }}
+                                className="px-1.5 py-1 text-muted-foreground hover:text-foreground hover:bg-black/10"
+                                title="Unhide"
+                              >
+                                <Eye className="w-3 h-3" />
+                              </button>
+                            ) : manageMode ? (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleHideSymptom(cs); }}
                                 className={cn("px-1.5 py-1 hover:bg-black/10", isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-foreground")}
-                                title="Edit"
+                                title="Hide from my view"
                               >
-                                <Pencil className="w-3 h-3" />
+                                <EyeOff className="w-3 h-3" />
                               </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDeleteSymptom(cs); }}
-                                className={cn("px-1.5 py-1 hover:bg-destructive/20", isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-destructive")}
-                                title="Delete"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </>
+                            ) : null}
+                            {isMine && !inHiddenRow && (
+                              <>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); startEdit(cs); }}
+                                  className={cn("px-1.5 py-1 hover:bg-black/10", isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-foreground")}
+                                  title="Edit"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteSymptom(cs); }}
+                                  className={cn("px-1.5 py-1 hover:bg-destructive/20", isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-destructive")}
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                          {isSelected && !inHiddenRow && entry && (
+                            <div className="w-full pl-3 border-l border-primary/30 mt-1.5 mb-1 space-y-1">
+                              <div className="flex items-center gap-3">
+                                <Slider
+                                  min={0}
+                                  max={5}
+                                  step={1}
+                                  value={[entry.severity]}
+                                  onValueChange={([v]) => setSeverity(entry.name, v)}
+                                  className="flex-1"
+                                />
+                                <span className="text-xs font-medium text-muted-foreground w-4 text-right">
+                                  {entry.severity}
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-[9px] uppercase tracking-wider text-muted-foreground/50">
+                                <span>Not feeling it</span>
+                                <span>Severe</span>
+                              </div>
+                            </div>
                           )}
                         </div>
                       );
@@ -848,30 +894,6 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
             </p>
           </div>
 
-          {/* Severity sliders for selected symptoms */}
-          {selected.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50">
-                Severity (0 = not feeling it, 5 = severe)
-              </p>
-              {selected.map(entry => (
-                <div key={entry.name} className="flex items-center gap-3">
-                  <span className="text-xs text-foreground/70 w-28 truncate">{entry.name}</span>
-                  <Slider
-                    min={0}
-                    max={5}
-                    step={1}
-                    value={[entry.severity]}
-                    onValueChange={([v]) => setSeverity(entry.name, v)}
-                    className="flex-1"
-                  />
-                  <span className="text-xs font-medium text-muted-foreground w-4 text-right">
-                    {entry.severity}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
 
           {/* Notes */}
           <div className="space-y-1">
