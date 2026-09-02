@@ -156,9 +156,9 @@ export const ReferralsPanel = () => {
 
             <TabsContent value="weekly">
               <div className="space-y-4">
-                {weekRows.map((w) => {
+                {pagedWeeks.map((w) => {
                   const key = w.weekStart.toISOString();
-                  const isCollapsed = collapsed.has(key);
+                  const isCollapsed = !expanded.has(key);
                   const groups = Array.from(w.byReferrer.entries())
                     .map(([id, v]) => ({
                       id,
@@ -175,7 +175,7 @@ export const ReferralsPanel = () => {
                         variant="ghost"
                         className="w-full h-auto px-2 py-3 justify-between font-normal hover:bg-muted/50"
                         onClick={() => {
-                          setCollapsed((prev) => {
+                          setExpanded((prev) => {
                             const next = new Set(prev);
                             if (next.has(key)) next.delete(key);
                             else next.add(key);
