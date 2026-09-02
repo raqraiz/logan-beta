@@ -479,7 +479,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                 const isSelected = selected.some(s => s.name === name);
                 const entry = selected.find(s => s.name === name);
                 return (
-                  <div key={name} className={cn("flex flex-col", isSelected ? "w-full" : "inline-flex")}>
+                  <div key={name} className={cn("flex flex-col", isSelected ? "w-full items-start" : "inline-flex")}>
                     <button
                       onClick={() => toggleSymptom(name)}
                       className={cn(
