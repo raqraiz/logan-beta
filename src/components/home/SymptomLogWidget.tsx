@@ -184,15 +184,26 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
   const handleAddCommunitySymptom = async () => {
     const name = newSymptom.trim();
     if (!name || name.length > 50) return;
-    if (
-      BUILT_IN_SET.has(name.toLowerCase()) ||
-      communitySymptoms.some(s => s.name.toLowerCase() === name.toLowerCase())
-    ) {
-      toast({ title: "Already on the list", description: "This symptom is already available." });
+    // Exact match first, then fuzzy (plural / -ness / synonym) match against the
+    // built-in list and the shared library, so we stop stacking near-duplicates.
+    const existingNames = [...SYMPTOM_OPTIONS, ...communitySymptoms.map(s => s.name)];
+    const exact = existingNames.find(n => n.toLowerCase() === name.toLowerCase());
+    const duplicateOf = exact ?? findNearDuplicate(name, existingNames);
+    if (duplicateOf) {
+      setSelected(prev =>
+        prev.some(s => s.name.toLowerCase() === duplicateOf.toLowerCase())
+          ? prev
+          : [...prev, { name: duplicateOf, severity: 0 }]
+      );
+      toast({
+        title: "Already on the list",
+        description: `We've selected "${duplicateOf}" for you — same thing, one tag.`,
+      });
       setNewSymptom("");
       setShowAddForm(false);
       return;
     }
+
     setAddingSymptom(true);
     const { data, error } = await supabase
       .from("community_symptoms")
