@@ -639,7 +639,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                       }
 
                       return (
-                        <div key={cs.id} className={cn("flex flex-col", isSelected && !inHiddenRow ? "w-full" : "inline-flex")}>
+                        <div key={cs.id} className={cn("flex flex-col", isSelected && !inHiddenRow ? "w-full items-start" : "inline-flex")}>
                           <div
                             className={cn(
                               "inline-flex items-center rounded-full border transition-all overflow-hidden",
