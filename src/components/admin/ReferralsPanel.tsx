@@ -48,7 +48,9 @@ export const ReferralsPanel = () => {
   const [referred, setReferred] = useState<ReferredSignup[]>([]);
   const [referrerMap, setReferrerMap] = useState<Map<string, any>>(new Map());
   const [loading, setLoading] = useState(true);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // Weeks are collapsed by default; only the most recent week starts expanded.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [visibleWeeks, setVisibleWeeks] = useState(8);
 
   useEffect(() => {
     (async () => {
@@ -123,6 +125,13 @@ export const ReferralsPanel = () => {
 
   const maxWeek = useMemo(() => Math.max(1, ...weekRows.map((w) => w.total)), [weekRows]);
 
+  // Expand only the newest week by default.
+  useEffect(() => {
+    if (weekRows.length) setExpanded(new Set([weekRows[0].weekStart.toISOString()]));
+  }, [weekRows]);
+
+  const pagedWeeks = useMemo(() => weekRows.slice(0, visibleWeeks), [weekRows, visibleWeeks]);
+
   const totalReferred = referred.length;
 
   return (
@@ -147,9 +156,9 @@ export const ReferralsPanel = () => {
 
             <TabsContent value="weekly">
               <div className="space-y-4">
-                {weekRows.map((w) => {
+                {pagedWeeks.map((w) => {
                   const key = w.weekStart.toISOString();
-                  const isCollapsed = collapsed.has(key);
+                  const isCollapsed = !expanded.has(key);
                   const groups = Array.from(w.byReferrer.entries())
                     .map(([id, v]) => ({
                       id,
@@ -166,7 +175,7 @@ export const ReferralsPanel = () => {
                         variant="ghost"
                         className="w-full h-auto px-2 py-3 justify-between font-normal hover:bg-muted/50"
                         onClick={() => {
-                          setCollapsed((prev) => {
+                          setExpanded((prev) => {
                             const next = new Set(prev);
                             if (next.has(key)) next.delete(key);
                             else next.add(key);
@@ -187,7 +196,10 @@ export const ReferralsPanel = () => {
                           {isCollapsed ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronUp className="w-4 h-4 text-muted-foreground" />}
                         </div>
                       </Button>
-                      {!isCollapsed && (
+                      {!isCollapsed && groups.length === 0 && (
+                        <p className="text-sm text-muted-foreground px-2 pb-2">No signups this week.</p>
+                      )}
+                      {!isCollapsed && groups.length > 0 && (
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -221,8 +233,16 @@ export const ReferralsPanel = () => {
                     </div>
                   );
                 })}
+                {weekRows.length > pagedWeeks.length && (
+                  <div className="pt-2 text-center">
+                    <Button variant="outline" size="sm" onClick={() => setVisibleWeeks((n) => n + 8)}>
+                      Load more weeks ({weekRows.length - pagedWeeks.length} older)
+                    </Button>
+                  </div>
+                )}
               </div>
             </TabsContent>
+
 
             <TabsContent value="referrer">
               <Table>
