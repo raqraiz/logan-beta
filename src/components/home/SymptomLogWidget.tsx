@@ -477,19 +477,42 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
               const q = search.trim().toLowerCase();
               const renderBuiltInChip = (name: string) => {
                 const isSelected = selected.some(s => s.name === name);
+                const entry = selected.find(s => s.name === name);
                 return (
-                  <button
-                    key={name}
-                    onClick={() => toggleSymptom(name)}
-                    className={cn(
-                      "px-2.5 py-1 text-xs rounded-full border transition-all",
-                      isSelected
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-card/60 border-border/40 hover:border-primary/40 text-foreground/70"
+                  <div key={name} className={cn("flex flex-col", isSelected ? "w-full" : "inline-flex")}>
+                    <button
+                      onClick={() => toggleSymptom(name)}
+                      className={cn(
+                        "px-2.5 py-1 text-xs rounded-full border transition-all",
+                        isSelected
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-card/60 border-border/40 hover:border-primary/40 text-foreground/70"
+                      )}
+                    >
+                      {name}
+                    </button>
+                    {isSelected && entry && (
+                      <div className="w-full pl-3 border-l border-primary/30 mt-1.5 mb-1 space-y-1">
+                        <div className="flex items-center gap-3">
+                          <Slider
+                            min={0}
+                            max={5}
+                            step={1}
+                            value={[entry.severity]}
+                            onValueChange={([v]) => setSeverity(entry.name, v)}
+                            className="flex-1"
+                          />
+                          <span className="text-xs font-medium text-muted-foreground w-4 text-right">
+                            {entry.severity}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-[9px] uppercase tracking-wider text-muted-foreground/50">
+                          <span>Not feeling it</span>
+                          <span>Severe</span>
+                        </div>
+                      </div>
                     )}
-                  >
-                    {name}
-                  </button>
+                  </div>
                 );
               };
 
