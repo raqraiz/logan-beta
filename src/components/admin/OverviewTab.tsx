@@ -217,6 +217,8 @@ export const OverviewTab = () => {
   // Per-section loading flags for progressive rendering
   const [engagementLoading, setEngagementLoading] = useState(true);
   const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [sessionsError, setSessionsError] = useState<string | null>(null);
+
   const [adoptionLoading, setAdoptionLoading] = useState(true);
   const [feedbackLoading, setFeedbackLoading] = useState(true);
   const [menuLoading, setMenuLoading] = useState(true);
