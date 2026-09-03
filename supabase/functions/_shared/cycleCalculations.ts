@@ -6,14 +6,15 @@
 // mirror imports it from ./phaseLengths; this copy inlines it).
 //
 // Per-caller policy differences are EXPLICIT options, not silent divergence:
-//  - overduePolicy:   chat-ai / generate-insight never wrap an overdue cycle
-//                     (running day count, so the overdue detector can fire);
-//                     the client ring wraps once past a 14-day grace window
-//                     unless periodPending is set.
+//  - overduePolicy:   canonical behavior is to never wrap an overdue cycle
+//                     (running day count, so the overdue detector can fire).
+//                     The legacy "wrap-after-grace" option remains for
+//                     callers that explicitly opt into it.
 //  - futureStartPolicy: chat-ai clamps a pre-start reference date to Day 1;
 //                     the ring/generate-insight historically wrapped modulo.
 //  - overdueCap:      ring-only display state ("Overdue") when periodPending
-//                     lets the day count run unbounded.
+//                     lets the day count run unbounded; the number shown still
+//                     matches the true running day count.
 // ============================================================================
 
 export interface CyclePhaseLengths {
