@@ -1654,7 +1654,7 @@ const Chat = () => {
       {/* Messages */}
       <ScrollArea
         ref={scrollContainerRef}
-        className="flex-1 min-h-0 px-4"
+        className="flex-1 min-h-0 px-4 [&>[data-radix-scroll-area-viewport]>div]:w-full [&>[data-radix-scroll-area-viewport]>div]:table-fixed"
         onScrollCapture={(e) => {
           const el = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
           if (el) {
