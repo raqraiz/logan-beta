@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { onboardedProfiles } from "@/lib/onboardedUsers";
+import { onboardedProfiles, countOnboardedUsers } from "@/lib/onboardedUsers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -13,6 +13,7 @@ import {
   buildActivityIndex,
   utcDayKeysBetween,
   utcKey,
+  todayUTCKey,
   toUTCDate,
   type ActivityIndex,
 } from "@/lib/activeUsers";
@@ -40,6 +41,11 @@ export const InvestorSummaryPanel = () => {
   const [index, setIndex] = useState<ActivityIndex | null>(null);
   // Cumulative user count by UTC day (all profiles up to a frozen snapshot instant).
   const [signupDays, setSignupDays] = useState<string[]>([]);
+  // Canonical all-time total from the SAME source the top-level "Total Users"
+  // card uses (`count_onboarded_users` RPC). The per-day list above is only a
+  // shape for the chart; it is paged client-side and can drift by a signup that
+  // lands between the two reads, so the headline always defers to this value.
+  const [canonicalTotal, setCanonicalTotal] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,7 +53,7 @@ export const InvestorSummaryPanel = () => {
       setLoading(true);
       // Freeze the read horizon once so paging can't shift while new signups land.
       const snapshotISO = new Date(Math.max(endOfDay(rangeTo).getTime(), Date.now())).toISOString();
-      const [idx, profiles] = await Promise.all([
+      const [idx, profiles, total] = await Promise.all([
         buildActivityIndex(startOfDay(rangeFrom).toISOString()),
         (async () => {
           const out: string[] = [];
@@ -65,10 +71,15 @@ export const InvestorSummaryPanel = () => {
           }
           return out;
         })(),
+        countOnboardedUsers().catch((e) => {
+          console.error("Investor summary canonical total failed:", e);
+          return null;
+        }),
       ]);
       if (cancelled) return;
       setIndex(idx);
       setSignupDays(profiles);
+      setCanonicalTotal(total);
       setLoading(false);
     })();
     return () => { cancelled = true; };
@@ -76,8 +87,16 @@ export const InvestorSummaryPanel = () => {
 
   const usersAsOf = useMemo(() => {
     // signupDays is sorted ascending; count of signups through end of dayKey.
-    return (dayKey: string) => signupDays.reduce((acc, k) => (k <= dayKey ? acc + 1 : acc), 0);
-  }, [signupDays]);
+    // Any drift between the paged list and the canonical all-time count is
+    // applied from today onwards, so "as of today" matches the Total Users card
+    // exactly while historical days keep their true per-day cumulative values.
+    const drift =
+      canonicalTotal === null ? 0 : canonicalTotal - signupDays.length;
+    const today = todayUTCKey();
+    return (dayKey: string) =>
+      signupDays.reduce((acc, k) => (k <= dayKey ? acc + 1 : acc), 0) +
+      (dayKey >= today ? drift : 0);
+  }, [signupDays, canonicalTotal]);
 
   const metrics = useMemo(() => {
     if (!index) return null;
