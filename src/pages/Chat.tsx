@@ -2215,14 +2215,14 @@ const Chat = () => {
               onDismiss={dismissFeedbackPrompt}
             />
           )}
-          <form onSubmit={sendMessage} className="max-w-3xl mx-auto px-4 py-4">
+          <form onSubmit={sendMessage} className="max-w-3xl mx-auto px-4 py-3">
             <div className="flex gap-2">
               {!isOnboarding && (
                 <Button
                   type="button"
                   variant="outline"
                   size="icon"
-                  className="h-12 w-12 shrink-0"
+                  className="h-11 w-11 shrink-0"
                   onClick={() => setImportOpen(true)}
                   disabled={isSending}
                   aria-label="Import history or blood test"
@@ -2242,18 +2242,18 @@ const Chat = () => {
                   }, 300);
                 }}
                 placeholder={isOnboarding ? "Type your answer..." : "Ask me anything..."}
-                className="flex-1 h-12"
+                className="flex-1 h-11 py-0"
                 disabled={isSending}
               />
               <VoiceInputButton
                 onTranscript={(text) => setInputValue(prev => prev ? `${prev} ${text}` : text)}
                 disabled={isSending}
-                className="h-12 w-12"
+                className="h-11 w-11"
               />
               <Button 
                 type="submit" 
                 size="icon" 
-                className="h-12 w-12"
+                className="h-11 w-11"
                 disabled={!inputValue.trim() || isSending}
               >
                 {isSending ? (
@@ -2263,23 +2263,24 @@ const Chat = () => {
                 )}
               </Button>
             </div>
-            <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
-              <p className="text-xs text-muted-foreground/60 text-center">
-                {isOnboarding 
-                  ? "Answer Logan's questions to personalize your experience"
-                  : "Logan is not a medical professional. Always consult your doctor for medical advice."
-                }
-              </p>
-              {!isOnboarding && (
-                <button
-                  type="button"
-                  onClick={() => setFeedbackOpen(true)}
-                  className="text-xs text-primary/80 hover:text-primary underline underline-offset-2"
-                >
-                  Send feedback
-                </button>
-              )}
-            </div>
+            <p className="text-xs text-muted-foreground/60 text-center mt-2">
+              {isOnboarding 
+                ? "Answer Logan's questions to personalize your experience"
+                : (
+                  <>
+                    Logan is not a medical professional. Always consult your doctor for medical advice.
+                    <span className="mx-1 text-muted-foreground/40">·</span>
+                    <button
+                      type="button"
+                      onClick={() => setFeedbackOpen(true)}
+                      className="text-primary/80 hover:text-primary underline underline-offset-2"
+                    >
+                      Send feedback
+                    </button>
+                  </>
+                )
+              }
+            </p>
           </form>
 
           {/* PWA install prompt — below input bar, above bottom nav */}
