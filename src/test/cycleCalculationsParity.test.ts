@@ -32,8 +32,8 @@ describe("shared calculateCycleInfo — canonical server policy (chat-ai / gener
     expectDay("2026-08-05", 1, "Menstruation");
     expectDay("2026-08-09", 5, "Menstruation");
     expectDay("2026-08-10", 6, "Follicular");
-    expectDay("2026-08-18", 14, "Ovulation");
-    expectDay("2026-08-20", 16, "Luteal");
+    expectDay("2026-08-18", 14, "Ovulation"); // ovulation window = days 13–16
+    expectDay("2026-08-22", 18, "Luteal");
   });
 
   it("never wraps an overdue cycle (running count)", () => {
