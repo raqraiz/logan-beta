@@ -3960,6 +3960,22 @@ serve(async (req) => {
       systemPrompt += overdueNote;
     }
 
+    // Retroactive date questions: resolve any concrete past date the user
+    // referenced into a fixed day/phase fact, computed here (not by the model).
+    if (isCycling && participant) {
+      const retroBlock = buildRetroDateContext(
+        userMessage,
+        participant as any,
+        cycleHistoryRows,
+        ACTIVE_PHASE_LENGTHS ?? null,
+      );
+      if (retroBlock) {
+        systemPrompt += retroBlock;
+        console.log("[retro-date-context]", JSON.stringify({ chars: retroBlock.length }));
+      }
+    }
+
+
 
 
 
