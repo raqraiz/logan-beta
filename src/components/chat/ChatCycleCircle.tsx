@@ -552,9 +552,10 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
 // Helper to calculate cycle info from dates — delegates to the single source
 // of truth in @/lib/cycleCalculations (canonical logic from chat-ai, mirrored
 // for the client in supabase/functions/_shared/cycleCalculations.ts).
-// Ring-specific display policy is passed explicitly: overdue cycles wrap only
-// after a 14-day grace window (never when periodPending), pre-start reference
-// dates wrap modulo, and unbounded pending counts cap into an "Overdue" phase.
+// Ring-specific display policy is passed explicitly: overdue cycles now match
+// the server and never wrap (true running day count), pre-start reference
+// dates still wrap modulo, and unbounded pending counts cap into an "Overdue"
+// phase for the ring's visual state only.
 export function calculateCycleInfo(
   lastPeriodStart: string | null,
   cycleLengthDays: number | null,
@@ -581,7 +582,7 @@ export function calculateCycleInfo(
     periodPending: !!periodPending,
     periodStillActive: !!periodStillActive,
     phaseLengths: phaseLengths ?? getPhaseLengthPrefs() ?? null,
-    overduePolicy: "wrap-after-grace",
+    overduePolicy: "no-wrap",
     futureStartPolicy: "wrap",
     overdueCap: true,
   });

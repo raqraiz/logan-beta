@@ -58,15 +58,21 @@ describe("ChatCycleCircle ring policy — agrees on normal + retroactive cases",
     expect(ringPast).toMatchObject({ cycleDay: serverPast.cycleDay, phase: serverPast.phase });
   });
 
-  it("ring still wraps only after the 14-day overdue grace window", () => {
-    // 10 days overdue (day 38 on 28d cycle) → within grace, unwrapped
+  it("ring never wraps an overdue cycle (matches server day count)", () => {
+    // 10 days overdue (day 38 on 28d cycle) → unwrapped
     const grace = calculateCycleInfo(START, LEN, "UTC", "2026-09-11")!;
     expect(grace.cycleDay).toBe(38);
-    // 40 days overdue → wrapped (ring display policy)
-    const wrapped = calculateCycleInfo(START, LEN, "UTC", "2026-10-10")!;
-    expect(wrapped.cycleDay).toBeLessThanOrEqual(LEN);
-    // periodPending never wraps
+    // 40 days overdue → still unwrapped, same as server
+    const overdue = calculateCycleInfo(START, LEN, "UTC", "2026-10-10")!;
+    expect(overdue.cycleDay).toBe(67);
+    // periodPending also keeps the true running count
     const pending = calculateCycleInfo(START, LEN, "UTC", "2026-10-10", null, true)!;
     expect(pending.cycleDay).toBe(67);
+  });
+
+  it("shows Day 47 for a user 47 days into a cycle with no new period logged", () => {
+    const r = calculateCycleInfo(START, LEN, "UTC", "2026-09-20")!;
+    expect(r.cycleDay).toBe(47);
+    expect(r.phase).toBe("Luteal");
   });
 });
