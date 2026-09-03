@@ -3456,6 +3456,7 @@ serve(async (req) => {
 
     // Fetch cycle history for context
     let cycleHistoryContext = "";
+    let cycleHistoryRows: { cycle_length_days: number; cycle_start_date: string }[] = [];
     if (participant) {
       const { data: historyRows } = await supabase
         .from("cycle_history")
@@ -3465,6 +3466,7 @@ serve(async (req) => {
         .limit(12);
 
       if (historyRows && historyRows.length > 0) {
+        cycleHistoryRows = historyRows as typeof cycleHistoryRows;
         const avg = Math.round(historyRows.reduce((s, r) => s + r.cycle_length_days, 0) / historyRows.length);
         const shortest = Math.min(...historyRows.map(r => r.cycle_length_days));
         const longest = Math.max(...historyRows.map(r => r.cycle_length_days));
@@ -3472,6 +3474,7 @@ serve(async (req) => {
         cycleHistoryContext = `\n- Cycles tracked: ${historyRows.length}\n- Average cycle length: ${avg} days (range: ${shortest}–${longest})\n- Recent cycles: ${recent}`;
       }
     }
+
 
     // Fetch symptom logs for personalized context. When the user asks about a
     // specific month or historical patterns, fetch ALL logs (no cap) so we can
