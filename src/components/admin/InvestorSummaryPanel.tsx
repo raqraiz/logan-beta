@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { onboardedProfiles } from "@/lib/onboardedUsers";
+import { onboardedProfiles, countOnboardedUsers } from "@/lib/onboardedUsers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -13,6 +13,7 @@ import {
   buildActivityIndex,
   utcDayKeysBetween,
   utcKey,
+  todayUTCKey,
   toUTCDate,
   type ActivityIndex,
 } from "@/lib/activeUsers";
