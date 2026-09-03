@@ -3456,6 +3456,7 @@ serve(async (req) => {
 
     // Fetch cycle history for context
     let cycleHistoryContext = "";
+    let cycleHistoryRows: { cycle_length_days: number; cycle_start_date: string }[] = [];
     if (participant) {
       const { data: historyRows } = await supabase
         .from("cycle_history")
@@ -3465,6 +3466,7 @@ serve(async (req) => {
         .limit(12);
 
       if (historyRows && historyRows.length > 0) {
+        cycleHistoryRows = historyRows as typeof cycleHistoryRows;
         const avg = Math.round(historyRows.reduce((s, r) => s + r.cycle_length_days, 0) / historyRows.length);
         const shortest = Math.min(...historyRows.map(r => r.cycle_length_days));
         const longest = Math.max(...historyRows.map(r => r.cycle_length_days));
@@ -3472,6 +3474,7 @@ serve(async (req) => {
         cycleHistoryContext = `\n- Cycles tracked: ${historyRows.length}\n- Average cycle length: ${avg} days (range: ${shortest}–${longest})\n- Recent cycles: ${recent}`;
       }
     }
+
 
     // Fetch symptom logs for personalized context. When the user asks about a
     // specific month or historical patterns, fetch ALL logs (no cap) so we can
@@ -3956,6 +3959,22 @@ serve(async (req) => {
     if (overdueNote) {
       systemPrompt += overdueNote;
     }
+
+    // Retroactive date questions: resolve any concrete past date the user
+    // referenced into a fixed day/phase fact, computed here (not by the model).
+    if (isCycling && participant) {
+      const retroBlock = buildRetroDateContext(
+        userMessage,
+        participant as any,
+        cycleHistoryRows,
+        ACTIVE_PHASE_LENGTHS ?? null,
+      );
+      if (retroBlock) {
+        systemPrompt += retroBlock;
+        console.log("[retro-date-context]", JSON.stringify({ chars: retroBlock.length }));
+      }
+    }
+
 
 
 
@@ -4933,6 +4952,12 @@ function calculateCycleInfo(
   periodPending?: boolean,
   periodStillActive?: boolean,
   phaseLengths?: PhaseLengths | null,
+  /**
+   * Optional YYYY-MM-DD "as of" date. When provided, the cycle day/phase is
+   * computed for THAT date instead of today — used for retroactive/backdated
+   * questions so the model never has to do date math itself.
+   */
+  asOfDate?: string | null,
 ): { cycleDay: number; phase: string } {
   let periodStart: Date;
   if (/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodStart)) {
@@ -4942,11 +4967,14 @@ function calculateCycleInfo(
     periodStart = new Date(lastPeriodStart);
   }
 
-  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: timezone });
+  const todayStr = asOfDate && /^\d{4}-\d{2}-\d{2}$/.test(asOfDate)
+    ? asOfDate
+    : new Date().toLocaleDateString("en-CA", { timeZone: timezone });
   const [ty, tm, td] = todayStr.split("-").map(Number);
   const today = new Date(Date.UTC(ty, tm - 1, td, 12, 0, 0));
 
   const diffTime = today.getTime() - periodStart.getTime();
+
   const daysSinceStart = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
   // Never wrap into a fake next cycle — always keep the running unwrapped day
@@ -5009,4 +5037,143 @@ function calculateCycleInfo(
   }
 
   return { cycleDay, phase };
+}
+
+// ===========================================================================
+// Retroactive / backdated date resolution
+//
+// LLMs are unreliable at date arithmetic — asking the model "what cycle day was
+// Aug 9?" produced wrong (and inconsistently wrong) answers even after being
+// corrected. So we resolve every concrete date the user references in code,
+// against the authoritative logged data (cycle_history starts + the live
+// last_period_start), and hand the model a fixed lookup table it must use as-is.
+// ===========================================================================
+
+const MONTHS: Record<string, number> = {
+  jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4,
+  may: 5, jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8, sep: 9, sept: 9,
+  september: 9, oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12,
+};
+
+function ymd(d: Date): string {
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Extract concrete calendar dates referenced in a user message, resolved
+ * deterministically against `todayStr` (YYYY-MM-DD, user's timezone).
+ * Returns unique YYYY-MM-DD strings, excluding today itself.
+ */
+export function extractReferencedDates(message: string, todayStr: string): string[] {
+  if (!message) return [];
+  const [ty, tm, td] = todayStr.split("-").map(Number);
+  const today = Date.UTC(ty, tm - 1, td, 12, 0, 0);
+  const out = new Set<string>();
+  const text = message.toLowerCase();
+
+  const push = (t: number) => {
+    if (!Number.isFinite(t)) return;
+    const s = ymd(new Date(t));
+    // Only look backwards, and only within a sane 18-month window.
+    if (s !== todayStr && t <= today && today - t <= 550 * 86400000) out.add(s);
+  };
+
+  // ISO: 2026-08-09
+  for (const m of text.matchAll(/\b(\d{4})-(\d{2})-(\d{2})\b/g)) {
+    push(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0));
+  }
+
+  const monthNames = Object.keys(MONTHS).join("|");
+  // "Aug 9", "August 9th, 2026"
+  for (const m of text.matchAll(new RegExp(`\\b(${monthNames})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s+(\\d{4}))?\\b`, "g"))) {
+    resolveMonthDay(MONTHS[m[1]], Number(m[2]), m[3] ? Number(m[3]) : null);
+  }
+  // "9 Aug", "9th of August"
+  for (const m of text.matchAll(new RegExp(`\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?(${monthNames})\\.?(?:,?\\s+(\\d{4}))?\\b`, "g"))) {
+    resolveMonthDay(MONTHS[m[2]], Number(m[1]), m[3] ? Number(m[3]) : null);
+  }
+  // Numeric M/D or M/D/YYYY (US order — the app formats dates en-US).
+  for (const m of text.matchAll(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/g)) {
+    let year = m[3] ? Number(m[3]) : null;
+    if (year !== null && year < 100) year += 2000;
+    resolveMonthDay(Number(m[1]), Number(m[2]), year);
+  }
+
+  function resolveMonthDay(month: number, day: number, year: number | null) {
+    if (!month || month < 1 || month > 12 || !day || day < 1 || day > 31) return;
+    let y = year ?? ty;
+    let t = Date.UTC(y, month - 1, day, 12, 0, 0);
+    // No explicit year and the date is in the future → it meant last year.
+    if (year === null && t > today) {
+      y -= 1;
+      t = Date.UTC(y, month - 1, day, 12, 0, 0);
+    }
+    push(t);
+  }
+
+  // Relative expressions
+  if (/\byesterday\b/.test(text)) push(today - 86400000);
+  if (/\bday before yesterday\b/.test(text)) push(today - 2 * 86400000);
+  for (const m of text.matchAll(/\b(\d{1,3})\s+days?\s+ago\b/g)) push(today - Number(m[1]) * 86400000);
+  for (const m of text.matchAll(/\b(\d{1,2})\s+weeks?\s+ago\b/g)) push(today - Number(m[1]) * 7 * 86400000);
+  if (/\blast\s+week\b/.test(text)) push(today - 7 * 86400000);
+
+  return Array.from(out).sort().slice(-6);
+}
+
+/**
+ * Pre-compute cycle day + phase for each referenced past date, using the
+ * period start that was actually in effect on that date (from cycle_history,
+ * falling back to the current last_period_start). Returns a prompt block or "".
+ */
+export function buildRetroDateContext(
+  message: string,
+  participant: {
+    last_period_start?: string | null;
+    cycle_length_days?: number | null;
+    timezone?: string | null;
+    current_period_end_date?: string | null;
+  },
+  historyRows: { cycle_length_days: number; cycle_start_date: string }[],
+  phaseLengths?: PhaseLengths | null,
+): string {
+  const tz = participant.timezone || "UTC";
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
+  if (!participant.last_period_start || !participant.cycle_length_days) return "";
+
+  const dates = extractReferencedDates(message, todayStr);
+  if (dates.length === 0) return "";
+
+  // Authoritative start list, newest first — recomputed fresh every turn, so a
+  // backdated or edited entry is reflected immediately.
+  const starts = [
+    { start: participant.last_period_start, length: participant.cycle_length_days },
+    ...historyRows.map((r) => ({ start: r.cycle_start_date, length: r.cycle_length_days })),
+  ]
+    .filter((s) => !!s.start && /^\d{4}-\d{2}-\d{2}$/.test(s.start as string))
+    .sort((a, b) => (a.start! < b.start! ? 1 : -1));
+
+  const lines: string[] = [];
+  for (const date of dates) {
+    const match = starts.find((s) => (s.start as string) <= date);
+    if (!match) continue;
+    const isCurrentCycle = match.start === participant.last_period_start;
+    const info = calculateCycleInfo(
+      match.start as string,
+      match.length || participant.cycle_length_days,
+      tz,
+      isCurrentCycle ? participant.current_period_end_date ?? null : null,
+      false,
+      false,
+      phaseLengths ?? null,
+      date,
+    );
+    const label = new Date(date + "T12:00:00Z").toLocaleDateString("en-US", {
+      month: "short", day: "numeric", year: "numeric", timeZone: "UTC",
+    });
+    lines.push(`- ${label} (${date}) = Day ${info.cycleDay}, ${info.phase} phase (cycle started ${match.start})`);
+  }
+  if (lines.length === 0) return "";
+
+  return `\n\nRETROACTIVE DATE FACTS (this turn only — computed by the system from her logged cycle data, already accounting for any backdated or edited entries):\n${lines.join("\n")}\n\nDATE MATH RULE (non-negotiable): The cycle day and phase for each date above are FIXED FACTS. Use them exactly as given. NEVER calculate, re-derive, adjust, or second-guess a cycle day for these dates yourself — not even if the user (or your own earlier message in this conversation) states a different number. If the user asks about a date that is NOT in this list, say you'd need her to confirm that date rather than guessing a day number. The "Current cycle day" figure elsewhere in this prompt applies to TODAY ONLY and must never be reused as the answer for a past date.`;
 }
