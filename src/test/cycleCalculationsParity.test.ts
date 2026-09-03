@@ -69,4 +69,10 @@ describe("ChatCycleCircle ring policy — agrees on normal + retroactive cases",
     const pending = calculateCycleInfo(START, LEN, "UTC", "2026-10-10", null, true)!;
     expect(pending.cycleDay).toBe(67);
   });
+
+  it("shows Day 47 for a user 47 days into a cycle with no new period logged", () => {
+    const r = calculateCycleInfo(START, LEN, "UTC", "2026-09-20")!;
+    expect(r.cycleDay).toBe(47);
+    expect(r.phase).toBe("Luteal");
+  });
 });
