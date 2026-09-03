@@ -14,7 +14,7 @@ export const ConversationStarters = ({
   if (!starters || starters.length === 0) return null;
 
   return (
-    <div className="flex flex-nowrap gap-2 mt-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="flex flex-nowrap gap-2 mt-2 w-full min-w-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {starters.map((starter, index) => (
         <Button
           key={index}
