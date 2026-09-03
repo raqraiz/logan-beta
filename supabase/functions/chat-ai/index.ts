@@ -4944,6 +4944,10 @@ function setActivePhaseLengths(p: any) {
   };
 }
 
+// Thin wrapper over the single source of truth in _shared/cycleCalculations.ts.
+// Keeps the historical positional signature so the ~15 call sites in this
+// function stay untouched; injects the request-scoped ACTIVE_PHASE_LENGTHS.
+// Canonical server policy: never wrap overdue cycles, clamp pre-start dates.
 function calculateCycleInfo(
   lastPeriodStart: string,
   cycleLengthDays: number,
@@ -4959,6 +4963,18 @@ function calculateCycleInfo(
    */
   asOfDate?: string | null,
 ): { cycleDay: number; phase: string } {
+  return sharedCalculateCycleInfo(lastPeriodStart, cycleLengthDays, {
+    timezone,
+    asOfDate: asOfDate ?? null,
+    currentPeriodEndDate: currentPeriodEndDate ?? null,
+    periodPending: !!periodPending,
+    periodStillActive: !!periodStillActive,
+    phaseLengths: phaseLengths ?? ACTIVE_PHASE_LENGTHS ?? {},
+  })!;
+}
+
+// deno-lint-ignore no-unused-vars
+function _legacyCalculateCycleInfoRemoved() {
   let periodStart: Date;
   if (/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodStart)) {
     const [year, month, day] = lastPeriodStart.split("-").map(Number);
