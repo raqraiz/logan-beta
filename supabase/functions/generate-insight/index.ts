@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { calculateCycleInfo as sharedCalculateCycleInfo } from "../_shared/cycleCalculations.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -411,6 +412,10 @@ type PhaseLengths = {
   luteal_days?: number | null;
 };
 
+// Thin wrapper over the single source of truth in _shared/cycleCalculations.ts
+// (canonical logic from chat-ai). Preserves this function's historical
+// positional signature and its modulo-wrap for pre-start reference dates.
+// Overdue cycles never wrap — matches chat-ai so briefing and chat agree.
 function calculateCycleInfo(
   lastPeriodStart: string | null,
   cycleLengthDays: number | null,
@@ -419,82 +424,13 @@ function calculateCycleInfo(
   periodStillActive?: boolean,
   phaseLengths?: PhaseLengths | null,
 ): { cycleDay: number; phase: string; daysUntilNextPhase: number } | null {
-  if (!lastPeriodStart || !cycleLengthDays) return null;
-
-  // Parse date-only string safely: treat YYYY-MM-DD as noon UTC to avoid timezone shift
-  let periodStart: Date;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodStart)) {
-    const [year, month, day] = lastPeriodStart.split("-").map(Number);
-    periodStart = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
-  } else {
-    periodStart = new Date(lastPeriodStart);
-  }
-
-  // Get today's date in the user's timezone for accurate day calculation
-  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: timezone }); // YYYY-MM-DD
-  const [ty, tm, td] = todayStr.split("-").map(Number);
-  const today = new Date(Date.UTC(ty, tm - 1, td, 12, 0, 0));
-
-  const diffTime = today.getTime() - periodStart.getTime();
-  const daysSinceStart = Math.round(diffTime / (1000 * 60 * 60 * 24));
-  // Don't wrap when she's past her expected cycle length — running count
-  // matches Ask tab + Home so we can prompt her to confirm day 1.
-  const cycleDay = daysSinceStart >= 0
-    ? daysSinceStart + 1
-    : ((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
-
-  const prefs: PhaseLengths = phaseLengths ?? {};
-  const defMenstruation = 5;
-  const defOvDay = cycleLengthDays - 14;
-  const defFollicular = Math.max(1, (defOvDay - 1) - defMenstruation - 1 + 1);
-  const defOvWindow = 4;
-
-  // Mirror chat-ai: use logged end date to shift Follicular forward.
-  let menstruationEnd = prefs.menstruation_days ?? defMenstruation;
-  if (currentPeriodEndDate && /^\d{4}-\d{2}-\d{2}$/.test(currentPeriodEndDate)) {
-    const [ey, em, ed] = currentPeriodEndDate.split("-").map(Number);
-    const endDate = new Date(Date.UTC(ey, em - 1, ed, 12, 0, 0));
-    const endDay = Math.round((endDate.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    if (endDay >= 1 && endDay <= cycleLengthDays) menstruationEnd = endDay;
-  }
-
-  const hasCustomWindow =
-    prefs.follicular_days != null || prefs.ovulation_window_days != null || prefs.menstruation_days != null;
-
-  let ovulationStart: number;
-  let ovulationEnd: number;
-  if (hasCustomWindow) {
-    ovulationStart = menstruationEnd + (prefs.follicular_days ?? defFollicular) + 1;
-    ovulationEnd = ovulationStart + (prefs.ovulation_window_days ?? defOvWindow) - 1;
-  } else {
-    ovulationStart = defOvDay - 1;
-    ovulationEnd = defOvDay + 2;
-  }
-
-
-  // Mirror chat-ai's forceMenstruation with the same auto-expiry so briefing
-  // and chat can never disagree on phase.
-  const flagExpired = !!periodStillActive && (cycleDay > 7 || daysSinceStart > 7);
-  const forceMenstruation = !!periodStillActive && !flagExpired && cycleDay <= 12;
-
-  let phase: string;
-  let daysUntilNextPhase: number;
-
-  if (forceMenstruation || cycleDay <= menstruationEnd) {
-    phase = "Menstruation";
-    daysUntilNextPhase = Math.max(1, menstruationEnd - cycleDay + 1);
-  } else if (cycleDay < ovulationStart) {
-    phase = "Follicular";
-    daysUntilNextPhase = ovulationStart - cycleDay;
-  } else if (cycleDay <= ovulationEnd) {
-    phase = "Ovulation";
-    daysUntilNextPhase = ovulationEnd - cycleDay + 1;
-  } else {
-    phase = "Luteal";
-    daysUntilNextPhase = cycleLengthDays - cycleDay + 1;
-  }
-
-  return { cycleDay, phase, daysUntilNextPhase };
+  return sharedCalculateCycleInfo(lastPeriodStart, cycleLengthDays, {
+    timezone,
+    currentPeriodEndDate: currentPeriodEndDate ?? null,
+    periodStillActive: !!periodStillActive,
+    phaseLengths: phaseLengths ?? null,
+    futureStartPolicy: "wrap",
+  });
 }
 
 

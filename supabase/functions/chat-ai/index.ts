@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { calculateCycleInfo as sharedCalculateCycleInfo } from "../_shared/cycleCalculations.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -4944,6 +4945,10 @@ function setActivePhaseLengths(p: any) {
   };
 }
 
+// Thin wrapper over the single source of truth in _shared/cycleCalculations.ts.
+// Keeps the historical positional signature so the ~15 call sites in this
+// function stay untouched; injects the request-scoped ACTIVE_PHASE_LENGTHS.
+// Canonical server policy: never wrap overdue cycles, clamp pre-start dates.
 function calculateCycleInfo(
   lastPeriodStart: string,
   cycleLengthDays: number,
@@ -4959,84 +4964,14 @@ function calculateCycleInfo(
    */
   asOfDate?: string | null,
 ): { cycleDay: number; phase: string } {
-  let periodStart: Date;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodStart)) {
-    const [year, month, day] = lastPeriodStart.split("-").map(Number);
-    periodStart = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
-  } else {
-    periodStart = new Date(lastPeriodStart);
-  }
-
-  const todayStr = asOfDate && /^\d{4}-\d{2}-\d{2}$/.test(asOfDate)
-    ? asOfDate
-    : new Date().toLocaleDateString("en-CA", { timeZone: timezone });
-  const [ty, tm, td] = todayStr.split("-").map(Number);
-  const today = new Date(Date.UTC(ty, tm - 1, td, 12, 0, 0));
-
-  const diffTime = today.getTime() - periodStart.getTime();
-
-  const daysSinceStart = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
-  // Never wrap into a fake next cycle — always keep the running unwrapped day
-  // count so the overdue detector can fire and Logan can prompt for a real
-  // Day-1 confirmation instead of silently pretending a new cycle started.
-  const cycleDay = daysSinceStart >= 0 ? daysSinceStart + 1 : 1;
-
-  const prefs: PhaseLengths = phaseLengths ?? ACTIVE_PHASE_LENGTHS ?? {};
-  const defMenstruation = 5;
-  const defOvDay = cycleLengthDays - 14;
-  const defFollicular = Math.max(1, (defOvDay - 1) - defMenstruation - 1 + 1);
-  const defOvWindow = 4;
-
-  // If she reported her period ended early, shift Follicular forward.
-  let menstruationEnd = prefs.menstruation_days ?? defMenstruation;
-  if (currentPeriodEndDate && /^\d{4}-\d{2}-\d{2}$/.test(currentPeriodEndDate)) {
-    const [ey, em, ed] = currentPeriodEndDate.split("-").map(Number);
-    const endDate = new Date(Date.UTC(ey, em - 1, ed, 12, 0, 0));
-    const endDay = Math.round((endDate.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    if (endDay >= 1 && endDay <= cycleLengthDays) menstruationEnd = endDay;
-  }
-
-  const hasCustomWindow =
-    prefs.follicular_days != null || prefs.ovulation_window_days != null || prefs.menstruation_days != null;
-
-  let ovulationStart: number;
-  let ovulationEnd: number;
-  if (hasCustomWindow) {
-    ovulationStart = menstruationEnd + (prefs.follicular_days ?? defFollicular) + 1;
-    ovulationEnd = ovulationStart + (prefs.ovulation_window_days ?? defOvWindow) - 1;
-  } else {
-    ovulationStart = defOvDay - 1;
-    ovulationEnd = defOvDay + 2;
-  }
-
-
-  // If she said her period is still ongoing past the default window, keep her
-  // in Menstruation (capped at day 12) until she logs an end date or new Day 1.
-  // Auto-expire: the flag is only meaningful during the actual bleed window.
-  // If we're past day 7 (normal max bleed length) or more than 7 days have
-  // elapsed since last_period_start, ignore the stale flag — it silently
-  // persisted and would force Menstruation while the briefing shows Follicular.
-  const flagExpired = !!periodStillActive && (cycleDay > 7 || daysSinceStart > 7);
-  const forceMenstruation = !!periodStillActive && !flagExpired && cycleDay <= 12;
-
-
-  // periodPending is informational for prompt context — parity with the client
-  // ring; we already don't wrap, so no behavior change here.
-  void periodPending;
-
-  let phase: string;
-  if (forceMenstruation || cycleDay <= menstruationEnd) {
-    phase = "Menstruation";
-  } else if (cycleDay < ovulationStart) {
-    phase = "Follicular";
-  } else if (cycleDay <= ovulationEnd) {
-    phase = "Ovulation";
-  } else {
-    phase = "Luteal";
-  }
-
-  return { cycleDay, phase };
+  return sharedCalculateCycleInfo(lastPeriodStart, cycleLengthDays, {
+    timezone,
+    asOfDate: asOfDate ?? null,
+    currentPeriodEndDate: currentPeriodEndDate ?? null,
+    periodPending: !!periodPending,
+    periodStillActive: !!periodStillActive,
+    phaseLengths: phaseLengths ?? ACTIVE_PHASE_LENGTHS ?? {},
+  })!;
 }
 
 // ===========================================================================

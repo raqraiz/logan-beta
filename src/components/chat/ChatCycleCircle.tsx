@@ -1,4 +1,5 @@
-import { type PhaseLengths, getPhaseLengthPrefs, defaultPhaseLengths } from "@/lib/phaseLengths";
+import { type PhaseLengths, getPhaseLengthPrefs } from "@/lib/phaseLengths";
+import { calculateCycleInfoShared } from "@/lib/cycleCalculations";
 
 type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
 
@@ -548,7 +549,12 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
   );
 }
 
-// Helper to calculate cycle info from dates — uses noon UTC to avoid timezone off-by-one
+// Helper to calculate cycle info from dates — delegates to the single source
+// of truth in @/lib/cycleCalculations (canonical logic from chat-ai, mirrored
+// for the client in supabase/functions/_shared/cycleCalculations.ts).
+// Ring-specific display policy is passed explicitly: overdue cycles wrap only
+// after a 14-day grace window (never when periodPending), pre-start reference
+// dates wrap modulo, and unbounded pending counts cap into an "Overdue" phase.
 export function calculateCycleInfo(
   lastPeriodStart: string | null,
   cycleLengthDays: number | null,
@@ -568,122 +574,15 @@ export function calculateCycleInfo(
    * historical hardcoded defaults, per field. */
   phaseLengths?: PhaseLengths | null
 ): { cycleDay: number; phase: string } | null {
-
-  if (!lastPeriodStart || !cycleLengthDays) return null;
-
-  // Parse date-only string safely: treat YYYY-MM-DD as noon UTC to avoid timezone shift
-  let periodStart: Date;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodStart)) {
-    const [year, month, day] = lastPeriodStart.split("-").map(Number);
-    periodStart = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
-  } else {
-    periodStart = new Date(lastPeriodStart);
-  }
-
-  // Reference date — defaults to today in the user's timezone
-  let today: Date;
-  if (forDate) {
-    if (typeof forDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(forDate)) {
-      const [y, m, d] = forDate.split("-").map(Number);
-      today = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
-    } else {
-      const d = forDate instanceof Date ? forDate : new Date(forDate);
-      today = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0));
-    }
-  } else {
-    const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: timezone });
-    const [ty, tm, td] = todayStr.split("-").map(Number);
-    today = new Date(Date.UTC(ty, tm - 1, td, 12, 0, 0));
-  }
-
-  const diffTime = today.getTime() - periodStart.getTime();
-  const daysSinceStart = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
-  // If she hasn't updated her cycle in a while, wrap around her selected
-  // cycle length so the ring never exceeds her configured length (e.g. Day 66
-  // on a 28-day cycle becomes Day 10 of the next assumed cycle).
-  // EXCEPTION 1: if she has explicitly told Logan her period hasn't started yet
-  // (periodPending), keep the true day count — don't roll into a fake cycle.
-  // EXCEPTION 2: if she's only slightly overdue (within 14 days past cycle
-  // length), keep showing the unwrapped day. Cycles vary, the luteal phase
-  // can run long, and silently rolling Day 29 into "Day 1 / Menstruation"
-  // creates a UI conflict with Cycle Forecast (which keeps the unwrapped day
-  // until next period is logged). Wait for her to confirm Day 1.
-  const OVERDUE_GRACE_DAYS = 14;
-  const overdueWithinGrace =
-    daysSinceStart >= cycleLengthDays && daysSinceStart < cycleLengthDays + OVERDUE_GRACE_DAYS;
-  const cycleDay = (periodPending || overdueWithinGrace)
-    ? (daysSinceStart >= 0 ? daysSinceStart + 1 : 1)
-    : (daysSinceStart >= 0
-        ? (daysSinceStart % cycleLengthDays) + 1
-        : (((daysSinceStart % cycleLengthDays) + cycleLengthDays) % cycleLengthDays) + 1);
-
-  // Per-user phase lengths (explicit arg > global prefs > hardcoded defaults).
-  const prefs: PhaseLengths = phaseLengths ?? getPhaseLengthPrefs() ?? {};
-  const fallback = defaultPhaseLengths(cycleLengthDays);
-
-  // Derive menstruationEnd. If the user reported her period ended early
-  // (currentPeriodEndDate), use that to shift Follicular forward. Only honor
-  // it when the end date is on/after period start and within this cycle.
-  let menstruationEnd = prefs.menstruation_days ?? fallback.menstruation_days;
-  if (currentPeriodEndDate && /^\d{4}-\d{2}-\d{2}$/.test(currentPeriodEndDate)) {
-    const [ey, em, ed] = currentPeriodEndDate.split("-").map(Number);
-    const endDate = new Date(Date.UTC(ey, em - 1, ed, 12, 0, 0));
-    const endDay = Math.round((endDate.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    if (endDay >= 1 && endDay <= cycleLengthDays) {
-      menstruationEnd = endDay;
-    }
-  }
-
-  const hasCustomWindow =
-    prefs.follicular_days != null || prefs.ovulation_window_days != null || prefs.menstruation_days != null;
-
-  let ovulationStart: number;
-  let ovulationEnd: number;
-  if (hasCustomWindow) {
-    ovulationStart = menstruationEnd + (prefs.follicular_days ?? fallback.follicular_days) + 1;
-    ovulationEnd = ovulationStart + (prefs.ovulation_window_days ?? fallback.ovulation_window_days) - 1;
-  } else {
-    const ovulationDay = cycleLengthDays - 14;
-    ovulationStart = ovulationDay - 1;
-    ovulationEnd = ovulationDay + 2;
-  }
-
-
-  // If she told Logan her period is still ongoing past the default window,
-  // keep showing Menstruation up to a sane cap (12 days) until she logs an end
-  // date or starts a new cycle. This OVERRIDES the ovulation window —
-  // a short cycle (e.g. 21d → ovulationStart=6) should not flip her into
-  // Ovulation while she's still bleeding.
-  // Match server-side expiry guard (chat-ai / generate-insight) so the ring
-  // does not visually lag behind: flag expires once we're past day 7.
-  const flagExpired = periodStillActive === true && (cycleDay > 7 || daysSinceStart > 7);
-
-  let phase: string;
-
-  if (cycleDay <= menstruationEnd) {
-    phase = "Menstruation";
-  } else if (periodStillActive === true && !flagExpired && cycleDay <= 12) {
-    phase = "Menstruation";
-  } else if (cycleDay < ovulationStart) {
-    phase = "Follicular";
-  } else if (cycleDay <= ovulationEnd) {
-    phase = "Ovulation";
-  } else {
-    phase = "Luteal";
-  }
-
-  // Overdue ceiling: when periodPending disables wrapping, the true day count
-  // can run unbounded (e.g. day 560 with a stale last_period_start). Keep the
-  // true count for internal math above, but cap what is displayed/derived so
-  // the ring shows a distinct "significantly overdue" state instead of an
-  // ever-growing Luteal day count.
-  if (periodPending) {
-    const OVERDUE_CAP = Math.max(90, cycleLengthDays * 3);
-    if (cycleDay > OVERDUE_CAP) {
-      return { cycleDay: OVERDUE_CAP, phase: "Overdue" };
-    }
-  }
-
-  return { cycleDay, phase };
+  return calculateCycleInfoShared(lastPeriodStart, cycleLengthDays, {
+    timezone,
+    asOfDate: forDate ?? null,
+    currentPeriodEndDate: currentPeriodEndDate ?? null,
+    periodPending: !!periodPending,
+    periodStillActive: !!periodStillActive,
+    phaseLengths: phaseLengths ?? getPhaseLengthPrefs() ?? null,
+    overduePolicy: "wrap-after-grace",
+    futureStartPolicy: "wrap",
+    overdueCap: true,
+  });
 }
