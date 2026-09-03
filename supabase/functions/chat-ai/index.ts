@@ -4936,6 +4936,12 @@ function calculateCycleInfo(
   periodPending?: boolean,
   periodStillActive?: boolean,
   phaseLengths?: PhaseLengths | null,
+  /**
+   * Optional YYYY-MM-DD "as of" date. When provided, the cycle day/phase is
+   * computed for THAT date instead of today — used for retroactive/backdated
+   * questions so the model never has to do date math itself.
+   */
+  asOfDate?: string | null,
 ): { cycleDay: number; phase: string } {
   let periodStart: Date;
   if (/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodStart)) {
@@ -4945,11 +4951,14 @@ function calculateCycleInfo(
     periodStart = new Date(lastPeriodStart);
   }
 
-  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: timezone });
+  const todayStr = asOfDate && /^\d{4}-\d{2}-\d{2}$/.test(asOfDate)
+    ? asOfDate
+    : new Date().toLocaleDateString("en-CA", { timeZone: timezone });
   const [ty, tm, td] = todayStr.split("-").map(Number);
   const today = new Date(Date.UTC(ty, tm - 1, td, 12, 0, 0));
 
   const diffTime = today.getTime() - periodStart.getTime();
+
   const daysSinceStart = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
   // Never wrap into a fake next cycle — always keep the running unwrapped day
