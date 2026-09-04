@@ -1202,19 +1202,31 @@ serve(async (req) => {
 
     const dayOfWeekPattern = /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)\b/i;
 
+    // Time words that can follow (or precede) a start verb. The clause is
+    // OPTIONAL everywhere below — a bare "Period started" counts as a same-day
+    // confirmation and defaults to today's date.
+    const PERIOD_TIME_WORD =
+      "(?:today|yesterday|this\\s+morning|this\\s+afternoon|this\\s+evening|last\\s+night|overnight|just\\s+now|right\\s+now|a\\s+(?:little|short)\\s+while\\s+ago|a\\s+bit\\s+ago|earlier(?:\\s+today)?|this\\s+week)";
+    const PERIOD_START_VERB = "(?:started|starting|came|come|arrived|began|begun|showed\\s+up|show(?:ed)?\\s+up|hit)";
+
+    // Coverage check — these should ALL match (eyeball before editing):
+    //   "Period started" · "My period started" · "Started overnight"
+    //   "Just got my period" · "Period came this morning" · "It started"
     const periodConfirmPatterns = [
       /^yes,?\s*(it )?(started|period|got it|began|came)/i,
-      /started (today|yesterday|this morning|last night)/i,
       /^(i )?(got|getting) my period/i,
-      /^it started/i,
-      /period started (today|yesterday|this morning|last night)/i,
-      /started yesterday/i,
-      /my period (just )?(started|came|arrived|began)/i,
-      /^(i )?(just )?(got|started|had) (my |the )?period/i,
+      /^it (just )?started\b/i,
       /got it yesterday/i,
+      // Noun-first: "Period started", "my period came this morning", "period showed up overnight"
+      new RegExp(`\\b(?:my\\s+|the\\s+)?period\\s+(?:has\\s+|had\\s+|just\\s+)?${PERIOD_START_VERB}(?:\\s+${PERIOD_TIME_WORD})?\\b`, "i"),
+      // Verb-first: "started my period", "got my period", "came on today"
+      new RegExp(`\\b(?:i\\s+)?(?:just\\s+)?(?:got|started|had|have)\\s+(?:my|the)\\s+period(?:\\s+${PERIOD_TIME_WORD})?\\b`, "i"),
+      // Bare start verb + time word (no period noun): "started overnight", "started just now"
+      new RegExp(`\\b(?:it\\s+)?(?:just\\s+)?${PERIOD_START_VERB}\\s+${PERIOD_TIME_WORD}\\b`, "i"),
       // Day-of-week variants: "period began Tuesday", "started on Monday", "got my period friday"
       /(?:period|it)\s+(?:started|began|came|arrived)\s+(?:on\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)/i,
       /(?:started|began|came|got it)\s+(?:on\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)/i,
+
       // Declarative Day-1 corrections: user tells Logan the cycle should reset to Day 1 today.
       // Examples: "I want it to show day 1 period", "it should show day 1", "today should be day 1",
       // "today is day 1 menstruation", "show day 1 period", "change it to day 1".
