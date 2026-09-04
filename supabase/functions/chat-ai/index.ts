@@ -3997,6 +3997,16 @@ serve(async (req) => {
       }
     }
 
+    // Save-confirmation guard (mirrors the symptom-log false-claim suppression).
+    // Every deterministic cycle write returns its own server-authored reply
+    // earlier in this request, so any reply reaching the model path by
+    // definition had NO cycle write this turn.
+    const periodWriteConfirmedThisTurn = false;
+    if (!periodWriteConfirmedThisTurn) {
+      systemPrompt += `\n\nCYCLE SAVE STATE (this turn): periodWriteConfirmedThisTurn = false. NOTHING was written to her cycle in this request. You must NOT use save-confirmation language of any kind — no "Done", no "I've set", no "I've logged/updated/reset your cycle to Day X", no "your new cycle starts today". Answer using the CURRENT stored cycle day and phase given above, without implying anything changed. If it sounds like she is reporting or correcting a period start and the system did not process it, ask her one clarifying question for the exact date instead of claiming a save.`;
+    }
+
+
 
 
 
