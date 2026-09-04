@@ -816,9 +816,10 @@ function hasLoggingClaim(text: string): boolean {
  * LLM-generated reply is by definition unbacked.
  */
 function hasCycleUpdateClaim(text: string): boolean {
-  return /\b(?:locked?\s+(?:that\s+)?in|updated|adjust(?:ed)?|chang(?:ed)?|correct(?:ed)?|reset|set|shift(?:ed)?|sync(?:ed|ed\s+up)?|fixed)\b[^.?!\n]{0,80}\b(?:day\s*1|start\s+date|period\s+(?:start|date)|cycle\s+(?:day|date|start)|your\s+cycle)\b/i.test(text)
-    || /\b(?:day\s*1|period\s+start|start\s+date|cycle)\b[^.?!\n]{0,60}\b(?:is\s+now|now\s+(?:shows|reads|set)|has\s+been\s+(?:updated|changed|set|locked))\b/i.test(text)
-    || /\b(?:i'?ve|i\s+have|i'?ll|i\s+will|logan\s+has)\b[^.?!\n]{0,40}\b(?:updat(?:e|ed)|chang(?:e|ed)|lock(?:ed)?\s+in|set)\b[^.?!\n]{0,40}\b(?:everywhere|across\s+(?:the\s+)?(?:app|tabs?)|your\s+(?:cycle|period|dates?))\b/i.test(text);
+  return /\b(?:locked?\s+(?:that\s+)?in|updated|adjust(?:ed)?|chang(?:ed)?|correct(?:ed)?|reset|set|shift(?:ed)?|sync(?:ed|ed\s+up)?|fixed|logged|marked)\b[^.?!\n]{0,80}\b(?:day\s*\d+|start\s+date|period\s+(?:start|date)|cycle\s+(?:day|date|start)|(?:your|a|the)\s+(?:new\s+)?cycle)\b/i.test(text)
+    || /\b(?:day\s*\d+|period\s+start|start\s+date|cycle)\b[^.?!\n]{0,60}\b(?:is\s+now|now\s+(?:shows|reads|set)|has\s+been\s+(?:updated|changed|set|locked))\b/i.test(text)
+    || /\b(?:i'?ve|i\s+have|i'?ll|i\s+will|logan\s+has)\b[^.?!\n]{0,40}\b(?:updat(?:e|ed)|chang(?:e|ed)|lock(?:ed)?\s+in|set|logged|marked)\b[^.?!\n]{0,60}\b(?:everywhere|across\s+(?:the\s+)?(?:app|tabs?)|day\s*\d+|your\s+(?:cycle|period|dates?)|(?:new\s+)?cycle)\b/i.test(text);
+
 }
 
 function stripUnbackedCycleClaims(text: string): string {
