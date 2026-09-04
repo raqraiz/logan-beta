@@ -1248,6 +1248,13 @@ serve(async (req) => {
     // still pass on their own. Generic confirm patterns must also mention a
     // period-related word OR follow a check-in, to avoid hijacking unrelated yeses.
     const mentionsPeriodWord = /\b(period|bleed|bleeding|day\s*1|menstruation|menstruating|spotting)\b/i.test(userMessage);
+    // Unambiguous standalone start phrasings that carry no period noun
+    // ("Started overnight", "It started just now"). Specific enough to stand on
+    // their own without a prior check-in.
+    const isUnambiguousStartPhrase = new RegExp(
+      `^(?:it\\s+)?(?:just\\s+)?${PERIOD_START_VERB}\\s+${PERIOD_TIME_WORD}[.!\\s]*$`,
+      "i",
+    ).test(userMessage.trim());
     // Explicit calendar-date correction ("Aug 1 was my first day"). This bypasses
     // the historical-date veto on purpose — otherwise the write never runs and the
     // model is left free to fabricate a confirmation.
@@ -1257,9 +1264,10 @@ serve(async (req) => {
     const isPeriodConfirmation = !isPeriodStartQuestion && (
       !!statedPeriodStart ||
       (!referencesHistoricalDate && (
-        (periodConfirmPatterns.some(p => p.test(userMessage)) && (wasPeridCheckin || mentionsPeriodWord)) ||
+        (periodConfirmPatterns.some(p => p.test(userMessage)) && (wasPeridCheckin || mentionsPeriodWord || isUnambiguousStartPhrase)) ||
         (isBareYes && wasPeridCheckin)
       ))
+
     );
 
 
