@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import { Check, ChevronDown, ChevronUp, Activity, Plus, Sparkles, Pencil, Trash2, X, CalendarIcon, EyeOff, Eye, Star } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Activity, Plus, Sparkles, Pencil, Trash2, X, CalendarIcon, EyeOff, Eye, Star, Flag } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -13,6 +13,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cleanSymptomLabel, truncateAtWord } from "@/lib/symptomLabel";
 import { findNearDuplicate } from "@/lib/symptomDedupe";
+import { ReportSymptomDialog } from "@/components/home/ReportSymptomDialog";
 import { validateSymptomName, suggestExistingSymptoms, MAX_PENDING_PER_DAY, MAX_SYMPTOM_LENGTH } from "@/lib/symptomModeration";
 
 
@@ -98,6 +99,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
   const [addingSymptom, setAddingSymptom] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [reportTarget, setReportTarget] = useState<{ id: string; name: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [search, setSearch] = useState("");
@@ -751,6 +753,15 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                                 <EyeOff className="w-3 h-3" />
                               </button>
                             ) : null}
+                            {!isMine && !inHiddenRow && manageMode && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setReportTarget({ id: cs.id, name: cs.name }); }}
+                                className={cn("px-1.5 py-1 hover:bg-black/10", isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-destructive")}
+                                title="Report this symptom"
+                              >
+                                <Flag className="w-3 h-3" />
+                              </button>
+                            )}
                             {isMine && !inHiddenRow && (
                               <>
                                 <button
