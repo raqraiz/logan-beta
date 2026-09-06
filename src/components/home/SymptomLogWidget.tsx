@@ -921,39 +921,71 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
               );
             })()}
             {showAddForm && (
-              <div className="mt-2 flex items-center gap-2">
-                <Input
-                  autoFocus
-                  value={newSymptom}
-                  onChange={e => setNewSymptom(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === "Enter") handleAddCommunitySymptom();
-                    if (e.key === "Escape") { setShowAddForm(false); setNewSymptom(""); }
-                  }}
-                  placeholder="e.g. Tingly hands, vivid dreams..."
-                  maxLength={50}
-                  className="h-8 text-xs"
-                />
-                <Button
-                  size="sm"
-                  onClick={handleAddCommunitySymptom}
-                  disabled={addingSymptom || !newSymptom.trim()}
-                  className="h-8 text-xs"
-                >
-                  Add
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => { setShowAddForm(false); setNewSymptom(""); }}
-                  className="h-8 text-xs"
-                >
-                  Cancel
-                </Button>
+              <div className="mt-2 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    autoFocus
+                    value={newSymptom}
+                    onChange={e => { setNewSymptom(e.target.value); setAddError(null); setSuggestions([]); }}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") handleCheckNewSymptom();
+                      if (e.key === "Escape") { setShowAddForm(false); setNewSymptom(""); setAddError(null); setSuggestions([]); }
+                    }}
+                    placeholder="e.g. Tingly hands, vivid dreams..."
+                    maxLength={MAX_SYMPTOM_LENGTH}
+                    className="h-8 text-xs"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleCheckNewSymptom}
+                    disabled={addingSymptom || !newSymptom.trim()}
+                    className="h-8 text-xs"
+                  >
+                    Add
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => { setShowAddForm(false); setNewSymptom(""); setAddError(null); setSuggestions([]); }}
+                    className="h-8 text-xs"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+
+                {addError && (
+                  <p className="text-[11px] text-destructive">{addError}</p>
+                )}
+
+                {suggestions.length > 0 && (
+                  <div className="rounded-lg border border-border/40 bg-card/60 p-2.5 space-y-2">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60">
+                      Already tracked — pick one?
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {suggestions.map(name => (
+                        <button
+                          key={name}
+                          onClick={() => selectExisting(name)}
+                          className="px-2.5 py-1 text-xs rounded-full border border-primary/40 text-primary/90 hover:bg-primary/5"
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={handleAddCommunitySymptom}
+                      disabled={addingSymptom}
+                      className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                    >
+                      None of these — add "{newSymptom.trim()}" as new
+                    </button>
+                  </div>
+                )}
               </div>
             )}
             <p className="text-[10px] text-muted-foreground/60 mt-2">
-              Symptoms you add are shared with other users (no personal info attached).
+              New symptoms are reviewed before joining the shared list. You can log yours right away.
             </p>
           </div>
 
