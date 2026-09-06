@@ -67,6 +67,7 @@ export function SymptomHistory({
   lifeStage,
 }: SymptomHistoryProps) {
   const [logs, setLogs] = useState<SymptomLog[]>([]);
+  const { resolve: resolveCanonical } = useCanonicalSymptoms();
   const [loading, setLoading] = useState(true);
   const [topSymptoms, setTopSymptoms] = useState<{ name: string; count: number; avgSeverity: number }[]>([]);
   const [notesOnlyCount, setNotesOnlyCount] = useState(0);
