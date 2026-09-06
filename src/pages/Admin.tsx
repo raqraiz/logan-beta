@@ -197,6 +197,10 @@ const Admin = () => {
             <NotificationsTab />
           </TabsContent>
 
+          <TabsContent value="symptoms">
+            <SymptomReviewTab />
+          </TabsContent>
+
           {isSuperAdmin && (
             <>
               <TabsContent value="users">
