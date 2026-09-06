@@ -5,6 +5,7 @@ import { subDays, format } from "date-fns";
 import { SymptomHistory } from "./SymptomHistory";
 import { SymptomPieChart } from "./SymptomPieChart";
 import { aggregateSymptomPatterns, countNotesOnlyLogs } from "@/lib/symptomAggregation";
+import { useCanonicalSymptoms } from "@/hooks/useCanonicalSymptoms";
 
 const COLORS = {
   border: "border-l-amber-500",
@@ -47,6 +48,7 @@ export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays,
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<SymptomLog[]>([]);
+  const { resolve: resolveCanonical } = useCanonicalSymptoms();
 
   useEffect(() => {
     if (!userId) return;
