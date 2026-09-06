@@ -96,6 +96,8 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
   const [showAddForm, setShowAddForm] = useState(false);
   const [newSymptom, setNewSymptom] = useState("");
   const [addingSymptom, setAddingSymptom] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [search, setSearch] = useState("");
