@@ -1332,6 +1332,41 @@ export type Database = {
         }
         Relationships: []
       }
+      symptom_reports: {
+        Row: {
+          community_symptom_id: string
+          created_at: string
+          details: string | null
+          id: string
+          reason: string
+          reporter_id: string
+        }
+        Insert: {
+          community_symptom_id: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason: string
+          reporter_id: string
+        }
+        Update: {
+          community_symptom_id?: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason?: string
+          reporter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "symptom_reports_community_symptom_id_fkey"
+            columns: ["community_symptom_id"]
+            isOneToOne: false
+            referencedRelation: "community_symptoms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tracker_logs: {
         Row: {
           created_at: string
