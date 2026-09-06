@@ -1033,6 +1033,12 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
             </Button>
           </div>
         </div>
+        <ReportSymptomDialog
+          symptom={reportTarget}
+          userId={userId}
+          onOpenChange={(o) => { if (!o) setReportTarget(null); }}
+        />
     </div>
+
   );
 }
