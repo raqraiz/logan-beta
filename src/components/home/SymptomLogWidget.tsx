@@ -56,6 +56,22 @@ const SHARED_CATEGORIES = [
 ] as const;
 type SharedCategory = typeof SHARED_CATEGORIES[number];
 
+// Unified picker category order — built-in defaults and community entries
+// render together in one continuous list (no origin split).
+const UNIFIED_CATEGORIES = [
+  "Physical",
+  "Emotional",
+  "Energy & focus",
+  "Sleep & Energy",
+  "Mood & Cognitive",
+  "Skin & Body",
+  "Digestive",
+  "Ear/Nose/Throat",
+  "Reproductive & Discharge",
+  "Pain",
+  "Other",
+] as const;
+
 const SYMPTOM_OPTIONS = SYMPTOM_CATEGORIES.flatMap(c => c.symptoms);
 const BUILT_IN_SET = new Set(SYMPTOM_OPTIONS.map(s => s.toLowerCase()));
 
@@ -506,12 +522,25 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50">
                 How are you feeling?
               </p>
-              <Input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search symptoms…"
-                className="h-7 text-xs max-w-[180px]"
-              />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setManageMode(m => !m)}
+                  className={cn(
+                    "text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border transition-colors",
+                    manageMode
+                      ? "border-primary/60 text-primary bg-primary/10"
+                      : "border-border/40 text-muted-foreground/70 hover:text-foreground hover:border-border"
+                  )}
+                >
+                  {manageMode ? "Done" : "Manage"}
+                </button>
+                <Input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search symptoms…"
+                  className="h-7 text-xs max-w-[180px]"
+                />
+              </div>
             </div>
 
             {/* Selected pinned chips */}
@@ -617,30 +646,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                     </div>
                   )}
 
-                  {SYMPTOM_CATEGORIES.map(cat => {
-                    const sorted = [...cat.symptoms].sort((a, b) => a.localeCompare(b));
-                    const filtered = q ? sorted.filter(n => n.toLowerCase().includes(q)) : sorted;
-                    if (filtered.length === 0) return null;
-                    const isCollapsed = !q && collapsedCats[cat.label];
-                    return (
-                      <div key={cat.label}>
-                        <button
-                          onClick={() => setCollapsedCats(prev => ({ ...prev, [cat.label]: !prev[cat.label] }))}
-                          className="w-full flex items-center justify-between mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/60 hover:text-foreground/80"
-                        >
-                          <span>{cat.label} · {filtered.length}</span>
-                          {isCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
-                        </button>
-                        {!isCollapsed && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {filtered.map(renderBuiltInChip)}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-
-                  {/* Shared (community) symptoms — grouped by category, collapsible, searchable */}
+                  {/* Unified category sections — built-in + community together */}
                   {(() => {
                     const sortedCs = [...communitySymptoms].sort((a, b) => a.name.localeCompare(b.name));
                     const searchMatched = q ? sortedCs.filter(c => cleanSymptomLabel(c.name).toLowerCase().includes(q)) : sortedCs;
@@ -648,26 +654,19 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                     const visibleCs = searchMatched.filter(c => !hiddenIds.has(c.id));
                     const hiddenCs = searchMatched.filter(c => hiddenIds.has(c.id));
 
-                    // Group visible by category (fallback to "Other")
-                    const grouped: Record<string, CommunitySymptom[]> = {};
-                    SHARED_CATEGORIES.forEach(c => { grouped[c] = []; });
-                    visibleCs.forEach(cs => {
-                      const cat: SharedCategory = (SHARED_CATEGORIES as readonly string[]).includes(cs.category ?? "")
-                        ? (cs.category as SharedCategory)
+                    const mapSharedCat = (cs: CommunitySymptom): string =>
+                      (SHARED_CATEGORIES as readonly string[]).includes(cs.category ?? "")
+                        ? (cs.category as string)
                         : "Other";
-                      grouped[cat].push(cs);
-                    });
 
-                    // Track which categories had entries before hiding, so we can show
-                    // "All hidden — manage hidden tags" instead of vanishing the group.
+                    // Group community entries by category (fallback to "Other")
+                    const groupedShared: Record<string, CommunitySymptom[]> = {};
                     const catsWithAnyContent: Record<string, boolean> = {};
-                    SHARED_CATEGORIES.forEach(c => { catsWithAnyContent[c] = false; });
-                    searchMatched.forEach(cs => {
-                      const cat: SharedCategory = (SHARED_CATEGORIES as readonly string[]).includes(cs.category ?? "")
-                        ? (cs.category as SharedCategory)
-                        : "Other";
-                      catsWithAnyContent[cat] = true;
-                    });
+                    UNIFIED_CATEGORIES.forEach(c => { groupedShared[c] = []; catsWithAnyContent[c] = false; });
+                    visibleCs.forEach(cs => { groupedShared[mapSharedCat(cs)].push(cs); });
+                    // Track which categories had entries before hiding, so we can show
+                    // "All hidden — manage" instead of vanishing the group.
+                    searchMatched.forEach(cs => { catsWithAnyContent[mapSharedCat(cs)] = true; });
 
                     const renderSharedChip = (cs: CommunitySymptom, opts?: { isHiddenRow?: boolean }) => {
                       const isSelected = selected.some(s => s.name === cs.name);
@@ -806,75 +805,56 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                       );
                     };
 
-                    const totalShared = visibleCs.length;
-                    if (searchMatched.length === 0 && q) return null;
-
                     return (
-                      <div className="pt-1">
-                        <div className="flex items-center justify-between mb-2 gap-2">
-                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60">
-                            Shared by the community · {totalShared}
-                            {hiddenCs.length > 0 && (
-                              <span className="ml-1 text-muted-foreground/40 normal-case">({hiddenCs.length} hidden)</span>
-                            )}
-                          </p>
-                          <button
-                            onClick={() => setManageMode(m => !m)}
-                            className={cn(
-                              "text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border transition-colors",
-                              manageMode
-                                ? "border-primary/60 text-primary bg-primary/10"
-                                : "border-border/40 text-muted-foreground/70 hover:text-foreground hover:border-border"
-                            )}
-                          >
-                            {manageMode ? "Done" : "Manage"}
-                          </button>
-                        </div>
-                        <div className="space-y-2">
-                          {SHARED_CATEGORIES.map(cat => {
-                            const chips = grouped[cat];
-                            const catHadContent = catsWithAnyContent[cat];
-                            if (!catHadContent) return null;
-                            const key = `__shared_${cat}`;
-                            const hasPrior = chips.some(c => previouslyLoggedNames.has(c.name.toLowerCase()));
-                            const userToggled = key in collapsedCats;
-                            const isCollapsed = q ? false : (userToggled ? collapsedCats[key] : !hasPrior);
+                      <>
+                        {UNIFIED_CATEGORIES.map(label => {
+                          const builtIn = SYMPTOM_CATEGORIES.find(c => c.label === label)?.symptoms ?? [];
+                          const sortedBuiltIn = [...builtIn].sort((a, b) => a.localeCompare(b));
+                          const filteredBuiltIn = q ? sortedBuiltIn.filter(n => n.toLowerCase().includes(q)) : sortedBuiltIn;
+                          const sharedChips = groupedShared[label] ?? [];
+                          if (filteredBuiltIn.length === 0 && !catsWithAnyContent[label]) return null;
+                          const total = filteredBuiltIn.length + sharedChips.length;
+                          const hasPrior =
+                            filteredBuiltIn.some(n => previouslyLoggedNames.has(n.toLowerCase())) ||
+                            sharedChips.some(c => previouslyLoggedNames.has(c.name.toLowerCase()));
+                          const userToggled = label in collapsedCats;
+                          const isCollapsed = q ? false : (userToggled ? collapsedCats[label] : !hasPrior);
 
-                            if (chips.length === 0) {
-                              // Category exists but every chip is hidden
-                              return (
-                                <div key={cat} className="pl-2 border-l border-border/20">
-                                  <div className="flex items-center justify-between mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/40">
-                                    <span>{cat} · 0</span>
-                                    <button
-                                      onClick={() => setShowHidden(true)}
-                                      className="normal-case tracking-normal text-[10px] text-muted-foreground/60 hover:text-foreground underline underline-offset-2"
-                                    >
-                                      All hidden — manage
-                                    </button>
-                                  </div>
-                                </div>
-                              );
-                            }
-
+                          if (total === 0) {
+                            // Category exists but every chip is hidden
                             return (
-                              <div key={cat} className="pl-2 border-l border-border/20">
-                                <button
-                                  onClick={() => setCollapsedCats(prev => ({ ...prev, [key]: !isCollapsed }))}
-                                  className="w-full flex items-center justify-between mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/50 hover:text-foreground/80"
-                                >
-                                  <span>{cat} · {chips.length}</span>
-                                  {isCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
-                                </button>
-                                {!isCollapsed && (
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {chips.map(cs => renderSharedChip(cs))}
-                                  </div>
-                                )}
+                              <div key={label}>
+                                <div className="flex items-center justify-between mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/40">
+                                  <span>{label} · 0</span>
+                                  <button
+                                    onClick={() => setShowHidden(true)}
+                                    className="normal-case tracking-normal text-[10px] text-muted-foreground/60 hover:text-foreground underline underline-offset-2"
+                                  >
+                                    All hidden — manage
+                                  </button>
+                                </div>
                               </div>
                             );
-                          })}
-                        </div>
+                          }
+
+                          return (
+                            <div key={label}>
+                              <button
+                                onClick={() => setCollapsedCats(prev => ({ ...prev, [label]: !isCollapsed }))}
+                                className="w-full flex items-center justify-between mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/60 hover:text-foreground/80"
+                              >
+                                <span>{label} · {total}</span>
+                                {isCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+                              </button>
+                              {!isCollapsed && (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {filteredBuiltIn.map(renderBuiltInChip)}
+                                  {sharedChips.map(cs => renderSharedChip(cs))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
 
                         {/* Hidden (n) — collapsible */}
                         {hiddenCs.length > 0 && (
@@ -906,7 +886,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                             Add yours
                           </button>
                         )}
-                      </div>
+                      </>
                     );
                   })()}
 
