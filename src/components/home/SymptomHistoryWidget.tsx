@@ -71,7 +71,7 @@ export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays,
 
   // Compute top symptoms. Logs with no named symptom but a written note are
   // counted separately instead of being dropped from the patterns view.
-  const topSymptoms = aggregateSymptomPatterns(logs, 4);
+  const topSymptoms = aggregateSymptomPatterns(logs, 4, resolveCanonical);
   const notesOnlyCount = countNotesOnlyLogs(logs);
 
   const totalLogs = logs.length;

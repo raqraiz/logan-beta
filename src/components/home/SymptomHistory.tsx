@@ -108,7 +108,7 @@ export function SymptomHistory({
         // Compute top symptoms. Notes-only logs (no named symptom, but a
         // written note — e.g. logged from chat) used to vanish from this view;
         // they're now counted so nothing she recorded goes unrepresented.
-        setTopSymptoms(aggregateSymptomPatterns(typed, 8));
+        setTopSymptoms(aggregateSymptomPatterns(typed, 8, resolveCanonical));
         setNotesOnlyCount(countNotesOnlyLogs(typed));
         setLoading(false);
 
