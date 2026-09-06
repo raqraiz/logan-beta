@@ -155,6 +155,10 @@ const Admin = () => {
               <Megaphone className="w-4 h-4" />
               <span className="hidden sm:inline">Notify</span>
             </TabsTrigger>
+            <TabsTrigger value="symptoms" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <ListChecks className="w-4 h-4" />
+              <span className="hidden sm:inline">Symptoms</span>
+            </TabsTrigger>
             {isSuperAdmin && (
               <>
                 <TabsTrigger value="users" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
