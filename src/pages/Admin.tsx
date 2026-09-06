@@ -129,7 +129,7 @@ const Admin = () => {
 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList
-            className={`grid w-full max-w-3xl ${isSuperAdmin ? "grid-cols-8" : "grid-cols-6"} bg-muted border border-border`}
+            className={`grid w-full max-w-3xl ${isSuperAdmin ? "grid-cols-9" : "grid-cols-7"} bg-muted border border-border`}
           >
             <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BarChart3 className="w-4 h-4" />
