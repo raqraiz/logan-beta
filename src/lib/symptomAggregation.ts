@@ -32,13 +32,24 @@ export function countNotesOnlyLogs(logs: SymptomLogLike[]): number {
   return logs.reduce((acc, log) => acc + (isNotesOnlyLog(log) ? 1 : 0), 0);
 }
 
-/** Frequency + average severity per named symptom, most frequent first. */
-export function aggregateSymptomPatterns(logs: SymptomLogLike[], limit?: number): SymptomPattern[] {
+/**
+ * Frequency + average severity per named symptom, most frequent first.
+ * `resolve` maps a logged name to its canonical library name (or null to hide
+ * it, e.g. a rejected entry). Historical log rows are never rewritten — merges
+ * are resolved here, at read time.
+ */
+export function aggregateSymptomPatterns(
+  logs: SymptomLogLike[],
+  limit?: number,
+  resolve?: (name: string) => string | null,
+): SymptomPattern[] {
   const freq: Record<string, { count: number; totalSev: number }> = {};
   logs.forEach((log) => {
     (log.symptoms ?? []).forEach((s) => {
-      const name = typeof s === "string" ? s : s?.name;
-      if (!name || !String(name).trim()) return;
+      const raw = typeof s === "string" ? s : s?.name;
+      if (!raw || !String(raw).trim()) return;
+      const name = resolve ? resolve(String(raw)) : String(raw);
+      if (!name) return;
       const key = String(name);
       if (!freq[key]) freq[key] = { count: 0, totalSev: 0 };
       freq[key].count++;
