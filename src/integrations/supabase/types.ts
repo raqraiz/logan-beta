@@ -137,29 +137,49 @@ export type Database = {
       community_symptoms: {
         Row: {
           added_by: string
+          aliases: string[] | null
+          canonical_id: string | null
           category: string | null
           created_at: string
           deleted_at: string | null
           id: string
           name: string
+          status: string
+          submitted_by: string | null
         }
         Insert: {
           added_by: string
+          aliases?: string[] | null
+          canonical_id?: string | null
           category?: string | null
           created_at?: string
           deleted_at?: string | null
           id?: string
           name: string
+          status?: string
+          submitted_by?: string | null
         }
         Update: {
           added_by?: string
+          aliases?: string[] | null
+          canonical_id?: string | null
           category?: string | null
           created_at?: string
           deleted_at?: string | null
           id?: string
           name?: string
+          status?: string
+          submitted_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "community_symptoms_canonical_id_fkey"
+            columns: ["canonical_id"]
+            isOneToOne: false
+            referencedRelation: "community_symptoms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       credit_transactions: {
         Row: {
