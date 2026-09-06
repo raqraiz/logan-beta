@@ -78,6 +78,8 @@ interface CommunitySymptom {
   added_by: string;
   created_at: string;
   category: string | null;
+  status?: string;
+  aliases?: string[] | null;
 }
 
 export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cycleLengthDays, isNonCycling, onLogged }: SymptomLogWidgetProps) {
