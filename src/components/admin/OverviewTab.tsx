@@ -19,6 +19,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area,
 } from "recharts";
 import { InvestorSummaryPanel } from "@/components/admin/InvestorSummaryPanel";
+import { ReportedSymptomsSection } from "@/components/admin/ReportedSymptomsSection";
 
 import {
   RefreshCw, Users, MessageSquare, Activity, TrendingUp, Clock, BarChart3,
@@ -1542,6 +1543,9 @@ export const OverviewTab = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Reported Symptoms */}
+      <ReportedSymptomsSection />
 
       {/* Menu Builder */}
       <Card>
