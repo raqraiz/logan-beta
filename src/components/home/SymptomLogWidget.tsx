@@ -726,7 +726,14 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                               <span className="max-w-[14rem] truncate">
                                 {truncateAtWord(cleanSymptomLabel(cs.name))}
                               </span>
-                              {isRecent && !inHiddenRow && (
+                              {cs.status === "pending" && !inHiddenRow ? (
+                                <span className={cn(
+                                  "inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider px-1 py-0.5 rounded-full",
+                                  isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
+                                )}>
+                                  pending review
+                                </span>
+                              ) : isRecent && !inHiddenRow ? (
                                 <span className={cn(
                                   "inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider px-1 py-0.5 rounded-full",
                                   isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-accent/40 text-accent-foreground/80"
@@ -734,7 +741,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                                   <Sparkles className="w-2 h-2" />
                                   new
                                 </span>
-                              )}
+                              ) : null}
                             </button>
                             {inHiddenRow ? (
                               <button
