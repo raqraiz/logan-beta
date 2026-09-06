@@ -13,6 +13,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cleanSymptomLabel, truncateAtWord } from "@/lib/symptomLabel";
 import { findNearDuplicate } from "@/lib/symptomDedupe";
+import { validateSymptomName, suggestExistingSymptoms, MAX_PENDING_PER_DAY, MAX_SYMPTOM_LENGTH } from "@/lib/symptomModeration";
 
 
 const SYMPTOM_CATEGORIES: { label: string; symptoms: string[] }[] = [
@@ -78,6 +79,8 @@ interface CommunitySymptom {
   added_by: string;
   created_at: string;
   category: string | null;
+  status?: string;
+  aliases?: string[] | null;
 }
 
 export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cycleLengthDays, isNonCycling, onLogged }: SymptomLogWidgetProps) {
@@ -93,6 +96,8 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
   const [showAddForm, setShowAddForm] = useState(false);
   const [newSymptom, setNewSymptom] = useState("");
   const [addingSymptom, setAddingSymptom] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [search, setSearch] = useState("");
@@ -170,56 +175,114 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
   useEffect(() => {
     supabase
       .from("community_symptoms")
-      .select("id, name, added_by, created_at, category")
+      .select("id, name, added_by, created_at, category, status, aliases, submitted_by, canonical_id")
       .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         if (data) {
           const filtered = (data as any[])
+            // Merged and rejected entries never show; a pending entry only shows
+            // to the person who submitted it, marked "pending review".
+            .filter(s => s.status === "approved" || (s.status === "pending" && (s.submitted_by ?? s.added_by) === userId))
             .filter(s => !BUILT_IN_SET.has(s.name.trim().toLowerCase()))
             .map(s => ({ ...s, category: s.category ?? null })) as CommunitySymptom[];
           setCommunitySymptoms(filtered);
         }
       });
-  }, []);
+  }, [userId]);
 
+  const approvedEntries = useMemo(
+    () => [
+      ...SYMPTOM_OPTIONS.map(n => ({ name: n, aliases: null as string[] | null })),
+      ...communitySymptoms.filter(s => s.status !== "pending").map(s => ({ name: s.name, aliases: s.aliases ?? null })),
+    ],
+    [communitySymptoms],
+  );
+
+  const selectExisting = (name: string) => {
+    setSelected(prev =>
+      prev.some(s => s.name.toLowerCase() === name.toLowerCase()) ? prev : [...prev, { name, severity: 0 }]
+    );
+    setNewSymptom("");
+    setAddError(null);
+    setSuggestions([]);
+    setShowAddForm(false);
+  };
+
+  // Step 1: fuzzy-match against approved names + aliases and surface matches
+  // before anything is created. Only "Add as new" gets past this.
+  const handleCheckNewSymptom = () => {
+    const check = validateSymptomName(newSymptom);
+    if (!check.ok) {
+      setAddError(check.message ?? "That entry isn't allowed.");
+      setSuggestions([]);
+      return;
+    }
+    setAddError(null);
+    const existingNames = approvedEntries.map(e => e.name);
+    const exact = existingNames.find(n => n.toLowerCase() === check.value.toLowerCase());
+    if (exact) {
+      selectExisting(exact);
+      toast({ title: "Already on the list", description: `We've selected "${exact}" for you.` });
+      return;
+    }
+    const matches = suggestExistingSymptoms(check.value, approvedEntries);
+    const near = findNearDuplicate(check.value, existingNames);
+    const names = Array.from(new Set([...(near ? [near] : []), ...matches.map(m => m.name)]));
+    if (names.length > 0) {
+      setSuggestions(names);
+      return;
+    }
+    handleAddCommunitySymptom();
+  };
+
+  // Step 2: guardrails passed and the user confirmed it's genuinely new.
   const handleAddCommunitySymptom = async () => {
-    const name = newSymptom.trim();
-    if (!name || name.length > 50) return;
-    // Exact match first, then fuzzy (plural / -ness / synonym) match against the
-    // built-in list and the shared library, so we stop stacking near-duplicates.
-    const existingNames = [...SYMPTOM_OPTIONS, ...communitySymptoms.map(s => s.name)];
-    const exact = existingNames.find(n => n.toLowerCase() === name.toLowerCase());
-    const duplicateOf = exact ?? findNearDuplicate(name, existingNames);
-    if (duplicateOf) {
-      setSelected(prev =>
-        prev.some(s => s.name.toLowerCase() === duplicateOf.toLowerCase())
-          ? prev
-          : [...prev, { name: duplicateOf, severity: 0 }]
-      );
-      toast({
-        title: "Already on the list",
-        description: `We've selected "${duplicateOf}" for you — same thing, one tag.`,
-      });
-      setNewSymptom("");
-      setShowAddForm(false);
+    const check = validateSymptomName(newSymptom);
+    if (!check.ok) {
+      setAddError(check.message ?? "That entry isn't allowed.");
+      return;
+    }
+    const name = check.value;
+
+    setAddingSymptom(true);
+    // Rolling 24h cap (also enforced server-side).
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count } = await supabase
+      .from("community_symptoms")
+      .select("id", { count: "exact", head: true })
+      .eq("submitted_by", userId)
+      .eq("status", "pending")
+      .gte("created_at", since);
+
+    if ((count ?? 0) >= MAX_PENDING_PER_DAY) {
+      setAddingSymptom(false);
+      setAddError(`You can submit ${MAX_PENDING_PER_DAY} new symptoms per day. Try again tomorrow.`);
       return;
     }
 
-    setAddingSymptom(true);
     const { data, error } = await supabase
       .from("community_symptoms")
-      .insert({ name, added_by: userId })
+      .insert({ name, added_by: userId, submitted_by: userId, status: "pending" })
       .select()
       .single();
 
     if (error) {
-      toast({ title: "Couldn't add", description: error.message, variant: "destructive" });
+      setAddError(
+        /rate_limited/i.test(error.message)
+          ? `You can submit ${MAX_PENDING_PER_DAY} new symptoms per day. Try again tomorrow.`
+          : error.message
+      );
     } else if (data) {
       setCommunitySymptoms(prev => [data as CommunitySymptom, ...prev]);
       setSelected(prev => [...prev, { name: data.name, severity: 0 }]);
-      toast({ title: "Added to the shared list", description: "Other users can see this too 💜" });
+      toast({
+        title: "Sent for review",
+        description: "You can log it right away — it joins the shared list once approved.",
+      });
       setNewSymptom("");
+      setAddError(null);
+      setSuggestions([]);
       setShowAddForm(false);
     }
     setAddingSymptom(false);
@@ -663,7 +726,14 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                               <span className="max-w-[14rem] truncate">
                                 {truncateAtWord(cleanSymptomLabel(cs.name))}
                               </span>
-                              {isRecent && !inHiddenRow && (
+                              {cs.status === "pending" && !inHiddenRow ? (
+                                <span className={cn(
+                                  "inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider px-1 py-0.5 rounded-full",
+                                  isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
+                                )}>
+                                  pending review
+                                </span>
+                              ) : isRecent && !inHiddenRow ? (
                                 <span className={cn(
                                   "inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider px-1 py-0.5 rounded-full",
                                   isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-accent/40 text-accent-foreground/80"
@@ -671,7 +741,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                                   <Sparkles className="w-2 h-2" />
                                   new
                                 </span>
-                              )}
+                              ) : null}
                             </button>
                             {inHiddenRow ? (
                               <button
@@ -858,39 +928,71 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
               );
             })()}
             {showAddForm && (
-              <div className="mt-2 flex items-center gap-2">
-                <Input
-                  autoFocus
-                  value={newSymptom}
-                  onChange={e => setNewSymptom(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === "Enter") handleAddCommunitySymptom();
-                    if (e.key === "Escape") { setShowAddForm(false); setNewSymptom(""); }
-                  }}
-                  placeholder="e.g. Tingly hands, vivid dreams..."
-                  maxLength={50}
-                  className="h-8 text-xs"
-                />
-                <Button
-                  size="sm"
-                  onClick={handleAddCommunitySymptom}
-                  disabled={addingSymptom || !newSymptom.trim()}
-                  className="h-8 text-xs"
-                >
-                  Add
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => { setShowAddForm(false); setNewSymptom(""); }}
-                  className="h-8 text-xs"
-                >
-                  Cancel
-                </Button>
+              <div className="mt-2 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    autoFocus
+                    value={newSymptom}
+                    onChange={e => { setNewSymptom(e.target.value); setAddError(null); setSuggestions([]); }}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") handleCheckNewSymptom();
+                      if (e.key === "Escape") { setShowAddForm(false); setNewSymptom(""); setAddError(null); setSuggestions([]); }
+                    }}
+                    placeholder="e.g. Tingly hands, vivid dreams..."
+                    maxLength={MAX_SYMPTOM_LENGTH}
+                    className="h-8 text-xs"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleCheckNewSymptom}
+                    disabled={addingSymptom || !newSymptom.trim()}
+                    className="h-8 text-xs"
+                  >
+                    Add
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => { setShowAddForm(false); setNewSymptom(""); setAddError(null); setSuggestions([]); }}
+                    className="h-8 text-xs"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+
+                {addError && (
+                  <p className="text-[11px] text-destructive">{addError}</p>
+                )}
+
+                {suggestions.length > 0 && (
+                  <div className="rounded-lg border border-border/40 bg-card/60 p-2.5 space-y-2">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60">
+                      Already tracked — pick one?
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {suggestions.map(name => (
+                        <button
+                          key={name}
+                          onClick={() => selectExisting(name)}
+                          className="px-2.5 py-1 text-xs rounded-full border border-primary/40 text-primary/90 hover:bg-primary/5"
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={handleAddCommunitySymptom}
+                      disabled={addingSymptom}
+                      className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                    >
+                      None of these — add "{newSymptom.trim()}" as new
+                    </button>
+                  </div>
+                )}
               </div>
             )}
             <p className="text-[10px] text-muted-foreground/60 mt-2">
-              Symptoms you add are shared with other users (no personal info attached).
+              New symptoms are reviewed before joining the shared list. You can log yours right away.
             </p>
           </div>
 

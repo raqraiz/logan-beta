@@ -12,6 +12,7 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { format, subDays } from "date-fns";
 import { aggregateSymptomPatterns, countNotesOnlyLogs } from "@/lib/symptomAggregation";
+import { useCanonicalSymptoms } from "@/hooks/useCanonicalSymptoms";
 import { AllSymptomsChart } from "./AllSymptomsChart";
 import { SymptomHormoneChart } from "./SymptomHormoneChart";
 import { ChevronDown, Pencil, Trash2, X, Check, Search, StickyNote } from "lucide-react";
@@ -66,6 +67,7 @@ export function SymptomHistory({
   lifeStage,
 }: SymptomHistoryProps) {
   const [logs, setLogs] = useState<SymptomLog[]>([]);
+  const { resolve: resolveCanonical } = useCanonicalSymptoms();
   const [loading, setLoading] = useState(true);
   const [topSymptoms, setTopSymptoms] = useState<{ name: string; count: number; avgSeverity: number }[]>([]);
   const [notesOnlyCount, setNotesOnlyCount] = useState(0);
@@ -108,7 +110,7 @@ export function SymptomHistory({
         // Compute top symptoms. Notes-only logs (no named symptom, but a
         // written note — e.g. logged from chat) used to vanish from this view;
         // they're now counted so nothing she recorded goes unrepresented.
-        setTopSymptoms(aggregateSymptomPatterns(typed, 8));
+        setTopSymptoms(aggregateSymptomPatterns(typed, 8, resolveCanonical));
         setNotesOnlyCount(countNotesOnlyLogs(typed));
         setLoading(false);
 
