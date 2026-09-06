@@ -172,56 +172,114 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
   useEffect(() => {
     supabase
       .from("community_symptoms")
-      .select("id, name, added_by, created_at, category")
+      .select("id, name, added_by, created_at, category, status, aliases, submitted_by, canonical_id")
       .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         if (data) {
           const filtered = (data as any[])
+            // Merged and rejected entries never show; a pending entry only shows
+            // to the person who submitted it, marked "pending review".
+            .filter(s => s.status === "approved" || (s.status === "pending" && (s.submitted_by ?? s.added_by) === userId))
             .filter(s => !BUILT_IN_SET.has(s.name.trim().toLowerCase()))
             .map(s => ({ ...s, category: s.category ?? null })) as CommunitySymptom[];
           setCommunitySymptoms(filtered);
         }
       });
-  }, []);
+  }, [userId]);
 
+  const approvedEntries = useMemo(
+    () => [
+      ...SYMPTOM_OPTIONS.map(n => ({ name: n, aliases: null as string[] | null })),
+      ...communitySymptoms.filter(s => s.status !== "pending").map(s => ({ name: s.name, aliases: s.aliases ?? null })),
+    ],
+    [communitySymptoms],
+  );
+
+  const selectExisting = (name: string) => {
+    setSelected(prev =>
+      prev.some(s => s.name.toLowerCase() === name.toLowerCase()) ? prev : [...prev, { name, severity: 0 }]
+    );
+    setNewSymptom("");
+    setAddError(null);
+    setSuggestions([]);
+    setShowAddForm(false);
+  };
+
+  // Step 1: fuzzy-match against approved names + aliases and surface matches
+  // before anything is created. Only "Add as new" gets past this.
+  const handleCheckNewSymptom = () => {
+    const check = validateSymptomName(newSymptom);
+    if (!check.ok) {
+      setAddError(check.message ?? "That entry isn't allowed.");
+      setSuggestions([]);
+      return;
+    }
+    setAddError(null);
+    const existingNames = approvedEntries.map(e => e.name);
+    const exact = existingNames.find(n => n.toLowerCase() === check.value.toLowerCase());
+    if (exact) {
+      selectExisting(exact);
+      toast({ title: "Already on the list", description: `We've selected "${exact}" for you.` });
+      return;
+    }
+    const matches = suggestExistingSymptoms(check.value, approvedEntries);
+    const near = findNearDuplicate(check.value, existingNames);
+    const names = Array.from(new Set([...(near ? [near] : []), ...matches.map(m => m.name)]));
+    if (names.length > 0) {
+      setSuggestions(names);
+      return;
+    }
+    handleAddCommunitySymptom();
+  };
+
+  // Step 2: guardrails passed and the user confirmed it's genuinely new.
   const handleAddCommunitySymptom = async () => {
-    const name = newSymptom.trim();
-    if (!name || name.length > 50) return;
-    // Exact match first, then fuzzy (plural / -ness / synonym) match against the
-    // built-in list and the shared library, so we stop stacking near-duplicates.
-    const existingNames = [...SYMPTOM_OPTIONS, ...communitySymptoms.map(s => s.name)];
-    const exact = existingNames.find(n => n.toLowerCase() === name.toLowerCase());
-    const duplicateOf = exact ?? findNearDuplicate(name, existingNames);
-    if (duplicateOf) {
-      setSelected(prev =>
-        prev.some(s => s.name.toLowerCase() === duplicateOf.toLowerCase())
-          ? prev
-          : [...prev, { name: duplicateOf, severity: 0 }]
-      );
-      toast({
-        title: "Already on the list",
-        description: `We've selected "${duplicateOf}" for you — same thing, one tag.`,
-      });
-      setNewSymptom("");
-      setShowAddForm(false);
+    const check = validateSymptomName(newSymptom);
+    if (!check.ok) {
+      setAddError(check.message ?? "That entry isn't allowed.");
+      return;
+    }
+    const name = check.value;
+
+    setAddingSymptom(true);
+    // Rolling 24h cap (also enforced server-side).
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count } = await supabase
+      .from("community_symptoms")
+      .select("id", { count: "exact", head: true })
+      .eq("submitted_by", userId)
+      .eq("status", "pending")
+      .gte("created_at", since);
+
+    if ((count ?? 0) >= MAX_PENDING_PER_DAY) {
+      setAddingSymptom(false);
+      setAddError(`You can submit ${MAX_PENDING_PER_DAY} new symptoms per day. Try again tomorrow.`);
       return;
     }
 
-    setAddingSymptom(true);
     const { data, error } = await supabase
       .from("community_symptoms")
-      .insert({ name, added_by: userId })
+      .insert({ name, added_by: userId, submitted_by: userId, status: "pending" })
       .select()
       .single();
 
     if (error) {
-      toast({ title: "Couldn't add", description: error.message, variant: "destructive" });
+      setAddError(
+        /rate_limited/i.test(error.message)
+          ? `You can submit ${MAX_PENDING_PER_DAY} new symptoms per day. Try again tomorrow.`
+          : error.message
+      );
     } else if (data) {
       setCommunitySymptoms(prev => [data as CommunitySymptom, ...prev]);
       setSelected(prev => [...prev, { name: data.name, severity: 0 }]);
-      toast({ title: "Added to the shared list", description: "Other users can see this too 💜" });
+      toast({
+        title: "Sent for review",
+        description: "You can log it right away — it joins the shared list once approved.",
+      });
       setNewSymptom("");
+      setAddError(null);
+      setSuggestions([]);
       setShowAddForm(false);
     }
     setAddingSymptom(false);
