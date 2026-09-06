@@ -56,6 +56,22 @@ const SHARED_CATEGORIES = [
 ] as const;
 type SharedCategory = typeof SHARED_CATEGORIES[number];
 
+// Unified picker category order — built-in defaults and community entries
+// render together in one continuous list (no origin split).
+const UNIFIED_CATEGORIES = [
+  "Physical",
+  "Emotional",
+  "Energy & focus",
+  "Sleep & Energy",
+  "Mood & Cognitive",
+  "Skin & Body",
+  "Digestive",
+  "Ear/Nose/Throat",
+  "Reproductive & Discharge",
+  "Pain",
+  "Other",
+] as const;
+
 const SYMPTOM_OPTIONS = SYMPTOM_CATEGORIES.flatMap(c => c.symptoms);
 const BUILT_IN_SET = new Set(SYMPTOM_OPTIONS.map(s => s.toLowerCase()));
 
@@ -506,12 +522,25 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50">
                 How are you feeling?
               </p>
-              <Input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search symptoms…"
-                className="h-7 text-xs max-w-[180px]"
-              />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setManageMode(m => !m)}
+                  className={cn(
+                    "text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border transition-colors",
+                    manageMode
+                      ? "border-primary/60 text-primary bg-primary/10"
+                      : "border-border/40 text-muted-foreground/70 hover:text-foreground hover:border-border"
+                  )}
+                >
+                  {manageMode ? "Done" : "Manage"}
+                </button>
+                <Input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search symptoms…"
+                  className="h-7 text-xs max-w-[180px]"
+                />
+              </div>
             </div>
 
             {/* Selected pinned chips */}
