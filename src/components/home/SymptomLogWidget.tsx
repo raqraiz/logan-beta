@@ -181,9 +181,8 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
       .then(({ data }) => {
         if (data) {
           const filtered = (data as any[])
-            // Merged and rejected entries never show; a pending entry only shows
-            // to the person who submitted it, marked "pending review".
-            .filter(s => s.status === "approved" || (s.status === "pending" && (s.submitted_by ?? s.added_by) === userId))
+            // Merged and deprecated entries never show; everything live is shared.
+            .filter(s => s.status === "approved")
             .filter(s => !BUILT_IN_SET.has(s.name.trim().toLowerCase()))
             .map(s => ({ ...s, category: s.category ?? null })) as CommunitySymptom[];
           setCommunitySymptoms(filtered);
@@ -194,7 +193,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
   const approvedEntries = useMemo(
     () => [
       ...SYMPTOM_OPTIONS.map(n => ({ name: n, aliases: null as string[] | null })),
-      ...communitySymptoms.filter(s => s.status !== "pending").map(s => ({ name: s.name, aliases: s.aliases ?? null })),
+      ...communitySymptoms.map(s => ({ name: s.name, aliases: s.aliases ?? null })),
     ],
     [communitySymptoms],
   );
@@ -252,7 +251,6 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
       .from("community_symptoms")
       .select("id", { count: "exact", head: true })
       .eq("submitted_by", userId)
-      .eq("status", "pending")
       .gte("created_at", since);
 
     if ((count ?? 0) >= MAX_PENDING_PER_DAY) {
@@ -263,7 +261,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
 
     const { data, error } = await supabase
       .from("community_symptoms")
-      .insert({ name, added_by: userId, submitted_by: userId, status: "pending" })
+      .insert({ name, added_by: userId, submitted_by: userId, status: "approved" })
       .select()
       .single();
 
@@ -277,8 +275,8 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
       setCommunitySymptoms(prev => [data as CommunitySymptom, ...prev]);
       setSelected(prev => [...prev, { name: data.name, severity: 0 }]);
       toast({
-        title: "Sent for review",
-        description: "You can log it right away — it joins the shared list once approved.",
+        title: "Added to the shared list",
+        description: "It's live for everyone right away.",
       });
       setNewSymptom("");
       setAddError(null);
@@ -726,14 +724,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                               <span className="max-w-[14rem] truncate">
                                 {truncateAtWord(cleanSymptomLabel(cs.name))}
                               </span>
-                              {cs.status === "pending" && !inHiddenRow ? (
-                                <span className={cn(
-                                  "inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider px-1 py-0.5 rounded-full",
-                                  isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
-                                )}>
-                                  pending review
-                                </span>
-                              ) : isRecent && !inHiddenRow ? (
+                              {isRecent && !inHiddenRow ? (
                                 <span className={cn(
                                   "inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider px-1 py-0.5 rounded-full",
                                   isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-accent/40 text-accent-foreground/80"
