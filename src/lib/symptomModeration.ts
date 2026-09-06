@@ -1,7 +1,8 @@
 // Guardrails + canonicalization helpers for the community-editable symptom
 // library. Used by the "add new symptom" entry point and the admin review
-// screen. Server-side, an insert trigger forces status='pending' and enforces
-// the 3-per-24h submission cap; these checks are the user-facing mirror.
+// screen. There is no review queue: a submission that passes these checks is
+// created live (status='approved'). Server-side, an insert trigger enforces the
+// 3-per-24h submission cap; these checks are the user-facing mirror.
 
 import { canonicalSymptomKey, findNearDuplicate } from "@/lib/symptomDedupe";
 
@@ -112,14 +113,14 @@ export interface CanonicalRow {
 /**
  * Historical logs store symptom *names*, not ids, so merges resolve at read
  * time by name: merged entry name -> surviving canonical entry name.
- * Rejected entries map to null (hidden everywhere).
+ * Deprecated entries map to null (hidden everywhere).
  */
 export function buildCanonicalNameMap(rows: CanonicalRow[]): Map<string, string | null> {
   const byId = new Map(rows.map((r) => [r.id, r]));
   const map = new Map<string, string | null>();
 
   for (const row of rows) {
-    if (row.status === "rejected") {
+    if (row.status === "deprecated" || row.status === "rejected") {
       map.set(row.name.toLowerCase(), null);
       continue;
     }

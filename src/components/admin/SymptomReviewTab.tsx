@@ -8,7 +8,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Check, Merge, RefreshCw, X } from "lucide-react";
+import { Merge, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { clusterSimilarNames } from "@/lib/symptomModeration";
 
@@ -23,14 +23,18 @@ interface SymptomRow {
   category: string | null;
 }
 
+/**
+ * Submissions go live immediately, so there is no approval queue here — this
+ * screen exists for ongoing consolidation of overlapping live entries.
+ */
 export function SymptomReviewTab() {
   const [rows, setRows] = useState<SymptomRow[]>([]);
-  const [submitters, setSubmitters] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [mergeSource, setMergeSource] = useState<SymptomRow | null>(null);
   const [mergeSearch, setMergeSearch] = useState("");
+  const [search, setSearch] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -46,53 +50,24 @@ export function SymptomReviewTab() {
       setLoading(false);
       return;
     }
-    const list = (data ?? []) as SymptomRow[];
-    setRows(list);
-
-    const ids = Array.from(new Set(list.map(r => r.submitted_by ?? r.added_by).filter(Boolean))) as string[];
-    if (ids.length) {
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .in("id", ids);
-      const map: Record<string, string> = {};
-      (profs ?? []).forEach((p: any) => { map[p.id] = p.full_name || p.email || p.id.slice(0, 8); });
-      setSubmitters(map);
-    }
+    setRows((data ?? []) as SymptomRow[]);
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const pending = useMemo(() => rows.filter(r => r.status === "pending"), [rows]);
   const approved = useMemo(() => rows.filter(r => r.status === "approved"), [rows]);
   const clusters = useMemo(() => clusterSimilarNames(approved), [approved]);
 
-  const submitterLabel = (r: SymptomRow) => {
-    const uid = r.submitted_by ?? r.added_by;
-    return (uid && submitters[uid]) || "Unknown";
-  };
-
-  const setStatus = async (row: SymptomRow, status: "approved" | "rejected") => {
-    setBusyId(row.id);
-    const { error: err } = await supabase
-      .from("community_symptoms")
-      .update({ status, canonical_id: null })
-      .eq("id", row.id);
-    setBusyId(null);
-    if (err) {
-      toast({ title: "Couldn't update", description: err.message, variant: "destructive" });
-      return;
-    }
-    setRows(prev => prev.map(r => (r.id === row.id ? { ...r, status, canonical_id: null } : r)));
-    toast({ title: status === "approved" ? "Approved" : "Rejected", description: row.name });
-  };
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return q ? approved.filter(r => r.name.toLowerCase().includes(q)) : approved;
+  }, [approved, search]);
 
   const mergeInto = async (target: SymptomRow) => {
     if (!mergeSource) return;
     const source = mergeSource;
     setBusyId(source.id);
-    const nextAliases = Array.from(new Set([source.name]));
     const { error: err } = await supabase
       .from("community_symptoms")
       .update({ status: "merged", canonical_id: target.id })
@@ -103,7 +78,7 @@ export function SymptomReviewTab() {
       // submissions fuzzy-match against it.
       const { data: existing } = await supabase
         .from("community_symptoms").select("aliases").eq("id", target.id).maybeSingle();
-      const merged = Array.from(new Set([...(existing?.aliases ?? []), ...nextAliases]));
+      const merged = Array.from(new Set([...(existing?.aliases ?? []), source.name]));
       await supabase.from("community_symptoms").update({ aliases: merged }).eq("id", target.id);
     }
     setBusyId(null);
@@ -148,63 +123,25 @@ export function SymptomReviewTab() {
     </div>
   );
 
-  const rowActions = (row: SymptomRow) => (
-    <div className="flex items-center gap-1.5 shrink-0">
-      {row.status === "pending" && (
-        <Button size="sm" className="h-8 gap-1.5 text-xs" disabled={busyId === row.id} onClick={() => setStatus(row, "approved")}>
-          <Check className="w-3.5 h-3.5" /> Approve
-        </Button>
-      )}
-      <Button
-        size="sm"
-        variant="outline"
-        className="h-8 gap-1.5 text-xs"
-        disabled={busyId === row.id}
-        onClick={() => { setMergeSource(row); setMergeSearch(""); }}
-      >
-        <Merge className="w-3.5 h-3.5" /> Merge
-      </Button>
-      {row.status === "pending" && (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-destructive"
-          disabled={busyId === row.id}
-          onClick={() => setStatus(row, "rejected")}
-        >
-          <X className="w-3.5 h-3.5" /> Reject
-        </Button>
-      )}
-    </div>
+  const mergeButton = (row: SymptomRow) => (
+    <Button
+      size="sm"
+      variant="outline"
+      className="h-8 gap-1.5 text-xs shrink-0"
+      disabled={busyId === row.id}
+      onClick={() => { setMergeSource(row); setMergeSearch(""); }}
+    >
+      <Merge className="w-3.5 h-3.5" /> Merge
+    </Button>
   );
 
   return (
     <div className="space-y-4">
-      <Tabs defaultValue="pending" className="space-y-4">
+      <Tabs defaultValue="cleanup" className="space-y-4">
         <TabsList className="bg-muted border border-border">
-          <TabsTrigger value="pending">Pending{pending.length ? ` · ${pending.length}` : ""}</TabsTrigger>
           <TabsTrigger value="cleanup">Cleanup{clusters.length ? ` · ${clusters.length}` : ""}</TabsTrigger>
+          <TabsTrigger value="all">All{approved.length ? ` · ${approved.length}` : ""}</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="pending" className="space-y-2">
-          {loading ? <SkeletonRows /> : error ? <ErrorState /> : pending.length === 0 ? (
-            <div className="px-4 py-10 rounded-lg border border-border bg-card text-center">
-              <p className="text-sm text-muted-foreground">No pending symptoms to review.</p>
-            </div>
-          ) : (
-            pending.map(row => (
-              <div key={row.id} className="flex items-center justify-between gap-4 px-4 py-3 rounded-lg border border-border bg-card">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{row.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {submitterLabel(row)} · {format(new Date(row.created_at), "MMM d, yyyy")}
-                  </p>
-                </div>
-                {rowActions(row)}
-              </div>
-            ))
-          )}
-        </TabsContent>
 
         <TabsContent value="cleanup" className="space-y-3">
           {loading ? <SkeletonRows /> : error ? <ErrorState /> : clusters.length === 0 ? (
@@ -226,10 +163,36 @@ export function SymptomReviewTab() {
                           {row.category ?? "Uncategorised"} · {format(new Date(row.created_at), "MMM d, yyyy")}
                         </p>
                       </div>
-                      {rowActions(row)}
+                      {mergeButton(row)}
                     </div>
                   ))}
                 </div>
+              </div>
+            ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="all" className="space-y-2">
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search live symptoms…"
+            className="h-9 text-sm"
+          />
+          {loading ? <SkeletonRows /> : error ? <ErrorState /> : filtered.length === 0 ? (
+            <div className="px-4 py-10 rounded-lg border border-border bg-card text-center">
+              <p className="text-sm text-muted-foreground">No symptoms match that search.</p>
+            </div>
+          ) : (
+            filtered.slice(0, 200).map(row => (
+              <div key={row.id} className="flex items-center justify-between gap-4 px-4 py-3 rounded-lg border border-border bg-card">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{row.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {row.category ?? "Uncategorised"} · {format(new Date(row.created_at), "MMM d, yyyy")}
+                  </p>
+                </div>
+                {mergeButton(row)}
               </div>
             ))
           )}
@@ -248,7 +211,7 @@ export function SymptomReviewTab() {
             autoFocus
             value={mergeSearch}
             onChange={e => setMergeSearch(e.target.value)}
-            placeholder="Search approved symptoms…"
+            placeholder="Search live symptoms…"
             className="h-9 text-sm"
           />
           <div className="max-h-72 overflow-y-auto space-y-1">
