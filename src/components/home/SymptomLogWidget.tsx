@@ -13,6 +13,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cleanSymptomLabel, truncateAtWord } from "@/lib/symptomLabel";
 import { findNearDuplicate } from "@/lib/symptomDedupe";
+import { validateSymptomName, suggestExistingSymptoms, MAX_PENDING_PER_DAY, MAX_SYMPTOM_LENGTH } from "@/lib/symptomModeration";
 
 
 const SYMPTOM_CATEGORIES: { label: string; symptoms: string[] }[] = [
