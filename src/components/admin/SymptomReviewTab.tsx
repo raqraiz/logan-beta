@@ -8,9 +8,19 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Merge, RefreshCw } from "lucide-react";
+import { Merge, RefreshCw, Flag, Trash2, Check } from "lucide-react";
 import { format } from "date-fns";
 import { clusterSimilarNames } from "@/lib/symptomModeration";
+import { REPORT_REASON_LABEL } from "@/components/home/ReportSymptomDialog";
+
+interface ReportRow {
+  id: string;
+  community_symptom_id: string;
+  reporter_id: string;
+  reason: string;
+  details: string | null;
+  created_at: string;
+}
 
 interface SymptomRow {
   id: string;
@@ -35,6 +45,28 @@ export function SymptomReviewTab() {
   const [mergeSource, setMergeSource] = useState<SymptomRow | null>(null);
   const [mergeSearch, setMergeSearch] = useState("");
   const [search, setSearch] = useState("");
+  const [reports, setReports] = useState<ReportRow[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(true);
+  const [reportsError, setReportsError] = useState(false);
+  const [names, setNames] = useState<Record<string, string>>({});
+
+  const loadReports = useCallback(async () => {
+    setReportsLoading(true);
+    setReportsError(false);
+    const { data, error: err } = await supabase
+      .from("symptom_reports" as any)
+      .select("id, community_symptom_id, reporter_id, reason, details, created_at")
+      .order("created_at", { ascending: false });
+    if (err) {
+      setReportsError(true);
+      setReportsLoading(false);
+      return;
+    }
+    setReports((data ?? []) as unknown as ReportRow[]);
+    setReportsLoading(false);
+  }, []);
+
+  useEffect(() => { loadReports(); }, [loadReports]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,6 +87,24 @@ export function SymptomReviewTab() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Resolve submitter names for reported entries.
+  useEffect(() => {
+    const ids = Array.from(new Set(
+      reports
+        .map(r => rows.find(x => x.id === r.community_symptom_id))
+        .map(row => row?.submitted_by ?? row?.added_by)
+        .filter((v): v is string => !!v),
+    ));
+    const missing = ids.filter(id => !(id in names));
+    if (missing.length === 0) return;
+    (async () => {
+      const { data } = await supabase.from("profiles").select("id, full_name").in("id", missing);
+      if (data?.length) {
+        setNames(prev => ({ ...prev, ...Object.fromEntries(data.map(p => [p.id, p.full_name])) }));
+      }
+    })();
+  }, [reports, rows, names]);
 
   const approved = useMemo(() => rows.filter(r => r.status === "approved"), [rows]);
   const clusters = useMemo(() => clusterSimilarNames(approved), [approved]);
@@ -100,6 +150,47 @@ export function SymptomReviewTab() {
       .slice(0, 40);
   }, [approved, mergeSearch, mergeSource]);
 
+  const reportedGroups = useMemo(() => {
+    const byId = new Map<string, ReportRow[]>();
+    reports.forEach(r => {
+      byId.set(r.community_symptom_id, [...(byId.get(r.community_symptom_id) ?? []), r]);
+    });
+    return Array.from(byId.entries())
+      .map(([id, list]) => ({ row: rows.find(r => r.id === id), list }))
+      .filter((g): g is { row: SymptomRow; list: ReportRow[] } => !!g.row)
+      .sort((a, b) => b.list.length - a.list.length);
+  }, [reports, rows]);
+
+  const removeReported = async (row: SymptomRow) => {
+    setBusyId(row.id);
+    const { error: err } = await supabase
+      .from("community_symptoms").update({ status: "deprecated" }).eq("id", row.id);
+    if (!err) {
+      await supabase.from("symptom_reports" as any).delete().eq("community_symptom_id", row.id);
+    }
+    setBusyId(null);
+    if (err) {
+      toast({ title: "Couldn't remove", description: err.message, variant: "destructive" });
+      return;
+    }
+    setRows(prev => prev.map(r => (r.id === row.id ? { ...r, status: "deprecated" } : r)));
+    setReports(prev => prev.filter(r => r.community_symptom_id !== row.id));
+    toast({ title: "Removed", description: `"${row.name}" no longer appears in the picker.` });
+  };
+
+  const dismissReports = async (row: SymptomRow) => {
+    setBusyId(row.id);
+    const { error: err } = await supabase
+      .from("symptom_reports" as any).delete().eq("community_symptom_id", row.id);
+    setBusyId(null);
+    if (err) {
+      toast({ title: "Couldn't dismiss", description: err.message, variant: "destructive" });
+      return;
+    }
+    setReports(prev => prev.filter(r => r.community_symptom_id !== row.id));
+    toast({ title: "Reports dismissed", description: `"${row.name}" stays live.` });
+  };
+
   const SkeletonRows = () => (
     <div className="space-y-2">
       {[0, 1, 2, 3].map(i => (
@@ -140,6 +231,7 @@ export function SymptomReviewTab() {
       <Tabs defaultValue="cleanup" className="space-y-4">
         <TabsList className="bg-muted border border-border">
           <TabsTrigger value="cleanup">Cleanup{clusters.length ? ` · ${clusters.length}` : ""}</TabsTrigger>
+          <TabsTrigger value="reported">Reported{reportedGroups.length ? ` · ${reportedGroups.length}` : ""}</TabsTrigger>
           <TabsTrigger value="all">All{approved.length ? ` · ${approved.length}` : ""}</TabsTrigger>
         </TabsList>
 
@@ -169,6 +261,67 @@ export function SymptomReviewTab() {
                 </div>
               </div>
             ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="reported" className="space-y-3">
+          {reportsLoading || loading ? <SkeletonRows /> : reportsError || error ? (
+            <div className="px-4 py-8 rounded-lg border border-border bg-card text-center space-y-3">
+              <p className="text-sm text-muted-foreground">Failed to load reports.</p>
+              <Button variant="outline" size="sm" onClick={() => { load(); loadReports(); }} className="gap-2">
+                <RefreshCw className="w-3.5 h-3.5" /> Retry
+              </Button>
+            </div>
+          ) : reportedGroups.length === 0 ? (
+            <div className="px-4 py-10 rounded-lg border border-border bg-card text-center">
+              <p className="text-sm text-muted-foreground">No reports right now.</p>
+            </div>
+          ) : (
+            reportedGroups.map(({ row, list }) => {
+              const submitter = row.submitted_by ?? row.added_by;
+              return (
+                <div key={row.id} className="rounded-lg border border-border bg-card p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <Flag className="w-3.5 h-3.5 text-destructive shrink-0" />
+                        <span className="truncate">{row.name}</span>
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          {list.length} report{list.length !== 1 ? "s" : ""}
+                        </span>
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        Added by {names[submitter] ?? "Unknown"} · {format(new Date(row.created_at), "MMM d, yyyy")}
+                        {row.status !== "approved" ? ` · ${row.status}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <Button
+                        size="sm" variant="outline" className="h-8 gap-1.5 text-xs"
+                        disabled={busyId === row.id} onClick={() => dismissReports(row)}
+                      >
+                        <Check className="w-3.5 h-3.5" /> Dismiss
+                      </Button>
+                      <Button
+                        size="sm" variant="destructive" className="h-8 gap-1.5 text-xs"
+                        disabled={busyId === row.id} onClick={() => removeReported(row)}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Remove
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-1 border-t border-border pt-2">
+                    {list.map(r => (
+                      <p key={r.id} className="text-xs text-muted-foreground">
+                        <span className="text-foreground/80">{REPORT_REASON_LABEL[r.reason] ?? r.reason}</span>
+                        {r.details ? ` — ${r.details}` : ""}
+                        {" · "}{format(new Date(r.created_at), "MMM d, yyyy")}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              );
+            })
           )}
         </TabsContent>
 
