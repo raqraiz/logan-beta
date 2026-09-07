@@ -200,12 +200,16 @@ const Admin = () => {
                   <TabsList className="bg-muted border border-border">
                     <TabsTrigger value="directory">Directory</TabsTrigger>
                     <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
+                    <TabsTrigger value="life-stage">Life Stage</TabsTrigger>
                   </TabsList>
                   <TabsContent value="directory">
                     <ProfilesTab />
                   </TabsContent>
                   <TabsContent value="leaderboard">
                     <UsersLeaderboard />
+                  </TabsContent>
+                  <TabsContent value="life-stage">
+                    <LifeStageTab />
                   </TabsContent>
                 </Tabs>
               </TabsContent>
