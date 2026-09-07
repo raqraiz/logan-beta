@@ -15,6 +15,7 @@ import { EmailsTab } from "@/components/admin/EmailsTab";
 import { GrowthTrackerTab } from "@/components/admin/GrowthTrackerTab";
 import { ReferralLeaderboardTab } from "@/components/admin/ReferralLeaderboardTab";
 import { UsersLeaderboard } from "@/components/admin/UsersLeaderboard";
+import { LifeStageTab } from "@/components/admin/LifeStageTab";
 import { LoganFullLogo } from "@/components/LoganFullLogo";
 
 
