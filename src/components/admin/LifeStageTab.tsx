@@ -159,19 +159,17 @@ export function LifeStageTab() {
       byStage.get(key)!.push(p);
     });
 
-    // Order: known stages first (fixed order), unknown values next, "Not set" last.
-    const ordered: string[] = [];
-    KNOWN_STAGES.forEach((s) => {
-      if (byStage.has(s.value)) ordered.push(s.value);
-    });
+    // Order: all known stages (even empty ones — their stat cards show a real 0),
+    // unknown values next, "Not set" always last.
+    const ordered: string[] = KNOWN_STAGES.map((s) => s.value);
     [...byStage.keys()]
       .filter((k) => k !== NOT_SET && !KNOWN_STAGES.some((s) => s.value === k))
       .sort()
       .forEach((k) => ordered.push(k));
-    if (byStage.has(NOT_SET)) ordered.push(NOT_SET);
+    ordered.push(NOT_SET);
 
     return ordered.map((key) => {
-      const members = byStage.get(key)!;
+      const members = byStage.get(key) || [];
       const visible = searchQuery.trim()
         ? members.filter((m) => filtered.includes(m))
         : members;
