@@ -15,6 +15,7 @@ import { EmailsTab } from "@/components/admin/EmailsTab";
 import { GrowthTrackerTab } from "@/components/admin/GrowthTrackerTab";
 import { ReferralLeaderboardTab } from "@/components/admin/ReferralLeaderboardTab";
 import { UsersLeaderboard } from "@/components/admin/UsersLeaderboard";
+import { LifeStageTab } from "@/components/admin/LifeStageTab";
 import { LoganFullLogo } from "@/components/LoganFullLogo";
 
 
@@ -200,12 +201,16 @@ const Admin = () => {
                   <TabsList className="bg-muted border border-border">
                     <TabsTrigger value="directory">Directory</TabsTrigger>
                     <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
+                    <TabsTrigger value="life-stage">Life Stage</TabsTrigger>
                   </TabsList>
                   <TabsContent value="directory">
                     <ProfilesTab />
                   </TabsContent>
                   <TabsContent value="leaderboard">
                     <UsersLeaderboard />
+                  </TabsContent>
+                  <TabsContent value="life-stage">
+                    <LifeStageTab />
                   </TabsContent>
                 </Tabs>
               </TabsContent>
