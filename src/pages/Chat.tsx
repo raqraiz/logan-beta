@@ -1026,6 +1026,7 @@ const Chat = () => {
     anchor?: string,
     date?: Date,
     skipMessageInsert = false,
+    displayLabel?: string,
   ) => {
     if (!user || isSending || onboardingRequestInFlightRef.current) return;
 
@@ -1045,7 +1046,7 @@ const Chat = () => {
           ? `Anchor symptom: ${anchor}`
           : date
             ? `${lifeStage === "postpartum" ? "Birth date" : "Last period"}: ${format(date, "PPP")}`
-            : formatOnboardingEcho(messageContent);
+            : displayLabel ?? formatOnboardingEcho(messageContent);
 
       if (!skipMessageInsert) {
         const { error } = await supabase.from("chat_messages").insert({
