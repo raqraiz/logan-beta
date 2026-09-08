@@ -1985,7 +1985,7 @@ const Chat = () => {
 
                   {/* Interactive inputs for onboarding */}
                   {showInteractiveInput && inputType === "symptom_picker" && message.metadata?.symptom_categories && (
-                    <div className="mt-3">
+                    <div className={`mt-3 ${pickerBusyClass}`}>
                       <SymptomPicker
                         categories={message.metadata.symptom_categories}
                         onSubmit={handleSymptomSubmit}
@@ -1995,7 +1995,7 @@ const Chat = () => {
                   )}
 
                   {showInteractiveInput && inputType === "anchor_picker" && (
-                    <div className="mt-3">
+                    <div className={`mt-3 ${pickerBusyClass}`}>
                       <AnchorPicker
                         symptoms={message.metadata?.available_symptoms || selectedSymptoms}
                         onSubmit={handleAnchorSubmit}
@@ -2005,7 +2005,7 @@ const Chat = () => {
                   )}
 
                   {showInteractiveInput && inputType === "date_picker" && (
-                    <div className="mt-3">
+                    <div className={`mt-3 ${pickerBusyClass}`}>
                       <DatePickerInput
                         onSubmit={handleDateSubmit}
                         isSubmitting={isSending}
@@ -2021,7 +2021,7 @@ const Chat = () => {
                   {/* age uses the standard text input below */}
 
                   {showInteractiveInput && inputType === "life_stage_picker" && (
-                    <div className="mt-3 flex flex-col gap-2 max-w-xs">
+                    <div className={`mt-3 flex flex-col gap-2 max-w-xs ${pickerBusyClass}`}>
                       {[
                         { value: "cycling", label: "I have a regular cycle", desc: "Currently menstruating" },
                         { value: "irregular", label: "Irregular or on hormonal BC", desc: "PMOS (formerly PCOS), unpredictable cycles, or pill/IUD/implant" },
@@ -2047,7 +2047,7 @@ const Chat = () => {
                   )}
 
                   {showInteractiveInput && inputType === "bc_picker" && (
-                    <div className="mt-3 flex flex-col gap-2 max-w-xs">
+                    <div className={`mt-3 flex flex-col gap-2 max-w-xs ${pickerBusyClass}`}>
                       {[
                         { value: "bc_yes", label: "Yes", desc: "Pill, mini-pill, hormonal IUD, implant, ring, or patch" },
                         { value: "bc_no", label: "No", desc: "Not on hormonal contraception" },
@@ -2067,7 +2067,7 @@ const Chat = () => {
                   )}
 
                   {showInteractiveInput && inputType === "uterus_picker" && (
-                    <div className="mt-3 flex flex-col gap-2 max-w-xs">
+                    <div className={`mt-3 flex flex-col gap-2 max-w-xs ${pickerBusyClass}`}>
                       {[
                         { value: "uterus_removed_yes", label: "Yes", desc: "Uterus removed, ovaries still there — no periods, but your hormones still cycle" },
                         { value: "uterus_removed_no", label: "No", desc: "My uterus is intact" },
@@ -2089,7 +2089,7 @@ const Chat = () => {
 
 
                   {showInteractiveInput && inputType === "topic_picker" && (
-                    <div className="mt-3">
+                    <div className={`mt-3 ${pickerBusyClass}`}>
                       <TopicPicker
                         onSubmit={handleTopicSubmit}
                         isSubmitting={isSending}
@@ -2100,7 +2100,7 @@ const Chat = () => {
 
                   {/* Postpartum branch: feeding / cycle return / birth control chip pickers */}
                   {showInteractiveInput && (inputType === "feeding_picker" || inputType === "cycle_return_picker" || inputType === "pp_bc_picker") && (
-                    <div className="mt-3 flex flex-col gap-2 max-w-xs">
+                    <div className={`mt-3 flex flex-col gap-2 max-w-xs ${pickerBusyClass}`}>
                       {(inputType === "feeding_picker"
                         ? [
                             { value: "breastfeeding", label: "Breastfeeding", desc: "Exclusively or mostly" },
@@ -2144,7 +2144,7 @@ const Chat = () => {
 
                   {/* "I'm not sure" button for cycle length and last period */}
                   {showInteractiveInput && message.metadata?.show_not_sure && (
-                    <div className="mt-1 ml-1">
+                    <div className={`mt-1 ml-1 ${pickerBusyClass}`}>
                       <NotSureButton
                         field={message.metadata.show_not_sure}
                         onUseDefault={() => {
