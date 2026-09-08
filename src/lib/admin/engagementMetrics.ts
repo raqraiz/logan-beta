@@ -1,5 +1,5 @@
 import { onboardedProfiles } from "@/lib/onboardedUsers";
-import { utcKey, todayUTCKey } from "@/lib/activeUsers";
+import { utcKey, todayUTCKey, utcDayKeysBetween, toUTCDate, type ActivityIndex } from "@/lib/activeUsers";
 
 /**
  * Shared admin engagement math — the single canonical definition for the
@@ -62,6 +62,55 @@ export const makeUsersAsOf =
  * to one decimal so every surface displays identically. Returns nulls when
  * there are no users as of the range end (matches the "—" display convention).
  */
+/**
+ * Canonical weekly-active-users average for a selected range, shared by the
+ * Overview tab and the Investor Summary panel:
+ *
+ *   ISO calendar weeks (Monday–Sunday, UTC), distinct active users per week,
+ *   averaged across weeks with dayCount === 7 within the range; falls back to
+ *   day-weighted partial weeks only if no full week exists in range.
+ *
+ * Extracted from InvestorSummaryPanel — both surfaces share it by construction.
+ */
+export const computeAvgWeeklyActiveUsers = ({
+  activityIndex,
+  rangeFrom,
+  rangeTo,
+}: {
+  activityIndex: ActivityIndex;
+  rangeFrom: Date;
+  rangeTo: Date;
+}): { avgWeeklyUsers: number | null; fullWeekCount: number; usedFallback: boolean } => {
+  const days = utcDayKeysBetween(rangeFrom, rangeTo);
+  if (days.length === 0) return { avgWeeklyUsers: null, fullWeekCount: 0, usedFallback: false };
+
+  const buckets = new Map<string, { days: string[]; users: Set<string> }>();
+  for (const d of days) {
+    const dt = toUTCDate(d);
+    const dow = (dt.getUTCDay() + 6) % 7; // 0 = Monday
+    const monday = new Date(dt.getTime() - dow * 86400000);
+    const wk = utcKey(monday);
+    let b = buckets.get(wk);
+    if (!b) { b = { days: [], users: new Set<string>() }; buckets.set(wk, b); }
+    b.days.push(d);
+    for (const u of activityIndex.getActiveUsersForDay(d)) b.users.add(u);
+  }
+  const weekly = Array.from(buckets.values());
+
+  const full = weekly.filter((w) => w.days.length === 7);
+  if (full.length > 0) {
+    const avg = full.reduce((a, w) => a + w.users.size, 0) / full.length;
+    return { avgWeeklyUsers: Math.round(avg * 10) / 10, fullWeekCount: full.length, usedFallback: false };
+  }
+  const wsum = weekly.reduce((a, w) => a + w.days.length / 7, 0);
+  const avg = wsum > 0 ? weekly.reduce((a, w) => a + w.users.size * (w.days.length / 7), 0) / wsum : null;
+  return {
+    avgWeeklyUsers: avg === null ? null : Math.round(avg * 10) / 10,
+    fullWeekCount: 0,
+    usedFallback: avg !== null,
+  };
+};
+
 export const computeAvgPerUser = ({
   totalMessages,
   totalSessions,
