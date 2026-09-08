@@ -132,6 +132,27 @@ interface CycleData {
 
 const MESSAGES_PER_PAGE = 100;
 
+// Display-only labels for onboarding choice echoes (never changes stored values)
+const ONBOARDING_ECHO_LABELS: Record<string, string> = {
+  // Cycle return
+  not_yet: "Cycle status: Not yet",
+  regular: "Cycle status: Yes, and it's regular",
+  irregular: "Cycle status: Yes, but it's irregular",
+  not_sure: "Cycle status: Not sure",
+  // Feeding
+  breastfeeding: "Feeding: Breastfeeding",
+  combination: "Feeding: Combination",
+  formula: "Feeding: Formula / not breastfeeding",
+  weaned: "Feeding: Weaned",
+  // Birth control
+  none: "Birth control: None",
+  hormonal: "Birth control: Hormonal",
+  non_hormonal: "Birth control: Non-hormonal",
+  prefer_not_to_say: "Birth control: Prefer not to say",
+};
+
+const formatOnboardingEcho = (value: string) => ONBOARDING_ECHO_LABELS[value] ?? value;
+
 const Chat = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
