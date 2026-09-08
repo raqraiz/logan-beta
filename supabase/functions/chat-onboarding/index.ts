@@ -57,6 +57,40 @@ const SYMPTOM_CATEGORIES = {
   }
 };
 
+// Extra symptom category — appended to the picker options ONLY on the postpartum branch.
+const POSTPARTUM_SYMPTOM_CATEGORY = {
+  label: "POSTPARTUM-SPECIFIC",
+  symptoms: [
+    "Night sweats",
+    "Hair shedding",
+    "Healing/incision pain",
+    "Engorgement or feeding pain",
+    "Postpartum rage",
+    "Intrusive thoughts",
+    "Touched out"
+  ]
+};
+
+function symptomCategoriesFor(lifeStage: string) {
+  return lifeStage === "postpartum"
+    ? { ...SYMPTOM_CATEGORIES, postpartum: POSTPARTUM_SYMPTOM_CATEGORY }
+    : SYMPTOM_CATEGORIES;
+}
+
+// Human-readable labels for the postpartum branch answers (insight card).
+const FEEDING_LABELS: Record<string, string> = {
+  breastfeeding: "Breastfeeding",
+  combination: "Combination (breast + formula)",
+  formula: "Formula / not breastfeeding",
+  weaned: "Weaned"
+};
+const CYCLE_RETURN_LABELS: Record<string, string> = {
+  not_yet: "Not back yet — no cycle-phase predictions until it returns",
+  regular: "Back and regular — Logan will start reading your rhythm",
+  irregular: "Back but irregular — normal while hormones rebuild; Logan will watch the pattern, not the calendar",
+  not_sure: "Still settling — Logan won't assume a rhythm until it's clear"
+};
+
 // Onboarding question flow - simplified for beginners
 const ONBOARDING_QUESTIONS = [
   {
@@ -75,11 +109,38 @@ const ONBOARDING_QUESTIONS = [
   },
   {
     key: "birth_date",
-    message: "When was your baby born? Even an approximate date works — I'll use it to track your recovery timeline.",
+    message: "Your body is doing a lot right now — recovering, adjusting, rebuilding. Logan meets you where you actually are, not where a general cycle timeline says you should be.\n\nWhen was your baby born? Even an approximate date works — I'll use it to track your recovery timeline.",
     field: "postpartum_start_date",
     parseType: "date",
     inputType: "date_picker",
     showNotSure: false,
+    requiresStage: "postpartum"
+  },
+  {
+    key: "feeding",
+    message: "How are you feeding right now?",
+    field: "feeding_status",
+    parseType: "choice",
+    inputType: "feeding_picker",
+    choices: ["breastfeeding", "combination", "formula", "weaned"],
+    requiresStage: "postpartum"
+  },
+  {
+    key: "cycle_return",
+    message: "Has your period come back yet?",
+    field: "cycle_return_status",
+    parseType: "choice",
+    inputType: "cycle_return_picker",
+    choices: ["not_yet", "regular", "irregular", "not_sure"],
+    requiresStage: "postpartum"
+  },
+  {
+    key: "postpartum_bc",
+    message: "Are you using any birth control right now?",
+    field: "birth_control_status",
+    parseType: "choice",
+    inputType: "pp_bc_picker",
+    choices: ["none", "hormonal", "non_hormonal", "prefer_not_to_say"],
     requiresStage: "postpartum"
   },
   {
@@ -181,6 +242,54 @@ const ONBOARDING_QUESTIONS = [
     inputType: null
   }
 ];
+
+// Which questions apply to this participant (life stage + flag state).
+function makeShouldSkip(participant: any) {
+  const userLifeStage = participant?.life_stage || "cycling";
+  return (q: any): boolean => {
+    if (!q) return false;
+    if (q.requiresStage) {
+      const ok = Array.isArray(q.requiresStage)
+        ? (q.requiresStage as string[]).includes(userLifeStage)
+        : q.requiresStage === userLifeStage;
+      if (!ok) return true;
+    }
+    // Uterus question only for users who explicitly answered "not on hormonal BC"
+    if (q.requiresBcFalse && participant?.on_hormonal_bc !== false) return true;
+    // Bleed-date questions are meaningless without a uterus
+    if (q.requiresUterus && participant?.has_uterus === false) return true;
+    return false;
+  };
+}
+
+// Postpartum branch only: 1-based ordinal + total for the step counter.
+// General path keeps its existing (index-driven) counter untouched.
+function branchStepMeta(participant: any, stepIndex: number): Record<string, any> {
+  if (participant?.life_stage !== "postpartum") return {};
+  const skip = makeShouldSkip(participant);
+  const applicable = ONBOARDING_QUESTIONS
+    .map((q, i) => ({ q, i }))
+    .filter(({ q, i }) => i < ONBOARDING_QUESTIONS.length - 1 && !skip(q));
+  const ordinal = applicable.filter(({ i }) => i <= stepIndex).length;
+  return {
+    branch: "postpartum",
+    branch_step: Math.max(ordinal, 1),
+    branch_total: applicable.length,
+    branch_labels: applicable.map(({ q }) => BRANCH_STEP_LABELS[q.key] || "")
+  };
+}
+
+const BRANCH_STEP_LABELS: Record<string, string> = {
+  age: "Age",
+  life_stage: "Stage",
+  birth_date: "Birth date",
+  feeding: "Feeding",
+  cycle_return: "Cycle return",
+  postpartum_bc: "Birth control",
+  symptoms: "Symptoms",
+  anchor_symptom: "Anchor symptom",
+  topics: "Focus areas"
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -327,6 +436,7 @@ serve(async (req) => {
         message_type: "onboarding",
         metadata: { 
           onboarding_step: 0, 
+          question_key: ONBOARDING_QUESTIONS[0].key,
           expecting_field: welcomeQ.field,
           input_type: welcomeQ.inputType
         }
@@ -353,7 +463,10 @@ serve(async (req) => {
         );
       }
 
-      const currentStep = lastOnboardingMsg.metadata.onboarding_step as number;
+      // Prefer the stored question key (stable across list edits); fall back to the raw index.
+      const storedKey = (lastOnboardingMsg.metadata as any).question_key as string | undefined;
+      const keyIndex = storedKey ? ONBOARDING_QUESTIONS.findIndex(q => q.key === storedKey) : -1;
+      const currentStep = keyIndex >= 0 ? keyIndex : (lastOnboardingMsg.metadata.onboarding_step as number);
       const currentQuestion = ONBOARDING_QUESTIONS[currentStep];
       
       if (currentStep >= ONBOARDING_QUESTIONS.length - 1) {
@@ -425,6 +538,12 @@ serve(async (req) => {
         parsedValue = anchorSymptom || userMessage?.trim() || "";
       } else if (parseType === "topics") {
         parsedValue = body.selectedTopics || [];
+      } else if (parseType === "choice") {
+        // Chip answers arrive as their stored code; anything unrecognised is stored as null
+        // (never blocks progression — e.g. "prefer_not_to_say" is a valid, stored answer).
+        const raw = (userMessage || "").trim().toLowerCase();
+        const allowed = ((currentQuestion as any).choices as string[] | undefined) || [];
+        parsedValue = allowed.includes(raw) ? raw : null;
       }
 
       // Get user's name (prefer profile, then auth user_metadata)
@@ -484,20 +603,7 @@ serve(async (req) => {
       // or to her flag state (on_hormonal_bc / has_uterus).
       let nextStep = currentStep + 1;
       const userLifeStage = (participant as any)?.life_stage || "cycling";
-      const shouldSkipQuestion = (q: any): boolean => {
-        if (!q) return false;
-        if (q.requiresStage) {
-          const ok = Array.isArray(q.requiresStage)
-            ? (q.requiresStage as string[]).includes(userLifeStage)
-            : q.requiresStage === userLifeStage;
-          if (!ok) return true;
-        }
-        // Uterus question only for users who explicitly answered "not on hormonal BC"
-        if (q.requiresBcFalse && (participant as any)?.on_hormonal_bc !== false) return true;
-        // Bleed-date questions are meaningless without a uterus
-        if (q.requiresUterus && (participant as any)?.has_uterus === false) return true;
-        return false;
-      };
+      const shouldSkipQuestion = makeShouldSkip(participant);
       while (
         nextStep < ONBOARDING_QUESTIONS.length - 1 &&
         shouldSkipQuestion(ONBOARDING_QUESTIONS[nextStep])
@@ -511,11 +617,10 @@ serve(async (req) => {
       // ─── Educational moments between steps ───────────────────────
 
       // After LIFE_STAGE → show hormone basics (adapted for non-cycling).
-      // Skip entirely for pregnant / pregnancy_loss — hormone cycle graph isn't relevant.
-      if (currentQuestion.key === "life_stage" && userLifeStage !== "pregnant" && userLifeStage !== "pregnancy_loss") {
-        const stageContent = userLifeStage === "postpartum"
-          ? "Your hormones are recalibrating after pregnancy. It takes time — Logan will adapt guidance to your recovery:"
-          : userLifeStage === "menopause"
+      // Skip entirely for pregnant / pregnancy_loss / postpartum — the hormone cycle graph
+      // isn't relevant (postpartum goes straight into the recovery acknowledgment).
+      if (currentQuestion.key === "life_stage" && userLifeStage !== "pregnant" && userLifeStage !== "pregnancy_loss" && userLifeStage !== "postpartum") {
+        const stageContent = userLifeStage === "menopause"
           ? "Your hormones are shifting into a new pattern. Understanding what's changing helps you navigate it:"
           : userLifeStage === "perimenopause"
           ? "Perimenopause means your cycle is still happening, but the pattern is shifting. Logan will track your cycle and watch for the new signals coming in:"
@@ -614,7 +719,7 @@ serve(async (req) => {
         } else if (hasEmotional) {
           validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These are linked to a hormone called progesterone — it rises and falls across your cycle. You're not imagining it.`;
         } else if (hasPhysical) {
-          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Your body is telling you where it struggles most. These tend to follow your hormonal shifts across your cycle.`;
+          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Your body is telling you where it struggles most. ${userLifeStage === "postpartum" ? "These tend to follow your recovery and hormone rebuilding." : "These tend to follow your hormonal shifts across your cycle."}`;
         } else {
           validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These follow your hormonal pattern more closely than you might think. Once you start noticing when they hit, it stops being a surprise.`;
         }
@@ -661,13 +766,15 @@ serve(async (req) => {
       // Build metadata for next message
       const nextMetadata: Record<string, any> = { 
         onboarding_step: nextStep, 
+        question_key: nextQuestion.key,
         expecting_field: nextQuestion.field,
         input_type: nextQuestion.inputType,
-        onboarding_complete: nextStep === ONBOARDING_QUESTIONS.length - 1
+        onboarding_complete: nextStep === ONBOARDING_QUESTIONS.length - 1,
+        ...branchStepMeta(participant, nextStep)
       };
 
       if (nextQuestion.inputType === "symptom_picker") {
-        nextMetadata.symptom_categories = SYMPTOM_CATEGORIES;
+        nextMetadata.symptom_categories = symptomCategoriesFor(userLifeStage);
       }
       if (nextQuestion.inputType === "anchor_picker") {
         const symptomsForAnchor = participant?.typical_symptoms || selectedSymptoms || [];
@@ -702,7 +809,17 @@ serve(async (req) => {
           // Non-cycling first insight (postpartum / menopause / pregnant / pregnancy_loss)
           let stageInsight = "";
           if (pLifeStage === "postpartum") {
-            stageInsight = `Here's your first personal insight 👇\n\n**Postpartum — Recovery phase**\n\n- **Energy**: Variable — sleep deprivation and hormonal shifts are real\n- **What to expect**: Your body is rebuilding. Some days are harder than others\n${participant.anchor_symptom ? `- **Your anchor (${participant.anchor_symptom.toLowerCase()})**: may show up differently during recovery` : "- **Tip**: Be patient with your body — it did something extraordinary"}\n\nLogan adapts to where you are, not where a textbook says you should be.`;
+            // Dynamic from Steps 3–8. Every line has a neutral fallback so no combination
+            // of answers (incl. "Prefer not to say" / "Not sure yet") renders blank.
+            const p = participant as any;
+            const feedingLine = FEEDING_LABELS[p.feeding_status as string]
+              || "We'll figure out what fits as you go";
+            const cycleLine = CYCLE_RETURN_LABELS[p.cycle_return_status as string]
+              || "Logan will follow your lead as your rhythm settles";
+            const anchorLine = p.anchor_symptom
+              ? `- **Your anchor (${String(p.anchor_symptom).toLowerCase()})**: may show up differently during recovery`
+              : "- **Tip**: Be patient with your body — it did something extraordinary";
+            stageInsight = `Here's your first personal insight 👇\n\n**Postpartum — Recovery phase**\n\n- **Feeding**: ${feedingLine}\n- **Cycle**: ${cycleLine}\n- **Energy**: Variable — sleep deprivation and hormonal shifts are real\n${anchorLine}\n\nLogan adapts to where you are, not where a textbook says you should be.`;
           } else if (pLifeStage === "pregnant") {
             stageInsight = `Here's your first personal insight 👇\n\n**Pregnancy — Growing phase**\n\n- **Energy**: Shifting week by week as your body does extraordinary work\n- **What to expect**: Symptoms come in waves — nausea, fatigue, mood shifts, and stretches of feeling great\n${participant.anchor_symptom ? `- **Your anchor (${participant.anchor_symptom.toLowerCase()})**: I'll watch how it moves across your trimesters` : "- **Tip**: Rest is doing something, even when it feels like nothing"}\n\nLogan will track your week and trimester instead of a cycle — you're in a completely different rhythm now.`;
           } else if (pLifeStage === "pregnancy_loss") {
@@ -777,13 +894,20 @@ serve(async (req) => {
 
     // Action: Go back to a previous step
     if (action === "go_back") {
-      const { targetStep } = body;
+      let { targetStep } = body;
       
       if (targetStep === undefined || targetStep < 0 || targetStep >= ONBOARDING_QUESTIONS.length - 1) {
         return new Response(
           JSON.stringify({ error: "Invalid target step" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+
+      // Land on a question that actually applies to this participant's branch —
+      // never on a step her life stage skipped (e.g. postpartum → BC, not irregular's period date).
+      const skipBack = makeShouldSkip(participant);
+      while (targetStep > 0 && skipBack(ONBOARDING_QUESTIONS[targetStep])) {
+        targetStep--;
       }
 
       const targetStepMessages = messages?.filter(
@@ -807,12 +931,14 @@ serve(async (req) => {
       const targetQuestion = ONBOARDING_QUESTIONS[targetStep];
       const targetMetadata: Record<string, any> = {
         onboarding_step: targetStep,
+        question_key: targetQuestion.key,
         expecting_field: targetQuestion.field,
-        input_type: targetQuestion.inputType
+        input_type: targetQuestion.inputType,
+        ...branchStepMeta(participant, targetStep)
       };
 
       if (targetQuestion.inputType === "symptom_picker") {
-        targetMetadata.symptom_categories = SYMPTOM_CATEGORIES;
+        targetMetadata.symptom_categories = symptomCategoriesFor(participant?.life_stage || "cycling");
       }
       if (targetQuestion.inputType === "anchor_picker") {
         const symptomsForAnchor = participant?.typical_symptoms || [];

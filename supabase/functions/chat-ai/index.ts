@@ -4874,8 +4874,17 @@ MEAL PLANS / MENUS — STRICT RULES:
       }
     }
 
+    // Postpartum onboarding answers (nullable — older accounts have none). When present they
+    // override the "don't assume" defaults below; when absent the defaults stand.
+    const ppFeeding = (participant as any)?.feeding_status as string | null | undefined;
+    const ppCycleReturn = (participant as any)?.cycle_return_status as string | null | undefined;
+    const ppBc = (participant as any)?.birth_control_status as string | null | undefined;
+    const ppKnownFacts = userLifeStage === "postpartum" && (ppFeeding || ppCycleReturn || ppBc)
+      ? `\n\nKNOWN FROM ONBOARDING (use these — do not re-ask):${ppFeeding ? `\n- Feeding: ${ppFeeding}${ppFeeding === "breastfeeding" || ppFeeding === "combination" ? " (lactation is active — factor in fuel/hydration needs and lactational cycle suppression)" : ""}` : ""}${ppCycleReturn ? `\n- Cycle returned: ${ppCycleReturn}${ppCycleReturn === "not_yet" || ppCycleReturn === "not_sure" ? " — no cycle-phase or ovulation predictions" : ppCycleReturn === "irregular" ? " — cycle is back but irregular; read patterns, not the calendar" : " — cycle is back and regular; phase guidance is appropriate"}` : ""}${ppBc && ppBc !== "prefer_not_to_say" ? `\n- Birth control: ${ppBc}${ppBc === "hormonal" ? " (may suppress or alter cycle signals)" : ""}` : ""}`
+      : "";
+
     const stageContext = userLifeStage === "postpartum"
-      ? `This user is POSTPARTUM — they do not have a regular cycle right now (unless they say it has returned). Their hormones are recalibrating after pregnancy, but the SPECIFIC focus depends heavily on how far postpartum they are. ${ppPhaseGuidance}\n\nGENERAL POSTPARTUM RULES: Do NOT assume whether the user is breastfeeding or not — only reference breastfeeding if the USER brings it up first. If they mention having multiple children, do NOT assume they are breastfeeding all of them. Do NOT reference cycle phases, cycle days, or ovulation unless the user has confirmed their cycle returned. NEVER default to generic "early postpartum healing/recovery" language for users past 6 months postpartum.`
+      ? `This user is POSTPARTUM — they do not have a regular cycle right now (unless they say it has returned). Their hormones are recalibrating after pregnancy, but the SPECIFIC focus depends heavily on how far postpartum they are. ${ppPhaseGuidance}\n\nGENERAL POSTPARTUM RULES: Do NOT assume whether the user is breastfeeding or not — only reference breastfeeding if the USER brings it up first or it is listed in KNOWN FROM ONBOARDING. If they mention having multiple children, do NOT assume they are breastfeeding all of them. Do NOT reference cycle phases, cycle days, or ovulation unless the user has confirmed their cycle returned. NEVER default to generic "early postpartum healing/recovery" language for users past 6 months postpartum.${ppKnownFacts}`
       : userLifeStage === "menopause"
         ? `This user is in MENOPAUSE — their cycle has stopped (12+ months without a period). Their estrogen and progesterone are declining. Focus on: hot flashes, sleep disruption, mood changes, bone health, energy management, cognitive shifts, weight changes. Do NOT reference specific cycle days or ovulation windows. Instead, provide guidance relevant to hormonal transition and thriving through it.`
         : userLifeStage === "perimenopause"
