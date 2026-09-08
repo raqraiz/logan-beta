@@ -50,6 +50,10 @@ const TESTIMONIALS = [
     quote: "It's like texting a friend who actually knows what's happening in my body.",
     name: "Sam K., 38 · New York",
   },
+  {
+    quote: "Being postpartum is such a hormonal whirlwind, and there is very little support for women beyond 6 weeks pp since society assumes we're recovered by then. I'm 10 months postpartum and still don't feel 100% like myself, both emotionally and physically.",
+    name: "Founding Member",
+  },
 ];
 
 const getContextualHeadline = (q: string): string => {
@@ -396,9 +400,9 @@ export const TrialChat = () => {
                 </p>
                 <div className="grid sm:grid-cols-3 gap-4">
                   {TESTIMONIALS.map((t, i) => {
-                    const tops = ["#2BD4D9", "#A22BE8", "#FF2E92"];
+                    const tops = ["#2BD4D9", "#A22BE8", "#FF2E92", "#15B88C"];
                     return (
-                      <figure key={t.name} className="bg-card/40 border border-border/50 rounded-2xl p-6" style={{ borderTop: `3px solid ${tops[i]}` }}>
+                      <figure key={t.name} className={`bg-card/40 border border-border/50 rounded-2xl p-6 ${i === 3 ? "sm:col-span-3" : ""}`} style={{ borderTop: `3px solid ${tops[i]}` }}>
                         <blockquote className="text-base text-foreground/90 leading-relaxed">"{t.quote}"</blockquote>
                         <figcaption className="text-sm text-muted-foreground mt-4">— {t.name}</figcaption>
                       </figure>
