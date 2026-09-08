@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { onboardedProfiles, countOnboardedUsers } from "@/lib/onboardedUsers";
+import { fetchSignupDayKeys, makeUsersAsOf, computeAvgPerUser } from "@/lib/admin/engagementMetrics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -13,7 +13,6 @@ import {
   buildActivityIndex,
   utcDayKeysBetween,
   utcKey,
-  todayUTCKey,
   toUTCDate,
   type ActivityIndex,
 } from "@/lib/activeUsers";
@@ -55,22 +54,7 @@ export const InvestorSummaryPanel = () => {
       const snapshotISO = new Date(Math.max(endOfDay(rangeTo).getTime(), Date.now())).toISOString();
       const [idx, profiles, total] = await Promise.all([
         buildActivityIndex(startOfDay(rangeFrom).toISOString()),
-        (async () => {
-          const out: string[] = [];
-          for (let from = 0; ; from += 1000) {
-            const { data, error } = await onboardedProfiles()
-              .select("created_at, id")
-              .lte("created_at", snapshotISO)
-              .order("created_at", { ascending: true })
-              .order("id", { ascending: true })
-              .range(from, from + 999);
-            if (error) { console.error("Investor summary profiles load failed:", error); break; }
-            const rows = data ?? [];
-            for (const r of rows) if (r.created_at) out.push(utcKey(new Date(r.created_at)));
-            if (rows.length < 1000) break;
-          }
-          return out;
-        })(),
+        fetchSignupDayKeys(snapshotISO),
         countOnboardedUsers().catch((e) => {
           console.error("Investor summary canonical total failed:", e);
           return null;
@@ -85,18 +69,10 @@ export const InvestorSummaryPanel = () => {
     return () => { cancelled = true; };
   }, [rangeFrom, rangeTo]);
 
-  const usersAsOf = useMemo(() => {
-    // signupDays is sorted ascending; count of signups through end of dayKey.
-    // Any drift between the paged list and the canonical all-time count is
-    // applied from today onwards, so "as of today" matches the Total Users card
-    // exactly while historical days keep their true per-day cumulative values.
-    const drift =
-      canonicalTotal === null ? 0 : canonicalTotal - signupDays.length;
-    const today = todayUTCKey();
-    return (dayKey: string) =>
-      signupDays.reduce((acc, k) => (k <= dayKey ? acc + 1 : acc), 0) +
-      (dayKey >= today ? drift : 0);
-  }, [signupDays, canonicalTotal]);
+  const usersAsOf = useMemo(
+    () => makeUsersAsOf(signupDays, canonicalTotal),
+    [signupDays, canonicalTotal],
+  );
 
   const metrics = useMemo(() => {
     if (!index) return null;
@@ -148,6 +124,13 @@ export const InvestorSummaryPanel = () => {
       avgWeekly = wsum > 0 ? weekly.reduce((a, w) => a + w.activeUsers * (w.dayCount / 7), 0) / wsum : null;
     }
 
+    // Canonical per-user averages, shared with the Overview tab.
+    const { avgMsgsPerUser, avgSessionsPerUser } = computeAvgPerUser({
+      totalMessages,
+      totalSessions,
+      totalUsers: totalAtEnd,
+    });
+
     return {
       startKey,
       endKey,
@@ -158,8 +141,8 @@ export const InvestorSummaryPanel = () => {
       weekly,
       weeklyFullCount: full.length,
       avgWeekly,
-      avgMsgsPerUser: totalAtEnd > 0 ? totalMessages / totalAtEnd : null,
-      avgSessionsPerUser: totalAtEnd > 0 ? totalSessions / totalAtEnd : null,
+      avgMsgsPerUser,
+      avgSessionsPerUser,
     };
   }, [index, rangeFrom, rangeTo, usersAsOf]);
 
@@ -201,9 +184,6 @@ export const InvestorSummaryPanel = () => {
     }
     return ticks;
   }, [chartData]);
-
-  const monthLabel = format(rangeFrom, "MMMM");
-
 
   return (
     <Card className="border-primary/30 bg-card">
@@ -254,7 +234,7 @@ export const InvestorSummaryPanel = () => {
           <>
             <div>
               <p className="text-3xl font-bold text-foreground">
-                Total Users in {monthLabel}: {metrics.totalAtEnd}
+                Total Users as of {format(toUTCDate(metrics.endKey), "MMM d, yyyy")}: {metrics.totalAtEnd}
               </p>
               <p className="text-sm text-muted-foreground mt-1">
                 Up from {metrics.totalAtStart} at the start of the period.

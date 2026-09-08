@@ -29,6 +29,9 @@ import { format, subDays, startOfDay, parseISO, differenceInMinutes, eachWeekOfI
 import {
   buildActivityIndex, utcKey, utcDayKeysBetween, type ActivityIndex,
 } from "@/lib/activeUsers";
+import {
+  computeAvgPerUser, fetchSignupDayKeys, makeUsersAsOf,
+} from "@/lib/admin/engagementMetrics";
 
 
 const SESSION_GAP_MS = 30 * 60 * 1000;
@@ -257,6 +260,9 @@ export const OverviewTab = () => {
   const [allTimeUsers, setAllTimeUsers] = useState<number | null>(null);
   const [allTimeUsersLoading, setAllTimeUsersLoading] = useState(true);
   const [allTimeUsersError, setAllTimeUsersError] = useState<string | null>(null);
+  // Sorted UTC signup-day keys for every onboarded profile — the denominator
+  // shape for "users as of range end" (drift-corrected via allTimeUsers).
+  const [signupDayKeys, setSignupDayKeys] = useState<string[]>([]);
 
   // Fixed rolling window for today's cards — independent of the selected range.
   const [todayIndex, setTodayIndex] = useState<ActivityIndex | null>(null);
@@ -840,6 +846,11 @@ export const OverviewTab = () => {
     }
   }, []);
 
+  // Per-day signup keys feeding the shared "users as of range end" denominator.
+  const loadSignupDayKeys = useCallback(async () => {
+    setSignupDayKeys(await fetchSignupDayKeys(new Date().toISOString()));
+  }, []);
+
 
   // ----- SHARED ACTIVE-USER INDEX -----
   const loadActivityIndex = useCallback(async () => {
@@ -874,6 +885,7 @@ export const OverviewTab = () => {
     // 1) Instant counts so the top stats row paints immediately
     loadFastCounts();
     loadAllTimeUsers();
+    loadSignupDayKeys();
     // 2) Fast/light loaders in parallel
     loadFeedback();
     loadMenu();
@@ -884,7 +896,7 @@ export const OverviewTab = () => {
     await Promise.all([loadEngagement(), loadSessions()]);
     // 4) Defer the slowest query (feature_events scan) so it stops competing
     loadAdoption();
-  }, [loadFastCounts, loadAllTimeUsers, loadActivityIndex, loadTodayIndex, loadTodayTime, loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
+  }, [loadFastCounts, loadAllTimeUsers, loadSignupDayKeys, loadActivityIndex, loadTodayIndex, loadTodayTime, loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
 
 
   // Initialize default range to all time (earliest profile → now), then load data
@@ -913,8 +925,11 @@ export const OverviewTab = () => {
 
     let avgDailyUsers: number | null = null;
     let avgWeeklyUsers: number | null = null;
-    let avgMsgsPerUser = 0;
-    let avgSessionsPerUser = 0;
+    let avgMsgsPerUser: number | null = null;
+    let avgSessionsPerUser: number | null = null;
+
+    // Cumulative onboarded users as of range end — shared with Investor Summary.
+    const usersAsOf = makeUsersAsOf(signupDayKeys, allTimeUsers);
 
     if (activityIndex) {
       const days = utcDayKeysBetween(rangeFrom, rangeTo);
@@ -964,19 +979,21 @@ export const OverviewTab = () => {
         }
       }
 
-      // Per-day ratio, then averaged across days (not cumulative).
-      const msgRatios: number[] = [];
-      const sessionRatios: number[] = [];
+      // Canonical per-user averages (shared formula with Investor Summary):
+      // range totals / cumulative onboarded users as of range end.
+      let totalMessages = 0;
+      let totalSessions = 0;
       for (const d of days) {
-        const active = activityIndex.getActiveUsersForDay(d).size;
-        if (active === 0) continue;
-        msgRatios.push(activityIndex.getUserMessagesForDay(d) / active);
-        sessionRatios.push(activityIndex.getSessionsForDay(d) / active);
+        totalMessages += activityIndex.getUserMessagesForDay(d);
+        totalSessions += activityIndex.getSessionsForDay(d);
       }
-      const mean = (arr: number[]) =>
-        arr.length ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : 0;
-      avgMsgsPerUser = mean(msgRatios);
-      avgSessionsPerUser = mean(sessionRatios);
+      const avgs = computeAvgPerUser({
+        totalMessages,
+        totalSessions,
+        totalUsers: usersAsOf(days[days.length - 1] ?? utcKey(rangeTo)),
+      });
+      avgMsgsPerUser = avgs.avgMsgsPerUser;
+      avgSessionsPerUser = avgs.avgSessionsPerUser;
     }
 
     return {
@@ -988,7 +1005,7 @@ export const OverviewTab = () => {
       avgMsgsPerUser,
       avgSessionsPerUser,
     };
-  }, [todayIndex, activityIndex, rangeFrom, rangeTo]);
+  }, [todayIndex, activityIndex, rangeFrom, rangeTo, signupDayKeys, allTimeUsers]);
 
   const activeTodayUsers = useMemo(
     () => users.filter((u) => activeMetrics.activeTodayIds.has(u.userId)),
@@ -1225,14 +1242,14 @@ export const OverviewTab = () => {
               <CardContent className="p-4 text-center">
                 <MessageSquare className="w-5 h-5 mx-auto mb-1 text-purple-500" />
                 <p className="text-2xl font-bold text-foreground">
-                  {activityLoading ? "…" : activeMetrics.avgMsgsPerUser}
+                  {activityLoading ? "…" : activeMetrics.avgMsgsPerUser ?? "—"}
                 </p>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Msgs/User</p>
               </CardContent>
             </Card>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Average messages per active user, per day — not cumulative.</p>
+            <p>Range messages ÷ total users as of range end.</p>
           </TooltipContent>
         </Tooltip>
         <Tooltip>
@@ -1241,14 +1258,14 @@ export const OverviewTab = () => {
               <CardContent className="p-4 text-center">
                 <Clock className="w-5 h-5 mx-auto mb-1 text-orange-500" />
                 <p className="text-2xl font-bold text-foreground">
-                  {activityLoading ? "…" : activeMetrics.avgSessionsPerUser}
+                  {activityLoading ? "…" : activeMetrics.avgSessionsPerUser ?? "—"}
                 </p>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Sessions/User</p>
               </CardContent>
             </Card>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Average sessions per active user, per day — not cumulative.</p>
+            <p>Range sessions ÷ total users as of range end.</p>
           </TooltipContent>
         </Tooltip>
         <Card>
