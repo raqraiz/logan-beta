@@ -414,7 +414,10 @@ serve(async (req) => {
         );
       }
 
-      const currentStep = lastOnboardingMsg.metadata.onboarding_step as number;
+      // Prefer the stored question key (stable across list edits); fall back to the raw index.
+      const storedKey = (lastOnboardingMsg.metadata as any).question_key as string | undefined;
+      const keyIndex = storedKey ? ONBOARDING_QUESTIONS.findIndex(q => q.key === storedKey) : -1;
+      const currentStep = keyIndex >= 0 ? keyIndex : (lastOnboardingMsg.metadata.onboarding_step as number);
       const currentQuestion = ONBOARDING_QUESTIONS[currentStep];
       
       if (currentStep >= ONBOARDING_QUESTIONS.length - 1) {
