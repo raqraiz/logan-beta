@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Send } from "lucide-react";
 
-const TOPICS = [
+const BASE_TOPICS = [
   { id: "diet", label: "Diet & nutrition", description: "What to eat and when" },
   { id: "exercise", label: "Exercise & movement", description: "Workouts that match your energy" },
   { id: "sleep", label: "Sleep & recovery", description: "Rest strategies by phase" },
@@ -12,13 +12,18 @@ const TOPICS = [
   { id: "skin", label: "Skin & body", description: "Breakouts, bloating, inflammation" },
 ];
 
+const POSTPARTUM_TOPIC = { id: "feeding", label: "Feeding & lactation", description: "Fuel, supply, and recovery while feeding" };
+
 interface TopicPickerProps {
   onSubmit: (topics: string[]) => void;
   isSubmitting: boolean;
+  /** Adds the postpartum-only "Feeding & lactation" topic. General path leaves this unset. */
+  includePostpartumTopic?: boolean;
 }
 
-export const TopicPicker = ({ onSubmit, isSubmitting }: TopicPickerProps) => {
+export const TopicPicker = ({ onSubmit, isSubmitting, includePostpartumTopic }: TopicPickerProps) => {
   const [selected, setSelected] = useState<string[]>([]);
+  const TOPICS = includePostpartumTopic ? [...BASE_TOPICS, POSTPARTUM_TOPIC] : BASE_TOPICS;
 
   const toggle = (id: string) => {
     setSelected(prev =>
