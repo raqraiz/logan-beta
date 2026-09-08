@@ -30,7 +30,7 @@ import {
   buildActivityIndex, utcKey, utcDayKeysBetween, type ActivityIndex,
 } from "@/lib/activeUsers";
 import {
-  computeAvgPerUser, fetchSignupDayKeys, makeUsersAsOf,
+  computeAvgPerUser, computeAvgWeeklyActiveUsers, fetchSignupDayKeys, makeUsersAsOf,
 } from "@/lib/admin/engagementMetrics";
 
 

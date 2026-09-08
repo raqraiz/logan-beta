@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { onboardedProfiles, countOnboardedUsers } from "@/lib/onboardedUsers";
-import { fetchSignupDayKeys, makeUsersAsOf, computeAvgPerUser } from "@/lib/admin/engagementMetrics";
+import { fetchSignupDayKeys, makeUsersAsOf, computeAvgPerUser, computeAvgWeeklyActiveUsers } from "@/lib/admin/engagementMetrics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -118,8 +118,7 @@ export const InvestorSummaryPanel = () => {
       totalAtStart,
       hasData: anyActivity || totalAtEnd > 0,
       avgDaily: dailySum / days.length,
-      weekly,
-      weeklyFullCount: full.length,
+      weeklyFullCount: fullWeekCount,
       avgWeekly,
       avgMsgsPerUser,
       avgSessionsPerUser,
