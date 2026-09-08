@@ -808,7 +808,17 @@ serve(async (req) => {
           // Non-cycling first insight (postpartum / menopause / pregnant / pregnancy_loss)
           let stageInsight = "";
           if (pLifeStage === "postpartum") {
-            stageInsight = `Here's your first personal insight 👇\n\n**Postpartum — Recovery phase**\n\n- **Energy**: Variable — sleep deprivation and hormonal shifts are real\n- **What to expect**: Your body is rebuilding. Some days are harder than others\n${participant.anchor_symptom ? `- **Your anchor (${participant.anchor_symptom.toLowerCase()})**: may show up differently during recovery` : "- **Tip**: Be patient with your body — it did something extraordinary"}\n\nLogan adapts to where you are, not where a textbook says you should be.`;
+            // Dynamic from Steps 3–8. Every line has a neutral fallback so no combination
+            // of answers (incl. "Prefer not to say" / "Not sure yet") renders blank.
+            const p = participant as any;
+            const feedingLine = FEEDING_LABELS[p.feeding_status as string]
+              || "We'll figure out what fits as you go";
+            const cycleLine = CYCLE_RETURN_LABELS[p.cycle_return_status as string]
+              || "Logan will follow your lead as your rhythm settles";
+            const anchorLine = p.anchor_symptom
+              ? `- **Your anchor (${String(p.anchor_symptom).toLowerCase()})**: may show up differently during recovery`
+              : "- **Tip**: Be patient with your body — it did something extraordinary";
+            stageInsight = `Here's your first personal insight 👇\n\n**Postpartum — Recovery phase**\n\n- **Feeding**: ${feedingLine}\n- **Cycle**: ${cycleLine}\n- **Energy**: Variable — sleep deprivation and hormonal shifts are real\n${anchorLine}\n\nLogan adapts to where you are, not where a textbook says you should be.`;
           } else if (pLifeStage === "pregnant") {
             stageInsight = `Here's your first personal insight 👇\n\n**Pregnancy — Growing phase**\n\n- **Energy**: Shifting week by week as your body does extraordinary work\n- **What to expect**: Symptoms come in waves — nausea, fatigue, mood shifts, and stretches of feeling great\n${participant.anchor_symptom ? `- **Your anchor (${participant.anchor_symptom.toLowerCase()})**: I'll watch how it moves across your trimesters` : "- **Tip**: Rest is doing something, even when it feels like nothing"}\n\nLogan will track your week and trimester instead of a cycle — you're in a completely different rhythm now.`;
           } else if (pLifeStage === "pregnancy_loss") {
