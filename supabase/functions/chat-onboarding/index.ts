@@ -109,7 +109,7 @@ const ONBOARDING_QUESTIONS = [
   },
   {
     key: "birth_date",
-    message: "Your body is doing a lot right now — recovering, adjusting, rebuilding. Logan meets you where you actually are, not where a general cycle timeline says you should be.\n\nWhen was your baby born? Even an approximate date works — I'll use it to track your recovery timeline.",
+    message: "Your body is doing a lot right now — recovering, adjusting, rebuilding. Logan meets you where you actually are, not where a general cycle timeline says you should be.\n\nWhen was your baby born? I'll use it to track your recovery timeline.",
     field: "postpartum_start_date",
     parseType: "date",
     inputType: "date_picker",
