@@ -36,19 +36,19 @@ const STARTER_PROMPTS = [
   "How do I plan my month around my energy?",
 ];
 
-// Real-feeling attribution — last initial + a humanising detail.
+// Anonymized real quotes from founding members.
 const TESTIMONIALS = [
   {
-    quote: "I finally understand why I crash every few weeks. Logan saw the pattern before I did.",
-    name: "Maya R., 34 · Los Angeles",
+    quote: "I guess Logan really does track my invisible cycle and I guess it all really does just make sense biologically.",
+    name: "Founding Member",
   },
   {
-    quote: "I stopped scheduling big presentations on day 25. My whole week changed.",
-    name: "Jules T., 29 · Austin",
+    quote: "I checked in Logan where I would be in my cycle, and when I saw that I'd be in some of the toughest days of my luteal phase, I decided to take the whole week off. This was the best decision.",
+    name: "Founding Member",
   },
   {
-    quote: "It's like texting a friend who actually knows what's happening in my body.",
-    name: "Sam K., 38 · New York",
+    quote: "My husband loves it too — he says it's like you have a friend who understands you now.",
+    name: "Founding Member",
   },
   {
     quote: "Being postpartum is such a hormonal whirlwind, and there is very little support for women beyond 6 weeks pp since society assumes we're recovered by then. I'm 10 months postpartum and still don't feel 100% like myself, both emotionally and physically.",
