@@ -14,6 +14,7 @@ import {
   utcDayKeysBetween,
   utcKey,
   toUTCDate,
+  localDayKey,
   type ActivityIndex,
 } from "@/lib/activeUsers";
 
