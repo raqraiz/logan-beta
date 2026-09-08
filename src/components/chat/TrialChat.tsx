@@ -20,6 +20,7 @@ interface TrialMessage {
 
 const FEELING_CHIPS = [
   "Nobody's tracking me anymore — just the baby.",
+  "I'm still healing from birth and no one's tracking that.",
   "I feel like a different person two weeks a month",
   "I never know when to push or rest",
   "My cycle is irregular and nothing tracks it right",
@@ -56,7 +57,7 @@ const getContextualHeadline = (q: string): string => {
   if (s.includes("luteal") || s.includes("two weeks") || s.includes("different person")) return "That luteal chaos? I can help you see it coming.";
   if (s.includes("predict") || s.includes("mood")) return "Your mood has a pattern. Let's map it.";
   if (s.includes("push") || s.includes("rest")) return "Your body wants different things on different days.";
-  if (s.includes("baby") || s.includes("postpartum")) return "Postpartum has its own rhythm. I'll meet you there.";
+  if (s.includes("baby") || s.includes("postpartum") || s.includes("healing") || s.includes("birth")) return "Postpartum has its own rhythm. I'll meet you there.";
   if (s.includes("irregular")) return "Irregular doesn't mean unknowable. Let's find your signal.";
   if (s.includes("pms") || s.includes("blindsided")) return "What if you could see PMS coming days in advance?";
   if (s.includes("menopause")) return "Menopause isn't the end of knowing your body. I'll help you find your new normal.";
@@ -65,7 +66,7 @@ const getContextualHeadline = (q: string): string => {
 
 const getContextualDescription = (q: string): string => {
   const s = q.toLowerCase();
-  if (s.includes("baby") || s.includes("postpartum")) return "Create an account and I'll track where you are in recovery so I can guide you week by week.";
+  if (s.includes("baby") || s.includes("postpartum") || s.includes("healing") || s.includes("birth")) return "Create an account and I'll track where you are in recovery so I can guide you week by week.";
   if (s.includes("irregular")) return "Create an account and I'll learn your unique patterns instead of forcing you into a 28-day box.";
   if (s.includes("menopause")) return "Create an account and I'll track your symptoms, energy, and sleep so you can feel like yourself again.";
   return "Create an account and I'll learn your patterns so I can give you a heads up before things shift.";
@@ -350,12 +351,12 @@ export const TrialChat = () => {
                 </p>
                 <div className="grid sm:grid-cols-2 gap-3">
                   {FEELING_CHIPS.map((chip, i) => {
-                    const accents = ["#15B88C", "#FF2E92", "#2BD4D9", "#A22BE8", "#4F8EF7"];
+                    const accents = ["#15B88C", "#15B88C", "#FF2E92", "#2BD4D9", "#A22BE8", "#4F8EF7"];
                     return (
                       <button
                         key={chip}
                         onClick={() => enterChatMode(chip)}
-                        className={`text-left text-sm px-5 py-4 rounded-xl bg-card/40 border border-border/50 hover:border-border text-foreground/90 hover:text-foreground transition-all ${i === 0 ? "sm:col-span-2" : ""}`}
+                        className="text-left text-sm px-5 py-4 rounded-xl bg-card/40 border border-border/50 hover:border-border text-foreground/90 hover:text-foreground transition-all"
                         style={{ borderLeft: `3px solid ${accents[i % accents.length]}` }}
                       >
                         {chip}
