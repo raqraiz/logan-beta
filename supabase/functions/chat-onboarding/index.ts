@@ -57,6 +57,40 @@ const SYMPTOM_CATEGORIES = {
   }
 };
 
+// Extra symptom category — appended to the picker options ONLY on the postpartum branch.
+const POSTPARTUM_SYMPTOM_CATEGORY = {
+  label: "POSTPARTUM-SPECIFIC",
+  symptoms: [
+    "Night sweats",
+    "Hair shedding",
+    "Healing/incision pain",
+    "Engorgement or feeding pain",
+    "Postpartum rage",
+    "Intrusive thoughts",
+    "Touched out"
+  ]
+};
+
+function symptomCategoriesFor(lifeStage: string) {
+  return lifeStage === "postpartum"
+    ? { ...SYMPTOM_CATEGORIES, postpartum: POSTPARTUM_SYMPTOM_CATEGORY }
+    : SYMPTOM_CATEGORIES;
+}
+
+// Human-readable labels for the postpartum branch answers (insight card).
+const FEEDING_LABELS: Record<string, string> = {
+  breastfeeding: "Breastfeeding",
+  combination: "Combination (breast + formula)",
+  formula: "Formula / not breastfeeding",
+  weaned: "Weaned"
+};
+const CYCLE_RETURN_LABELS: Record<string, string> = {
+  not_yet: "Not back yet — no cycle-phase predictions until it returns",
+  regular: "Back and regular — Logan will start reading your rhythm",
+  irregular: "Back but irregular — normal while hormones rebuild; Logan will watch the pattern, not the calendar",
+  not_sure: "Still settling — Logan won't assume a rhythm until it's clear"
+};
+
 // Onboarding question flow - simplified for beginners
 const ONBOARDING_QUESTIONS = [
   {
