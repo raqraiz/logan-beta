@@ -436,6 +436,7 @@ serve(async (req) => {
         message_type: "onboarding",
         metadata: { 
           onboarding_step: 0, 
+          question_key: ONBOARDING_QUESTIONS[0].key,
           expecting_field: welcomeQ.field,
           input_type: welcomeQ.inputType
         }
