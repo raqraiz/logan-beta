@@ -893,13 +893,20 @@ serve(async (req) => {
 
     // Action: Go back to a previous step
     if (action === "go_back") {
-      const { targetStep } = body;
+      let { targetStep } = body;
       
       if (targetStep === undefined || targetStep < 0 || targetStep >= ONBOARDING_QUESTIONS.length - 1) {
         return new Response(
           JSON.stringify({ error: "Invalid target step" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+
+      // Land on a question that actually applies to this participant's branch —
+      // never on a step her life stage skipped (e.g. postpartum → BC, not irregular's period date).
+      const skipBack = makeShouldSkip(participant);
+      while (targetStep > 0 && skipBack(ONBOARDING_QUESTIONS[targetStep])) {
+        targetStep--;
       }
 
       const targetStepMessages = messages?.filter(
@@ -923,12 +930,14 @@ serve(async (req) => {
       const targetQuestion = ONBOARDING_QUESTIONS[targetStep];
       const targetMetadata: Record<string, any> = {
         onboarding_step: targetStep,
+        question_key: targetQuestion.key,
         expecting_field: targetQuestion.field,
-        input_type: targetQuestion.inputType
+        input_type: targetQuestion.inputType,
+        ...branchStepMeta(participant, targetStep)
       };
 
       if (targetQuestion.inputType === "symptom_picker") {
-        targetMetadata.symptom_categories = SYMPTOM_CATEGORIES;
+        targetMetadata.symptom_categories = symptomCategoriesFor(participant?.life_stage || "cycling");
       }
       if (targetQuestion.inputType === "anchor_picker") {
         const symptomsForAnchor = participant?.typical_symptoms || [];
