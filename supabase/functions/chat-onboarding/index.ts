@@ -75,11 +75,38 @@ const ONBOARDING_QUESTIONS = [
   },
   {
     key: "birth_date",
-    message: "When was your baby born? Even an approximate date works — I'll use it to track your recovery timeline.",
+    message: "Your body is doing a lot right now — recovering, adjusting, rebuilding. Logan meets you where you actually are, not where a general cycle timeline says you should be.\n\nWhen was your baby born? Even an approximate date works — I'll use it to track your recovery timeline.",
     field: "postpartum_start_date",
     parseType: "date",
     inputType: "date_picker",
     showNotSure: false,
+    requiresStage: "postpartum"
+  },
+  {
+    key: "feeding",
+    message: "How are you feeding right now?",
+    field: "feeding_status",
+    parseType: "choice",
+    inputType: "feeding_picker",
+    choices: ["breastfeeding", "combination", "formula", "weaned"],
+    requiresStage: "postpartum"
+  },
+  {
+    key: "cycle_return",
+    message: "Has your period come back yet?",
+    field: "cycle_return_status",
+    parseType: "choice",
+    inputType: "cycle_return_picker",
+    choices: ["not_yet", "regular", "irregular", "not_sure"],
+    requiresStage: "postpartum"
+  },
+  {
+    key: "postpartum_bc",
+    message: "Are you using any birth control right now?",
+    field: "birth_control_status",
+    parseType: "choice",
+    inputType: "pp_bc_picker",
+    choices: ["none", "hormonal", "non_hormonal", "prefer_not_to_say"],
     requiresStage: "postpartum"
   },
   {
