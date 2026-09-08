@@ -2120,7 +2120,14 @@ const Chat = () => {
                       ).map((option) => (
                         <button
                           key={option.value}
-                          onClick={() => sendOnboardingResponse(option.value)}
+                          onClick={() => sendOnboardingResponse(
+                            option.value,
+                            undefined,
+                            undefined,
+                            undefined,
+                            false,
+                            `${inputType === "feeding_picker" ? "Feeding" : inputType === "cycle_return_picker" ? "Cycle status" : "Birth control"}: ${option.label}`,
+                          )}
                           disabled={isSending}
                           className="text-left px-4 py-3 rounded-xl border border-border/40 bg-card/60 hover:bg-card/90 transition-all active:scale-[0.98]"
                         >
