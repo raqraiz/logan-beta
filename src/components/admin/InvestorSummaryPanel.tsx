@@ -76,7 +76,11 @@ export const InvestorSummaryPanel = () => {
 
   const metrics = useMemo(() => {
     if (!index) return null;
-    const days = utcDayKeysBetween(rangeFrom, rangeTo);
+    // Normalize the picker's local-timezone Dates to their intended calendar
+    // day before generating UTC day keys: in timezones ahead of UTC a
+    // local-midnight rangeFrom is the previous UTC day (32 keys for a 31-day
+    // month), and behind UTC an end-of-day rangeTo spills into the next day.
+    const days = utcDayKeysBetween(toUTCDate(localDayKey(rangeFrom)), toUTCDate(localDayKey(rangeTo)));
     if (days.length === 0) return null;
 
     const startKey = days[0];
