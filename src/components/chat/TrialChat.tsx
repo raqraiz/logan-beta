@@ -23,6 +23,7 @@ const FEELING_CHIPS = [
   "I never know when to push or rest",
   "My cycle is irregular and nothing tracks it right",
   "I'm in menopause and no one prepared me for this",
+  "Nobody's tracking me anymore — just the baby.",
 ];
 
 const STARTER_PROMPTS = [
@@ -349,13 +350,13 @@ export const TrialChat = () => {
                 </p>
                 <div className="grid sm:grid-cols-2 gap-3">
                   {FEELING_CHIPS.map((chip, i) => {
-                    const accents = ["#FF2E92", "#2BD4D9", "#A22BE8", "#4F8EF7"];
+                    const accents = ["#FF2E92", "#2BD4D9", "#A22BE8", "#4F8EF7", "#15B88C"];
                     return (
                       <button
                         key={chip}
                         onClick={() => enterChatMode(chip)}
-                        className="text-left text-sm px-5 py-4 rounded-xl bg-card/40 border border-border/50 hover:border-border text-foreground/90 hover:text-foreground transition-all"
-                        style={{ borderLeft: `3px solid ${accents[i % 4]}` }}
+                        className={`text-left text-sm px-5 py-4 rounded-xl bg-card/40 border border-border/50 hover:border-border text-foreground/90 hover:text-foreground transition-all ${i === FEELING_CHIPS.length - 1 ? "sm:col-span-2" : ""}`}
+                        style={{ borderLeft: `3px solid ${accents[i % accents.length]}` }}
                       >
                         {chip}
                       </button>
