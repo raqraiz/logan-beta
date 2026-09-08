@@ -30,7 +30,7 @@ import {
   buildActivityIndex, utcKey, utcDayKeysBetween, type ActivityIndex,
 } from "@/lib/activeUsers";
 import {
-  computeAvgPerUser, fetchSignupDayKeys, makeUsersAsOf,
+  computeAvgPerUser, computeAvgWeeklyActiveUsers, fetchSignupDayKeys, makeUsersAsOf,
 } from "@/lib/admin/engagementMetrics";
 
 
@@ -964,20 +964,13 @@ export const OverviewTab = () => {
         }
       }
 
-      // Non-overlapping 7-day buckets aligned to range start; partial trailing week excluded.
-      if (days.length >= 7) {
-        const buckets: number[] = [];
-        for (let i = 0; i + 7 <= days.length; i += 7) {
-          const set = new Set<string>();
-          for (const d of days.slice(i, i + 7)) {
-            for (const u of activityIndex.getActiveUsersForDay(d)) set.add(u);
-          }
-          buckets.push(set.size);
-        }
-        if (buckets.length) {
-          avgWeeklyUsers = Math.round((buckets.reduce((a, b) => a + b, 0) / buckets.length) * 10) / 10;
-        }
-      }
+      // Canonical weekly active users (ISO Monday–Sunday weeks) — shared with
+      // Investor Summary via the same helper, so the two cards cannot drift.
+      avgWeeklyUsers = computeAvgWeeklyActiveUsers({
+        activityIndex,
+        rangeFrom,
+        rangeTo,
+      }).avgWeeklyUsers;
 
       // Canonical per-user averages (shared formula with Investor Summary):
       // range totals / cumulative onboarded users as of range end.
@@ -1233,7 +1226,7 @@ export const OverviewTab = () => {
             <p className="text-2xl font-bold text-foreground">
               {activityLoading ? "…" : activeMetrics.avgWeeklyUsers ?? "—"}
             </p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Weekly Users</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Weekly Users (Mon–Sun)</p>
           </CardContent>
         </Card>
         <Tooltip>

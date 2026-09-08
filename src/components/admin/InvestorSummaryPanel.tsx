@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { onboardedProfiles, countOnboardedUsers } from "@/lib/onboardedUsers";
-import { fetchSignupDayKeys, makeUsersAsOf, computeAvgPerUser } from "@/lib/admin/engagementMetrics";
+import { fetchSignupDayKeys, makeUsersAsOf, computeAvgPerUser, computeAvgWeeklyActiveUsers } from "@/lib/admin/engagementMetrics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -96,33 +96,13 @@ export const InvestorSummaryPanel = () => {
       totalSessions += index.getSessionsForDay(d);
     }
 
-    // Distinct active users per ISO calendar week (Monday–Sunday, UTC),
-    // matching the Monday-start convention used elsewhere in the admin dashboard.
-    const buckets = new Map<string, { days: string[]; users: Set<string> }>();
-    for (const d of days) {
-      const dt = toUTCDate(d);
-      const dow = (dt.getUTCDay() + 6) % 7; // 0 = Monday
-      const monday = new Date(dt.getTime() - dow * 86400000);
-      const wk = utcKey(monday);
-      let b = buckets.get(wk);
-      if (!b) { b = { days: [], users: new Set<string>() }; buckets.set(wk, b); }
-      b.days.push(d);
-      for (const u of index.getActiveUsersForDay(d)) b.users.add(u);
-    }
-    const weekly = Array.from(buckets.entries())
-      .sort((a, b) => (a[0] < b[0] ? -1 : 1))
-      .map(([weekStart, b]) => ({ weekStart, dayCount: b.days.length, activeUsers: b.users.size }));
-
-    // Full weeks only. If the range contains no full week, fall back to
-    // day-weighted partial weeks so a 3-day stub isn't treated as a full week.
-    const full = weekly.filter((w) => w.dayCount === 7);
-    let avgWeekly: number | null = null;
-    if (full.length > 0) {
-      avgWeekly = full.reduce((a, w) => a + w.activeUsers, 0) / full.length;
-    } else if (weekly.length > 0) {
-      const wsum = weekly.reduce((a, w) => a + w.dayCount / 7, 0);
-      avgWeekly = wsum > 0 ? weekly.reduce((a, w) => a + w.activeUsers * (w.dayCount / 7), 0) / wsum : null;
-    }
+    // Canonical weekly active users (ISO Monday–Sunday weeks) — shared with
+    // the Overview tab via the same helper, so the two cards cannot drift.
+    const { avgWeeklyUsers: avgWeekly, fullWeekCount } = computeAvgWeeklyActiveUsers({
+      activityIndex: index,
+      rangeFrom,
+      rangeTo,
+    });
 
     // Canonical per-user averages, shared with the Overview tab.
     const { avgMsgsPerUser, avgSessionsPerUser } = computeAvgPerUser({
@@ -138,8 +118,7 @@ export const InvestorSummaryPanel = () => {
       totalAtStart,
       hasData: anyActivity || totalAtEnd > 0,
       avgDaily: dailySum / days.length,
-      weekly,
-      weeklyFullCount: full.length,
+      weeklyFullCount: fullWeekCount,
       avgWeekly,
       avgMsgsPerUser,
       avgSessionsPerUser,
