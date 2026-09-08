@@ -947,6 +947,7 @@ export type Database = {
           additional_notes: string | null
           age: number | null
           anchor_symptom: string | null
+          birth_control_status: string | null
           consent_given: boolean | null
           consent_given_at: string | null
           created_at: string
@@ -954,8 +955,10 @@ export type Database = {
           cycle_length_days: number | null
           cycle_length_user_override: boolean
           cycle_regularity: string | null
+          cycle_return_status: string | null
           due_date: string | null
           email: string | null
+          feeding_status: string | null
           follicular_days: number | null
           full_name: string
           goals: string[] | null
@@ -987,6 +990,7 @@ export type Database = {
           additional_notes?: string | null
           age?: number | null
           anchor_symptom?: string | null
+          birth_control_status?: string | null
           consent_given?: boolean | null
           consent_given_at?: string | null
           created_at?: string
@@ -994,8 +998,10 @@ export type Database = {
           cycle_length_days?: number | null
           cycle_length_user_override?: boolean
           cycle_regularity?: string | null
+          cycle_return_status?: string | null
           due_date?: string | null
           email?: string | null
+          feeding_status?: string | null
           follicular_days?: number | null
           full_name: string
           goals?: string[] | null
@@ -1027,6 +1033,7 @@ export type Database = {
           additional_notes?: string | null
           age?: number | null
           anchor_symptom?: string | null
+          birth_control_status?: string | null
           consent_given?: boolean | null
           consent_given_at?: string | null
           created_at?: string
@@ -1034,8 +1041,10 @@ export type Database = {
           cycle_length_days?: number | null
           cycle_length_user_override?: boolean
           cycle_regularity?: string | null
+          cycle_return_status?: string | null
           due_date?: string | null
           email?: string | null
+          feeding_status?: string | null
           follicular_days?: number | null
           full_name?: string
           goals?: string[] | null
