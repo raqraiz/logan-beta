@@ -72,6 +72,11 @@ interface ChatMessage {
     reaction_to?: string;
     input_type?: string;
     expecting_field?: string;
+    question_key?: string;
+    branch?: string;
+    branch_step?: number;
+    branch_total?: number;
+    branch_labels?: string[];
     symptom_categories?: SymptomCategories;
     available_symptoms?: string[];
     has_cycle_visual?: boolean;
@@ -141,6 +146,7 @@ const Chat = () => {
   
   const [isOnboarding, setIsOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
+  const [onboardingBranch, setOnboardingBranch] = useState<{ step: number; total: number; labels: string[] } | null>(null);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
   // Live cycle values for message-bubble visuals. Null until participant data
