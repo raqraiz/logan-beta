@@ -489,6 +489,12 @@ serve(async (req) => {
         parsedValue = anchorSymptom || userMessage?.trim() || "";
       } else if (parseType === "topics") {
         parsedValue = body.selectedTopics || [];
+      } else if (parseType === "choice") {
+        // Chip answers arrive as their stored code; anything unrecognised is stored as null
+        // (never blocks progression — e.g. "prefer_not_to_say" is a valid, stored answer).
+        const raw = (userMessage || "").trim().toLowerCase();
+        const allowed = ((currentQuestion as any).choices as string[] | undefined) || [];
+        parsedValue = allowed.includes(raw) ? raw : null;
       }
 
       // Get user's name (prefer profile, then auth user_metadata)
