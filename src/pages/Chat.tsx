@@ -1760,7 +1760,11 @@ const Chat = () => {
                 }
               }
               const inputType = message.metadata?.input_type;
-              const showInteractiveInput = isLastMessage && message.role === "assistant" && isOnboarding && !isSending;
+              // Keep the picker mounted while the answer is in flight (dimmed +
+              // non-interactive) so the tall block doesn't vanish before the new
+              // messages land — unmounting early caused a visible scroll jump.
+              const showInteractiveInput = isLastMessage && message.role === "assistant" && isOnboarding;
+              const pickerBusyClass = isSending ? "opacity-60 pointer-events-none transition-opacity" : "";
 
               // Find existing reaction for this message
               const existingReactionMsg = messages.find(
