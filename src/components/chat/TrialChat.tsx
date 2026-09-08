@@ -402,7 +402,7 @@ export const TrialChat = () => {
                   {TESTIMONIALS.map((t, i) => {
                     const tops = ["#2BD4D9", "#A22BE8", "#FF2E92", "#15B88C"];
                     return (
-                      <figure key={t.name} className={`bg-card/40 border border-border/50 rounded-2xl p-6 ${i === 3 ? "sm:col-span-3" : ""}`} style={{ borderTop: `3px solid ${tops[i]}` }}>
+                      <figure key={i} className={`bg-card/40 border border-border/50 rounded-2xl p-6 ${i === 3 ? "sm:col-span-3" : ""}`} style={{ borderTop: `3px solid ${tops[i]}` }}>
                         <blockquote className="text-base text-foreground/90 leading-relaxed">"{t.quote}"</blockquote>
                         <figcaption className="text-sm text-muted-foreground mt-4">— {t.name}</figcaption>
                       </figure>
