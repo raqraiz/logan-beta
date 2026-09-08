@@ -554,20 +554,7 @@ serve(async (req) => {
       // or to her flag state (on_hormonal_bc / has_uterus).
       let nextStep = currentStep + 1;
       const userLifeStage = (participant as any)?.life_stage || "cycling";
-      const shouldSkipQuestion = (q: any): boolean => {
-        if (!q) return false;
-        if (q.requiresStage) {
-          const ok = Array.isArray(q.requiresStage)
-            ? (q.requiresStage as string[]).includes(userLifeStage)
-            : q.requiresStage === userLifeStage;
-          if (!ok) return true;
-        }
-        // Uterus question only for users who explicitly answered "not on hormonal BC"
-        if (q.requiresBcFalse && (participant as any)?.on_hormonal_bc !== false) return true;
-        // Bleed-date questions are meaningless without a uterus
-        if (q.requiresUterus && (participant as any)?.has_uterus === false) return true;
-        return false;
-      };
+      const shouldSkipQuestion = makeShouldSkip(participant);
       while (
         nextStep < ONBOARDING_QUESTIONS.length - 1 &&
         shouldSkipQuestion(ONBOARDING_QUESTIONS[nextStep])
@@ -581,11 +568,10 @@ serve(async (req) => {
       // ─── Educational moments between steps ───────────────────────
 
       // After LIFE_STAGE → show hormone basics (adapted for non-cycling).
-      // Skip entirely for pregnant / pregnancy_loss — hormone cycle graph isn't relevant.
-      if (currentQuestion.key === "life_stage" && userLifeStage !== "pregnant" && userLifeStage !== "pregnancy_loss") {
-        const stageContent = userLifeStage === "postpartum"
-          ? "Your hormones are recalibrating after pregnancy. It takes time — Logan will adapt guidance to your recovery:"
-          : userLifeStage === "menopause"
+      // Skip entirely for pregnant / pregnancy_loss / postpartum — the hormone cycle graph
+      // isn't relevant (postpartum goes straight into the recovery acknowledgment).
+      if (currentQuestion.key === "life_stage" && userLifeStage !== "pregnant" && userLifeStage !== "pregnancy_loss" && userLifeStage !== "postpartum") {
+        const stageContent = userLifeStage === "menopause"
           ? "Your hormones are shifting into a new pattern. Understanding what's changing helps you navigate it:"
           : userLifeStage === "perimenopause"
           ? "Perimenopause means your cycle is still happening, but the pattern is shifting. Logan will track your cycle and watch for the new signals coming in:"
