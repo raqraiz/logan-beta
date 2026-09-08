@@ -132,6 +132,27 @@ interface CycleData {
 
 const MESSAGES_PER_PAGE = 100;
 
+// Display-only labels for onboarding choice echoes (never changes stored values)
+const ONBOARDING_ECHO_LABELS: Record<string, string> = {
+  // Cycle return
+  not_yet: "Cycle status: Not yet",
+  regular: "Cycle status: Yes, and it's regular",
+  irregular: "Cycle status: Yes, but it's irregular",
+  not_sure: "Cycle status: Not sure",
+  // Feeding
+  breastfeeding: "Feeding: Breastfeeding",
+  combination: "Feeding: Combination",
+  formula: "Feeding: Formula / not breastfeeding",
+  weaned: "Feeding: Weaned",
+  // Birth control
+  none: "Birth control: None",
+  hormonal: "Birth control: Hormonal",
+  non_hormonal: "Birth control: Non-hormonal",
+  prefer_not_to_say: "Birth control: Prefer not to say",
+};
+
+const formatOnboardingEcho = (value: string) => ONBOARDING_ECHO_LABELS[value] ?? value;
+
 const Chat = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -1005,6 +1026,7 @@ const Chat = () => {
     anchor?: string,
     date?: Date,
     skipMessageInsert = false,
+    displayLabel?: string,
   ) => {
     if (!user || isSending || onboardingRequestInFlightRef.current) return;
 
@@ -1019,12 +1041,12 @@ const Chat = () => {
     try {
       // First, insert the user's message
       const displayContent = symptoms 
-        ? `Selected: ${symptoms.join(", ")}`
+        ? `Selected: ${symptoms.length > 0 ? symptoms.join(", ") : "None"}`
         : anchor 
           ? `Anchor symptom: ${anchor}`
           : date
             ? `${lifeStage === "postpartum" ? "Birth date" : "Last period"}: ${format(date, "PPP")}`
-            : messageContent;
+            : displayLabel ?? formatOnboardingEcho(messageContent);
 
       if (!skipMessageInsert) {
         const { error } = await supabase.from("chat_messages").insert({
@@ -1849,7 +1871,7 @@ const Chat = () => {
                         <div className="mt-3"><SymptomExplainerCard /></div>
                       )}
                       {message.metadata?.visual_type === "education_anchor" && (
-                        <div className="mt-3"><AnchorExplainerCard /></div>
+                        <div className="mt-3"><AnchorExplainerCard lifeStage={lifeStage} /></div>
                       )}
 
                       {/* Phase cheat sheet for proactive insights — between intro and question */}
@@ -2098,7 +2120,14 @@ const Chat = () => {
                       ).map((option) => (
                         <button
                           key={option.value}
-                          onClick={() => sendOnboardingResponse(option.value)}
+                          onClick={() => sendOnboardingResponse(
+                            option.value,
+                            undefined,
+                            undefined,
+                            undefined,
+                            false,
+                            `${inputType === "feeding_picker" ? "Feeding" : inputType === "cycle_return_picker" ? "Cycle status" : "Birth control"}: ${option.label}`,
+                          )}
                           disabled={isSending}
                           className="text-left px-4 py-3 rounded-xl border border-border/40 bg-card/60 hover:bg-card/90 transition-all active:scale-[0.98]"
                         >
