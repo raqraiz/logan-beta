@@ -289,6 +289,12 @@ const Chat = () => {
     );
     if (latestOnboardingMsg?.metadata?.onboarding_step !== undefined) {
       setOnboardingStep(latestOnboardingMsg.metadata.onboarding_step);
+      const md = latestOnboardingMsg.metadata;
+      setOnboardingBranch(
+        md.branch === "postpartum" && typeof md.branch_step === "number" && typeof md.branch_total === "number"
+          ? { step: md.branch_step, total: md.branch_total, labels: Array.isArray(md.branch_labels) ? md.branch_labels : [] }
+          : null
+      );
     }
 
     setIsOnboarding(hasOnboardingMessages && !isOnboardingComplete);
@@ -1257,7 +1263,8 @@ const Chat = () => {
     const lastMessage = messages[messages.length - 1];
     if (lastMessage.role !== "assistant") return false;
     const inputType = lastMessage.metadata?.input_type;
-    return inputType === "symptom_picker" || inputType === "anchor_picker" || inputType === "date_picker" || inputType === "topic_picker" || inputType === "life_stage_picker";
+    return inputType === "symptom_picker" || inputType === "anchor_picker" || inputType === "date_picker" || inputType === "topic_picker" || inputType === "life_stage_picker"
+      || inputType === "feeding_picker" || inputType === "cycle_return_picker" || inputType === "pp_bc_picker";
   };
   const sendFeedback = async (messageId: string, isPositive: boolean) => {
     if (!user) return;
@@ -1627,7 +1634,11 @@ const Chat = () => {
               </Button>
             )}
             <div className="flex-1">
-              <OnboardingProgress currentStep={onboardingStep} totalSteps={5} />
+              <OnboardingProgress
+                currentStep={onboardingStep}
+                totalSteps={5}
+                branch={onboardingBranch ?? undefined}
+              />
             </div>
           </div>
         </div>
@@ -1968,6 +1979,8 @@ const Chat = () => {
                         isSubmitting={isSending}
                         {...(message.metadata?.expecting_field === "due_date"
                           ? { minDate: new Date(), maxDate: addWeeks(new Date(), 42) }
+                          : message.metadata?.expecting_field === "postpartum_start_date"
+                          ? { maxDate: new Date() }
                           : {})}
                       />
                     </div>
@@ -2048,7 +2061,45 @@ const Chat = () => {
                       <TopicPicker
                         onSubmit={handleTopicSubmit}
                         isSubmitting={isSending}
+                        includePostpartumTopic={message.metadata?.branch === "postpartum"}
                       />
+                    </div>
+                  )}
+
+                  {/* Postpartum branch: feeding / cycle return / birth control chip pickers */}
+                  {showInteractiveInput && (inputType === "feeding_picker" || inputType === "cycle_return_picker" || inputType === "pp_bc_picker") && (
+                    <div className="mt-3 flex flex-col gap-2 max-w-xs">
+                      {(inputType === "feeding_picker"
+                        ? [
+                            { value: "breastfeeding", label: "Breastfeeding", desc: "Exclusively or mostly" },
+                            { value: "combination", label: "Combination", desc: "Breast and formula" },
+                            { value: "formula", label: "Formula / not breastfeeding", desc: "" },
+                            { value: "weaned", label: "Weaned", desc: "Recently or fully stopped" },
+                          ]
+                        : inputType === "cycle_return_picker"
+                        ? [
+                            { value: "not_yet", label: "Not yet", desc: "No period since birth" },
+                            { value: "regular", label: "Yes, and it's regular", desc: "" },
+                            { value: "irregular", label: "Yes, but it's irregular", desc: "Normal while hormones rebuild" },
+                            { value: "not_sure", label: "Not sure", desc: "Some bleeding, hard to tell" },
+                          ]
+                        : [
+                            { value: "none", label: "None", desc: "" },
+                            { value: "hormonal", label: "Hormonal", desc: "Mini-pill, hormonal IUD, implant, injection" },
+                            { value: "non_hormonal", label: "Non-hormonal", desc: "Copper IUD, condoms, other" },
+                            { value: "prefer_not_to_say", label: "Prefer not to say", desc: "Logan will keep it general" },
+                          ]
+                      ).map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => sendOnboardingResponse(option.value)}
+                          disabled={isSending}
+                          className="text-left px-4 py-3 rounded-xl border border-border/40 bg-card/60 hover:bg-card/90 transition-all active:scale-[0.98]"
+                        >
+                          <span className="text-sm font-medium text-foreground">{option.label}</span>
+                          {option.desc && <span className="block text-xs text-muted-foreground mt-0.5">{option.desc}</span>}
+                        </button>
+                      ))}
                     </div>
                   )}
 
