@@ -20,6 +20,7 @@ interface TrialMessage {
 
 const FEELING_CHIPS = [
   "Nobody's tracking me anymore — just the baby.",
+  "I'm still healing from birth and no one's tracking that.",
   "I feel like a different person two weeks a month",
   "I never know when to push or rest",
   "My cycle is irregular and nothing tracks it right",
@@ -350,12 +351,12 @@ export const TrialChat = () => {
                 </p>
                 <div className="grid sm:grid-cols-2 gap-3">
                   {FEELING_CHIPS.map((chip, i) => {
-                    const accents = ["#15B88C", "#FF2E92", "#2BD4D9", "#A22BE8", "#4F8EF7"];
+                    const accents = ["#15B88C", "#15B88C", "#FF2E92", "#2BD4D9", "#A22BE8", "#4F8EF7"];
                     return (
                       <button
                         key={chip}
                         onClick={() => enterChatMode(chip)}
-                        className={`text-left text-sm px-5 py-4 rounded-xl bg-card/40 border border-border/50 hover:border-border text-foreground/90 hover:text-foreground transition-all ${i === 0 ? "sm:col-span-2" : ""}`}
+                        className="text-left text-sm px-5 py-4 rounded-xl bg-card/40 border border-border/50 hover:border-border text-foreground/90 hover:text-foreground transition-all"
                         style={{ borderLeft: `3px solid ${accents[i % accents.length]}` }}
                       >
                         {chip}
