@@ -718,7 +718,7 @@ serve(async (req) => {
         } else if (hasEmotional) {
           validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These are linked to a hormone called progesterone — it rises and falls across your cycle. You're not imagining it.`;
         } else if (hasPhysical) {
-          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Your body is telling you where it struggles most. These tend to follow your hormonal shifts across your cycle.`;
+          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Your body is telling you where it struggles most. ${userLifeStage === "postpartum" ? "These tend to follow your recovery and hormone rebuilding." : "These tend to follow your hormonal shifts across your cycle."}`;
         } else {
           validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These follow your hormonal pattern more closely than you might think. Once you start noticing when they hit, it stops being a surprise.`;
         }
