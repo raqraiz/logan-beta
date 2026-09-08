@@ -13,6 +13,8 @@ interface SymptomCategories {
   emotional: SymptomCategory;
   physical: SymptomCategory;
   quirky: SymptomCategory;
+  /** Present only on the postpartum onboarding branch */
+  postpartum?: SymptomCategory;
 }
 
 interface SymptomPickerProps {
@@ -71,6 +73,7 @@ export const SymptomPicker = ({ categories, onSubmit, isSubmitting }: SymptomPic
       {renderCategory(categories.emotional)}
       {renderCategory(categories.physical)}
       {renderCategory(categories.quirky)}
+      {categories.postpartum && renderCategory(categories.postpartum)}
       
       {/* Add custom symptom or notes */}
       <div className="space-y-2">
