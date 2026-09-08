@@ -765,13 +765,15 @@ serve(async (req) => {
       // Build metadata for next message
       const nextMetadata: Record<string, any> = { 
         onboarding_step: nextStep, 
+        question_key: nextQuestion.key,
         expecting_field: nextQuestion.field,
         input_type: nextQuestion.inputType,
-        onboarding_complete: nextStep === ONBOARDING_QUESTIONS.length - 1
+        onboarding_complete: nextStep === ONBOARDING_QUESTIONS.length - 1,
+        ...branchStepMeta(participant, nextStep)
       };
 
       if (nextQuestion.inputType === "symptom_picker") {
-        nextMetadata.symptom_categories = SYMPTOM_CATEGORIES;
+        nextMetadata.symptom_categories = symptomCategoriesFor(userLifeStage);
       }
       if (nextQuestion.inputType === "anchor_picker") {
         const symptomsForAnchor = participant?.typical_symptoms || selectedSymptoms || [];
