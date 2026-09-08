@@ -243,6 +243,54 @@ const ONBOARDING_QUESTIONS = [
   }
 ];
 
+// Which questions apply to this participant (life stage + flag state).
+function makeShouldSkip(participant: any) {
+  const userLifeStage = participant?.life_stage || "cycling";
+  return (q: any): boolean => {
+    if (!q) return false;
+    if (q.requiresStage) {
+      const ok = Array.isArray(q.requiresStage)
+        ? (q.requiresStage as string[]).includes(userLifeStage)
+        : q.requiresStage === userLifeStage;
+      if (!ok) return true;
+    }
+    // Uterus question only for users who explicitly answered "not on hormonal BC"
+    if (q.requiresBcFalse && participant?.on_hormonal_bc !== false) return true;
+    // Bleed-date questions are meaningless without a uterus
+    if (q.requiresUterus && participant?.has_uterus === false) return true;
+    return false;
+  };
+}
+
+// Postpartum branch only: 1-based ordinal + total for the step counter.
+// General path keeps its existing (index-driven) counter untouched.
+function branchStepMeta(participant: any, stepIndex: number): Record<string, any> {
+  if (participant?.life_stage !== "postpartum") return {};
+  const skip = makeShouldSkip(participant);
+  const applicable = ONBOARDING_QUESTIONS
+    .map((q, i) => ({ q, i }))
+    .filter(({ q, i }) => i < ONBOARDING_QUESTIONS.length - 1 && !skip(q));
+  const ordinal = applicable.filter(({ i }) => i <= stepIndex).length;
+  return {
+    branch: "postpartum",
+    branch_step: Math.max(ordinal, 1),
+    branch_total: applicable.length,
+    branch_labels: applicable.map(({ q }) => BRANCH_STEP_LABELS[q.key] || "")
+  };
+}
+
+const BRANCH_STEP_LABELS: Record<string, string> = {
+  age: "Age",
+  life_stage: "Stage",
+  birth_date: "Birth date",
+  feeding: "Feeding",
+  cycle_return: "Cycle return",
+  postpartum_bc: "Birth control",
+  symptoms: "Symptoms",
+  anchor_symptom: "Anchor symptom",
+  topics: "Focus areas"
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
