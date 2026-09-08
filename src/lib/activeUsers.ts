@@ -17,6 +17,14 @@ const CHUNK_DAYS = 14;
 export const utcKey = (d: Date) => d.toISOString().slice(0, 10);
 /** Parse a yyyy-MM-dd key at noon UTC so local-timezone display never shifts the day. */
 export const toUTCDate = (s: string) => new Date(s + "T12:00:00Z");
+/**
+ * Timezone-safe key for a date-picker value: the picker's local calendar day
+ * (what the user clicked) as a yyyy-MM-dd key, independent of timezone. Pair
+ * with toUTCDate before generating UTC day keys so a local-midnight Date never
+ * shifts one day back (UTC+) or the end-of-day Date one day forward (UTC-).
+ */
+export const localDayKey = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 export const todayUTCKey = () => utcKey(new Date());
 const addDaysUTC = (d: Date, n: number) => new Date(d.getTime() + n * 86400000);
 
