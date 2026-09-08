@@ -1019,12 +1019,12 @@ const Chat = () => {
     try {
       // First, insert the user's message
       const displayContent = symptoms 
-        ? `Selected: ${symptoms.join(", ")}`
+        ? `Selected: ${symptoms.length > 0 ? symptoms.join(", ") : "None"}`
         : anchor 
           ? `Anchor symptom: ${anchor}`
           : date
             ? `${lifeStage === "postpartum" ? "Birth date" : "Last period"}: ${format(date, "PPP")}`
-            : messageContent;
+            : formatOnboardingEcho(messageContent);
 
       if (!skipMessageInsert) {
         const { error } = await supabase.from("chat_messages").insert({
@@ -1849,7 +1849,7 @@ const Chat = () => {
                         <div className="mt-3"><SymptomExplainerCard /></div>
                       )}
                       {message.metadata?.visual_type === "education_anchor" && (
-                        <div className="mt-3"><AnchorExplainerCard /></div>
+                        <div className="mt-3"><AnchorExplainerCard lifeStage={lifeStage} /></div>
                       )}
 
                       {/* Phase cheat sheet for proactive insights — between intro and question */}
