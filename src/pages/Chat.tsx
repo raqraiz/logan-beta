@@ -260,7 +260,7 @@ const Chat = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const onboardingInitialized = useRef(false);
   const insightGenerated = useRef(false);
   const topicPromptChecked = useRef(false);
