@@ -39,8 +39,10 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
               activeTab === "home" ? "text-primary" : "text-muted-foreground"
             )}
           >
-            <Home className="w-5 h-5" />
-            <span className={cn("text-sm font-medium", activeTab === "home" && "font-semibold")}>Home</span>
+            <span data-tour="home" className="flex flex-col items-center gap-0.5">
+              <Home className="w-5 h-5" />
+              <span className={cn("text-sm font-medium", activeTab === "home" && "font-semibold")}>Home</span>
+            </span>
           </button>
 
           {/* Ask tab — cycle ring raised above, label aligned with others */}
@@ -52,7 +54,7 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
             )}
           >
             {/* Raised circle with ring — Ask text inside, positioned at bottom to align with Home/Plan */}
-            <div className={cn(
+            <div data-tour="ask" className={cn(
               "relative w-12 h-12 rounded-full bg-card flex items-center justify-center transition-all duration-200 -mt-6",
               activeTab === "ask" ? "scale-105" : ""
             )}>
@@ -91,8 +93,10 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
               activeTab === "plan" ? "text-primary" : "text-muted-foreground"
             )}
           >
-            <Target className="w-5 h-5" />
-            <span className={cn("text-sm font-medium", activeTab === "plan" && "font-semibold")}>Plan</span>
+            <span data-tour="plan" className="flex flex-col items-center gap-0.5">
+              <Target className="w-5 h-5" />
+              <span className={cn("text-sm font-medium", activeTab === "plan" && "font-semibold")}>Plan</span>
+            </span>
           </button>
         </div>
       </div>
