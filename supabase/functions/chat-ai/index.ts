@@ -3057,6 +3057,83 @@ serve(async (req) => {
         );
       }
 
+      // --- Pregnancy correction: user says the pregnant flip was wrong ---
+      if (pregnancyCorrection) {
+        const { data: recentLifeStageMessages } = await supabase
+          .from("chat_messages")
+          .select("metadata")
+          .eq("user_id", user.id)
+          .eq("role", "assistant")
+          .order("created_at", { ascending: false })
+          .limit(25);
+
+        const restoredStage = extractPreviousLifeStageFromMessages(recentLifeStageMessages || [], "pregnant");
+        let restoredPeriodStart: string | null = null;
+        for (const m of recentLifeStageMessages || []) {
+          const prev = (m as any)?.metadata?.previous_last_period_start;
+          if (typeof prev === "string" && /^\d{4}-\d{2}-\d{2}$/.test(prev)) { restoredPeriodStart = prev; break; }
+        }
+
+        if (!restoredStage) {
+          // Don't guess a stage — ask her directly. No write, no claim of a switch.
+          const askMsg = `I hear you — I got that wrong, and I'm sorry. I don't want to guess at the fix: which describes you right now — **cycling** (regular periods), **irregular / on hormonal birth control**, **perimenopause**, **menopause**, or **postpartum**? Tell me and I'll set it straight.`;
+          await supabase.from("chat_messages").insert({
+            user_id: user.id,
+            role: "assistant",
+            content: askMsg,
+            message_type: "text",
+            metadata: { pregnancy_correction_pending: true },
+          });
+          return new Response(
+            JSON.stringify({ success: true, message: askMsg }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const correctionPayload: any = {
+          life_stage: restoredStage,
+          pregnancy_lmp: null,
+          due_date: null,
+        };
+        if (restoredPeriodStart) correctionPayload.last_period_start = restoredPeriodStart;
+
+        const { error: correctionError } = await supabase
+          .from("participants")
+          .update(correctionPayload)
+          .eq("id", participant.id);
+
+        if (correctionError) {
+          const failMsg = `I tried to switch that back and it didn't save on my side. Can you try once more in a moment? You can also change it directly in Settings.`;
+          await supabase.from("chat_messages").insert({
+            user_id: user.id, role: "assistant", content: failMsg, message_type: "text",
+          });
+          return new Response(
+            JSON.stringify({ success: true, message: failMsg }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { data: refreshedCorrection } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshedCorrection) participant = refreshedCorrection;
+
+        const stageLabel = restoredStage === "irregular" ? "irregular / hormonal birth control" : restoredStage;
+        const needsAnchor = (restoredStage === "cycling" || restoredStage === "perimenopause") && !participant.last_period_start;
+        const msg = `You're right — I got that wrong, and I'm sorry. I've switched you back to **${stageLabel}** mode and cleared the pregnancy details.${restoredPeriodStart ? ` Your last period start is back to ${restoredPeriodStart}.` : ""}${needsAnchor ? " Tell me when your last period started and I'll re-anchor your cycle." : ""}`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: msg,
+          message_type: "text",
+          metadata: { life_stage_updated: restoredStage, corrected_from: "pregnant", awaiting_period_date: needsAnchor },
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+
+
       // --- Pregnancy LMP / due date / weeks-along updates (already pregnant) ---
       if (participant.life_stage === "pregnant") {
         const msg = userMessage;
