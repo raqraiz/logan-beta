@@ -112,7 +112,6 @@ interface ChatMessage {
       tab: "home" | "ask" | "plan";
       plan_section?: "mood" | "exercise" | "nutrition" | null;
     };
-    walkthrough_chips?: boolean;
   };
 }
 

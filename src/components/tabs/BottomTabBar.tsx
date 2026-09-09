@@ -33,6 +33,7 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
         <div className="max-w-md mx-auto flex items-end justify-around h-16 px-6 pb-2">
           {/* Home tab */}
           <button
+            data-tour="home"
             onClick={() => onTabChange("home")}
             className={cn(
               "flex flex-col items-center justify-end gap-0.5 flex-1 transition-colors",
@@ -45,6 +46,7 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
 
           {/* Ask tab — cycle ring raised above, label aligned with others */}
           <button
+            data-tour="ask"
             onClick={() => onTabChange("ask")}
             className={cn(
               "flex flex-col items-center justify-end flex-1 transition-colors",
@@ -85,6 +87,7 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
 
           {/* Plan tab */}
           <button
+            data-tour="plan"
             onClick={() => onTabChange("plan")}
             className={cn(
               "flex flex-col items-center justify-end gap-0.5 flex-1 transition-colors",
