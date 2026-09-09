@@ -2968,13 +2968,20 @@ serve(async (req) => {
       // --- Pregnancy detection ---
       // Trigger only on clear self-statements ("I'm pregnant", "I just found out I'm pregnant", "I'm X weeks pregnant").
       // Do NOT trigger on questions like "could I be pregnant?" or third-party mentions.
-      const pregnancySignal =
-        /\b(i'?m|i\s+am|just\s+found\s+out\s+i'?m|just\s+confirmed\s+i'?m|we'?re|we\s+are)\s+(pregnant|expecting|having\s+a\s+baby)\b/i.test(userMessage)
+      // Test cases — should NOT fire: "how many weeks would I be if I were pregnant",
+      // "what if we're pregnant this month", "could I be pregnant", "am I pregnant?".
+      // Should still fire: "I'm pregnant", "we're pregnant", "I found out I'm expecting".
+      const pregnancyPhrase =
+        /\b(i'?m|i\s+am|just\s+found\s+out\s+i'?m|just\s+confirmed\s+i'?m|we['’]re|we\s+are)\s+(pregnant|expecting|having\s+a\s+baby)\b/i.test(userMessage)
         || /\bi'?m\s+\d{1,2}\s+weeks?\s+(pregnant|along)\b/i.test(userMessage)
         || /\b(positive\s+pregnancy\s+test|positive\s+test\s+today|two\s+lines\s+today|bfp)\b/i.test(userMessage);
+      const pregnancySignal = pregnancyPhrase && !hasPregnancyHypotheticalContext(userMessage);
       const pregnancyExit =
         /\b(i\s+had\s+the\s+baby|baby\s+(is\s+)?here|gave\s+birth|delivered|switch\s+me\s+to\s+postpartum|switch\s+to\s+postpartum|i'?m\s+postpartum\s+now|no\s+longer\s+pregnant|lost\s+the\s+baby|miscarried)\b/i.test(userMessage)
         && participant.life_stage === "pregnant";
+      const pregnancyCorrection = !pregnancyExit
+        && participant.life_stage === "pregnant"
+        && isPregnancyCorrection(userMessage);
 
       if (pregnancySignal && participant.life_stage !== "pregnant" && participant.life_stage !== "pregnancy_loss") {
         // Try to extract weeks pregnant; LMP/due date will be asked.
