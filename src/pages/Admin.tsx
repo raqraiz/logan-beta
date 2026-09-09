@@ -42,7 +42,7 @@ const Admin = () => {
 
   useEffect(() => {
     if (!session) {
-      if (!loading) navigate("/auth");
+      if (!loading) navigate("/logan-admin-access");
       return;
     }
     const checkAdmin = async (attempt = 0) => {
@@ -78,7 +78,7 @@ const Admin = () => {
       setLoading(false);
     };
     checkAdmin();
-  }, [session, navigate]);
+  }, [session, navigate, loading]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
