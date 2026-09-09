@@ -476,7 +476,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
   };
 
   return (
-    <div className="w-full overflow-hidden">
+    <div ref={rootRef} className="w-full overflow-hidden">
       {/* Header — always visible, no toggle */}
       <div className="w-full flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2.5">
