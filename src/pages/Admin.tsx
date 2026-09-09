@@ -42,7 +42,7 @@ const Admin = () => {
 
   useEffect(() => {
     if (!session) {
-      if (!loading) navigate("/auth");
+      if (!loading) navigate("/logan-admin-access");
       return;
     }
     const checkAdmin = async (attempt = 0) => {
