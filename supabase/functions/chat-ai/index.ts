@@ -2984,6 +2984,9 @@ serve(async (req) => {
         && isPregnancyCorrection(userMessage);
 
       if (pregnancySignal && participant.life_stage !== "pregnant" && participant.life_stage !== "pregnancy_loss") {
+        // Remember what we're flipping away from, so a false flip can be undone.
+        const prevStage = participant.life_stage;
+        const prevPeriodStart = participant.last_period_start ?? null;
         // Try to extract weeks pregnant; LMP/due date will be asked.
         const weeksMatch = userMessage.match(/\b(\d{1,2})\s+weeks?\b/i);
         const weeksAlong = weeksMatch ? parseInt(weeksMatch[1]) : null;
