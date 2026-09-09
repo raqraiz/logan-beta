@@ -110,6 +110,20 @@ function isPregnancyLossCorrection(text: string): boolean {
   return /\b(i\s+did\s+not\s+miscarry|i\s+didn'?t\s+miscarry|i\s+haven'?t\s+miscarried|i'?m\s+not\s+in\s+pregnancy\s+loss|not\s+pregnancy\s+loss|that\s+was\s+a\s+misunderstanding|you\s+misunderstood|return\s+to\s+(regular|cycle|cycling)\s+tracking|switch\s+me\s+back\s+to\s+(regular|cycle|cycling)|i\s+was\s+asking\s+about\s+my\s+(mother|mom|mum|sister|friend)|that\s+was\s+about\s+my\s+(mother|mom|mum|sister|friend)|asking\s+a\s+question)\b/i.test(text);
 }
 
+// Veto for hypothetical / question-shaped pregnancy talk.
+// Fires on: "how many weeks would I be if I were pregnant", "what if we're pregnant
+// this month", "could I be pregnant", "am I pregnant?"
+function hasPregnancyHypotheticalContext(text: string): boolean {
+  return isQuestionLike(text)
+    || /\b(if|what\s+if|would|could|might|maybe|in\s+case|suppose|hypothetically|were\s+i|i\s+were|not\s+sure\s+if|wondering\s+if|think\s+i\s+might)\b/i.test(text);
+}
+
+// Detects a user correcting a false pregnancy flip ("no I'm not pregnant",
+// "that's wrong", "switch me back", "I'm not actually pregnant").
+function isPregnancyCorrection(text: string): boolean {
+  return /\b(i'?m\s+not\s+(actually\s+|really\s+)?pregnant|i\s+am\s+not\s+(actually\s+|really\s+)?pregnant|i\s+was\s+never\s+pregnant|i\s+never\s+said\s+i\s+was\s+pregnant|not\s+pregnant|that'?s\s+wrong|that\s+is\s+wrong|you\s+got\s+that\s+wrong|you\s+misunderstood|that\s+was\s+a\s+(mistake|misunderstanding)|switch\s+me\s+back|change\s+it\s+back|put\s+it\s+back|undo\s+that|remove\s+pregnancy\s+mode|i'?m\s+not\s+expecting)\b/i.test(text);
+}
+
 function extractPreviousLifeStageFromMessages(messages: any[], current: LifeStage): LifeStage | null {
   for (const message of messages || []) {
     const metadata = message?.metadata || {};
@@ -2954,15 +2968,25 @@ serve(async (req) => {
       // --- Pregnancy detection ---
       // Trigger only on clear self-statements ("I'm pregnant", "I just found out I'm pregnant", "I'm X weeks pregnant").
       // Do NOT trigger on questions like "could I be pregnant?" or third-party mentions.
-      const pregnancySignal =
-        /\b(i'?m|i\s+am|just\s+found\s+out\s+i'?m|just\s+confirmed\s+i'?m|we'?re|we\s+are)\s+(pregnant|expecting|having\s+a\s+baby)\b/i.test(userMessage)
+      // Test cases — should NOT fire: "how many weeks would I be if I were pregnant",
+      // "what if we're pregnant this month", "could I be pregnant", "am I pregnant?".
+      // Should still fire: "I'm pregnant", "we're pregnant", "I found out I'm expecting".
+      const pregnancyPhrase =
+        /\b(i'?m|i\s+am|just\s+found\s+out\s+i'?m|just\s+confirmed\s+i'?m|we['’]re|we\s+are)\s+(pregnant|expecting|having\s+a\s+baby)\b/i.test(userMessage)
         || /\bi'?m\s+\d{1,2}\s+weeks?\s+(pregnant|along)\b/i.test(userMessage)
         || /\b(positive\s+pregnancy\s+test|positive\s+test\s+today|two\s+lines\s+today|bfp)\b/i.test(userMessage);
+      const pregnancySignal = pregnancyPhrase && !hasPregnancyHypotheticalContext(userMessage);
       const pregnancyExit =
         /\b(i\s+had\s+the\s+baby|baby\s+(is\s+)?here|gave\s+birth|delivered|switch\s+me\s+to\s+postpartum|switch\s+to\s+postpartum|i'?m\s+postpartum\s+now|no\s+longer\s+pregnant|lost\s+the\s+baby|miscarried)\b/i.test(userMessage)
         && participant.life_stage === "pregnant";
+      const pregnancyCorrection = !pregnancyExit
+        && participant.life_stage === "pregnant"
+        && isPregnancyCorrection(userMessage);
 
       if (pregnancySignal && participant.life_stage !== "pregnant" && participant.life_stage !== "pregnancy_loss") {
+        // Remember what we're flipping away from, so a false flip can be undone.
+        const prevStage = participant.life_stage;
+        const prevPeriodStart = participant.last_period_start ?? null;
         // Try to extract weeks pregnant; LMP/due date will be asked.
         const weeksMatch = userMessage.match(/\b(\d{1,2})\s+weeks?\b/i);
         const weeksAlong = weeksMatch ? parseInt(weeksMatch[1]) : null;
@@ -2992,7 +3016,11 @@ serve(async (req) => {
           role: "assistant",
           content: msg,
           message_type: "text",
-          metadata: { life_stage_updated: "pregnant" },
+          metadata: {
+            life_stage_updated: "pregnant",
+            previous_life_stage: isLifeStage(prevStage) ? prevStage : "cycling",
+            previous_last_period_start: prevPeriodStart,
+          },
         });
         return new Response(
           JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
@@ -3028,6 +3056,83 @@ serve(async (req) => {
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      // --- Pregnancy correction: user says the pregnant flip was wrong ---
+      if (pregnancyCorrection) {
+        const { data: recentLifeStageMessages } = await supabase
+          .from("chat_messages")
+          .select("metadata")
+          .eq("user_id", user.id)
+          .eq("role", "assistant")
+          .order("created_at", { ascending: false })
+          .limit(25);
+
+        const restoredStage = extractPreviousLifeStageFromMessages(recentLifeStageMessages || [], "pregnant");
+        let restoredPeriodStart: string | null = null;
+        for (const m of recentLifeStageMessages || []) {
+          const prev = (m as any)?.metadata?.previous_last_period_start;
+          if (typeof prev === "string" && /^\d{4}-\d{2}-\d{2}$/.test(prev)) { restoredPeriodStart = prev; break; }
+        }
+
+        if (!restoredStage) {
+          // Don't guess a stage — ask her directly. No write, no claim of a switch.
+          const askMsg = `I hear you — I got that wrong, and I'm sorry. I don't want to guess at the fix: which describes you right now — **cycling** (regular periods), **irregular / on hormonal birth control**, **perimenopause**, **menopause**, or **postpartum**? Tell me and I'll set it straight.`;
+          await supabase.from("chat_messages").insert({
+            user_id: user.id,
+            role: "assistant",
+            content: askMsg,
+            message_type: "text",
+            metadata: { pregnancy_correction_pending: true },
+          });
+          return new Response(
+            JSON.stringify({ success: true, message: askMsg }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const correctionPayload: any = {
+          life_stage: restoredStage,
+          pregnancy_lmp: null,
+          due_date: null,
+        };
+        if (restoredPeriodStart) correctionPayload.last_period_start = restoredPeriodStart;
+
+        const { error: correctionError } = await supabase
+          .from("participants")
+          .update(correctionPayload)
+          .eq("id", participant.id);
+
+        if (correctionError) {
+          const failMsg = `I tried to switch that back and it didn't save on my side. Can you try once more in a moment? You can also change it directly in Settings.`;
+          await supabase.from("chat_messages").insert({
+            user_id: user.id, role: "assistant", content: failMsg, message_type: "text",
+          });
+          return new Response(
+            JSON.stringify({ success: true, message: failMsg }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { data: refreshedCorrection } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshedCorrection) participant = refreshedCorrection;
+
+        const stageLabel = restoredStage === "irregular" ? "irregular / hormonal birth control" : restoredStage;
+        const needsAnchor = (restoredStage === "cycling" || restoredStage === "perimenopause") && !participant.last_period_start;
+        const msg = `You're right — I got that wrong, and I'm sorry. I've switched you back to **${stageLabel}** mode and cleared the pregnancy details.${restoredPeriodStart ? ` Your last period start is back to ${restoredPeriodStart}.` : ""}${needsAnchor ? " Tell me when your last period started and I'll re-anchor your cycle." : ""}`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: msg,
+          message_type: "text",
+          metadata: { life_stage_updated: restoredStage, corrected_from: "pregnant", awaiting_period_date: needsAnchor },
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+
 
       // --- Pregnancy LMP / due date / weeks-along updates (already pregnant) ---
       if (participant.life_stage === "pregnant") {
