@@ -3013,7 +3013,11 @@ serve(async (req) => {
           role: "assistant",
           content: msg,
           message_type: "text",
-          metadata: { life_stage_updated: "pregnant" },
+          metadata: {
+            life_stage_updated: "pregnant",
+            previous_life_stage: isLifeStage(prevStage) ? prevStage : "cycling",
+            previous_last_period_start: prevPeriodStart,
+          },
         });
         return new Response(
           JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
