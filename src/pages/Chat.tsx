@@ -6,6 +6,7 @@ import { setPhaseLengthPrefs } from "@/lib/phaseLengths";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
@@ -260,7 +261,16 @@ const Chat = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-grow the composer on any value change, including programmatic
+  // inserts (e.g. voice dictation) that don't fire onChange.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 200) + "px";
+  }, [inputValue]);
   const onboardingInitialized = useRef(false);
   const insightGenerated = useRef(false);
   const topicPromptChecked = useRef(false);
@@ -2331,18 +2341,25 @@ const Chat = () => {
                   <Paperclip className="w-5 h-5" />
                 </Button>
               )}
-              <Input
+              <Textarea
                 ref={inputRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    (e.currentTarget.form as HTMLFormElement | null)?.requestSubmit();
+                  }
+                }}
                 onFocus={(e) => {
                   // Ensure input is visible when mobile keyboard opens
                   setTimeout(() => {
                     e.target.scrollIntoView({ block: "center", behavior: "smooth" });
                   }, 300);
                 }}
+                rows={1}
                 placeholder={isOnboarding ? "Type your answer..." : "Ask me anything..."}
-                className="flex-1 h-11 py-0"
+                className="flex-1 min-h-[44px] max-h-[200px] resize-none py-2.5"
                 disabled={isSending}
               />
               <VoiceInputButton

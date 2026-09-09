@@ -107,6 +107,15 @@ export const TrialChat = () => {
   const isNearBottomRef = useRef(true);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Auto-grow the composer on any value change, including programmatic
+  // inserts (e.g. voice dictation) that don't fire onChange.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 200) + "px";
+  }, [inputValue]);
+
   // Scroll to top on mount so the landing page always starts at the hero
   useEffect(() => {
     const scrollTop = () => {
