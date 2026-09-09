@@ -2331,18 +2331,25 @@ const Chat = () => {
                   <Paperclip className="w-5 h-5" />
                 </Button>
               )}
-              <Input
+              <Textarea
                 ref={inputRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    (e.currentTarget.form as HTMLFormElement | null)?.requestSubmit();
+                  }
+                }}
                 onFocus={(e) => {
                   // Ensure input is visible when mobile keyboard opens
                   setTimeout(() => {
                     e.target.scrollIntoView({ block: "center", behavior: "smooth" });
                   }, 300);
                 }}
+                rows={1}
                 placeholder={isOnboarding ? "Type your answer..." : "Ask me anything..."}
-                className="flex-1 h-11 py-0"
+                className="flex-1 min-h-[44px] max-h-[200px] resize-none py-2.5"
                 disabled={isSending}
               />
               <VoiceInputButton
