@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -391,6 +391,28 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
     });
   }, []);
 
+  // Deep-link target (e.g. post-onboarding walkthrough "Log it now" chip):
+  // open today's logging view pre-filled with the given symptom and scroll here.
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const symptom = (e as CustomEvent).detail?.symptom as string | null | undefined;
+      setExpanded(true);
+      setLogDate(new Date());
+      if (symptom) {
+        const name = String(symptom);
+        setSelected(prev =>
+          prev.some(s => s.name.toLowerCase() === name.toLowerCase())
+            ? prev
+            : [...prev, { name, severity: 0 }]
+        );
+      }
+      setTimeout(() => rootRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+    };
+    window.addEventListener("logan:open-symptom-log", handler);
+    return () => window.removeEventListener("logan:open-symptom-log", handler);
+  }, []);
+
   const setSeverity = useCallback((name: string, severity: number) => {
     setSelected(prev => prev.map(s => s.name === name ? { ...s, severity } : s));
   }, []);
@@ -454,7 +476,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
   };
 
   return (
-    <div className="w-full overflow-hidden">
+    <div ref={rootRef} className="w-full overflow-hidden">
       {/* Header — always visible, no toggle */}
       <div className="w-full flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2.5">
