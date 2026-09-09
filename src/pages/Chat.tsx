@@ -1986,6 +1986,47 @@ const Chat = () => {
                   })()}
 
 
+                  {/* Post-onboarding walkthrough quick-reply chips (bubble 5) */}
+                  {isLastMessage && message.role === "assistant" && message.metadata?.walkthrough_chips && !walkthroughDismissed.has(message.id) && (
+                    <div className="mt-3 flex flex-col gap-2 max-w-xs">
+                      {[
+                        {
+                          label: "Log it now",
+                          onClick: () => {
+                            setWalkthroughDismissed(prev => new Set(prev).add(message.id));
+                            setActiveTab("home");
+                            trackTabSwitch("home");
+                            setTimeout(() => {
+                              window.dispatchEvent(new CustomEvent("logan:open-symptom-log", {
+                                detail: { symptom: (message.metadata?.anchor_symptom as string) || null },
+                              }));
+                            }, 50);
+                          },
+                        },
+                        {
+                          label: "Take me to Home",
+                          onClick: () => {
+                            setWalkthroughDismissed(prev => new Set(prev).add(message.id));
+                            setActiveTab("home");
+                            trackTabSwitch("home");
+                          },
+                        },
+                        {
+                          label: "Later",
+                          onClick: () => setWalkthroughDismissed(prev => new Set(prev).add(message.id)),
+                        },
+                      ].map((chip) => (
+                        <button
+                          key={chip.label}
+                          onClick={chip.onClick}
+                          className="text-left px-4 py-3 rounded-xl border border-border/40 bg-card/60 hover:bg-card/90 transition-all active:scale-[0.98]"
+                        >
+                          <span className="text-sm font-medium text-foreground">{chip.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Interactive inputs for onboarding */}
                   {showInteractiveInput && inputType === "symptom_picker" && message.metadata?.symptom_categories && (
                     <div className={`mt-3 ${pickerBusyClass}`}>
