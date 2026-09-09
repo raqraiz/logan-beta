@@ -111,6 +111,7 @@ export function CoachMarkTour({ open, anchorSymptom, onLogNow, onGoHome, onDismi
             left: hole.left,
             width: hole.width,
             height: hole.height,
+            borderRadius: STEPS[step].target === "ask" ? 9999 : undefined,
             boxShadow: "0 0 0 9999px hsl(240 10% 4% / 0.82), 0 0 24px -2px hsl(var(--primary) / 0.7)",
             border: "1.5px solid hsl(var(--primary))",
           }}
