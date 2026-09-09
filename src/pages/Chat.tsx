@@ -169,6 +169,8 @@ const Chat = () => {
   const [isOnboarding, setIsOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [onboardingBranch, setOnboardingBranch] = useState<{ step: number; total: number; labels: string[] } | null>(null);
+  // Walkthrough bubble-5 chips dismissed locally (per message id)
+  const [walkthroughDismissed, setWalkthroughDismissed] = useState<Set<string>>(new Set());
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
   // Live cycle values for message-bubble visuals. Null until participant data
