@@ -20,8 +20,97 @@ export const VoiceInputButton = ({ onTranscript, disabled, className }: VoiceInp
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
   const deliveredRef = useRef(false);
+  // True only while the user wants dictation to continue. The stop button is
+  // the sole terminating action; any other onend (Android Chrome pauses,
+  // no-speech timeouts) triggers an automatic restart.
+  const wantListeningRef = useRef(false);
+  // Committed (final) transcript accumulated across restarts.
   const finalTranscriptRef = useRef("");
   const isIOSDevice = useMemo(() => isIOS(), []);
+
+  const startRecognition = useCallback(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    const recognition = new SpeechRecognition();
+    // Continuous + interim: keep the session alive across natural pauses and
+    // surface partial text so long dictations aren't truncated.
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+    recognitionRef.current = recognition;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event: any) => {
+      // Each restart begins a fresh result list. Only append results from
+      // resultIndex onward so already-committed finals aren't duplicated.
+      let newFinal = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          newFinal += result[0].transcript;
+        }
+      }
+      if (newFinal) {
+        finalTranscriptRef.current += newFinal;
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error, event.message);
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        // Dead permission — stop the session, don't loop-restart.
+        wantListeningRef.current = false;
+        toast({
+          title: "Microphone access denied",
+          description: "Please allow microphone access in your browser settings.",
+          variant: "destructive",
+        });
+      } else if (event.error === "no-speech") {
+        // Transient pause — handled as a restart in onend while the user
+        // still wants to dictate.
+      } else if (event.error === "audio-capture") {
+        wantListeningRef.current = false;
+        toast({
+          title: "Microphone unavailable",
+          description: "Check that your microphone is connected and not in use by another app.",
+          variant: "destructive",
+        });
+      } else if (event.error === "network") {
+        wantListeningRef.current = false;
+        toast({
+          title: "Voice input connection error",
+          description: "Check your internet connection and try again.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    recognition.onend = () => {
+      if (wantListeningRef.current) {
+        // User hasn't tapped stop — restart immediately (Android Chrome ends
+        // the session after a pause even in continuous mode).
+        try {
+          startRecognition();
+        } catch (e) {
+          console.error("Speech recognition restart failed:", e);
+          wantListeningRef.current = false;
+          setIsListening(false);
+        }
+        return;
+      }
+      setIsListening(false);
+      const text = finalTranscriptRef.current.trim().replace(/\s+/g, " ");
+      if (text && !deliveredRef.current) {
+        deliveredRef.current = true;
+        onTranscript(text);
+      }
+    };
+
+    recognition.start();
+  }, [onTranscript]);
 
   const toggleListening = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -36,68 +125,23 @@ export const VoiceInputButton = ({ onTranscript, disabled, className }: VoiceInp
     }
 
     if (isListening) {
+      // Explicit stop — the sole terminating action. No restart fires after this.
+      wantListeningRef.current = false;
       recognitionRef.current?.stop();
       setIsListening(false);
       return;
     }
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = "en-US";
-    recognitionRef.current = recognition;
+    wantListeningRef.current = true;
     deliveredRef.current = false;
     finalTranscriptRef.current = "";
-
-    recognition.onstart = () => {
-      setIsListening(true);
-    };
-
-    recognition.onresult = (event: any) => {
-      // Some mobile browsers (notably Android Chrome) fire onresult multiple
-      // times with cumulative transcripts even when interimResults=false.
-      // Collect only final results and keep the longest snapshot — we deliver
-      // once in onend to avoid duplicated/stuttered appends.
-      let finalText = "";
-      for (let i = 0; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) {
-          finalText += (finalText ? " " : "") + result[0].transcript;
-        }
-      }
-      if (finalText.length > finalTranscriptRef.current.length) {
-        finalTranscriptRef.current = finalText;
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error("Speech recognition error:", event.error, event.message);
-      if (event.error === "not-allowed") {
-        toast({
-          title: "Microphone access denied",
-          description: "Please allow microphone access in your browser settings.",
-          variant: "destructive",
-        });
-      } else if (event.error === "no-speech") {
-        toast({
-          title: "No speech detected",
-          description: "Try speaking louder or closer to your microphone.",
-        });
-      }
-      setIsListening(false);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-      const text = finalTranscriptRef.current.trim();
-      if (text && !deliveredRef.current) {
-        deliveredRef.current = true;
-        onTranscript(text);
-      }
-    };
-
-    recognition.start();
-  }, [isListening, onTranscript]);
+    try {
+      startRecognition();
+    } catch (e) {
+      console.error("Speech recognition start failed:", e);
+      wantListeningRef.current = false;
+    }
+  }, [isListening, startRecognition]);
 
   if (isIOSDevice) return null;
 
