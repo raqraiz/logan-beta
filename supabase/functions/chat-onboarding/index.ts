@@ -884,6 +884,42 @@ serve(async (req) => {
           message_type: "text",
           metadata: { insight_type: "email_confirmation_nudge" }
         });
+
+        // Post-onboarding walkthrough: 5 orientation bubbles, same pacing as
+        // the rest of onboarding. Generic app tour — identical for both paths.
+        const walkthroughBubbles = [
+          "Before you dive in — quick tour of where everything lives. 🏠",
+          "Home is your daily check-in — log symptoms, meals, and weight, and see what to expect today.",
+          "Ask is right here — anytime something feels off, ask me. No 3am googling.",
+          "Plan lays out your whole week — mood, workouts, and nutrition, built for exactly where you are.",
+        ];
+        for (const bubble of walkthroughBubbles) {
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          await supabase.from("chat_messages").insert({
+            user_id: user.id,
+            role: "assistant",
+            content: bubble,
+            message_type: "text",
+            metadata: { insight_type: "walkthrough" }
+          });
+        }
+
+        // Bubble 5: anchor-symptom call-to-action with quick-reply chips.
+        const anchorSym = participant.anchor_symptom || null;
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: anchorSym
+            ? `You told me ${anchorSym.toLowerCase()} is the one to watch. Want to log today's now, so I can start finding your pattern?`
+            : "Want to log how you're feeling today, so I can start finding your pattern?",
+          message_type: "text",
+          metadata: {
+            insight_type: "walkthrough",
+            walkthrough_chips: true,
+            anchor_symptom: anchorSym
+          }
+        });
       }
 
       return new Response(
