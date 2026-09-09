@@ -78,7 +78,7 @@ const Admin = () => {
       setLoading(false);
     };
     checkAdmin();
-  }, [session, navigate]);
+  }, [session, navigate, loading]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
