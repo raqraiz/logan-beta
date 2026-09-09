@@ -110,6 +110,20 @@ function isPregnancyLossCorrection(text: string): boolean {
   return /\b(i\s+did\s+not\s+miscarry|i\s+didn'?t\s+miscarry|i\s+haven'?t\s+miscarried|i'?m\s+not\s+in\s+pregnancy\s+loss|not\s+pregnancy\s+loss|that\s+was\s+a\s+misunderstanding|you\s+misunderstood|return\s+to\s+(regular|cycle|cycling)\s+tracking|switch\s+me\s+back\s+to\s+(regular|cycle|cycling)|i\s+was\s+asking\s+about\s+my\s+(mother|mom|mum|sister|friend)|that\s+was\s+about\s+my\s+(mother|mom|mum|sister|friend)|asking\s+a\s+question)\b/i.test(text);
 }
 
+// Veto for hypothetical / question-shaped pregnancy talk.
+// Fires on: "how many weeks would I be if I were pregnant", "what if we're pregnant
+// this month", "could I be pregnant", "am I pregnant?"
+function hasPregnancyHypotheticalContext(text: string): boolean {
+  return isQuestionLike(text)
+    || /\b(if|what\s+if|would|could|might|maybe|in\s+case|suppose|hypothetically|were\s+i|i\s+were|not\s+sure\s+if|wondering\s+if|think\s+i\s+might)\b/i.test(text);
+}
+
+// Detects a user correcting a false pregnancy flip ("no I'm not pregnant",
+// "that's wrong", "switch me back", "I'm not actually pregnant").
+function isPregnancyCorrection(text: string): boolean {
+  return /\b(i'?m\s+not\s+(actually\s+|really\s+)?pregnant|i\s+am\s+not\s+(actually\s+|really\s+)?pregnant|i\s+was\s+never\s+pregnant|i\s+never\s+said\s+i\s+was\s+pregnant|not\s+pregnant|that'?s\s+wrong|that\s+is\s+wrong|you\s+got\s+that\s+wrong|you\s+misunderstood|that\s+was\s+a\s+(mistake|misunderstanding)|switch\s+me\s+back|change\s+it\s+back|put\s+it\s+back|undo\s+that|remove\s+pregnancy\s+mode|i'?m\s+not\s+expecting)\b/i.test(text);
+}
+
 function extractPreviousLifeStageFromMessages(messages: any[], current: LifeStage): LifeStage | null {
   for (const message of messages || []) {
     const metadata = message?.metadata || {};
