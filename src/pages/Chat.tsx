@@ -6,6 +6,7 @@ import { setPhaseLengthPrefs } from "@/lib/phaseLengths";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
@@ -261,6 +262,15 @@ const Chat = () => {
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-grow the composer on any value change, including programmatic
+  // inserts (e.g. voice dictation) that don't fire onChange.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 200) + "px";
+  }, [inputValue]);
   const onboardingInitialized = useRef(false);
   const insightGenerated = useRef(false);
   const topicPromptChecked = useRef(false);
