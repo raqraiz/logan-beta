@@ -33,20 +33,20 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
         <div className="max-w-md mx-auto flex items-end justify-around h-16 px-6 pb-2">
           {/* Home tab */}
           <button
-            data-tour="home"
             onClick={() => onTabChange("home")}
             className={cn(
               "flex flex-col items-center justify-end gap-0.5 flex-1 transition-colors",
               activeTab === "home" ? "text-primary" : "text-muted-foreground"
             )}
           >
-            <Home className="w-5 h-5" />
-            <span className={cn("text-sm font-medium", activeTab === "home" && "font-semibold")}>Home</span>
+            <span data-tour="home" className="flex flex-col items-center gap-0.5">
+              <Home className="w-5 h-5" />
+              <span className={cn("text-sm font-medium", activeTab === "home" && "font-semibold")}>Home</span>
+            </span>
           </button>
 
           {/* Ask tab — cycle ring raised above, label aligned with others */}
           <button
-            data-tour="ask"
             onClick={() => onTabChange("ask")}
             className={cn(
               "flex flex-col items-center justify-end flex-1 transition-colors",
@@ -54,7 +54,7 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
             )}
           >
             {/* Raised circle with ring — Ask text inside, positioned at bottom to align with Home/Plan */}
-            <div className={cn(
+            <div data-tour="ask" className={cn(
               "relative w-12 h-12 rounded-full bg-card flex items-center justify-center transition-all duration-200 -mt-6",
               activeTab === "ask" ? "scale-105" : ""
             )}>
@@ -87,15 +87,16 @@ export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays
 
           {/* Plan tab */}
           <button
-            data-tour="plan"
             onClick={() => onTabChange("plan")}
             className={cn(
               "flex flex-col items-center justify-end gap-0.5 flex-1 transition-colors",
               activeTab === "plan" ? "text-primary" : "text-muted-foreground"
             )}
           >
-            <Target className="w-5 h-5" />
-            <span className={cn("text-sm font-medium", activeTab === "plan" && "font-semibold")}>Plan</span>
+            <span data-tour="plan" className="flex flex-col items-center gap-0.5">
+              <Target className="w-5 h-5" />
+              <span className={cn("text-sm font-medium", activeTab === "plan" && "font-semibold")}>Plan</span>
+            </span>
           </button>
         </div>
       </div>
