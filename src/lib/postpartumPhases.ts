@@ -1,3 +1,5 @@
+import { getPostpartumTimeline } from "@/lib/postpartumTimeline";
+
 // Centralized postpartum phase model. Used by HomeTab, PlanTab, and the cycle circle
 // so insights, diet, exercise, and mood/hormone context stay consistent across the app.
 
@@ -19,9 +21,8 @@ export interface PPPhaseMeta {
 }
 
 export function getPostpartumPhase(birthDate?: string | null): PPPhase {
+  const days = getPostpartumDays(birthDate);
   if (!birthDate) return "acute";
-  const start = new Date(birthDate + "T12:00:00Z");
-  const days = Math.floor((Date.now() - start.getTime()) / 86400000);
   if (days < 14) return "acute";
   if (days < 42) return "early";
   if (days < 84) return "healing";
@@ -31,9 +32,8 @@ export function getPostpartumPhase(birthDate?: string | null): PPPhase {
 }
 
 export function getPostpartumDays(birthDate?: string | null): number {
-  if (!birthDate) return 0;
-  const start = new Date(birthDate + "T12:00:00Z");
-  return Math.max(0, Math.floor((Date.now() - start.getTime()) / 86400000));
+  // Shared calendar-day convention — see src/lib/postpartumTimeline.ts
+  return Math.max(0, getPostpartumTimeline(birthDate)?.days ?? 0);
 }
 
 export const PP_META: Record<PPPhase, PPPhaseMeta> = {

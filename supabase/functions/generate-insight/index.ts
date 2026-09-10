@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
 import { calculateCycleInfo as sharedCalculateCycleInfo } from "../_shared/cycleCalculations.ts";
 
 const corsHeaders = {
@@ -584,13 +585,12 @@ function buildNonCyclingInsightPrompt(
   let ppPhaseGuidance = "";
   let pregnancyPhaseGuidance = "";
   if (lifeStage === "postpartum" && participant.postpartum_start_date) {
-    const birthDate = new Date(participant.postpartum_start_date + "T12:00:00Z");
-    const now = new Date();
-    const diffDays = Math.floor((now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
-    const weeks = Math.floor(diffDays / 7);
-    const months = Math.floor(diffDays / 30);
+    const ppT = getPostpartumTimeline(participant.postpartum_start_date, { timezone: (participant as any).timezone || "UTC" })!;
+    const diffDays = ppT.days;
+    const weeks = ppT.weeks;
+    const months = ppT.months;
     timelineContext = months >= 3
-      ? `${months} months postpartum`
+      ? `${months} months postpartum (week ${weeks})`
       : `${weeks} weeks postpartum (Day ${diffDays})`;
 
     if (diffDays < 14) {

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -94,9 +95,10 @@ serve(async (req) => {
         if (Number.isFinite(len)) cycleLengthDays = Math.min(45, Math.max(18, len));
       }
       if (participant?.postpartum_start_date) {
-        const start = new Date(participant.postpartum_start_date + "T12:00:00Z");
-        const now = new Date();
-        postpartumWeeks = Math.max(0, Math.floor((now.getTime() - start.getTime()) / (86400000 * 7)));
+        postpartumWeeks = Math.max(
+          0,
+          getPostpartumTimeline(participant.postpartum_start_date, { timezone: participant?.timezone || "UTC" })?.weeks ?? 0,
+        );
       }
       if (participant?.last_period_start && lifeStage !== "postpartum" && lifeStage !== "menopause" && lifeStage !== "irregular") {
         const start = new Date(participant.last_period_start + "T12:00:00Z");

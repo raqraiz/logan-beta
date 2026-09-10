@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
 import { calculateCycleInfo as sharedCalculateCycleInfo } from "../_shared/cycleCalculations.ts";
 
 const corsHeaders = {
@@ -4946,23 +4947,22 @@ MEAL PLANS / MENUS — STRICT RULES:
     let ppTimeline = "";
     let ppPhaseGuidance = "";
     if (userLifeStage === "postpartum" && participant.postpartum_start_date) {
-      const birthDate = new Date(participant.postpartum_start_date + "T12:00:00Z");
-      const now = new Date();
-      const diffDays = Math.floor((now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
-      const weeks = Math.floor(diffDays / 7);
-      const months = Math.floor(diffDays / 30);
+      const birthDate = new Date(String(participant.postpartum_start_date).slice(0, 10) + "T12:00:00Z");
+      const pp = getPostpartumTimeline(participant.postpartum_start_date, { timezone: participant.timezone || "UTC" })!;
+      const diffDays = pp.days;
+      const weeks = pp.weeks;
+      const months = pp.months;
 
       // Sanity: anything older than ~3 years (1095 days) is almost certainly stale/wrong data.
       // Do NOT inject a misleading "302 months postpartum" timeline. Tell the model to ask for the real date.
-      if (diffDays > 1095 || diffDays < 0) {
+      if (pp.isImplausible) {
         ppTimeline = `\n- Postpartum timeline: UNKNOWN — the stored birth date (${participant.postpartum_start_date}) looks invalid or stale. Do NOT cite weeks/months postpartum. In your reply, ask the user for her baby's actual birth date so the timeline can be corrected. Do NOT claim you have updated anything.`;
         ppPhaseGuidance = `\nPOSTPARTUM PHASE — UNKNOWN: The stored date is unreliable. Ask the user for the correct baby birth date. Avoid phase-specific framing until corrected.`;
       } else {
-        if (months >= 1) {
-          ppTimeline = `\n- Postpartum timeline: ${months} month${months > 1 ? "s" : ""} postpartum (baby born ${birthDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})`;
-        } else {
-          ppTimeline = `\n- Postpartum timeline: ${weeks} week${weeks !== 1 ? "s" : ""} postpartum (baby born ${birthDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})`;
-        }
+        // CANONICAL numbers — identical to the Home tab's postpartum ring.
+        // If you state how far postpartum she is, use EXACTLY these figures.
+        ppTimeline = `\n- Postpartum timeline (CANONICAL — matches her Home screen exactly, never recompute or estimate): ${weeks} week${weeks !== 1 ? "s" : ""} postpartum (day ${diffDays}${months >= 1 ? `, i.e. ${months} month${months > 1 ? "s" : ""}` : ""}; baby born ${birthDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}). Any week/month number you say MUST match these values, and MUST ignore older numbers from earlier in this conversation.`;
+
 
         // Bucket guidance — DO NOT default to "early postpartum healing" for everyone
         if (diffDays <= 42) {
@@ -5024,12 +5024,10 @@ MEAL PLANS / MENUS — STRICT RULES:
   // Reconciliation: cycling user who is also actively recovering postpartum
   let dualStateContext = "";
   if ((participant as any).postpartum_active && participant.postpartum_start_date) {
-    const birthDate = new Date(participant.postpartum_start_date + "T12:00:00Z");
-    const diffDays = Math.floor((Date.now() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays >= 0 && diffDays <= 1095) {
-      const months = Math.floor(diffDays / 30);
-      const weeks = Math.floor(diffDays / 7);
-      const ppLabel = months >= 1 ? `${months} month${months > 1 ? "s" : ""}` : `${weeks} week${weeks !== 1 ? "s" : ""}`;
+    const birthDate = new Date(String(participant.postpartum_start_date).slice(0, 10) + "T12:00:00Z");
+    const ppDual = getPostpartumTimeline(participant.postpartum_start_date, { timezone: participant.timezone || "UTC" })!;
+    if (!ppDual.isImplausible) {
+      const ppLabel = `${ppDual.weeks} week${ppDual.weeks !== 1 ? "s" : ""}${ppDual.months >= 1 ? ` (${ppDual.months} month${ppDual.months > 1 ? "s" : ""})` : ""}`;
       dualStateContext = `
 
 DUAL STATE — POSTPARTUM + CYCLING:

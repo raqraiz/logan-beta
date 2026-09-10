@@ -1,5 +1,6 @@
 import { type PhaseLengths, getPhaseLengthPrefs } from "@/lib/phaseLengths";
 import { calculateCycleInfoShared } from "@/lib/cycleCalculations";
+import { getPostpartumTimeline } from "@/lib/postpartumTimeline";
 
 type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
 
@@ -21,15 +22,11 @@ interface ChatCycleCircleProps {
 }
 
 function formatPpShort(postpartumStartDate?: string): string | null {
-  if (!postpartumStartDate) return null;
-  const start = new Date(postpartumStartDate + "T12:00:00Z");
-  const diffDays = Math.floor((Date.now() - start.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays < 0 || diffDays > 1095) return null;
-  if (diffDays < 7) return `${diffDays + 1}d`;
-  const weeks = Math.floor(diffDays / 7);
-  if (weeks < 12) return `${weeks}w`;
-  const months = Math.floor(diffDays / 30);
-  return `${months}mo`;
+  const t = getPostpartumTimeline(postpartumStartDate);
+  if (!t || t.isImplausible) return null;
+  if (t.days < 7) return `${t.days + 1}d`;
+  if (t.weeks < 12) return `${t.weeks}w`;
+  return `${t.months}mo`;
 }
 
 function PpBadgeInside({ postpartumStartDate, size }: { postpartumStartDate?: string; size: "sm" | "md" }) {
@@ -184,9 +181,8 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
     subLabel = onHormonalBc === true ? "On the pill / irregular" : "Irregular cycle";
   }
   if (lifeStage === "postpartum" && postpartumStartDate) {
-    const start = new Date(postpartumStartDate + "T12:00:00Z");
-    const now = new Date();
-    const diffDays = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const pp = getPostpartumTimeline(postpartumStartDate);
+    const diffDays = pp?.days ?? 0;
     if (diffDays < 0) {
       displayNumber = "0";
       subLabel = "Week";
@@ -194,7 +190,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
       displayNumber = String(diffDays + 1);
       subLabel = "Day";
     } else {
-      const weeks = Math.floor(diffDays / 7);
+      const weeks = pp!.weeks;
       displayNumber = String(weeks);
       subLabel = weeks === 1 ? "Week" : "Weeks";
     }
