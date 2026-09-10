@@ -5023,12 +5023,10 @@ MEAL PLANS / MENUS — STRICT RULES:
   // Reconciliation: cycling user who is also actively recovering postpartum
   let dualStateContext = "";
   if ((participant as any).postpartum_active && participant.postpartum_start_date) {
-    const birthDate = new Date(participant.postpartum_start_date + "T12:00:00Z");
-    const diffDays = Math.floor((Date.now() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays >= 0 && diffDays <= 1095) {
-      const months = Math.floor(diffDays / 30);
-      const weeks = Math.floor(diffDays / 7);
-      const ppLabel = months >= 1 ? `${months} month${months > 1 ? "s" : ""}` : `${weeks} week${weeks !== 1 ? "s" : ""}`;
+    const birthDate = new Date(String(participant.postpartum_start_date).slice(0, 10) + "T12:00:00Z");
+    const ppDual = getPostpartumTimeline(participant.postpartum_start_date, { timezone: participant.timezone || "UTC" })!;
+    if (!ppDual.isImplausible) {
+      const ppLabel = `${ppDual.weeks} week${ppDual.weeks !== 1 ? "s" : ""}${ppDual.months >= 1 ? ` (${ppDual.months} month${ppDual.months > 1 ? "s" : ""})` : ""}`;
       dualStateContext = `
 
 DUAL STATE — POSTPARTUM + CYCLING:
