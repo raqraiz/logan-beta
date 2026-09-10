@@ -1,5 +1,6 @@
 import { type PhaseLengths, getPhaseLengthPrefs } from "@/lib/phaseLengths";
 import { calculateCycleInfoShared } from "@/lib/cycleCalculations";
+import { getPostpartumTimeline } from "@/lib/postpartumTimeline";
 
 type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
 
