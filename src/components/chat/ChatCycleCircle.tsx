@@ -181,9 +181,8 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
     subLabel = onHormonalBc === true ? "On the pill / irregular" : "Irregular cycle";
   }
   if (lifeStage === "postpartum" && postpartumStartDate) {
-    const start = new Date(postpartumStartDate + "T12:00:00Z");
-    const now = new Date();
-    const diffDays = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const pp = getPostpartumTimeline(postpartumStartDate);
+    const diffDays = pp?.days ?? 0;
     if (diffDays < 0) {
       displayNumber = "0";
       subLabel = "Week";
@@ -191,7 +190,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
       displayNumber = String(diffDays + 1);
       subLabel = "Day";
     } else {
-      const weeks = Math.floor(diffDays / 7);
+      const weeks = pp!.weeks;
       displayNumber = String(weeks);
       subLabel = weeks === 1 ? "Week" : "Weeks";
     }
