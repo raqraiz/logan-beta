@@ -193,7 +193,7 @@ serve(async (req) => {
 
     let ppWindow: string | null = null;
     if (lifeStage === "postpartum" && participant?.postpartum_start_date) {
-      const days = Math.floor((Date.now() - new Date(participant.postpartum_start_date + "T12:00:00Z").getTime()) / 86400000);
+      const days = getPostpartumTimeline(participant.postpartum_start_date, { timezone: participant?.timezone || "UTC" })?.days ?? 0;
       if (days < 14) ppWindow = "Acute recovery (0-2 weeks)";
       else if (days < 42) ppWindow = "Early recovery (2-6 weeks)";
       else if (days < 84) ppWindow = "Tissue closing (6-12 weeks)";
