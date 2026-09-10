@@ -21,15 +21,11 @@ interface ChatCycleCircleProps {
 }
 
 function formatPpShort(postpartumStartDate?: string): string | null {
-  if (!postpartumStartDate) return null;
-  const start = new Date(postpartumStartDate + "T12:00:00Z");
-  const diffDays = Math.floor((Date.now() - start.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays < 0 || diffDays > 1095) return null;
-  if (diffDays < 7) return `${diffDays + 1}d`;
-  const weeks = Math.floor(diffDays / 7);
-  if (weeks < 12) return `${weeks}w`;
-  const months = Math.floor(diffDays / 30);
-  return `${months}mo`;
+  const t = getPostpartumTimeline(postpartumStartDate);
+  if (!t || t.isImplausible) return null;
+  if (t.days < 7) return `${t.days + 1}d`;
+  if (t.weeks < 12) return `${t.weeks}w`;
+  return `${t.months}mo`;
 }
 
 function PpBadgeInside({ postpartumStartDate, size }: { postpartumStartDate?: string; size: "sm" | "md" }) {
