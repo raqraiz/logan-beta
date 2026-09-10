@@ -1,3 +1,5 @@
+import { getPostpartumTimeline } from "@/lib/postpartumTimeline";
+
 // Centralized postpartum phase model. Used by HomeTab, PlanTab, and the cycle circle
 // so insights, diet, exercise, and mood/hormone context stay consistent across the app.
 
