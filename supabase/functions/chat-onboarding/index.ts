@@ -568,9 +568,18 @@ serve(async (req) => {
       } else if (participant && currentQuestion.field) {
         const updateData: Record<string, any> = {};
         updateData[currentQuestion.field] = parsedValue;
+        // Feeding answer seeds the editable breastfeeding flag used by the
+        // postpartum exit rule (never breastfed => false, so exit rests on
+        // cycle regularity alone).
+        if (currentQuestion.field === "feeding_status") {
+          updateData.is_breastfeeding = parsedValue === "breastfeeding" || parsedValue === "combination";
+        }
         await supabase.from("participants").update(updateData).eq("id", participant.id);
         // Keep local participant object in sync so downstream logic sees the update
         (participant as any)[currentQuestion.field] = parsedValue;
+        if (updateData.is_breastfeeding !== undefined) {
+          (participant as any).is_breastfeeding = updateData.is_breastfeeding;
+        }
         console.log("Updated participant field:", currentQuestion.field, "=", parsedValue);
       } else if (!participant && currentQuestion.field) {
         const { data: newParticipant, error: createError } = await supabase
