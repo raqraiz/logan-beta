@@ -50,6 +50,10 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
   const [timezone, setTimezone] = useState<string>("");
   const [onHormonalBc, setOnHormonalBc] = useState<boolean | null>(null);
   const [hasUterus, setHasUterus] = useState<boolean | null>(null);
+  // Postpartum exit inputs: breastfeeding is user-set, regularity is derived
+  // server-side from logged cycle history (read-only here).
+  const [isBreastfeeding, setIsBreastfeeding] = useState<boolean>(false);
+  const [regularPeriodsConfirmed, setRegularPeriodsConfirmed] = useState<boolean>(false);
 
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -84,7 +88,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
     (async () => {
       const { data } = await supabase
         .from("participants")
-        .select("postpartum_active, postpartum_start_date, loss_date, due_date, pregnancy_lmp, timezone, on_hormonal_bc, has_uterus, cycle_length_days, menstruation_days, follicular_days, ovulation_window_days, luteal_days")
+        .select("postpartum_active, postpartum_start_date, loss_date, due_date, pregnancy_lmp, timezone, on_hormonal_bc, has_uterus, is_breastfeeding, postpartum_regular_periods_confirmed, feeding_status, cycle_length_days, menstruation_days, follicular_days, ovulation_window_days, luteal_days")
         .eq("email", userEmail)
         .maybeSingle();
       if (data) {
@@ -95,6 +99,16 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
         setPregnancyLmp((data as any).pregnancy_lmp ?? "");
         setOnHormonalBc((data as any).on_hormonal_bc ?? null);
         setHasUterus((data as any).has_uterus ?? null);
+        {
+          const bf = (data as any).is_breastfeeding;
+          const feeding = (data as any).feeding_status;
+          setIsBreastfeeding(
+            typeof bf === "boolean"
+              ? bf
+              : feeding === "breastfeeding" || feeding === "combination",
+          );
+        }
+        setRegularPeriodsConfirmed(!!(data as any).postpartum_regular_periods_confirmed);
         const cl = (data as any).cycle_length_days ?? 28;
         setCycleLen(cl);
         const d = defaultPhaseLengths(cl);
@@ -141,6 +155,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
       payload.postpartum_active = false;
       if (postpartumStartDate) payload.postpartum_start_date = postpartumStartDate;
       payload.loss_date = null;
+      payload.is_breastfeeding = isBreastfeeding;
     } else if (stage === "pregnancy_loss") {
       payload.postpartum_active = false;
       payload.postpartum_start_date = null;
@@ -167,6 +182,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
       payload.pregnancy_lmp = null;
       payload.on_hormonal_bc = onHormonalBc;
       payload.has_uterus = hasUterus;
+      if (postpartumActive) payload.is_breastfeeding = isBreastfeeding;
       // No uterus => no bleed anchor will ever exist. Clear any stale period date.
       if (hasUterus === false) payload.last_period_start = null;
     } else if (stage === "menopause") {
@@ -188,6 +204,32 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
     onUpdated?.(stage);
     onOpenChange(false);
   };
+
+  // Postpartum exit inputs. Breastfeeding is a plain toggle (no confirmation);
+  // the regularity half is derived from logged cycles, so we only explain it.
+  const breastfeedingToggle = (
+    <div className="space-y-2">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1">
+          <div className="text-sm font-medium">Currently breastfeeding/pumping</div>
+          <div className="text-xs text-muted-foreground mt-0.5">
+            Milk supply keeps hormones in recovery mode, so Logan stays in postpartum guidance while this is on.
+          </div>
+        </div>
+        <Switch checked={isBreastfeeding} onCheckedChange={setIsBreastfeeding} />
+      </div>
+      {!isBreastfeeding && !regularPeriodsConfirmed && (
+        <p className="text-xs text-muted-foreground/90 border-t border-border/40 pt-2">
+          Postpartum guidance stays on for now — still confirming your cycle's back to a regular rhythm.
+        </p>
+      )}
+      {!isBreastfeeding && regularPeriodsConfirmed && (
+        <p className="text-xs text-muted-foreground/90 border-t border-border/40 pt-2">
+          Your cycle looks regular again — saving this will move you out of postpartum mode.
+        </p>
+      )}
+    </div>
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -325,20 +367,30 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
                 <Switch checked={postpartumActive} onCheckedChange={setPostpartumActive} />
               </div>
               {postpartumActive && (
-                <div>
-                  <Label htmlFor="pp-date" className="text-xs text-muted-foreground">Baby's birth date</Label>
-                  <Input
-                    id="pp-date"
-                    type="date"
-                    value={postpartumStartDate}
-                    onChange={(e) => setPostpartumStartDate(e.target.value)}
-                    max={new Date().toISOString().slice(0, 10)}
-                    className="mt-1"
-                  />
-                </div>
+                <>
+                  <div>
+                    <Label htmlFor="pp-date" className="text-xs text-muted-foreground">Baby's birth date</Label>
+                    <Input
+                      id="pp-date"
+                      type="date"
+                      value={postpartumStartDate}
+                      onChange={(e) => setPostpartumStartDate(e.target.value)}
+                      max={new Date().toISOString().slice(0, 10)}
+                      className="mt-1"
+                    />
+                  </div>
+                  {breastfeedingToggle}
+                </>
               )}
             </div>
           )}
+
+          {stage === "postpartum" && (
+            <div className="mt-4 p-3 rounded-lg border border-pink-400/30 bg-pink-400/5 space-y-3">
+              {breastfeedingToggle}
+            </div>
+          )}
+
 
           {stage === "pregnancy_loss" && (
             <div className="mt-4 p-3 rounded-lg border border-rose-300/40 bg-rose-50/40 dark:bg-rose-950/10 space-y-3">
