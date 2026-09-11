@@ -965,6 +965,7 @@ export type Database = {
           has_uterus: boolean | null
           id: string
           is_active: boolean | null
+          is_breastfeeding: boolean | null
           last_period_start: string | null
           life_stage: string
           loss_date: string | null
@@ -975,6 +976,7 @@ export type Database = {
           period_pending_since: string | null
           period_still_active: boolean
           postpartum_active: boolean
+          postpartum_regular_periods_confirmed: boolean
           postpartum_start_date: string | null
           preferred_channel: string | null
           pregnancy_lmp: string | null
@@ -1008,6 +1010,7 @@ export type Database = {
           has_uterus?: boolean | null
           id?: string
           is_active?: boolean | null
+          is_breastfeeding?: boolean | null
           last_period_start?: string | null
           life_stage?: string
           loss_date?: string | null
@@ -1018,6 +1021,7 @@ export type Database = {
           period_pending_since?: string | null
           period_still_active?: boolean
           postpartum_active?: boolean
+          postpartum_regular_periods_confirmed?: boolean
           postpartum_start_date?: string | null
           preferred_channel?: string | null
           pregnancy_lmp?: string | null
@@ -1051,6 +1055,7 @@ export type Database = {
           has_uterus?: boolean | null
           id?: string
           is_active?: boolean | null
+          is_breastfeeding?: boolean | null
           last_period_start?: string | null
           life_stage?: string
           loss_date?: string | null
@@ -1061,6 +1066,7 @@ export type Database = {
           period_pending_since?: string | null
           period_still_active?: boolean
           postpartum_active?: boolean
+          postpartum_regular_periods_confirmed?: boolean
           postpartum_start_date?: string | null
           preferred_channel?: string | null
           pregnancy_lmp?: string | null
@@ -1820,6 +1826,10 @@ export type Database = {
     }
     Functions: {
       count_onboarded_users: { Args: never; Returns: number }
+      evaluate_postpartum_regularity: {
+        Args: { _participant_id: string }
+        Returns: boolean
+      }
       generate_referral_code: { Args: never; Returns: string }
       get_auth_email: { Args: never; Returns: string }
       get_referral_count:
@@ -1831,6 +1841,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      refresh_postpartum_state: {
+        Args: { _participant_id: string }
+        Returns: undefined
       }
       resolve_referral_code: { Args: { _code: string }; Returns: string }
     }
