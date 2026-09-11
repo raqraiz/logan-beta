@@ -155,6 +155,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
       payload.postpartum_active = false;
       if (postpartumStartDate) payload.postpartum_start_date = postpartumStartDate;
       payload.loss_date = null;
+      payload.is_breastfeeding = isBreastfeeding;
     } else if (stage === "pregnancy_loss") {
       payload.postpartum_active = false;
       payload.postpartum_start_date = null;
@@ -181,6 +182,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
       payload.pregnancy_lmp = null;
       payload.on_hormonal_bc = onHormonalBc;
       payload.has_uterus = hasUterus;
+      if (postpartumActive) payload.is_breastfeeding = isBreastfeeding;
       // No uterus => no bleed anchor will ever exist. Clear any stale period date.
       if (hasUterus === false) payload.last_period_start = null;
     } else if (stage === "menopause") {
