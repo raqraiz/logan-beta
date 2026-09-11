@@ -50,6 +50,10 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
   const [timezone, setTimezone] = useState<string>("");
   const [onHormonalBc, setOnHormonalBc] = useState<boolean | null>(null);
   const [hasUterus, setHasUterus] = useState<boolean | null>(null);
+  // Postpartum exit inputs: breastfeeding is user-set, regularity is derived
+  // server-side from logged cycle history (read-only here).
+  const [isBreastfeeding, setIsBreastfeeding] = useState<boolean>(false);
+  const [regularPeriodsConfirmed, setRegularPeriodsConfirmed] = useState<boolean>(false);
 
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
