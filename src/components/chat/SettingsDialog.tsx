@@ -205,6 +205,32 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
     onOpenChange(false);
   };
 
+  // Postpartum exit inputs. Breastfeeding is a plain toggle (no confirmation);
+  // the regularity half is derived from logged cycles, so we only explain it.
+  const breastfeedingToggle = (
+    <div className="space-y-2">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1">
+          <div className="text-sm font-medium">Currently breastfeeding/pumping</div>
+          <div className="text-xs text-muted-foreground mt-0.5">
+            Milk supply keeps hormones in recovery mode, so Logan stays in postpartum guidance while this is on.
+          </div>
+        </div>
+        <Switch checked={isBreastfeeding} onCheckedChange={setIsBreastfeeding} />
+      </div>
+      {!isBreastfeeding && !regularPeriodsConfirmed && (
+        <p className="text-xs text-muted-foreground/90 border-t border-border/40 pt-2">
+          Postpartum guidance stays on for now — still confirming your cycle's back to a regular rhythm.
+        </p>
+      )}
+      {!isBreastfeeding && regularPeriodsConfirmed && (
+        <p className="text-xs text-muted-foreground/90 border-t border-border/40 pt-2">
+          Your cycle looks regular again — saving this will move you out of postpartum mode.
+        </p>
+      )}
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
