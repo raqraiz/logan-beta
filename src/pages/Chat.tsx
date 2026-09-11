@@ -483,7 +483,12 @@ const Chat = () => {
             periodStillActive: !!row.period_still_active,
           });
           if (row.life_stage) {
-            setLifeStage(row.life_stage as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant");
+            // Birth date is the entry gate for postpartum. Postpartum with no
+            // birth date on file is a data inconsistency — treat as cycling.
+            const stageRow = row.life_stage === "postpartum" && !row.postpartum_start_date
+              ? "cycling"
+              : row.life_stage;
+            setLifeStage(stageRow as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant");
           }
           if (row.postpartum_start_date !== undefined) {
             setPostpartumStartDate(row.postpartum_start_date ?? null);
@@ -768,7 +773,11 @@ const Chat = () => {
         .eq("email", user.email)
         .single();
       if (data?.life_stage) {
-        setLifeStage(data.life_stage as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant");
+        // Birth date is the entry gate for postpartum (see loader above).
+        const stageVal = data.life_stage === "postpartum" && !data.postpartum_start_date
+          ? "cycling"
+          : data.life_stage;
+        setLifeStage(stageVal as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant");
       }
       if (data?.postpartum_start_date) {
         setPostpartumStartDate(data.postpartum_start_date);
