@@ -88,7 +88,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
     (async () => {
       const { data } = await supabase
         .from("participants")
-        .select("postpartum_active, postpartum_start_date, loss_date, due_date, pregnancy_lmp, timezone, on_hormonal_bc, has_uterus, cycle_length_days, menstruation_days, follicular_days, ovulation_window_days, luteal_days")
+        .select("postpartum_active, postpartum_start_date, loss_date, due_date, pregnancy_lmp, timezone, on_hormonal_bc, has_uterus, is_breastfeeding, postpartum_regular_periods_confirmed, feeding_status, cycle_length_days, menstruation_days, follicular_days, ovulation_window_days, luteal_days")
         .eq("email", userEmail)
         .maybeSingle();
       if (data) {
@@ -99,6 +99,16 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
         setPregnancyLmp((data as any).pregnancy_lmp ?? "");
         setOnHormonalBc((data as any).on_hormonal_bc ?? null);
         setHasUterus((data as any).has_uterus ?? null);
+        {
+          const bf = (data as any).is_breastfeeding;
+          const feeding = (data as any).feeding_status;
+          setIsBreastfeeding(
+            typeof bf === "boolean"
+              ? bf
+              : feeding === "breastfeeding" || feeding === "combination",
+          );
+        }
+        setRegularPeriodsConfirmed(!!(data as any).postpartum_regular_periods_confirmed);
         const cl = (data as any).cycle_length_days ?? 28;
         setCycleLen(cl);
         const d = defaultPhaseLengths(cl);
