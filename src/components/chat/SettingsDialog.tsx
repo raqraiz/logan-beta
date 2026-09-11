@@ -341,20 +341,30 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
                 <Switch checked={postpartumActive} onCheckedChange={setPostpartumActive} />
               </div>
               {postpartumActive && (
-                <div>
-                  <Label htmlFor="pp-date" className="text-xs text-muted-foreground">Baby's birth date</Label>
-                  <Input
-                    id="pp-date"
-                    type="date"
-                    value={postpartumStartDate}
-                    onChange={(e) => setPostpartumStartDate(e.target.value)}
-                    max={new Date().toISOString().slice(0, 10)}
-                    className="mt-1"
-                  />
-                </div>
+                <>
+                  <div>
+                    <Label htmlFor="pp-date" className="text-xs text-muted-foreground">Baby's birth date</Label>
+                    <Input
+                      id="pp-date"
+                      type="date"
+                      value={postpartumStartDate}
+                      onChange={(e) => setPostpartumStartDate(e.target.value)}
+                      max={new Date().toISOString().slice(0, 10)}
+                      className="mt-1"
+                    />
+                  </div>
+                  {breastfeedingToggle}
+                </>
               )}
             </div>
           )}
+
+          {stage === "postpartum" && (
+            <div className="mt-4 p-3 rounded-lg border border-pink-400/30 bg-pink-400/5 space-y-3">
+              {breastfeedingToggle}
+            </div>
+          )}
+
 
           {stage === "pregnancy_loss" && (
             <div className="mt-4 p-3 rounded-lg border border-rose-300/40 bg-rose-50/40 dark:bg-rose-950/10 space-y-3">
