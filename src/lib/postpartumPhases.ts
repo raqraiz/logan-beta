@@ -4,6 +4,7 @@ import { getPostpartumTimeline } from "@/lib/postpartumTimeline";
 // so insights, diet, exercise, and mood/hormone context stay consistent across the app.
 
 export type PPPhase =
+  | "unset"      // birth date missing — cannot determine phase
   | "acute"      // 0-2 weeks
   | "early"      // 2-6 weeks
   | "healing"    // 6-12 weeks
