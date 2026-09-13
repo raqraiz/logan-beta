@@ -4,6 +4,7 @@ import { getPostpartumTimeline } from "@/lib/postpartumTimeline";
 // so insights, diet, exercise, and mood/hormone context stay consistent across the app.
 
 export type PPPhase =
+  | "unset"      // birth date missing — cannot determine phase
   | "acute"      // 0-2 weeks
   | "early"      // 2-6 weeks
   | "healing"    // 6-12 weeks
@@ -22,7 +23,7 @@ export interface PPPhaseMeta {
 
 export function getPostpartumPhase(birthDate?: string | null): PPPhase {
   const days = getPostpartumDays(birthDate);
-  if (!birthDate) return "acute";
+  if (!birthDate) return "unset";
   if (days < 14) return "acute";
   if (days < 42) return "early";
   if (days < 84) return "healing";
@@ -37,6 +38,14 @@ export function getPostpartumDays(birthDate?: string | null): number {
 }
 
 export const PP_META: Record<PPPhase, PPPhaseMeta> = {
+  unset: {
+    phase: "unset",
+    label: "Birth date not set",
+    shortLabel: "Not set",
+    rangeLabel: "Unknown",
+    hormones: "Add your baby's birth date so Logan can tailor postpartum guidance to your exact recovery stage.",
+    mood: "No assumptions here — once we know where you are, the right guidance can show up.",
+  },
   acute: {
     phase: "acute",
     label: "Acute recovery (0-2 weeks)",
@@ -89,6 +98,11 @@ export const PP_META: Record<PPPhase, PPPhaseMeta> = {
 
 // ── Workout per phase ──────────────────────────────────────
 export const PP_WORKOUTS: Record<PPPhase, { suggestion: string; examples: string[]; trainingNote: string }> = {
+  unset: {
+    suggestion: "Set your baby's birth date in settings to get stage-matched movement guidance.",
+    examples: [],
+    trainingNote: "Without a birth date, Logan can't safely guess what your body is ready for.",
+  },
   acute: {
     suggestion: "Your only job is to heal. Breath, gentle pelvic floor reconnection, and short slow walks once you feel up to it.",
     examples: ["Diaphragmatic breathing", "Pelvic floor activations", "Ankle pumps", "Slow indoor walking"],
@@ -123,6 +137,11 @@ export const PP_WORKOUTS: Record<PPPhase, { suggestion: string; examples: string
 
 // ── Nutrition per phase ────────────────────────────────────
 export const PP_NUTRITIONS: Record<PPPhase, { focus: string; foods: string[]; avoid: string }> = {
+  unset: {
+    focus: "Add your baby's birth date to unlock stage-specific recovery fueling guidance.",
+    foods: [],
+    avoid: "General nutrition advice can't replace recovery-stage context.",
+  },
   acute: {
     focus: "Replenish iron and blood volume, heal tissue, stabilize blood sugar between feeds",
     foods: [
@@ -193,6 +212,18 @@ export const PP_MOODS: Record<PPPhase, {
   selfCare: string;
   relationships: { people: string; withPartner: string; withKids: string; strategy: string };
 }> = {
+  unset: {
+    outlook: "Postpartum mode is on, but we don't know your recovery stage yet",
+    hormonalShift: "Once you add your baby's birth date, Logan can describe what's likely happening hormonally right now.",
+    headsUp: "Without a birth date, Logan can't tell whether you're days or months into recovery.",
+    selfCare: "Open settings and add your baby's birth date when you have a moment.",
+    relationships: {
+      people: "Let someone know you're setting this up — they can hold the baby for two minutes.",
+      withPartner: "Ask them to remind you to add the birth date if you get interrupted.",
+      withKids: "Older kids can wait two minutes; this helps Logan guide you better long-term.",
+      strategy: "One small setting now, better guidance every day after.",
+    },
+  },
   acute: {
     outlook: "Survival mode — that is the assignment",
     hormonalShift: "Estrogen and progesterone have crashed off a cliff. Oxytocin and prolactin are running the show. Your nervous system is genuinely altered.",
@@ -269,6 +300,9 @@ export const PP_MOODS: Record<PPPhase, {
 
 // ── Tip lists for HomeTab cards ─────────────────────────────
 export const PP_SUCCEED_HER: Record<PPPhase, string[]> = {
+  unset: [
+    "Add your baby's birth date in settings so Logan can match guidance to your recovery stage.",
+  ],
   acute: [
     "Sleep when the baby sleeps — even 20 minutes counts. This is healing, not laziness.",
     "Eat one warm, protein-rich meal a day. Bone broth, eggs, oats — anything cooked.",
@@ -314,6 +348,9 @@ export const PP_SUCCEED_HER: Record<PPPhase, string[]> = {
 };
 
 export const PP_DONTMESS_HER: Record<PPPhase, string[]> = {
+  unset: [
+    "Don't skip adding the birth date — without it, Logan can't tell which postpartum guidance fits.",
+  ],
   acute: [
     "Don't try to 'bounce back' anything. Your body just built and birthed a human.",
     "Don't restrict food. Your body needs fuel to heal and (if nursing) feed.",
@@ -359,6 +396,9 @@ export const PP_DONTMESS_HER: Record<PPPhase, string[]> = {
 };
 
 export const PP_SUCCEED_HIM: Record<PPPhase, string[]> = {
+  unset: [
+    "Help her find a moment to add the baby's birth date in settings — it unlocks the right guidance.",
+  ],
   acute: [
     "Take a night feed without being asked. One unbroken sleep cycle changes her week.",
     "Bring food without commentary. Hot, salty, easy to eat one-handed wins.",
@@ -404,6 +444,9 @@ export const PP_SUCCEED_HIM: Record<PPPhase, string[]> = {
 };
 
 export const PP_DONTMESS_HIM: Record<PPPhase, string[]> = {
+  unset: [
+    "Don't guess which recovery stage she's in — the birth date in settings tells Logan what she needs.",
+  ],
   acute: [
     "Don't comment on her body — not size, not weight, not 'when you're back'. Don't.",
     "Don't ask 'what can I do?' — look around and just do it.",
