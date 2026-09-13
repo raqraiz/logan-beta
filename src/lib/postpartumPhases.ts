@@ -23,7 +23,7 @@ export interface PPPhaseMeta {
 
 export function getPostpartumPhase(birthDate?: string | null): PPPhase {
   const days = getPostpartumDays(birthDate);
-  if (!birthDate) return "acute";
+  if (!birthDate) return "unset";
   if (days < 14) return "acute";
   if (days < 42) return "early";
   if (days < 84) return "healing";
