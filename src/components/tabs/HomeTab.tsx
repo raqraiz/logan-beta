@@ -25,6 +25,8 @@ import {
   PP_SUCCEED_HIM,
   PP_DONTMESS_HIM,
 } from "@/lib/postpartumPhases";
+import { getPostpartumTimeline } from "@/lib/postpartumTimeline";
+import { useDailyHomeInsights } from "@/hooks/useDailyHomeInsights";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -461,6 +463,26 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
 
   const { widgets, loading, save, toggleWidget, renameWidget, setWidgets, addCustomWidget, updateCustomWidget, removeWidget } = useWidgetPreferences(userId);
 
+  // Daily AI copy for the HER-facing "succeed"/"don't mess up" cards.
+  // Hooks must run before the early return below, so guard on cycleData here.
+  const ppPhaseForInsights = getPostpartumPhase(cycleData?.postpartumStartDate);
+  const ppWeeksForInsights = cycleData?.postpartumStartDate
+    ? getPostpartumTimeline(cycleData.postpartumStartDate)?.weeks ?? null
+    : null;
+  const isPostpartumContext =
+    cycleData?.lifeStage === "postpartum" || !!cycleData?.postpartumActive;
+  const { insights: dailyInsights } = useDailyHomeInsights({
+    userId,
+    lifeStage: cycleData?.lifeStage,
+    phase: cycleData?.phase,
+    cycleDay: cycleData?.cycleDay,
+    cycleLengthDays: cycleData?.cycleLengthDays,
+    postpartumPhase: isPostpartumContext ? ppPhaseForInsights : undefined,
+    postpartumWeeks: ppWeeksForInsights,
+    anchorSymptom: anchorSymptom ?? null,
+    enabled: !!cycleData && !(isPostpartumContext && ppPhaseForInsights === "unset"),
+  });
+
   if (!cycleData) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 text-center">
@@ -542,6 +564,10 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
 
   const getTipsHer = (widgetId: string): string[] => {
     const isSucceed = widgetId.startsWith("succeed");
+    if (dailyInsights) {
+      const generated = isSucceed ? dailyInsights.succeed : dailyInsights.dontMessUp;
+      if (generated.length) return generated;
+    }
     if (isLoss) return isSucceed ? LOSS_SUCCEED_HER : LOSS_DONTMESS_HER;
     if (isPregnant) return isSucceed ? PREG_SUCCEED_HER : PREG_DONTMESS_HER;
     if (hasPostpartumContext) {
