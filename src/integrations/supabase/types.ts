@@ -338,6 +338,39 @@ export type Database = {
           },
         ]
       }
+      daily_home_insights: {
+        Row: {
+          context_key: string
+          created_at: string
+          dont_mess_up_text: string
+          generated_at: string
+          id: string
+          local_date: string
+          succeed_text: string
+          user_id: string
+        }
+        Insert: {
+          context_key: string
+          created_at?: string
+          dont_mess_up_text: string
+          generated_at?: string
+          id?: string
+          local_date: string
+          succeed_text: string
+          user_id: string
+        }
+        Update: {
+          context_key?: string
+          created_at?: string
+          dont_mess_up_text?: string
+          generated_at?: string
+          id?: string
+          local_date?: string
+          succeed_text?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_opens: {
         Row: {
           id: string
