@@ -1360,6 +1360,13 @@ serve(async (req) => {
         // Preserve postpartum recovery context as a secondary state (dual-state).
         periodUpdatePayload.postpartum_active = true;
       }
+      // Explicitly reporting a period start contradicts a live pregnancy flag —
+      // clear it so Home/Plan/Ask can't disagree about her status.
+      if (participant.life_stage === "pregnant") {
+        periodUpdatePayload.life_stage = "cycling";
+        periodUpdatePayload.pregnancy_lmp = null;
+        periodUpdatePayload.due_date = null;
+      }
 
       const { error: updateError } = await supabase
         .from("participants")
@@ -2089,6 +2096,13 @@ serve(async (req) => {
             cycleDayPayload.life_stage = "cycling";
             cycleDayPayload.postpartum_active = true;
           }
+          // A stated cycle day contradicts a live pregnancy flag — clear it so
+          // Home doesn't keep showing "Pregnant" while Ask shows a cycle day.
+          if (participant.life_stage === "pregnant") {
+            cycleDayPayload.life_stage = "cycling";
+            cycleDayPayload.pregnancy_lmp = null;
+            cycleDayPayload.due_date = null;
+          }
 
           const { error: updateErr } = await supabase
             .from("participants")
@@ -2106,7 +2120,11 @@ serve(async (req) => {
               tz
             );
 
-            const msg = `Got it — today is **Day ${updatedCycleInfo.cycleDay}** in your **${updatedCycleInfo.phase}** phase. Updated everywhere.`;
+            // Only claim a global sync when the canonical row actually holds it.
+            const savedEverywhere = refreshed?.last_period_start === formattedDate;
+            const msg = savedEverywhere
+              ? `Got it — today is **Day ${updatedCycleInfo.cycleDay}** in your **${updatedCycleInfo.phase}** phase. Updated everywhere.`
+              : `Got it — today is **Day ${updatedCycleInfo.cycleDay}** in your **${updatedCycleInfo.phase}** phase.`;
 
             await supabase.from("chat_messages").insert({
               user_id: user.id,
@@ -3076,17 +3094,46 @@ serve(async (req) => {
         }
 
         if (!restoredStage) {
-          // Don't guess a stage — ask her directly. No write, no claim of a switch.
-          const askMsg = `I hear you — I got that wrong, and I'm sorry. I don't want to guess at the fix: which describes you right now — **cycling** (regular periods), **irregular / on hormonal birth control**, **perimenopause**, **menopause**, or **postpartum**? Tell me and I'll set it straight.`;
+          // She rejected the pregnant flag. Clear it NOW — never leave a rejected
+          // status live on Home while waiting on her follow-up answer. Default to
+          // cycling (the app's neutral baseline) and still ask her to refine.
+          const { error: clearError } = await supabase
+            .from("participants")
+            .update({
+              life_stage: "cycling",
+              pregnancy_lmp: null,
+              due_date: null,
+            })
+            .eq("id", participant.id);
+
+          if (clearError) {
+            const failMsg = `I tried to clear that and it didn't save on my side. Can you try once more in a moment? You can also change it directly in Settings.`;
+            await supabase.from("chat_messages").insert({
+              user_id: user.id, role: "assistant", content: failMsg, message_type: "text",
+            });
+            return new Response(
+              JSON.stringify({ success: true, message: failMsg }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          const { data: refreshedCleared } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+          if (refreshedCleared) participant = refreshedCleared;
+
+          const askMsg = `I hear you — I got that wrong, and I'm sorry. I've cleared pregnancy mode everywhere, so nothing in the app should say that anymore. To set it properly: which describes you right now — **cycling** (regular periods), **irregular / on hormonal birth control**, **perimenopause**, **menopause**, or **postpartum**?`;
           await supabase.from("chat_messages").insert({
             user_id: user.id,
             role: "assistant",
             content: askMsg,
             message_type: "text",
-            metadata: { pregnancy_correction_pending: true },
+            metadata: {
+              pregnancy_correction_pending: true,
+              life_stage_updated: "cycling",
+              corrected_from: "pregnant",
+            },
           });
           return new Response(
-            JSON.stringify({ success: true, message: askMsg }),
+            JSON.stringify({ success: true, message: askMsg, lifeStageUpdated: true }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
