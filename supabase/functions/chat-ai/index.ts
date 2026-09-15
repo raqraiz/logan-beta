@@ -2096,6 +2096,13 @@ serve(async (req) => {
             cycleDayPayload.life_stage = "cycling";
             cycleDayPayload.postpartum_active = true;
           }
+          // A stated cycle day contradicts a live pregnancy flag — clear it so
+          // Home doesn't keep showing "Pregnant" while Ask shows a cycle day.
+          if (participant.life_stage === "pregnant") {
+            cycleDayPayload.life_stage = "cycling";
+            cycleDayPayload.pregnancy_lmp = null;
+            cycleDayPayload.due_date = null;
+          }
 
           const { error: updateErr } = await supabase
             .from("participants")
@@ -2113,7 +2120,11 @@ serve(async (req) => {
               tz
             );
 
-            const msg = `Got it — today is **Day ${updatedCycleInfo.cycleDay}** in your **${updatedCycleInfo.phase}** phase. Updated everywhere.`;
+            // Only claim a global sync when the canonical row actually holds it.
+            const savedEverywhere = refreshed?.last_period_start === formattedDate;
+            const msg = savedEverywhere
+              ? `Got it — today is **Day ${updatedCycleInfo.cycleDay}** in your **${updatedCycleInfo.phase}** phase. Updated everywhere.`
+              : `Got it — today is **Day ${updatedCycleInfo.cycleDay}** in your **${updatedCycleInfo.phase}** phase.`;
 
             await supabase.from("chat_messages").insert({
               user_id: user.id,
