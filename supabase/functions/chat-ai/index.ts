@@ -1360,6 +1360,13 @@ serve(async (req) => {
         // Preserve postpartum recovery context as a secondary state (dual-state).
         periodUpdatePayload.postpartum_active = true;
       }
+      // Explicitly reporting a period start contradicts a live pregnancy flag —
+      // clear it so Home/Plan/Ask can't disagree about her status.
+      if (participant.life_stage === "pregnant") {
+        periodUpdatePayload.life_stage = "cycling";
+        periodUpdatePayload.pregnancy_lmp = null;
+        periodUpdatePayload.due_date = null;
+      }
 
       const { error: updateError } = await supabase
         .from("participants")
