@@ -331,7 +331,7 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
       );
     if (upsertErr) console.error("daily_home_insights upsert failed:", upsertErr.message);
 
-    return json({ succeed, dontMessUp, cached: false });
+    return json({ succeed, dontMessUp, succeedHim, dontMessUpHim, cached: false });
   } catch (e) {
     console.error("generate-daily-insights error:", e);
     return json({ error: "An internal error occurred" }, 500);
