@@ -155,6 +155,23 @@ const PARTNER_TIPS: Record<string, string[]> = {
   ],
 };
 
+/**
+ * Deterministic per-day ordering of a phase's tip list. Same input (cycle day)
+ * always yields the same order, so lines rotate across the phase instead of
+ * repeating identically on every day of that phase.
+ */
+function rotateForDay(tips: string[], day: number): string[] {
+  if (!tips.length) return tips;
+  const offset = (((day - 1) % tips.length) + tips.length) % tips.length;
+  return tips.map((_, i) => tips[(i + offset) % tips.length]);
+}
+
+type TipSource = "live" | "historical" | "rotated";
+
+function splitLines(text: string | null | undefined): string[] {
+  return String(text ?? "").split("\n").filter(Boolean);
+}
+
 function EnergyBar({ value, color }: { value: number; color: string }) {
   return (
     <div className="w-full h-1.5 rounded-full bg-muted/30 overflow-hidden">
