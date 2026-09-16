@@ -253,6 +253,56 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   const selectedTips = selectedPhase ? PHASE_TIPS[selectedPhase] : null;
   const selectedPartnerTips = selectedPhase ? PARTNER_TIPS[selectedPhase] : null;
 
+  // ── Tip sourcing: live (today) → historical (cached past day) → rotated ──
+  const todayKey = format(today, "yyyy-MM-dd");
+  const selectedKey = selectedDate ? format(selectedDate, "yyyy-MM-dd") : null;
+  const isTodaySelected = !!selectedKey && selectedKey === todayKey;
+  const isPastSelected = !!selectedKey && selectedKey < todayKey;
+
+  const [historyKey, setHistoryKey] = useState<string | null>(null);
+  const [historyRow, setHistoryRow] = useState<{
+    dont_mess_up_text: string | null;
+    dont_mess_up_him_text: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!userId || !selectedKey || !isPastSelected) {
+      setHistoryRow(null);
+      setHistoryKey(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("daily_home_insights")
+        .select("dont_mess_up_text, dont_mess_up_him_text")
+        .eq("user_id", userId)
+        .eq("local_date", selectedKey)
+        .maybeSingle();
+      if (cancelled) return;
+      setHistoryRow((data as any) ?? null);
+      setHistoryKey(selectedKey);
+    })();
+    return () => { cancelled = true; };
+  }, [userId, selectedKey, isPastSelected]);
+
+  const historyReady = isPastSelected && historyKey === selectedKey;
+  const liveHer = isTodaySelected ? todayInsights?.dontMessUp ?? [] : [];
+  const liveHim = isTodaySelected ? todayInsights?.dontMessUpHim ?? [] : [];
+  const histHer = historyReady ? splitLines(historyRow?.dont_mess_up_text) : [];
+  const histHim = historyReady ? splitLines(historyRow?.dont_mess_up_him_text) : [];
+
+  const rotatedHer = rotateForDay(selectedTips ?? [], selectedCycleDay ?? 1);
+  const rotatedHim = rotateForDay(selectedPartnerTips ?? [], selectedCycleDay ?? 1);
+
+  const herTips = liveHer.length ? liveHer : histHer.length ? histHer : rotatedHer;
+  const himTips = liveHim.length ? liveHim : histHim.length ? histHim : rotatedHim;
+  const herSource: TipSource = liveHer.length ? "live" : histHer.length ? "historical" : "rotated";
+  const himSource: TipSource = liveHim.length ? "live" : histHim.length ? "historical" : "rotated";
+  const sourceLabel = (s: TipSource) =>
+    s === "live" ? "Today · personalised" : s === "historical" ? "Saved from that day" : "Phase guidance";
+
+
   const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
   const PHASES = ["Menstruation", "Follicular", "Ovulation", "Luteal"] as const;
 
