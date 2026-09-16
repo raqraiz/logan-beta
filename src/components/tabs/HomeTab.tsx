@@ -26,6 +26,7 @@ import {
   PP_DONTMESS_HIM,
 } from "@/lib/postpartumPhases";
 import { getPostpartumTimeline } from "@/lib/postpartumTimeline";
+import { isCycleStale } from "@/lib/cycleCalculations";
 import { useDailyHomeInsights } from "@/hooks/useDailyHomeInsights";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -275,6 +276,33 @@ const IRREGULAR_DONTMESS_HIM: string[] = [
   "Don't assume libido shifts are about you. BC affects desire for many women.",
 ];
 
+// Stale Day 1 — no confirmed period well past her expected next one, so no
+// phase is asserted. Steady-state guidance only, same tone shift as chat.
+const STALE_SUCCEED_HER: string[] = [
+  "Log your period the day it starts — one Day 1 gets your whole picture back.",
+  "Anchor your sleep. A consistent wake time steadies energy more than any phase strategy right now.",
+  "Hydrate and eat protein at breakfast — boring, but it works at every point in a cycle.",
+  "Move gently most days. A walk or light strength session beats guessing at an 'optimal' window.",
+  "Notice how you actually feel today — your body is a better signal right now than a calendar.",
+];
+const STALE_DONTMESS_HER: string[] = [
+  "Don't blame 'your hormones' for every off day — without a recent Day 1, nobody can say where you are.",
+  "Don't push through exhaustion assuming it'll pass with a phase. Rest now, reassess after a real period.",
+  "Don't panic if your period is late — cycles drift. Log it when it comes and the picture sharpens.",
+  "Don't overhaul your routine off a stale date. Small, consistent habits beat phase-chasing right now.",
+  "If your period is 60+ days gone, that's worth mentioning to your doctor — not alarming, just worth a note.",
+];
+const STALE_SUCCEED_HIM: string[] = [
+  "She hasn't logged a period in a while, so don't guess at phases — ask how she's actually feeling.",
+  "Support the basics: consistent meals, earlier nights, a walk together. Those help regardless of timing.",
+  "If her period shows up, that's useful info for her — not a headline. Stay low-key about it.",
+];
+const STALE_DONTMESS_HIM: string[] = [
+  "Don't ask 'aren't you late?' — if she's tracking it, she already knows. Pressure doesn't help.",
+  "Don't chalk her mood up to PMS when no recent period confirms where she is in a cycle.",
+  "Don't suggest she 'just relax and it'll come' — if it's been a long stretch, a doctor visit is the smart move, and you can offer to help make it happen.",
+];
+
 
 
 
@@ -500,6 +528,11 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   const isIrregular = cycleData.lifeStage === "irregular";
   const isLoss = cycleData.lifeStage === "pregnancy_loss";
   const isPregnant = cycleData.lifeStage === "pregnant";
+  // Same staleness flag as the cycle circle and chat — stop asserting a phase.
+  const isStale =
+    cycleData.lifeStage === "cycling" &&
+    !isIrregular &&
+    isCycleStale(cycleData.cycleDay, cycleData.cycleLengthDays);
   const isNonCycling = cycleData.lifeStage === "postpartum" || cycleData.lifeStage === "menopause" || isLoss || isPregnant;
   const stagePhase = isNonCycling
     ? (cycleData.lifeStage === "postpartum"
@@ -582,6 +615,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     if (isIrregular) {
       return isSucceed ? IRREGULAR_SUCCEED_HER : IRREGULAR_DONTMESS_HER;
     }
+    if (isStale) {
+      return isSucceed ? STALE_SUCCEED_HER : STALE_DONTMESS_HER;
+    }
     return isSucceed ? (SUCCEED_HER[cycleData.phase] || []) : (DONT_MESS_UP_HER[cycleData.phase] || []);
   };
   const getTipsHim = (widgetId: string): string[] => {
@@ -599,6 +635,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     }
     if (isIrregular) {
       return isSucceed ? IRREGULAR_SUCCEED_HIM : IRREGULAR_DONTMESS_HIM;
+    }
+    if (isStale) {
+      return isSucceed ? STALE_SUCCEED_HIM : STALE_DONTMESS_HIM;
     }
     return isSucceed ? (SUCCEED_HIM[cycleData.phase] || []) : (DONT_MESS_UP_HIM[cycleData.phase] || []);
   };
