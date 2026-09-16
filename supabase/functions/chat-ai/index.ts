@@ -902,6 +902,57 @@ function firstDayOfPhase(
   return Math.min(cycleLengthDays - 1, ovulationDay + 3);
 }
 
+/**
+ * Phase boundaries for the CURRENT cycle, using the exact same rules as the
+ * canonical calculator in _shared/cycleCalculations.ts (per-user phase lengths
+ * + a manually logged period end date shifting Follicular forward).
+ * Returns the first/last cycle day of the given phase, so we can hand the model
+ * a grounded "days into phase" number instead of letting it guess.
+ */
+function phaseWindowFor(
+  phase: string,
+  lastPeriodStart: string | null | undefined,
+  cycleLengthDays: number,
+  currentPeriodEndDate?: string | null,
+  prefs: PhaseLengths = ACTIVE_PHASE_LENGTHS || {},
+): { start: number; end: number } | null {
+  if (!cycleLengthDays) return null;
+  const defMenstruation = 5;
+  const defOvDay = cycleLengthDays - 14;
+  const defFollicular = Math.max(1, (defOvDay - 1) - defMenstruation - 1 + 1);
+  const defOvWindow = 4;
+
+  let menstruationEnd = prefs?.menstruation_days ?? defMenstruation;
+  if (
+    lastPeriodStart &&
+    currentPeriodEndDate &&
+    /^\d{4}-\d{2}-\d{2}$/.test(currentPeriodEndDate) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(String(lastPeriodStart).slice(0, 10))
+  ) {
+    const [sy, sm, sd] = String(lastPeriodStart).slice(0, 10).split("-").map(Number);
+    const start = new Date(Date.UTC(sy, sm - 1, sd, 12, 0, 0));
+    const [ey, em, ed] = currentPeriodEndDate.split("-").map(Number);
+    const end = new Date(Date.UTC(ey, em - 1, ed, 12, 0, 0));
+    const endDay = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+    if (endDay >= 1 && endDay <= cycleLengthDays) menstruationEnd = endDay;
+  }
+
+  const hasCustomWindow =
+    prefs?.follicular_days != null || prefs?.ovulation_window_days != null || prefs?.menstruation_days != null;
+  const ovulationStart = hasCustomWindow
+    ? menstruationEnd + (prefs?.follicular_days ?? defFollicular) + 1
+    : defOvDay - 1;
+  const ovulationEnd = hasCustomWindow
+    ? ovulationStart + (prefs?.ovulation_window_days ?? defOvWindow) - 1
+    : defOvDay + 2;
+
+  if (phase === "Menstruation") return { start: 1, end: menstruationEnd };
+  if (phase === "Follicular") return { start: menstruationEnd + 1, end: Math.max(menstruationEnd + 1, ovulationStart - 1) };
+  if (phase === "Ovulation") return { start: ovulationStart, end: ovulationEnd };
+  if (phase === "Luteal") return { start: ovulationEnd + 1, end: Math.max(ovulationEnd + 1, cycleLengthDays) };
+  return null;
+}
+
 /** Explicit phase words the user can use to override the derived phase. */
 function explicitPhaseWord(text: string): "Menstruation" | "Follicular" | "Ovulation" | "Luteal" | null {
   if (!text) return null;
@@ -5107,13 +5158,40 @@ This user's cycle has returned, AND she is ${ppLabel} postpartum (baby born ${bi
   const cycleStale = isCycleStale(cycleInfo.cycleDay, participant.cycle_length_days || 28);
   const staleDaysLate = cycleStale ? cycleInfo.cycleDay - (participant.cycle_length_days || 28) : 0;
 
+  // Grounded position WITHIN the current phase, from the same stored data the
+  // phase itself is derived from (per-user phase lengths + any manually logged
+  // period end date). Without this the model invents "early"/"final stretch".
+  const cycleLenForPhase = participant.cycle_length_days || 28;
+  const phaseWindow = cycleStale
+    ? null
+    : phaseWindowFor(
+        cycleInfo.phase,
+        participant.last_period_start,
+        cycleLenForPhase,
+        (participant as any).current_period_end_date,
+      );
+  const daysIntoPhase =
+    phaseWindow && cycleInfo.cycleDay >= phaseWindow.start ? cycleInfo.cycleDay - phaseWindow.start + 1 : null;
+  const phaseLengthDays = phaseWindow ? Math.max(1, phaseWindow.end - phaseWindow.start + 1) : null;
+
+  const phasePositionFact = daysIntoPhase
+    ? `
+- Days into current phase: day ${daysIntoPhase} of her ${cycleInfo.phase} phase${phaseLengthDays ? ` (her ${cycleInfo.phase} phase runs about ${phaseLengthDays} days this cycle)` : ""}`
+    : "";
+
+  const phasePositionRule = daysIntoPhase
+    ? `
+
+PHASE POSITION RULE (non-negotiable): She is on day ${daysIntoPhase} of her ${cycleInfo.phase} phase${phaseLengthDays ? `, which runs about ${phaseLengthDays} days for her this cycle` : ""}. Any position-within-phase language — "early", "just entering", "midpoint", "halfway through", "final stretch", "tail end", "winding down" — MUST match that number. Day 1–2 is the very start; the middle third is the midpoint; only the last day or two is the final stretch. Never infer position from a textbook phase length or from her overall cycle day. If you are unsure how to phrase it, state the grounded fact plainly ("day ${daysIntoPhase} of your ${cycleInfo.phase.toLowerCase()} phase") or say nothing about position at all.`
+    : "";
+
   const phaseAuthorityBlock = cycleStale
     ? `PHASE IS UNKNOWN (non-negotiable): Her last logged Day 1 is ${cycleInfo.cycleDay - 1} days ago — about ${staleDaysLate} days past her expected next period, with nothing new logged. Any phase derived from that date is NOT reliable. Do NOT state, imply, or build guidance around Menstruation, Follicular, Ovulation, or Luteal for her right now. Do NOT state a current cycle day as fact. If cycle timing is relevant, say plainly that you don't have a reliable Day 1 and invite her to log one (or tell you her period hasn't come). Educational/general statements about phases are still fine as long as they are clearly generic and never claim to describe where SHE is. Ground today's guidance in her logged symptoms, sleep, stress, food, and training instead.`
     : `PHASE AUTHORITY RULE (non-negotiable): The Current phase and cycle day above are authoritative. Never generate symptom explanations, hormone framing, or phase-specific guidance that contradicts this value, regardless of what earlier messages in this conversation discussed. If prior conversation mentioned a different phase, that context is outdated — the current phase value is always correct. Do not attribute today's symptoms to ovulation if the current phase is Luteal, and do not attribute them to Luteal if the current phase is Ovulation, etc. When in doubt, defer to Current phase.
 
 NEVER name a phase other than ${cycleInfo.phase} in your response. If you are tempted to reference Menstruation, Follicular, Ovulation, or Luteal other than ${cycleInfo.phase}, stop and reframe using ${cycleInfo.phase} instead. Short user affirmations ("yeah", "exactly", "tell me more", "okay", "sure", "mhm") do NOT change the phase context — stay anchored to ${cycleInfo.phase} regardless of how little content the user message contains. The phase word in your response MUST match ${cycleInfo.phase} exactly. This is non-negotiable.
 
-CYCLE DAY RULE (non-negotiable): This rule governs statements about HER current day or status. When you say what day she is on, where she is in her cycle, or what day her symptoms correspond to right now, the only number you may use is ${cycleInfo.cycleDay}. Never derive, estimate, round, or infer a different day for her. Never state a "day within the phase" (e.g. "day 3 of luteal") as if it were her cycle day — if you state her day, it is Day ${cycleInfo.cycleDay}. Do not assume a 28-day textbook cycle to compute her day number.`;
+CYCLE DAY RULE (non-negotiable): This rule governs statements about HER current day or status. When you say what day she is on, where she is in her cycle, or what day her symptoms correspond to right now, the only cycle-day number you may use is ${cycleInfo.cycleDay}. Never derive, estimate, round, or infer a different day for her. Never present a position-within-phase number as if it were her cycle day — her cycle day is Day ${cycleInfo.cycleDay}; a phase-position number may only be the "Days into current phase" value given above, and only stated as such (e.g. "day ${daysIntoPhase ?? "N"} of your ${cycleInfo.phase.toLowerCase()} phase"). Do not assume a 28-day textbook cycle to compute her day number.${phasePositionRule}`;
 
   const userContext = `
 
@@ -5123,7 +5201,7 @@ ${cycleStale
   ? `- Current cycle day: UNKNOWN (last logged Day 1 was ${cycleInfo.cycleDay - 1} days ago — too stale to count from)
 - Current phase: UNKNOWN (no reliable Day 1 on file)`
   : `- Current cycle day: ${cycleInfo.cycleDay}
-- Current phase: ${cycleInfo.phase}`}
+- Current phase: ${cycleInfo.phase}${phasePositionFact}`}
 - Cycle length: ${participant.cycle_length_days || 28} days
 
 ${phaseAuthorityBlock}
