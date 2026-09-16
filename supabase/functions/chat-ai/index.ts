@@ -2219,8 +2219,10 @@ serve(async (req) => {
         /(?:i['’]?m|i\s+am|im)\s+(?:actually\s+|currently\s+|now\s+|definitely\s+|really\s+)?(?:in|on)\s+(?:my\s+|the\s+)?(menstrual|menstruation|period|follicular|ovulation|ovulating|ovulatory|fertile|luteal)(?:\s+phase|\s+window)?/i
       ) || userMessage.match(
         /^\s*(?:no,?\s+)?(?:actually,?\s+)?(?:i['’]?m|i\s+am|im)\s+(?:actually\s+|currently\s+|now\s+|definitely\s+)?(menstruating|ovulating)\b/i
-      ) || userMessage.match(
-        /^\s*(?:actually\s+,?\s*)?(?:in\s+)?(?:my\s+)?(menstrual|menstruation|follicular|ovulation|ovulating|ovulatory|fertile|luteal)\s+(?:phase|window)\b/i
+      // REMOVED: bare "<phase> phase" matcher. It fired on non-assertions like
+      // "Follicular phase huh" (even Logan's own suggested chips) and wrote
+      // cycle data. A phase override now requires an explicit first-person
+      // statement or a direct request (patterns below).
       ) || userMessage.match(
         /\b(?:switch|put|move|set|change|correct)\s+me\s+(?:to|into|back\s+to)\s+(?:my\s+|the\s+)?(menstrual|menstruation|period|follicular|ovulation|ovulating|ovulatory|fertile|luteal)(?:\s+phase|\s+window)?/i
       ) || userMessage.match(
