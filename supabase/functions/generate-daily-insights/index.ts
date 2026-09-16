@@ -151,6 +151,8 @@ serve(async (req) => {
       return json({
         succeed: String(cached.succeed_text).split("\n").filter(Boolean),
         dontMessUp: String(cached.dont_mess_up_text).split("\n").filter(Boolean),
+        succeedHim: String(cached.succeed_him_text ?? "").split("\n").filter(Boolean),
+        dontMessUpHim: String(cached.dont_mess_up_him_text ?? "").split("\n").filter(Boolean),
         cached: true,
       });
     }
