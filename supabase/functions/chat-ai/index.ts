@@ -2305,16 +2305,11 @@ serve(async (req) => {
           );
         }
 
-        // A day number stated in THIS message, or anywhere in the recent thread,
-        // always beats a phase default. Never silently pick a "typical" mid-phase day.
+        // A day number must be stated in THIS message to be applied. We never
+        // pull a day figure out of earlier messages — a number from days ago is
+        // stale and produced a wrong "Day 2" write.
         const tzForDay = participant.timezone || "UTC";
-        let statedDay = extractStatedCycleDay(userMessage);
-        if (statedDay === null) {
-          for (const t of recentUserTexts) {
-            const d = extractStatedCycleDay(t);
-            if (d !== null) { statedDay = d; break; }
-          }
-        }
+        const statedDay = extractStatedCycleDay(userMessage);
 
         // Respect a logged bleed end so Follicular starts the day after it.
         let menstruationEndDay = 5;
