@@ -7,6 +7,91 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// --- Chat-fact extraction (v1: food craving/aversion + named dated event) ---
+const CHAT_FACT_MIN_CHARS = 200; // ~350 chars/week median; below this there is nothing to read
+const CHAT_FACT_TIMEOUT_MS = 7000;
+
+type ChatFact =
+  | { type: "food"; direction: "craving" | "avoiding"; item: string; daysAgo: number }
+  | { type: "event"; label: string; date: string };
+
+async function extractChatFacts(
+  transcript: string,
+  today: string,
+  apiKey: string,
+): Promise<ChatFact[]> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), CHAT_FACT_TIMEOUT_MS);
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        temperature: 0,
+        max_tokens: 400,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: [
+              "You extract at most two kinds of fact a woman states about HERSELF in her own chat messages.",
+              'Return json of the form {"foods":[{"item":"...","direction":"craving|avoiding","daysAgo":0}],"events":[{"label":"...","date":"YYYY-MM-DD"}]}.',
+              "foods: a specific food or drink she says she is craving, wants, or wants to avoid. item is 1-3 words, lowercase.",
+              "  daysAgo: how many days before today the message was sent (each line is tagged with its age).",
+              "events: a named plan or event with an identifiable date (a race, a trip, a wedding, a deadline, an appointment).",
+              "  label is 1-5 words, lowercase. date must be an absolute YYYY-MM-DD resolved against today's date.",
+              "  Skip any event whose date you cannot pin down confidently.",
+              "Rules:",
+              "- Extract ONLY what she states about herself. Return empty lists for questions, hypotheticals,",
+              "  someone else's plans or cravings, negations, and general curiosity.",
+              "- Do NOT invent or infer. Empty lists are the correct answer most of the time.",
+            ].join("\n"),
+          },
+          { role: "user", content: `Today is ${today}.\nHer recent messages:\n${transcript.slice(0, 6000)}` },
+        ],
+      }),
+    });
+    clearTimeout(timer);
+    if (!res.ok) {
+      console.warn("[chat_facts] gateway error", res.status);
+      return [];
+    }
+
+    const data = await res.json();
+    const parsed = JSON.parse(
+      String(data.choices?.[0]?.message?.content ?? "{}").replace(/```json/gi, "").replace(/```/g, "").trim(),
+    );
+
+    const facts: ChatFact[] = [];
+    for (const f of Array.isArray(parsed.foods) ? parsed.foods : []) {
+      const item = typeof f?.item === "string" ? f.item.trim().slice(0, 40) : "";
+      const daysAgo = Number.isFinite(f?.daysAgo) ? Math.max(0, Math.round(Number(f.daysAgo))) : 7;
+      // Foods use the same ~7 day freshness window as symptom data.
+      if (item && daysAgo <= 7) {
+        facts.push({
+          type: "food",
+          direction: f?.direction === "avoiding" ? "avoiding" : "craving",
+          item,
+          daysAgo,
+        });
+      }
+    }
+    for (const e of Array.isArray(parsed.events) ? parsed.events : []) {
+      const label = typeof e?.label === "string" ? e.label.trim().slice(0, 60) : "";
+      const date = typeof e?.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(e.date) ? e.date : "";
+      // An event is valid through its own date, then gone the next day.
+      if (label && date && date >= today) facts.push({ type: "event", label, date });
+    }
+    return facts.slice(0, 5);
+  } catch (e) {
+    console.warn("[chat_facts] extraction skipped:", (e as Error)?.message);
+    return [];
+  }
+}
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
