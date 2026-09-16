@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { Zap, Brain, AlertTriangle } from "lucide-react";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
+import { isCycleStale } from "@/lib/cycleCalculations";
 
 interface DailyBriefingHeroProps {
   cycleDay: number;
@@ -120,6 +121,8 @@ export function DailyBriefingHero({
   const isLoss = lifeStage === "pregnancy_loss";
   const isPregnant = lifeStage === "pregnant";
   const isNonCycling = !!lifeStage && (lifeStage === "postpartum" || lifeStage === "menopause" || lifeStage === "pregnancy_loss" || lifeStage === "pregnant");
+  // Stored Day 1 is far past her expected next period — don't assert a phase.
+  const isStale = !isNonCycling && !isIrregular && isCycleStale(cycleDay, cycleLengthDays);
   const phaseText = isLoss ? "text-rose-300" : isPregnant ? "text-emerald-300" : (PHASE_TEXT[phase] || "text-primary");
   const phaseBg = isLoss ? "bg-rose-300/15" : isPregnant ? "bg-emerald-300/15" : (PHASE_BG[phase] || "bg-primary/15");
   const phaseAccent = isLoss
