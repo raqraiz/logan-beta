@@ -546,6 +546,32 @@ serve(async (req) => {
         parsedValue = allowed.includes(raw) ? raw : null;
       }
 
+      // --- Cross-cutting BC / IUD / no-period detection -------------------
+      // A user can mention her hormonal IUD or that she doesn't get a period
+      // inside the answer to a completely different question (usually the
+      // last-period-date one). Run the SAME detector the chat side uses
+      // against every free-text answer and route her into the existing
+      // irregular / hormonal-BC state instead of collecting a Day 1 that
+      // would feed cycling math. Uses the one existing flag (on_hormonal_bc).
+      const bcDetection = detectBcOrNoPeriod(userMessage || "");
+      const detectableStage = !participant?.life_stage
+        || ["cycling", "perimenopause", "irregular"].includes((participant as any).life_stage);
+      const bcDetected = bcDetection.irregular && detectableStage;
+      let bcRoutedToIrregular = false;
+      if (bcDetected && participant) {
+        const update: Record<string, any> = {};
+        if ((participant as any).life_stage !== "irregular") update.life_stage = "irregular";
+        if (bcDetection.bcPositive && (participant as any).on_hormonal_bc !== true) update.on_hormonal_bc = true;
+        // No real period => any stored Day 1 (including one from this very
+        // answer) must not drive cycling calculations.
+        if (bcDetection.noRealPeriod && (participant as any).last_period_start) update.last_period_start = null;
+        if (Object.keys(update).length > 0) {
+          await supabase.from("participants").update(update).eq("id", participant.id);
+          Object.assign(participant as any, update);
+        }
+        bcRoutedToIrregular = true;
+      }
+
       // Get user's name (prefer profile, then auth user_metadata)
       let userName = "";
       const { data: profile } = await supabase
