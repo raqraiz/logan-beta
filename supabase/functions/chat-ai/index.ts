@@ -889,6 +889,24 @@ function extractStatedCycleDay(text: string): number | null {
   return null;
 }
 
+/**
+ * A suggested chip must never be text that, if tapped, would be parsed as a
+ * cycle/period/phase declaration and write to her record. Anything carrying a
+ * phase word, a day number, or period-start/end language is dropped.
+ */
+function isDataMutatingChipText(text: string): boolean {
+  if (!text) return false;
+  const t = text.toLowerCase();
+  if (/\b(menstrual|menstruation|follicular|ovulation|ovulating|ovulatory|fertile|luteal)\b/.test(t)) return true;
+  if (extractStatedCycleDay(t) !== null) return true;
+  if (/\bday\s*\d/.test(t)) return true;
+  if (/\bperiod\b|\bbleed(?:ing)?\b|\bspotting\b|\bcycle\s+(?:length|day)\b/.test(t)) return true;
+  if (/\b(?:started|ended|starting|ending|finished)\b/.test(t) && /\b(period|bleed|cycle)\b/.test(t)) return true;
+  return false;
+}
+
+
+
 /** First day of a phase given cycle length and (optional) actual bleed end day. */
 function firstDayOfPhase(
   phase: "Menstruation" | "Follicular" | "Ovulation" | "Luteal",
@@ -2219,8 +2237,10 @@ serve(async (req) => {
         /(?:i['’]?m|i\s+am|im)\s+(?:actually\s+|currently\s+|now\s+|definitely\s+|really\s+)?(?:in|on)\s+(?:my\s+|the\s+)?(menstrual|menstruation|period|follicular|ovulation|ovulating|ovulatory|fertile|luteal)(?:\s+phase|\s+window)?/i
       ) || userMessage.match(
         /^\s*(?:no,?\s+)?(?:actually,?\s+)?(?:i['’]?m|i\s+am|im)\s+(?:actually\s+|currently\s+|now\s+|definitely\s+)?(menstruating|ovulating)\b/i
-      ) || userMessage.match(
-        /^\s*(?:actually\s+,?\s*)?(?:in\s+)?(?:my\s+)?(menstrual|menstruation|follicular|ovulation|ovulating|ovulatory|fertile|luteal)\s+(?:phase|window)\b/i
+      // REMOVED: bare "<phase> phase" matcher. It fired on non-assertions like
+      // "Follicular phase huh" (even Logan's own suggested chips) and wrote
+      // cycle data. A phase override now requires an explicit first-person
+      // statement or a direct request (patterns below).
       ) || userMessage.match(
         /\b(?:switch|put|move|set|change|correct)\s+me\s+(?:to|into|back\s+to)\s+(?:my\s+|the\s+)?(menstrual|menstruation|period|follicular|ovulation|ovulating|ovulatory|fertile|luteal)(?:\s+phase|\s+window)?/i
       ) || userMessage.match(
@@ -2303,16 +2323,11 @@ serve(async (req) => {
           );
         }
 
-        // A day number stated in THIS message, or anywhere in the recent thread,
-        // always beats a phase default. Never silently pick a "typical" mid-phase day.
+        // A day number must be stated in THIS message to be applied. We never
+        // pull a day figure out of earlier messages — a number from days ago is
+        // stale and produced a wrong "Day 2" write.
         const tzForDay = participant.timezone || "UTC";
-        let statedDay = extractStatedCycleDay(userMessage);
-        if (statedDay === null) {
-          for (const t of recentUserTexts) {
-            const d = extractStatedCycleDay(t);
-            if (d !== null) { statedDay = d; break; }
-          }
-        }
+        const statedDay = extractStatedCycleDay(userMessage);
 
         // Respect a logged bleed end so Follicular starts the day after it.
         let menstruationEndDay = 5;
@@ -4641,7 +4656,10 @@ serve(async (req) => {
         if (match) {
           const parsed = JSON.parse(match[0]);
           if (Array.isArray(parsed)) {
-            conversationStarters = parsed.filter((s) => typeof s === "string" && s.trim().length > 0).slice(0, 3);
+            conversationStarters = parsed
+              .filter((s) => typeof s === "string" && s.trim().length > 0)
+              .filter((s) => !isDataMutatingChipText(s))
+              .slice(0, 3);
           }
         }
       }
