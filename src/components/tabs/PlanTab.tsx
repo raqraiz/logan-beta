@@ -18,6 +18,8 @@ import {
   PP_NUTRITIONS,
   PP_MOODS,
 } from "@/lib/postpartumPhases";
+import { getPostpartumTimeline } from "@/lib/postpartumTimeline";
+import { useDailyHomeInsights } from "@/hooks/useDailyHomeInsights";
 
 interface CycleData {
   cycleDay: number;
@@ -27,6 +29,7 @@ interface CycleData {
   currentPeriodEndDate?: string | null;
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
   postpartumStartDate?: string;
+  postpartumActive?: boolean;
   dueDate?: string;
   pregnancyLmp?: string;
   lossDate?: string;
@@ -442,6 +445,26 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
   const currentPhase = liveCycle?.phase || cycleData?.phase || "Follicular";
   const currentDay = liveCycle?.cycleDay || cycleData?.cycleDay || 1;
   const cycleLength = liveCycle?.cycleLengthDays || cycleData?.cycleLengthDays || 28;
+  // Same daily AI copy the Home tab reads — identical context key so whichever
+  // tab she opens first generates the row and the other reads the cache.
+  const ppPhaseForInsights = getPostpartumPhase(cycleData?.postpartumStartDate);
+  const ppWeeksForInsights = cycleData?.postpartumStartDate
+    ? getPostpartumTimeline(cycleData.postpartumStartDate)?.weeks ?? null
+    : null;
+  const isPostpartumContext =
+    cycleData?.lifeStage === "postpartum" || !!cycleData?.postpartumActive;
+  const { insights: dailyInsights } = useDailyHomeInsights({
+    userId,
+    lifeStage: cycleData?.lifeStage,
+    phase: cycleData?.phase,
+    cycleDay: cycleData?.cycleDay,
+    cycleLengthDays: cycleData?.cycleLengthDays,
+    postpartumPhase: isPostpartumContext ? ppPhaseForInsights : undefined,
+    postpartumWeeks: ppWeeksForInsights,
+    anchorSymptom: anchorSymptom ?? null,
+    enabled: !!cycleData && !(isPostpartumContext && ppPhaseForInsights === "unset"),
+  });
+
   const lastPeriodStart = liveCycle?.lastPeriodStart || cycleData?.lastPeriodStart;
   const currentPeriodEndDate = liveCycle?.currentPeriodEndDate ?? cycleData?.currentPeriodEndDate ?? null;
 
@@ -872,6 +895,8 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             embedded
             onPeriodUpdate={onPeriodUpdate}
             postpartumStartDate={cycleData?.postpartumStartDate}
+            userId={userId}
+            todayInsights={dailyInsights}
           />
         )}
 
