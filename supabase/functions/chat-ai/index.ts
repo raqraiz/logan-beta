@@ -5158,6 +5158,34 @@ This user's cycle has returned, AND she is ${ppLabel} postpartum (baby born ${bi
   const cycleStale = isCycleStale(cycleInfo.cycleDay, participant.cycle_length_days || 28);
   const staleDaysLate = cycleStale ? cycleInfo.cycleDay - (participant.cycle_length_days || 28) : 0;
 
+  // Grounded position WITHIN the current phase, from the same stored data the
+  // phase itself is derived from (per-user phase lengths + any manually logged
+  // period end date). Without this the model invents "early"/"final stretch".
+  const cycleLenForPhase = participant.cycle_length_days || 28;
+  const phaseStart = cycleStale
+    ? null
+    : phaseStartDayFor(
+        cycleInfo.phase,
+        participant.last_period_start,
+        cycleLenForPhase,
+        (participant as any).current_period_end_date,
+      );
+  const daysIntoPhase =
+    phaseStart != null && cycleInfo.cycleDay >= phaseStart ? cycleInfo.cycleDay - phaseStart + 1 : null;
+  const phaseLengthDays =
+    phaseStart != null ? Math.max(1, (daysIntoPhase ?? 1) + (cycleInfo.daysUntilNextPhase ?? 1) - 1) : null;
+
+  const phasePositionFact = daysIntoPhase
+    ? `
+- Days into current phase: day ${daysIntoPhase} of her ${cycleInfo.phase} phase${phaseLengthDays ? ` (her ${cycleInfo.phase} phase runs about ${phaseLengthDays} days this cycle)` : ""}`
+    : "";
+
+  const phasePositionRule = daysIntoPhase
+    ? `
+
+PHASE POSITION RULE (non-negotiable): She is on day ${daysIntoPhase} of her ${cycleInfo.phase} phase${phaseLengthDays ? `, which runs about ${phaseLengthDays} days for her this cycle` : ""}. Any position-within-phase language — "early", "just entering", "midpoint", "halfway through", "final stretch", "tail end", "winding down" — MUST match that number. Day 1–2 is the very start; the middle third is the midpoint; only the last day or two is the final stretch. Never infer position from a textbook phase length or from her overall cycle day. If you are unsure how to phrase it, state the grounded fact plainly ("day ${daysIntoPhase} of your ${cycleInfo.phase.toLowerCase()} phase") or say nothing about position at all.`
+    : "";
+
   const phaseAuthorityBlock = cycleStale
     ? `PHASE IS UNKNOWN (non-negotiable): Her last logged Day 1 is ${cycleInfo.cycleDay - 1} days ago — about ${staleDaysLate} days past her expected next period, with nothing new logged. Any phase derived from that date is NOT reliable. Do NOT state, imply, or build guidance around Menstruation, Follicular, Ovulation, or Luteal for her right now. Do NOT state a current cycle day as fact. If cycle timing is relevant, say plainly that you don't have a reliable Day 1 and invite her to log one (or tell you her period hasn't come). Educational/general statements about phases are still fine as long as they are clearly generic and never claim to describe where SHE is. Ground today's guidance in her logged symptoms, sleep, stress, food, and training instead.`
     : `PHASE AUTHORITY RULE (non-negotiable): The Current phase and cycle day above are authoritative. Never generate symptom explanations, hormone framing, or phase-specific guidance that contradicts this value, regardless of what earlier messages in this conversation discussed. If prior conversation mentioned a different phase, that context is outdated — the current phase value is always correct. Do not attribute today's symptoms to ovulation if the current phase is Luteal, and do not attribute them to Luteal if the current phase is Ovulation, etc. When in doubt, defer to Current phase.
