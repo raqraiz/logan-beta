@@ -588,7 +588,10 @@ serve(async (req) => {
 
       // Update participant record and refresh local object.
       // Skip persistence entirely if user opted to skip an optional date question.
-      const shouldSkipWrite = parseType === "date_optional" && parsedValue == null;
+      // Also skip writing a period date when she just told us she doesn't get
+      // a real period — saving it would feed cycling math she's no longer in.
+      const shouldSkipWrite = (parseType === "date_optional" && parsedValue == null)
+        || (bcDetection.noRealPeriod && bcRoutedToIrregular && currentQuestion.field === "last_period_start");
       if (shouldSkipWrite) {
         console.log("Skipping write for optional field:", currentQuestion.field);
       } else if (participant && currentQuestion.field) {
