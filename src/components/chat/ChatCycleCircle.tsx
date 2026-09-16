@@ -1,5 +1,5 @@
 import { type PhaseLengths, getPhaseLengthPrefs } from "@/lib/phaseLengths";
-import { calculateCycleInfoShared } from "@/lib/cycleCalculations";
+import { calculateCycleInfoShared, isCycleStale } from "@/lib/cycleCalculations";
 import { getPostpartumTimeline } from "@/lib/postpartumTimeline";
 
 type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
@@ -493,6 +493,12 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
   }
   if (lifeStage === "irregular") {
     return <LifeStageBadge lifeStage="irregular" size={size} onHormonalBc={onHormonalBc} />;
+  }
+  // Stale Day 1: running well past her expected next period with nothing new
+  // logged. Stop asserting a day/phase — show the existing Overdue state.
+  // Logging a new period resets cycleDay, which exits this state immediately.
+  if (isCycleStale(cycleDay, cycleLengthDays)) {
+    return <LifeStageBadge lifeStage="steady" steadyReason="stale" size={size} onHormonalBc={onHormonalBc} />;
   }
   // Cycling users always wrap to their input cycle length — no "overdue" pseudo-state.
   // Proactive check-in messages before the assumed day 1 confirm whether the cycle has shifted.
