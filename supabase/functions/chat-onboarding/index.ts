@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { detectBcOrNoPeriod } from "../_shared/bcDetection.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -546,6 +547,32 @@ serve(async (req) => {
         parsedValue = allowed.includes(raw) ? raw : null;
       }
 
+      // --- Cross-cutting BC / IUD / no-period detection -------------------
+      // A user can mention her hormonal IUD or that she doesn't get a period
+      // inside the answer to a completely different question (usually the
+      // last-period-date one). Run the SAME detector the chat side uses
+      // against every free-text answer and route her into the existing
+      // irregular / hormonal-BC state instead of collecting a Day 1 that
+      // would feed cycling math. Uses the one existing flag (on_hormonal_bc).
+      const bcDetection = detectBcOrNoPeriod(userMessage || "");
+      const detectableStage = !participant?.life_stage
+        || ["cycling", "perimenopause", "irregular"].includes((participant as any).life_stage);
+      const bcDetected = bcDetection.irregular && detectableStage;
+      let bcRoutedToIrregular = false;
+      if (bcDetected && participant) {
+        const update: Record<string, any> = {};
+        if ((participant as any).life_stage !== "irregular") update.life_stage = "irregular";
+        if (bcDetection.bcPositive && (participant as any).on_hormonal_bc !== true) update.on_hormonal_bc = true;
+        // No real period => any stored Day 1 (including one from this very
+        // answer) must not drive cycling calculations.
+        if (bcDetection.noRealPeriod && (participant as any).last_period_start) update.last_period_start = null;
+        if (Object.keys(update).length > 0) {
+          await supabase.from("participants").update(update).eq("id", participant.id);
+          Object.assign(participant as any, update);
+        }
+        bcRoutedToIrregular = true;
+      }
+
       // Get user's name (prefer profile, then auth user_metadata)
       let userName = "";
       const { data: profile } = await supabase
@@ -562,7 +589,10 @@ serve(async (req) => {
 
       // Update participant record and refresh local object.
       // Skip persistence entirely if user opted to skip an optional date question.
-      const shouldSkipWrite = parseType === "date_optional" && parsedValue == null;
+      // Also skip writing a period date when she just told us she doesn't get
+      // a real period — saving it would feed cycling math she's no longer in.
+      const shouldSkipWrite = (parseType === "date_optional" && parsedValue == null)
+        || (bcDetection.noRealPeriod && bcRoutedToIrregular && currentQuestion.field === "last_period_start");
       if (shouldSkipWrite) {
         console.log("Skipping write for optional field:", currentQuestion.field);
       } else if (participant && currentQuestion.field) {

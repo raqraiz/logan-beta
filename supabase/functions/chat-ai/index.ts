@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
 import { calculateCycleInfo as sharedCalculateCycleInfo, isCycleStale } from "../_shared/cycleCalculations.ts";
+import { detectBcOrNoPeriod } from "../_shared/bcDetection.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -2726,8 +2727,12 @@ serve(async (req) => {
         || /\bi'?m\s+not\s+postpartum\b/i.test(userMessage);
 
       // --- Hormonal birth control status (independent of life_stage) ---
+      // Shared broadened detector: also catches descriptive/negative phrasing
+      // ("I don't really get a period with my IUD", "only some staining, no
+      // real period"), with the same hypothetical/question veto.
+      const sharedBcDetection = detectBcOrNoPeriod(userMessage);
       // BC-POSITIVE: "I'm on the pill", "I got an IUD", "switch me to hormonal BC"
-      const bcPositiveSignal =
+      const bcPositiveSignal = sharedBcDetection.bcPositive ||
         /\b(?:i'?m|i\s+am|just\s+(?:started|got)|started|recently\s+started|switched\s+to|now\s+on|currently\s+on|going\s+on)\s+(?:on\s+)?(?:the\s+)?(?:pill|mini[-\s]?pill|combined\s+pill|birth\s+control(?:\s+pill)?|hormonal\s+(?:birth\s+control|bc|iud|contracepti(?:on|ve))|nuvaring|the\s+ring|the\s+patch|nexplanon|the\s+implant|depo(?:[-\s]provera)?|mirena|kyleena|skyla|liletta)\b/i.test(userMessage)
         || /\b(?:i\s+have|got|just\s+got|just\s+had)\s+(?:an?\s+)?(?:hormonal\s+)?(?:iud|implant|nexplanon|mirena|kyleena|skyla|liletta|nuvaring|patch)\s+(?:put\s+in|inserted|placed)?\b/i.test(userMessage)
         || /\b(?:change|switch|update|set)\s+(?:my\s+)?(?:settings?|account|life\s+stage|profile)\s+(?:to|for)\s+(?:hormonal\s+(?:birth\s+control|bc)|birth\s+control|irregular|the\s+pill|iud)\b/i.test(userMessage);
@@ -2749,6 +2754,8 @@ serve(async (req) => {
       // Irregular / hormonal birth control: BC-positive phrases, PCOS, or self-reported irregular cycles
       const irregularSignal =
         (bcPositiveSignal && !bcNegativeSignal)
+        // Descriptive "no real period / spotting only" phrasing (shared detector)
+        || (sharedBcDetection.irregular && !bcNegativeSignal)
         // PCOS was renamed PMOS (polyendocrine metabolic ovarian syndrome) in the 2026
         // global consensus. Both terms stay matched — users will say PCOS for years.
         || /\b(?:i\s+have|i'?ve\s+got|diagnosed\s+with)\s+(?:pcos|pmos|polycystic\s+ovar(?:y|ian)\s+syndrome|polyendocrine\s+metabolic\s+ovarian\s+syndrome|hypothalamic\s+amenorrhea)\b/i.test(userMessage)
@@ -2832,6 +2839,10 @@ serve(async (req) => {
           .update({
             life_stage: "irregular",
             ...(bcPositiveSignal ? { on_hormonal_bc: true } : {}),
+            // She says she has no real period — an old stored Day 1 would keep
+            // feeding cycling math. Clear it. Stating a real date later moves
+            // her back to cycling (handled by the cycling detector).
+            ...(sharedBcDetection.noRealPeriod ? { last_period_start: null } : {}),
           })
           .eq("id", participant.id);
         const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
