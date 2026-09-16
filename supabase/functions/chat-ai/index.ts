@@ -2753,6 +2753,8 @@ serve(async (req) => {
       // Irregular / hormonal birth control: BC-positive phrases, PCOS, or self-reported irregular cycles
       const irregularSignal =
         (bcPositiveSignal && !bcNegativeSignal)
+        // Descriptive "no real period / spotting only" phrasing (shared detector)
+        || (sharedBcDetection.irregular && !bcNegativeSignal)
         // PCOS was renamed PMOS (polyendocrine metabolic ovarian syndrome) in the 2026
         // global consensus. Both terms stay matched — users will say PCOS for years.
         || /\b(?:i\s+have|i'?ve\s+got|diagnosed\s+with)\s+(?:pcos|pmos|polycystic\s+ovar(?:y|ian)\s+syndrome|polyendocrine\s+metabolic\s+ovarian\s+syndrome|hypothalamic\s+amenorrhea)\b/i.test(userMessage)
