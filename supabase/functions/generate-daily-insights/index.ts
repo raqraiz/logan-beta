@@ -272,7 +272,7 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Today is ${localDate}. Generate today's two lists.` },
+          { role: "user", content: `Today is ${localDate}. Generate today's four lists.` },
         ],
       }),
     });
