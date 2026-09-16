@@ -517,9 +517,10 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                       <div className="px-3 py-2.5">
                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
                           <Shield className="w-3 h-3" /> How not to mess up today
+                          <span className="ml-auto normal-case tracking-normal text-[9px] text-muted-foreground/60">{sourceLabel(herSource)}</span>
                         </p>
                         <ul className="space-y-1.5">
-                          {(selectedTips || []).map((tip, i) => (
+                          {herTips.map((tip, i) => (
                             <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
                               <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${selectedColors.dot}`} />
                               {tip}
