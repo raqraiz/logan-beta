@@ -5164,7 +5164,7 @@ This user's cycle has returned, AND she is ${ppLabel} postpartum (baby born ${bi
 
 NEVER name a phase other than ${cycleInfo.phase} in your response. If you are tempted to reference Menstruation, Follicular, Ovulation, or Luteal other than ${cycleInfo.phase}, stop and reframe using ${cycleInfo.phase} instead. Short user affirmations ("yeah", "exactly", "tell me more", "okay", "sure", "mhm") do NOT change the phase context — stay anchored to ${cycleInfo.phase} regardless of how little content the user message contains. The phase word in your response MUST match ${cycleInfo.phase} exactly. This is non-negotiable.
 
-CYCLE DAY RULE (non-negotiable): This rule governs statements about HER current day or status. When you say what day she is on, where she is in her cycle, or what day her symptoms correspond to right now, the only number you may use is ${cycleInfo.cycleDay}. Never derive, estimate, round, or infer a different day for her. Never state a "day within the phase" (e.g. "day 3 of luteal") as if it were her cycle day — if you state her day, it is Day ${cycleInfo.cycleDay}. Do not assume a 28-day textbook cycle to compute her day number.`;
+CYCLE DAY RULE (non-negotiable): This rule governs statements about HER current day or status. When you say what day she is on, where she is in her cycle, or what day her symptoms correspond to right now, the only cycle-day number you may use is ${cycleInfo.cycleDay}. Never derive, estimate, round, or infer a different day for her. Never present a position-within-phase number as if it were her cycle day — her cycle day is Day ${cycleInfo.cycleDay}; a phase-position number may only be the "Days into current phase" value given above, and only stated as such (e.g. "day ${daysIntoPhase ?? "N"} of your ${cycleInfo.phase.toLowerCase()} phase"). Do not assume a 28-day textbook cycle to compute her day number.${phasePositionRule}`;
 
   const userContext = `
 
@@ -5174,7 +5174,7 @@ ${cycleStale
   ? `- Current cycle day: UNKNOWN (last logged Day 1 was ${cycleInfo.cycleDay - 1} days ago — too stale to count from)
 - Current phase: UNKNOWN (no reliable Day 1 on file)`
   : `- Current cycle day: ${cycleInfo.cycleDay}
-- Current phase: ${cycleInfo.phase}`}
+- Current phase: ${cycleInfo.phase}${phasePositionFact}`}
 - Cycle length: ${participant.cycle_length_days || 28} days
 
 ${phaseAuthorityBlock}
