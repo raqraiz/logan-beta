@@ -5108,15 +5108,14 @@ CYCLE DAY RULE (non-negotiable): This rule governs statements about HER current 
 
 USER CONTEXT:
 - TODAY'S DATE: ${todayStr} (use this as the anchor for any time/date reasoning — "last month", "last week", "yesterday". NEVER guess or invent dates. If symptom data doesn't cover the period the user asked about, say so plainly.)
-- Current cycle day: ${cycleInfo.cycleDay}
-- Current phase: ${cycleInfo.phase}
+${cycleStale
+  ? `- Current cycle day: UNKNOWN (last logged Day 1 was ${cycleInfo.cycleDay - 1} days ago — too stale to count from)
+- Current phase: UNKNOWN (no reliable Day 1 on file)`
+  : `- Current cycle day: ${cycleInfo.cycleDay}
+- Current phase: ${cycleInfo.phase}`}
 - Cycle length: ${participant.cycle_length_days || 28} days
 
-PHASE AUTHORITY RULE (non-negotiable): The Current phase and cycle day above are authoritative. Never generate symptom explanations, hormone framing, or phase-specific guidance that contradicts this value, regardless of what earlier messages in this conversation discussed. If prior conversation mentioned a different phase, that context is outdated — the current phase value is always correct. Do not attribute today's symptoms to ovulation if the current phase is Luteal, and do not attribute them to Luteal if the current phase is Ovulation, etc. When in doubt, defer to Current phase.
-
-NEVER name a phase other than ${cycleInfo.phase} in your response. If you are tempted to reference Menstruation, Follicular, Ovulation, or Luteal other than ${cycleInfo.phase}, stop and reframe using ${cycleInfo.phase} instead. Short user affirmations ("yeah", "exactly", "tell me more", "okay", "sure", "mhm") do NOT change the phase context — stay anchored to ${cycleInfo.phase} regardless of how little content the user message contains. The phase word in your response MUST match ${cycleInfo.phase} exactly. This is non-negotiable.
-
-CYCLE DAY RULE (non-negotiable): This rule governs statements about HER current day or status. When you say what day she is on, where she is in her cycle, or what day her symptoms correspond to right now, the only number you may use is ${cycleInfo.cycleDay}. Never derive, estimate, round, or infer a different day for her. Never state a "day within the phase" (e.g. "day 3 of luteal") as if it were her cycle day — if you state her day, it is Day ${cycleInfo.cycleDay}. Do not assume a 28-day textbook cycle to compute her day number.
+${phaseAuthorityBlock}
 
 GENERIC DAY RANGES ARE ALLOWED: Educational statements about general biological patterns may use their own day numbers and ranges (e.g. "milk supply usually peaks between Day 2 and Day 4 postpartum", "this typically settles by Day 3 or 4"). These describe what is typical for people in general, not a claim about where she is — keep them clearly generic ("usually", "typically", "for most people") and never let them restate or override her authoritative day. Never collapse a range into two identical numbers: if both endpoints would come out the same, drop the range framing entirely and describe the timing in words without day numbers.
 
