@@ -889,6 +889,24 @@ function extractStatedCycleDay(text: string): number | null {
   return null;
 }
 
+/**
+ * A suggested chip must never be text that, if tapped, would be parsed as a
+ * cycle/period/phase declaration and write to her record. Anything carrying a
+ * phase word, a day number, or period-start/end language is dropped.
+ */
+function isDataMutatingChipText(text: string): boolean {
+  if (!text) return false;
+  const t = text.toLowerCase();
+  if (/\b(menstrual|menstruation|follicular|ovulation|ovulating|ovulatory|fertile|luteal)\b/.test(t)) return true;
+  if (extractStatedCycleDay(t) !== null) return true;
+  if (/\bday\s*\d/.test(t)) return true;
+  if (/\bperiod\b|\bbleed(?:ing)?\b|\bspotting\b|\bcycle\s+(?:length|day)\b/.test(t)) return true;
+  if (/\b(?:started|ended|starting|ending|finished)\b/.test(t) && /\b(period|bleed|cycle)\b/.test(t)) return true;
+  return false;
+}
+
+
+
 /** First day of a phase given cycle length and (optional) actual bleed end day. */
 function firstDayOfPhase(
   phase: "Menstruation" | "Follicular" | "Ovulation" | "Luteal",
