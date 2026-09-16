@@ -72,7 +72,7 @@ export function detectBcOrNoPeriod(text: string): BcDetection {
 
   // --- Spotting / staining only (implies no true bleed to anchor a cycle on).
   const spottingOnly =
-    /\b(?:only|just|some|a\s+bit\s+of|a\s+little)\s+(?:light\s+)?(?:spotting|staining|stains?|brown\s+discharge)\b/i.test(msg) ||
+    /\b(?:only|just|some|a\s+bit\s+of|a\s+little)\s+(?:get|getting|have|having|had\s+)?\s*(?:light\s+)?(?:spotting|staining|stains?|brown\s+discharge)\b/i.test(msg) ||
     (/\b(?:spotting|staining)\b/i.test(msg) &&
       /\b(?:no|not\s+a|never\s+a)\s+(?:real|proper|actual|true|full)?\s*periods?\b/i.test(msg));
 
