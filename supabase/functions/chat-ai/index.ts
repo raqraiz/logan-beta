@@ -2726,8 +2726,12 @@ serve(async (req) => {
         || /\bi'?m\s+not\s+postpartum\b/i.test(userMessage);
 
       // --- Hormonal birth control status (independent of life_stage) ---
+      // Shared broadened detector: also catches descriptive/negative phrasing
+      // ("I don't really get a period with my IUD", "only some staining, no
+      // real period"), with the same hypothetical/question veto.
+      const sharedBcDetection = detectBcOrNoPeriod(userMessage);
       // BC-POSITIVE: "I'm on the pill", "I got an IUD", "switch me to hormonal BC"
-      const bcPositiveSignal =
+      const bcPositiveSignal = sharedBcDetection.bcPositive ||
         /\b(?:i'?m|i\s+am|just\s+(?:started|got)|started|recently\s+started|switched\s+to|now\s+on|currently\s+on|going\s+on)\s+(?:on\s+)?(?:the\s+)?(?:pill|mini[-\s]?pill|combined\s+pill|birth\s+control(?:\s+pill)?|hormonal\s+(?:birth\s+control|bc|iud|contracepti(?:on|ve))|nuvaring|the\s+ring|the\s+patch|nexplanon|the\s+implant|depo(?:[-\s]provera)?|mirena|kyleena|skyla|liletta)\b/i.test(userMessage)
         || /\b(?:i\s+have|got|just\s+got|just\s+had)\s+(?:an?\s+)?(?:hormonal\s+)?(?:iud|implant|nexplanon|mirena|kyleena|skyla|liletta|nuvaring|patch)\s+(?:put\s+in|inserted|placed)?\b/i.test(userMessage)
         || /\b(?:change|switch|update|set)\s+(?:my\s+)?(?:settings?|account|life\s+stage|profile)\s+(?:to|for)\s+(?:hormonal\s+(?:birth\s+control|bc)|birth\s+control|irregular|the\s+pill|iud)\b/i.test(userMessage);
