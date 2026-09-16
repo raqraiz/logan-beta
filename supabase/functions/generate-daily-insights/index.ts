@@ -7,6 +7,91 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// --- Chat-fact extraction (v1: food craving/aversion + named dated event) ---
+const CHAT_FACT_MIN_CHARS = 200; // ~350 chars/week median; below this there is nothing to read
+const CHAT_FACT_TIMEOUT_MS = 7000;
+
+type ChatFact =
+  | { type: "food"; direction: "craving" | "avoiding"; item: string; daysAgo: number }
+  | { type: "event"; label: string; date: string };
+
+async function extractChatFacts(
+  transcript: string,
+  today: string,
+  apiKey: string,
+): Promise<ChatFact[]> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), CHAT_FACT_TIMEOUT_MS);
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        temperature: 0,
+        max_tokens: 400,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: [
+              "You extract at most two kinds of fact a woman states about HERSELF in her own chat messages.",
+              'Return json of the form {"foods":[{"item":"...","direction":"craving|avoiding","daysAgo":0}],"events":[{"label":"...","date":"YYYY-MM-DD"}]}.',
+              "foods: a specific food or drink she says she is craving, wants, or wants to avoid. item is 1-3 words, lowercase.",
+              "  daysAgo: how many days before today the message was sent (each line is tagged with its age).",
+              "events: a named plan or event with an identifiable date (a race, a trip, a wedding, a deadline, an appointment).",
+              "  label is 1-5 words, lowercase. date must be an absolute YYYY-MM-DD resolved against today's date.",
+              "  Skip any event whose date you cannot pin down confidently.",
+              "Rules:",
+              "- Extract ONLY what she states about herself. Return empty lists for questions, hypotheticals,",
+              "  someone else's plans or cravings, negations, and general curiosity.",
+              "- Do NOT invent or infer. Empty lists are the correct answer most of the time.",
+            ].join("\n"),
+          },
+          { role: "user", content: `Today is ${today}.\nHer recent messages:\n${transcript.slice(0, 6000)}` },
+        ],
+      }),
+    });
+    clearTimeout(timer);
+    if (!res.ok) {
+      console.warn("[chat_facts] gateway error", res.status);
+      return [];
+    }
+
+    const data = await res.json();
+    const parsed = JSON.parse(
+      String(data.choices?.[0]?.message?.content ?? "{}").replace(/```json/gi, "").replace(/```/g, "").trim(),
+    );
+
+    const facts: ChatFact[] = [];
+    for (const f of Array.isArray(parsed.foods) ? parsed.foods : []) {
+      const item = typeof f?.item === "string" ? f.item.trim().slice(0, 40) : "";
+      const daysAgo = Number.isFinite(f?.daysAgo) ? Math.max(0, Math.round(Number(f.daysAgo))) : 7;
+      // Foods use the same ~7 day freshness window as symptom data.
+      if (item && daysAgo <= 7) {
+        facts.push({
+          type: "food",
+          direction: f?.direction === "avoiding" ? "avoiding" : "craving",
+          item,
+          daysAgo,
+        });
+      }
+    }
+    for (const e of Array.isArray(parsed.events) ? parsed.events : []) {
+      const label = typeof e?.label === "string" ? e.label.trim().slice(0, 60) : "";
+      const date = typeof e?.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(e.date) ? e.date : "";
+      // An event is valid through its own date, then gone the next day.
+      if (label && date && date >= today) facts.push({ type: "event", label, date });
+    }
+    return facts.slice(0, 5);
+  } catch (e) {
+    console.warn("[chat_facts] extraction skipped:", (e as Error)?.message);
+    return [];
+  }
+}
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -57,7 +142,7 @@ serve(async (req) => {
     // Serve the cache when nothing about her situation changed today.
     const { data: cached } = await service
       .from("daily_home_insights")
-      .select("succeed_text, dont_mess_up_text, context_key")
+      .select("succeed_text, dont_mess_up_text, succeed_him_text, dont_mess_up_him_text, context_key")
       .eq("user_id", userId)
       .eq("local_date", localDate)
       .maybeSingle();
@@ -66,6 +151,8 @@ serve(async (req) => {
       return json({
         succeed: String(cached.succeed_text).split("\n").filter(Boolean),
         dontMessUp: String(cached.dont_mess_up_text).split("\n").filter(Boolean),
+        succeedHim: String(cached.succeed_him_text ?? "").split("\n").filter(Boolean),
+        dontMessUpHim: String(cached.dont_mess_up_him_text ?? "").split("\n").filter(Boolean),
         cached: true,
       });
     }
@@ -119,19 +206,63 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) return json({ error: "AI not configured" }, 500);
 
+    // --- Chat facts from her own messages in the last 7 days (never persisted) ---
+    let chatFactContext = "";
+    const chatSince = new Date(Date.now() - 7 * 86400000).toISOString();
+    const { data: recentMessages } = await service
+      .from("chat_messages")
+      .select("content, created_at")
+      .eq("user_id", userId)
+      .eq("role", "user")
+      .gte("created_at", chatSince)
+      .order("created_at", { ascending: false })
+      .limit(60);
+
+    const msgLines: string[] = [];
+    let totalChars = 0;
+    for (const m of recentMessages ?? []) {
+      const text = typeof m.content === "string" ? m.content.trim() : "";
+      if (!text) continue;
+      totalChars += text.length;
+      const daysAgo = Math.max(
+        0,
+        Math.round((Date.now() - new Date(m.created_at as string).getTime()) / 86400000),
+      );
+      msgLines.push(`(${daysAgo}d ago) ${text.slice(0, 400)}`);
+    }
+
+    if (totalChars >= CHAT_FACT_MIN_CHARS && msgLines.length) {
+      const facts = await extractChatFacts(msgLines.join("\n"), localDate, LOVABLE_API_KEY);
+      if (facts.length) {
+        const lines = facts.map((f) =>
+          f.type === "food"
+            ? `She mentioned ${f.direction === "avoiding" ? "wanting to avoid" : "craving"} ${f.item} (${f.daysAgo === 0 ? "today" : `${f.daysAgo}d ago`}).`
+            : `She mentioned ${f.label}${f.date === localDate ? " — that is today" : ` on ${f.date}`}.`
+        );
+        chatFactContext = `From her own recent messages: ${lines.join(" ")} These came from chat, not from a log — reference them lightly and naturally, never state them as confirmed facts, and skip any that do not fit today's guidance.`;
+      }
+    }
+
+
     const systemPrompt = `You are Logan — a knowledgeable, grounded friend giving a woman two short lists for TODAY only.
 
 ${stageContext}
 ${anchorContext}
 ${symptomContext}
+${chatFactContext}
 
-Write two lists:
+
+Write four lists — two addressed to her, two addressed to her partner ("him"):
 - "succeed": 3 things that will make today go well for her, given her exact state.
 - "dontMessUp": 3 specific traps to avoid today, given her exact state.
+- "succeedHim": 3 things her partner can do today to support her, given her exact state.
+- "dontMessUpHim": 3 things her partner should avoid doing today, given her exact state.
+
+The him lists speak TO her partner ABOUT her ("she"/"her"), never to her. They draw on the same state, symptoms and recent-message context as the her lists.
 
 Rules: each item is ONE sentence, max 14 words, concrete and actionable. Grace over guilt — never shaming. No emojis, no markdown, no numbering, no headers. Vary the wording day to day; do not sound like a generic template.
 
-Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."]}`;
+Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."],"succeedHim":["...","...","..."],"dontMessUpHim":["...","...","..."]}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -143,7 +274,7 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Today is ${localDate}. Generate today's two lists.` },
+          { role: "user", content: `Today is ${localDate}. Generate today's four lists.` },
         ],
       }),
     });
@@ -161,10 +292,15 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
 
     let succeed: string[] = [];
     let dontMessUp: string[] = [];
+    let succeedHim: string[] = [];
+    let dontMessUpHim: string[] = [];
+    const asList = (v: unknown) => (Array.isArray(v) ? v.map(String).filter(Boolean) : []);
     try {
       const parsed = JSON.parse(cleaned);
-      succeed = Array.isArray(parsed.succeed) ? parsed.succeed.map(String).filter(Boolean) : [];
-      dontMessUp = Array.isArray(parsed.dontMessUp) ? parsed.dontMessUp.map(String).filter(Boolean) : [];
+      succeed = asList(parsed.succeed);
+      dontMessUp = asList(parsed.dontMessUp);
+      succeedHim = asList(parsed.succeedHim);
+      dontMessUpHim = asList(parsed.dontMessUpHim);
     } catch (_e) {
       console.error("Failed to parse AI output:", cleaned.slice(0, 300));
     }
@@ -175,6 +311,9 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
 
     succeed = succeed.slice(0, 4);
     dontMessUp = dontMessUp.slice(0, 4);
+    // Him lists are best-effort: too few items simply falls back to the static set.
+    succeedHim = succeedHim.length >= 2 ? succeedHim.slice(0, 4) : [];
+    dontMessUpHim = dontMessUpHim.length >= 2 ? dontMessUpHim.slice(0, 4) : [];
 
     // Unique constraint is (user_id, local_date) — a context change overwrites today's row.
     const { error: upsertErr } = await service
@@ -185,6 +324,8 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
           local_date: localDate,
           succeed_text: succeed.join("\n"),
           dont_mess_up_text: dontMessUp.join("\n"),
+          succeed_him_text: succeedHim.length ? succeedHim.join("\n") : null,
+          dont_mess_up_him_text: dontMessUpHim.length ? dontMessUpHim.join("\n") : null,
           context_key: contextKey,
           generated_at: new Date().toISOString(),
         },
@@ -192,7 +333,7 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
       );
     if (upsertErr) console.error("daily_home_insights upsert failed:", upsertErr.message);
 
-    return json({ succeed, dontMessUp, cached: false });
+    return json({ succeed, dontMessUp, succeedHim, dontMessUpHim, cached: false });
   } catch (e) {
     console.error("generate-daily-insights error:", e);
     return json({ error: "An internal error occurred" }, 500);

@@ -342,30 +342,36 @@ export type Database = {
         Row: {
           context_key: string
           created_at: string
+          dont_mess_up_him_text: string | null
           dont_mess_up_text: string
           generated_at: string
           id: string
           local_date: string
+          succeed_him_text: string | null
           succeed_text: string
           user_id: string
         }
         Insert: {
           context_key: string
           created_at?: string
+          dont_mess_up_him_text?: string | null
           dont_mess_up_text: string
           generated_at?: string
           id?: string
           local_date: string
+          succeed_him_text?: string | null
           succeed_text: string
           user_id: string
         }
         Update: {
           context_key?: string
           created_at?: string
+          dont_mess_up_him_text?: string | null
           dont_mess_up_text?: string
           generated_at?: string
           id?: string
           local_date?: string
+          succeed_him_text?: string | null
           succeed_text?: string
           user_id?: string
         }

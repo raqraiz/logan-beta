@@ -624,6 +624,11 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
   };
   const getTipsHim = (widgetId: string): string[] => {
     const isSucceed = widgetId.startsWith("succeed");
+    // Same generation call as HER — phase-derived, so skipped while stale.
+    if (dailyInsights && !isStale) {
+      const generated = isSucceed ? dailyInsights.succeedHim : dailyInsights.dontMessUpHim;
+      if (generated.length) return generated;
+    }
     if (isLoss) return isSucceed ? LOSS_SUCCEED_HIM : LOSS_DONTMESS_HIM;
     if (isPregnant) return isSucceed ? PREG_SUCCEED_HIM : PREG_DONTMESS_HIM;
     if (hasPostpartumContext) {
