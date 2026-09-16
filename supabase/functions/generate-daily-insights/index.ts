@@ -247,6 +247,8 @@ serve(async (req) => {
 ${stageContext}
 ${anchorContext}
 ${symptomContext}
+${chatFactContext}
+
 
 Write two lists:
 - "succeed": 3 things that will make today go well for her, given her exact state.
