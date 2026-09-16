@@ -134,12 +134,14 @@ export function DailyBriefingHero({
     ? "Healing in progress. There's no timeline for this — only your pace."
     : isPregnant
       ? "Growing a human is a full-time job. Rest is part of the work."
-      : isSteadyByPill
-        ? "Hormonal birth control evens out your cycle. Let's focus on sleep, energy, and stress today."
-        : isIrregular
-          ? "Your cycle runs its own way. Let's focus on sleep, energy, and stress today."
-          : (PHASE_HEADLINE[phase] || "Your day, your rhythm.");
-  const metrics = !isNonCycling ? getDayMetrics(cycleDay, cycleLengthDays) : null;
+      : isStale
+        ? "It's been a while since your last logged period, so I'm not guessing at a phase. Log your Day 1 and I'll pick the thread back up."
+        : isSteadyByPill
+          ? "Hormonal birth control evens out your cycle. Let's focus on sleep, energy, and stress today."
+          : isIrregular
+            ? "Your cycle runs its own way. Let's focus on sleep, energy, and stress today."
+            : (PHASE_HEADLINE[phase] || "Your day, your rhythm.");
+  const metrics = !isNonCycling && !isStale ? getDayMetrics(cycleDay, cycleLengthDays) : null;
 
   return (
     <div className="w-full max-w-sm">
