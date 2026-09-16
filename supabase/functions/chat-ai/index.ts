@@ -946,10 +946,10 @@ function phaseStartDayFor(
     ? ovulationStart + (prefs?.ovulation_window_days ?? defOvWindow) - 1
     : defOvDay + 2;
 
-  if (phase === "Menstruation") return 1;
-  if (phase === "Follicular") return menstruationEnd + 1;
-  if (phase === "Ovulation") return ovulationStart;
-  if (phase === "Luteal") return ovulationEnd + 1;
+  if (phase === "Menstruation") return { start: 1, end: menstruationEnd };
+  if (phase === "Follicular") return { start: menstruationEnd + 1, end: Math.max(menstruationEnd + 1, ovulationStart - 1) };
+  if (phase === "Ovulation") return { start: ovulationStart, end: ovulationEnd };
+  if (phase === "Luteal") return { start: ovulationEnd + 1, end: Math.max(ovulationEnd + 1, cycleLengthDays) };
   return null;
 }
 
