@@ -4638,7 +4638,10 @@ serve(async (req) => {
         if (match) {
           const parsed = JSON.parse(match[0]);
           if (Array.isArray(parsed)) {
-            conversationStarters = parsed.filter((s) => typeof s === "string" && s.trim().length > 0).slice(0, 3);
+            conversationStarters = parsed
+              .filter((s) => typeof s === "string" && s.trim().length > 0)
+              .filter((s) => !isDataMutatingChipText(s))
+              .slice(0, 3);
           }
         }
       }
