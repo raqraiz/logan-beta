@@ -2839,6 +2839,10 @@ serve(async (req) => {
           .update({
             life_stage: "irregular",
             ...(bcPositiveSignal ? { on_hormonal_bc: true } : {}),
+            // She says she has no real period — an old stored Day 1 would keep
+            // feeding cycling math. Clear it. Stating a real date later moves
+            // her back to cycling (handled by the cycling detector).
+            ...(sharedBcDetection.noRealPeriod ? { last_period_start: null } : {}),
           })
           .eq("id", participant.id);
         const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
