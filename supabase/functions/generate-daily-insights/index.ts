@@ -204,6 +204,44 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) return json({ error: "AI not configured" }, 500);
 
+    // --- Chat facts from her own messages in the last 7 days (never persisted) ---
+    let chatFactContext = "";
+    const chatSince = new Date(Date.now() - 7 * 86400000).toISOString();
+    const { data: recentMessages } = await service
+      .from("chat_messages")
+      .select("content, created_at")
+      .eq("user_id", userId)
+      .eq("role", "user")
+      .gte("created_at", chatSince)
+      .order("created_at", { ascending: false })
+      .limit(60);
+
+    const msgLines: string[] = [];
+    let totalChars = 0;
+    for (const m of recentMessages ?? []) {
+      const text = typeof m.content === "string" ? m.content.trim() : "";
+      if (!text) continue;
+      totalChars += text.length;
+      const daysAgo = Math.max(
+        0,
+        Math.round((Date.now() - new Date(m.created_at as string).getTime()) / 86400000),
+      );
+      msgLines.push(`(${daysAgo}d ago) ${text.slice(0, 400)}`);
+    }
+
+    if (totalChars >= CHAT_FACT_MIN_CHARS && msgLines.length) {
+      const facts = await extractChatFacts(msgLines.join("\n"), localDate, LOVABLE_API_KEY);
+      if (facts.length) {
+        const lines = facts.map((f) =>
+          f.type === "food"
+            ? `She mentioned ${f.direction === "avoiding" ? "wanting to avoid" : "craving"} ${f.item} (${f.daysAgo === 0 ? "today" : `${f.daysAgo}d ago`}).`
+            : `She mentioned ${f.label}${f.date === localDate ? " — that is today" : ` on ${f.date}`}.`
+        );
+        chatFactContext = `From her own recent messages: ${lines.join(" ")} These came from chat, not from a log — reference them lightly and naturally, never state them as confirmed facts, and skip any that do not fit today's guidance.`;
+      }
+    }
+
+
     const systemPrompt = `You are Logan — a knowledgeable, grounded friend giving a woman two short lists for TODAY only.
 
 ${stageContext}
