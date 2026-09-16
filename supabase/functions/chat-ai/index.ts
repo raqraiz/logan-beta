@@ -5162,18 +5162,17 @@ This user's cycle has returned, AND she is ${ppLabel} postpartum (baby born ${bi
   // phase itself is derived from (per-user phase lengths + any manually logged
   // period end date). Without this the model invents "early"/"final stretch".
   const cycleLenForPhase = participant.cycle_length_days || 28;
-  const phaseStart = cycleStale
+  const phaseWindow = cycleStale
     ? null
-    : phaseStartDayFor(
+    : phaseWindowFor(
         cycleInfo.phase,
         participant.last_period_start,
         cycleLenForPhase,
         (participant as any).current_period_end_date,
       );
   const daysIntoPhase =
-    phaseStart != null && cycleInfo.cycleDay >= phaseStart ? cycleInfo.cycleDay - phaseStart + 1 : null;
-  const phaseLengthDays =
-    phaseStart != null ? Math.max(1, (daysIntoPhase ?? 1) + (cycleInfo.daysUntilNextPhase ?? 1) - 1) : null;
+    phaseWindow && cycleInfo.cycleDay >= phaseWindow.start ? cycleInfo.cycleDay - phaseWindow.start + 1 : null;
+  const phaseLengthDays = phaseWindow ? Math.max(1, phaseWindow.end - phaseWindow.start + 1) : null;
 
   const phasePositionFact = daysIntoPhase
     ? `
