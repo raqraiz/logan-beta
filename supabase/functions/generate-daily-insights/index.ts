@@ -142,7 +142,7 @@ serve(async (req) => {
     // Serve the cache when nothing about her situation changed today.
     const { data: cached } = await service
       .from("daily_home_insights")
-      .select("succeed_text, dont_mess_up_text, context_key")
+      .select("succeed_text, dont_mess_up_text, succeed_him_text, dont_mess_up_him_text, context_key")
       .eq("user_id", userId)
       .eq("local_date", localDate)
       .maybeSingle();
