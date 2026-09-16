@@ -902,6 +902,57 @@ function firstDayOfPhase(
   return Math.min(cycleLengthDays - 1, ovulationDay + 3);
 }
 
+/**
+ * Phase boundaries for the CURRENT cycle, using the exact same rules as the
+ * canonical calculator in _shared/cycleCalculations.ts (per-user phase lengths
+ * + a manually logged period end date shifting Follicular forward).
+ * Returns the first cycle day of the given phase, so we can hand the model a
+ * grounded "days into phase" number instead of letting it guess.
+ */
+function phaseStartDayFor(
+  phase: string,
+  lastPeriodStart: string | null | undefined,
+  cycleLengthDays: number,
+  currentPeriodEndDate?: string | null,
+  prefs: PhaseLengths = ACTIVE_PHASE_LENGTHS || {},
+): number | null {
+  if (!cycleLengthDays) return null;
+  const defMenstruation = 5;
+  const defOvDay = cycleLengthDays - 14;
+  const defFollicular = Math.max(1, (defOvDay - 1) - defMenstruation - 1 + 1);
+  const defOvWindow = 4;
+
+  let menstruationEnd = prefs?.menstruation_days ?? defMenstruation;
+  if (
+    lastPeriodStart &&
+    currentPeriodEndDate &&
+    /^\d{4}-\d{2}-\d{2}$/.test(currentPeriodEndDate) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(String(lastPeriodStart).slice(0, 10))
+  ) {
+    const [sy, sm, sd] = String(lastPeriodStart).slice(0, 10).split("-").map(Number);
+    const start = new Date(Date.UTC(sy, sm - 1, sd, 12, 0, 0));
+    const [ey, em, ed] = currentPeriodEndDate.split("-").map(Number);
+    const end = new Date(Date.UTC(ey, em - 1, ed, 12, 0, 0));
+    const endDay = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+    if (endDay >= 1 && endDay <= cycleLengthDays) menstruationEnd = endDay;
+  }
+
+  const hasCustomWindow =
+    prefs?.follicular_days != null || prefs?.ovulation_window_days != null || prefs?.menstruation_days != null;
+  const ovulationStart = hasCustomWindow
+    ? menstruationEnd + (prefs?.follicular_days ?? defFollicular) + 1
+    : defOvDay - 1;
+  const ovulationEnd = hasCustomWindow
+    ? ovulationStart + (prefs?.ovulation_window_days ?? defOvWindow) - 1
+    : defOvDay + 2;
+
+  if (phase === "Menstruation") return 1;
+  if (phase === "Follicular") return menstruationEnd + 1;
+  if (phase === "Ovulation") return ovulationStart;
+  if (phase === "Luteal") return ovulationEnd + 1;
+  return null;
+}
+
 /** Explicit phase words the user can use to override the derived phase. */
 function explicitPhaseWord(text: string): "Menstruation" | "Follicular" | "Ovulation" | "Luteal" | null {
   if (!text) return null;
