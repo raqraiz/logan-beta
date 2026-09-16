@@ -290,10 +290,15 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
 
     let succeed: string[] = [];
     let dontMessUp: string[] = [];
+    let succeedHim: string[] = [];
+    let dontMessUpHim: string[] = [];
+    const asList = (v: unknown) => (Array.isArray(v) ? v.map(String).filter(Boolean) : []);
     try {
       const parsed = JSON.parse(cleaned);
-      succeed = Array.isArray(parsed.succeed) ? parsed.succeed.map(String).filter(Boolean) : [];
-      dontMessUp = Array.isArray(parsed.dontMessUp) ? parsed.dontMessUp.map(String).filter(Boolean) : [];
+      succeed = asList(parsed.succeed);
+      dontMessUp = asList(parsed.dontMessUp);
+      succeedHim = asList(parsed.succeedHim);
+      dontMessUpHim = asList(parsed.dontMessUpHim);
     } catch (_e) {
       console.error("Failed to parse AI output:", cleaned.slice(0, 300));
     }
