@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
+import { supabase } from "@/integrations/supabase/client";
 import { Zap, Shield, Users, Moon, TrendingUp, TrendingDown, AlertTriangle, Heart, ChevronLeft, ChevronRight, ChevronDown, X, Calendar, Pencil } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, differenceInCalendarDays, parseISO, isValid, addDays } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
