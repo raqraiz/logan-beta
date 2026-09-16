@@ -597,7 +597,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
 
   const getTipsHer = (widgetId: string): string[] => {
     const isSucceed = widgetId.startsWith("succeed");
-    if (dailyInsights) {
+    // AI-generated daily copy is phase-derived — skip it while stale so the
+    // neutral set below wins (same rule as the circle and chat).
+    if (dailyInsights && !isStale) {
       const generated = isSucceed ? dailyInsights.succeed : dailyInsights.dontMessUp;
       if (generated.length) return generated;
     }
