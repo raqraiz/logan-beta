@@ -50,6 +50,28 @@ export interface CycleInfo {
 
 const OVERDUE_GRACE_DAYS = 14;
 
+/**
+ * Staleness: how many days past the EXPECTED next period (day cycleLength + 1)
+ * a running day count may go before the stored Day 1 is treated as unreliable.
+ * Not a flat day count — it is always relative to her own cycle length.
+ */
+export const CYCLE_STALE_GRACE_DAYS = 45;
+
+/**
+ * True when the stored period date is so far in the past that the derived
+ * day/phase can no longer be asserted as fact. Display/assertion only —
+ * nothing is cleared or rewritten. No date logged yet => NOT stale (that is a
+ * separate empty state).
+ */
+export function isCycleStale(
+  cycleDay: number | null | undefined,
+  cycleLengthDays: number | null | undefined,
+): boolean {
+  if (!cycleDay || !cycleLengthDays) return false;
+  if (!Number.isFinite(cycleDay) || !Number.isFinite(cycleLengthDays)) return false;
+  return cycleDay > cycleLengthDays + CYCLE_STALE_GRACE_DAYS;
+}
+
 export function calculateCycleInfoShared(
   lastPeriodStart: string | null,
   cycleLengthDays: number | null,

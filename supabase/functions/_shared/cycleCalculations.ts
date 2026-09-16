@@ -54,6 +54,23 @@ export interface CycleInfo {
 
 const OVERDUE_GRACE_DAYS = 14;
 
+/** Mirror of src/lib/cycleCalculations.ts — keep in sync. */
+export const CYCLE_STALE_GRACE_DAYS = 45;
+
+/**
+ * True when the stored period date is so far past her expected next period
+ * that the derived day/phase can no longer be asserted as fact.
+ * No date logged yet => NOT stale (separate empty state).
+ */
+export function isCycleStale(
+  cycleDay: number | null | undefined,
+  cycleLengthDays: number | null | undefined,
+): boolean {
+  if (!cycleDay || !cycleLengthDays) return false;
+  if (!Number.isFinite(cycleDay) || !Number.isFinite(cycleLengthDays)) return false;
+  return cycleDay > cycleLengthDays + CYCLE_STALE_GRACE_DAYS;
+}
+
 export function calculateCycleInfo(
   lastPeriodStart: string | null,
   cycleLengthDays: number | null,
