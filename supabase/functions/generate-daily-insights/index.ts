@@ -309,6 +309,9 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
 
     succeed = succeed.slice(0, 4);
     dontMessUp = dontMessUp.slice(0, 4);
+    // Him lists are best-effort: too few items simply falls back to the static set.
+    succeedHim = succeedHim.length >= 2 ? succeedHim.slice(0, 4) : [];
+    dontMessUpHim = dontMessUpHim.length >= 2 ? dontMessUpHim.slice(0, 4) : [];
 
     // Unique constraint is (user_id, local_date) — a context change overwrites today's row.
     const { error: upsertErr } = await service
