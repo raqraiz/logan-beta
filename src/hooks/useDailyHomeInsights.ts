@@ -17,6 +17,9 @@ export interface DailyInsightContext {
 export interface DailyInsights {
   succeed: string[];
   dontMessUp: string[];
+  /** Partner-facing lists from the same generation call; empty means fall back to static. */
+  succeedHim: string[];
+  dontMessUpHim: string[];
 }
 
 function localDateKey(): string {
@@ -63,7 +66,7 @@ export function useDailyHomeInsights(ctx: DailyInsightContext) {
       try {
         const { data: row } = await supabase
           .from("daily_home_insights")
-          .select("succeed_text, dont_mess_up_text, context_key")
+          .select("succeed_text, dont_mess_up_text, succeed_him_text, dont_mess_up_him_text, context_key")
           .eq("user_id", userId)
           .eq("local_date", localDate)
           .maybeSingle();
@@ -73,6 +76,8 @@ export function useDailyHomeInsights(ctx: DailyInsightContext) {
             setInsights({
               succeed: String(row.succeed_text).split("\n").filter(Boolean),
               dontMessUp: String(row.dont_mess_up_text).split("\n").filter(Boolean),
+              succeedHim: String(row.succeed_him_text ?? "").split("\n").filter(Boolean),
+              dontMessUpHim: String(row.dont_mess_up_him_text ?? "").split("\n").filter(Boolean),
             });
           }
           return;
@@ -97,7 +102,12 @@ export function useDailyHomeInsights(ctx: DailyInsightContext) {
           setInsights(null);
           return;
         }
-        setInsights({ succeed: data.succeed, dontMessUp: data.dontMessUp });
+        setInsights({
+          succeed: data.succeed,
+          dontMessUp: data.dontMessUp,
+          succeedHim: Array.isArray(data.succeedHim) ? data.succeedHim : [],
+          dontMessUpHim: Array.isArray(data.dontMessUpHim) ? data.dontMessUpHim : [],
+        });
       } catch {
         if (!cancelled) setInsights(null);
       } finally {
