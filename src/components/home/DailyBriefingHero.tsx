@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { Zap, Brain, AlertTriangle } from "lucide-react";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
+import { isCycleStale } from "@/lib/cycleCalculations";
 
 interface DailyBriefingHeroProps {
   cycleDay: number;
@@ -120,23 +121,29 @@ export function DailyBriefingHero({
   const isLoss = lifeStage === "pregnancy_loss";
   const isPregnant = lifeStage === "pregnant";
   const isNonCycling = !!lifeStage && (lifeStage === "postpartum" || lifeStage === "menopause" || lifeStage === "pregnancy_loss" || lifeStage === "pregnant");
-  const phaseText = isLoss ? "text-rose-300" : isPregnant ? "text-emerald-300" : (PHASE_TEXT[phase] || "text-primary");
-  const phaseBg = isLoss ? "bg-rose-300/15" : isPregnant ? "bg-emerald-300/15" : (PHASE_BG[phase] || "bg-primary/15");
+  // Stored Day 1 is far past her expected next period — don't assert a phase.
+  const isStale = !isNonCycling && !isIrregular && isCycleStale(cycleDay, cycleLengthDays);
+  const phaseText = isLoss ? "text-rose-300" : isPregnant ? "text-emerald-300" : isStale ? "text-primary" : (PHASE_TEXT[phase] || "text-primary");
+  const phaseBg = isLoss ? "bg-rose-300/15" : isPregnant ? "bg-emerald-300/15" : isStale ? "bg-primary/15" : (PHASE_BG[phase] || "bg-primary/15");
   const phaseAccent = isLoss
     ? "from-rose-300/10 via-transparent to-transparent"
     : isPregnant
       ? "from-emerald-300/10 via-transparent to-transparent"
-      : (PHASE_ACCENT[phase] || "from-primary/10 via-transparent to-transparent");
+      : isStale
+        ? "from-primary/10 via-transparent to-transparent"
+        : (PHASE_ACCENT[phase] || "from-primary/10 via-transparent to-transparent");
   const headline = isLoss
     ? "Healing in progress. There's no timeline for this — only your pace."
     : isPregnant
       ? "Growing a human is a full-time job. Rest is part of the work."
-      : isSteadyByPill
-        ? "Hormonal birth control evens out your cycle. Let's focus on sleep, energy, and stress today."
-        : isIrregular
-          ? "Your cycle runs its own way. Let's focus on sleep, energy, and stress today."
-          : (PHASE_HEADLINE[phase] || "Your day, your rhythm.");
-  const metrics = !isNonCycling ? getDayMetrics(cycleDay, cycleLengthDays) : null;
+      : isStale
+        ? "It's been a while since your last logged period, so I'm not guessing at a phase. Log your Day 1 and I'll pick the thread back up."
+        : isSteadyByPill
+          ? "Hormonal birth control evens out your cycle. Let's focus on sleep, energy, and stress today."
+          : isIrregular
+            ? "Your cycle runs its own way. Let's focus on sleep, energy, and stress today."
+            : (PHASE_HEADLINE[phase] || "Your day, your rhythm.");
+  const metrics = !isNonCycling && !isStale ? getDayMetrics(cycleDay, cycleLengthDays) : null;
 
   return (
     <div className="w-full max-w-sm">
@@ -188,7 +195,9 @@ export function DailyBriefingHero({
                           : lifeStage === "pregnant"
                             ? "Pregnant"
                             : (onHormonalBc === true ? "On the pill" : "Irregular"))
-                  : phase}
+                  : isStale
+                    ? "Period overdue"
+                    : phase}
               </span>
             </div>
 
