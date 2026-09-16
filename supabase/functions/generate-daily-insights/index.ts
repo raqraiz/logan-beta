@@ -322,6 +322,8 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
           local_date: localDate,
           succeed_text: succeed.join("\n"),
           dont_mess_up_text: dontMessUp.join("\n"),
+          succeed_him_text: succeedHim.length ? succeedHim.join("\n") : null,
+          dont_mess_up_him_text: dontMessUpHim.length ? dontMessUpHim.join("\n") : null,
           context_key: contextKey,
           generated_at: new Date().toISOString(),
         },
