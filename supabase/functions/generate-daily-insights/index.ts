@@ -250,13 +250,17 @@ ${symptomContext}
 ${chatFactContext}
 
 
-Write two lists:
+Write four lists — two addressed to her, two addressed to her partner ("him"):
 - "succeed": 3 things that will make today go well for her, given her exact state.
 - "dontMessUp": 3 specific traps to avoid today, given her exact state.
+- "succeedHim": 3 things her partner can do today to support her, given her exact state.
+- "dontMessUpHim": 3 things her partner should avoid doing today, given her exact state.
+
+The him lists speak TO her partner ABOUT her ("she"/"her"), never to her. They draw on the same state, symptoms and recent-message context as the her lists.
 
 Rules: each item is ONE sentence, max 14 words, concrete and actionable. Grace over guilt — never shaming. No emojis, no markdown, no numbering, no headers. Vary the wording day to day; do not sound like a generic template.
 
-Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."]}`;
+Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."],"succeedHim":["...","...","..."],"dontMessUpHim":["...","...","..."]}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
