@@ -906,16 +906,16 @@ function firstDayOfPhase(
  * Phase boundaries for the CURRENT cycle, using the exact same rules as the
  * canonical calculator in _shared/cycleCalculations.ts (per-user phase lengths
  * + a manually logged period end date shifting Follicular forward).
- * Returns the first cycle day of the given phase, so we can hand the model a
- * grounded "days into phase" number instead of letting it guess.
+ * Returns the first/last cycle day of the given phase, so we can hand the model
+ * a grounded "days into phase" number instead of letting it guess.
  */
-function phaseStartDayFor(
+function phaseWindowFor(
   phase: string,
   lastPeriodStart: string | null | undefined,
   cycleLengthDays: number,
   currentPeriodEndDate?: string | null,
   prefs: PhaseLengths = ACTIVE_PHASE_LENGTHS || {},
-): number | null {
+): { start: number; end: number } | null {
   if (!cycleLengthDays) return null;
   const defMenstruation = 5;
   const defOvDay = cycleLengthDays - 14;
