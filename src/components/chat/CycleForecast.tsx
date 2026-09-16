@@ -7,6 +7,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 
+/** Same shape the Home tab's daily insights hook returns. */
+export interface ForecastDailyInsights {
+  succeed: string[];
+  dontMessUp: string[];
+  succeedHim: string[];
+  dontMessUpHim: string[];
+}
+
 interface CycleForecastProps {
   cycleDay: number;
   phase: string;
@@ -18,6 +26,10 @@ interface CycleForecastProps {
   embedded?: boolean;
   onPeriodUpdate?: (date: Date) => Promise<void> | void;
   postpartumStartDate?: string;
+  /** Needed to read cached daily_home_insights rows for past days. */
+  userId?: string;
+  /** Today's live copy, passed down from the same hook Home uses. */
+  todayInsights?: ForecastDailyInsights | null;
 }
 
 function getPhaseForDay(day: number, cycleLength: number, menstruationEnd: number = 5): string {
