@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
-import { calculateCycleInfo as sharedCalculateCycleInfo } from "../_shared/cycleCalculations.ts";
+import { calculateCycleInfo as sharedCalculateCycleInfo, isCycleStale } from "../_shared/cycleCalculations.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -5089,6 +5089,21 @@ This user's cycle has returned, AND she is ${ppLabel} postpartum (baby born ${bi
   }
 
   const todayStr = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
+
+  // STALE DAY 1: her running day count is far past her expected next period with
+  // no new Day 1 logged. The derived phase is no longer a fact, so the phase
+  // authority rules below are replaced with an explicit "phase unknown" mandate.
+  const cycleStale = isCycleStale(cycleInfo.cycleDay, participant.cycle_length_days || 28);
+  const staleDaysLate = cycleStale ? cycleInfo.cycleDay - (participant.cycle_length_days || 28) : 0;
+
+  const phaseAuthorityBlock = cycleStale
+    ? `PHASE IS UNKNOWN (non-negotiable): Her last logged Day 1 is ${cycleInfo.cycleDay - 1} days ago — about ${staleDaysLate} days past her expected next period, with nothing new logged. Any phase derived from that date is NOT reliable. Do NOT state, imply, or build guidance around Menstruation, Follicular, Ovulation, or Luteal for her right now. Do NOT state a current cycle day as fact. If cycle timing is relevant, say plainly that you don't have a reliable Day 1 and invite her to log one (or tell you her period hasn't come). Educational/general statements about phases are still fine as long as they are clearly generic and never claim to describe where SHE is. Ground today's guidance in her logged symptoms, sleep, stress, food, and training instead.`
+    : `PHASE AUTHORITY RULE (non-negotiable): The Current phase and cycle day above are authoritative. Never generate symptom explanations, hormone framing, or phase-specific guidance that contradicts this value, regardless of what earlier messages in this conversation discussed. If prior conversation mentioned a different phase, that context is outdated — the current phase value is always correct. Do not attribute today's symptoms to ovulation if the current phase is Luteal, and do not attribute them to Luteal if the current phase is Ovulation, etc. When in doubt, defer to Current phase.
+
+NEVER name a phase other than ${cycleInfo.phase} in your response. If you are tempted to reference Menstruation, Follicular, Ovulation, or Luteal other than ${cycleInfo.phase}, stop and reframe using ${cycleInfo.phase} instead. Short user affirmations ("yeah", "exactly", "tell me more", "okay", "sure", "mhm") do NOT change the phase context — stay anchored to ${cycleInfo.phase} regardless of how little content the user message contains. The phase word in your response MUST match ${cycleInfo.phase} exactly. This is non-negotiable.
+
+CYCLE DAY RULE (non-negotiable): This rule governs statements about HER current day or status. When you say what day she is on, where she is in her cycle, or what day her symptoms correspond to right now, the only number you may use is ${cycleInfo.cycleDay}. Never derive, estimate, round, or infer a different day for her. Never state a "day within the phase" (e.g. "day 3 of luteal") as if it were her cycle day — if you state her day, it is Day ${cycleInfo.cycleDay}. Do not assume a 28-day textbook cycle to compute her day number.`;
+
   const userContext = `
 
 USER CONTEXT:
