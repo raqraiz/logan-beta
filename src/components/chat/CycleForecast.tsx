@@ -1,10 +1,19 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
+import { supabase } from "@/integrations/supabase/client";
 import { Zap, Shield, Users, Moon, TrendingUp, TrendingDown, AlertTriangle, Heart, ChevronLeft, ChevronRight, ChevronDown, X, Calendar, Pencil } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, differenceInCalendarDays, parseISO, isValid, addDays } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
+
+/** Same shape the Home tab's daily insights hook returns. */
+export interface ForecastDailyInsights {
+  succeed: string[];
+  dontMessUp: string[];
+  succeedHim: string[];
+  dontMessUpHim: string[];
+}
 
 interface CycleForecastProps {
   cycleDay: number;
@@ -17,6 +26,10 @@ interface CycleForecastProps {
   embedded?: boolean;
   onPeriodUpdate?: (date: Date) => Promise<void> | void;
   postpartumStartDate?: string;
+  /** Needed to read cached daily_home_insights rows for past days. */
+  userId?: string;
+  /** Today's live copy, passed down from the same hook Home uses. */
+  todayInsights?: ForecastDailyInsights | null;
 }
 
 function getPhaseForDay(day: number, cycleLength: number, menstruationEnd: number = 5): string {
@@ -142,6 +155,23 @@ const PARTNER_TIPS: Record<string, string[]> = {
   ],
 };
 
+/**
+ * Deterministic per-day ordering of a phase's tip list. Same input (cycle day)
+ * always yields the same order, so lines rotate across the phase instead of
+ * repeating identically on every day of that phase.
+ */
+function rotateForDay(tips: string[], day: number): string[] {
+  if (!tips.length) return tips;
+  const offset = (((day - 1) % tips.length) + tips.length) % tips.length;
+  return tips.map((_, i) => tips[(i + offset) % tips.length]);
+}
+
+type TipSource = "live" | "historical" | "rotated";
+
+function splitLines(text: string | null | undefined): string[] {
+  return String(text ?? "").split("\n").filter(Boolean);
+}
+
 function EnergyBar({ value, color }: { value: number; color: string }) {
   return (
     <div className="w-full h-1.5 rounded-full bg-muted/30 overflow-hidden">
@@ -150,7 +180,7 @@ function EnergyBar({ value, color }: { value: number; color: string }) {
   );
 }
 
-export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStart, currentPeriodEndDate, anchorSymptom, onClose, embedded = false, onPeriodUpdate, postpartumStartDate }: CycleForecastProps) {
+export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStart, currentPeriodEndDate, anchorSymptom, onClose, embedded = false, onPeriodUpdate, postpartumStartDate, userId, todayInsights }: CycleForecastProps) {
   useTrackFeature("cycle_forecast");
   const today = useMemo(() => new Date(), []);
   // Parse YYYY-MM-DD as noon UTC to match calculateCycleInfo and avoid timezone off-by-one
@@ -222,6 +252,56 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   const selectedColors = selectedPhase ? PHASE_COLORS[selectedPhase] : null;
   const selectedTips = selectedPhase ? PHASE_TIPS[selectedPhase] : null;
   const selectedPartnerTips = selectedPhase ? PARTNER_TIPS[selectedPhase] : null;
+
+  // ── Tip sourcing: live (today) → historical (cached past day) → rotated ──
+  const todayKey = format(today, "yyyy-MM-dd");
+  const selectedKey = selectedDate ? format(selectedDate, "yyyy-MM-dd") : null;
+  const isTodaySelected = !!selectedKey && selectedKey === todayKey;
+  const isPastSelected = !!selectedKey && selectedKey < todayKey;
+
+  const [historyKey, setHistoryKey] = useState<string | null>(null);
+  const [historyRow, setHistoryRow] = useState<{
+    dont_mess_up_text: string | null;
+    dont_mess_up_him_text: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!userId || !selectedKey || !isPastSelected) {
+      setHistoryRow(null);
+      setHistoryKey(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("daily_home_insights")
+        .select("dont_mess_up_text, dont_mess_up_him_text")
+        .eq("user_id", userId)
+        .eq("local_date", selectedKey)
+        .maybeSingle();
+      if (cancelled) return;
+      setHistoryRow((data as any) ?? null);
+      setHistoryKey(selectedKey);
+    })();
+    return () => { cancelled = true; };
+  }, [userId, selectedKey, isPastSelected]);
+
+  const historyReady = isPastSelected && historyKey === selectedKey;
+  const liveHer = isTodaySelected ? todayInsights?.dontMessUp ?? [] : [];
+  const liveHim = isTodaySelected ? todayInsights?.dontMessUpHim ?? [] : [];
+  const histHer = historyReady ? splitLines(historyRow?.dont_mess_up_text) : [];
+  const histHim = historyReady ? splitLines(historyRow?.dont_mess_up_him_text) : [];
+
+  const rotatedHer = rotateForDay(selectedTips ?? [], selectedCycleDay ?? 1);
+  const rotatedHim = rotateForDay(selectedPartnerTips ?? [], selectedCycleDay ?? 1);
+
+  const herTips = liveHer.length ? liveHer : histHer.length ? histHer : rotatedHer;
+  const himTips = liveHim.length ? liveHim : histHim.length ? histHim : rotatedHim;
+  const herSource: TipSource = liveHer.length ? "live" : histHer.length ? "historical" : "rotated";
+  const himSource: TipSource = liveHim.length ? "live" : histHim.length ? "historical" : "rotated";
+  const sourceLabel = (s: TipSource) =>
+    s === "live" ? "Today · personalised" : s === "historical" ? "Saved from that day" : "Phase guidance";
+
 
   const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
   const PHASES = ["Menstruation", "Follicular", "Ovulation", "Luteal"] as const;
@@ -437,9 +517,10 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                       <div className="px-3 py-2.5">
                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
                           <Shield className="w-3 h-3" /> How not to mess up today
+                          <span className="ml-auto normal-case tracking-normal text-[9px] text-muted-foreground/60">{sourceLabel(herSource)}</span>
                         </p>
                         <ul className="space-y-1.5">
-                          {(selectedTips || []).map((tip, i) => (
+                          {herTips.map((tip, i) => (
                             <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
                               <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${selectedColors.dot}`} />
                               {tip}
@@ -460,9 +541,10 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                       <div className="px-3 py-2.5">
                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
                           <Users className="w-3 h-3" /> For him — how not to mess up today
+                          <span className="ml-auto normal-case tracking-normal text-[9px] text-muted-foreground/60">{sourceLabel(himSource)}</span>
                         </p>
                         <ul className="space-y-1.5">
-                          {(selectedPartnerTips || []).map((tip, i) => (
+                          {himTips.map((tip, i) => (
                             <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
                               <span className="mt-1 w-1.5 h-1.5 rounded-full shrink-0 bg-primary/50" />
                               {tip}
@@ -626,9 +708,10 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                   <div className="px-3 py-2.5">
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
                       <Shield className="w-3 h-3" /> How not to mess up today
+                      <span className="ml-auto normal-case tracking-normal text-[9px] text-muted-foreground/60">{sourceLabel(herSource)}</span>
                     </p>
                     <ul className="space-y-1.5">
-                      {(selectedTips || []).map((tip, i) => (
+                      {herTips.map((tip, i) => (
                         <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
                           <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${selectedColors.dot}`} />
                           {tip}
@@ -649,9 +732,10 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                   <div className="px-3 py-2.5">
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
                       <Users className="w-3 h-3" /> For him — how not to mess up today
+                      <span className="ml-auto normal-case tracking-normal text-[9px] text-muted-foreground/60">{sourceLabel(himSource)}</span>
                     </p>
                     <ul className="space-y-1.5">
-                      {(selectedPartnerTips || []).map((tip, i) => (
+                      {himTips.map((tip, i) => (
                         <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5 items-start">
                           <span className="mt-1 w-1.5 h-1.5 rounded-full shrink-0 bg-primary/50" />
                           {tip}
