@@ -123,13 +123,15 @@ export function DailyBriefingHero({
   const isNonCycling = !!lifeStage && (lifeStage === "postpartum" || lifeStage === "menopause" || lifeStage === "pregnancy_loss" || lifeStage === "pregnant");
   // Stored Day 1 is far past her expected next period — don't assert a phase.
   const isStale = !isNonCycling && !isIrregular && isCycleStale(cycleDay, cycleLengthDays);
-  const phaseText = isLoss ? "text-rose-300" : isPregnant ? "text-emerald-300" : (PHASE_TEXT[phase] || "text-primary");
-  const phaseBg = isLoss ? "bg-rose-300/15" : isPregnant ? "bg-emerald-300/15" : (PHASE_BG[phase] || "bg-primary/15");
+  const phaseText = isLoss ? "text-rose-300" : isPregnant ? "text-emerald-300" : isStale ? "text-primary" : (PHASE_TEXT[phase] || "text-primary");
+  const phaseBg = isLoss ? "bg-rose-300/15" : isPregnant ? "bg-emerald-300/15" : isStale ? "bg-primary/15" : (PHASE_BG[phase] || "bg-primary/15");
   const phaseAccent = isLoss
     ? "from-rose-300/10 via-transparent to-transparent"
     : isPregnant
       ? "from-emerald-300/10 via-transparent to-transparent"
-      : (PHASE_ACCENT[phase] || "from-primary/10 via-transparent to-transparent");
+      : isStale
+        ? "from-primary/10 via-transparent to-transparent"
+        : (PHASE_ACCENT[phase] || "from-primary/10 via-transparent to-transparent");
   const headline = isLoss
     ? "Healing in progress. There's no timeline for this — only your pace."
     : isPregnant
