@@ -674,11 +674,14 @@ export const OverviewTab = () => {
       // Sessions are built from the SAME user-initiated event set that defines
       // "active": messages she sent (never Logan's replies), symptom logs and
       // in-app activity events.
+      const eligible = await fetchEligibleUserIds();
       const tsByUser = new Map<string, string[]>();
       for (const e of [...recentChat, ...recentActivity, ...recentSymptoms]) {
+        if (!eligible.has(e.user_id)) continue;
         if (!tsByUser.has(e.user_id)) tsByUser.set(e.user_id, []);
         tsByUser.get(e.user_id)!.push(e.created_at);
       }
+
 
       const sessions: SessionRecord[] = [];
       for (const [userId, timestamps] of tsByUser.entries()) {
