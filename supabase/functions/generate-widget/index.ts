@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
+import { calculateCycleInfo, isCycleStale } from "../_shared/cycleCalculations.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -79,11 +80,14 @@ serve(async (req) => {
     let lifeStage: string = "cycling";
     let postpartumWeeks: number | null = null;
     let postpartumActive = false;
+    let isStaleCycle = false;
 
     if (userEmail) {
       const { data: participant } = await supabaseService
         .from("participants")
-        .select("cycle_length_days, last_period_start, life_stage, postpartum_start_date, postpartum_active")
+        .select(
+          "cycle_length_days, last_period_start, life_stage, postpartum_start_date, postpartum_active, timezone, current_period_end_date, period_pending_since, period_still_active, menstruation_days, follicular_days, ovulation_window_days, luteal_days",
+        )
         .eq("email", userEmail)
         .maybeSingle();
 
@@ -101,25 +105,26 @@ serve(async (req) => {
         );
       }
       if (participant?.last_period_start && lifeStage !== "postpartum" && lifeStage !== "menopause" && lifeStage !== "irregular") {
-        const start = new Date(participant.last_period_start + "T12:00:00Z");
-        const now = new Date();
-        const diffDays = Math.floor((now.getTime() - start.getTime()) / 86400000);
-        const day = ((diffDays % cycleLengthDays) + cycleLengthDays) % cycleLengthDays + 1;
-        cycleDay = Math.min(60, Math.max(1, day));
-        const ovulationDay = cycleLengthDays - 14;
-        if (cycleDay <= 5) phase = "Menstruation";
-        else if (cycleDay < ovulationDay - 1) phase = "Follicular";
-        else if (cycleDay <= ovulationDay + 1) phase = "Ovulation";
-        else phase = "Luteal";
+        // Single source of truth — same calculator the cycle ring / chat use,
+        // so this card can never show a phase the badge doesn't also show.
+        const info = calculateCycleInfo(participant.last_period_start, cycleLengthDays, {
+          timezone: participant.timezone || "UTC",
+          currentPeriodEndDate: participant.current_period_end_date ?? null,
+          periodPending: !!participant.period_pending_since,
+          periodStillActive: !!participant.period_still_active,
+          phaseLengths: {
+            menstruation_days: participant.menstruation_days,
+            follicular_days: participant.follicular_days,
+            ovulation_window_days: participant.ovulation_window_days,
+            luteal_days: participant.luteal_days,
+          },
+        });
+        if (info) {
+          cycleDay = info.cycleDay;
+          phase = info.phase;
+          isStaleCycle = isCycleStale(info.cycleDay, cycleLengthDays);
+        }
       }
-    }
-
-    // Detect stale cycling (period overdue by > 14 days past expected length) — don't pretend to know a phase.
-    let isStaleCycle = false;
-    if (lifeStage === "cycling" && cycleLengthDays > 0) {
-      // Recompute true days-since-start (unclamped) to detect overdue
-      // Note: cycleDay above is clamped to 60 — we already know overdue if cycleDay >= cycleLengthDays + 14 OR if clamped at 60.
-      if (cycleDay >= Math.min(60, cycleLengthDays + 14)) isStaleCycle = true;
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
