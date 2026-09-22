@@ -13,6 +13,12 @@ import { supabase } from "@/integrations/supabase/client";
  */
 
 export const SESSION_GAP_MS = 30 * 60 * 1000;
+/**
+ * Activity-event types that count as user-initiated (see
+ * src/lib/metrics/definitions.ts, which re-exports this as the shared rule).
+ */
+export const USER_INITIATED_EVENT_TYPES: string[] = ["click", "page_view", "tab_switch"];
+
 const PAGE = 1000;
 const CHUNK_DAYS = 14;
 
