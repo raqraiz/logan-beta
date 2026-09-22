@@ -5,13 +5,23 @@ import { supabase } from "@/integrations/supabase/client";
  * Growth "Daily log". Extracted from GrowthTrackerTab so both surfaces agree
  * by construction.
  *
- * Definition: a user is "active" on a UTC calendar day if they have any
- * chat_messages row (any role) or any symptom_logs row on that day.
+ * Definition (see src/lib/metrics/definitions.ts): a user is "active" on a UTC
+ * calendar day if they took at least one user-initiated action that day — sent
+ * a chat message, logged a symptom, or produced a click / page_view /
+ * tab_switch activity event. Assistant-generated chat rows and any other
+ * background writes never mark a user active.
  */
 
 export const SESSION_GAP_MS = 30 * 60 * 1000;
+/**
+ * Activity-event types that count as user-initiated (see
+ * src/lib/metrics/definitions.ts, which re-exports this as the shared rule).
+ */
+export const USER_INITIATED_EVENT_TYPES: string[] = ["click", "page_view", "tab_switch"];
+
 const PAGE = 1000;
 const CHUNK_DAYS = 14;
+
 
 /** Timezone-safe key: the UTC calendar day of the given instant. */
 export const utcKey = (d: Date) => d.toISOString().slice(0, 10);
@@ -31,7 +41,7 @@ const addDaysUTC = (d: Date, n: number) => new Date(d.getTime() + n * 86400000);
 // Paged fetch in time chunks so a single massive range query can't time out.
 // Each chunk is half-open [chunkStart, chunkEnd) to avoid duplicate rows.
 const fetchAll = async <T,>(
-  table: "chat_messages" | "symptom_logs" | "profiles",
+  table: "chat_messages" | "symptom_logs" | "profiles" | "user_activity_events",
   columns: string,
   tsColumn: string,
   since: string,
@@ -88,7 +98,7 @@ const keyOf = (date: Date | string) => (typeof date === "string" ? date : utcKey
  * Builds the shared activity index from `since` (ISO string) onwards.
  */
 export const buildActivityIndex = async (since: string): Promise<ActivityIndex> => {
-  const [msgs, symptoms, profiles] = await Promise.all([
+  const [msgs, symptoms, profiles, events] = await Promise.all([
     fetchAll<{ user_id: string; role: string; created_at: string }>(
       "chat_messages",
       "user_id, role, created_at",
@@ -102,6 +112,12 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
       since,
     ),
     fetchAll<{ created_at: string }>("profiles", "created_at", "created_at", since),
+    fetchAll<{ user_id: string; event_type: string; created_at: string }>(
+      "user_activity_events",
+      "user_id, event_type, created_at",
+      "created_at",
+      since,
+    ),
   ]);
 
   const activeByDay = new Map<string, Set<string>>();
@@ -117,9 +133,11 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
 
   for (const m of msgs) {
     if (!m.created_at) continue;
+    // Only user-sent messages count as activity — assistant/system rows are
+    // generated on the user's behalf and must never mark her active.
+    if (m.role !== "user") continue;
     const key = utcKey(new Date(m.created_at));
     markActive(key, m.user_id);
-    if (m.role !== "user") continue;
     let byUser = userMsgsByDay.get(key);
     if (!byUser) { byUser = new Map(); userMsgsByDay.set(key, byUser); }
     const arr = byUser.get(m.user_id) ?? [];
@@ -131,6 +149,13 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
     if (!s.logged_at) continue;
     markActive(utcKey(new Date(s.logged_at)), s.user_id);
   }
+
+  for (const e of events) {
+    if (!e.created_at) continue;
+    if (!USER_INITIATED_EVENT_TYPES.includes(e.event_type)) continue;
+    markActive(utcKey(new Date(e.created_at)), e.user_id);
+  }
+
 
   for (const p of profiles) {
     if (!p.created_at) continue;

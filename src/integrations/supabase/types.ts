@@ -1153,6 +1153,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          is_internal: boolean
           landing_at: string | null
           landing_path: string | null
           marketing_opt_out: boolean
@@ -1173,6 +1174,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          is_internal?: boolean
           landing_at?: string | null
           landing_path?: string | null
           marketing_opt_out?: boolean
@@ -1193,6 +1195,7 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          is_internal?: boolean
           landing_at?: string | null
           landing_path?: string | null
           marketing_opt_out?: boolean
