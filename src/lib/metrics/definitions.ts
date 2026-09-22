@@ -25,21 +25,42 @@ export const METRIC_TOOLTIPS = {
   totalUsers:
     "People who finished onboarding, excluding internal/test accounts. Follows the date range as 'signed up in range'; All time counts everyone.",
   activeToday:
-    "People who used Logan at least once today (UTC). Ignores the date range.",
+    "People who did anything in the app today — anywhere, not just chat (UTC). Ignores the date range.",
   activeThisWeek:
-    "People who used Logan at least once in the last 7 days, including today (UTC). Ignores the date range.",
+    "People who did anything in the app in the last 7 days, including today (UTC). Ignores the date range.",
   activeThisMonth:
-    "People who used Logan at least once in the last 30 days, including today (UTC). Ignores the date range.",
+    "People who did anything in the app in the last 30 days, including today (UTC). Ignores the date range.",
   stickiness:
     "Share of the last 30 days' active people who used Logan today (today ÷ last 30 days).",
   avgDailyUsers:
     "Average number of people active per day across every day in the selected range (UTC).",
   avgWeeklyUsers:
     "Average number of people active per week across completed Monday–Sunday weeks in the range; the current part-week is excluded.",
-  avgMsgsPerUser: "Messages sent in the range ÷ total users as of the end of the range.",
-  avgSessionsPerUser: "Sessions in the range ÷ total users as of the end of the range.",
-  totalMessages: "Messages sent by users in the selected range.",
+  avgMsgsPerUser:
+    "Messages she sent in the range ÷ the people who were active in the range (Logan's replies excluded).",
+  avgSessionsPerUser:
+    "Visits in the range ÷ the people who were active in the range, counting anything done in the app with a 30-minute break between visits.",
+  totalMessages:
+    "All chat messages in the range, split below into the ones she sent and the ones Logan sent.",
 } as const;
+
+/**
+ * Distinct eligible users active anywhere in the selected range — the shared
+ * denominator for the per-user averages.
+ */
+export const activeInRange = (
+  index: ActivityIndex,
+  rangeFrom: Date,
+  rangeTo: Date,
+  eligible: Set<string> | null,
+): Set<string> => {
+  const out = new Set<string>();
+  for (const d of utcDayKeysBetween(rangeFrom, rangeTo)) {
+    for (const u of activeOnDay(index, d, eligible)) out.add(u);
+  }
+  return out;
+};
+
 
 /** Ids of onboarded, non-internal users — the denominator/eligibility set. */
 export const fetchEligibleUserIds = async (): Promise<Set<string>> => {
