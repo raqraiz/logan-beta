@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
+import { calculateCycleInfo, isCycleStale } from "../_shared/cycleCalculations.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -80,7 +81,6 @@ serve(async (req) => {
     let postpartumWeeks: number | null = null;
     let postpartumActive = false;
     let isStaleCycle = false;
-    let hasCycleInfo = false;
 
     if (userEmail) {
       const { data: participant } = await supabaseService
@@ -122,7 +122,6 @@ serve(async (req) => {
         if (info) {
           cycleDay = info.cycleDay;
           phase = info.phase;
-          hasCycleInfo = true;
           isStaleCycle = isCycleStale(info.cycleDay, cycleLengthDays);
         }
       }
