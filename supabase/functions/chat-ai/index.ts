@@ -4472,6 +4472,10 @@ serve(async (req) => {
               comparativeSkips.push(`${other}:${match}`);
               return match; // leave the contrast phase intact
             }
+            if (!isPersonalClaim(full, offset, match.length)) {
+              comparativeSkips.push(`${other}:educational:${match}`);
+              return match; // definitional / general-biology use — must stay accurate
+            }
             mismatches.push(other);
             return canonicalPhase;
           });
