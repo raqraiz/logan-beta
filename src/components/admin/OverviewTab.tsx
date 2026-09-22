@@ -295,6 +295,7 @@ export const OverviewTab = () => {
   // Fixed rolling window for today's cards — independent of the selected range.
   const [todayIndex, setTodayIndex] = useState<ActivityIndex | null>(null);
   const [todayIndexLoading, setTodayIndexLoading] = useState(true);
+  const [todayIndexError, setTodayIndexError] = useState<string | null>(null);
 
 
   // Sessions state
@@ -961,12 +962,15 @@ export const OverviewTab = () => {
   // DAU / WAU / MAU never depend on the selected range.
   const loadTodayIndex = useCallback(async () => {
     setTodayIndexLoading(true);
+    setTodayIndexError(null);
     try {
       const since = startOfDay(subDays(new Date(), 31)).toISOString();
       const index = await buildActivityIndex(since);
       setTodayIndex(index);
     } catch (err) {
       console.error("Today index load error:", err);
+      setTodayIndexError(err instanceof Error ? err.message : "Failed to load");
+      setTodayIndex(null);
     } finally {
       setTodayIndexLoading(false);
     }
@@ -1068,7 +1072,7 @@ export const OverviewTab = () => {
       activeThisWeek: activeWeekIds.size,
       activeThisMonth: activeMonthIds.size,
       activeInRangeCount,
-      stickiness: computeStickiness(activeTodayIds.size, activeMonthIds.size),
+      stickiness: computeStickiness(activeWeekIds.size, activeMonthIds.size),
       avgDailyUsers,
       avgWeeklyUsers,
       avgMsgsPerUser,
@@ -1338,7 +1342,17 @@ export const OverviewTab = () => {
             </p>
             <p className="text-[9px] text-muted-foreground/70">
               Stickiness{" "}
-              {todayIndexLoading || !eligibleIds
+              {/* WAU and MAU both come from the today-index load — if either
+                  failed, the ratio would be wrong, so show the failed state. */}
+              {todayIndexError || eligibleError ? (
+                <button
+                  onClick={() => { loadTodayIndex(); loadEligibleIds(); }}
+                  className="text-destructive underline underline-offset-2"
+                  title={todayIndexError ?? eligibleError ?? undefined}
+                >
+                  Failed — retry
+                </button>
+              ) : todayIndexLoading || !eligibleIds
                 ? "…"
                 : activeMetrics.stickiness === null
                   ? "—"
