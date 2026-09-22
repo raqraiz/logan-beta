@@ -30,8 +30,33 @@ import {
   buildActivityIndex, utcKey, utcDayKeysBetween, type ActivityIndex,
 } from "@/lib/activeUsers";
 import {
-  computeAvgPerUser, computeAvgWeeklyActiveUsers, fetchSignupDayKeys, makeUsersAsOf,
+  computeAvgPerUser, fetchSignupDayKeys, makeUsersAsOf,
 } from "@/lib/admin/engagementMetrics";
+import {
+  METRIC_TOOLTIPS, fetchEligibleUserIds, computeDau, computeWau, computeMau,
+  computeStickiness, computeAvgDailyUsers, computeAvgWeeklyUsers,
+} from "@/lib/metrics/definitions";
+import { Info } from "lucide-react";
+
+/** Info icon with a tap-friendly (not hover-only) one-line metric definition. */
+const InfoTip = ({ text }: { text: string }) => (
+  <Popover>
+    <PopoverTrigger asChild>
+      <button
+        type="button"
+        aria-label="What this means"
+        onClick={(e) => e.stopPropagation()}
+        className="inline-flex text-muted-foreground/70 hover:text-foreground align-middle"
+      >
+        <Info className="w-3 h-3" />
+      </button>
+    </PopoverTrigger>
+    <PopoverContent className="w-60 text-xs leading-relaxed" onClick={(e) => e.stopPropagation()}>
+      {text}
+    </PopoverContent>
+  </Popover>
+);
+
 
 
 const SESSION_GAP_MS = 30 * 60 * 1000;
