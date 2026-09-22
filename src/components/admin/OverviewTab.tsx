@@ -1195,10 +1195,27 @@ export const OverviewTab = () => {
             <Card className="cursor-pointer hover:border-primary/50 transition-colors">
               <CardContent className="p-4 text-center">
                 <Activity className="w-5 h-5 mx-auto mb-1 text-green-500" />
-                <p className="text-2xl font-bold text-foreground">
-                  {todayIndexLoading ? "…" : activeMetrics.activeToday}
+                {eligibleError ? (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); loadEligibleIds(); }}
+                    className="text-xs font-medium text-destructive underline underline-offset-2"
+                    title={eligibleError}
+                  >
+                    Failed — retry
+                  </button>
+                ) : (
+                  <p className="text-2xl font-bold text-foreground">
+                    {todayIndexLoading || !eligibleIds ? "…" : activeMetrics.activeToday}
+                  </p>
+                )}
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                  Active users today <InfoTip text={METRIC_TOOLTIPS.activeToday} />
                 </p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active users today</p>
+                {trackingSince && (
+                  <p className="text-[9px] text-muted-foreground/70">
+                    since {format(new Date(trackingSince), "MMM d, yyyy")}
+                  </p>
+                )}
               </CardContent>
             </Card>
           </PopoverTrigger>
@@ -1210,9 +1227,11 @@ export const OverviewTab = () => {
           <CardContent className="p-4 text-center">
             <BarChart3 className="w-5 h-5 mx-auto mb-1 text-teal-500" />
             <p className="text-2xl font-bold text-foreground">
-              {activityLoading ? "…" : activeMetrics.avgDailyUsers ?? "—"}
+              {activityLoading || !eligibleIds ? "…" : activeMetrics.avgDailyUsers ?? "—"}
             </p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Daily Users</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+              Avg Daily Users <InfoTip text={METRIC_TOOLTIPS.avgDailyUsers} />
+            </p>
           </CardContent>
         </Card>
         <Popover>
@@ -1221,9 +1240,16 @@ export const OverviewTab = () => {
               <CardContent className="p-4 text-center">
                 <TrendingUp className="w-5 h-5 mx-auto mb-1 text-blue-500" />
                 <p className="text-2xl font-bold text-foreground">
-                  {todayIndexLoading ? "…" : activeMetrics.activeThisWeek}
+                  {todayIndexLoading || !eligibleIds ? "…" : activeMetrics.activeThisWeek}
                 </p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active This Week</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                  Active This Week <InfoTip text={METRIC_TOOLTIPS.activeThisWeek} />
+                </p>
+                {trackingSince && (
+                  <p className="text-[9px] text-muted-foreground/70">
+                    since {format(new Date(trackingSince), "MMM d, yyyy")}
+                  </p>
+                )}
               </CardContent>
             </Card>
           </PopoverTrigger>
@@ -1233,52 +1259,72 @@ export const OverviewTab = () => {
         </Popover>
         <Card>
           <CardContent className="p-4 text-center">
-            <TrendingUp className="w-5 h-5 mx-auto mb-1 text-purple-500" />
+            <TrendingUp className="w-5 h-5 mx-auto mb-1 text-emerald-500" />
             <p className="text-2xl font-bold text-foreground">
-              {activityLoading ? "…" : activeMetrics.avgWeeklyUsers ?? "—"}
+              {todayIndexLoading || !eligibleIds ? "…" : activeMetrics.activeThisMonth}
             </p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Weekly Users (Mon–Sun)</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+              Active This Month <InfoTip text={METRIC_TOOLTIPS.activeThisMonth} />
+            </p>
+            <p className="text-[9px] text-muted-foreground/70">
+              Stickiness{" "}
+              {todayIndexLoading || !eligibleIds
+                ? "…"
+                : activeMetrics.stickiness === null
+                  ? "—"
+                  : `${activeMetrics.stickiness}%`}{" "}
+              <InfoTip text={METRIC_TOOLTIPS.stickiness} />
+            </p>
+            {trackingSince && (
+              <p className="text-[9px] text-muted-foreground/70">
+                since {format(new Date(trackingSince), "MMM d, yyyy")}
+              </p>
+            )}
           </CardContent>
         </Card>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Card className="h-full cursor-help">
-              <CardContent className="p-4 text-center">
-                <MessageSquare className="w-5 h-5 mx-auto mb-1 text-purple-500" />
-                <p className="text-2xl font-bold text-foreground">
-                  {activityLoading ? "…" : activeMetrics.avgMsgsPerUser ?? "—"}
-                </p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Msgs/User</p>
-              </CardContent>
-            </Card>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Range messages ÷ total users as of range end.</p>
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Card className="h-full cursor-help">
-              <CardContent className="p-4 text-center">
-                <Clock className="w-5 h-5 mx-auto mb-1 text-orange-500" />
-                <p className="text-2xl font-bold text-foreground">
-                  {activityLoading ? "…" : activeMetrics.avgSessionsPerUser ?? "—"}
-                </p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Sessions/User</p>
-              </CardContent>
-            </Card>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Range sessions ÷ total users as of range end.</p>
-          </TooltipContent>
-        </Tooltip>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <TrendingUp className="w-5 h-5 mx-auto mb-1 text-purple-500" />
+            <p className="text-2xl font-bold text-foreground">
+              {activityLoading || !eligibleIds ? "…" : activeMetrics.avgWeeklyUsers ?? "—"}
+            </p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+              Avg Weekly Users (Mon–Sun) <InfoTip text={METRIC_TOOLTIPS.avgWeeklyUsers} />
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <MessageSquare className="w-5 h-5 mx-auto mb-1 text-purple-500" />
+            <p className="text-2xl font-bold text-foreground">
+              {activityLoading ? "…" : activeMetrics.avgMsgsPerUser ?? "—"}
+            </p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+              Avg Msgs/User <InfoTip text={METRIC_TOOLTIPS.avgMsgsPerUser} />
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <Clock className="w-5 h-5 mx-auto mb-1 text-orange-500" />
+            <p className="text-2xl font-bold text-foreground">
+              {activityLoading ? "…" : activeMetrics.avgSessionsPerUser ?? "—"}
+            </p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+              Avg Sessions/User <InfoTip text={METRIC_TOOLTIPS.avgSessionsPerUser} />
+            </p>
+          </CardContent>
+        </Card>
         <Card>
           <CardContent className="p-4 text-center">
             <MessageSquare className="w-5 h-5 mx-auto mb-1 text-primary" />
             <p className="text-2xl font-bold text-foreground">{totals.totalMessages}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Messages</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+              Total Messages <InfoTip text={METRIC_TOOLTIPS.totalMessages} />
+            </p>
           </CardContent>
         </Card>
+
       </div>
       </TooltipProvider>
 
