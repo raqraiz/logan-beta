@@ -156,25 +156,25 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
     // Only user-sent messages count as activity — assistant/system rows are
     // generated on the user's behalf and must never mark her active.
     if (m.role !== "user") continue;
+    const ts = new Date(m.created_at).getTime();
     const key = utcKey(new Date(m.created_at));
-    markActive(key, m.user_id);
-    let byUser = userMsgsByDay.get(key);
-    if (!byUser) { byUser = new Map(); userMsgsByDay.set(key, byUser); }
-    const arr = byUser.get(m.user_id) ?? [];
-    arr.push(new Date(m.created_at).getTime());
-    byUser.set(m.user_id, arr);
+    markActive(key, m.user_id, ts);
+    pushTs(userMsgsByDay, key, m.user_id, ts);
   }
 
   for (const s of symptoms) {
     if (!s.logged_at) continue;
-    markActive(utcKey(new Date(s.logged_at)), s.user_id);
+    const ts = new Date(s.logged_at).getTime();
+    markActive(utcKey(new Date(s.logged_at)), s.user_id, ts);
   }
 
   for (const e of events) {
     if (!e.created_at) continue;
     if (!USER_INITIATED_EVENT_TYPES.includes(e.event_type)) continue;
-    markActive(utcKey(new Date(e.created_at)), e.user_id);
+    const ts = new Date(e.created_at).getTime();
+    markActive(utcKey(new Date(e.created_at)), e.user_id, ts);
   }
+
 
 
   for (const p of profiles) {
