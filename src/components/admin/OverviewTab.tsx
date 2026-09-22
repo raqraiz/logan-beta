@@ -890,12 +890,26 @@ export const OverviewTab = () => {
     }
   }, [rangeFrom]);
 
-  // Fixed rolling window for "today" cards — always covers the last 8 days so
-  // Active Users / Active This Week never depend on the selected range.
+  // Eligibility set for every active-user card: onboarded, non-internal users.
+  const [eligibleIds, setEligibleIds] = useState<Set<string> | null>(null);
+  const [eligibleError, setEligibleError] = useState<string | null>(null);
+  const loadEligibleIds = useCallback(async () => {
+    setEligibleError(null);
+    try {
+      setEligibleIds(await fetchEligibleUserIds());
+    } catch (err) {
+      console.error("Eligible users load error:", err);
+      setEligibleError(err instanceof Error ? err.message : "Failed to load");
+      setEligibleIds(null);
+    }
+  }, []);
+
+  // Fixed rolling window for "today" cards — always covers the last 31 days so
+  // DAU / WAU / MAU never depend on the selected range.
   const loadTodayIndex = useCallback(async () => {
     setTodayIndexLoading(true);
     try {
-      const since = startOfDay(subDays(new Date(), 8)).toISOString();
+      const since = startOfDay(subDays(new Date(), 31)).toISOString();
       const index = await buildActivityIndex(since);
       setTodayIndex(index);
     } catch (err) {
@@ -911,6 +925,7 @@ export const OverviewTab = () => {
     loadFastCounts();
     loadAllTimeUsers();
     loadSignupDayKeys();
+    loadEligibleIds();
     // 2) Fast/light loaders in parallel
     loadFeedback();
     loadMenu();
@@ -921,7 +936,8 @@ export const OverviewTab = () => {
     await Promise.all([loadEngagement(), loadSessions()]);
     // 4) Defer the slowest query (feature_events scan) so it stops competing
     loadAdoption();
-  }, [loadFastCounts, loadAllTimeUsers, loadSignupDayKeys, loadActivityIndex, loadTodayIndex, loadTodayTime, loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
+  }, [loadFastCounts, loadAllTimeUsers, loadSignupDayKeys, loadEligibleIds, loadActivityIndex, loadTodayIndex, loadTodayTime, loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
+
 
 
   // Initialize default range to all time (earliest profile → now), then load data
