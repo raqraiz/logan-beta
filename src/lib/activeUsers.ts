@@ -17,7 +17,18 @@ export const SESSION_GAP_MS = 30 * 60 * 1000;
  * Activity-event types that count as user-initiated (see
  * src/lib/metrics/definitions.ts, which re-exports this as the shared rule).
  */
-export const USER_INITIATED_EVENT_TYPES: string[] = ["click", "page_view", "tab_switch"];
+export const USER_INITIATED_EVENT_TYPES: string[] = [
+  "click", "page_view", "tab_switch", "widget_interact",
+];
+
+/**
+ * True for any user-initiated event: the legacy flat types above plus the
+ * newer `<tab>.<feature>.<action>` names (sliders, fields, drag-reorder).
+ * Automated/background events never use either shape.
+ */
+export const isUserInitiatedEvent = (eventType: string): boolean =>
+  USER_INITIATED_EVENT_TYPES.includes(eventType) || eventType.includes(".");
+
 
 const PAGE = 1000;
 const CHUNK_DAYS = 14;
@@ -80,6 +91,12 @@ export interface ActivityIndex {
   signupsByDay: Map<string, number>;
   /** UTC day key -> user id -> sorted user-sent message timestamps (ms). */
   userMsgsByDay: Map<string, Map<string, number[]>>;
+  /**
+   * UTC day key -> user id -> sorted timestamps (ms) of EVERY user-initiated
+   * action that day (messages she sent, symptom logs, activity events). This
+   * is the single event set behind both "active" and "session".
+   */
+  sessionTsByDay: Map<string, Map<string, number[]>>;
   /** Users with any activity on that UTC day. */
   getActiveUsersForDay: (date: Date | string) => Set<string>;
   /** Users active in the 7 UTC days ending on (and including) the given date. */
@@ -90,6 +107,7 @@ export interface ActivityIndex {
   getUserMessagesForDay: (date: Date | string) => number;
   /** Total sessions (30m inactivity gap) across all users that UTC day. */
   getSessionsForDay: (date: Date | string) => number;
+
 }
 
 const keyOf = (date: Date | string) => (typeof date === "string" ? date : utcKey(date));
@@ -122,39 +140,52 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
 
   const activeByDay = new Map<string, Set<string>>();
   const userMsgsByDay = new Map<string, Map<string, number[]>>();
+  const sessionTsByDay = new Map<string, Map<string, number[]>>();
   const signupsByDay = new Map<string, number>();
 
-  const markActive = (key: string, userId: string) => {
+  const pushTs = (map: Map<string, Map<string, number[]>>, key: string, userId: string, ts: number) => {
+    let byUser = map.get(key);
+    if (!byUser) { byUser = new Map(); map.set(key, byUser); }
+    const arr = byUser.get(userId) ?? [];
+    arr.push(ts);
+    byUser.set(userId, arr);
+  };
+
+  const markActive = (key: string, userId: string, ts: number) => {
     if (!userId) return;
     let set = activeByDay.get(key);
     if (!set) { set = new Set(); activeByDay.set(key, set); }
     set.add(userId);
+    // Same event set feeds session reconstruction, so "active" and "has a
+    // session" can never disagree.
+    pushTs(sessionTsByDay, key, userId, ts);
   };
+
 
   for (const m of msgs) {
     if (!m.created_at) continue;
     // Only user-sent messages count as activity — assistant/system rows are
     // generated on the user's behalf and must never mark her active.
     if (m.role !== "user") continue;
+    const ts = new Date(m.created_at).getTime();
     const key = utcKey(new Date(m.created_at));
-    markActive(key, m.user_id);
-    let byUser = userMsgsByDay.get(key);
-    if (!byUser) { byUser = new Map(); userMsgsByDay.set(key, byUser); }
-    const arr = byUser.get(m.user_id) ?? [];
-    arr.push(new Date(m.created_at).getTime());
-    byUser.set(m.user_id, arr);
+    markActive(key, m.user_id, ts);
+    pushTs(userMsgsByDay, key, m.user_id, ts);
   }
 
   for (const s of symptoms) {
     if (!s.logged_at) continue;
-    markActive(utcKey(new Date(s.logged_at)), s.user_id);
+    const ts = new Date(s.logged_at).getTime();
+    markActive(utcKey(new Date(s.logged_at)), s.user_id, ts);
   }
 
   for (const e of events) {
     if (!e.created_at) continue;
-    if (!USER_INITIATED_EVENT_TYPES.includes(e.event_type)) continue;
-    markActive(utcKey(new Date(e.created_at)), e.user_id);
+    if (!isUserInitiatedEvent(e.event_type)) continue;
+    const ts = new Date(e.created_at).getTime();
+    markActive(utcKey(new Date(e.created_at)), e.user_id, ts);
   }
+
 
 
   for (const p of profiles) {
@@ -164,6 +195,9 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
   }
 
   for (const byUser of userMsgsByDay.values()) {
+    for (const arr of byUser.values()) arr.sort((a, b) => a - b);
+  }
+  for (const byUser of sessionTsByDay.values()) {
     for (const arr of byUser.values()) arr.sort((a, b) => a - b);
   }
 
@@ -190,8 +224,10 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
     return total;
   };
 
+  // Sessions use the same user-initiated event set as "active" (messages she
+  // sent + symptom logs + activity events), 30-minute inactivity gap.
   const getSessionsForDay = (date: Date | string) => {
-    const byUser = userMsgsByDay.get(keyOf(date));
+    const byUser = sessionTsByDay.get(keyOf(date));
     if (!byUser) return 0;
     let total = 0;
     for (const times of byUser.values()) {
@@ -209,11 +245,13 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
     activeByDay,
     signupsByDay,
     userMsgsByDay,
+    sessionTsByDay,
     getActiveUsersForDay,
     getActiveThisWeek,
     getSignupsForDay,
     getUserMessagesForDay,
     getSessionsForDay,
+
   };
 };
 

@@ -34,8 +34,9 @@ import {
 } from "@/lib/admin/engagementMetrics";
 import {
   METRIC_TOOLTIPS, fetchEligibleUserIds, computeDau, computeWau, computeMau,
-  computeStickiness, computeAvgDailyUsers, computeAvgWeeklyUsers,
+  computeStickiness, computeAvgDailyUsers, computeAvgWeeklyUsers, activeInRange,
 } from "@/lib/metrics/definitions";
+
 import { Info } from "lucide-react";
 
 /** Info icon with a tap-friendly (not hover-only) one-line metric definition. */
@@ -331,12 +332,16 @@ export const OverviewTab = () => {
   const [todayTimeMin, setTodayTimeMin] = useState<number | null>(null);
   const [todayTimeLoading, setTodayTimeLoading] = useState(true);
   const [todayTimeError, setTodayTimeError] = useState<string | null>(null);
+  // Split shown under Total Messages: what she sent vs what Logan sent.
+  const [messageSplit, setMessageSplit] = useState<{ fromUsers: number; fromLogan: number } | null>(null);
+  const [messageSplitError, setMessageSplitError] = useState<string | null>(null);
+
 
   const loadTodayTime = useCallback(async () => {
     setTodayTimeLoading(true);
     try {
       const fromIso = new Date().toISOString().slice(0, 10) + "T00:00:00.000Z";
-      const [chat, activity] = await Promise.all([
+      const [chat, activity, symptoms] = await Promise.all([
         fetchAllRows<{ user_id: string; created_at: string }>(
           (from, to) => supabase.from("chat_messages")
             .select("user_id, created_at")
@@ -356,15 +361,25 @@ export const OverviewTab = () => {
           () => supabase.from("user_activity_events").select("*", { count: "exact", head: true })
             .gte("created_at", fromIso),
         ),
+        fetchAllRows<{ user_id: string; created_at: string }>(
+          (from, to) => supabase.from("symptom_logs")
+            .select("user_id, created_at:logged_at")
+            .gte("logged_at", fromIso)
+            .order("logged_at", { ascending: true })
+            .range(from, to),
+          () => supabase.from("symptom_logs").select("*", { count: "exact", head: true })
+            .gte("logged_at", fromIso),
+        ),
       ]);
       // Same 30-min-gap reconstruction as loadSessions, per user so
       // overlapping tabs/devices can't double-count.
       const tsByUser = new Map<string, number[]>();
-      for (const e of [...chat, ...activity]) {
+      for (const e of [...chat, ...activity, ...symptoms]) {
         const arr = tsByUser.get(e.user_id) ?? [];
         arr.push(new Date(e.created_at).getTime());
         tsByUser.set(e.user_id, arr);
       }
+
       let total = 0;
       for (const times of tsByUser.values()) {
         times.sort((a, b) => a - b);
@@ -614,7 +629,7 @@ export const OverviewTab = () => {
   const loadSessions = useCallback(async () => {
     setSessionsLoading(true);
     try {
-      const [profiles, recentChat, recentActivity] = await Promise.all([
+      const [profiles, recentChat, recentActivity, recentSymptoms] = await Promise.all([
         getProfiles(),
         fetchAllRows<{ user_id: string; created_at: string }>(
           (from, to) => supabase.from("chat_messages")
@@ -637,14 +652,28 @@ export const OverviewTab = () => {
           () => supabase.from("user_activity_events").select("*", { count: "exact", head: true })
             .gte("created_at", fromIso).lte("created_at", toIso),
         ),
+        fetchAllRows<{ user_id: string; created_at: string }>(
+          (from, to) => supabase.from("symptom_logs")
+            .select("user_id, created_at:logged_at")
+            .gte("logged_at", fromIso)
+            .lte("logged_at", toIso)
+            .order("logged_at", { ascending: true })
+            .range(from, to),
+          () => supabase.from("symptom_logs").select("*", { count: "exact", head: true })
+            .gte("logged_at", fromIso).lte("logged_at", toIso),
+        ),
       ]);
       const profileMap = new Map(profiles.map((p: any) => [p.id, p]));
 
+      // Sessions are built from the SAME user-initiated event set that defines
+      // "active": messages she sent (never Logan's replies), symptom logs and
+      // in-app activity events.
       const tsByUser = new Map<string, string[]>();
-      for (const e of [...recentChat, ...recentActivity]) {
+      for (const e of [...recentChat, ...recentActivity, ...recentSymptoms]) {
         if (!tsByUser.has(e.user_id)) tsByUser.set(e.user_id, []);
         tsByUser.get(e.user_id)!.push(e.created_at);
       }
+
       const sessions: SessionRecord[] = [];
       for (const [userId, timestamps] of tsByUser.entries()) {
         const sorted = timestamps.map(t => new Date(t).getTime()).sort();
@@ -835,18 +864,33 @@ export const OverviewTab = () => {
   // Instant top-stats prefetch — cheap HEAD count queries so the stats row
   // shows numbers immediately, before the heavy row-by-row loaders finish.
   const loadFastCounts = useCallback(async () => {
-    const [usersRes, msgsRes] = await Promise.all([
-      onboardedProfiles().select("*", { count: "exact", head: true })
-        .gte("created_at", fromIso).lte("created_at", toIso),
-      supabase.from("chat_messages").select("*", { count: "exact", head: true })
-        .eq("role", "user").gte("created_at", fromIso).lte("created_at", toIso),
-    ]);
-    setTotals(t => ({
-      ...t,
-      totalUsers: usersRes.count ?? t.totalUsers,
-      totalMessages: msgsRes.count ?? t.totalMessages,
-    }));
+    setMessageSplitError(null);
+    try {
+      const [usersRes, msgsRes, loganRes] = await Promise.all([
+        onboardedProfiles().select("*", { count: "exact", head: true })
+          .gte("created_at", fromIso).lte("created_at", toIso),
+        supabase.from("chat_messages").select("*", { count: "exact", head: true })
+          .eq("role", "user").gte("created_at", fromIso).lte("created_at", toIso),
+        supabase.from("chat_messages").select("*", { count: "exact", head: true })
+          .neq("role", "user").gte("created_at", fromIso).lte("created_at", toIso),
+      ]);
+      if (msgsRes.error) throw msgsRes.error;
+      if (loganRes.error) throw loganRes.error;
+      const fromUsers = msgsRes.count ?? 0;
+      const fromLogan = loganRes.count ?? 0;
+      setMessageSplit({ fromUsers, fromLogan });
+      setTotals(t => ({
+        ...t,
+        totalUsers: usersRes.count ?? t.totalUsers,
+        totalMessages: fromUsers + fromLogan,
+      }));
+    } catch (err) {
+      console.error("Message counts load error:", err);
+      setMessageSplitError(err instanceof Error ? err.message : "Failed to load");
+      setMessageSplit(null);
+    }
   }, [fromIso, toIso]);
+
 
   // True all-time cumulative signups — never scoped by the range selector.
   // Single fast RPC (indexed, security-definer) with a hard timeout so a stalled
@@ -970,8 +1014,7 @@ export const OverviewTab = () => {
     let avgMsgsPerUser: number | null = null;
     let avgSessionsPerUser: number | null = null;
 
-    // Cumulative onboarded users as of range end — shared with Investor Summary.
-    const usersAsOf = makeUsersAsOf(signupDayKeys, allTimeUsers);
+    let activeInRangeCount = 0;
 
     if (activityIndex) {
       const days = utcDayKeysBetween(rangeFrom, rangeTo);
@@ -979,21 +1022,24 @@ export const OverviewTab = () => {
       avgDailyUsers = computeAvgDailyUsers(activityIndex, rangeFrom, rangeTo, eligibleIds);
       avgWeeklyUsers = computeAvgWeeklyUsers(activityIndex, rangeFrom, rangeTo, eligibleIds);
 
-      // Canonical per-user averages (shared formula with Investor Summary):
-      // range totals / cumulative onboarded users as of range end.
+      // Per-user averages: range totals ÷ distinct users active in the range.
+      // Messages count only the ones she sent; sessions use the shared
+      // user-initiated event set (messages + symptom logs + activity events).
       let totalMessages = 0;
       let totalSessions = 0;
       for (const d of days) {
         totalMessages += activityIndex.getUserMessagesForDay(d);
         totalSessions += activityIndex.getSessionsForDay(d);
       }
+      activeInRangeCount = activeInRange(activityIndex, rangeFrom, rangeTo, eligibleIds).size;
       const avgs = computeAvgPerUser({
         totalMessages,
         totalSessions,
-        totalUsers: usersAsOf(days[days.length - 1] ?? utcKey(rangeTo)),
+        totalUsers: activeInRangeCount,
       });
       avgMsgsPerUser = avgs.avgMsgsPerUser;
       avgSessionsPerUser = avgs.avgSessionsPerUser;
+
     }
 
     return {
@@ -1002,12 +1048,14 @@ export const OverviewTab = () => {
       activeToday: activeTodayIds.size,
       activeThisWeek: activeWeekIds.size,
       activeThisMonth: activeMonthIds.size,
+      activeInRangeCount,
       stickiness: computeStickiness(activeTodayIds.size, activeMonthIds.size),
       avgDailyUsers,
       avgWeeklyUsers,
       avgMsgsPerUser,
       avgSessionsPerUser,
     };
+
   }, [todayIndex, activityIndex, rangeFrom, rangeTo, signupDayKeys, allTimeUsers, eligibleIds]);
 
 
@@ -1325,6 +1373,14 @@ export const OverviewTab = () => {
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
               Total Messages <InfoTip text={METRIC_TOOLTIPS.totalMessages} />
             </p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              {messageSplitError
+                ? "Failed — retry"
+                : messageSplit
+                  ? `${messageSplit.fromUsers} from users · ${messageSplit.fromLogan} from Logan`
+                  : "…"}
+            </p>
+
           </CardContent>
         </Card>
 
