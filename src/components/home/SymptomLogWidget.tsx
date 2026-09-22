@@ -262,6 +262,12 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
       toast({ title: "Already on the list", description: `We've selected "${exact}" for you.` });
       return;
     }
+    // The name may exist as a hidden/retired row — inserting it would hit the
+    // unique constraint, so resolve it here instead.
+    if (retiredNames.has(check.value.toLowerCase())) {
+      handleTakenName(check.value);
+      return;
+    }
     const matches = suggestExistingSymptoms(check.value, approvedEntries);
     const near = findNearDuplicate(check.value, existingNames);
     const names = Array.from(new Set([...(near ? [near] : []), ...matches.map(m => m.name)]));
@@ -270,6 +276,19 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
       return;
     }
     handleAddCommunitySymptom();
+  };
+
+  // Shared landing spot for "this name already exists in the shared table":
+  // point at the surviving canonical entry, or just let her log the name itself.
+  const handleTakenName = (name: string) => {
+    const canonical = retiredNames.get(name.toLowerCase()) ?? null;
+    if (canonical) {
+      setSuggestions([canonical]);
+      setAddError(null);
+      return;
+    }
+    selectExisting(name);
+    toast({ title: "Already tracked", description: `We've selected "${name}" for you.` });
   };
 
   // Step 2: guardrails passed and the user confirmed it's genuinely new.
