@@ -69,10 +69,13 @@ export function useActivityTracker(userId?: string) {
   // Track tab switches
   const trackTabSwitch = useCallback(
     (tabId: string) => {
+      currentTab = (tabId || "app").toLowerCase();
       track("tab_switch", { elementLabel: tabId, elementType: "tab" });
     },
     [track]
   );
+
+
 
   // Track button/element clicks
   const trackClick = useCallback(
