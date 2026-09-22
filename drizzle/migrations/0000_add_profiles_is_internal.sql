@@ -1,0 +1,2 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_internal boolean NOT NULL DEFAULT false;
+COMMENT ON COLUMN public.profiles.is_internal IS 'Internal/test account: excluded from admin metric counts.';
