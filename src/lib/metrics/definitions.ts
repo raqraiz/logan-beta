@@ -17,7 +17,8 @@ import { utcKey, toUTCDate, utcDayKeysBetween, USER_INITIATED_EVENT_TYPES, type 
  */
 
 /** Activity-event types that count as user-initiated. */
-export const USER_INITIATED_EVENT_TYPES = ["click", "page_view", "tab_switch"] as const;
+export { USER_INITIATED_EVENT_TYPES };
+
 
 /** One-sentence, plain-language definitions shown in each card's ⓘ tooltip. */
 export const METRIC_TOOLTIPS = {
