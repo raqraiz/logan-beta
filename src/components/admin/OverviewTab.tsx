@@ -1005,12 +1005,14 @@ export const OverviewTab = () => {
       activeToday: activeTodayIds.size,
       activeThisWeek: activeWeekIds.size,
       activeThisMonth: activeMonthIds.size,
+      activeInRangeCount,
       stickiness: computeStickiness(activeTodayIds.size, activeMonthIds.size),
       avgDailyUsers,
       avgWeeklyUsers,
       avgMsgsPerUser,
       avgSessionsPerUser,
     };
+
   }, [todayIndex, activityIndex, rangeFrom, rangeTo, signupDayKeys, allTimeUsers, eligibleIds]);
 
 
