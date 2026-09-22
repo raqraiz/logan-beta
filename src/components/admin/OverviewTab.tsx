@@ -1016,11 +1016,11 @@ export const OverviewTab = () => {
     [users, activeMetrics],
   );
 
-  const activeWeekUsers = useMemo(() => {
-    if (!todayIndex) return [];
-    const ids = todayIndex.getActiveThisWeek(utcKey(new Date()));
-    return users.filter((u) => ids.has(u.userId));
-  }, [users, todayIndex]);
+  const activeWeekUsers = useMemo(
+    () => users.filter((u) => activeMetrics.activeWeekIds.has(u.userId)),
+    [users, activeMetrics],
+  );
+
 
 
 
