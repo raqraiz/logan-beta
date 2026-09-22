@@ -836,18 +836,33 @@ export const OverviewTab = () => {
   // Instant top-stats prefetch — cheap HEAD count queries so the stats row
   // shows numbers immediately, before the heavy row-by-row loaders finish.
   const loadFastCounts = useCallback(async () => {
-    const [usersRes, msgsRes] = await Promise.all([
-      onboardedProfiles().select("*", { count: "exact", head: true })
-        .gte("created_at", fromIso).lte("created_at", toIso),
-      supabase.from("chat_messages").select("*", { count: "exact", head: true })
-        .eq("role", "user").gte("created_at", fromIso).lte("created_at", toIso),
-    ]);
-    setTotals(t => ({
-      ...t,
-      totalUsers: usersRes.count ?? t.totalUsers,
-      totalMessages: msgsRes.count ?? t.totalMessages,
-    }));
+    setMessageSplitError(null);
+    try {
+      const [usersRes, msgsRes, loganRes] = await Promise.all([
+        onboardedProfiles().select("*", { count: "exact", head: true })
+          .gte("created_at", fromIso).lte("created_at", toIso),
+        supabase.from("chat_messages").select("*", { count: "exact", head: true })
+          .eq("role", "user").gte("created_at", fromIso).lte("created_at", toIso),
+        supabase.from("chat_messages").select("*", { count: "exact", head: true })
+          .neq("role", "user").gte("created_at", fromIso).lte("created_at", toIso),
+      ]);
+      if (msgsRes.error) throw msgsRes.error;
+      if (loganRes.error) throw loganRes.error;
+      const fromUsers = msgsRes.count ?? 0;
+      const fromLogan = loganRes.count ?? 0;
+      setMessageSplit({ fromUsers, fromLogan });
+      setTotals(t => ({
+        ...t,
+        totalUsers: usersRes.count ?? t.totalUsers,
+        totalMessages: fromUsers + fromLogan,
+      }));
+    } catch (err) {
+      console.error("Message counts load error:", err);
+      setMessageSplitError(err instanceof Error ? err.message : "Failed to load");
+      setMessageSplit(null);
+    }
   }, [fromIso, toIso]);
+
 
   // True all-time cumulative signups — never scoped by the range selector.
   // Single fast RPC (indexed, security-definer) with a hard timeout so a stalled
