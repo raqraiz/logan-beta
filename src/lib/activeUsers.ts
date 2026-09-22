@@ -92,7 +92,7 @@ const keyOf = (date: Date | string) => (typeof date === "string" ? date : utcKey
  * Builds the shared activity index from `since` (ISO string) onwards.
  */
 export const buildActivityIndex = async (since: string): Promise<ActivityIndex> => {
-  const [msgs, symptoms, profiles] = await Promise.all([
+  const [msgs, symptoms, profiles, events] = await Promise.all([
     fetchAll<{ user_id: string; role: string; created_at: string }>(
       "chat_messages",
       "user_id, role, created_at",
@@ -106,6 +106,12 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
       since,
     ),
     fetchAll<{ created_at: string }>("profiles", "created_at", "created_at", since),
+    fetchAll<{ user_id: string; event_type: string; created_at: string }>(
+      "user_activity_events",
+      "user_id, event_type, created_at",
+      "created_at",
+      since,
+    ),
   ]);
 
   const activeByDay = new Map<string, Set<string>>();
@@ -121,9 +127,11 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
 
   for (const m of msgs) {
     if (!m.created_at) continue;
+    // Only user-sent messages count as activity — assistant/system rows are
+    // generated on the user's behalf and must never mark her active.
+    if (m.role !== "user") continue;
     const key = utcKey(new Date(m.created_at));
     markActive(key, m.user_id);
-    if (m.role !== "user") continue;
     let byUser = userMsgsByDay.get(key);
     if (!byUser) { byUser = new Map(); userMsgsByDay.set(key, byUser); }
     const arr = byUser.get(m.user_id) ?? [];
@@ -135,6 +143,13 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
     if (!s.logged_at) continue;
     markActive(utcKey(new Date(s.logged_at)), s.user_id);
   }
+
+  for (const e of events) {
+    if (!e.created_at) continue;
+    if (!USER_INITIATED_EVENT_TYPES.includes(e.event_type)) continue;
+    markActive(utcKey(new Date(e.created_at)), e.user_id);
+  }
+
 
   for (const p of profiles) {
     if (!p.created_at) continue;
