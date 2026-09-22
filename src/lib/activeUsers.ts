@@ -35,7 +35,7 @@ const addDaysUTC = (d: Date, n: number) => new Date(d.getTime() + n * 86400000);
 // Paged fetch in time chunks so a single massive range query can't time out.
 // Each chunk is half-open [chunkStart, chunkEnd) to avoid duplicate rows.
 const fetchAll = async <T,>(
-  table: "chat_messages" | "symptom_logs" | "profiles",
+  table: "chat_messages" | "symptom_logs" | "profiles" | "user_activity_events",
   columns: string,
   tsColumn: string,
   since: string,
