@@ -970,8 +970,7 @@ export const OverviewTab = () => {
     let avgMsgsPerUser: number | null = null;
     let avgSessionsPerUser: number | null = null;
 
-    // Cumulative onboarded users as of range end — shared with Investor Summary.
-    const usersAsOf = makeUsersAsOf(signupDayKeys, allTimeUsers);
+    let activeInRangeCount = 0;
 
     if (activityIndex) {
       const days = utcDayKeysBetween(rangeFrom, rangeTo);
@@ -979,21 +978,24 @@ export const OverviewTab = () => {
       avgDailyUsers = computeAvgDailyUsers(activityIndex, rangeFrom, rangeTo, eligibleIds);
       avgWeeklyUsers = computeAvgWeeklyUsers(activityIndex, rangeFrom, rangeTo, eligibleIds);
 
-      // Canonical per-user averages (shared formula with Investor Summary):
-      // range totals / cumulative onboarded users as of range end.
+      // Per-user averages: range totals ÷ distinct users active in the range.
+      // Messages count only the ones she sent; sessions use the shared
+      // user-initiated event set (messages + symptom logs + activity events).
       let totalMessages = 0;
       let totalSessions = 0;
       for (const d of days) {
         totalMessages += activityIndex.getUserMessagesForDay(d);
         totalSessions += activityIndex.getSessionsForDay(d);
       }
+      activeInRangeCount = activeInRange(activityIndex, rangeFrom, rangeTo, eligibleIds).size;
       const avgs = computeAvgPerUser({
         totalMessages,
         totalSessions,
-        totalUsers: usersAsOf(days[days.length - 1] ?? utcKey(rangeTo)),
+        totalUsers: activeInRangeCount,
       });
       avgMsgsPerUser = avgs.avgMsgsPerUser;
       avgSessionsPerUser = avgs.avgSessionsPerUser;
+
     }
 
     return {
