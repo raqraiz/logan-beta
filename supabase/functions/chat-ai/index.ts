@@ -4422,16 +4422,11 @@ serve(async (req) => {
     };
     assistantMessage = sanitizeLeakedInstructions(assistantMessage);
 
-    // PHASE GUARD: rewrite any contradicting phase words to match cycleInfo.phase.
-    // Prevents phase drift on short affirmations ("yeah", "tell me more") where the
-    // LLM sometimes leans on generic phase framing that disagrees with the injected
-    // Current phase. Logs [phase_mismatch] so we can monitor frequency.
-    //
-    // EXCEPTION: a phase word inside a comparative/contrastive construction
-    // ("compared to those restless follicular nights", "unlike ovulation") is
-    // intentionally naming a DIFFERENT phase as the contrast point. Rewriting it
-    // to the canonical phase produces self-contradicting nonsense, so those
-    // occurrences are left alone and logged as [phase_guard_comparative_skip].
+    // PHASE GUARD: rewrite contradicting phase words to match cycleInfo.phase —
+    // but ONLY where the sentence claims SHE is in that phase right now.
+    // Blind rewriting corrupted educational sentences ("ovulation is when the egg
+    // is released" -> "Luteal is when the egg is released"), so definitional,
+    // comparative and general-biology mentions are preserved and logged.
     if (cycleInfo?.phase) {
       const canonicalPhase = cycleInfo.phase as "Menstruation" | "Follicular" | "Ovulation" | "Luteal";
       const phasePatterns: Record<string, RegExp[]> = {
@@ -4444,12 +4439,21 @@ serve(async (req) => {
       // "as opposed to", "not like" occurring within ~5 words before the match.
       const COMPARATIVE_LEAD =
         /\b(?:compared (?:to|with)|unlike|vs\.?|versus|instead of|rather than|as opposed to|not like|in contrast to|different from)\b(?:\W+\w+){0,5}\W*$/i;
-      const isComparative = (text: string, matchIndex: number) => {
+      // Only these leads mean "this is where SHE is right now".
+      const PERSONAL_LEAD =
+        /\b(?:you(?:'re| are)|your|you're in|she(?:'s| is)|currently|right now|today)\b(?:\W+\w+){0,6}\W*$/i;
+      // A definition/explanation of the term itself must never be renamed.
+      const DEFINITIONAL_TRAIL = /^\s*(?:is|are|means|refers to|happens|occurs|=)\b/i;
+      const leadOfSentence = (text: string, matchIndex: number) => {
         let lead = text.slice(Math.max(0, matchIndex - 120), matchIndex);
-        // never look across a sentence boundary
         const lastStop = Math.max(lead.lastIndexOf("."), lead.lastIndexOf("!"), lead.lastIndexOf("?"), lead.lastIndexOf("\n"));
         if (lastStop >= 0) lead = lead.slice(lastStop + 1);
-        return COMPARATIVE_LEAD.test(lead);
+        return lead;
+      };
+      const isComparative = (text: string, matchIndex: number) => COMPARATIVE_LEAD.test(leadOfSentence(text, matchIndex));
+      const isPersonalClaim = (text: string, matchIndex: number, matchLength: number) => {
+        if (DEFINITIONAL_TRAIL.test(text.slice(matchIndex + matchLength, matchIndex + matchLength + 20))) return false;
+        return PERSONAL_LEAD.test(leadOfSentence(text, matchIndex));
       };
 
       const others = (Object.keys(phasePatterns) as (keyof typeof phasePatterns)[])
