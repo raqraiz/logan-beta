@@ -103,10 +103,11 @@ export interface ActivityIndex {
   getActiveThisWeek: (date: Date | string) => Set<string>;
   /** Signups on that UTC day. */
   getSignupsForDay: (date: Date | string) => number;
-  /** Total user-sent messages that UTC day. */
-  getUserMessagesForDay: (date: Date | string) => number;
-  /** Total sessions (30m inactivity gap) across all users that UTC day. */
-  getSessionsForDay: (date: Date | string) => number;
+  /** Total user-sent messages that UTC day, optionally limited to eligible users. */
+  getUserMessagesForDay: (date: Date | string, eligible?: Set<string> | null) => number;
+  /** Total sessions (30m inactivity gap) that UTC day, optionally limited to eligible users. */
+  getSessionsForDay: (date: Date | string, eligible?: Set<string> | null) => number;
+
 
 }
 
