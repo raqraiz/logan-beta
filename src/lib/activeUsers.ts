@@ -181,7 +181,7 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
 
   for (const e of events) {
     if (!e.created_at) continue;
-    if (!USER_INITIATED_EVENT_TYPES.includes(e.event_type)) continue;
+    if (!isUserInitiatedEvent(e.event_type)) continue;
     const ts = new Date(e.created_at).getTime();
     markActive(utcKey(new Date(e.created_at)), e.user_id, ts);
   }
