@@ -35,7 +35,9 @@ import {
 import {
   METRIC_TOOLTIPS, fetchEligibleUserIds, computeDau, computeWau, computeMau,
   computeStickiness, computeAvgDailyUsers, computeAvgWeeklyUsers, activeInRange,
+  assertActiveSubset,
 } from "@/lib/metrics/definitions";
+
 
 import { Info } from "lucide-react";
 
