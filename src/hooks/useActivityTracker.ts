@@ -18,6 +18,10 @@ interface ActivityEvent {
 const FLUSH_INTERVAL = 5000; // flush every 5 seconds
 const MAX_BUFFER = 20;
 
+/** Last tab the user opened — prefixes event names as `<tab>.<feature>.<action>`. */
+let currentTab = "app";
+
+
 export function useActivityTracker(userId?: string) {
   const bufferRef = useRef<ActivityEvent[]>([]);
   const lastPageView = useRef<string>("");
