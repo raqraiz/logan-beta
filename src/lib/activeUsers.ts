@@ -129,14 +129,27 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
 
   const activeByDay = new Map<string, Set<string>>();
   const userMsgsByDay = new Map<string, Map<string, number[]>>();
+  const sessionTsByDay = new Map<string, Map<string, number[]>>();
   const signupsByDay = new Map<string, number>();
 
-  const markActive = (key: string, userId: string) => {
+  const pushTs = (map: Map<string, Map<string, number[]>>, key: string, userId: string, ts: number) => {
+    let byUser = map.get(key);
+    if (!byUser) { byUser = new Map(); map.set(key, byUser); }
+    const arr = byUser.get(userId) ?? [];
+    arr.push(ts);
+    byUser.set(userId, arr);
+  };
+
+  const markActive = (key: string, userId: string, ts: number) => {
     if (!userId) return;
     let set = activeByDay.get(key);
     if (!set) { set = new Set(); activeByDay.set(key, set); }
     set.add(userId);
+    // Same event set feeds session reconstruction, so "active" and "has a
+    // session" can never disagree.
+    pushTs(sessionTsByDay, key, userId, ts);
   };
+
 
   for (const m of msgs) {
     if (!m.created_at) continue;
