@@ -1129,7 +1129,10 @@ export const OverviewTab = () => {
             ) : (
               <p className="text-2xl font-bold text-foreground">{allTimeUsers ?? 0}</p>
             )}
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Users</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+              Total Users <InfoTip text={METRIC_TOOLTIPS.totalUsers} />
+            </p>
+
           </CardContent>
         </Card>
         <Tooltip>
