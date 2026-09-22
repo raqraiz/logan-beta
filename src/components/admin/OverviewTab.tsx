@@ -373,14 +373,18 @@ export const OverviewTab = () => {
             .gte("logged_at", fromIso),
         ),
       ]);
+      // Same population as every other active/session metric.
+      const eligible = await fetchEligibleUserIds();
       // Same 30-min-gap reconstruction as loadSessions, per user so
       // overlapping tabs/devices can't double-count.
       const tsByUser = new Map<string, number[]>();
       for (const e of [...chat, ...activity, ...symptoms]) {
+        if (!eligible.has(e.user_id)) continue;
         const arr = tsByUser.get(e.user_id) ?? [];
         arr.push(new Date(e.created_at).getTime());
         tsByUser.set(e.user_id, arr);
       }
+
 
       let total = 0;
       for (const times of tsByUser.values()) {
