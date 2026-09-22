@@ -80,6 +80,12 @@ export interface ActivityIndex {
   signupsByDay: Map<string, number>;
   /** UTC day key -> user id -> sorted user-sent message timestamps (ms). */
   userMsgsByDay: Map<string, Map<string, number[]>>;
+  /**
+   * UTC day key -> user id -> sorted timestamps (ms) of EVERY user-initiated
+   * action that day (messages she sent, symptom logs, activity events). This
+   * is the single event set behind both "active" and "session".
+   */
+  sessionTsByDay: Map<string, Map<string, number[]>>;
   /** Users with any activity on that UTC day. */
   getActiveUsersForDay: (date: Date | string) => Set<string>;
   /** Users active in the 7 UTC days ending on (and including) the given date. */
@@ -90,6 +96,7 @@ export interface ActivityIndex {
   getUserMessagesForDay: (date: Date | string) => number;
   /** Total sessions (30m inactivity gap) across all users that UTC day. */
   getSessionsForDay: (date: Date | string) => number;
+
 }
 
 const keyOf = (date: Date | string) => (typeof date === "string" ? date : utcKey(date));
