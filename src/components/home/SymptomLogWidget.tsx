@@ -322,10 +322,17 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
       .single();
 
     if (error) {
+      const isDuplicate =
+        (error as any).code === "23505" || /duplicate key|unique constraint/i.test(error.message);
+      if (isDuplicate) {
+        setAddingSymptom(false);
+        handleTakenName(name);
+        return;
+      }
       setAddError(
         /rate_limited/i.test(error.message)
           ? `You can submit ${MAX_PENDING_PER_DAY} new symptoms per day. Try again tomorrow.`
-          : error.message
+          : "Couldn't add that one right now. Try again."
       );
     } else if (data) {
       setCommunitySymptoms(prev => [data as CommunitySymptom, ...prev]);
