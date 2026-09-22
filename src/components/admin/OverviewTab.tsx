@@ -332,6 +332,10 @@ export const OverviewTab = () => {
   const [todayTimeMin, setTodayTimeMin] = useState<number | null>(null);
   const [todayTimeLoading, setTodayTimeLoading] = useState(true);
   const [todayTimeError, setTodayTimeError] = useState<string | null>(null);
+  // Split shown under Total Messages: what she sent vs what Logan sent.
+  const [messageSplit, setMessageSplit] = useState<{ fromUsers: number; fromLogan: number } | null>(null);
+  const [messageSplitError, setMessageSplitError] = useState<string | null>(null);
+
 
   const loadTodayTime = useCallback(async () => {
     setTodayTimeLoading(true);
