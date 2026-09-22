@@ -1028,8 +1028,11 @@ export const OverviewTab = () => {
       let totalMessages = 0;
       let totalSessions = 0;
       for (const d of days) {
-        totalMessages += activityIndex.getUserMessagesForDay(d);
-        totalSessions += activityIndex.getSessionsForDay(d);
+        // Numerators are scoped to the same onboarded, non-internal population
+        // as the denominator, so messages/sessions from people who never
+        // finished onboarding can never inflate the averages.
+        totalMessages += activityIndex.getUserMessagesForDay(d, eligibleIds);
+        totalSessions += activityIndex.getSessionsForDay(d, eligibleIds);
       }
       activeInRangeCount = activeInRange(activityIndex, rangeFrom, rangeTo, eligibleIds).size;
       const avgs = computeAvgPerUser({
@@ -1039,6 +1042,13 @@ export const OverviewTab = () => {
       });
       avgMsgsPerUser = avgs.avgMsgsPerUser;
       avgSessionsPerUser = avgs.avgSessionsPerUser;
+
+      const population = eligibleIds ? eligibleIds.size : null;
+      assertActiveSubset("range", activeInRangeCount, population);
+      assertActiveSubset("today", activeTodayIds.size, population);
+      assertActiveSubset("week", activeWeekIds.size, population);
+      assertActiveSubset("month", activeMonthIds.size, population);
+
 
     }
 
