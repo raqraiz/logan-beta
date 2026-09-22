@@ -125,6 +125,9 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
   const [manageMode, setManageMode] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [frequentNames, setFrequentNames] = useState<string[]>([]);
+  // Lowercased names that exist in the shared table but aren't shown (retired/merged),
+  // mapped to their live canonical name when there is one.
+  const [retiredNames, setRetiredNames] = useState<Map<string, string | null>>(new Map());
 
   useEffect(() => {
     if (!userId) return;
@@ -193,18 +196,34 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
   useEffect(() => {
     supabase
       .from("community_symptoms")
-      .select("id, name, added_by, created_at, category, status, aliases, submitted_by, canonical_id")
-      .is("deleted_at", null)
+      .select("id, name, added_by, created_at, category, status, aliases, submitted_by, canonical_id, deleted_at")
       .order("created_at", { ascending: false })
       .then(({ data }) => {
-        if (data) {
-          const filtered = (data as any[])
-            // Merged and deprecated entries never show; everything live is shared.
-            .filter(s => s.status === "approved")
-            .filter(s => !BUILT_IN_SET.has(s.name.trim().toLowerCase()))
-            .map(s => ({ ...s, category: s.category ?? null })) as CommunitySymptom[];
-          setCommunitySymptoms(filtered);
-        }
+        if (!data) return;
+        const rows = data as any[];
+        const live = rows
+          // Merged, deprecated and retired entries never show; everything live is shared.
+          .filter(s => s.status === "approved" && !s.deleted_at)
+          .filter(s => !BUILT_IN_SET.has(s.name.trim().toLowerCase()))
+          .map(s => ({ ...s, category: s.category ?? null })) as CommunitySymptom[];
+        setCommunitySymptoms(live);
+
+        // Names that exist in the table but aren't shown. The unique constraint
+        // still covers them, so treat them as taken during the match pass.
+        const liveNames = new Set(live.map(s => s.name.trim().toLowerCase()));
+        const byId = new Map(rows.map(r => [r.id, r]));
+        const retired = new Map<string, string | null>();
+        rows.forEach(r => {
+          const key = r.name.trim().toLowerCase();
+          if (liveNames.has(key) || BUILT_IN_SET.has(key)) return;
+          const canonical = r.canonical_id ? byId.get(r.canonical_id) : null;
+          const canonicalLive =
+            canonical && canonical.status === "approved" && !canonical.deleted_at
+              ? canonical.name
+              : null;
+          retired.set(key, canonicalLive);
+        });
+        setRetiredNames(retired);
       });
   }, [userId]);
 
@@ -243,6 +262,12 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
       toast({ title: "Already on the list", description: `We've selected "${exact}" for you.` });
       return;
     }
+    // The name may exist as a hidden/retired row — inserting it would hit the
+    // unique constraint, so resolve it here instead.
+    if (retiredNames.has(check.value.toLowerCase())) {
+      handleTakenName(check.value);
+      return;
+    }
     const matches = suggestExistingSymptoms(check.value, approvedEntries);
     const near = findNearDuplicate(check.value, existingNames);
     const names = Array.from(new Set([...(near ? [near] : []), ...matches.map(m => m.name)]));
@@ -251,6 +276,19 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
       return;
     }
     handleAddCommunitySymptom();
+  };
+
+  // Shared landing spot for "this name already exists in the shared table":
+  // point at the surviving canonical entry, or just let her log the name itself.
+  const handleTakenName = (name: string) => {
+    const canonical = retiredNames.get(name.toLowerCase()) ?? null;
+    if (canonical) {
+      setSuggestions([canonical]);
+      setAddError(null);
+      return;
+    }
+    selectExisting(name);
+    toast({ title: "Already tracked", description: `We've selected "${name}" for you.` });
   };
 
   // Step 2: guardrails passed and the user confirmed it's genuinely new.
@@ -284,10 +322,17 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
       .single();
 
     if (error) {
+      const isDuplicate =
+        (error as any).code === "23505" || /duplicate key|unique constraint/i.test(error.message);
+      if (isDuplicate) {
+        setAddingSymptom(false);
+        handleTakenName(name);
+        return;
+      }
       setAddError(
         /rate_limited/i.test(error.message)
           ? `You can submit ${MAX_PENDING_PER_DAY} new symptoms per day. Try again tomorrow.`
-          : error.message
+          : "Couldn't add that one right now. Try again."
       );
     } else if (data) {
       setCommunitySymptoms(prev => [data as CommunitySymptom, ...prev]);
