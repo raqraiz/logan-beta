@@ -4518,10 +4518,14 @@ serve(async (req) => {
           const full = args[4] as string;
           const n = parseInt(num, 10);
           if (n === canonicalDay) return match;
-          // Skip ranges / non-current references: "day 1 of your period", "days 10-14",
-          // "day 3 to day 5" — only correct standalone present-tense day claims.
-          const after = full.slice(offset + match.length, offset + match.length + 3);
-          if (/^\s*[-–—]\s*\d/.test(after)) return match;
+          // Skip ranges / alternatives / non-current references: "days 10-14",
+          // "day 12 or 13", "day 3 to day 5", "between day 10 and day 14" —
+          // rewriting those collapses them into nonsense ("Day 12 or 12").
+          const after = full.slice(offset + match.length, offset + match.length + 16);
+          if (/^\s*(?:[-–—]|or|to|and|through|until|\/)\s*(?:day\s*#?\s*)?\d/i.test(after)) return match;
+          const beforeCtx = full.slice(Math.max(0, offset - 24), offset);
+          if (/\d\s*(?:[-–—]|or|to|and|through|until|\/)\s*(?:day\s*#?\s*)?$/i.test(beforeCtx)) return match;
+          if (/\bbetween\b[^.]{0,20}$/i.test(beforeCtx)) return match;
           wrongDays.push(n);
           return `${prefix}${canonicalDay}`;
         },
