@@ -341,7 +341,7 @@ export const OverviewTab = () => {
     setTodayTimeLoading(true);
     try {
       const fromIso = new Date().toISOString().slice(0, 10) + "T00:00:00.000Z";
-      const [chat, activity] = await Promise.all([
+      const [chat, activity, symptoms] = await Promise.all([
         fetchAllRows<{ user_id: string; created_at: string }>(
           (from, to) => supabase.from("chat_messages")
             .select("user_id, created_at")
@@ -361,15 +361,25 @@ export const OverviewTab = () => {
           () => supabase.from("user_activity_events").select("*", { count: "exact", head: true })
             .gte("created_at", fromIso),
         ),
+        fetchAllRows<{ user_id: string; created_at: string }>(
+          (from, to) => supabase.from("symptom_logs")
+            .select("user_id, created_at:logged_at")
+            .gte("logged_at", fromIso)
+            .order("logged_at", { ascending: true })
+            .range(from, to),
+          () => supabase.from("symptom_logs").select("*", { count: "exact", head: true })
+            .gte("logged_at", fromIso),
+        ),
       ]);
       // Same 30-min-gap reconstruction as loadSessions, per user so
       // overlapping tabs/devices can't double-count.
       const tsByUser = new Map<string, number[]>();
-      for (const e of [...chat, ...activity]) {
+      for (const e of [...chat, ...activity, ...symptoms]) {
         const arr = tsByUser.get(e.user_id) ?? [];
         arr.push(new Date(e.created_at).getTime());
         tsByUser.set(e.user_id, arr);
       }
+
       let total = 0;
       for (const times of tsByUser.values()) {
         times.sort((a, b) => a - b);
