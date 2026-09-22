@@ -5,13 +5,17 @@ import { supabase } from "@/integrations/supabase/client";
  * Growth "Daily log". Extracted from GrowthTrackerTab so both surfaces agree
  * by construction.
  *
- * Definition: a user is "active" on a UTC calendar day if they have any
- * chat_messages row (any role) or any symptom_logs row on that day.
+ * Definition (see src/lib/metrics/definitions.ts): a user is "active" on a UTC
+ * calendar day if they took at least one user-initiated action that day — sent
+ * a chat message, logged a symptom, or produced a click / page_view /
+ * tab_switch activity event. Assistant-generated chat rows and any other
+ * background writes never mark a user active.
  */
 
 export const SESSION_GAP_MS = 30 * 60 * 1000;
 const PAGE = 1000;
 const CHUNK_DAYS = 14;
+
 
 /** Timezone-safe key: the UTC calendar day of the given instant. */
 export const utcKey = (d: Date) => d.toISOString().slice(0, 10);
