@@ -34,8 +34,9 @@ import {
 } from "@/lib/admin/engagementMetrics";
 import {
   METRIC_TOOLTIPS, fetchEligibleUserIds, computeDau, computeWau, computeMau,
-  computeStickiness, computeAvgDailyUsers, computeAvgWeeklyUsers,
+  computeStickiness, computeAvgDailyUsers, computeAvgWeeklyUsers, activeInRange,
 } from "@/lib/metrics/definitions";
+
 import { Info } from "lucide-react";
 
 /** Info icon with a tap-friendly (not hover-only) one-line metric definition. */
