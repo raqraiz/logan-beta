@@ -103,10 +103,11 @@ export interface ActivityIndex {
   getActiveThisWeek: (date: Date | string) => Set<string>;
   /** Signups on that UTC day. */
   getSignupsForDay: (date: Date | string) => number;
-  /** Total user-sent messages that UTC day. */
-  getUserMessagesForDay: (date: Date | string) => number;
-  /** Total sessions (30m inactivity gap) across all users that UTC day. */
-  getSessionsForDay: (date: Date | string) => number;
+  /** Total user-sent messages that UTC day, optionally limited to eligible users. */
+  getUserMessagesForDay: (date: Date | string, eligible?: Set<string> | null) => number;
+  /** Total sessions (30m inactivity gap) that UTC day, optionally limited to eligible users. */
+  getSessionsForDay: (date: Date | string, eligible?: Set<string> | null) => number;
+
 
 }
 
@@ -216,21 +217,25 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
 
   const getSignupsForDay = (date: Date | string) => signupsByDay.get(keyOf(date)) ?? 0;
 
-  const getUserMessagesForDay = (date: Date | string) => {
+  const getUserMessagesForDay = (date: Date | string, eligible?: Set<string> | null) => {
     const byUser = userMsgsByDay.get(keyOf(date));
     if (!byUser) return 0;
     let total = 0;
-    for (const arr of byUser.values()) total += arr.length;
+    for (const [userId, arr] of byUser.entries()) {
+      if (eligible && !eligible.has(userId)) continue;
+      total += arr.length;
+    }
     return total;
   };
 
   // Sessions use the same user-initiated event set as "active" (messages she
   // sent + symptom logs + activity events), 30-minute inactivity gap.
-  const getSessionsForDay = (date: Date | string) => {
+  const getSessionsForDay = (date: Date | string, eligible?: Set<string> | null) => {
     const byUser = sessionTsByDay.get(keyOf(date));
     if (!byUser) return 0;
     let total = 0;
-    for (const times of byUser.values()) {
+    for (const [userId, times] of byUser.entries()) {
+      if (eligible && !eligible.has(userId)) continue;
       if (times.length === 0) continue;
       let sessions = 1;
       for (let i = 1; i < times.length; i++) {
@@ -240,6 +245,7 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
     }
     return total;
   };
+
 
   return {
     activeByDay,

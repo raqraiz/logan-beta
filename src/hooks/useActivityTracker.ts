@@ -148,22 +148,30 @@ export function useActivityTracker(userId?: string) {
       });
     };
 
+    // Sliders: one event per completed adjustment (on release), never per tick.
+    let sliderPending: Element | null = null;
     const handlePointerDown = (e: Event) => {
-      const el = (e.target as HTMLElement)?.closest?.("[role='slider'], input[type='range']");
-      if (!el) return;
-      emit(featureOf(el), "adjust", el);
+      sliderPending =
+        (e.target as HTMLElement)?.closest?.("[role='slider'], input[type='range']") ?? null;
+    };
+    const handlePointerUp = () => {
+      if (!sliderPending) return;
+      emit(featureOf(sliderPending), "adjust", sliderPending);
+      sliderPending = null;
     };
 
+    // Text fields: `change` fires once on blur/commit, never per keystroke.
     const handleChange = (e: Event) => {
       const el = e.target as HTMLElement | null;
       if (!el) return;
       const tag = el.tagName.toLowerCase();
       if (tag !== "input" && tag !== "select" && tag !== "textarea") return;
       const type = (el as HTMLInputElement).type;
-      if (type === "range") return; // already covered by pointerdown
+      if (type === "range") return; // covered by the slider release handler
       emit(featureOf(el), type === "checkbox" || type === "radio" ? "toggle" : "edit", el);
     };
 
+    // Drag reorder: one event per completed drag.
     const handleDragEnd = (e: Event) => {
       const el = (e.target as HTMLElement)?.closest?.("[draggable='true']");
       if (!el) return;
@@ -171,15 +179,20 @@ export function useActivityTracker(userId?: string) {
     };
 
     document.addEventListener("pointerdown", handlePointerDown, { capture: true, passive: true });
+    document.addEventListener("pointerup", handlePointerUp, { capture: true, passive: true });
+    document.addEventListener("pointercancel", handlePointerUp, { capture: true, passive: true });
     document.addEventListener("change", handleChange, { capture: true, passive: true });
     document.addEventListener("dragend", handleDragEnd, { capture: true, passive: true });
 
     return () => {
       document.removeEventListener("click", handleClick, true);
       document.removeEventListener("pointerdown", handlePointerDown, true);
+      document.removeEventListener("pointerup", handlePointerUp, true);
+      document.removeEventListener("pointercancel", handlePointerUp, true);
       document.removeEventListener("change", handleChange, true);
       document.removeEventListener("dragend", handleDragEnd, true);
     };
+
   }, [userId, track]);
 
 

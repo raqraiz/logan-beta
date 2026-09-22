@@ -35,7 +35,9 @@ import {
 import {
   METRIC_TOOLTIPS, fetchEligibleUserIds, computeDau, computeWau, computeMau,
   computeStickiness, computeAvgDailyUsers, computeAvgWeeklyUsers, activeInRange,
+  assertActiveSubset,
 } from "@/lib/metrics/definitions";
+
 
 import { Info } from "lucide-react";
 
@@ -371,14 +373,18 @@ export const OverviewTab = () => {
             .gte("logged_at", fromIso),
         ),
       ]);
+      // Same population as every other active/session metric.
+      const eligible = await fetchEligibleUserIds();
       // Same 30-min-gap reconstruction as loadSessions, per user so
       // overlapping tabs/devices can't double-count.
       const tsByUser = new Map<string, number[]>();
       for (const e of [...chat, ...activity, ...symptoms]) {
+        if (!eligible.has(e.user_id)) continue;
         const arr = tsByUser.get(e.user_id) ?? [];
         arr.push(new Date(e.created_at).getTime());
         tsByUser.set(e.user_id, arr);
       }
+
 
       let total = 0;
       for (const times of tsByUser.values()) {
@@ -668,11 +674,14 @@ export const OverviewTab = () => {
       // Sessions are built from the SAME user-initiated event set that defines
       // "active": messages she sent (never Logan's replies), symptom logs and
       // in-app activity events.
+      const eligible = await fetchEligibleUserIds();
       const tsByUser = new Map<string, string[]>();
       for (const e of [...recentChat, ...recentActivity, ...recentSymptoms]) {
+        if (!eligible.has(e.user_id)) continue;
         if (!tsByUser.has(e.user_id)) tsByUser.set(e.user_id, []);
         tsByUser.get(e.user_id)!.push(e.created_at);
       }
+
 
       const sessions: SessionRecord[] = [];
       for (const [userId, timestamps] of tsByUser.entries()) {
@@ -1028,8 +1037,11 @@ export const OverviewTab = () => {
       let totalMessages = 0;
       let totalSessions = 0;
       for (const d of days) {
-        totalMessages += activityIndex.getUserMessagesForDay(d);
-        totalSessions += activityIndex.getSessionsForDay(d);
+        // Numerators are scoped to the same onboarded, non-internal population
+        // as the denominator, so messages/sessions from people who never
+        // finished onboarding can never inflate the averages.
+        totalMessages += activityIndex.getUserMessagesForDay(d, eligibleIds);
+        totalSessions += activityIndex.getSessionsForDay(d, eligibleIds);
       }
       activeInRangeCount = activeInRange(activityIndex, rangeFrom, rangeTo, eligibleIds).size;
       const avgs = computeAvgPerUser({
@@ -1039,6 +1051,13 @@ export const OverviewTab = () => {
       });
       avgMsgsPerUser = avgs.avgMsgsPerUser;
       avgSessionsPerUser = avgs.avgSessionsPerUser;
+
+      const population = eligibleIds ? eligibleIds.size : null;
+      assertActiveSubset("range", activeInRangeCount, population);
+      assertActiveSubset("today", activeTodayIds.size, population);
+      assertActiveSubset("week", activeWeekIds.size, population);
+      assertActiveSubset("month", activeMonthIds.size, population);
+
 
     }
 

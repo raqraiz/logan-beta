@@ -61,6 +61,22 @@ export const activeInRange = (
   return out;
 };
 
+/**
+ * Invariant: active users are always a subset of the eligible (onboarded,
+ * non-internal) population. If a range ever reports more active than total
+ * users, something bypassed the eligibility filter — warn loudly.
+ */
+export const assertActiveSubset = (label: string, activeCount: number, totalUsers: number | null) => {
+  if (totalUsers != null && activeCount > totalUsers) {
+    console.warn(
+      `[metrics] ${label}: active users (${activeCount}) exceeds total users (${totalUsers}) — ` +
+      `an active/session metric is not filtered to onboarded, non-internal users.`,
+    );
+  }
+};
+
+
+
 
 /** Ids of onboarded, non-internal users — the denominator/eligibility set. */
 export const fetchEligibleUserIds = async (): Promise<Set<string>> => {
