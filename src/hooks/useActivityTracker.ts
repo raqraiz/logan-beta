@@ -129,10 +129,59 @@ export function useActivityTracker(userId?: string) {
 
     document.addEventListener("click", handleClick, { capture: true, passive: true });
 
+    // Coverage fill: interactions that are NOT buttons/links and therefore never
+    // reached the delegated click handler — sliders, selects, text fields,
+    // drag-reordering. All user-initiated; nothing here fires on render.
+    const featureOf = (el: Element | null) =>
+      (el?.closest("[data-feature]")?.getAttribute("data-feature") ||
+        el?.getAttribute("aria-label") ||
+        el?.getAttribute("name") ||
+        "control")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .slice(0, 40);
+
+    const emit = (feature: string, action: string, el: Element | null) => {
+      track(`${currentTab}.${feature}.${action}`, {
+        elementLabel: el?.getAttribute("aria-label") || feature,
+        elementType: el?.tagName.toLowerCase() || null,
+      });
+    };
+
+    const handlePointerDown = (e: Event) => {
+      const el = (e.target as HTMLElement)?.closest?.("[role='slider'], input[type='range']");
+      if (!el) return;
+      emit(featureOf(el), "adjust", el);
+    };
+
+    const handleChange = (e: Event) => {
+      const el = e.target as HTMLElement | null;
+      if (!el) return;
+      const tag = el.tagName.toLowerCase();
+      if (tag !== "input" && tag !== "select" && tag !== "textarea") return;
+      const type = (el as HTMLInputElement).type;
+      if (type === "range") return; // already covered by pointerdown
+      emit(featureOf(el), type === "checkbox" || type === "radio" ? "toggle" : "edit", el);
+    };
+
+    const handleDragEnd = (e: Event) => {
+      const el = (e.target as HTMLElement)?.closest?.("[draggable='true']");
+      if (!el) return;
+      emit(featureOf(el), "reorder", el);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown, { capture: true, passive: true });
+    document.addEventListener("change", handleChange, { capture: true, passive: true });
+    document.addEventListener("dragend", handleDragEnd, { capture: true, passive: true });
+
     return () => {
       document.removeEventListener("click", handleClick, true);
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+      document.removeEventListener("change", handleChange, true);
+      document.removeEventListener("dragend", handleDragEnd, true);
     };
   }, [userId, track]);
+
 
   // Periodic flush
   useEffect(() => {
