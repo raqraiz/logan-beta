@@ -652,14 +652,28 @@ export const OverviewTab = () => {
           () => supabase.from("user_activity_events").select("*", { count: "exact", head: true })
             .gte("created_at", fromIso).lte("created_at", toIso),
         ),
+        fetchAllRows<{ user_id: string; created_at: string }>(
+          (from, to) => supabase.from("symptom_logs")
+            .select("user_id, created_at:logged_at")
+            .gte("logged_at", fromIso)
+            .lte("logged_at", toIso)
+            .order("logged_at", { ascending: true })
+            .range(from, to),
+          () => supabase.from("symptom_logs").select("*", { count: "exact", head: true })
+            .gte("logged_at", fromIso).lte("logged_at", toIso),
+        ),
       ]);
       const profileMap = new Map(profiles.map((p: any) => [p.id, p]));
 
+      // Sessions are built from the SAME user-initiated event set that defines
+      // "active": messages she sent (never Logan's replies), symptom logs and
+      // in-app activity events.
       const tsByUser = new Map<string, string[]>();
-      for (const e of [...recentChat, ...recentActivity]) {
+      for (const e of [...recentChat, ...recentActivity, ...recentSymptoms]) {
         if (!tsByUser.has(e.user_id)) tsByUser.set(e.user_id, []);
         tsByUser.get(e.user_id)!.push(e.created_at);
       }
+
       const sessions: SessionRecord[] = [];
       for (const [userId, timestamps] of tsByUser.entries()) {
         const sorted = timestamps.map(t => new Date(t).getTime()).sort();
