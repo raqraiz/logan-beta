@@ -940,13 +940,14 @@ export const OverviewTab = () => {
 
   useEffect(() => { if (rangeReady) refreshAll(); }, [refreshAll, rangeReady]);
 
-  // Active-user metrics:
-  // - "Active Users" and "Active This Week" are fixed to today and come from
-  //   the rolling todayIndex (independent of the selected range).
+  // Active-user metrics — every value comes from the shared definitions module
+  // (src/lib/metrics/definitions.ts); no card computes its own.
+  // - DAU / WAU / MAU are fixed to today and come from the rolling todayIndex.
   // - Averages are computed from the range-scoped activityIndex.
   const activeMetrics = useMemo(() => {
-    const today = utcKey(new Date());
-    const activeTodayIds = todayIndex ? todayIndex.getActiveUsersForDay(today) : new Set<string>();
+    const activeTodayIds = todayIndex ? computeDau(todayIndex, eligibleIds) : new Set<string>();
+    const activeWeekIds = todayIndex ? computeWau(todayIndex, eligibleIds) : new Set<string>();
+    const activeMonthIds = todayIndex ? computeMau(todayIndex, eligibleIds) : new Set<string>();
 
     let avgDailyUsers: number | null = null;
     let avgWeeklyUsers: number | null = null;
@@ -959,43 +960,8 @@ export const OverviewTab = () => {
     if (activityIndex) {
       const days = utcDayKeysBetween(rangeFrom, rangeTo);
 
-      // Monthly-cycle average: only complete calendar months inside the range.
-      if (days.length > 0) {
-        const firstKey = days[0];
-        const lastKey = days[days.length - 1];
-        const monthlyAvgs: number[] = [];
-        let y = parseInt(firstKey.slice(0, 4), 10);
-        let m = parseInt(firstKey.slice(5, 7), 10) - 1;
-        const endY = parseInt(lastKey.slice(0, 4), 10);
-        const endM = parseInt(lastKey.slice(5, 7), 10) - 1;
-        while (true) {
-          const dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
-          const monthStart = `${String(y).padStart(4, "0")}-${String(m + 1).padStart(2, "0")}-01`;
-          const monthEnd = `${String(y).padStart(4, "0")}-${String(m + 1).padStart(2, "0")}-${String(dim).padStart(2, "0")}`;
-          if (monthStart >= firstKey && monthEnd <= lastKey) {
-            let sum = 0;
-            for (let d = 1; d <= dim; d++) {
-              const key = `${String(y).padStart(4, "0")}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-              sum += activityIndex.getActiveUsersForDay(key).size;
-            }
-            monthlyAvgs.push(sum / dim);
-          }
-          if (y === endY && m === endM) break;
-          m++;
-          if (m > 11) { m = 0; y++; }
-        }
-        if (monthlyAvgs.length > 0) {
-          avgDailyUsers = Math.round((monthlyAvgs.reduce((a, b) => a + b, 0) / monthlyAvgs.length) * 10) / 10;
-        }
-      }
-
-      // Canonical weekly active users (ISO Monday–Sunday weeks) — shared with
-      // Investor Summary via the same helper, so the two cards cannot drift.
-      avgWeeklyUsers = computeAvgWeeklyActiveUsers({
-        activityIndex,
-        rangeFrom,
-        rangeTo,
-      }).avgWeeklyUsers;
+      avgDailyUsers = computeAvgDailyUsers(activityIndex, rangeFrom, rangeTo, eligibleIds);
+      avgWeeklyUsers = computeAvgWeeklyUsers(activityIndex, rangeFrom, rangeTo, eligibleIds);
 
       // Canonical per-user averages (shared formula with Investor Summary):
       // range totals / cumulative onboarded users as of range end.
@@ -1016,14 +982,18 @@ export const OverviewTab = () => {
 
     return {
       activeTodayIds,
+      activeWeekIds,
       activeToday: activeTodayIds.size,
-      activeThisWeek: todayIndex ? todayIndex.getActiveThisWeek(today).size : 0,
+      activeThisWeek: activeWeekIds.size,
+      activeThisMonth: activeMonthIds.size,
+      stickiness: computeStickiness(activeTodayIds.size, activeMonthIds.size),
       avgDailyUsers,
       avgWeeklyUsers,
       avgMsgsPerUser,
       avgSessionsPerUser,
     };
-  }, [todayIndex, activityIndex, rangeFrom, rangeTo, signupDayKeys, allTimeUsers]);
+  }, [todayIndex, activityIndex, rangeFrom, rangeTo, signupDayKeys, allTimeUsers, eligibleIds]);
+
 
   const activeTodayUsers = useMemo(
     () => users.filter((u) => activeMetrics.activeTodayIds.has(u.userId)),
