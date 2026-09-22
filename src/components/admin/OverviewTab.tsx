@@ -1373,6 +1373,14 @@ export const OverviewTab = () => {
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
               Total Messages <InfoTip text={METRIC_TOOLTIPS.totalMessages} />
             </p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              {messageSplitError
+                ? "Failed — retry"
+                : messageSplit
+                  ? `${messageSplit.fromUsers} from users · ${messageSplit.fromLogan} from Logan`
+                  : "…"}
+            </p>
+
           </CardContent>
         </Card>
 
