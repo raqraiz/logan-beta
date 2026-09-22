@@ -17,7 +17,18 @@ export const SESSION_GAP_MS = 30 * 60 * 1000;
  * Activity-event types that count as user-initiated (see
  * src/lib/metrics/definitions.ts, which re-exports this as the shared rule).
  */
-export const USER_INITIATED_EVENT_TYPES: string[] = ["click", "page_view", "tab_switch"];
+export const USER_INITIATED_EVENT_TYPES: string[] = [
+  "click", "page_view", "tab_switch", "widget_interact",
+];
+
+/**
+ * True for any user-initiated event: the legacy flat types above plus the
+ * newer `<tab>.<feature>.<action>` names (sliders, fields, drag-reorder).
+ * Automated/background events never use either shape.
+ */
+export const isUserInitiatedEvent = (eventType: string): boolean =>
+  USER_INITIATED_EVENT_TYPES.includes(eventType) || eventType.includes(".");
+
 
 const PAGE = 1000;
 const CHUNK_DAYS = 14;
