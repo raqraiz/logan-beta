@@ -31,7 +31,7 @@ export const METRIC_TOOLTIPS = {
   activeThisMonth:
     "People who did anything in the app in the last 30 days, including today (UTC). Ignores the date range.",
   stickiness:
-    "Share of the last 30 days' active people who used Logan today (today ÷ last 30 days).",
+    "Share of this month's active people who also used Logan this week (last 7 days ÷ last 30 days).",
   avgDailyUsers:
     "Average number of people active per day across every day in the selected range (UTC).",
   avgWeeklyUsers:
@@ -140,7 +140,7 @@ export const computeWau = (index: ActivityIndex, eligible: Set<string> | null) =
 export const computeMau = (index: ActivityIndex, eligible: Set<string> | null) =>
   activeInRollingWindow(index, utcKey(new Date()), 30, eligible);
 
-/** Stickiness = DAU ÷ MAU as a percentage, one decimal. */
+/** Stickiness = WAU ÷ MAU as a percentage, one decimal. */
 export const computeStickiness = (dau: number, mau: number): number | null =>
   mau > 0 ? Math.round((dau / mau) * 1000) / 10 : null;
 
