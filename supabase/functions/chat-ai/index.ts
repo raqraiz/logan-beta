@@ -3583,8 +3583,19 @@ serve(async (req) => {
 
       // --- Softer postpartum detection: ask, never write silently ---
       // Fires only when the explicit switch phrasing did NOT fire and the user is
-      // not already postpartum. Postpartum only — no other life stage uses this.
-      if (!explicitSwitchIntent && participant.life_stage !== "postpartum") {
+      // not already tracked as postpartum by ANY stored signal. This must match the
+      // shared postpartum status other surfaces read (dual postpartum+cycling users
+      // keep life_stage = 'cycling' while postpartum_active / start date are set),
+      // otherwise we offer to "set up" tracking she already has.
+      const alreadyPostpartumTracked =
+        participant.life_stage === "postpartum"
+        || participant.postpartum_active === true
+        || !!participant.postpartum_start_date
+        || participant.is_breastfeeding === true
+        || participant.feeding_status === "breastfeeding"
+        || participant.feeding_status === "mixed";
+
+      if (!explicitSwitchIntent && !alreadyPostpartumTracked) {
         const thirdParty = /\b(my\s+(sister|friend|mom|mother|daughter|cousin|colleague|coworker|wife|partner)|she|her)\b[^.?!]{0,40}\b(had|gave\s+birth|is\s+postpartum|baby)\b/i.test(userMessage);
 
         const birthDateOrPostpartumMention =
