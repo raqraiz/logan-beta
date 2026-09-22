@@ -186,6 +186,9 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
   for (const byUser of userMsgsByDay.values()) {
     for (const arr of byUser.values()) arr.sort((a, b) => a - b);
   }
+  for (const byUser of sessionTsByDay.values()) {
+    for (const arr of byUser.values()) arr.sort((a, b) => a - b);
+  }
 
   const getActiveUsersForDay = (date: Date | string) =>
     activeByDay.get(keyOf(date)) ?? new Set<string>();
@@ -210,8 +213,10 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
     return total;
   };
 
+  // Sessions use the same user-initiated event set as "active" (messages she
+  // sent + symptom logs + activity events), 30-minute inactivity gap.
   const getSessionsForDay = (date: Date | string) => {
-    const byUser = userMsgsByDay.get(keyOf(date));
+    const byUser = sessionTsByDay.get(keyOf(date));
     if (!byUser) return 0;
     let total = 0;
     for (const times of byUser.values()) {
@@ -229,11 +234,13 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
     activeByDay,
     signupsByDay,
     userMsgsByDay,
+    sessionTsByDay,
     getActiveUsersForDay,
     getActiveThisWeek,
     getSignupsForDay,
     getUserMessagesForDay,
     getSessionsForDay,
+
   };
 };
 
