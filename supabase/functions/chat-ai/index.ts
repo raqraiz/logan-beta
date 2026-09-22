@@ -4422,16 +4422,11 @@ serve(async (req) => {
     };
     assistantMessage = sanitizeLeakedInstructions(assistantMessage);
 
-    // PHASE GUARD: rewrite any contradicting phase words to match cycleInfo.phase.
-    // Prevents phase drift on short affirmations ("yeah", "tell me more") where the
-    // LLM sometimes leans on generic phase framing that disagrees with the injected
-    // Current phase. Logs [phase_mismatch] so we can monitor frequency.
-    //
-    // EXCEPTION: a phase word inside a comparative/contrastive construction
-    // ("compared to those restless follicular nights", "unlike ovulation") is
-    // intentionally naming a DIFFERENT phase as the contrast point. Rewriting it
-    // to the canonical phase produces self-contradicting nonsense, so those
-    // occurrences are left alone and logged as [phase_guard_comparative_skip].
+    // PHASE GUARD: rewrite contradicting phase words to match cycleInfo.phase —
+    // but ONLY where the sentence claims SHE is in that phase right now.
+    // Blind rewriting corrupted educational sentences ("ovulation is when the egg
+    // is released" -> "Luteal is when the egg is released"), so definitional,
+    // comparative and general-biology mentions are preserved and logged.
     if (cycleInfo?.phase) {
       const canonicalPhase = cycleInfo.phase as "Menstruation" | "Follicular" | "Ovulation" | "Luteal";
       const phasePatterns: Record<string, RegExp[]> = {
@@ -4444,12 +4439,21 @@ serve(async (req) => {
       // "as opposed to", "not like" occurring within ~5 words before the match.
       const COMPARATIVE_LEAD =
         /\b(?:compared (?:to|with)|unlike|vs\.?|versus|instead of|rather than|as opposed to|not like|in contrast to|different from)\b(?:\W+\w+){0,5}\W*$/i;
-      const isComparative = (text: string, matchIndex: number) => {
+      // Only these leads mean "this is where SHE is right now".
+      const PERSONAL_LEAD =
+        /\b(?:you(?:'re| are)|your|you're in|she(?:'s| is)|currently|right now|today)\b(?:\W+\w+){0,6}\W*$/i;
+      // A definition/explanation of the term itself must never be renamed.
+      const DEFINITIONAL_TRAIL = /^\s*(?:is|are|means|refers to|happens|occurs|=)\b/i;
+      const leadOfSentence = (text: string, matchIndex: number) => {
         let lead = text.slice(Math.max(0, matchIndex - 120), matchIndex);
-        // never look across a sentence boundary
         const lastStop = Math.max(lead.lastIndexOf("."), lead.lastIndexOf("!"), lead.lastIndexOf("?"), lead.lastIndexOf("\n"));
         if (lastStop >= 0) lead = lead.slice(lastStop + 1);
-        return COMPARATIVE_LEAD.test(lead);
+        return lead;
+      };
+      const isComparative = (text: string, matchIndex: number) => COMPARATIVE_LEAD.test(leadOfSentence(text, matchIndex));
+      const isPersonalClaim = (text: string, matchIndex: number, matchLength: number) => {
+        if (DEFINITIONAL_TRAIL.test(text.slice(matchIndex + matchLength, matchIndex + matchLength + 20))) return false;
+        return PERSONAL_LEAD.test(leadOfSentence(text, matchIndex));
       };
 
       const others = (Object.keys(phasePatterns) as (keyof typeof phasePatterns)[])
@@ -4467,6 +4471,10 @@ serve(async (req) => {
             if (isComparative(full, offset)) {
               comparativeSkips.push(`${other}:${match}`);
               return match; // leave the contrast phase intact
+            }
+            if (!isPersonalClaim(full, offset, match.length)) {
+              comparativeSkips.push(`${other}:educational:${match}`);
+              return match; // definitional / general-biology use — must stay accurate
             }
             mismatches.push(other);
             return canonicalPhase;
@@ -4510,10 +4518,14 @@ serve(async (req) => {
           const full = args[4] as string;
           const n = parseInt(num, 10);
           if (n === canonicalDay) return match;
-          // Skip ranges / non-current references: "day 1 of your period", "days 10-14",
-          // "day 3 to day 5" — only correct standalone present-tense day claims.
-          const after = full.slice(offset + match.length, offset + match.length + 3);
-          if (/^\s*[-–—]\s*\d/.test(after)) return match;
+          // Skip ranges / alternatives / non-current references: "days 10-14",
+          // "day 12 or 13", "day 3 to day 5", "between day 10 and day 14" —
+          // rewriting those collapses them into nonsense ("Day 12 or 12").
+          const after = full.slice(offset + match.length, offset + match.length + 16);
+          if (/^\s*(?:[-–—]|or|to|and|through|until|\/)\s*(?:day\s*#?\s*)?\d/i.test(after)) return match;
+          const beforeCtx = full.slice(Math.max(0, offset - 24), offset);
+          if (/\d\s*(?:[-–—]|or|to|and|through|until|\/)\s*(?:day\s*#?\s*)?$/i.test(beforeCtx)) return match;
+          if (/\bbetween\b[^.]{0,20}$/i.test(beforeCtx)) return match;
           wrongDays.push(n);
           return `${prefix}${canonicalDay}`;
         },
@@ -5127,7 +5139,7 @@ MEAL PLANS / MENUS — STRICT RULES:
       : userLifeStage === "menopause"
         ? `This user is in MENOPAUSE — their cycle has stopped (12+ months without a period). Their estrogen and progesterone are declining. Focus on: hot flashes, sleep disruption, mood changes, bone health, energy management, cognitive shifts, weight changes. Do NOT reference specific cycle days or ovulation windows. Instead, provide guidance relevant to hormonal transition and thriving through it.`
         : userLifeStage === "perimenopause"
-          ? `This user is in PERIMENOPAUSE — she STILL HAS PERIODS and is still cycling, but the pattern is shifting (cycles getting shorter/longer, heavier/lighter, skipped months, new symptoms like hot flashes, sleep changes, mood swings). DO NOT call her menopausal. Reference her cycle day and phase when relevant, but acknowledge that hormone swings can be sharper and less predictable than they used to be. Focus on: tracking pattern shifts, sleep, hot flashes, mood, energy, bone/muscle health, and what's changed vs. her baseline. Be precise: perimenopause ≠ menopause.`
+          ? `This user is in PERIMENOPAUSE — she STILL HAS PERIODS and is still cycling, but the pattern is shifting (cycles getting shorter/longer, heavier/lighter, skipped months, new symptoms like hot flashes, sleep changes, mood swings). DO NOT call her menopausal. Reference her cycle day and phase when relevant, but acknowledge that hormone swings can be sharper and less predictable than they used to be. Focus on: tracking pattern shifts, sleep, hot flashes, mood, energy, bone/muscle health, and what's changed vs. her baseline. Be precise: perimenopause ≠ menopause. Perimenopause changes the TIMING and INTENSITY of phases, never their definitions: ovulation is still the egg-release event (it can come late, early, or be skipped entirely in an anovulatory cycle), and luteal is still the stretch after ovulation until the next bleed (it can be short or barely present if ovulation didn't happen). A stuttering or delayed LH surge is an ovulation statement, not a luteal one.`
           : ((participant as any).on_hormonal_bc === true
             ? `This user is on HORMONAL BIRTH CONTROL. Their hormones are externally regulated (pill, IUD, implant, ring, patch). They are NOT naturally cycling. RULES: Never reference a cycle "day number" or natural phase (follicular, luteal, ovulation, menstruation). Never invent rising/falling estrogen or progesterone language tied to a phase. Frame guidance around steady-state levers: sleep, protein, strength training, stress, hydration, and micronutrient depletion that hormonal BC can cause (B6, B12, magnesium, zinc, folate). If they ask about a phase, gently explain why phase-based predictions don't apply to them.`
             : (participant as any).on_hormonal_bc === false
@@ -5214,7 +5226,16 @@ PHASE POSITION RULE (non-negotiable): She is on day ${daysIntoPhase} of her ${cy
     ? `PHASE IS UNKNOWN (non-negotiable): Her last logged Day 1 is ${cycleInfo.cycleDay - 1} days ago — about ${staleDaysLate} days past her expected next period, with nothing new logged. Any phase derived from that date is NOT reliable. Do NOT state, imply, or build guidance around Menstruation, Follicular, Ovulation, or Luteal for her right now. Do NOT state a current cycle day as fact. If cycle timing is relevant, say plainly that you don't have a reliable Day 1 and invite her to log one (or tell you her period hasn't come). Educational/general statements about phases are still fine as long as they are clearly generic and never claim to describe where SHE is. Ground today's guidance in her logged symptoms, sleep, stress, food, and training instead.`
     : `PHASE AUTHORITY RULE (non-negotiable): The Current phase and cycle day above are authoritative. Never generate symptom explanations, hormone framing, or phase-specific guidance that contradicts this value, regardless of what earlier messages in this conversation discussed. If prior conversation mentioned a different phase, that context is outdated — the current phase value is always correct. Do not attribute today's symptoms to ovulation if the current phase is Luteal, and do not attribute them to Luteal if the current phase is Ovulation, etc. When in doubt, defer to Current phase.
 
-NEVER name a phase other than ${cycleInfo.phase} in your response. If you are tempted to reference Menstruation, Follicular, Ovulation, or Luteal other than ${cycleInfo.phase}, stop and reframe using ${cycleInfo.phase} instead. Short user affirmations ("yeah", "exactly", "tell me more", "okay", "sure", "mhm") do NOT change the phase context — stay anchored to ${cycleInfo.phase} regardless of how little content the user message contains. The phase word in your response MUST match ${cycleInfo.phase} exactly. This is non-negotiable.
+NEVER say she is in, entering, or moving through any phase other than ${cycleInfo.phase}. Every statement about where SHE is right now must use ${cycleInfo.phase}. Short user affirmations ("yeah", "exactly", "tell me more", "okay", "sure", "mhm") do NOT change the phase context — stay anchored to ${cycleInfo.phase} regardless of how little content the user message contains. This is non-negotiable.
+
+This does NOT ban the other phase names as vocabulary. When you explain biology, define a term she asked about, or contrast phases, you may and MUST name the correct phase — using the wrong phase name to satisfy the rule above is a worse error than naming another phase. Educational sentences must stay generic ("ovulation is when the egg is released") and never claim they describe her today unless the phase is ${cycleInfo.phase}.
+
+PHASE TERMINOLOGY (never blur these — each name means exactly one thing):
+- Menstruation = the bleeding days at the start of the cycle (Day 1 is the first day of real flow). Not "the follicular phase", even though follicular activity overlaps it.
+- Follicular = after bleeding ends, before ovulation. Rising estrogen, follicles maturing. Not a synonym for menstruation.
+- Ovulation = the short window when the egg is released (LH surge, peak estrogen, fertile window, mittelschmerz / ovulation pain, egg-white discharge). It is an EVENT and its surrounding days — never call it a phase that "follows" anything.
+- Luteal = the phase AFTER ovulation until the next period. Corpus luteum, progesterone dominant, PMS-type symptoms, higher core temp.
+Ovulation and luteal are never interchangeable: ovulation causes the luteal phase, it is not the luteal phase. Mittelschmerz, LH surge, fertile-window and egg-release language belong to ovulation only. PMS, progesterone drop and pre-period symptoms belong to luteal only. The same separation applies to menstruation vs follicular. If a sentence would define one phase using another phase's name, rewrite the sentence rather than swapping the name.
 
 CYCLE DAY RULE (non-negotiable): This rule governs statements about HER current day or status. When you say what day she is on, where she is in her cycle, or what day her symptoms correspond to right now, the only cycle-day number you may use is ${cycleInfo.cycleDay}. Never derive, estimate, round, or infer a different day for her. Never present a position-within-phase number as if it were her cycle day — her cycle day is Day ${cycleInfo.cycleDay}; a phase-position number may only be the "Days into current phase" value given above, and only stated as such (e.g. "day ${daysIntoPhase ?? "N"} of your ${cycleInfo.phase.toLowerCase()} phase"). Do not assume a 28-day textbook cycle to compute her day number.${phasePositionRule}`;
 
