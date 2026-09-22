@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { onboardedProfiles } from "@/lib/onboardedUsers";
-import { utcKey, toUTCDate, utcDayKeysBetween, type ActivityIndex } from "@/lib/activeUsers";
+import { utcKey, toUTCDate, utcDayKeysBetween, USER_INITIATED_EVENT_TYPES, type ActivityIndex } from "@/lib/activeUsers";
 
 /**
  * THE single source of truth for what "user" and "active user" mean on the
