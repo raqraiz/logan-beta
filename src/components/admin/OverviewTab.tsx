@@ -629,7 +629,7 @@ export const OverviewTab = () => {
   const loadSessions = useCallback(async () => {
     setSessionsLoading(true);
     try {
-      const [profiles, recentChat, recentActivity] = await Promise.all([
+      const [profiles, recentChat, recentActivity, recentSymptoms] = await Promise.all([
         getProfiles(),
         fetchAllRows<{ user_id: string; created_at: string }>(
           (from, to) => supabase.from("chat_messages")
