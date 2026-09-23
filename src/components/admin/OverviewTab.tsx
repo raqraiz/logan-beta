@@ -20,6 +20,7 @@ import {
 } from "recharts";
 import { InvestorSummaryPanel } from "@/components/admin/InvestorSummaryPanel";
 import { ReportedSymptomsSection } from "@/components/admin/ReportedSymptomsSection";
+import { LifeStageEngagementSection } from "@/components/admin/LifeStageEngagementSection";
 
 import {
   RefreshCw, Users, MessageSquare, Activity, TrendingUp, Clock, BarChart3,
@@ -1419,6 +1420,9 @@ export const OverviewTab = () => {
 
       </div>
       </TooltipProvider>
+
+      {/* Engagement by life stage (own load/retry, independent of the range) */}
+      <LifeStageEngagementSection />
 
       {/* Investor Summary (additive — independent range) */}
       <InvestorSummaryPanel />
