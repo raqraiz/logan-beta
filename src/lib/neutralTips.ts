@@ -2,7 +2,7 @@
 // life stage. Same wording as the server fallback in generate-daily-insights.
 export const NEUTRAL_SUCCEED_HER = [
   "Get outside for ten minutes of daylight before noon.",
-  "Eat a real breakfast with some protein in it.",
+  "Start the day with something that has a bit of protein.",
   "Pick one small task and let finishing it be enough.",
 ];
 export const NEUTRAL_DONTMESS_HER = [
@@ -12,7 +12,7 @@ export const NEUTRAL_DONTMESS_HER = [
 ];
 export const NEUTRAL_SUCCEED_HIM = [
   "Handle dinner tonight without being asked.",
-  "Suggest a short walk together after work.",
+  "Suggest a short walk together this evening.",
   "Ask what would make her evening easier, then do it.",
 ];
 export const NEUTRAL_DONTMESS_HIM = [
