@@ -1,3 +1,4 @@
+import { Loader2 } from "lucide-react";
 import { useState, useCallback } from "react";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
 import { CycleAnalytics } from "@/components/chat/CycleAnalytics";
@@ -28,6 +29,8 @@ import {
 import { getPostpartumTimeline } from "@/lib/postpartumTimeline";
 import { isCycleStale } from "@/lib/cycleCalculations";
 import { useDailyHomeInsights } from "@/hooks/useDailyHomeInsights";
+import { useStageBoundary, isStageHidden, stageKeyForLifeStage } from "@/hooks/useStageBoundary";
+import { NEUTRAL_SUCCEED_HER, NEUTRAL_DONTMESS_HER, NEUTRAL_SUCCEED_HIM, NEUTRAL_DONTMESS_HIM } from "@/lib/neutralTips";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -511,6 +514,8 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     enabled: !!cycleData && !(isPostpartumContext && ppPhaseForInsights === "unset"),
   });
 
+  const { stageKey: boundaryStageKey, loading: boundaryLoading } = useStageBoundary();
+
   if (!cycleData) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 text-center">
@@ -544,6 +549,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
             : "Pregnant")
     : cycleData.phase;
 
+  // Stage boundary: she asked Logan not to bring up her current stage.
+  const hideStage = isStageHidden(boundaryStageKey, cycleData.lifeStage);
+  const stagePending = boundaryLoading && !!stageKeyForLifeStage(cycleData.lifeStage);
   // Helper to get life-stage-aware tips
   const ppPhase = getPostpartumPhase(cycleData.postpartumStartDate);
   const LOSS_SUCCEED_HER = [
@@ -603,6 +611,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       const generated = isSucceed ? dailyInsights.succeed : dailyInsights.dontMessUp;
       if (generated.length) return generated;
     }
+    if (hideStage) return isSucceed ? NEUTRAL_SUCCEED_HER : NEUTRAL_DONTMESS_HER;
     if (isLoss) return isSucceed ? LOSS_SUCCEED_HER : LOSS_DONTMESS_HER;
     if (isPregnant) return isSucceed ? PREG_SUCCEED_HER : PREG_DONTMESS_HER;
     if (hasPostpartumContext) {
@@ -629,6 +638,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       const generated = isSucceed ? dailyInsights.succeedHim : dailyInsights.dontMessUpHim;
       if (generated.length) return generated;
     }
+    if (hideStage) return isSucceed ? NEUTRAL_SUCCEED_HIM : NEUTRAL_DONTMESS_HIM;
     if (isLoss) return isSucceed ? LOSS_SUCCEED_HIM : LOSS_DONTMESS_HIM;
     if (isPregnant) return isSucceed ? PREG_SUCCEED_HIM : PREG_DONTMESS_HIM;
     if (hasPostpartumContext) {
@@ -905,6 +915,15 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
         return null;
     }
   };
+
+  // Never flash stage content before the boundary check resolves.
+  if (stagePending) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col items-center pb-16">

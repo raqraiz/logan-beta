@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { Zap, Brain, AlertTriangle } from "lucide-react";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
 import { isCycleStale } from "@/lib/cycleCalculations";
+import { useStageBoundary, isStageHidden, stageKeyForLifeStage } from "@/hooks/useStageBoundary";
 
 interface DailyBriefingHeroProps {
   cycleDay: number;
@@ -116,6 +117,9 @@ export function DailyBriefingHero({
   onHormonalBc,
   onCircleClick,
 }: DailyBriefingHeroProps) {
+  const { stageKey, loading: boundaryLoading } = useStageBoundary();
+  const hideStage = isStageHidden(stageKey, lifeStage);
+  const stagePending = boundaryLoading && !!stageKeyForLifeStage(lifeStage);
   const isSteadyByPill = onHormonalBc === true;
   const isIrregular = lifeStage === "irregular";
   const isLoss = lifeStage === "pregnancy_loss";
@@ -123,16 +127,21 @@ export function DailyBriefingHero({
   const isNonCycling = !!lifeStage && (lifeStage === "postpartum" || lifeStage === "menopause" || lifeStage === "pregnancy_loss" || lifeStage === "pregnant");
   // Stored Day 1 is far past her expected next period — don't assert a phase.
   const isStale = !isNonCycling && !isIrregular && isCycleStale(cycleDay, cycleLengthDays);
-  const phaseText = isLoss ? "text-rose-300" : isPregnant ? "text-emerald-300" : isStale ? "text-primary" : (PHASE_TEXT[phase] || "text-primary");
-  const phaseBg = isLoss ? "bg-rose-300/15" : isPregnant ? "bg-emerald-300/15" : isStale ? "bg-primary/15" : (PHASE_BG[phase] || "bg-primary/15");
-  const phaseAccent = isLoss
+  const neutral = hideStage || stagePending;
+  const phaseText = neutral ? "text-primary" : isLoss ? "text-rose-300" : isPregnant ? "text-emerald-300" : isStale ? "text-primary" : (PHASE_TEXT[phase] || "text-primary");
+  const phaseBg = neutral ? "bg-primary/15" : isLoss ? "bg-rose-300/15" : isPregnant ? "bg-emerald-300/15" : isStale ? "bg-primary/15" : (PHASE_BG[phase] || "bg-primary/15");
+  const phaseAccent = neutral
+    ? "from-primary/10 via-transparent to-transparent"
+    : isLoss
     ? "from-rose-300/10 via-transparent to-transparent"
     : isPregnant
       ? "from-emerald-300/10 via-transparent to-transparent"
       : isStale
         ? "from-primary/10 via-transparent to-transparent"
         : (PHASE_ACCENT[phase] || "from-primary/10 via-transparent to-transparent");
-  const headline = isLoss
+  const headline = hideStage
+    ? "Here's your day."
+    : isLoss
     ? "Healing in progress. There's no timeline for this — only your pace."
     : isPregnant
       ? "Growing a human is a full-time job. Rest is part of the work."
@@ -182,6 +191,9 @@ export function DailyBriefingHero({
               />
             </button>
 
+            {stagePending ? (
+              <div className="h-5 w-24 rounded-full bg-muted/30 animate-pulse" />
+            ) : !hideStage && (
             <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${phaseBg}`}>
               <span className={`w-1.5 h-1.5 rounded-full bg-current ${phaseText}`} />
               <span className={`text-[11px] font-semibold uppercase tracking-wider ${phaseText}`}>
@@ -200,11 +212,15 @@ export function DailyBriefingHero({
                     : phase}
               </span>
             </div>
+            )}
 
-
+            {stagePending ? (
+              <div className="h-4 w-52 rounded bg-muted/30 animate-pulse" />
+            ) : (
             <p className="text-sm text-foreground/85 text-center leading-relaxed max-w-[260px]">
               {headline}
             </p>
+            )}
           </div>
 
 

@@ -20,6 +20,7 @@ import {
 } from "@/lib/postpartumPhases";
 import { getPostpartumTimeline } from "@/lib/postpartumTimeline";
 import { useDailyHomeInsights } from "@/hooks/useDailyHomeInsights";
+import { useStageBoundary, isStageHidden, stageKeyForLifeStage } from "@/hooks/useStageBoundary";
 
 interface CycleData {
   cycleDay: number;
@@ -465,6 +466,9 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
     enabled: !!cycleData && !(isPostpartumContext && ppPhaseForInsights === "unset"),
   });
 
+  const { stageKey: boundaryStageKey, loading: boundaryLoading } = useStageBoundary();
+  const hideStage = isStageHidden(boundaryStageKey, cycleData?.lifeStage);
+  const stagePending = boundaryLoading && !!stageKeyForLifeStage(cycleData?.lifeStage);
   const lastPeriodStart = liveCycle?.lastPeriodStart || cycleData?.lastPeriodStart;
   const currentPeriodEndDate = liveCycle?.currentPeriodEndDate ?? cycleData?.currentPeriodEndDate ?? null;
 
@@ -552,7 +556,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
   const nextPhase = PHASE_ORDER[(PHASE_ORDER.indexOf(currentPhase) + 1) % 4];
   const anchorInsight = anchorSymptom && ANCHOR_INSIGHTS[currentPhase]?.[anchorSymptom];
 
-  if (loading) {
+  if (loading || stagePending) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -565,6 +569,20 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
 
   // Non-cycling life stages get tailored content
   const isNonCycling = cycleData?.lifeStage === "postpartum" || cycleData?.lifeStage === "menopause" || cycleData?.lifeStage === "pregnancy_loss" || cycleData?.lifeStage === "pregnant";
+
+  // Stage boundary active: no stage label, count, or stage-specific guidance.
+  // No general non-cycling content exists yet, so only the heading shows.
+  if (isNonCycling && hideStage) {
+    return (
+      <div className="flex-1 overflow-y-auto pb-20">
+        <div className="max-w-lg md:max-w-4xl mx-auto px-4 py-5 space-y-4">
+          <div>
+            <h2 className="font-display font-semibold text-lg text-foreground">Your Week</h2>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isNonCycling) {
     const stage = cycleData!.lifeStage!;
