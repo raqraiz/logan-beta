@@ -4266,6 +4266,55 @@ serve(async (req) => {
       );
     }
 
+    // --- Topic/behavior boundary capture ("don't bring that up again") ---
+    // No-write-no-claim: the reply may only confirm once the row is confirmed saved.
+    let boundarySaveState: "none" | "saved" | "failed" = "none";
+    let boundarySavedLabel = "";
+    if (mayBeBoundaryRequest(userMessage)) {
+      const detected = await extractBoundaryViaLLM(userMessage, lovableApiKey);
+      if (detected) {
+        // Best-effort link to the user message the client already persisted.
+        let sourceMessageId: string | null = null;
+        try {
+          const { data: srcMsg } = await supabase
+            .from("chat_messages")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("role", "user")
+            .eq("content", userMessage)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          sourceMessageId = srcMsg?.id ?? null;
+        } catch (_e) { /* source link is optional */ }
+
+        const { error: boundaryErr } = await supabase
+          .from("user_topic_boundaries")
+          .insert({
+            user_id: user.id,
+            kind: detected.kind,
+            label: detected.label,
+            stage_key: detected.stage_key,
+            source_message_id: sourceMessageId,
+          });
+
+        if (!boundaryErr) {
+          boundarySaveState = "saved";
+          boundarySavedLabel = detected.label;
+        } else if (boundaryErr.code === "23505") {
+          // uq_active_stage_boundary — an active boundary already exists. Saved.
+          boundarySaveState = "saved";
+          boundarySavedLabel = detected.label;
+        } else {
+          console.error("[boundary] insert failed:", boundaryErr.message);
+          boundarySaveState = "failed";
+        }
+      }
+    }
+    // --- End boundary capture ---
+
+    const activeBoundaries: TopicBoundary[] = await fetchActiveBoundaries(supabase, user.id);
+
     const backfillBlock = backfillConfirmation ? `\n\n${backfillConfirmation}\n` : "";
     const libraryBlock = libraryConfirmation ? `\n\n${libraryConfirmation}\n` : "";
 
