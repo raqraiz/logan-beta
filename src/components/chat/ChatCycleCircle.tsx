@@ -512,7 +512,24 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
   }
   // Postpartum/menopause/pregnancy-loss/pregnant/irregular users get a static badge.
   if (lifeStage === "postpartum" || lifeStage === "menopause" || lifeStage === "perimenopause") {
-...
+    return <LifeStageBadge lifeStage={lifeStage} size={size} postpartumStartDate={postpartumStartDate} />;
+  }
+  if (lifeStage === "pregnancy_loss") {
+    return <LifeStageBadge lifeStage="pregnancy_loss" size={size} lossDate={lossDate} />;
+  }
+  if (lifeStage === "pregnant") {
+    return <PregnancyCircle size={size} dueDate={dueDate} pregnancyLmp={pregnancyLmp} />;
+  }
+  if (lifeStage === "irregular") {
+    return <LifeStageBadge lifeStage="irregular" size={size} onHormonalBc={onHormonalBc} />;
+  }
+  // Stale Day 1: running well past her expected next period with nothing new
+  // logged. Stop asserting a day/phase — show the existing Overdue state.
+  // Logging a new period resets cycleDay, which exits this state immediately.
+  if (isCycleStale(cycleDay, cycleLengthDays)) {
+    return <LifeStageBadge lifeStage="steady" steadyReason="stale" size={size} onHormonalBc={onHormonalBc} />;
+  }
+
   const showPpBadge = postpartumActive && !!postpartumStartDate && stageKey !== "postpartum";
   const isSmall = size === "sm";
 
