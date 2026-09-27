@@ -2059,6 +2059,7 @@ const Chat = () => {
                         { value: "irregular", label: "Irregular or on hormonal BC", desc: "PMOS (formerly PCOS), unpredictable cycles, or pill/IUD/implant" },
                         { value: "pregnant", label: "Pregnant 🌱", desc: "Currently pregnant" },
                         { value: "postpartum", label: "Postpartum", desc: "Recently had a baby" },
+                        { value: "pregnancy_loss", label: "Pregnancy loss", desc: "Miscarriage or loss, whenever it happened" },
                         { value: "perimenopause", label: "Perimenopause", desc: "Still getting periods, but the pattern is shifting" },
                         { value: "menopause", label: "Menopause", desc: "12+ months without a period" },
                       ].map((option) => (

@@ -155,9 +155,9 @@ const ONBOARDING_QUESTIONS = [
   },
   {
     key: "loss_date",
-    message: "When did the loss happen? Take your time — even an approximate date helps me support your recovery. There's no rush here.",
+    message: "When did it happen? Pick the date, or skip if you'd rather not say.",
     field: "loss_date",
-    parseType: "date",
+    parseType: "date_optional",
     inputType: "date_picker",
     showNotSure: false,
     requiresStage: "pregnancy_loss"
