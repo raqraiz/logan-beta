@@ -481,7 +481,8 @@ function buildInsightPrompt(
   cycleInfo: { cycleDay: number; phase: string; daysUntilNextPhase: number },
   participant: Record<string, any>,
   recentMessages: { content: string; role: string }[],
-  checkinMessages: { content: string; metadata: any; created_at: string }[]
+  checkinMessages: { content: string; metadata: any; created_at: string }[],
+  boundaries: TopicBoundary[] = [],
 ): string {
   const anchorSymptom = participant.anchor_symptom;
   const symptoms = participant.typical_symptoms || [];
@@ -542,7 +543,7 @@ function buildInsightPrompt(
     ? `\n- NO UTERUS (hysterectomy, ovaries intact): She is NOT menopausal — her ovaries still cycle, so hormone patterns still apply. But she will NEVER bleed again: never ask for, reference, or imply a period date, Day 1, a late/due period, or "when your period starts". Any cycle day or phase here is an ESTIMATE with no bleed anchor — hedge it ("roughly", "estimated") and lean on her tracked symptoms over calendar timing.`
     : "";
 
-  return `You are Logan. You know ${firstName}'s cycle so well you can name what she's feeling before she does. You're not giving advice or instructions. You're the person who just gets it.
+  return `You are Logan. You know ${firstName}'s cycle so well you can name what she's feeling before she does. You're not giving advice or instructions. You're the person who just gets it.${buildBoundaryRuleBlock(boundaries)}
 
 CONTEXT:
 - Today is Day ${cycleInfo.cycleDay} of your cycle · **${cycleInfo.phase}**
