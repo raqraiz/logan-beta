@@ -155,9 +155,9 @@ const ONBOARDING_QUESTIONS = [
   },
   {
     key: "loss_date",
-    message: "When did the loss happen? Take your time — even an approximate date helps me support your recovery. There's no rush here.",
+    message: "When did it happen? Pick the date, or skip if you'd rather not say.",
     field: "loss_date",
-    parseType: "date",
+    parseType: "date_optional",
     inputType: "date_picker",
     showNotSure: false,
     requiresStage: "pregnancy_loss"
@@ -862,7 +862,7 @@ serve(async (req) => {
           } else if (pLifeStage === "pregnant") {
             stageInsight = `Here's your first personal insight 👇\n\n**Pregnancy — Growing phase**\n\n- **Energy**: Shifting week by week as your body does extraordinary work\n- **What to expect**: Symptoms come in waves — nausea, fatigue, mood shifts, and stretches of feeling great\n${participant.anchor_symptom ? `- **Your anchor (${participant.anchor_symptom.toLowerCase()})**: I'll watch how it moves across your trimesters` : "- **Tip**: Rest is doing something, even when it feels like nothing"}\n\nLogan will track your week and trimester instead of a cycle — you're in a completely different rhythm now.`;
           } else if (pLifeStage === "pregnancy_loss") {
-            stageInsight = `I'm so glad you're here 💚\n\nThere's no right timeline for this. Logan is switching into recovery mode — no cycle tracking, no pressure. I'll follow your lead on bleeding, energy, sleep, and how you're feeling.\n\nWhen you're ready to talk, I'm here. When you're not, that's okay too.`;
+            stageInsight = `I'm really glad you're here 💚\n\nThere's no right timeline for this. I've switched off cycle tracking and there's no pressure. I'll follow your lead on bleeding, energy, sleep and how you're feeling.\n\nWhen you want to talk, I'm here. When you don't, that's okay too.`;
           } else if (pLifeStage === "irregular") {
             stageInsight = `Here's your first personal insight 👇\n\n**Steady-state mode**\n\n- **Focus**: Sleep, protein, stress, and hydration — the levers that work no matter what your cycle is doing\n- **What to expect**: Without a predictable rhythm (irregular cycles or hormonal BC), symptoms tie more to lifestyle than phase\n${participant.anchor_symptom ? `- **Your anchor (${participant.anchor_symptom.toLowerCase()})**: I'll watch for what actually moves it — sleep, stress, food, training` : "- **Tip**: Hormonal BC can quietly deplete B vitamins, magnesium, and zinc — worth keeping an eye on"}\n\nNo phase predictions here. Just the patterns that show up in your day-to-day.`;
           } else {
