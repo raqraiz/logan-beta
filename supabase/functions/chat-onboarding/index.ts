@@ -216,7 +216,7 @@ const ONBOARDING_QUESTIONS = [
 
   {
     key: "symptoms",
-    message: "Now let's talk about what you feel most often — not just right now. Pick anything that sounds familiar.",
+    message: "Now let's talk about what you feel most often, not just right now. Pick anything that sounds familiar.",
     field: "typical_symptoms",
     parseType: "symptoms",
     inputType: "symptom_picker"
@@ -263,17 +263,20 @@ function makeShouldSkip(participant: any) {
   };
 }
 
-// Postpartum branch only: 1-based ordinal + total for the step counter.
+// Postpartum + pregnancy-loss branches: 1-based ordinal + total for the step counter.
 // General path keeps its existing (index-driven) counter untouched.
+const BRANCH_COUNTED_STAGES = ["postpartum", "pregnancy_loss"];
+
 function branchStepMeta(participant: any, stepIndex: number): Record<string, any> {
-  if (participant?.life_stage !== "postpartum") return {};
+  const stage = participant?.life_stage;
+  if (!BRANCH_COUNTED_STAGES.includes(stage)) return {};
   const skip = makeShouldSkip(participant);
   const applicable = ONBOARDING_QUESTIONS
     .map((q, i) => ({ q, i }))
     .filter(({ q, i }) => i < ONBOARDING_QUESTIONS.length - 1 && !skip(q));
   const ordinal = applicable.filter(({ i }) => i <= stepIndex).length;
   return {
-    branch: "postpartum",
+    branch: stage,
     branch_step: Math.max(ordinal, 1),
     branch_total: applicable.length,
     branch_labels: applicable.map(({ q }) => BRANCH_STEP_LABELS[q.key] || "")
@@ -284,6 +287,7 @@ const BRANCH_STEP_LABELS: Record<string, string> = {
   age: "Age",
   life_stage: "Stage",
   birth_date: "Birth date",
+  loss_date: "Loss date",
   feeding: "Feeding",
   cycle_return: "Cycle return",
   postpartum_bc: "Birth control",
