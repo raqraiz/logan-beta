@@ -215,8 +215,10 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
         subLabel = weeks === 1 ? "Week" : "Weeks";
       }
     } else {
-      displayNumber = "♡";
-      subLabel = "Healing";
+      // No loss date on file — never show a count. Fall back to today's date.
+      const now = new Date();
+      displayNumber = now.toLocaleDateString(undefined, { weekday: "short" });
+      subLabel = now.toLocaleDateString(undefined, { month: "short", day: "numeric" });
     }
   }
   if (lifeStage === "pregnant") {
