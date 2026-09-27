@@ -2045,8 +2045,24 @@ const Chat = () => {
                           ? { minDate: new Date(), maxDate: addWeeks(new Date(), 42) }
                           : message.metadata?.expecting_field === "postpartum_start_date"
                           ? { maxDate: new Date() }
+                          : message.metadata?.expecting_field === "loss_date"
+                          ? { maxDate: new Date() }
                           : {})}
                       />
+                      {message.metadata?.expecting_field === "loss_date" && (
+                        <div className="mt-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={isSending}
+                            onClick={() => sendOnboardingResponse("Skip — I'd rather not say")}
+                            className="text-muted-foreground"
+                          >
+                            Skip
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
 
