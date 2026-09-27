@@ -1,5 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import {
+  fetchActiveBoundaries,
+  buildBoundaryRuleBlock,
+  hasStageBoundary,
+  mentionsLoss,
+} from "../_shared/topicBoundaries.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -184,6 +190,10 @@ serve(async (req) => {
       ? `Recent symptom logs (most recent first): ${symptomLines.slice(0, 10).join("; ")}. Anything older than a week is a weak signal — hedge rather than assert a trend.`
       : "She has no recent symptom logs. Do not invent symptoms.";
 
+    // Active "don't bring up X" boundaries — absolute, enforced on this surface too.
+    const boundaries = await fetchActiveBoundaries(service, userId);
+    const stageSuppressed = hasStageBoundary(boundaries, lifeStage);
+
     let stageContext: string;
     if (lifeStage === "postpartum") {
       stageContext = `She is postpartum, ${postpartumWeeks ?? 0} weeks since birth (recovery stage: ${postpartumPhase}). She is NOT cycling. Never mention a menstrual cycle phase or cycle day.`;
@@ -194,7 +204,9 @@ serve(async (req) => {
     } else if (lifeStage === "pregnant") {
       stageContext = `She is pregnant. Do not name a menstrual cycle phase. Focus on safe, supportive guidance.`;
     } else if (lifeStage === "pregnancy_loss") {
-      stageContext = `She is recovering from a pregnancy loss. Be gentle, never minimize, never rush her timeline.`;
+      stageContext = stageSuppressed
+        ? `Do not name a menstrual cycle phase or day number. Keep everything neutral and everyday: sleep, energy, nourishment, movement, mood. Do NOT reference loss, grief, healing, recovery, or anything she has been through.`
+        : `She is recovering from a pregnancy loss. Be gentle, never minimize, never rush her timeline.`;
     } else {
       stageContext = `She is on Day ${cycleDay ?? 1} of a ${cycleLengthDays}-day cycle, in her ${phase} phase.`;
     }
@@ -244,7 +256,7 @@ serve(async (req) => {
     }
 
 
-    const systemPrompt = `You are Logan — a knowledgeable, grounded friend giving a woman two short lists for TODAY only.
+    const systemPrompt = `You are Logan — a knowledgeable, grounded friend giving a woman two short lists for TODAY only.${buildBoundaryRuleBlock(boundaries)}
 
 ${stageContext}
 ${anchorContext}
@@ -307,6 +319,23 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
 
     if (succeed.length < 2 || dontMessUp.length < 2) {
       return json({ error: "fallback_required" }, 422);
+    }
+
+    // Post-generation guard: strip any line that breaches an active loss boundary.
+    if (stageSuppressed && lifeStage === "pregnancy_loss") {
+      const before = [succeed, dontMessUp, succeedHim, dontMessUpHim].map((l) => l.length);
+      succeed = succeed.filter((t) => !mentionsLoss(t));
+      dontMessUp = dontMessUp.filter((t) => !mentionsLoss(t));
+      succeedHim = succeedHim.filter((t) => !mentionsLoss(t));
+      dontMessUpHim = dontMessUpHim.filter((t) => !mentionsLoss(t));
+      const after = [succeed, dontMessUp, succeedHim, dontMessUpHim].map((l) => l.length);
+      if (before.join() !== after.join()) {
+        console.warn("[boundary] stripped loss references from daily insights");
+      }
+      // Too little left to be useful — fall back to the static set rather than leak.
+      if (succeed.length < 2 || dontMessUp.length < 2) {
+        return json({ error: "fallback_required" }, 422);
+      }
     }
 
     succeed = succeed.slice(0, 4);

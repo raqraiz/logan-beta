@@ -3,6 +3,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
 import { calculateCycleInfo as sharedCalculateCycleInfo, isCycleStale } from "../_shared/cycleCalculations.ts";
 import { detectBcOrNoPeriod } from "../_shared/bcDetection.ts";
+import {
+  fetchActiveBoundaries,
+  buildBoundaryRuleBlock,
+  mayBeBoundaryRequest,
+  isValidStageKey,
+  type TopicBoundary,
+} from "../_shared/topicBoundaries.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -613,6 +620,76 @@ async function screenLibraryCandidates(
 }
 
 
+
+// --- Topic/behavior boundary extraction ("don't bring that up again") ---
+// Only ever called when the cheap pre-filter in _shared/topicBoundaries.ts
+// matches, so ordinary messages never pay for an extra model call.
+const BOUNDARY_EXTRACTION_TIMEOUT_MS = 7000;
+
+async function extractBoundaryViaLLM(
+  userMessage: string,
+  apiKey: string,
+): Promise<{ kind: "topic" | "behavior"; label: string; stage_key: string | null } | null> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), BOUNDARY_EXTRACTION_TIMEOUT_MS);
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        temperature: 0,
+        max_tokens: 200,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: [
+              "You decide whether a woman is asking her assistant to STOP mentioning a topic or STOP a behavior.",
+              'Return json: {"boundary": null} or {"boundary":{"kind":"topic|behavior","label":"...","stage_key":"..."|null}}.',
+              "kind 'topic' = don't bring up subject X. kind 'behavior' = don't do action Y (e.g. listing her past records).",
+              "label: her own terms, lowercase, 2-10 words, describing what to avoid.",
+              "stage_key: one of pregnancy_loss, pregnancy, postpartum, perimenopause, menopause when the topic IS that life stage; otherwise null.",
+              "Rules:",
+              "- Only return a boundary when she is clearly asking you to stop mentioning/doing something going forward.",
+              "- Return null for ordinary disagreement, corrections of fact, venting, or questions.",
+              "- Do NOT invent. null is the correct answer most of the time.",
+            ].join("\n"),
+          },
+          { role: "user", content: userMessage.slice(0, 1200) },
+        ],
+      }),
+    });
+    clearTimeout(timer);
+    if (!res.ok) {
+      console.warn("[boundary_extraction] gateway error", res.status);
+      return null;
+    }
+    const json = await res.json();
+    const raw = json?.choices?.[0]?.message?.content;
+    if (!raw) return null;
+    let parsed: any;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      const m = String(raw).match(/\{[\s\S]*\}/);
+      if (!m) return null;
+      parsed = JSON.parse(m[0]);
+    }
+    const b = parsed?.boundary;
+    if (!b || typeof b !== "object") return null;
+    const label = String(b.label ?? "").trim().slice(0, 120);
+    if (!label) return null;
+    const kind = b.kind === "behavior" ? "behavior" : "topic";
+    const stage_key = isValidStageKey(b.stage_key) ? b.stage_key : null;
+    return { kind, label, stage_key };
+  } catch (e) {
+    console.warn("[boundary_extraction] failed:", (e as Error)?.message);
+    return null;
+  }
+}
 
 // --- Pass 2: catalog-independent symptom extraction ---
 // The keyword list can only ever see the ~30 symptoms someone thought to add.
@@ -4189,6 +4266,55 @@ serve(async (req) => {
       );
     }
 
+    // --- Topic/behavior boundary capture ("don't bring that up again") ---
+    // No-write-no-claim: the reply may only confirm once the row is confirmed saved.
+    let boundarySaveState: "none" | "saved" | "failed" = "none";
+    let boundarySavedLabel = "";
+    if (mayBeBoundaryRequest(userMessage)) {
+      const detected = await extractBoundaryViaLLM(userMessage, lovableApiKey);
+      if (detected) {
+        // Best-effort link to the user message the client already persisted.
+        let sourceMessageId: string | null = null;
+        try {
+          const { data: srcMsg } = await supabase
+            .from("chat_messages")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("role", "user")
+            .eq("content", userMessage)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          sourceMessageId = srcMsg?.id ?? null;
+        } catch (_e) { /* source link is optional */ }
+
+        const { error: boundaryErr } = await supabase
+          .from("user_topic_boundaries")
+          .insert({
+            user_id: user.id,
+            kind: detected.kind,
+            label: detected.label,
+            stage_key: detected.stage_key,
+            source_message_id: sourceMessageId,
+          });
+
+        if (!boundaryErr) {
+          boundarySaveState = "saved";
+          boundarySavedLabel = detected.label;
+        } else if (boundaryErr.code === "23505") {
+          // uq_active_stage_boundary — an active boundary already exists. Saved.
+          boundarySaveState = "saved";
+          boundarySavedLabel = detected.label;
+        } else {
+          console.error("[boundary] insert failed:", boundaryErr.message);
+          boundarySaveState = "failed";
+        }
+      }
+    }
+    // --- End boundary capture ---
+
+    const activeBoundaries: TopicBoundary[] = await fetchActiveBoundaries(supabase, user.id);
+
     const backfillBlock = backfillConfirmation ? `\n\n${backfillConfirmation}\n` : "";
     const libraryBlock = libraryConfirmation ? `\n\n${libraryConfirmation}\n` : "";
 
@@ -4201,6 +4327,23 @@ serve(async (req) => {
     const emotionalFollowUp = isEmotionalFollowUp(userMessage, recentMessages as any);
     const emotionalContextActive = isEmotionalOrHeavyMessage(userMessage) || emotionalFollowUp;
     let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext + backfillBlock + libraryBlock + libraryGuidance, emotionalContextActive);
+
+    // Active boundaries — absolute, highest priority, applied before anything else.
+    if (activeBoundaries.length > 0) {
+      systemPrompt += buildBoundaryRuleBlock(activeBoundaries);
+    }
+
+    // No-write-no-claim for the boundary just requested in this message.
+    if (boundarySaveState === "saved") {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): She just asked you to stop bringing up "${boundarySavedLabel}". This has been SAVED permanently. Acknowledge it once, briefly and warmly (e.g. "Got it — I won't bring that up again"), without over-apologising or repeating the topic itself. Then answer whatever else she said.`;
+    } else if (boundarySaveState === "failed") {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): She asked you to stop bringing something up, but saving that preference FAILED. You must NOT promise that you'll remember or that it won't come up again. Acknowledge that you heard her, avoid the topic in this reply, and do not claim anything is saved.`;
+    }
+
+    // Cycle-day grounding: never let the model reuse a day number from the transcript.
+    if (!cycleInfo) {
+      systemPrompt += `\n\nCYCLE GROUNDING (ABSOLUTE): You do NOT have a current cycle day or phase for this user. NEVER state, guess, estimate, or infer a day number ("Day 30") or a phase name as her current state. NEVER reuse a day number or phase from earlier messages in this conversation — those are not live data. NEVER claim your count "follows the calendar" or is automatically accurate. If she asks what day or phase she is on, say plainly that cycle tracking isn't running for her right now and ask whether she'd like to log a period start date. You may still explain what phases mean in general.`;
+    }
     console.log("[prompt-mandates]", JSON.stringify({
       emotionalContextActive,
       emotionalFollowUp,
@@ -4551,6 +4694,27 @@ serve(async (req) => {
         }));
       }
     }
+
+    // NO-CYCLE GUARD: with no live cycle data, a stated "you're on Day N" or
+    // "you're in your luteal phase" can only have come from the transcript.
+    // Drop those sentences entirely rather than let a stale number persist.
+    if (!cycleInfo) {
+      const TODAY_CLAIM = /(?:^|(?<=[.!?]\s))[^.!?\n]*\b(?:you(?:'re| are)|you'?re currently|today is|that puts you|which puts you|right now you)\b[^.!?\n]*\b(?:day\s*#?\s*\d{1,2}|menstruation|menstrual phase|follicular|ovulation|ovulatory|luteal)\b[^.!?\n]*[.!?]/gi;
+      const beforeStrip = assistantMessage;
+      assistantMessage = assistantMessage.replace(TODAY_CLAIM, "").replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+      if (beforeStrip !== assistantMessage) {
+        console.warn("[no_cycle_day_claim_stripped]", JSON.stringify({
+          user_id: user?.id,
+          life_stage: participant?.life_stage ?? null,
+          user_message_preview: (userMessage || "").slice(0, 120),
+        }));
+      }
+      if (!assistantMessage.trim()) {
+        assistantMessage = "Cycle tracking isn't running for you right now, so I don't have a day or phase to give you. Want to log a period start date so I can pick it back up?";
+      }
+    }
+
+
 
 
     if (isCurrentSymptomQuestion || isCurrentSymptomNegation) {
