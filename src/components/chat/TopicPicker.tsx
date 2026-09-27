@@ -19,14 +19,21 @@ interface TopicPickerProps {
   isSubmitting: boolean;
   /** Adds the postpartum-only "Feeding & lactation" topic. General path leaves this unset. */
   includePostpartumTopic?: boolean;
-  /** Pregnancy-loss copy: swaps the phase-based Sleep description. */
-  pregnancyLoss?: boolean;
+  /** Life stage, used only to swap the Sleep & recovery description. */
+  lifeStage?: string;
 }
 
-export const TopicPicker = ({ onSubmit, isSubmitting, includePostpartumTopic, pregnancyLoss }: TopicPickerProps) => {
+export const TopicPicker = ({ onSubmit, isSubmitting, includePostpartumTopic, lifeStage }: TopicPickerProps) => {
   const [selected, setSelected] = useState<string[]>([]);
-  const baseTopics = pregnancyLoss
-    ? BASE_TOPICS.map(t => (t.id === "sleep" ? { ...t, description: "Rest strategies for right now" } : t))
+  const SLEEP_COPY: Record<string, string> = {
+    pregnancy_loss: "Rest strategies for right now",
+    pregnant: "Rest strategies for each trimester",
+    postpartum: "Rest strategies for right now",
+    menopause: "Rest strategies for this stage",
+  };
+  const sleepCopy = lifeStage ? SLEEP_COPY[lifeStage] : undefined;
+  const baseTopics = sleepCopy
+    ? BASE_TOPICS.map(t => (t.id === "sleep" ? { ...t, description: sleepCopy } : t))
     : BASE_TOPICS;
   const TOPICS = includePostpartumTopic ? [...baseTopics, POSTPARTUM_TOPIC] : baseTopics;
 
