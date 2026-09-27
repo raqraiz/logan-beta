@@ -3,7 +3,7 @@ import { useTrackFeature } from "@/hooks/useTrackFeature";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dumbbell, Brain, Heart, Utensils, TrendingUp, Loader2,
-  AlertTriangle, Zap, ChevronRight, Clock, ShieldAlert, Users
+  AlertTriangle, Zap, ChevronRight, Clock, ShieldAlert, Users, Moon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
@@ -571,14 +571,43 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
   const isNonCycling = cycleData?.lifeStage === "postpartum" || cycleData?.lifeStage === "menopause" || cycleData?.lifeStage === "pregnancy_loss" || cycleData?.lifeStage === "pregnant";
 
   // Stage boundary active: no stage label, count, or stage-specific guidance.
-  // No general non-cycling content exists yet, so only the heading shows.
+  // Show general wellness cards instead (copy approved verbatim).
   if (isNonCycling && hideStage) {
+    const GENERAL_CARDS = [
+      { key: "gen-movement", name: "Movement", title: "Move in whatever way feels good", Icon: Dumbbell, iconBg: "bg-primary/10", iconColor: "text-primary", dot: "bg-primary",
+        items: ["A walk counts. So does five minutes of stretching.", "If your body is asking for rest, that's a real answer."] },
+      { key: "gen-food", name: "Food", title: "Eat to feel steady", Icon: Utensils, iconBg: "bg-phase-luteal/10", iconColor: "text-phase-luteal", dot: "bg-phase-luteal",
+        items: ["Some protein early in the day helps keep energy more even.", "Keep water nearby and sip through the day.", "Something you simply enjoy counts too."] },
+      { key: "gen-sleep", name: "Sleep", title: "Protect your wind-down", Icon: Moon, iconBg: "bg-primary/10", iconColor: "text-primary", dot: "bg-primary",
+        items: ["Give yourself 20 minutes to land before bed.", "Put screens down a little earlier if you can.", "One rough night doesn't make a rough day."] },
+      { key: "gen-mood", name: "Mood", title: "Check in with yourself", Icon: Heart, iconBg: "bg-phase-follicular/10", iconColor: "text-phase-follicular", dot: "bg-phase-follicular",
+        items: ["Notice how you're feeling without needing to fix it.", "Lower the bar on one thing today.", "Reach out to someone who makes things feel lighter."] },
+    ];
     return (
       <div className="flex-1 overflow-y-auto pb-20">
         <div className="max-w-lg md:max-w-4xl mx-auto px-4 py-5 space-y-4">
           <div>
             <h2 className="font-display font-semibold text-lg text-foreground">Your Week</h2>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {GENERAL_CARDS.map(({ key, name, title, Icon, iconBg, iconColor, dot, items }) => (
+              <button key={key} onClick={() => toggle(key)} className="w-full rounded-xl border border-border/30 bg-card/50 overflow-hidden text-left transition-colors hover:bg-card/70">
+                <div className="flex items-center gap-3 px-4 py-3.5">
+                  <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", iconBg)}><Icon className={cn("w-5 h-5", iconColor)} /></div>
+                  <div className="flex-1 min-w-0"><p className="text-sm font-semibold text-foreground">{name}</p><p className="text-xs text-muted-foreground truncate">{title}</p></div>
+                  <ChevronRight className={cn("w-4 h-4 text-muted-foreground transition-transform", expandedSection === key && "rotate-90")} />
+                </div>
+                {expandedSection === key && (
+                  <div className="px-4 pb-4 space-y-3 border-t border-border/15 pt-3" onClick={(e) => e.stopPropagation()}>
+                    <ul className="space-y-1">{items.map(t => <li key={t} className="text-xs text-muted-foreground flex items-start gap-1.5"><span className={cn("mt-1 w-1.5 h-1.5 rounded-full shrink-0", dot)} />{t}</li>)}</ul>
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="max-w-lg">
+          <ReferralCard userId={userId} />
         </div>
       </div>
     );

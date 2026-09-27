@@ -5063,6 +5063,7 @@ serve(async (req) => {
         message: finalAssistantMessage,
         cycleInfo: cycleInfo,
         creditBalance,
+        boundarySaved: boundarySaveState === "saved",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
