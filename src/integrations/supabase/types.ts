@@ -1734,6 +1734,50 @@ export type Database = {
         }
         Relationships: []
       }
+      user_topic_boundaries: {
+        Row: {
+          active: boolean
+          created_at: string
+          deactivated_at: string | null
+          id: string
+          kind: string
+          label: string
+          source_message_id: string | null
+          stage_key: string | null
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          deactivated_at?: string | null
+          id?: string
+          kind: string
+          label: string
+          source_message_id?: string | null
+          stage_key?: string | null
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          deactivated_at?: string | null
+          id?: string
+          kind?: string
+          label?: string
+          source_message_id?: string | null
+          stage_key?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_topic_boundaries_source_message_id_fkey"
+            columns: ["source_message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       waitlist: {
         Row: {
           context: string | null
