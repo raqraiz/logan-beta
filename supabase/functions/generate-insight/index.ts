@@ -388,8 +388,9 @@ serve(async (req) => {
         profile?.full_name || "there",
         cycleInfo,
         participant,
-        recentMessages || [],
-        checkinMessages || []
+        safeRecentMessages,
+        checkinMessages || [],
+        boundaries,
       );
 
       let aiResult;
