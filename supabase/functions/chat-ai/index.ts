@@ -4695,6 +4695,27 @@ serve(async (req) => {
       }
     }
 
+    // NO-CYCLE GUARD: with no live cycle data, a stated "you're on Day N" or
+    // "you're in your luteal phase" can only have come from the transcript.
+    // Drop those sentences entirely rather than let a stale number persist.
+    if (!cycleInfo) {
+      const TODAY_CLAIM = /(?:^|(?<=[.!?]\s))[^.!?\n]*\b(?:you(?:'re| are)|you'?re currently|today is|that puts you|which puts you|right now you)\b[^.!?\n]*\b(?:day\s*#?\s*\d{1,2}|menstruation|menstrual phase|follicular|ovulation|ovulatory|luteal)\b[^.!?\n]*[.!?]/gi;
+      const beforeStrip = assistantMessage;
+      assistantMessage = assistantMessage.replace(TODAY_CLAIM, "").replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+      if (beforeStrip !== assistantMessage) {
+        console.warn("[no_cycle_day_claim_stripped]", JSON.stringify({
+          user_id: user?.id,
+          life_stage: participant?.life_stage ?? null,
+          user_message_preview: (userMessage || "").slice(0, 120),
+        }));
+      }
+      if (!assistantMessage.trim()) {
+        assistantMessage = "Cycle tracking isn't running for you right now, so I don't have a day or phase to give you. Want to log a period start date so I can pick it back up?";
+      }
+    }
+
+
+
 
     if (isCurrentSymptomQuestion || isCurrentSymptomNegation) {
       assistantMessage = stripFalseSymptomLoggingClaim(assistantMessage);
