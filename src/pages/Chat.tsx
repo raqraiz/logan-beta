@@ -25,6 +25,7 @@ import { AnchorPicker } from "@/components/chat/AnchorPicker";
 import { DatePickerInput } from "@/components/chat/DatePickerInput";
 import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 import { ChatCycleCircle, calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
+import { refreshStageBoundary } from "@/hooks/useStageBoundary";
 import { inferCycleLengthForDeclaredPhase, autoCycleLengthFromHistory } from "@/lib/cyclePhase";
 import { updateParticipant } from "@/lib/participantWrite";
 import { HormoneChart } from "@/components/chat/HormoneChart";
@@ -977,6 +978,8 @@ const Chat = () => {
       const { data, error } = await supabase.functions.invoke("chat-ai", {
         body: { userMessage: messageContent },
       });
+      // Boundary just saved: refresh the shared cache so Home, Plan and the ring update now.
+      if (data?.boundarySaved) void refreshStageBoundary();
 
       if (error) {
         console.error("AI chat error:", error);
