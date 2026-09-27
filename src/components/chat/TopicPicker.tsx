@@ -19,11 +19,16 @@ interface TopicPickerProps {
   isSubmitting: boolean;
   /** Adds the postpartum-only "Feeding & lactation" topic. General path leaves this unset. */
   includePostpartumTopic?: boolean;
+  /** Pregnancy-loss copy: swaps the phase-based Sleep description. */
+  pregnancyLoss?: boolean;
 }
 
-export const TopicPicker = ({ onSubmit, isSubmitting, includePostpartumTopic }: TopicPickerProps) => {
+export const TopicPicker = ({ onSubmit, isSubmitting, includePostpartumTopic, pregnancyLoss }: TopicPickerProps) => {
   const [selected, setSelected] = useState<string[]>([]);
-  const TOPICS = includePostpartumTopic ? [...BASE_TOPICS, POSTPARTUM_TOPIC] : BASE_TOPICS;
+  const baseTopics = pregnancyLoss
+    ? BASE_TOPICS.map(t => (t.id === "sleep" ? { ...t, description: "Rest strategies for right now" } : t))
+    : BASE_TOPICS;
+  const TOPICS = includePostpartumTopic ? [...baseTopics, POSTPARTUM_TOPIC] : baseTopics;
 
   const toggle = (id: string) => {
     setSelected(prev =>
