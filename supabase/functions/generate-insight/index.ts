@@ -615,8 +615,10 @@ function buildNonCyclingInsightPrompt(
   participant: Record<string, any>,
   lifeStage: string,
   recentMessages: { content: string; role: string }[],
-  checkinMessages: { content: string; metadata: any; created_at: string }[]
+  checkinMessages: { content: string; metadata: any; created_at: string }[],
+  boundaries: TopicBoundary[] = [],
 ): string {
+  const stageSuppressed = hasStageBoundary(boundaries, lifeStage);
   const firstName = userName.split(" ")[0];
   const age = participant.age || null;
   const anchorSymptom = participant.anchor_symptom;
