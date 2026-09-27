@@ -1,6 +1,7 @@
 import { type PhaseLengths, getPhaseLengthPrefs } from "@/lib/phaseLengths";
 import { calculateCycleInfoShared, isCycleStale } from "@/lib/cycleCalculations";
 import { getPostpartumTimeline } from "@/lib/postpartumTimeline";
+import { useStageBoundary, isStageHidden, stageKeyForLifeStage } from "@/hooks/useStageBoundary";
 
 type LifeStage = "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
 
@@ -501,11 +502,9 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
   }
   const hideStage = isStageHidden(stageKey, lifeStage);
   if (hideStage) {
-    const badgeStage = lifeStage === "pregnant" ? "pregnancy_loss" : lifeStage;
-    // Pregnant uses a dedicated circle; reuse the badge ring shape with neutral center.
     return (
       <LifeStageBadge
-        lifeStage={badgeStage as "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss"}
+        lifeStage={lifeStage as "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant"}
         size={size}
         neutral
       />
