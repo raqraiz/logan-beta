@@ -588,7 +588,7 @@ export function AnchorExplainerCard({ lifeStage }: { lifeStage?: string | null }
         {/* Explanation text */}
         <div className="flex-1 space-y-2 pt-1">
           <p className="text-xs text-muted-foreground leading-relaxed">
-            It's the <span className="text-foreground font-medium">one thing</span> that {lifeStage === "pregnancy_loss" ? "affects your day the most right now" : <>bothers you most{lifeStage === "postpartum" ? " in your hormonal pattern" : " each cycle"}</>}. Logan uses it as your main signal — so you should get a heads-up before it hits, instead of being blindsided.
+            It's the <span className="text-foreground font-medium">one thing</span> that {lifeStage === "pregnancy_loss" || lifeStage === "pregnant" || lifeStage === "menopause" ? "affects your day the most right now" : <>bothers you most{lifeStage === "postpartum" ? " in your hormonal pattern" : " each cycle"}</>}. {lifeStage === "pregnancy_loss" || lifeStage === "pregnant" ? "Logan uses it as your main signal, to notice what helps and what makes it harder." : "Logan uses it as your main signal, so you get a heads-up before it hits instead of being blindsided."}
           </p>
           <div className="bg-muted/30 rounded-lg p-2.5">
             <p className="text-[11px] text-foreground leading-snug">

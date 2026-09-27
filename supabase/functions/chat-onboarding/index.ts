@@ -749,11 +749,11 @@ serve(async (req) => {
 
         if (userLifeStage === "menopause" || userLifeStage === "perimenopause") {
           if (hasEmotional && hasPhysical) {
-            validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. You're getting hit on both sides — mind and body. In menopause, these signals can shift with sleep, stress, and changing hormones. That's what I'm here to help you track.`;
+            validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Got it, thanks for sharing that. In menopause, these signals can shift with sleep, stress, and changing hormones. That's what I'm here to help you track.`;
           } else if (hasEmotional) {
             validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Mood, focus, and sleep changes are real menopause signals — not a character flaw. Logan will watch for patterns without tying them to a cycle.`;
           } else if (hasPhysical) {
-            validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Your body is telling us where this stage is asking for support. We'll track what flares, what settles, and what helps.`;
+            validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Got it, thanks for sharing that. We'll track what flares, what settles, and what helps.`;
           } else {
             validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These patterns matter in menopause. Once you start noticing what drives them, they stop feeling random.`;
           }
@@ -769,17 +769,17 @@ serve(async (req) => {
             validationMsg = `${lossPrefix} These can be more connected to your hormones than you might think.`;
           }
         } else if (hasEmotional && hasPhysical) {
-          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. You're getting hit on both sides — mind and body. These shift in intensity across your cycle. That's what I'm here to help you track.`;
+          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. ${userLifeStage === "pregnant" ? "Got it, thanks for sharing that. Hormones change a lot during pregnancy, and that can show up in mood and in the body. I'm here to help you keep track of it." : userLifeStage === "postpartum" ? "Got it, thanks for sharing that. Hormones shift a lot after birth, and that can show up in mood and in the body. I'm here to help you keep track of it." : "Got it, thanks for sharing that. These shift in intensity across your cycle. That's what I'm here to help you track."}`;
         } else if (hasEmotional) {
-          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These are linked to a hormone called progesterone — it rises and falls across your cycle. You're not imagining it.`;
+          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. ${userLifeStage === "pregnant" ? "Progesterone and estrogen rise a lot during pregnancy, and that can affect mood. You're not imagining it." : userLifeStage === "postpartum" ? "Mood can be closely tied to hormones after birth, while they rebalance. You're not imagining it." : "These are linked to a hormone called progesterone — it rises and falls across your cycle. You're not imagining it."}`;
         } else if (hasPhysical) {
-          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Your body is telling you where it struggles most. ${userLifeStage === "postpartum" ? "These tend to follow your recovery and hormone rebuilding." : "These tend to follow your hormonal shifts across your cycle."}`;
+          validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Got it, thanks for sharing that. ${userLifeStage === "pregnant" ? "Pregnancy hormones can show up in all kinds of physical ways. I'll help you keep track of them." : userLifeStage === "postpartum" ? "These tend to follow your recovery and hormone rebuilding." : "These tend to follow your hormonal shifts across your cycle."}`;
         } else {
           validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These follow your hormonal pattern more closely than you might think. Once you start noticing when they hit, it stops being a surprise.`;
         }
 
         if (hasQuirky) {
-          validationMsg += " And yeah — the weird ones are real too. Hormones do strange things.";
+          validationMsg += " And yeah, the weird ones are real too. Hormones do strange things.";
         }
 
         const metadata: Record<string, any> = { insight_type: "symptom_validation" };
