@@ -146,7 +146,7 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
 }
 
 // Static badge for non-cycling/steady life stages (postpartum, menopause, irregular/on-the-pill, pregnancy loss, pregnant, or stale cycling)
-function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDate, pregnancyLmp, steadyReason, onHormonalBc }: { lifeStage: "postpartum" | "menopause" | "perimenopause" | "irregular" | "steady" | "pregnancy_loss" | "pregnant"; size: "sm" | "md"; postpartumStartDate?: string; lossDate?: string; dueDate?: string; pregnancyLmp?: string; steadyReason?: "pill" | "stale"; onHormonalBc?: boolean | null }) {
+function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDate, pregnancyLmp, steadyReason, onHormonalBc, neutral = false }: { lifeStage: "postpartum" | "menopause" | "perimenopause" | "irregular" | "steady" | "pregnancy_loss" | "pregnant"; size: "sm" | "md"; postpartumStartDate?: string; lossDate?: string; dueDate?: string; pregnancyLmp?: string; steadyReason?: "pill" | "stale"; onHormonalBc?: boolean | null; neutral?: boolean }) {
   const stageKey =
     lifeStage === "postpartum" ? "Postpartum" :
     lifeStage === "menopause" ? "Menopause" :
@@ -159,7 +159,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
       : lifeStage === "pregnant"
         ? { color: "text-emerald-300", ringColor: "stroke-emerald-300", hex: "#86D7B5" }
         : PHASE_STYLES[stageKey];
-  const label =
+  const stageLabel =
     lifeStage === "postpartum" ? "Postpartum" :
     lifeStage === "menopause" ? "Menopause" :
     lifeStage === "perimenopause" ? "Perimenopause" :
@@ -240,10 +240,18 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
       subLabel = "Pregnant";
     }
   }
+  // Stage boundary active: no stage count or stage wording — today's date only.
+  let label = stageLabel;
+  if (neutral) {
+    const now = new Date();
+    displayNumber = now.toLocaleDateString(undefined, { weekday: "short" });
+    subLabel = now.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    label = "";
+  }
   // Irregular / on-the-pill / steady: no day number, show a glyph instead.
   // Pill 💊 only for irregular users explicitly on hormonal BC; hourglass ⏳ for stale/overdue cycles.
   // Non-BC irregular users get the same neutral dot as steady non-stale users.
-  const showGlyph = lifeStage === "irregular" || lifeStage === "steady";
+  const showGlyph = !neutral && (lifeStage === "irregular" || lifeStage === "steady");
   const glyph =
     lifeStage === "irregular"
       ? onHormonalBc === true
