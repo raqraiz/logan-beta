@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Pencil, Trash2, Check, X, Plus, Sliders } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format, differenceInDays } from "date-fns";
+import { useStageBoundary, isStageHidden } from "@/hooks/useStageBoundary";
 import {
   LineChart,
   Line,
@@ -65,6 +66,8 @@ export function CycleAnalytics({
   dueDate,
   pregnancyLmp,
 }: CycleAnalyticsProps) {
+  const { stageKey: boundaryStageKey } = useStageBoundary();
+  const stageHidden = isStageHidden(boundaryStageKey, lifeStage);
   const [history, setHistory] = useState<CycleHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [participantId, setParticipantId] = useState<string | null>(null);
@@ -369,6 +372,22 @@ export function CycleAnalytics({
   const isPregnant = lifeStage === "pregnant";
 
   // Pregnancy variant: gestational week + trimester, LMP + Due Date. Hide cycle-specific stats.
+  // Stage boundary active: no pregnancy note, weeks or dates.
+  if (isPregnant && stageHidden) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-sm rounded-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg">Today</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
+          </p>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   if (isPregnant) {
     const today = new Date();
     let gestDays: number | null = null;

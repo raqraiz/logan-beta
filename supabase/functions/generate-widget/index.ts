@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
 import { calculateCycleInfo, isCycleStale } from "../_shared/cycleCalculations.ts";
+import { fetchActiveBoundaries, buildBoundaryRuleBlock, hasStageBoundary } from "../_shared/topicBoundaries.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -81,6 +82,7 @@ serve(async (req) => {
     let postpartumWeeks: number | null = null;
     let postpartumActive = false;
     let isStaleCycle = false;
+    let hasCycleInfo = false;
 
     if (userEmail) {
       const { data: participant } = await supabaseService
@@ -123,6 +125,7 @@ serve(async (req) => {
           cycleDay = info.cycleDay;
           phase = info.phase;
           isStaleCycle = isCycleStale(info.cycleDay, cycleLengthDays);
+          hasCycleInfo = true;
         }
       }
     }
@@ -135,8 +138,24 @@ serve(async (req) => {
       });
     }
 
+    // Boundaries ("don't bring up X") — same hard rule block as chat-ai.
+    const boundaryUserId = targetUserId || userData.user.id;
+    const boundaries = await fetchActiveBoundaries(supabaseService, boundaryUserId);
+    const stageKeyMap: Record<string, string> = {
+      pregnancy_loss: "pregnancy_loss", pregnant: "pregnancy", postpartum: "postpartum",
+      perimenopause: "perimenopause", menopause: "menopause",
+    };
+    const stageSuppressed = hasStageBoundary(boundaries, stageKeyMap[lifeStage] ?? null)
+      || (postpartumActive && hasStageBoundary(boundaries, "postpartum"));
+    const noCycleRule = `CYCLE GROUNDING (ABSOLUTE): You do NOT have a current cycle day or phase for this user. NEVER state, guess, estimate, or infer a day number or a phase name as her current state.`;
+
     let stageContext: string;
-    if (lifeStage === "postpartum") {
+    if (stageSuppressed) {
+      // No stage label at all when she's asked not to hear about it.
+      stageContext = hasCycleInfo && lifeStage !== "postpartum" && lifeStage !== "menopause" && lifeStage !== "irregular" && !isStaleCycle
+        ? `The user is on Day ${cycleDay} of ${cycleLengthDays} in their ${phase} phase. Frame guidance around general well-being: sleep, movement, food, mood.`
+        : `Frame guidance around general well-being: sleep, movement, food, mood. ${noCycleRule}`;
+    } else if (lifeStage === "postpartum") {
       const wk = postpartumWeeks ?? 0;
       stageContext = `The user is postpartum, currently ${wk} week${wk === 1 ? "" : "s"} since birth. They are NOT cycling. Do NOT mention any menstrual cycle phase (follicular, luteal, ovulation, menstruation). Frame guidance around postpartum recovery, healing, energy rebuild, sleep, and capacity at this specific week.`;
     } else if (lifeStage === "menopause") {
@@ -147,6 +166,8 @@ serve(async (req) => {
       stageContext = `The user's tracked period is overdue (more than two weeks past their expected cycle length of ${cycleLengthDays} days). We do NOT know what phase they are in right now. Do NOT name a phase or day number. Frame guidance around general well-being and suggest they update their last period date when it starts.`;
     } else if (postpartumActive) {
       stageContext = `The user is cycling (Day ${cycleDay} of ${cycleLengthDays}, ${phase} phase) AND still recovering postpartum (${postpartumWeeks ?? 0} weeks since birth). Blend both contexts.`;
+    } else if (!hasCycleInfo) {
+      stageContext = `Frame guidance around general well-being. ${noCycleRule}`;
     } else {
       stageContext = `The user is on Day ${cycleDay} of ${cycleLengthDays} in their ${phase} phase.`;
     }
@@ -173,7 +194,7 @@ serve(async (req) => {
 
 Generate a personalized insight based on the user's custom widget description below. Make it specific to their current state. Be warm but direct. No emojis. No fluff.
 
-OUTPUT FORMAT: ${formatInstruction}`;
+OUTPUT FORMAT: ${formatInstruction}${buildBoundaryRuleBlock(boundaries)}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
