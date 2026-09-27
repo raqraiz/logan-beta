@@ -156,6 +156,14 @@ const ONBOARDING_ECHO_LABELS: Record<string, string> = {
 
 const formatOnboardingEcho = (value: string) => ONBOARDING_ECHO_LABELS[value] ?? value;
 
+// Prefix for date answers, chosen by the field the step is collecting.
+const DATE_ECHO_PREFIXES: Record<string, string> = {
+  loss_date: "Loss date",
+  postpartum_start_date: "Birth date",
+  due_date: "Due date",
+  last_period_start: "Last period",
+};
+
 const Chat = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -333,7 +341,8 @@ const Chat = () => {
       setOnboardingStep(latestOnboardingMsg.metadata.onboarding_step);
       const md = latestOnboardingMsg.metadata;
       setOnboardingBranch(
-        md.branch === "postpartum" && typeof md.branch_step === "number" && typeof md.branch_total === "number"
+        (md.branch === "postpartum" || md.branch === "pregnancy_loss") &&
+        typeof md.branch_step === "number" && typeof md.branch_total === "number"
           ? { step: md.branch_step, total: md.branch_total, labels: Array.isArray(md.branch_labels) ? md.branch_labels : [] }
           : null
       );
@@ -1071,7 +1080,7 @@ const Chat = () => {
         : anchor 
           ? `Anchor symptom: ${anchor}`
           : date
-            ? `${lifeStage === "postpartum" ? "Birth date" : "Last period"}: ${format(date, "PPP")}`
+            ? displayLabel ?? `${lifeStage === "postpartum" ? "Birth date" : "Last period"}: ${format(date, "PPP")}`
             : displayLabel ?? formatOnboardingEcho(messageContent);
 
       if (!skipMessageInsert) {
@@ -1153,8 +1162,17 @@ const Chat = () => {
     sendOnboardingResponse(`Anchor: ${anchor}`, undefined, anchor);
   };
 
-  const handleDateSubmit = (date: Date) => {
-    sendOnboardingResponse(format(date, "PPP"), undefined, undefined, date);
+  const handleDateSubmit = (date: Date, expectingField?: string) => {
+    const prefix = DATE_ECHO_PREFIXES[expectingField ?? ""]
+      ?? (lifeStage === "postpartum" ? "Birth date" : "Last period");
+    sendOnboardingResponse(
+      format(date, "PPP"),
+      undefined,
+      undefined,
+      date,
+      false,
+      `${prefix}: ${format(date, "PPP")}`,
+    );
   };
 
   const handleTopicSubmit = (topics: string[]) => {
@@ -2039,7 +2057,7 @@ const Chat = () => {
                   {showInteractiveInput && inputType === "date_picker" && (
                     <div className={`mt-3 ${pickerBusyClass}`}>
                       <DatePickerInput
-                        onSubmit={handleDateSubmit}
+                        onSubmit={(date) => handleDateSubmit(date, message.metadata?.expecting_field)}
                         isSubmitting={isSending}
                         {...(message.metadata?.expecting_field === "due_date"
                           ? { minDate: new Date(), maxDate: addWeeks(new Date(), 42) }
@@ -2056,7 +2074,7 @@ const Chat = () => {
                             variant="ghost"
                             size="sm"
                             disabled={isSending}
-                            onClick={() => sendOnboardingResponse("Skip — I'd rather not say")}
+                            onClick={() => sendOnboardingResponse("Skip — I'd rather not say", undefined, undefined, undefined, false, "Skipped")}
                             className="text-muted-foreground"
                           >
                             Skip
@@ -2082,7 +2100,7 @@ const Chat = () => {
                         <button
                           key={option.value}
                           onClick={() => {
-                            sendOnboardingResponse(option.value);
+                            sendOnboardingResponse(option.value, undefined, undefined, undefined, false, option.label);
                             setLifeStage(option.value as "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant");
                           }}
                           disabled={isSending}
