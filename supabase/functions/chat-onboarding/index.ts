@@ -751,7 +751,7 @@ serve(async (req) => {
           if (hasEmotional && hasPhysical) {
             validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Got it, thanks for sharing that. In menopause, these signals can shift with sleep, stress, and changing hormones. That's what I'm here to help you track.`;
           } else if (hasEmotional) {
-            validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Mood, focus, and sleep changes are real menopause signals — not a character flaw. Logan will watch for patterns without tying them to a cycle.`;
+            validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Mood, focus, and sleep changes are real menopause signals, not a character flaw. Logan will watch for patterns without tying them to a cycle.`;
           } else if (hasPhysical) {
             validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Got it, thanks for sharing that. We'll track what flares, what settles, and what helps.`;
           } else {
