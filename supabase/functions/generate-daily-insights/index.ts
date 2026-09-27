@@ -322,20 +322,38 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
     }
 
     // Post-generation guard: strip any line that breaches an active loss boundary.
+    // If a list ends up too short, substitute neutral everyday tips (never an empty
+    // section, and never the client's static loss-themed fallback).
     if (stageSuppressed && lifeStage === "pregnancy_loss") {
-      const before = [succeed, dontMessUp, succeedHim, dontMessUpHim].map((l) => l.length);
-      succeed = succeed.filter((t) => !mentionsLoss(t));
-      dontMessUp = dontMessUp.filter((t) => !mentionsLoss(t));
-      succeedHim = succeedHim.filter((t) => !mentionsLoss(t));
-      dontMessUpHim = dontMessUpHim.filter((t) => !mentionsLoss(t));
-      const after = [succeed, dontMessUp, succeedHim, dontMessUpHim].map((l) => l.length);
-      if (before.join() !== after.join()) {
-        console.warn("[boundary] stripped loss references from daily insights");
-      }
-      // Too little left to be useful — fall back to the static set rather than leak.
-      if (succeed.length < 2 || dontMessUp.length < 2) {
-        return json({ error: "fallback_required" }, 422);
-      }
+      const NEUTRAL_SUCCEED = [
+        "Get outside for ten minutes of daylight before noon.",
+        "Eat a real breakfast with some protein in it.",
+        "Pick one small task and let finishing it be enough.",
+      ];
+      const NEUTRAL_DONTMESS = [
+        "Don't skip lunch because the day got busy.",
+        "Don't scroll in bed past your usual lights-out.",
+        "Don't pack your evening so full you can't rest.",
+      ];
+      const NEUTRAL_SUCCEED_HIM = [
+        "Handle dinner tonight without being asked.",
+        "Suggest a short walk together after work.",
+        "Ask what would make her evening easier, then do it.",
+      ];
+      const NEUTRAL_DONTMESS_HIM = [
+        "Don't make plans for her evening without checking first.",
+        "Don't leave the small chores for her to notice.",
+        "Don't push a conversation she doesn't feel like having.",
+      ];
+      const guard = (list: string[], fallback: string[]) => {
+        const kept = list.filter((t) => !mentionsLoss(t));
+        if (kept.length !== list.length) console.warn("[boundary] stripped loss references from daily insights");
+        return kept.length >= 2 ? kept : fallback;
+      };
+      succeed = guard(succeed, NEUTRAL_SUCCEED);
+      dontMessUp = guard(dontMessUp, NEUTRAL_DONTMESS);
+      succeedHim = guard(succeedHim, NEUTRAL_SUCCEED_HIM);
+      dontMessUpHim = guard(dontMessUpHim, NEUTRAL_DONTMESS_HIM);
     }
 
     succeed = succeed.slice(0, 4);

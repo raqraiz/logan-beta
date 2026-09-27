@@ -110,11 +110,31 @@ export function sanitizeRecentMessages<T extends { content?: string | null }>(me
 // ---------------------------------------------------------------------------
 // Cheap pre-filter for boundary intent (avoids a model call on every message)
 // ---------------------------------------------------------------------------
-const STOP_ANCHOR = /\b(stop|stopped|don'?t|dont|do not|quit|no more|never again|please don'?t|cut it out|enough)\b/i;
-const SPEECH_VERB = /\b(remind|reminding|reminder|mention|mentioning|bring(ing)? up|brought up|talk(ing)? about|say|saying|said|list|listing|reference|referencing|discuss(ing)?|raise|raising)\b/i;
+export function normalizeForBoundary(text: string): string {
+  return text
+    .replace(/[\u2018\u2019\u201B\u2032]/g, "'")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const STOP_ANCHOR = /\b(stop|don't|dont|do not|quit|no more|any more|anymore|enough with|please stop)\b/;
+const SPEECH_VERB = new RegExp(
+  [
+    "\\bremind(ing|ers?)?\\b",
+    "\\bmention(ing)?\\b",
+    "\\bbring(ing)?(\\s+\\S+){0,3}\\s+up\\b",
+    "\\bbrought(\\s+\\S+){0,3}\\s+up\\b",
+    "\\btalk(ing)? about\\b",
+    "\\bsay(ing)?\\b",
+    "\\blist(ing)?\\b",
+    "\\bkeep \\w+ing\\b",
+  ].join("|"),
+);
 
 export function mayBeBoundaryRequest(text: string | null | undefined): boolean {
   if (!text) return false;
   if (text.length > 600) return false;
-  return STOP_ANCHOR.test(text) && SPEECH_VERB.test(text);
+  const t = normalizeForBoundary(text);
+  return STOP_ANCHOR.test(t) && SPEECH_VERB.test(t);
 }
