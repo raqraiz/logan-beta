@@ -223,14 +223,14 @@ const ONBOARDING_QUESTIONS = [
   },
   {
     key: "anchor_symptom",
-    message: "Which one disrupts your life the most? This becomes your anchor — the signal Logan watches most closely.",
+    message: "Which one disrupts your life the most? This becomes your anchor, the signal Logan watches most closely.",
     field: "anchor_symptom",
     parseType: "anchor",
     inputType: "anchor_picker"
   },
   {
     key: "topics",
-    message: "Last one — what areas do you want Logan to focus on? Pick as many as you like.",
+    message: "Last one: what areas do you want Logan to focus on? Pick as many as you like.",
     field: "goals",
     parseType: "topics",
     inputType: "topic_picker"
@@ -756,6 +756,17 @@ serve(async (req) => {
             validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Your body is telling us where this stage is asking for support. We'll track what flares, what settles, and what helps.`;
           } else {
             validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. These patterns matter in menopause. Once you start noticing what drives them, they stop feeling random.`;
+          }
+        } else if (userLifeStage === "pregnancy_loss") {
+          const lossPrefix = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. Got it, thanks for sharing that.`;
+          if (hasEmotional && hasPhysical) {
+            validationMsg = `${lossPrefix} Hormones can shift a lot after a loss, and that can show up in mood and in the body. I'm here to help you keep track of it.`;
+          } else if (hasEmotional) {
+            validationMsg = `${lossPrefix} Mood can be closely tied to hormones like progesterone and estrogen, especially after a loss. You're not imagining it.`;
+          } else if (hasPhysical) {
+            validationMsg = `${lossPrefix} Hormonal changes after a loss can show up physically. I'll help you keep track of it.`;
+          } else {
+            validationMsg = `${lossPrefix} These can be more connected to your hormones than you might think.`;
           }
         } else if (hasEmotional && hasPhysical) {
           validationMsg = `${symptomList.join(", ")}${selectedSymptoms.length > 3 ? ` and ${selectedSymptoms.length - 3} more` : ""}. You're getting hit on both sides — mind and body. These shift in intensity across your cycle. That's what I'm here to help you track.`;

@@ -2161,6 +2161,7 @@ const Chat = () => {
                         onSubmit={handleTopicSubmit}
                         isSubmitting={isSending}
                         includePostpartumTopic={message.metadata?.branch === "postpartum"}
+                        pregnancyLoss={lifeStage === "pregnancy_loss"}
                       />
                     </div>
                   )}
