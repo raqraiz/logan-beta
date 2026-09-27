@@ -256,7 +256,7 @@ serve(async (req) => {
     }
 
 
-    const systemPrompt = `You are Logan — a knowledgeable, grounded friend giving a woman two short lists for TODAY only.
+    const systemPrompt = `You are Logan — a knowledgeable, grounded friend giving a woman two short lists for TODAY only.${buildBoundaryRuleBlock(boundaries)}
 
 ${stageContext}
 ${anchorContext}
@@ -319,6 +319,23 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
 
     if (succeed.length < 2 || dontMessUp.length < 2) {
       return json({ error: "fallback_required" }, 422);
+    }
+
+    // Post-generation guard: strip any line that breaches an active loss boundary.
+    if (stageSuppressed && lifeStage === "pregnancy_loss") {
+      const before = [succeed, dontMessUp, succeedHim, dontMessUpHim].map((l) => l.length);
+      succeed = succeed.filter((t) => !mentionsLoss(t));
+      dontMessUp = dontMessUp.filter((t) => !mentionsLoss(t));
+      succeedHim = succeedHim.filter((t) => !mentionsLoss(t));
+      dontMessUpHim = dontMessUpHim.filter((t) => !mentionsLoss(t));
+      const after = [succeed, dontMessUp, succeedHim, dontMessUpHim].map((l) => l.length);
+      if (before.join() !== after.join()) {
+        console.warn("[boundary] stripped loss references from daily insights");
+      }
+      // Too little left to be useful — fall back to the static set rather than leak.
+      if (succeed.length < 2 || dontMessUp.length < 2) {
+        return json({ error: "fallback_required" }, 422);
+      }
     }
 
     succeed = succeed.slice(0, 4);
