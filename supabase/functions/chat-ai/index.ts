@@ -3,6 +3,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
 import { calculateCycleInfo as sharedCalculateCycleInfo, isCycleStale } from "../_shared/cycleCalculations.ts";
 import { detectBcOrNoPeriod } from "../_shared/bcDetection.ts";
+import {
+  fetchActiveBoundaries,
+  buildBoundaryRuleBlock,
+  mayBeBoundaryRequest,
+  isValidStageKey,
+  type TopicBoundary,
+} from "../_shared/topicBoundaries.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -613,6 +620,76 @@ async function screenLibraryCandidates(
 }
 
 
+
+// --- Topic/behavior boundary extraction ("don't bring that up again") ---
+// Only ever called when the cheap pre-filter in _shared/topicBoundaries.ts
+// matches, so ordinary messages never pay for an extra model call.
+const BOUNDARY_EXTRACTION_TIMEOUT_MS = 7000;
+
+async function extractBoundaryViaLLM(
+  userMessage: string,
+  apiKey: string,
+): Promise<{ kind: "topic" | "behavior"; label: string; stage_key: string | null } | null> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), BOUNDARY_EXTRACTION_TIMEOUT_MS);
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        temperature: 0,
+        max_tokens: 200,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: [
+              "You decide whether a woman is asking her assistant to STOP mentioning a topic or STOP a behavior.",
+              'Return json: {"boundary": null} or {"boundary":{"kind":"topic|behavior","label":"...","stage_key":"..."|null}}.',
+              "kind 'topic' = don't bring up subject X. kind 'behavior' = don't do action Y (e.g. listing her past records).",
+              "label: her own terms, lowercase, 2-10 words, describing what to avoid.",
+              "stage_key: one of pregnancy_loss, pregnancy, postpartum, perimenopause, menopause when the topic IS that life stage; otherwise null.",
+              "Rules:",
+              "- Only return a boundary when she is clearly asking you to stop mentioning/doing something going forward.",
+              "- Return null for ordinary disagreement, corrections of fact, venting, or questions.",
+              "- Do NOT invent. null is the correct answer most of the time.",
+            ].join("\n"),
+          },
+          { role: "user", content: userMessage.slice(0, 1200) },
+        ],
+      }),
+    });
+    clearTimeout(timer);
+    if (!res.ok) {
+      console.warn("[boundary_extraction] gateway error", res.status);
+      return null;
+    }
+    const json = await res.json();
+    const raw = json?.choices?.[0]?.message?.content;
+    if (!raw) return null;
+    let parsed: any;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      const m = String(raw).match(/\{[\s\S]*\}/);
+      if (!m) return null;
+      parsed = JSON.parse(m[0]);
+    }
+    const b = parsed?.boundary;
+    if (!b || typeof b !== "object") return null;
+    const label = String(b.label ?? "").trim().slice(0, 120);
+    if (!label) return null;
+    const kind = b.kind === "behavior" ? "behavior" : "topic";
+    const stage_key = isValidStageKey(b.stage_key) ? b.stage_key : null;
+    return { kind, label, stage_key };
+  } catch (e) {
+    console.warn("[boundary_extraction] failed:", (e as Error)?.message);
+    return null;
+  }
+}
 
 // --- Pass 2: catalog-independent symptom extraction ---
 // The keyword list can only ever see the ~30 symptoms someone thought to add.
