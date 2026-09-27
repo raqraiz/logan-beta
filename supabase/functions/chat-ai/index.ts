@@ -4327,6 +4327,23 @@ serve(async (req) => {
     const emotionalFollowUp = isEmotionalFollowUp(userMessage, recentMessages as any);
     const emotionalContextActive = isEmotionalOrHeavyMessage(userMessage) || emotionalFollowUp;
     let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext + backfillBlock + libraryBlock + libraryGuidance, emotionalContextActive);
+
+    // Active boundaries — absolute, highest priority, applied before anything else.
+    if (activeBoundaries.length > 0) {
+      systemPrompt += buildBoundaryRuleBlock(activeBoundaries);
+    }
+
+    // No-write-no-claim for the boundary just requested in this message.
+    if (boundarySaveState === "saved") {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): She just asked you to stop bringing up "${boundarySavedLabel}". This has been SAVED permanently. Acknowledge it once, briefly and warmly (e.g. "Got it — I won't bring that up again"), without over-apologising or repeating the topic itself. Then answer whatever else she said.`;
+    } else if (boundarySaveState === "failed") {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): She asked you to stop bringing something up, but saving that preference FAILED. You must NOT promise that you'll remember or that it won't come up again. Acknowledge that you heard her, avoid the topic in this reply, and do not claim anything is saved.`;
+    }
+
+    // Cycle-day grounding: never let the model reuse a day number from the transcript.
+    if (!cycleInfo) {
+      systemPrompt += `\n\nCYCLE GROUNDING (ABSOLUTE): You do NOT have a current cycle day or phase for this user. NEVER state, guess, estimate, or infer a day number ("Day 30") or a phase name as her current state. NEVER reuse a day number or phase from earlier messages in this conversation — those are not live data. NEVER claim your count "follows the calendar" or is automatically accurate. If she asks what day or phase she is on, say plainly that cycle tracking isn't running for her right now and ask whether she'd like to log a period start date. You may still explain what phases mean in general.`;
+    }
     console.log("[prompt-mandates]", JSON.stringify({
       emotionalContextActive,
       emotionalFollowUp,
