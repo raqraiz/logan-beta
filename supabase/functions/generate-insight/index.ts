@@ -699,7 +699,9 @@ function buildNonCyclingInsightPrompt(
         : lifeStage === "pregnant"
           ? `${firstName} is **pregnant**${timelineContext ? ` — ${timelineContext}` : ""}. Phase-specific guidance: ${pregnancyPhaseGuidance} DO NOT reference cycle phases, ovulation, or period timing. DO NOT use menopause, perimenopause, or postpartum framing. Center pregnancy body-changes, emotional shifts, nutrition, sleep, and mental preparation for the specific trimester.`
           : lifeStage === "pregnancy_loss"
-            ? `${firstName} is navigating **pregnancy loss**. Lead with grief-aware, empathetic witnessing. Do NOT rush to cycle tracking, milestones, or "silver linings." Do NOT reference ovulation, phases, or menopause framing. Acknowledge the loss, name that the body is also recovering (hormones drop, bleeding, milk changes possible), and offer gentle presence — not fixes.`
+            ? (stageSuppressed
+                ? `${firstName} has asked you NOT to bring up her pregnancy loss. Write a warm, neutral, everyday opener: energy, sleep, mood, nourishment, movement. Do NOT mention loss, grief, miscarriage, healing, recovery, "what you've been through", or her body recovering from anything. Do NOT reference ovulation, cycle phases, or menopause framing either. Just be an ordinary, warm presence.`
+                : `${firstName} is navigating **pregnancy loss**. Lead with grief-aware, empathetic witnessing. Do NOT rush to cycle tracking, milestones, or "silver linings." Do NOT reference ovulation, phases, or menopause framing. Acknowledge the loss, name that the body is also recovering (hormones drop, bleeding, milk changes possible), and offer gentle presence — not fixes.`)
             : lifeStage === "irregular"
               ? (onHormonalBc === true
                   ? `${firstName} is on **hormonal birth control** (IUD, pill, implant, ring, or patch). Natural cycle phases don't apply — her hormones are externally modulated. DO NOT use menopause, perimenopause, postpartum, or pregnancy framing. DO NOT confidently quote a specific cycle phase. Focus on steady-state levers: sleep, protein, strength, stress, hydration, and micronutrients hormonal BC can deplete (B6, B12, magnesium, zinc, folate). Acknowledge symptoms in terms of daily patterns, not phase predictions.`
@@ -715,7 +717,7 @@ function buildNonCyclingInsightPrompt(
     ? `\n- NO UTERUS (hysterectomy, ovaries intact): She is NOT menopausal — her ovaries still cycle, so hormone patterns still apply. But she will NEVER bleed again: never ask for, reference, or imply a period date, Day 1, a late/due period, or "when your period starts". Any cycle day or phase here is an ESTIMATE with no bleed anchor — hedge it ("roughly", "estimated") and lean on her tracked symptoms over calendar timing.`
     : "";
 
-  return `You are Logan. You're ${firstName}'s companion through her ${stageLabel.toLowerCase()} journey. You're not clinical — you're the friend who just gets it.
+  return `You are Logan. You're ${firstName}'s companion through her ${stageLabel.toLowerCase()} journey. You're not clinical — you're the friend who just gets it.${buildBoundaryRuleBlock(boundaries)}
 
 CONTEXT:
 - Life stage: **${stageLabel}**
@@ -736,13 +738,17 @@ ${checkinMessages.length > 0 ? checkinMessages.map(m => {
   }).join("\n") : "None yet"}
 
 RULES:
-- STAGE AUTHORITY: The life stage above is **${stageLabel}** and is authoritative. It is IMPOSSIBLE for this response to use framing from any other stage. Never mention menopause for a pregnant/postpartum/perimenopause user. Never mention pregnancy for a menopause user. Never mention cycle phases or ovulation for pregnant, pregnancy_loss, postpartum, or menopause users.
+${stageSuppressed
+  ? `- STAGE AUTHORITY IS SUSPENDED: She has asked you not to bring up this life stage. Do NOT name it, allude to it, or frame the opener around it. Do NOT substitute another stage's framing either. Write a neutral, warm, everyday opener.`
+  : `- STAGE AUTHORITY: The life stage above is **${stageLabel}** and is authoritative. It is IMPOSSIBLE for this response to use framing from any other stage. Never mention menopause for a pregnant/postpartum/perimenopause user. Never mention pregnancy for a menopause user. Never mention cycle phases or ovulation for pregnant, pregnancy_loss, postpartum, or menopause users.`}
 - Lead with empathy and validation. ${stageLabel} is not a deficit — it's a transition with its own strengths.
 - For postpartum: match the EXACT phase guidance above. Acute/early phases = healing, rest, gentle pelvic floor. Rebuilding+ = strength, capacity, identity — NOT "healing/recovery" framing. Never prescribe. Never guilt.
 - For perimenopause: she is STILL CYCLING. Never call her menopausal. Acknowledge pattern shifts, sharper swings, and new signals (hot flashes, sleep, mood). Perimenopause ≠ menopause.
 - For menopause: focus on adaptation, strength preservation, and reframing the narrative. Only use menopause framing when life stage is actually "menopause".
 - For pregnancy: match the EXACT trimester guidance above. Center pregnancy-specific body, mind, nutrition, and prep. NEVER use menopause, perimenopause, or postpartum framing. NEVER reference cycle phases or ovulation.
-- For pregnancy loss: lead with grief-aware witnessing. Never rush to cycle tracking or "next steps." NEVER use cycle-phase, menopause, or generic postpartum framing.
+${stageSuppressed && lifeStage === "pregnancy_loss"
+  ? `- Pregnancy loss must NOT be referenced at all in this message — no grief language, no "healing", no "what you've been through". This overrides every other instruction.`
+  : `- For pregnancy loss: lead with grief-aware witnessing. Never rush to cycle tracking or "next steps." NEVER use cycle-phase, menopause, or generic postpartum framing.`}
 - NEVER reference cycle phases, ovulation, or period timing for menopause, postpartum, pregnant, or pregnancy_loss users (perimenopause users still cycle, so cycle references are fine for them).
 - For irregular / hormonal BC: never use menopause, perimenopause, postpartum, or pregnancy framing. Do NOT confidently assign a cycle phase. Focus on steady-state levers (sleep, protein, strength, stress, micronutrients B6/B12/magnesium/zinc/folate).
 - NEVER assume breastfeeding status unless the user has explicitly mentioned it.
