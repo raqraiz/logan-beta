@@ -200,6 +200,12 @@ serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(12);
 
+    // Active "don't bring up X" boundaries — absolute, enforced on every surface.
+    const boundaries = await fetchActiveBoundaries(supabase, user.id);
+    // Strip prior boundary disputes / apologies out of the context we feed back in.
+    const safeRecentMessages = sanitizeRecentMessages(recentMessages || []);
+    const stageSuppressed = hasStageBoundary(boundaries, userLifeStage);
+
     // For non-cycling users, generate stage-specific insights.
     // Perimenopause users are still cycling — route them through the cycling path.
     if (userLifeStage !== "cycling" && userLifeStage !== "perimenopause") {
@@ -207,8 +213,9 @@ serve(async (req) => {
         profile?.full_name || "there",
         participant,
         userLifeStage,
-        recentMessages || [],
-        checkinMessages || []
+        safeRecentMessages,
+        checkinMessages || [],
+        boundaries,
       );
 
       let aiResult;
@@ -229,7 +236,32 @@ serve(async (req) => {
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      const { insight, question, conversationStarters, cheatSheet } = aiResult;
+      let { insight, question, conversationStarters, cheatSheet } = aiResult;
+
+      // Post-generation guard: a loss boundary must never leak into the opener.
+      if (stageSuppressed && userLifeStage === "pregnancy_loss" && mentionsLoss(insight)) {
+        console.warn("Loss boundary violated in generated opener — regenerating once");
+        try {
+          const retry = await generateAIInsight(
+            Deno.env.get("LOVABLE_API_KEY")!,
+            prompt + "\n\nYOUR PREVIOUS ATTEMPT VIOLATED THE USER BOUNDARY. Rewrite with zero reference to loss, grief, miscarriage, or healing from loss.",
+          );
+          if (!mentionsLoss(retry.insight)) {
+            insight = retry.insight;
+            question = retry.question;
+            conversationStarters = retry.conversationStarters;
+            cheatSheet = retry.cheatSheet;
+          } else {
+            throw new Error("retry still violated boundary");
+          }
+        } catch {
+          console.warn("Falling back to neutral opener after boundary violation");
+          insight = "Morning. Here for whatever today looks like.";
+          question = "How's your energy right now?";
+          conversationStarters = ["Pretty good", "Kind of flat", "Tell me more"];
+          cheatSheet = null;
+        }
+      }
 
       await supabase.from("chat_messages").update({
         content: insight,
