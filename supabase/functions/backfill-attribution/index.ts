@@ -135,8 +135,25 @@ Deno.serve(async (req) => {
     paths.push("inline_match");
   }
 
+  // Signup metadata candidate — captured at signUp() and stored server-side in
+  // auth.users, so it survives cleared localStorage and cross-browser email
+  // confirmation. Ranks just below the live inline payload.
+  const metaAttribution = (user.user_metadata?.logan_attribution_v1 ??
+    null) as InlineAttribution | null;
+  const metaInline = sanitizeInline(metaAttribution ?? undefined);
+  if (Object.values(metaInline).some((v) => v)) {
+    candidates.push({ ...metaInline, landing_at: truncate(metaAttribution?.landing_at, 64) });
+    paths.push("user_metadata_match");
+  }
+
+  const metaAnonId = user.user_metadata?.logan_anon_id_v1;
+  const anonId = isUuid(body.anon_id)
+    ? body.anon_id
+    : (isUuid(metaAnonId) ? metaAnonId : undefined);
+
   // anon_id candidates — also link events to this user for future analysis.
-  if (isUuid(body.anon_id)) {
+  if (isUuid(anonId)) {
+    body.anon_id = anonId;
     // Link any unlinked events for this anon_id to the user.
     await admin
       .from("attribution_events")
