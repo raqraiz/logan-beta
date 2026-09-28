@@ -131,16 +131,28 @@ export const AttributionTab = () => {
       : groupBy === "referred_by" ? "utm_source"
       : "utm_source";
 
-    const resolve = (key: keyof Signup, val: string | null): string => {
+    const resolve = (key: keyof Signup, val: string | null, row: Signup): string => {
       if (key === "referred_by") return val ? (referrerMap[val] ?? val) : NONE;
-      return display(val);
+      const shown = display(val);
+      if (shown === NONE && (key === "utm_source" || key === "utm_medium")) {
+        const cls = classifyReferrer(row.referrer);
+        if (cls) return key === "utm_source" ? cls.source : "organic";
+      }
+      return shown;
     };
 
     for (const r of rows) {
-      const primary = resolve(groupBy, r[groupBy] as string | null);
-      let secondary = resolve(secondaryKey, r[secondaryKey] as string | null);
+      const primary = resolve(groupBy, r[groupBy] as string | null, r);
+      let secondary = resolve(secondaryKey, r[secondaryKey] as string | null, r);
       if (groupBy === "utm_source" && display(r.utm_source).toLowerCase() === "referral" && r.referred_by) {
         secondary = referrerMap[r.referred_by] ?? r.referred_by;
+      }
+      // For untagged search/email arrivals, break down by which engine or app.
+      if (!r.utm_source?.trim()) {
+        const cls = classifyReferrer(r.referrer);
+        if (cls && (primary === ORGANIC || primary === EMAIL_APP || primary === "organic")) {
+          secondary = cls.detail;
+        }
       }
       if (!byPrimary.has(primary)) byPrimary.set(primary, { primary, total: 0, breakdown: new Map() });
       const entry = byPrimary.get(primary)!;
