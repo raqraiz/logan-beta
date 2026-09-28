@@ -306,8 +306,16 @@ export const AttributionTab = () => {
                       {new Date(r.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-sm">{r.email ?? "—"}</TableCell>
-                    <TableCell className="text-sm">{display(r.utm_source)}</TableCell>
-                    <TableCell className="text-sm">{display(r.utm_medium)}</TableCell>
+                    <TableCell className="text-sm">
+                      {display(r.utm_source) === NONE
+                        ? (classifyReferrer(r.referrer)?.source ?? NONE)
+                        : display(r.utm_source)}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {display(r.utm_medium) === NONE && classifyReferrer(r.referrer)
+                        ? "organic"
+                        : display(r.utm_medium)}
+                    </TableCell>
                     <TableCell className="text-sm">{display(r.utm_campaign)}</TableCell>
                     <TableCell className="text-sm">
                       {r.referred_by ? (referrerMap[r.referred_by] ?? "…") : "—"}
