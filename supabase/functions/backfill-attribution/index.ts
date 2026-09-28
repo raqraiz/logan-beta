@@ -210,6 +210,11 @@ Deno.serve(async (req) => {
     const inlineRef = typeof body.attribution?.ref_code === "string" ? body.attribution.ref_code.trim().toUpperCase() : "";
     if (inlineRef && withinRefWindow(body.attribution?.landing_at ?? null)) refCandidates.push(inlineRef);
 
+    // Referral code stashed in signup metadata (survives cleared localStorage).
+    const metaRef = typeof metaAttribution?.ref_code === "string" ? metaAttribution.ref_code.trim().toUpperCase() : "";
+    if (metaRef && withinRefWindow(metaAttribution?.landing_at ?? null)) refCandidates.push(metaRef);
+
+
     if (isUuid(body.anon_id)) {
       const { data: refEvent } = await admin
         .from("attribution_events")
