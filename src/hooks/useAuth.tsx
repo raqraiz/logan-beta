@@ -18,33 +18,46 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const ATTRIBUTION_COLUMNS = [
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_term",
+  "utm_content",
+  "referrer",
+  "landing_path",
+  "landing_at",
+] as const;
+
 const ensureProfile = async (user: User) => {
   const { data: existingProfile } = await supabase
     .from("profiles")
-    .select("id")
+    .select(
+      "id, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_path, landing_at"
+    )
     .eq("id", user.id)
     .maybeSingle();
 
-  if (!existingProfile) {
-    // Strip ref_code — it's not a column on profiles; it's resolved to
-    // referred_by by the backfill-attribution edge function.
-    // Priority: user_metadata (captured at signUp, survives cross-browser
-    // email confirmation) > localStorage (same-browser) > backfill (later).
-    const metaAttribution = getAttributionFromUserMetadata(user.user_metadata);
-    const localAttribution = getAttribution();
-    if (
-      import.meta.env.DEV &&
-      metaAttribution?.utm_source &&
-      localAttribution?.utm_source &&
-      metaAttribution.utm_source !== localAttribution.utm_source
-    ) {
-      console.warn(
-        `attribution conflict: user_metadata=${metaAttribution.utm_source} localStorage=${localAttribution.utm_source}`
-      );
-    }
-    const attribution = metaAttribution ?? localAttribution;
-    const { ref_code: _refCode, ...attributionForProfile } = attribution ?? {};
+  // Strip ref_code — it's not a column on profiles; it's resolved to
+  // referred_by by the backfill-attribution edge function.
+  // Priority: user_metadata (captured at signUp, survives cross-browser
+  // email confirmation) > localStorage (same-browser) > backfill (later).
+  const metaAttribution = getAttributionFromUserMetadata(user.user_metadata);
+  const localAttribution = getAttribution();
+  if (
+    import.meta.env.DEV &&
+    metaAttribution?.utm_source &&
+    localAttribution?.utm_source &&
+    metaAttribution.utm_source !== localAttribution.utm_source
+  ) {
+    console.warn(
+      `attribution conflict: user_metadata=${metaAttribution.utm_source} localStorage=${localAttribution.utm_source}`
+    );
+  }
+  const attribution = metaAttribution ?? localAttribution;
+  const { ref_code: _refCode, ...attributionForProfile } = attribution ?? {};
 
+  if (!existingProfile) {
     const { error } = await supabase.from("profiles").upsert(
       {
         id: user.id,
@@ -57,6 +70,28 @@ const ensureProfile = async (user: User) => {
     );
     if (error) {
       console.error("ensureProfile upsert failed:", error);
+    }
+    return;
+  }
+
+  // A profile row can already exist before this runs — chat-onboarding creates
+  // an early shell (id/email/full_name). Don't skip attribution in that case:
+  // fill only the columns that are still NULL (first-touch preserved).
+  const patch: Record<string, string> = {};
+  for (const col of ATTRIBUTION_COLUMNS) {
+    const existingValue = (existingProfile as Record<string, unknown>)[col];
+    const incoming = (attributionForProfile as Record<string, unknown>)[col];
+    if (!existingValue && typeof incoming === "string" && incoming) {
+      patch[col] = incoming;
+    }
+  }
+  if (Object.keys(patch).length > 0) {
+    const { error } = await supabase
+      .from("profiles")
+      .update(patch)
+      .eq("id", user.id);
+    if (error) {
+      console.error("ensureProfile attribution patch failed:", error);
     }
   }
 };

@@ -401,8 +401,27 @@ serve(async (req) => {
       // Best-effort backfill so downstream code has the real name.
       if (metaFullName) {
         if (!profile) {
+          // Carry attribution captured at signup into the shell row. Without
+          // this the shell exists with NULL attribution and later writers skip
+          // it, leaving real campaigns/referrals stuck in auth metadata.
+          const signupAttribution =
+            (user.user_metadata?.logan_attribution_v1 as Record<string, unknown> | undefined) ?? {};
+          const attrColumns = [
+            "utm_source", "utm_medium", "utm_campaign", "utm_term",
+            "utm_content", "referrer", "landing_path", "landing_at",
+          ] as const;
+          const attrForProfile: Record<string, string> = {};
+          for (const col of attrColumns) {
+            const v = signupAttribution[col];
+            if (typeof v === "string" && v.trim()) attrForProfile[col] = v.trim().slice(0, 512);
+          }
           await supabase.from("profiles").upsert(
-            { id: user.id, email: user.email || "", full_name: metaFullName },
+            {
+              id: user.id,
+              email: user.email || "",
+              full_name: metaFullName,
+              ...attrForProfile,
+            },
             { onConflict: "id" }
           );
         }
