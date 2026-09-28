@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { recordShortLinkAttribution } from "@/lib/attribution";
 
 export default function ShortRedirect() {
   const { slug } = useParams<{ slug: string }>();
@@ -17,7 +18,7 @@ export default function ShortRedirect() {
     const go = async () => {
       const { data, error } = await (supabase as any)
         .from("short_links")
-        .select("target_url")
+        .select("target_url, utm_source, utm_medium, utm_campaign, utm_term, utm_content")
         .eq("slug", slug)
         .single();
 
@@ -27,6 +28,17 @@ export default function ShortRedirect() {
         setStatus("notfound");
         return;
       }
+
+      // Persist the campaign behind this short link before the redirect, so the
+      // signup is credited even if the tagged target page never gets to record it.
+      recordShortLinkAttribution({
+        slug,
+        utm_source: data.utm_source ?? null,
+        utm_medium: data.utm_medium ?? null,
+        utm_campaign: data.utm_campaign ?? null,
+        utm_term: data.utm_term ?? null,
+        utm_content: data.utm_content ?? null,
+      });
 
       window.location.replace(data.target_url);
     };

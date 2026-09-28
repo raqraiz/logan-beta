@@ -124,6 +124,72 @@ export const captureAttribution = (): void => {
   }
 };
 
+/**
+ * Record attribution for a short link (/s/:slug) before redirecting.
+ * The redirect target carries the UTM params, but the hop itself is what the
+ * user actually landed on, so we persist the link's campaign here — otherwise
+ * a signup that starts before/around the redirect is stored as untagged.
+ * Overwrites any previous untagged first-touch record.
+ */
+export const recordShortLinkAttribution = (link: {
+  slug: string;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_term: string | null;
+  utm_content: string | null;
+}): void => {
+  if (typeof window === "undefined") return;
+  const hasUtm = !!(link.utm_source || link.utm_medium || link.utm_campaign);
+  if (!hasUtm) return;
+  try {
+    const anonId = getAnonId();
+    const landingPath = truncate(`/s/${link.slug}`, 512);
+    const referrer = truncate(document.referrer || null, 512);
+
+    supabase
+      .from("attribution_events")
+      .insert({
+        anon_id: anonId || generateUuid(),
+        utm_source: truncate(link.utm_source),
+        utm_medium: truncate(link.utm_medium),
+        utm_campaign: truncate(link.utm_campaign),
+        utm_term: truncate(link.utm_term),
+        utm_content: truncate(link.utm_content),
+        referrer,
+        landing_path: landingPath,
+        ref_code: null,
+      })
+      .then(({ error }) => {
+        if (error) console.warn("short link attribution log failed:", error.message);
+      });
+
+    // Only replace a stored record that has no campaign of its own (first-touch).
+    const existing = getAttribution();
+    const existingHasUtm = !!(
+      existing?.utm_source ||
+      existing?.utm_medium ||
+      existing?.utm_campaign
+    );
+    if (existingHasUtm) return;
+
+    const attribution: Attribution = {
+      utm_source: truncate(link.utm_source),
+      utm_medium: truncate(link.utm_medium),
+      utm_campaign: truncate(link.utm_campaign),
+      utm_term: truncate(link.utm_term),
+      utm_content: truncate(link.utm_content),
+      referrer,
+      landing_path: landingPath,
+      landing_at: new Date().toISOString(),
+      ref_code: existing?.ref_code ?? null,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(attribution));
+  } catch {
+    // best-effort
+  }
+};
+
 export const getAttribution = (): Attribution | null => {
   if (typeof window === "undefined") return null;
   try {
