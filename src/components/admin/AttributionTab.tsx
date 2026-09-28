@@ -34,7 +34,41 @@ const rangeToSince = (r: Range): string | null => {
 };
 
 const NONE = "(direct / none)";
+const ORGANIC = "organic_search";
+const EMAIL_APP = "email_app";
 const display = (v: string | null) => (v && v.trim() ? v : NONE);
+
+// Untagged arrivals still carry an HTTP referrer we can classify, so they don't
+// all collapse into "(direct / none)".
+const SEARCH_ENGINES: Array<{ match: string; label: string }> = [
+  { match: "google.", label: "Google" },
+  { match: "bing.com", label: "Bing" },
+  { match: "duckduckgo.com", label: "DuckDuckGo" },
+  { match: "search.yahoo.com", label: "Yahoo" },
+  { match: "ecosia.org", label: "Ecosia" },
+  { match: "search.brave.com", label: "Brave" },
+  { match: "yandex.", label: "Yandex" },
+  { match: "baidu.com", label: "Baidu" },
+];
+
+const EMAIL_APPS: Array<{ match: string; label: string }> = [
+  { match: "com.google.android.gm", label: "Gmail app" },
+  { match: "mail.google.com", label: "Gmail web" },
+  { match: "outlook.live.com", label: "Outlook" },
+  { match: "outlook.office.com", label: "Outlook" },
+  { match: "mail.yahoo.com", label: "Yahoo Mail" },
+];
+
+const classifyReferrer = (referrer: string | null): { source: string; detail: string } | null => {
+  const r = (referrer ?? "").toLowerCase();
+  if (!r) return null;
+  // android-app://com.google.android.gm/ also contains "google." — check email apps first.
+  const app = EMAIL_APPS.find((e) => r.includes(e.match));
+  if (app) return { source: EMAIL_APP, detail: app.label };
+  const engine = SEARCH_ENGINES.find((e) => r.includes(e.match));
+  if (engine) return { source: ORGANIC, detail: engine.label };
+  return null;
+};
 
 const csvEscape = (v: unknown): string => {
   const s = v === null || v === undefined ? "" : String(v);
