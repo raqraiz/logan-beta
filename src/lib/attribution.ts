@@ -145,7 +145,8 @@ export const backfillAttribution = async (): Promise<void> => {
   try {
     const anonId = getAnonId();
     const attribution = getAttribution();
-    if (!anonId && !attribution) return;
+    // Always call: even with nothing local, the server can still recover
+    // attribution stored in the user's signup metadata.
     await supabase.functions.invoke("backfill-attribution", {
       body: { anon_id: anonId || undefined, attribution: attribution || undefined },
     });
