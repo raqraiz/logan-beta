@@ -57,7 +57,7 @@ export const DatePickerInput = ({
     if (result.kind === "exact") {
       setError(null);
       setDate(result.date);
-      setHint(`${formatDateEcho(result.date)} — tap send to confirm`);
+      setHint(`${formatDateEcho(result.date)}. Tap send to confirm.`);
       return;
     }
     // month-only or relative: needs a specific day
