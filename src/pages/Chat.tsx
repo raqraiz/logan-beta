@@ -19,7 +19,7 @@ import { SettingsDialog } from "@/components/chat/SettingsDialog";
 import { CoachMarkTour } from "@/components/chat/CoachMarkTour";
 import { HistoryImportDialog } from "@/components/chat/HistoryImportDialog";
 import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
-import { format, addWeeks } from "date-fns";
+import { format, addWeeks, subYears } from "date-fns";
 import { SymptomPicker } from "@/components/chat/SymptomPicker";
 import { AnchorPicker } from "@/components/chat/AnchorPicker";
 import { DatePickerInput } from "@/components/chat/DatePickerInput";
@@ -2060,12 +2060,12 @@ const Chat = () => {
                         onSubmit={(date) => handleDateSubmit(date, message.metadata?.expecting_field)}
                         isSubmitting={isSending}
                         {...(message.metadata?.expecting_field === "due_date"
-                          ? { minDate: new Date(), maxDate: addWeeks(new Date(), 42) }
+                          ? { minDate: new Date(), maxDate: addWeeks(new Date(), 42), isDueDate: true }
                           : message.metadata?.expecting_field === "postpartum_start_date"
-                          ? { maxDate: new Date() }
+                          ? { minDate: subYears(new Date(), 5), maxDate: new Date() }
                           : message.metadata?.expecting_field === "loss_date"
-                          ? { maxDate: new Date() }
-                          : {})}
+                          ? { minDate: subYears(new Date(), 40), maxDate: new Date() }
+                          : { minDate: subYears(new Date(), 5), maxDate: new Date() })}
                       />
                       {message.metadata?.expecting_field === "loss_date" && (
                         <div className="mt-2">
