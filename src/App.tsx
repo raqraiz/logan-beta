@@ -13,6 +13,7 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import Unsubscribe from "./pages/Unsubscribe";
 import ShortRedirect from "./pages/ShortRedirect";
+import DatePickerProbe from "./pages/DatePickerProbe";
 
 import IntegrationCallback from "./pages/IntegrationCallback";
 import { Seo } from "@/components/Seo";
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/integrations/:provider/callback" element={<IntegrationCallback />} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
+              <Route path="/__datepicker-probe" element={<DatePickerProbe />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
