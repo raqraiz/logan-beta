@@ -32,6 +32,7 @@ export const DatePickerInput = ({
   const [hint, setHint] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [monthView, setMonthView] = useState<Date | undefined>(undefined);
 
   // Bounds shared by the calendar dropdowns AND the typed-input validation.
   const today = new Date();
@@ -66,8 +67,6 @@ export const DatePickerInput = ({
     setHint(`Pick the day in ${formatMonthEcho(result.month)}`);
     setOpen(true);
   };
-
-  const [monthView, setMonthView] = useState<Date | undefined>(undefined);
 
   const handleSelect = (d: Date | undefined) => {
     setDate(d);
