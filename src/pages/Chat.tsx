@@ -60,7 +60,7 @@ import { PartnerHeadsupDraftCard } from "@/components/partner/PartnerHeadsupDraf
 import { PartnerHeadsupCheckinCard, PartnerHeadsupKeepCard, PartnerHeadsupSendNowCard } from "@/components/partner/PartnerHeadsupMiniCards";
 import { OPEN_CHAT_EVENT, PREFILL_CHAT_EVENT } from "@/lib/partnerHeadsupClient";
 import { InsightConfirm } from "@/components/chat/InsightConfirm";
-import { consumePendingCorrection } from "@/lib/insightFeedback";
+import { consumePendingCorrection, takeLinkedCorrectionId } from "@/lib/insightFeedback";
 interface SymptomCategory {
   label: string;
   symptoms: string[];
@@ -1043,7 +1043,7 @@ const Chat = () => {
 
       // Call the AI chat function
       const { data, error } = await supabase.functions.invoke("chat-ai", {
-        body: { userMessage: messageContent },
+        body: { userMessage: messageContent, correctionMessageId: takeLinkedCorrectionId() },
       });
       // Boundary just saved: refresh the shared cache so Home, Plan and the ring update now.
       if (data?.boundarySaved) void refreshStageBoundary();
@@ -2095,7 +2095,7 @@ const Chat = () => {
                         />
                       )}
                       
-                      {message.role === "assistant" && message.metadata?.insight_type === "proactive" && !showInteractiveInput && (
+                      {message.role === "assistant" && ["proactive", "awareness", "symptom_validation"].includes(message.metadata?.insight_type as string) && !showInteractiveInput && (
                         <InsightConfirm userId={user.id} messageId={message.id} insightType={message.metadata.insight_type} />
                       )}
                       <div className={`flex items-center gap-2 mt-1 ${

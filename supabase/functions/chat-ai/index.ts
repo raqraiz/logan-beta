@@ -4341,16 +4341,11 @@ serve(async (req) => {
     // No-write-no-claim: only confirm "I'll remember" once the note is saved.
     let correctionState: "none" | "saved" | "unclear" | "failed" = "none";
     let correctionNote = "";
-    if (CORRECTION_PREFIX_RE.test(userMessage)) {
-      const { data: lastInsight } = await supabase
-        .from("chat_messages")
-        .select("id, content")
-        .eq("user_id", user.id)
-        .eq("role", "assistant")
-        .contains("metadata", { insight_type: "proactive" })
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    const linkedId = typeof body.correctionMessageId === "string" && /^[0-9a-f-]{36}$/i.test(body.correctionMessageId) ? body.correctionMessageId : null;
+    if (linkedId || CORRECTION_PREFIX_RE.test(userMessage)) {
+      let q = supabase.from("chat_messages").select("id, content").eq("user_id", user.id).eq("role", "assistant");
+      q = linkedId ? q.eq("id", linkedId) : q.in("metadata->>insight_type", ["proactive", "awareness", "symptom_validation"]);
+      const { data: lastInsight } = await q.order("created_at", { ascending: false }).limit(1).maybeSingle();
       const correctionText = userMessage.replace(CORRECTION_PREFIX_RE, "").trim();
       if (!correctionText) {
         correctionState = "unclear";
@@ -4391,7 +4386,7 @@ serve(async (req) => {
     systemPrompt += buildBcMethodRule(participant, { allowAsk: true }) + bcMethodSavedNote;
     systemPrompt += buildMemoryBlock(memoryNotes);
     if (correctionState === "saved") {
-      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only, overrides length/format rules): She just corrected an insight you gave her. This was SAVED: "${correctionNote}". Reply in 1-2 short plain sentences: thank her and confirm what you'll remember, in second person, e.g. "Got it, thanks for telling me. I'll remember that your energy dips before your period, not after." No science, no follow-up advice, no question.`;
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only, overrides length/format rules): She just corrected an insight you gave her. This was SAVED: "${correctionNote}". Reply in 1-2 short plain sentences: acknowledge it and say it's remembered, e.g. "Thanks for telling me. I've updated that, so I'll keep it in mind from now on." You may name what changed in second person. No em dashes, no science, no follow-up advice, no question.`;
     } else if (correctionState === "unclear") {
       systemPrompt += `\n\nRUNTIME CONTEXT (this turn only, overrides length/format rules): She said your last insight wasn't quite right, but it's not clear what is true for her instead. Ask exactly ONE short, warm question to find out (e.g. "Thanks for saying. What feels different for you?"). Do NOT claim you'll remember anything yet.`;
     } else if (correctionState === "failed") {

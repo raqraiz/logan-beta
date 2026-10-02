@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +50,7 @@ interface Profile {
   avatar_url: string | null;
   created_at: string;
   updated_at: string;
+  is_internal?: boolean;
 }
 
 
@@ -623,6 +625,18 @@ export function ProfilesTab() {
                 <div>
                   <p className="font-semibold text-lg">{profile.full_name}</p>
                   <p className="text-sm text-muted-foreground">{profile.email}</p>
+                  <label className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                    <Switch
+                      checked={!!profile.is_internal}
+                      onCheckedChange={async (v) => {
+                        const { error } = await supabase.rpc("admin_set_user_internal", { _user_id: profile.id, _internal: v });
+                        if (error) { toast({ title: "Couldn't update", description: error.message, variant: "destructive" }); return; }
+                        setSelectedProfile((sp) => sp && sp.id === profile.id ? { ...sp, is_internal: v } : sp);
+                        setProfiles((ps) => ps.map((x) => x.id === profile.id ? { ...x, is_internal: v } : x));
+                      }}
+                    />
+                    Internal account (left out of measurement)
+                  </label>
                 </div>
               </div>
               {profile.phone && (
