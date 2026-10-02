@@ -104,7 +104,6 @@ Deno.serve(async (req) => {
     ]);
 
     const userLang = detectLang((recent ?? []).map((r) => r.content));
-    console.log("[headsup-draft] lang", userLang, (recent ?? []).length, JSON.stringify((recent ?? []).map((r) => r.content.slice(0, 40))));
     const lang = b.language ?? userLang;
     const name = (b.name || s?.partner_name || "").trim() || "there";
     const relationship = b.relationship ?? s?.relationship ?? null;
