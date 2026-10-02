@@ -1,4 +1,4 @@
-import { buildBcMethodRule, detectBcMethod, BC_METHOD_LABELS } from "../_shared/bcMethod.ts";
+import { buildBcMethodRule, detectBcMethod, BC_METHOD_LABELS, canAskBcMethod, didAskBcMethod, isHormonalMethod } from "../_shared/bcMethod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
@@ -4345,8 +4345,8 @@ serve(async (req) => {
     // Active boundaries — absolute, highest priority, applied before anything else.
     if (activeBoundaries.length > 0) {
       systemPrompt += buildBoundaryRuleBlock(activeBoundaries);
-      systemPrompt += buildBcMethodRule(participant, { allowAsk: true }) + bcMethodSavedNote;
     }
+    systemPrompt += buildBcMethodRule(participant, { allowAsk: true }) + bcMethodSavedNote;
 
     // No-write-no-claim for the boundary just requested in this message.
     if (boundarySaveState === "saved") {
@@ -5011,6 +5011,13 @@ serve(async (req) => {
       console.error("Post-reply library guard error:", e);
     }
     // --- End safety net ---
+
+    // Stored "asked once" flag: if Logan asked which kind of BC this turn, record it.
+    if (canAskBcMethod(participant) && didAskBcMethod(assistantMessage)) {
+      await supabase.from("participants")
+        .update({ birth_control_method_asked_at: new Date().toISOString() })
+        .eq("id", participant.id);
+    }
 
     const { error: insertError } = await supabase.from("chat_messages").insert({
 
