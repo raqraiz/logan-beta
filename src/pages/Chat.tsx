@@ -850,15 +850,15 @@ const Chat = () => {
       if (data) {
 
         let effectiveTimezone: string | null = data.timezone ?? null;
-        // Silent backfill: if the stored timezone is missing or not a valid IANA name, detect and persist.
+        // Silent sync: whenever the phone's timezone differs from the saved one, save the phone's.
         const isValidTz = (tz: string | null) => {
           if (!tz) return false;
           try { new Intl.DateTimeFormat("en-US", { timeZone: tz }); return true; } catch { return false; }
         };
-        if (!isValidTz(effectiveTimezone)) {
+        {
           try {
             const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            if (detected) {
+            if (detected && isValidTz(detected) && detected !== effectiveTimezone) {
               const { error: tzErr } = await supabase
                 .from("participants")
                 .update({ timezone: detected })
