@@ -36,6 +36,13 @@
       "when": 1790935839879,
       "tag": "0004_create_partner_headsup",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790936281299,
+      "tag": "0005_create_feature_flags",
+      "breakpoints": true
     }
   ]
 }
