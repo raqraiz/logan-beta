@@ -4,8 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { HEADSUP_FOOTER } from "@/lib/partnerHeadsup";
 import {
   HEADSUP_UPDATED_EVENT, PREFILL_CHAT_EVENT, generateDraft, saveStyleExample, shareSheet, whatsappUrl,
-  type HeadsupDraftResponse,
-} from "@/lib/partnerHeadsupClient";
+  type HeadsupDraftResponse,, openTopLevel } from "@/lib/partnerHeadsupClient";
 import { HeadsupEditSheet } from "./HeadsupEditSheet";
 
 interface Props {
@@ -109,7 +108,7 @@ export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId: initialEven
   };
 
   const send = () => {
-    window.open(whatsappUrl(fullText, settings?.whatsapp_number), "_blank", "noopener");
+    openTopLevel(whatsappUrl(fullText, settings?.whatsapp_number));
     void afterSend();
   };
   const shareOther = async () => {
@@ -165,7 +164,7 @@ export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId: initialEven
   const showDates = mode === "predicted" && draft && !draft.undated && draft.window && draft.cycles_used > 0;
 
   return (
-    <div className="headsup-surface headsup-enter w-full space-y-3">
+    <div id={`headsup-${cacheKey}`} className="headsup-surface headsup-enter w-full space-y-3">
       <div className="text-[11px] font-medium tracking-[0.12em] headsup-gradient-text">DRAFT FOR {name.toUpperCase()}</div>
       {loading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Writing it as you…</div>}
       {err && (

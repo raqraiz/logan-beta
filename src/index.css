@@ -329,3 +329,8 @@
 .headsup-chip-active { border-color: hsl(var(--headsup-accent)); background: hsl(var(--headsup-accent) / 0.15); color: hsl(var(--headsup-accent)); }
 @keyframes headsup-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 .headsup-enter { animation: headsup-rise 350ms ease-out both; }
+
+/* Heads-up screens: solid surface so nothing underneath shows through. */
+.headsup-solid { background: #16120E !important; backdrop-filter: none !important; }
+.theme-light .headsup-solid { background: hsl(var(--background)) !important; }
+.headsup-surface [role="switch"][data-state="checked"] { background-color: hsl(var(--headsup-accent)); }

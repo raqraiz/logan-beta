@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { HEADSUP_HELP_OPTIONS, toE164, type HeadsupSettingsRow } from "@/lib/partnerHeadsup";
 import {
-  HEADSUP_UPDATED_EVENT, OPEN_CHAT_EVENT, PUSH_STATUS_COPY, enableHeadsupPush, endOfCurrentCycle,
+  HEADSUP_UPDATED_EVENT, OPEN_CHAT_EVENT, PUSH_STATUS_COPY, enableHeadsupPush, endOfCurrentCycle, isPushConfigured,
 } from "@/lib/partnerHeadsupClient";
 
 interface Props {
@@ -17,8 +17,9 @@ interface Props {
 }
 
 type EventRow = { id: string; window_start: string; status: string; outcome: string | null; kind: string };
-const STATUS_LABEL: Record<string, string> = { opened: "Sent", skipped: "Skipped", expired: "Not sent", drafted: "Ready" };
-const OUTCOME_LABEL: Record<string, string> = { helped: "It helped", no_difference: "No real difference", didnt_land: "Didn't land well" };
+const STATUS_LABEL: Record<string, string> = { opened: "Sent", skipped: "Skipped", expired: "Missed" };
+const OUTCOME_LABEL: Record<string, string> = { helped: "Sent. It helped", no_difference: "Sent. No real difference", didnt_land: "Sent. Didn't land well" };
+const historyLabel = (e: EventRow) => (e.status === "opened" && e.outcome && OUTCOME_LABEL[e.outcome]) || STATUS_LABEL[e.status];
 const chipCls = (on: boolean) =>
   `min-h-[40px] px-4 rounded-full border text-sm transition-colors ${on ? "headsup-chip-active" : "border-border/60 bg-card/60 hover:bg-card"}`;
 const primary = "headsup-primary min-h-[44px] w-full rounded-full px-5 text-sm font-medium transition-opacity disabled:opacity-40";
@@ -35,7 +36,7 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange, onCloseSettin
     const [{ data: st }, { data: ev }] = await Promise.all([
       supabase.from("partner_headsup_settings").select("*").eq("user_id", userId).maybeSingle(),
       supabase.from("partner_headsup_events").select("id, window_start, status, outcome, kind").eq("user_id", userId)
-        .neq("status", "superseded").order("window_start", { ascending: false }).limit(30),
+        .in("status", ["opened", "skipped", "expired"]).order("window_start", { ascending: false }).limit(30),
     ]);
     setS(st as HeadsupSettingsRow | null);
     setPhone(st?.whatsapp_number ?? "");
@@ -56,16 +57,35 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange, onCloseSettin
 
   const writeNow = async () => {
     const today = new Date().toLocaleDateString("en-CA");
-    const { data: ev } = await supabase.from("partner_headsup_events").insert({
-      user_id: userId, kind: "on_demand", window_start: today, window_end: today, status: "drafted", recipient_name: s?.partner_name,
-    }).select("id").maybeSingle();
-    await supabase.from("chat_messages").insert({
-      user_id: userId, role: "assistant", message_type: "partner_headsup_draft", content: `Draft for ${name}`,
-      metadata: { event_id: ev?.id, mode: "predicted", kind: "on_demand" },
-    });
+    // Reopen today's unfinished on-demand draft instead of making another.
+    const { data: existing } = await supabase.from("partner_headsup_events").select("id")
+      .eq("user_id", userId).eq("kind", "on_demand").eq("status", "drafted").eq("window_start", today)
+      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    let messageId: string | undefined;
+    if (existing) {
+      const { data: m } = await supabase.from("chat_messages").select("id").eq("user_id", userId)
+        .eq("message_type", "partner_headsup_draft").eq("metadata->>event_id", existing.id).limit(1).maybeSingle();
+      messageId = m?.id;
+    }
+    if (!messageId) {
+      let eventId = existing?.id;
+      if (!eventId) {
+        const { data: ev, error } = await supabase.from("partner_headsup_events").insert({
+          user_id: userId, kind: "on_demand", window_start: today, window_end: today, status: "drafted", recipient_name: s?.partner_name,
+        }).select("id").maybeSingle();
+        if (error || !ev) { toast({ title: "Couldn't start a draft", description: "Please try again.", variant: "destructive" }); return; }
+        eventId = ev.id;
+      }
+      const { data: msg, error: mErr } = await supabase.from("chat_messages").insert({
+        user_id: userId, role: "assistant", message_type: "partner_headsup_draft", content: `Draft for ${name}`,
+        metadata: { event_id: eventId, mode: "predicted", kind: "on_demand" },
+      }).select("id").maybeSingle();
+      if (mErr || !msg) { toast({ title: "Couldn't start a draft", description: "Please try again.", variant: "destructive" }); return; }
+      messageId = msg.id;
+    }
     onOpenChange(false);
     onCloseSettings();
-    globalThis.dispatchEvent(new CustomEvent(OPEN_CHAT_EVENT));
+    globalThis.dispatchEvent(new CustomEvent(OPEN_CHAT_EVENT, { detail: { focusMessageId: messageId } }));
   };
 
   const pause = async () => {
@@ -82,7 +102,7 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange, onCloseSettin
   };
 
   const notify = async () => {
-    try { const r = await enableHeadsupPush(userId); toast({ title: "Notifications", description: PUSH_STATUS_COPY[r] }); }
+    try { const r = await enableHeadsupPush(userId); if (PUSH_STATUS_COPY[r]) toast({ title: "Notifications", description: PUSH_STATUS_COPY[r] }); }
     catch { toast({ title: "Notifications", description: "Couldn't turn on notifications." }); }
   };
 
@@ -99,7 +119,7 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange, onCloseSettin
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="headsup-surface sm:max-w-md max-h-[92vh] overflow-y-auto rounded-[20px] space-y-4">
+      <DialogContent className="headsup-surface headsup-solid sm:max-w-md max-h-[92vh] overflow-y-auto rounded-[20px] space-y-4">
         <DialogTitle className="headsup-headline text-[32px] leading-tight">Heads-ups for {name}</DialogTitle>
         <DialogDescription className="sr-only">Manage partner heads-ups</DialogDescription>
         {!s ? (
@@ -175,7 +195,9 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange, onCloseSettin
               </div>
             </div>
 
-            <button className="text-xs text-muted-foreground underline underline-offset-2" onClick={notify}>Get a notification when a draft is ready</button>
+            {isPushConfigured() && (
+              <button className="text-xs text-muted-foreground underline underline-offset-2" onClick={notify}>Get a notification when a draft is ready</button>
+            )}
 
             <div className="space-y-2">
               <h4 className="text-sm font-medium">History</h4>
@@ -186,7 +208,7 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange, onCloseSettin
                   {events.map((e) => (
                     <li key={e.id} className="flex items-center justify-between text-sm">
                       <span>{new Date(`${e.window_start}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                      <span className="text-muted-foreground">{e.outcome ? OUTCOME_LABEL[e.outcome] : STATUS_LABEL[e.status] ?? e.status}</span>
+                      <span className="text-muted-foreground">{historyLabel(e)}</span>
                     </li>
                   ))}
                 </ul>

@@ -299,7 +299,18 @@ const Chat = () => {
     return () => window.removeEventListener(HEADSUP_OPEN_EVENT, handler);
   }, [headsupVisible]);
   useEffect(() => {
-    const openChat = () => setActiveTab("ask");
+    const openChat = async (e: Event) => {
+      setActiveTab("ask");
+      const focusId = (e as CustomEvent).detail?.focusMessageId as string | undefined;
+      if (!focusId || !user) return;
+      const list = await refreshMessages(user.id);
+      if (!list.some((m) => m.id === focusId)) return;
+      setTimeout(() => {
+        const el = document.getElementById(`headsup-${focusId}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+        else scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 300);
+    };
     const prefill = (e: Event) => {
       setActiveTab("ask");
       setInputValue(String((e as CustomEvent).detail ?? ""));

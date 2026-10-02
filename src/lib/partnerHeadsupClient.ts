@@ -101,8 +101,22 @@ export async function enableHeadsupPush(userId: string): Promise<"registered" | 
 
 export const PUSH_STATUS_COPY: Record<string, string> = {
   registered: "Notifications are on for this device.",
-  "not-configured": "Notifications aren't set up yet.",
+  "not-configured": "",
   unsupported: "This browser can't show notifications. On iPhone, add Logan to your home screen first.",
   "open-in-new-tab": "Open Logan in its own tab to turn on notifications.",
   denied: "Notifications are blocked. You can allow them in your browser's site settings.",
 };
+
+/** True when browser push notifications are configured for this app. */
+export function isPushConfigured() {
+  const appId = import.meta.env.VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_APP_ID as string | undefined;
+  return !!(appId && appId.split(":")[1] && import.meta.env.VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_VAPID_KEY
+    && import.meta.env.VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_WEB_API_KEY && import.meta.env.VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_PROJECT_ID);
+}
+
+/** Opens a link (e.g. WhatsApp) in a top-level window, never inside the preview frame. */
+export function openTopLevel(url: string) {
+  const w = window.open(url, "_blank");
+  if (w) { try { w.opener = null; } catch { /* ignore */ } return; }
+  try { (window.top ?? window).location.href = url; } catch { window.location.href = url; }
+}
