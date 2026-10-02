@@ -85,6 +85,13 @@
       "when": 1790941092149,
       "tag": "0011_measurement_internal_and_reactions",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790941680208,
+      "tag": "0012_chat_messages_headsup_types",
+      "breakpoints": true
     }
   ]
 }
