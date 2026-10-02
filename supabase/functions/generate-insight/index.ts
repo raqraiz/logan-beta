@@ -11,7 +11,7 @@ import {
   mentionsLoss,
   type TopicBoundary,
 } from "../_shared/topicBoundaries.ts";
-import { fetchMemoryNotes, buildMemoryBlock } from "../_shared/memoryNotes.ts";
+import { fetchMemoryNotes, buildMemoryBlock, type MemoryNotes } from "../_shared/memoryNotes.ts";
 import { trackMessageFailures } from "../_shared/messageFailures.ts";
 
 const corsHeaders = {
@@ -489,7 +489,7 @@ function buildInsightPrompt(
   recentMessages: { content: string; role: string }[],
   checkinMessages: { content: string; metadata: any; created_at: string }[],
   boundaries: TopicBoundary[] = [],
-  memoryNotes: string[] = [],
+  memoryNotes: MemoryNotes = { corrections: [], confirmed: [] },
 ): string {
   const anchorSymptom = participant.anchor_symptom;
   const symptoms = participant.typical_symptoms || [];
@@ -624,7 +624,7 @@ function buildNonCyclingInsightPrompt(
   recentMessages: { content: string; role: string }[],
   checkinMessages: { content: string; metadata: any; created_at: string }[],
   boundaries: TopicBoundary[] = [],
-  memoryNotes: string[] = [],
+  memoryNotes: MemoryNotes = { corrections: [], confirmed: [] },
 ): string {
   const stageSuppressed = hasStageBoundary(boundaries, lifeStage);
   const firstName = userName.split(" ")[0];
