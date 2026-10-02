@@ -1,3 +1,4 @@
+import { buildBcMethodRule,  } from "../_shared/bcMethod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import {
@@ -163,6 +164,13 @@ serve(async (req) => {
       });
     }
 
+    const { data: bcRow } = await service
+      .from("participants")
+      .select("birth_control_method, on_hormonal_bc, birth_control_status")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const bcRule = buildBcMethodRule(bcRow as any);
+
     // Recent symptoms (last 21 days) with freshness so the model can hedge.
     const since = new Date(Date.now() - 21 * 86400000).toISOString();
     const { data: logs } = await service
@@ -256,7 +264,7 @@ serve(async (req) => {
     }
 
 
-    const systemPrompt = `You are Logan — a knowledgeable, grounded friend giving a woman two short lists for TODAY only.${buildBoundaryRuleBlock(boundaries)}
+    const systemPrompt = `You are Logan — a knowledgeable, grounded friend giving a woman two short lists for TODAY only.${buildBoundaryRuleBlock(boundaries)}${bcRule}
 
 ${stageContext}
 ${anchorContext}

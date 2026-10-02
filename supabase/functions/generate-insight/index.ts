@@ -1,3 +1,4 @@
+import { buildBcMethodRule,  } from "../_shared/bcMethod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
@@ -543,7 +544,7 @@ function buildInsightPrompt(
     ? `\n- NO UTERUS (hysterectomy, ovaries intact): She is NOT menopausal — her ovaries still cycle, so hormone patterns still apply. But she will NEVER bleed again: never ask for, reference, or imply a period date, Day 1, a late/due period, or "when your period starts". Any cycle day or phase here is an ESTIMATE with no bleed anchor — hedge it ("roughly", "estimated") and lean on her tracked symptoms over calendar timing.`
     : "";
 
-  return `You are Logan. You know ${firstName}'s cycle so well you can name what she's feeling before she does. You're not giving advice or instructions. You're the person who just gets it.${buildBoundaryRuleBlock(boundaries)}
+  return `You are Logan. You know ${firstName}'s cycle so well you can name what she's feeling before she does. You're not giving advice or instructions. You're the person who just gets it.${buildBoundaryRuleBlock(boundaries)}${buildBcMethodRule(participant)}
 
 CONTEXT:
 - Today is Day ${cycleInfo.cycleDay} of your cycle · **${cycleInfo.phase}**
@@ -717,7 +718,7 @@ function buildNonCyclingInsightPrompt(
     ? `\n- NO UTERUS (hysterectomy, ovaries intact): She is NOT menopausal — her ovaries still cycle, so hormone patterns still apply. But she will NEVER bleed again: never ask for, reference, or imply a period date, Day 1, a late/due period, or "when your period starts". Any cycle day or phase here is an ESTIMATE with no bleed anchor — hedge it ("roughly", "estimated") and lean on her tracked symptoms over calendar timing.`
     : "";
 
-  return `You are Logan. You're ${firstName}'s companion through her ${stageLabel.toLowerCase()} journey. You're not clinical — you're the friend who just gets it.${buildBoundaryRuleBlock(boundaries)}
+  return `You are Logan. You're ${firstName}'s companion through her ${stageLabel.toLowerCase()} journey. You're not clinical — you're the friend who just gets it.${buildBoundaryRuleBlock(boundaries)}${buildBcMethodRule(participant)}
 
 CONTEXT:
 - Life stage: **${stageLabel}**

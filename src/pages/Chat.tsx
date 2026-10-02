@@ -50,6 +50,7 @@ import { HomeTab } from "@/components/tabs/HomeTab";
 import { PlanTab } from "@/components/tabs/PlanTab";
 import { usePresence } from "@/hooks/usePresence";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
+import { BC_METHOD_OPTIONS } from "@/lib/bcMethod";
 interface SymptomCategory {
   label: string;
   symptoms: string[];
@@ -169,6 +170,8 @@ const Chat = () => {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  // Birth control "Which kind?" follow-up, shown inline after a yes/hormonal/non-hormonal answer.
+  const [bcFollowup, setBcFollowup] = useState<{ base: string; baseLabel: string } | null>(null);
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
   const [onboardingRetry, setOnboardingRetry] = useState<(() => void) | null>(null);
   const onboardingRequestIdRef = useRef(0);
@@ -2113,7 +2116,33 @@ const Chat = () => {
                     </div>
                   )}
 
-                  {showInteractiveInput && inputType === "bc_picker" && (
+                  {showInteractiveInput && bcFollowup && (inputType === "bc_picker" || inputType === "pp_bc_picker") && (
+                    <div className={`mt-3 max-w-xs ${pickerBusyClass}`}>
+                      <p className="text-sm text-foreground mb-2">Which kind?</p>
+                      <div className="flex flex-wrap gap-2">
+                        {[...BC_METHOD_OPTIONS, { value: "skip", label: "Skip" }].map((option) => (
+                          <button
+                            key={option.value}
+                            onClick={() => {
+                              const f = bcFollowup;
+                              setBcFollowup(null);
+                              sendOnboardingResponse(
+                                `${f.base}|method:${option.value}`,
+                                undefined, undefined, undefined, false,
+                                option.value === "skip" ? f.baseLabel : `${f.baseLabel} · ${option.label}`,
+                              );
+                            }}
+                            disabled={isSending}
+                            className="text-left px-3 py-2 rounded-xl border border-border/40 bg-card/60 hover:bg-card/90 transition-all active:scale-[0.98] text-sm text-foreground"
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {showInteractiveInput && !bcFollowup && inputType === "bc_picker" && (
                     <div className={`mt-3 flex flex-col gap-2 max-w-xs ${pickerBusyClass}`}>
                       {[
                         { value: "bc_yes", label: "Yes", desc: "Pill, mini-pill, hormonal IUD, implant, ring, or patch" },
@@ -2122,7 +2151,9 @@ const Chat = () => {
                       ].map((option) => (
                         <button
                           key={option.value}
-                          onClick={() => sendOnboardingResponse(option.value)}
+                          onClick={() => option.value === "bc_yes"
+                            ? setBcFollowup({ base: "bc_yes", baseLabel: "Birth control: Yes" })
+                            : sendOnboardingResponse(option.value)}
                           disabled={isSending}
                           className="text-left px-4 py-3 rounded-xl border border-border/40 bg-card/60 hover:bg-card/90 transition-all active:scale-[0.98]"
                         >
@@ -2167,7 +2198,7 @@ const Chat = () => {
                   )}
 
                   {/* Postpartum branch: feeding / cycle return / birth control chip pickers */}
-                  {showInteractiveInput && (inputType === "feeding_picker" || inputType === "cycle_return_picker" || inputType === "pp_bc_picker") && (
+                  {showInteractiveInput && !(bcFollowup && inputType === "pp_bc_picker") && (inputType === "feeding_picker" || inputType === "cycle_return_picker" || inputType === "pp_bc_picker") && (
                     <div className={`mt-3 flex flex-col gap-2 max-w-xs ${pickerBusyClass}`}>
                       {(inputType === "feeding_picker"
                         ? [
@@ -2192,7 +2223,9 @@ const Chat = () => {
                       ).map((option) => (
                         <button
                           key={option.value}
-                          onClick={() => sendOnboardingResponse(
+                          onClick={() => inputType === "pp_bc_picker" && (option.value === "hormonal" || option.value === "non_hormonal")
+                            ? setBcFollowup({ base: option.value, baseLabel: `Birth control: ${option.label}` })
+                            : sendOnboardingResponse(
                             option.value,
                             undefined,
                             undefined,

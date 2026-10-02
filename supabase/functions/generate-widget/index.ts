@@ -1,3 +1,4 @@
+import { buildBcMethodRule,  } from "../_shared/bcMethod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
@@ -83,17 +84,19 @@ serve(async (req) => {
     let postpartumActive = false;
     let isStaleCycle = false;
     let hasCycleInfo = false;
+    let bcRule = "";
 
     if (userEmail) {
       const { data: participant } = await supabaseService
         .from("participants")
         .select(
-          "cycle_length_days, last_period_start, life_stage, postpartum_start_date, postpartum_active, timezone, current_period_end_date, period_pending_since, period_still_active, menstruation_days, follicular_days, ovulation_window_days, luteal_days",
+          "cycle_length_days, last_period_start, life_stage, postpartum_start_date, postpartum_active, timezone, current_period_end_date, period_pending_since, period_still_active, menstruation_days, follicular_days, ovulation_window_days, luteal_days, birth_control_method, on_hormonal_bc, birth_control_status",
         )
         .eq("email", userEmail)
         .maybeSingle();
 
       if (participant?.life_stage) lifeStage = participant.life_stage;
+      bcRule = buildBcMethodRule(participant as any);
       postpartumActive = !!participant?.postpartum_active;
 
       if (participant?.cycle_length_days) {
@@ -194,7 +197,7 @@ serve(async (req) => {
 
 Generate a personalized insight based on the user's custom widget description below. Make it specific to their current state. Be warm but direct. No emojis. No fluff.
 
-OUTPUT FORMAT: ${formatInstruction}${buildBoundaryRuleBlock(boundaries)}`;
+OUTPUT FORMAT: ${formatInstruction}${buildBoundaryRuleBlock(boundaries)}${bcRule}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { BC_METHOD_OPTIONS } from "@/lib/bcMethod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -58,6 +59,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [cycleLen, setCycleLen] = useState<number>(28);
+  const [bcMethod, setBcMethod] = useState<string | null>(null);
   const [phaseLens, setPhaseLens] = useState<Required<PhaseLengths>>(() => defaultPhaseLengths(28));
 
 
@@ -88,7 +90,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
     (async () => {
       const { data } = await supabase
         .from("participants")
-        .select("postpartum_active, postpartum_start_date, loss_date, due_date, pregnancy_lmp, timezone, on_hormonal_bc, has_uterus, is_breastfeeding, postpartum_regular_periods_confirmed, feeding_status, cycle_length_days, menstruation_days, follicular_days, ovulation_window_days, luteal_days")
+        .select("postpartum_active, postpartum_start_date, loss_date, due_date, pregnancy_lmp, timezone, on_hormonal_bc, birth_control_method, has_uterus, is_breastfeeding, postpartum_regular_periods_confirmed, feeding_status, cycle_length_days, menstruation_days, follicular_days, ovulation_window_days, luteal_days")
         .eq("email", userEmail)
         .maybeSingle();
       if (data) {
@@ -98,6 +100,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
         setDueDate((data as any).due_date ?? "");
         setPregnancyLmp((data as any).pregnancy_lmp ?? "");
         setOnHormonalBc((data as any).on_hormonal_bc ?? null);
+        setBcMethod((data as any).birth_control_method ?? null);
         setHasUterus((data as any).has_uterus ?? null);
         {
           const bf = (data as any).is_breastfeeding;
@@ -143,7 +146,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
       return;
     }
     setSaving(true);
-    const payload: Record<string, unknown> = { life_stage: stage };
+    const payload: Record<string, unknown> = { life_stage: stage, birth_control_method: bcMethod };
     if (timezone && timezone.trim()) payload.timezone = timezone.trim();
     payload.menstruation_days = phaseLens.menstruation_days;
     payload.follicular_days = phaseLens.follicular_days;
@@ -322,6 +325,28 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
                   <span className="text-sm">Prefer not to say</span>
                 </label>
               </RadioGroup>
+            </div>
+          )}
+
+          {(((stage === "cycling" || stage === "irregular" || stage === "perimenopause") && onHormonalBc === true) || stage === "postpartum") && (
+            <div className="mt-4 p-3 rounded-lg border border-border/50 bg-accent/20 space-y-2">
+              <div className="text-sm font-medium">Which kind of birth control?</div>
+              <div className="text-xs text-muted-foreground">Logan only talks about pill breaks if you take a pill with a monthly break.</div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {[...BC_METHOD_OPTIONS, { value: "", label: "Don't know / clear" }].map((o) => {
+                  const active = (bcMethod ?? "") === o.value;
+                  return (
+                    <button
+                      key={o.value || "clear"}
+                      type="button"
+                      onClick={() => setBcMethod(o.value || null)}
+                      className={`px-3 py-1.5 rounded-full border text-xs transition-colors ${active ? "border-primary bg-primary/15 text-foreground" : "border-border/50 bg-card/60 text-muted-foreground hover:bg-card/90"}`}
+                    >
+                      {o.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 

@@ -206,7 +206,7 @@ export function DailyBriefingHero({
                           ? "Recovery"
                           : lifeStage === "pregnant"
                             ? "Pregnant"
-                            : (onHormonalBc === true ? "On the pill" : "Irregular"))
+                            : (onHormonalBc === true ? "On birth control" : "Irregular"))
                   : isStale
                     ? "Period overdue"
                     : phase}
