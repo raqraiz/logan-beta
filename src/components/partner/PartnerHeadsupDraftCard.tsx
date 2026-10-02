@@ -78,7 +78,9 @@ export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId: initialEven
   }, [status, name, draft, loading, err, generate]);
 
   const ensureEvent = async (newStatus: "opened" | "skipped") => {
-    const patch = { status: newStatus, ...(newStatus === "opened" ? { opened_at: new Date().toISOString() } : {}) };
+    const now = new Date().toISOString();
+    // sent_at records her tap on WhatsApp/Share; delivery itself can't be confirmed.
+    const patch = { status: newStatus, ...(newStatus === "opened" ? { opened_at: now, sent_at: now } : {}) };
     if (eventId) { await supabase.from("partner_headsup_events").update(patch).eq("id", eventId); return; }
     const today = new Date().toLocaleDateString("en-CA");
     const { data } = await supabase.from("partner_headsup_events").insert({

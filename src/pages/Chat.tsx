@@ -59,6 +59,8 @@ import { usePartnerHeadsupFlag } from "@/hooks/usePartnerHeadsupFlag";
 import { PartnerHeadsupDraftCard } from "@/components/partner/PartnerHeadsupDraftCard";
 import { PartnerHeadsupCheckinCard, PartnerHeadsupKeepCard, PartnerHeadsupSendNowCard } from "@/components/partner/PartnerHeadsupMiniCards";
 import { OPEN_CHAT_EVENT, PREFILL_CHAT_EVENT } from "@/lib/partnerHeadsupClient";
+import { InsightConfirm } from "@/components/chat/InsightConfirm";
+import { consumePendingCorrection } from "@/lib/insightFeedback";
 interface SymptomCategory {
   label: string;
   symptoms: string[];
@@ -994,6 +996,7 @@ const Chat = () => {
     
     // If onboarding is complete, use AI chat; otherwise use onboarding flow
     if (!isOnboarding) {
+      consumePendingCorrection(user.id, messageContent);
       await sendAIMessage(messageContent);
     } else {
       await sendOnboardingResponse(messageContent);
@@ -2092,6 +2095,9 @@ const Chat = () => {
                         />
                       )}
                       
+                      {message.role === "assistant" && message.metadata?.insight_type === "proactive" && !showInteractiveInput && (
+                        <InsightConfirm userId={user.id} messageId={message.id} insightType={message.metadata.insight_type} />
+                      )}
                       <div className={`flex items-center gap-2 mt-1 ${
                         message.role === "user" ? "justify-end" : "justify-start"
                       }`}>

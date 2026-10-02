@@ -19,6 +19,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area,
 } from "recharts";
 import { InvestorSummaryPanel } from "@/components/admin/InvestorSummaryPanel";
+import { MeasurementPanel } from "@/components/admin/MeasurementPanel";
 import { ReportedSymptomsSection } from "@/components/admin/ReportedSymptomsSection";
 import { LifeStageEngagementSection } from "@/components/admin/LifeStageEngagementSection";
 
@@ -1425,6 +1426,7 @@ export const OverviewTab = () => {
       <LifeStageEngagementSection />
 
       {/* Investor Summary (additive — independent range) */}
+      <MeasurementPanel />
       <InvestorSummaryPanel />
 
 

@@ -57,6 +57,13 @@
       "when": 1790938817242,
       "tag": "0007_headsup_event_recipient_name",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790939837638,
+      "tag": "0008_insight_feedback_events",
+      "breakpoints": true
     }
   ]
 }
