@@ -1,3 +1,4 @@
+import { trackedSupabase } from "@/lib/messageFailures";
 import { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -76,7 +77,7 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange, onCloseSettin
         if (error || !ev) { toast({ title: "Couldn't start a draft", description: "Please try again.", variant: "destructive" }); return; }
         eventId = ev.id;
       }
-      const { data: msg, error: mErr } = await supabase.from("chat_messages").insert({
+      const { data: msg, error: mErr } = await trackedSupabase.from("chat_messages").insert({
         user_id: userId, role: "assistant", message_type: "partner_headsup_draft", content: `Draft for ${name}`,
         metadata: { event_id: eventId, mode: "predicted", kind: "on_demand" },
       }).select("id").maybeSingle();

@@ -1,3 +1,4 @@
+import { trackedSupabase } from "@/lib/messageFailures";
 import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -95,12 +96,12 @@ export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId: initialEven
     await ensureEvent("opened");
     persist(null);
     setStatus("opened");
-    await supabase.from("chat_messages").insert({ user_id: userId, role: "assistant", message_type: "partner_headsup_shared", content: `Heads-up shared with ${name}`, metadata: {} });
-    await supabase.from("chat_messages").insert({ user_id: userId, role: "assistant", message_type: "text", content: "Done. Go easy on yourself this week. I'm here if you want to talk any of it through.", metadata: { partner_headsup: "sent" } });
+    await trackedSupabase.from("chat_messages").insert({ user_id: userId, role: "assistant", message_type: "partner_headsup_shared", content: `Heads-up shared with ${name}`, metadata: {} });
+    await trackedSupabase.from("chat_messages").insert({ user_id: userId, role: "assistant", message_type: "text", content: "Done. Go easy on yourself this week. I'm here if you want to talk any of it through.", metadata: { partner_headsup: "sent" } });
     if (justThisWeek && !settings?.enabled) {
       const { data: prior } = await supabase.from("chat_messages").select("id").eq("user_id", userId).contains("metadata", { partner_headsup: "one_off_followup" }).limit(1);
       if (!prior?.length) {
-        await supabase.from("chat_messages").insert({ user_id: userId, role: "assistant", message_type: "partner_headsup_offer", content: "Want one ready before your next harder stretch too?", metadata: { partner_headsup: "one_off_followup" } });
+        await trackedSupabase.from("chat_messages").insert({ user_id: userId, role: "assistant", message_type: "partner_headsup_offer", content: "Want one ready before your next harder stretch too?", metadata: { partner_headsup: "one_off_followup" } });
       }
     }
     globalThis.dispatchEvent(new CustomEvent(HEADSUP_UPDATED_EVENT));
@@ -121,12 +122,12 @@ export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId: initialEven
     await ensureEvent("skipped");
     persist(null);
     setStatus("skipped");
-    await supabase.from("chat_messages").insert({ user_id: userId, role: "assistant", message_type: "text", content: "No problem. I'll have the next one ready.", metadata: { partner_headsup: "skipped" } });
+    await trackedSupabase.from("chat_messages").insert({ user_id: userId, role: "assistant", message_type: "text", content: "No problem. I'll have the next one ready.", metadata: { partner_headsup: "skipped" } });
     const { data: last } = await supabase.from("partner_headsup_events").select("status, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(3);
     if (settings?.enabled && last?.length === 3 && last.every((e) => e.status === "skipped")) {
       const { data: asked } = await supabase.from("chat_messages").select("id").eq("user_id", userId).eq("message_type", "partner_headsup_keep").gte("created_at", last[2].created_at).limit(1);
       if (!asked?.length) {
-        await supabase.from("chat_messages").insert({ user_id: userId, role: "assistant", message_type: "partner_headsup_keep", content: "Want me to keep making these?", metadata: {} });
+        await trackedSupabase.from("chat_messages").insert({ user_id: userId, role: "assistant", message_type: "partner_headsup_keep", content: "Want me to keep making these?", metadata: {} });
       }
     }
     setActing(false);
