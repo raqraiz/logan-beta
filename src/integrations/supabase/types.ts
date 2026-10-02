@@ -1125,6 +1125,87 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_headsup_events: {
+        Row: {
+          created_at: string
+          id: string
+          outcome: string | null
+          status: string
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          outcome?: string | null
+          status: string
+          user_id: string
+          window_start: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          outcome?: string | null
+          status?: string
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
+      partner_headsup_settings: {
+        Row: {
+          consent_at: string | null
+          created_at: string
+          enabled: boolean
+          helps: string[]
+          id: string
+          include_dates: boolean
+          include_footer: boolean
+          include_helps: boolean
+          include_mood: boolean
+          partner_name: string | null
+          paused_until: string | null
+          relationship: string | null
+          timing: string
+          user_id: string
+          whatsapp_number: string | null
+        }
+        Insert: {
+          consent_at?: string | null
+          created_at?: string
+          enabled?: boolean
+          helps?: string[]
+          id?: string
+          include_dates?: boolean
+          include_footer?: boolean
+          include_helps?: boolean
+          include_mood?: boolean
+          partner_name?: string | null
+          paused_until?: string | null
+          relationship?: string | null
+          timing?: string
+          user_id: string
+          whatsapp_number?: string | null
+        }
+        Update: {
+          consent_at?: string | null
+          created_at?: string
+          enabled?: boolean
+          helps?: string[]
+          id?: string
+          include_dates?: boolean
+          include_footer?: boolean
+          include_helps?: boolean
+          include_mood?: boolean
+          partner_name?: string | null
+          paused_until?: string | null
+          relationship?: string | null
+          timing?: string
+          user_id?: string
+          whatsapp_number?: string | null
+        }
+        Relationships: []
+      }
       policy_notifications: {
         Row: {
           created_at: string

@@ -5086,6 +5086,50 @@ serve(async (req) => {
       }
     }
 
+    // --- Partner heads-up offer / ask (opt-in; Logan never messages anyone) ---
+    try {
+      const askHelpExplain = /\b(help me|how (do|can|should) i)\b[^.?!]{0,40}\b(explain|tell|say to|talk to|let)\b[^.?!]{0,40}\b(my\s+)?(partner|husband|wife|boyfriend|girlfriend|fianc[eé]e?|spouse|mom|mum|dad|mother|father|sister|brother|family|friend|roommate)\b/i.test(userMessage);
+      const closePerson = /\b(my\s+)(partner|husband|wife|boyfriend|girlfriend|fianc[eé]e?|spouse|mom|mum|dad|mother|father|sister|brother|friend|roommate)\b/i;
+      const friction = /\b(fight|fought|argu(e|ed|ing|ment)|snapp(ed|ing)|yell(ed|ing)?|annoy(ed|ing)|frustrat(ed|ing)|doesn'?t (get|understand)|don'?t (get|understand)|tension|upset with|mad at|angry at|resent)\b/i;
+      const frictionMention = closePerson.test(userMessage) && friction.test(userMessage);
+
+      if (isOnboardingComplete && (askHelpExplain || frictionMention)) {
+        const { data: hs } = await supabase.from("partner_headsup_settings").select("enabled").eq("user_id", user.id).maybeSingle();
+        if (!hs?.enabled) {
+          if (askHelpExplain) {
+            await supabase.from("chat_messages").insert({
+              user_id: user.id, role: "assistant", message_type: "text",
+              content: "Of course. I can write something for this week right now.",
+              metadata: { partner_headsup: "ask_intro" },
+            });
+            await supabase.from("chat_messages").insert({
+              user_id: user.id, role: "assistant", message_type: "partner_headsup_ask",
+              content: "Or I can have a short heads-up ready before your harder days every cycle, so you don't have to explain it each time. You'd see every one first.",
+              metadata: {},
+            });
+          } else {
+            // At most once every 2 cycles.
+            const gapDays = Math.max(2 * (participant?.cycle_length_days || 28), 28);
+            const { data: recentOffer } = await supabase.from("chat_messages").select("id")
+              .eq("user_id", user.id).eq("message_type", "partner_headsup_offer")
+              .gte("created_at", new Date(Date.now() - gapDays * 86400000).toISOString()).limit(1);
+            if (!recentOffer || recentOffer.length === 0) {
+              const nameMatch = userMessage.match(/\bmy\s+(?:partner|husband|wife|boyfriend|girlfriend|fianc[eé]e?|spouse|mom|mum|dad|mother|father|sister|brother|friend|roommate)\s*,?\s+([A-Z][a-z]{1,20})\b/);
+              const relMatch = userMessage.match(closePerson);
+              const who = nameMatch?.[1] || (relMatch ? `your ${relMatch[2].toLowerCase()}` : "them");
+              await supabase.from("chat_messages").insert({
+                user_id: user.id, role: "assistant", message_type: "partner_headsup_offer",
+                content: `Want me to draft a short heads-up you can send ${who} before those days? You'll see every message first. Nothing goes to ${who} unless you send it.`,
+                metadata: {},
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("[partner-headsup] offer check failed", e);
+    }
+
     // Get updated credit balance to return to frontend (disabled during alpha)
     let creditBalance = null;
 
