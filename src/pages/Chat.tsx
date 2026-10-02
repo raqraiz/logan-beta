@@ -56,6 +56,9 @@ import { PartnerHeadsupOfferCard } from "@/components/partner/PartnerHeadsupOffe
 import { PartnerHeadsupSetup } from "@/components/partner/PartnerHeadsupSetup";
 import { HEADSUP_OPEN_EVENT } from "@/lib/partnerHeadsup";
 import { usePartnerHeadsupFlag } from "@/hooks/usePartnerHeadsupFlag";
+import { PartnerHeadsupDraftCard } from "@/components/partner/PartnerHeadsupDraftCard";
+import { PartnerHeadsupCheckinCard, PartnerHeadsupKeepCard, PartnerHeadsupSendNowCard } from "@/components/partner/PartnerHeadsupMiniCards";
+import { OPEN_CHAT_EVENT, PREFILL_CHAT_EVENT } from "@/lib/partnerHeadsupClient";
 interface SymptomCategory {
   label: string;
   symptoms: string[];
@@ -115,6 +118,10 @@ interface ChatMessage {
     broadcast?: boolean;
     broadcast_title?: string | null;
     broadcast_id?: string | null;
+    event_id?: string;
+    mode?: string;
+    kind?: string;
+    source_message_id?: string;
     broadcast_cta?: {
       label: string;
       tab: "home" | "ask" | "plan";
@@ -289,6 +296,19 @@ const Chat = () => {
     window.addEventListener(HEADSUP_OPEN_EVENT, handler);
     return () => window.removeEventListener(HEADSUP_OPEN_EVENT, handler);
   }, [headsupVisible]);
+  useEffect(() => {
+    const openChat = () => setActiveTab("ask");
+    const prefill = (e: Event) => {
+      setActiveTab("ask");
+      setInputValue(String((e as CustomEvent).detail ?? ""));
+    };
+    window.addEventListener(OPEN_CHAT_EVENT, openChat);
+    window.addEventListener(PREFILL_CHAT_EVENT, prefill);
+    return () => {
+      window.removeEventListener(OPEN_CHAT_EVENT, openChat);
+      window.removeEventListener(PREFILL_CHAT_EVENT, prefill);
+    };
+  }, []);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
@@ -1938,7 +1958,18 @@ const Chat = () => {
                       })()}
 
                       {/* Message text (intro for proactive insights) */}
-                      {message.role === "assistant" ? (
+                      {message.message_type === "partner_headsup_draft" && headsupVisible && user ? (
+                        <PartnerHeadsupDraftCard
+                          userId={user.id}
+                          cacheKey={message.id}
+                          eventId={typeof message.metadata?.event_id === "string" ? (message.metadata.event_id as string) : undefined}
+                          mode={(message.metadata?.mode as "predicted" | "today" | "undated") ?? "predicted"}
+                          kind={(message.metadata?.kind as "scheduled" | "on_demand") ?? "on_demand"}
+                          sourceMessageId={typeof message.metadata?.source_message_id === "string" ? (message.metadata.source_message_id as string) : undefined}
+                        />
+                      ) : message.message_type === "partner_headsup_shared" ? (
+                        <span className="inline-flex items-center rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground">{message.content}</span>
+                      ) : message.role === "assistant" ? (
                         <MarkdownMessage content={message.content} />
                       ) : (
                         <p className="whitespace-pre-wrap">
@@ -2025,8 +2056,18 @@ const Chat = () => {
                       {headsupVisible && (message.message_type === "partner_headsup_offer" || message.message_type === "partner_headsup_ask") && user && (
                         <PartnerHeadsupOfferCard
                           userId={user.id}
+                          cacheKey={message.id}
                           kind={message.message_type === "partner_headsup_ask" ? "ask" : "offer"}
                         />
+                      )}
+                      {headsupVisible && message.message_type === "partner_headsup_checkin" && typeof message.metadata?.event_id === "string" && user && (
+                        <PartnerHeadsupCheckinCard userId={user.id} eventId={message.metadata.event_id as string} />
+                      )}
+                      {headsupVisible && message.message_type === "partner_headsup_keep" && user && (
+                        <PartnerHeadsupKeepCard userId={user.id} />
+                      )}
+                      {headsupVisible && message.message_type === "partner_headsup_sendnow" && user && (
+                        <PartnerHeadsupSendNowCard userId={user.id} cacheKey={message.id} />
                       )}
 
                       {message.message_type === "resource_offer" && message.metadata?.resource_type && user && (

@@ -13,6 +13,7 @@ import {
   type HeadsupRelationship,
   type HeadsupTiming,
 } from "@/lib/partnerHeadsup";
+import { PUSH_STATUS_COPY, currentOrNextWindow, enableHeadsupPush } from "@/lib/partnerHeadsupClient";
 
 const chip = (active: boolean) =>
   `min-h-[44px] px-4 rounded-full border text-sm font-medium transition-colors ${
@@ -281,6 +282,10 @@ function HeadsupReviewDialog({ open, onOpenChange, userId, name, relationship, p
       toast({ title: "Couldn't turn on heads-ups", description: error.message, variant: "destructive" });
       return;
     }
+    // Browser notifications for scheduled drafts (needs this tap). Failures are non-blocking.
+    void enableHeadsupPush(userId).then((s) => {
+      if (s !== "registered" && s !== "not-configured") toast({ title: "Notifications", description: PUSH_STATUS_COPY[s] });
+    }).catch(() => {});
     await supabase.from("chat_messages").insert({
       user_id: userId,
       role: "assistant",
@@ -288,6 +293,19 @@ function HeadsupReviewDialog({ open, onOpenChange, userId, name, relationship, p
       message_type: "text",
       metadata: { partner_headsup: "enabled" },
     });
+    const { data: pc } = await supabase.from("participants").select("last_period_start, cycle_length_days").eq("user_id", userId).maybeSingle();
+    const w = currentOrNextWindow(pc?.last_period_start, pc?.cycle_length_days);
+    if (w && (w.inside || (w.daysUntil > 0 && w.daysUntil <= 3))) {
+      await supabase.from("chat_messages").insert({
+        user_id: userId,
+        role: "assistant",
+        message_type: "partner_headsup_sendnow",
+        content: w.inside
+          ? `Your harder stretch is already here. Want to send ${name} one now?`
+          : `Your harder stretch starts in ${w.daysUntil} ${w.daysUntil === 1 ? "day" : "days"}. Want to send ${name} one now?`,
+        metadata: {},
+      });
+    }
     setSaving(false);
     globalThis.dispatchEvent(new CustomEvent("logan:headsup-updated"));
     onEnabled();

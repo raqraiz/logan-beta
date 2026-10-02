@@ -1,9 +1,10 @@
 // Hourly partner heads-up job (pg_cron). Offers may post on any run; part 2 drafts must use localParts() for local 18:00 / 08:00.
-// Part 1: scheduled offer moments. Part 2 will add draft preparation here.
+// Scheduled offer moments + scheduled drafts, expiry and check-ins (drafts.ts).
 // Logan never messages the other person; offers are posted into her own chat only.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { partnerHeadsupAdminIds, partnerHeadsupFlagOn } from "../_shared/partnerHeadsupFlag.ts";
+import { processHeadsups } from "./drafts.ts";
 
 const MAX_USERS_PER_RUN = 1000;
 // Scheduled offers only trigger on a romantic partner mention (family/friends can still ask or use Settings).
@@ -43,7 +44,7 @@ function nextWindowStart(lastPeriodStart: string | null, cycleLen: number | null
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const result = { checked: 0, offered_symptom: 0, offered_pre_window: 0 };
+  const result = { checked: 0, offered_symptom: 0, offered_pre_window: 0, drafts: 0, updated: 0, expired: 0, checkins: 0, pushes: 0 };
   try {
     const flagOn = await partnerHeadsupFlagOn(admin);
     let q = admin.from("participants").select("user_id, last_period_start, cycle_length_days, timezone").not("user_id", "is", null).limit(MAX_USERS_PER_RUN);
@@ -61,6 +62,7 @@ Deno.serve(async (req) => {
       result.checked++;
       const uid = p.user_id as string;
       const local = localParts(p.timezone);
+      try { await processHeadsups(admin, p as any, result); } catch (e) { console.error("[partner-headsup-daily] drafts failed", uid, e); }
 
       // Heads-ups must be off.
       const { data: hs } = await admin.from("partner_headsup_settings").select("enabled").eq("user_id", uid).maybeSingle();
