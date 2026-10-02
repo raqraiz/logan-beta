@@ -9,7 +9,7 @@ const MAX_USERS_PER_RUN = 1000;
 // Scheduled offers only trigger on a romantic partner mention (family/friends can still ask or use Settings).
 const REL = "partner|husband|wife|boyfriend|girlfriend|fianc[eé]e?|spouse";
 // High-symptom day: 4-5 on a negative symptom she logged herself (symptom_logs only; trackers ignored).
-const NEGATIVE_SYMPTOM_RE = /\b(pain|cramps?|cramping|headaches?|fatigue|low mood|anxiety|anxious|irritab\w*|bloat\w*|poor sleep)\b/i;
+const NEGATIVE_SYMPTOM_RE = /\b(pain|cramps?|cramping|headaches?|fatigue|low mood|anxiety|anxious|irritab\w*|bloat\w*|poor sleep|migraines?|insomnia|insomniac|sleepless\w*|can't sleep|trouble sleeping)\b/i;
 
 /** Local date (YYYY-MM-DD) and hour for an IANA zone; falls back to UTC if invalid. Part 2 drafts fire at local 18:00 / 08:00. */
 export function localParts(tz: string | null | undefined, now = new Date()): { date: string; hour: number } {
