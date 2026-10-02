@@ -1,0 +1,3 @@
+ALTER TABLE public.participants ADD COLUMN IF NOT EXISTS birth_control_method text;
+ALTER TABLE public.participants ADD CONSTRAINT participants_birth_control_method_check CHECK (birth_control_method IS NULL OR birth_control_method IN ('combined_pill_with_breaks','continuous_pill','progestin_only_pill','hormonal_iud','copper_iud','implant','injection','ring_or_patch','other','not_sure'));
+COMMENT ON COLUMN public.participants.birth_control_method IS 'Specific contraception method. NULL = type unknown.';

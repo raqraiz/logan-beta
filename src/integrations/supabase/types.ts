@@ -986,6 +986,7 @@ export type Database = {
           additional_notes: string | null
           age: number | null
           anchor_symptom: string | null
+          birth_control_method: string | null
           birth_control_status: string | null
           consent_given: boolean | null
           consent_given_at: string | null
@@ -1031,6 +1032,7 @@ export type Database = {
           additional_notes?: string | null
           age?: number | null
           anchor_symptom?: string | null
+          birth_control_method?: string | null
           birth_control_status?: string | null
           consent_given?: boolean | null
           consent_given_at?: string | null
@@ -1076,6 +1078,7 @@ export type Database = {
           additional_notes?: string | null
           age?: number | null
           anchor_symptom?: string | null
+          birth_control_method?: string | null
           birth_control_status?: string | null
           consent_given?: boolean | null
           consent_given_at?: string | null
