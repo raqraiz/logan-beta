@@ -2849,6 +2849,7 @@ serve(async (req) => {
     let postpartumVetoBlockedStageSignal = false;
 
     // --- Manual life-stage corrections (menopause / perimenopause / cycling) ---
+    let bcMethodSavedNote = "";
     if (participant) {
       // Perimenopause: "I'm in perimenopause", "I'm perimenopausal", "I'm peri", "peri-menopausal"
       const perimenopauseSignal =
