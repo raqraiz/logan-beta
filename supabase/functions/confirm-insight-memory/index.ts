@@ -3,7 +3,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
-import { extractConfirmedPattern } from "../_shared/memoryNotes.ts";
+import { extractConfirmedPattern, supersedeSameTopic } from "../_shared/memoryNotes.ts";
 import { logMessageFailure } from "../_shared/messageFailures.ts";
 
 const json = (b: unknown, status = 200) =>
@@ -35,10 +35,11 @@ Deno.serve(async (req) => {
     const note = await extractConfirmedPattern(msg.content, Deno.env.get("LOVABLE_API_KEY") ?? "");
     if (!note) throw new Error("could not summarise insight");
 
-    const { error } = await service.from("user_memory_notes").insert({
+    const { data: row, error } = await service.from("user_memory_notes").insert({
       user_id: user.id, note, source: "insight_confirmed", source_message_id: messageId, active: true,
-    });
+    }).select("id").single();
     if (error && error.code !== "23505") throw error;
+    if (row?.id) await supersedeSameTopic(service, user.id, row.id, note, Deno.env.get("LOVABLE_API_KEY") ?? "");
     return json({ saved: true });
   } catch (e) {
     await logMessageFailure(service, userId, "insight_confirmed_note", "confirm-insight-memory", e);

@@ -13,7 +13,7 @@ import {
   isValidStageKey,
   type TopicBoundary,
 } from "../_shared/topicBoundaries.ts";
-import { fetchMemoryNotes, buildMemoryBlock, extractCorrection, CORRECTION_PREFIX_RE } from "../_shared/memoryNotes.ts";
+import { fetchMemoryNotes, buildMemoryBlock, extractCorrection, supersedeSameTopic, CORRECTION_PREFIX_RE } from "../_shared/memoryNotes.ts";
 import { trackMessageFailures } from "../_shared/messageFailures.ts";
 
 const corsHeaders = {
@@ -4353,11 +4353,14 @@ serve(async (req) => {
       } else {
         const result = await extractCorrection(lastInsight?.content ?? "", correctionText, lovableApiKey);
         if (result?.clear) {
-          const { error: noteErr } = await supabase.from("user_memory_notes").insert({
+          const { data: noteRow, error: noteErr } = await supabase.from("user_memory_notes").insert({
             user_id: user.id, note: result.note, source: "insight_correction", source_message_id: lastInsight?.id ?? null,
-          });
+          }).select("id").single();
           if (noteErr) { console.error("[correction] insert failed:", noteErr.message); correctionState = "failed"; }
-          else { correctionState = "saved"; correctionNote = result.note; }
+          else {
+            correctionState = "saved"; correctionNote = result.note;
+            await supersedeSameTopic(supabase, user.id, noteRow.id, result.note, lovableApiKey);
+          }
         } else if (result && !result.clear) {
           correctionState = "unclear";
         } else {
