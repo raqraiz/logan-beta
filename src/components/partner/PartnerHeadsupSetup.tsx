@@ -239,7 +239,7 @@ function HeadsupReviewDialog({ open, onOpenChange, userId, name, relationship, p
   const [includeHelps, setIncludeHelps] = useState(true);
   const [includeFooter, setIncludeFooter] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [window, setWindow] = useState<{ start: Date; end: Date } | null>(null);
+  const [harderWindow, setWindow] = useState<{ start: Date; end: Date } | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -252,8 +252,8 @@ function HeadsupReviewDialog({ open, onOpenChange, userId, name, relationship, p
   }, [open, userId]);
 
   const example = useMemo(
-    () => buildExampleMessage({ name, relationship, helps, includeDates, includeMood, includeHelps, window }),
-    [name, relationship, helps, includeDates, includeMood, includeHelps, window],
+    () => buildExampleMessage({ name, relationship, helps, includeDates, includeMood, includeHelps, window: harderWindow }),
+    [name, relationship, helps, includeDates, includeMood, includeHelps, harderWindow],
   );
 
   const turnOn = async () => {
@@ -288,7 +288,6 @@ function HeadsupReviewDialog({ open, onOpenChange, userId, name, relationship, p
       message_type: "text",
       metadata: { partner_headsup: "enabled" },
     });
-    window && null;
     setSaving(false);
     globalThis.dispatchEvent(new CustomEvent("logan:headsup-updated"));
     onEnabled();
