@@ -580,7 +580,7 @@ Generate a JSON object:
    - Sentence 2: Name a strength or high-performing quality they're likely feeling today. During Follicular/Ovulation, lean into peak performance. During Luteal/Menstruation, acknowledge the quieter superpowers.
    - Sentence 3 (optional, only in Luteal or Menstruation): A single, specific food mention that connects to their anchor symptom. Frame it as something their body might be drawn to, not as a prescription.
 
-2. "question": One short question (under 12 words). During Follicular/Ovulation: ask about a strength or creative/energetic moment. During Luteal/Menstruation: ask about a strength OR a hyper-specific sensation tied to "${anchorSymptom}". The kind of question that makes them stop and think "wait, yes."
+2. "question": One short question (under 12 words). During Follicular/Ovulation: ask about a strength or creative/energetic moment. During Luteal/Menstruation: ask about a strength OR a hyper-specific sensation tied to "${anchorSymptom}". The kind of question that makes them stop and think "wait, yes." Write it as its own full sentence: start with a capital letter and end with "?".
 
 3. "starters": 3 replies (2-4 words each). One confirms ("Yeah exactly"), one pushes back ("Not today actually"), one opens up ("Tell me more").
 
@@ -763,7 +763,7 @@ Generate a JSON object:
    - Sentence 2: Name something they're likely feeling or experiencing right now — with warmth.
    - Sentence 3 (optional): A gentle, specific tip or validation tied to their anchor symptom or stage.
 
-2. "question": One short question (under 12 words). Hyper-specific to their stage.
+2. "question": One short question (under 12 words). Hyper-specific to their stage. Start with a capital letter and end with "?".
 
 3. "starters": 3 replies (2-4 words each). One confirms, one pushes back, one opens up.
 

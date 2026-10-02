@@ -35,6 +35,7 @@ import { PhaseCheatSheet } from "@/components/chat/PhaseCheatSheet";
 import { TrialChat } from "@/components/chat/TrialChat";
 import { MessageFeedback } from "@/components/chat/MessageFeedback";
 import { ConversationStarters } from "@/components/chat/ConversationStarters";
+import { formatFollowUpQuestion } from "@/lib/formatFollowUpQuestion";
 import { MarkdownMessage } from "@/components/chat/MarkdownMessage";
 import { HighlightedText } from "@/components/chat/HighlightedText";
 import { CycleBasicsCard, HormoneBasicsCard, SymptomExplainerCard, AnchorExplainerCard, NotSureButton } from "@/components/chat/OnboardingEducation";
@@ -1963,7 +1964,7 @@ const Chat = () => {
                       {/* Engagement question after the cheat sheet */}
                       {message.metadata?.engagement_question && (
                         <div className="mt-3">
-                          <MarkdownMessage content={message.metadata.engagement_question as string} />
+                          <MarkdownMessage content={formatFollowUpQuestion(message.metadata.engagement_question as string)} />
                         </div>
                       )}
 
