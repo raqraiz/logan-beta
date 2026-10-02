@@ -1,4 +1,4 @@
-import { buildBcMethodRule,  } from "../_shared/bcMethod.ts";
+import { buildBcMethodRule, bcFramingSummary } from "../_shared/bcMethod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
@@ -86,6 +86,7 @@ serve(async (req) => {
     let hasCycleInfo = false;
     let bcRule = "";
 
+    let bcParticipant: any = null;
     if (userEmail) {
       const { data: participant } = await supabaseService
         .from("participants")
@@ -97,6 +98,7 @@ serve(async (req) => {
 
       if (participant?.life_stage) lifeStage = participant.life_stage;
       bcRule = buildBcMethodRule(participant as any);
+      bcParticipant = participant;
       postpartumActive = !!participant?.postpartum_active;
 
       if (participant?.cycle_length_days) {
@@ -164,7 +166,14 @@ serve(async (req) => {
     } else if (lifeStage === "menopause") {
       stageContext = `The user is in menopause. They are NOT cycling. Do NOT mention any menstrual cycle phase. Frame guidance around menopause: hormonal shifts, energy, sleep, strength, and long-term health.`;
     } else if (lifeStage === "irregular") {
-      stageContext = `The user is on hormonal birth control or has an irregular cycle. They are NOT naturally cycling — their hormones are externally regulated (or unpredictable). Do NOT mention any menstrual cycle phase (follicular, luteal, ovulation, menstruation), do NOT reference a cycle day number, and do NOT invent estrogen/progesterone-rising language. Frame guidance around steady-state levers: sleep, protein, strength training, stress, hydration, and micronutrients.`;
+      const irregularRules = "Do NOT mention any menstrual cycle phase (follicular, luteal, ovulation, menstruation), do NOT reference a cycle day number, and do NOT invent estrogen/progesterone-rising language. Frame guidance around steady-state levers: sleep, protein, strength training, stress, hydration, and micronutrients.";
+      stageContext = bcParticipant?.birth_control_method === "copper_iud"
+        ? `The user has an irregular cycle and ${bcFramingSummary(bcParticipant)}. Follow the BIRTH CONTROL METHOD rule for all method wording. ${irregularRules}`
+        : bcParticipant?.on_hormonal_bc === true
+        ? `The user ${bcFramingSummary(bcParticipant)}. Phase predictions are not reliable for her. ${irregularRules}`
+        : bcParticipant?.on_hormonal_bc === false
+        ? `The user has an irregular cycle and has confirmed she is NOT on hormonal birth control. Never mention the pill, IUD, implant, ring, patch, or hormonal contraception. ${irregularRules}`
+        : `The user has an irregular cycle. We do NOT know whether she is on hormonal birth control; never assert or assume that she is. ${irregularRules}`;
     } else if (isStaleCycle) {
       stageContext = `The user's tracked period is overdue (more than two weeks past their expected cycle length of ${cycleLengthDays} days). We do NOT know what phase they are in right now. Do NOT name a phase or day number. Frame guidance around general well-being and suggest they update their last period date when it starts.`;
     } else if (postpartumActive) {
