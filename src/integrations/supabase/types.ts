@@ -1328,6 +1328,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          analytics_consent: string | null
           avatar_url: string | null
           created_at: string
           email: string
@@ -1349,6 +1350,7 @@ export type Database = {
           utm_term: string | null
         }
         Insert: {
+          analytics_consent?: string | null
           avatar_url?: string | null
           created_at?: string
           email: string
@@ -1370,6 +1372,7 @@ export type Database = {
           utm_term?: string | null
         }
         Update: {
+          analytics_consent?: string | null
           avatar_url?: string | null
           created_at?: string
           email?: string

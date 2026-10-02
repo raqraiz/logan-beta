@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS analytics_consent text CHECK (analytics_consent IN ('granted','denied'));
