@@ -24,6 +24,16 @@ export function AnalyticsGate() {
     return () => { sub.subscription.unsubscribe(); globalThis.removeEventListener("logan:analytics-consent", onConsent); };
   }, []);
 
+  // Her account's choice wins on every device she signs into.
+  useEffect(() => {
+    if (!userId) return;
+    supabase.from("profiles").select("analytics_consent").eq("id", userId).maybeSingle().then(({ data }) => {
+      const saved = data?.analytics_consent as "granted" | "denied" | null | undefined;
+      if (saved && saved !== getAnalyticsConsent()) setAnalyticsConsent(saved, { sync: false });
+      else if (!saved && getAnalyticsConsent()) setAnalyticsConsent(getAnalyticsConsent() as "granted" | "denied");
+    });
+  }, [userId]);
+
   useEffect(() => {
     if (userId === undefined) return; // still checking sign-in
     const publicContext = userId === null || isPublicPath(location.pathname);
@@ -52,9 +62,9 @@ export function AnalyticsGate() {
   return (
     <div className="fixed inset-x-3 top-3 z-[60] mx-auto max-w-md rounded-2xl border border-border/50 bg-card/90 p-4 text-sm shadow-lg backdrop-blur-xl">
       <p className="text-foreground">Can we collect anonymous usage stats to improve Logan? Nothing you write or log is included.</p>
-      <div className="mt-3 flex justify-end gap-2">
-        <button type="button" onClick={() => setAnalyticsConsent("denied")} className="rounded-full px-3 py-1.5 text-muted-foreground hover:text-foreground">No thanks</button>
-        <button type="button" onClick={() => setAnalyticsConsent("granted")} className="rounded-full bg-primary px-3 py-1.5 text-primary-foreground">Allow</button>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button type="button" onClick={() => setAnalyticsConsent("denied")} className="rounded-full border border-border bg-secondary px-3 py-1.5 font-medium text-foreground">No thanks</button>
+        <button type="button" onClick={() => setAnalyticsConsent("granted")} className="rounded-full border border-border bg-secondary px-3 py-1.5 font-medium text-foreground">Allow</button>
       </div>
     </div>
   );

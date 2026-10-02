@@ -14,6 +14,7 @@ import { HistoryImportDialog } from "./HistoryImportDialog";
 import { ProviderConnectCard } from "@/components/settings/ProviderConnectCard";
 import { ReferralCard } from "@/components/settings/ReferralCard";
 import { SharingSection } from "@/components/settings/SharingSection";
+import { PrivacySection } from "@/components/settings/PrivacySection";
 import { setPhaseLengthPrefs, defaultPhaseLengths, clampPhaseLength, totalCycleLength, PHASE_LENGTH_BOUNDS, type PhaseLengths } from "@/lib/phaseLengths";
 
 import {
@@ -579,6 +580,8 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
         </div>
 
         <SharingSection userId={userId} onOpenSetup={() => onOpenChange(false)} />
+
+        <PrivacySection />
 
         <ReferralCard userId={userId} />
 

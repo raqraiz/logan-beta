@@ -63,7 +63,15 @@ export function enableLiveSession() {
 }
 
 export const getAnalyticsConsent = () => localStorage.getItem(ANALYTICS_CONSENT_KEY);
-export function setAnalyticsConsent(v: "granted" | "denied") {
+/** Saves her choice on this device and, when signed in, to her account. */
+export function setAnalyticsConsent(v: "granted" | "denied", opts: { sync?: boolean } = { sync: true }) {
+  if (opts.sync !== false) {
+    import("@/integrations/supabase/client").then(async ({ supabase }) => {
+      const { data } = await supabase.auth.getSession();
+      const uid = data.session?.user.id;
+      if (uid) await supabase.from("profiles").update({ analytics_consent: v }).eq("id", uid);
+    });
+  }
   localStorage.setItem(ANALYTICS_CONSENT_KEY, v);
   if (v === "granted") enableGA(); else disableGA();
   globalThis.dispatchEvent(new CustomEvent("logan:analytics-consent"));
