@@ -118,6 +118,10 @@ interface ChatMessage {
     broadcast?: boolean;
     broadcast_title?: string | null;
     broadcast_id?: string | null;
+    event_id?: string;
+    mode?: string;
+    kind?: string;
+    source_message_id?: string;
     broadcast_cta?: {
       label: string;
       tab: "home" | "ask" | "plan";

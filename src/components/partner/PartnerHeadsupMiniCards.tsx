@@ -5,7 +5,7 @@ import { PartnerHeadsupDraftCard } from "./PartnerHeadsupDraftCard";
 
 const chip = "min-h-[44px] px-4 rounded-full border border-border/60 bg-card/60 text-sm font-medium text-foreground hover:bg-card transition-colors disabled:opacity-40";
 
-const say = (userId: string, content: string, metadata: Record<string, unknown> = {}) =>
+const say = (userId: string, content: string, metadata: Record<string, string> = {}) =>
   supabase.from("chat_messages").insert({ user_id: userId, role: "assistant", message_type: "text", content, metadata });
 
 /** "How did the heads-up land with [name]?" chips. */

@@ -41,7 +41,8 @@ export function whatsappUrl(text: string, number: string | null | undefined): st
 }
 
 export async function shareSheet(text: string): Promise<boolean> {
-  if (typeof navigator !== "undefined" && "share" in navigator) {
+  if (typeof navigator === "undefined") return false;
+  if ("share" in navigator) {
     try { await navigator.share({ text }); return true; } catch { return false; }
   }
   try { await navigator.clipboard.writeText(text); } catch { /* ignore */ }
