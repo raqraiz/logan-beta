@@ -45,7 +45,7 @@ export async function shareSheet(text: string): Promise<boolean> {
   if ("share" in navigator) {
     try { await navigator.share({ text }); return true; } catch { return false; }
   }
-  try { await navigator.clipboard.writeText(text); } catch { /* ignore */ }
+  try { await (navigator as Navigator).clipboard.writeText(text); } catch { /* ignore */ }
   return false;
 }
 
