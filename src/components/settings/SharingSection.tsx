@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { HEADSUP_OPEN_EVENT, headsupStatus } from "@/lib/partnerHeadsup";
 import { usePartnerHeadsupFlag } from "@/hooks/usePartnerHeadsupFlag";
+import { PartnerHeadsupManage } from "@/components/partner/PartnerHeadsupManage";
 
 interface Props {
   userId?: string;
@@ -31,9 +32,10 @@ function SharingSectionInner({ userId, onOpenSetup }: Props) {
     return () => window.removeEventListener("logan:headsup-updated", load);
   }, [userId]);
 
+  const [manageOpen, setManageOpen] = useState(false);
   const open = () => {
+    if (status !== "Off" && userId) { setManageOpen(true); return; }
     onOpenSetup();
-    // Manage screen arrives in part 2; for now both open setup.
     setTimeout(() => window.dispatchEvent(new CustomEvent(HEADSUP_OPEN_EVENT)), 50);
   };
 
@@ -68,6 +70,9 @@ function SharingSectionInner({ userId, onOpenSetup }: Props) {
       <p className="text-xs font-light text-muted-foreground">
         You can turn off any kind of sharing and delete its history at any time.
       </p>
+      {userId && (
+        <PartnerHeadsupManage userId={userId} open={manageOpen} onOpenChange={setManageOpen} onCloseSettings={onOpenSetup} />
+      )}
     </div>
   );
 }
