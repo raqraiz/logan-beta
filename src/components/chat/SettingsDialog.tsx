@@ -13,6 +13,7 @@ import { Loader2, Upload, Trash2, FileText } from "lucide-react";
 import { HistoryImportDialog } from "./HistoryImportDialog";
 import { ProviderConnectCard } from "@/components/settings/ProviderConnectCard";
 import { ReferralCard } from "@/components/settings/ReferralCard";
+import { SharingSection } from "@/components/settings/SharingSection";
 import { setPhaseLengthPrefs, defaultPhaseLengths, clampPhaseLength, totalCycleLength, PHASE_LENGTH_BOUNDS, type PhaseLengths } from "@/lib/phaseLengths";
 
 import {
@@ -576,6 +577,8 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
           </p>
           <ProviderConnectCard provider="whoop" userId={userId} />
         </div>
+
+        <SharingSection userId={userId} onOpenSetup={() => onOpenChange(false)} />
 
         <ReferralCard userId={userId} />
 

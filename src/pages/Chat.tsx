@@ -52,6 +52,9 @@ import { PlanTab } from "@/components/tabs/PlanTab";
 import { usePresence } from "@/hooks/usePresence";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
 import { bcMethodOptionsFor } from "@/lib/bcMethod";
+import { PartnerHeadsupOfferCard } from "@/components/partner/PartnerHeadsupOfferCard";
+import { PartnerHeadsupSetup } from "@/components/partner/PartnerHeadsupSetup";
+import { HEADSUP_OPEN_EVENT } from "@/lib/partnerHeadsup";
 interface SymptomCategory {
   label: string;
   symptoms: string[];
@@ -273,6 +276,16 @@ const Chat = () => {
     trackPageView(window.location.pathname);
   }, [trackPageView]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [headsupSetupOpen, setHeadsupSetupOpen] = useState(false);
+  useEffect(() => {
+    const handler = () => {
+      setActiveTab("chat");
+      setHeadsupSetupOpen(true);
+      setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 150);
+    };
+    window.addEventListener(HEADSUP_OPEN_EVENT, handler);
+    return () => window.removeEventListener(HEADSUP_OPEN_EVENT, handler);
+  }, []);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
@@ -2003,6 +2016,13 @@ const Chat = () => {
                       })()}
 
                       {/* Resource offer card (Logan suggesting a downloadable) */}
+                      {(message.message_type === "partner_headsup_offer" || message.message_type === "partner_headsup_ask") && user && (
+                        <PartnerHeadsupOfferCard
+                          userId={user.id}
+                          kind={message.message_type === "partner_headsup_ask" ? "ask" : "offer"}
+                        />
+                      )}
+
                       {message.message_type === "resource_offer" && message.metadata?.resource_type && user && (
                         <ResourceOfferCard
                           userId={user.id}
@@ -2364,6 +2384,11 @@ const Chat = () => {
                 </div>
               );
             })
+          )}
+          {headsupSetupOpen && user && (
+            <div className="px-1 pb-4">
+              <PartnerHeadsupSetup userId={user.id} onClose={() => setHeadsupSetupOpen(false)} />
+            </div>
           )}
           <div ref={scrollRef} />
         </div>
