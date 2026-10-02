@@ -716,6 +716,33 @@ export type Database = {
         }
         Relationships: []
       }
+      insight_feedback_events: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          insight_type: string | null
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          insight_type?: string | null
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          insight_type?: string | null
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       insights: {
         Row: {
           admin_notes: string | null
@@ -1155,6 +1182,7 @@ export type Database = {
           outcome: string | null
           predicted_period_start: string | null
           recipient_name: string | null
+          sent_at: string | null
           status: string
           user_id: string
           window_end: string | null
@@ -1171,6 +1199,7 @@ export type Database = {
           outcome?: string | null
           predicted_period_start?: string | null
           recipient_name?: string | null
+          sent_at?: string | null
           status: string
           user_id: string
           window_end?: string | null
@@ -1187,6 +1216,7 @@ export type Database = {
           outcome?: string | null
           predicted_period_start?: string | null
           recipient_name?: string | null
+          sent_at?: string | null
           status?: string
           user_id?: string
           window_end?: string | null
@@ -2082,6 +2112,19 @@ export type Database = {
       }
     }
     Functions: {
+      admin_measurement_weekly: {
+        Args: { _weeks?: number }
+        Returns: {
+          active_user_days: number
+          active_users: number
+          headsups_sent: number
+          insights_confirmed: number
+          insights_corrected: number
+          insights_not_confirmed: number
+          insights_shown: number
+          week: string
+        }[]
+      }
       count_onboarded_users: { Args: never; Returns: number }
       evaluate_postpartum_regularity: {
         Args: { _participant_id: string }
