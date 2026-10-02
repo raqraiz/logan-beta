@@ -1,4 +1,5 @@
 import { buildBcMethodRule, detectBcMethod, BC_METHOD_LABELS, canAskBcMethod, didAskBcMethod, bcFramingSummary, hormonalAnswerForMethod } from "../_shared/bcMethod.ts";
+import { partnerHeadsupVisibleFor } from "../_shared/partnerHeadsupFlag.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
@@ -5093,7 +5094,7 @@ serve(async (req) => {
       const friction = /\b(fight|fought|argu(e|ed|ing|ment)|snapp(ed|ing)|yell(ed|ing)?|annoy(ed|ing)|frustrat(ed|ing)|doesn'?t (get|understand)|don'?t (get|understand)|tension|upset with|mad at|angry at|resent)\b/i;
       const frictionMention = closePerson.test(userMessage) && friction.test(userMessage);
 
-      if (isOnboardingComplete && (askHelpExplain || frictionMention)) {
+      if (isOnboardingComplete && (askHelpExplain || frictionMention) && await partnerHeadsupVisibleFor(supabase, user.id)) {
         const { data: hs } = await supabase.from("partner_headsup_settings").select("enabled").eq("user_id", user.id).maybeSingle();
         if (!hs?.enabled) {
           if (askHelpExplain) {

@@ -52,7 +52,7 @@ function joinList(items: string[]): string {
   return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
 }
 
-/** Next harder stretch: the 4 days before her next predicted period. */
+/** Next harder stretch: 3 days before the predicted next period start through day 2 of the period. */
 export function nextHarderWindow(
   lastPeriodStart: string | null | undefined,
   cycleLengthDays: number | null | undefined,
@@ -63,14 +63,14 @@ export function nextHarderWindow(
   today.setHours(12, 0, 0, 0);
   const next = new Date(y, m - 1, d, 12);
   let guard = 0;
-  while (next.getTime() - 4 * 86400000 < today.getTime() && guard < 60) {
+  while (next.getTime() - 3 * 86400000 < today.getTime() && guard < 60) {
     next.setDate(next.getDate() + cycleLengthDays);
     guard++;
   }
   const start = new Date(next);
-  start.setDate(start.getDate() - 4);
+  start.setDate(start.getDate() - 3);
   const end = new Date(next);
-  end.setDate(end.getDate() - 1);
+  end.setDate(end.getDate() + 1); // day 2 of the period
   return { start, end };
 }
 
@@ -92,7 +92,7 @@ export function buildExampleMessage(i: ExampleInput): string {
   if (i.includeDates) {
     const range = i.window
       ? `from about ${WEEKDAY(i.window.start)} to ${WEEKDAY(i.window.end)}`
-      : "from about Thursday to Sunday";
+      : "from about Thursday to Tuesday";
     parts.push(`The next few days, ${range}, are usually my harder stretch.`);
   } else {
     parts.push("The next few days are usually my harder stretch.");
