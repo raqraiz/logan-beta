@@ -37,7 +37,7 @@ export function InsightConfirm({ userId, messageId, insightType }: Props) {
   return (
     <div ref={ref} className="mt-1.5 flex items-center gap-3 text-[11px] font-normal text-muted-foreground [font-family:'Quicksand',system-ui,sans-serif]">
       {answer ? (
-        <span>{answer === "confirmed" ? "Thanks, noted." : "Tell me what's different and I'll adjust."}</span>
+        <span>{answer === "confirmed" ? "Got it. I'll remember that." : "Tell me what's different and I'll adjust."}</span>
       ) : (
         <>
           <span>Sound like you?</span>

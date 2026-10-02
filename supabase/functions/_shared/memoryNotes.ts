@@ -22,7 +22,7 @@ export async function fetchMemoryNotes(client: Client, userId: string): Promise<
 
 export function buildMemoryBlock(notes: string[]): string {
   if (!notes.length) return "";
-  return `\n\nWHAT SHE HAS TOLD YOU ABOUT HERSELF (her own corrections; these override general cycle patterns, never contradict them):\n${notes.map((n) => `- ${n}`).join("\n")}`;
+  return `\n\nWHAT SHE HAS TOLD YOU ABOUT HERSELF (her own corrections; these override any pattern you inferred from her data or general cycle patterns. Never contradict them, and never resurface a pattern she corrected unless she brings it up):\n${notes.map((n) => `- ${n}`).join("\n")}`;
 }
 
 /** Turns her correction into a short note, or flags that it's unclear. */

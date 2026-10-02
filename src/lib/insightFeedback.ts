@@ -24,13 +24,19 @@ export function setPendingCorrection(messageId: string, insightType?: string | n
 }
 
 /** Call when she sends a chat message; records "corrected" if it follows a "Not quite" tap within 15 minutes. */
+let linkedCorrectionId: string | null = null;
+/** The insight id the message just sent corrects (read once, by the chat request). */
+export function takeLinkedCorrectionId() { const v = linkedCorrectionId; linkedCorrectionId = null; return v; }
+
 export function consumePendingCorrection(userId: string, text: string) {
+  linkedCorrectionId = null;
   const raw = sessionStorage.getItem(PENDING_KEY);
   if (!raw) return;
   sessionStorage.removeItem(PENDING_KEY);
   try {
     const p = JSON.parse(raw) as { messageId: string; insightType: string | null; at: number };
     const changed = text.trim() !== CORRECTION_PREFIX.trim();
+    if (changed && Date.now() - p.at < 15 * 60 * 1000) linkedCorrectionId = p.messageId;
     if (changed && Date.now() - p.at < 15 * 60 * 1000) void logInsightAction(userId, p.messageId, "corrected", p.insightType);
   } catch { /* ignore */ }
 }

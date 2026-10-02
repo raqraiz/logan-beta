@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Row {
   week: string; insights_shown: number; insights_confirmed: number; insights_not_confirmed: number;
-  insights_corrected: number; headsups_sent: number; active_user_days: number; active_users: number;
+  insights_corrected: number; reactions_positive: number; reactions_negative: number; headsups_sent: number; active_user_days: number; active_users: number;
 }
 
 const COLS: [keyof Row, string][] = [
@@ -14,6 +14,8 @@ const COLS: [keyof Row, string][] = [
   ["insights_confirmed", "Confirmed"],
   ["insights_not_confirmed", "Not confirmed"],
   ["insights_corrected", "Corrected"],
+  ["reactions_positive", "Thumbs up"],
+  ["reactions_negative", "Thumbs down"],
   ["headsups_sent", "Heads-ups sent"],
   ["active_users", "Users chatting"],
   ["active_user_days", "User-days with a chat"],
@@ -40,7 +42,7 @@ export function MeasurementPanel() {
       <CardHeader>
         <CardTitle className="text-base">Measurement (weekly)</CardTitle>
         <p className="text-xs text-muted-foreground">
-          Shown/corrected tracking started Oct 2, 2026. Confirmed includes thumbs up; not confirmed includes thumbs down. Heads-ups sent counts taps on Send/Share, not delivery. Doctor summaries aren't built yet.
+          Shown/corrected tracking started Oct 2, 2026. Confirmed and not confirmed count only "That's right" / "Not quite" taps; thumbs are counted separately. Internal accounts are excluded. Heads-ups sent counts taps on Send/Share, not delivery. Doctor summaries aren't built yet.
         </p>
         <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
           <Switch checked={lsTesting} onCheckedChange={toggleLs} />
