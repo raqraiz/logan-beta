@@ -112,6 +112,7 @@ Deno.serve(async (req) => {
       "resource_feedback",
       "user_activity_events",
       "feature_events",
+      "insight_feedback_events",
       "weight_logs",
       "user_feedback",
       "history_imports",
