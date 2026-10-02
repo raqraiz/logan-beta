@@ -89,11 +89,8 @@ export interface ExampleInput {
 export function buildExampleMessage(i: ExampleInput): string {
   const greeting = i.relationship === "partner" ? "Hey love" : `Hey ${i.name.trim() || "there"}`;
   const parts: string[] = [`${greeting}, a heads-up from me.`];
-  if (i.includeDates) {
-    const range = i.window
-      ? `from about ${WEEKDAY(i.window.start)} to ${WEEKDAY(i.window.end)}`
-      : "from about Thursday to Tuesday";
-    parts.push(`The next few days, ${range}, are usually my harder stretch.`);
+  if (i.includeDates && i.window) {
+    parts.push(`The next few days, from about ${WEEKDAY(i.window.start)} to ${WEEKDAY(i.window.end)}, are usually my harder stretch.`);
   } else {
     parts.push("The next few days are usually my harder stretch.");
   }

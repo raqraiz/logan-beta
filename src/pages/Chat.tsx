@@ -850,16 +850,19 @@ const Chat = () => {
       if (data) {
 
         let effectiveTimezone: string | null = data.timezone ?? null;
-        // Silent one-time backfill: if the user has no timezone set, detect and persist.
-        if (!effectiveTimezone) {
+        // Silent backfill: if the stored timezone is missing or not a valid IANA name, detect and persist.
+        const isValidTz = (tz: string | null) => {
+          if (!tz) return false;
+          try { new Intl.DateTimeFormat("en-US", { timeZone: tz }); return true; } catch { return false; }
+        };
+        if (!isValidTz(effectiveTimezone)) {
           try {
             const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
             if (detected) {
               const { error: tzErr } = await supabase
                 .from("participants")
                 .update({ timezone: detected })
-                .eq("email", user.email!)
-                .is("timezone", null);
+                .eq("email", user.email!);
               if (!tzErr) effectiveTimezone = detected;
             }
           } catch (e) {
