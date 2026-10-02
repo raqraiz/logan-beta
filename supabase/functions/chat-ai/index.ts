@@ -8,6 +8,7 @@ import {
   fetchActiveBoundaries,
   buildBoundaryRuleBlock,
   mayBeBoundaryRequest,
+  hasStageBoundary,
   isValidStageKey,
   type TopicBoundary,
 } from "../_shared/topicBoundaries.ts";
@@ -4345,7 +4346,7 @@ serve(async (req) => {
     // contradicted by a later runtime block.
     const emotionalFollowUp = isEmotionalFollowUp(userMessage, recentMessages as any);
     const emotionalContextActive = isEmotionalOrHeavyMessage(userMessage) || emotionalFollowUp;
-    let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext + backfillBlock + libraryBlock + libraryGuidance, emotionalContextActive);
+    let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext + backfillBlock + libraryBlock + libraryGuidance, emotionalContextActive, activeBoundaries);
 
     // Active boundaries — absolute, highest priority, applied before anything else.
     if (activeBoundaries.length > 0) {
@@ -4416,7 +4417,9 @@ serve(async (req) => {
 
 
     // Pregnancy loss / miscarriage grief-aware mode — override tone, pause cycle talk.
-    if (participant?.life_stage === "pregnancy_loss") {
+    if (participant?.life_stage === "pregnancy_loss" && hasStageBoundary(activeBoundaries, "pregnancy_loss")) {
+      systemPrompt += `\n\nSTAGE-NEUTRAL (she asked not to discuss her stage): Frame guidance around general well-being: sleep, movement, food, mood. Do NOT name, reference, or allude to her life stage, its timeline, or stage-specific milestones.`;
+    } else if (participant?.life_stage === "pregnancy_loss") {
       const lossDate = (participant as any).loss_date;
       let daysSince: number | null = null;
       if (lossDate) {
@@ -4426,7 +4429,9 @@ serve(async (req) => {
       systemPrompt += `\n\nLIFE STAGE: PREGNANCY LOSS / MISCARRIAGE RECOVERY${daysSince !== null ? ` (Day ${daysSince} since loss)` : ""}.\n\nTHIS OVERRIDES NORMAL CYCLE COACHING. The user is grieving and/or physically recovering from a miscarriage, stillbirth, ectopic, chemical pregnancy, or D&C.\n\nABSOLUTE RULES:\n- NEVER mention cycle phases, ovulation, fertile windows, luteal/follicular, or "your next period in X days." Cycle tracking is paused.\n- NEVER say "everything happens for a reason," "at least…," "you can try again," "you're young," or anything that minimizes the loss.\n- NEVER push silver linings, productivity, optimization, workouts, or "getting back on track."\n- NEVER ask "how far along were you" unless she brings it up first.\n- Do NOT be performatively cheerful. Match her energy — quiet, soft, present.\n\nWHAT TO DO:\n- Lead with acknowledgment. Short sentences. Lots of breathing room.\n- Use her words back to her. If she says "baby," say "baby." If she says "pregnancy," mirror that.\n- Offer (don't impose) gentle support: rest, hydration, iron-rich food, sleep, a warm bath, a walk if she wants one, naming the baby if she wants, journaling, a support line.\n- Track what she shares — bleeding days, cramps, sleep, mood, appetite, milk coming in, partner support — without analyzing it into a "plan."\n- One short, optional follow-up question max. Often the right response is just presence: "I'm here. Take your time."\n\nPHYSICAL SAFETY (always flag, kindly but clearly):\nIf she mentions soaking a pad an hour for 2+ hours, fever over 100.4°F / 38°C, severe one-sided pain, foul-smelling discharge, fainting, or thoughts of harming herself — gently urge her to call her provider or emergency line right away. Don't bury this in caveats.\n\nRESOURCES (offer only if relevant, never as a list-dump):\n- Postpartum Support International: 1-800-944-4773 (text "HELP" to 800-944-4773)\n- Return to Zero: HOPE pregnancy loss support\n- Star Legacy Foundation (stillbirth)\n- 988 Suicide & Crisis Lifeline if she expresses self-harm thoughts.\n\nWhen she's ready to "move on" or "track cycles again," she can tell you and you'll switch back. Until then, this space is hers.`;
     }
 
-    if (participant?.life_stage === "pregnant") {
+    if (participant?.life_stage === "pregnant" && hasStageBoundary(activeBoundaries, "pregnancy")) {
+      systemPrompt += `\n\nSTAGE-NEUTRAL (she asked not to discuss her stage): Frame guidance around general well-being: sleep, movement, food, mood. Do NOT name, reference, or allude to her life stage, its timeline, or stage-specific milestones.`;
+    } else if (participant?.life_stage === "pregnant") {
       const lmp = (participant as any).pregnancy_lmp as string | null;
       const due = (participant as any).due_date as string | null;
       let gestWeeks: number | null = null;
@@ -5109,8 +5114,17 @@ function buildSystemPrompt(
   cycleInfo: { cycleDay: number; phase: string } | null,
   cycleHistoryContext: string = "",
   symptomContext: string = "",
-  emotionalContext: boolean = false
+  emotionalContext: boolean = false,
+  boundaries: TopicBoundary[] = []
 ): string {
+  // Stage-neutral handling (same check as opener/widgets): an active boundary for
+  // her stage removes stage-specific framing. Stage data is untouched.
+  const STAGE_KEY_MAP: Record<string, string> = {
+    pregnancy_loss: "pregnancy_loss", pregnant: "pregnancy", postpartum: "postpartum",
+    perimenopause: "perimenopause", menopause: "menopause",
+  };
+  const promptStageSuppressed = hasStageBoundary(boundaries, STAGE_KEY_MAP[participant?.life_stage ?? ""] ?? null);
+  const postpartumSuppressed = hasStageBoundary(boundaries, "postpartum");
   // NO-UTERUS BRANCH (hysterectomy, ovaries retained) — layered on top of life_stage,
   // exactly like on_hormonal_bc. Not a life_stage value.
   const noUterusBlock = participant?.has_uterus === false
@@ -5282,7 +5296,7 @@ MEAL PLANS / MENUS — STRICT RULES:
   if (userLifeStage !== "cycling") {
     const age = participant.age || null;
     const topics = participant.goals?.length ? participant.goals.join(", ") : null;
-    const stageLabel =
+    const rawStageLabel =
       userLifeStage === "postpartum" ? "Postpartum" :
       userLifeStage === "menopause" ? "Menopause" :
       userLifeStage === "perimenopause" ? "Perimenopause" :
@@ -5337,7 +5351,7 @@ MEAL PLANS / MENUS — STRICT RULES:
       ? `\n\nKNOWN FROM ONBOARDING (use these — do not re-ask):${ppFeeding ? `\n- Feeding: ${ppFeeding}${ppFeeding === "breastfeeding" || ppFeeding === "combination" ? " (lactation is active — factor in fuel/hydration needs and lactational cycle suppression)" : ""}` : ""}${ppCycleReturn ? `\n- Cycle returned: ${ppCycleReturn}${ppCycleReturn === "not_yet" || ppCycleReturn === "not_sure" ? " — no cycle-phase or ovulation predictions" : ppCycleReturn === "irregular" ? " — cycle is back but irregular; read patterns, not the calendar" : " — cycle is back and regular; phase guidance is appropriate"}` : ""}${ppBc && ppBc !== "prefer_not_to_say" ? `\n- Birth control: ${ppBc}${ppBc === "hormonal" ? " (may suppress or alter cycle signals)" : ""}` : ""}`
       : "";
 
-    const stageContext = userLifeStage === "postpartum"
+    const rawStageContext = userLifeStage === "postpartum"
       ? `This user is POSTPARTUM — they do not have a regular cycle right now (unless they say it has returned). Their hormones are recalibrating after pregnancy, but the SPECIFIC focus depends heavily on how far postpartum they are. ${ppPhaseGuidance}\n\nGENERAL POSTPARTUM RULES: Do NOT assume whether the user is breastfeeding or not — only reference breastfeeding if the USER brings it up first or it is listed in KNOWN FROM ONBOARDING. If they mention having multiple children, do NOT assume they are breastfeeding all of them. Do NOT reference cycle phases, cycle days, or ovulation unless the user has confirmed their cycle returned. NEVER default to generic "early postpartum healing/recovery" language for users past 6 months postpartum.${ppKnownFacts}`
       : userLifeStage === "menopause"
         ? `This user is in MENOPAUSE — their cycle has stopped (12+ months without a period). Their estrogen and progesterone are declining. Focus on: hot flashes, sleep disruption, mood changes, bone health, energy management, cognitive shifts, weight changes. Do NOT reference specific cycle days or ovulation windows. Instead, provide guidance relevant to hormonal transition and thriving through it.`
@@ -5350,6 +5364,11 @@ MEAL PLANS / MENUS — STRICT RULES:
               : `This user has an IRREGULAR cycle and we do NOT know whether she is on hormonal birth control — it has never been confirmed. Do NOT assert or assume she is on the pill, an IUD, or any hormonal contraception, and do not give BC-specific nutrient-depletion advice as though it applies to her. Never quote a confident cycle "day number" or phase. Frame guidance around steady-state levers: sleep, protein, strength training, stress, hydration, and her own observed patterns.`);
 
 
+    const stageLabel = promptStageSuppressed ? "Not shown (she asked not to discuss her stage)" : rawStageLabel;
+    const stageContext = promptStageSuppressed
+      ? "Frame guidance around general well-being: sleep, movement, food, mood. Do NOT name, reference, or allude to her life stage, its timeline, or stage-specific milestones."
+      : rawStageContext;
+    if (promptStageSuppressed) ppTimeline = "";
     const todayStr = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
     let userContext = `\n\nUSER CONTEXT:\n- TODAY'S DATE: ${todayStr} (anchor for all time/date reasoning — "last month", "yesterday", etc. NEVER guess or invent dates. If data doesn't cover the period asked about, say so plainly.)\n- Life stage: ${stageLabel}\n- Age: ${age || "unknown"}${ppTimeline}\n- Anchor symptom: ${participant.anchor_symptom || "not specified"}\n- Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}\n${topics ? `- Focus areas: ${topics}` : ""}\n\n${stageContext}${symptomContext}`;
     
@@ -5372,7 +5391,7 @@ MEAL PLANS / MENUS — STRICT RULES:
 
   // Reconciliation: cycling user who is also actively recovering postpartum
   let dualStateContext = "";
-  if ((participant as any).postpartum_active && participant.postpartum_start_date) {
+  if (!postpartumSuppressed && (participant as any).postpartum_active && participant.postpartum_start_date) {
     const birthDate = new Date(String(participant.postpartum_start_date).slice(0, 10) + "T12:00:00Z");
     const ppDual = getPostpartumTimeline(participant.postpartum_start_date, { timezone: participant.timezone || "UTC" })!;
     if (!ppDual.isImplausible) {
