@@ -4,3 +4,4 @@
 - partner-headsup-daily edge function (hourly pg_cron) owns scheduled heads-up work; offers post on any run, notifications must fire at the user's local time via participants.timezone (IANA) and localParts().
 - Heads-up draft text is generated on demand by partner-headsup-draft and cached only in the browser (localStorage, cleared on send/skip); the only stored wording is her last 5 edited messages (partner_headsup_style_examples), deleted with "Turn off and delete history".
 - Browser push uses the Firebase connector via _shared/partnerHeadsup.ts sendPush(); device tokens live in push_tokens.
+- Insight measurement lives in insight_feedback_events (shown/confirmed/not_confirmed/corrected, no text) written via src/lib/insightFeedback.ts; admin weekly counts come from the admin-only admin_measurement_weekly() function.
