@@ -1875,6 +1875,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_memory_notes: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          note: string
+          source: string
+          source_message_id: string | null
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          note: string
+          source?: string
+          source_message_id?: string | null
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          note?: string
+          source?: string
+          source_message_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_resources: {
         Row: {
           created_at: string

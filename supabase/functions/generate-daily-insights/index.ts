@@ -7,6 +7,7 @@ import {
   hasStageBoundary,
   mentionsLoss,
 } from "../_shared/topicBoundaries.ts";
+import { fetchMemoryNotes, buildMemoryBlock } from "../_shared/memoryNotes.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -200,6 +201,7 @@ serve(async (req) => {
 
     // Active "don't bring up X" boundaries — absolute, enforced on this surface too.
     const boundaries = await fetchActiveBoundaries(service, userId);
+    const memoryNotes = await fetchMemoryNotes(service, userId);
     const stageSuppressed = hasStageBoundary(boundaries, lifeStage);
 
     let stageContext: string;
@@ -264,7 +266,7 @@ serve(async (req) => {
     }
 
 
-    const systemPrompt = `You are Logan — a knowledgeable, grounded friend giving a woman two short lists for TODAY only.${buildBoundaryRuleBlock(boundaries)}${bcRule}
+    const systemPrompt = `You are Logan — a knowledgeable, grounded friend giving a woman two short lists for TODAY only.${buildBoundaryRuleBlock(boundaries)}${bcRule}${buildMemoryBlock(memoryNotes)}
 
 ${stageContext}
 ${anchorContext}

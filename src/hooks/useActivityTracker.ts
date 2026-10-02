@@ -116,11 +116,15 @@ export function useActivityTracker(userId?: string) {
       if (!el) return;
 
       // Extract a label
-      const label =
+      // Never store what she typed: skip private areas, and replace numbers
+      // (weights, calories, dates she entered) so only the button wording remains.
+      if (el.closest("[data-private]")) return;
+      const label = (
         el.getAttribute("data-track") ||
         el.getAttribute("aria-label") ||
         el.textContent?.trim().slice(0, 60) ||
-        el.tagName.toLowerCase();
+        el.tagName.toLowerCase()
+      ).replace(/\d+([.,:/]\d+)*/g, "#");
 
       const type = el.tagName.toLowerCase() === "a" ? "link" : "button";
 

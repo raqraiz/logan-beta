@@ -16,6 +16,7 @@ import ShortRedirect from "./pages/ShortRedirect";
 
 import IntegrationCallback from "./pages/IntegrationCallback";
 import { Seo } from "@/components/Seo";
+import { AnalyticsGate } from "@/components/AnalyticsGate";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Seo />
+          <AnalyticsGate />
           <main>
             <Routes>
               <Route path="/" element={<Chat />} />

@@ -11,6 +11,7 @@ import {
   mentionsLoss,
   type TopicBoundary,
 } from "../_shared/topicBoundaries.ts";
+import { fetchMemoryNotes, buildMemoryBlock } from "../_shared/memoryNotes.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -203,6 +204,7 @@ serve(async (req) => {
 
     // Active "don't bring up X" boundaries — absolute, enforced on every surface.
     const boundaries = await fetchActiveBoundaries(supabase, user.id);
+    const memoryNotes = await fetchMemoryNotes(supabase, user.id);
     // Strip prior boundary disputes / apologies out of the context we feed back in.
     const safeRecentMessages = sanitizeRecentMessages(recentMessages || []);
     const stageSuppressed = hasStageBoundary(boundaries, userLifeStage);
@@ -217,6 +219,7 @@ serve(async (req) => {
         safeRecentMessages,
         checkinMessages || [],
         boundaries,
+        memoryNotes,
       );
 
       let aiResult;
@@ -392,6 +395,7 @@ serve(async (req) => {
         safeRecentMessages,
         checkinMessages || [],
         boundaries,
+        memoryNotes,
       );
 
       let aiResult;
@@ -484,6 +488,7 @@ function buildInsightPrompt(
   recentMessages: { content: string; role: string }[],
   checkinMessages: { content: string; metadata: any; created_at: string }[],
   boundaries: TopicBoundary[] = [],
+  memoryNotes: string[] = [],
 ): string {
   const anchorSymptom = participant.anchor_symptom;
   const symptoms = participant.typical_symptoms || [];
@@ -544,7 +549,7 @@ function buildInsightPrompt(
     ? `\n- NO UTERUS (hysterectomy, ovaries intact): She is NOT menopausal — her ovaries still cycle, so hormone patterns still apply. But she will NEVER bleed again: never ask for, reference, or imply a period date, Day 1, a late/due period, or "when your period starts". Any cycle day or phase here is an ESTIMATE with no bleed anchor — hedge it ("roughly", "estimated") and lean on her tracked symptoms over calendar timing.`
     : "";
 
-  return `You are Logan. You know ${firstName}'s cycle so well you can name what she's feeling before she does. You're not giving advice or instructions. You're the person who just gets it.${buildBoundaryRuleBlock(boundaries)}${buildBcMethodRule(participant)}
+  return `You are Logan. You know ${firstName}'s cycle so well you can name what she's feeling before she does. You're not giving advice or instructions. You're the person who just gets it.${buildBoundaryRuleBlock(boundaries)}${buildBcMethodRule(participant)}${buildMemoryBlock(memoryNotes)}
 
 CONTEXT:
 - Today is Day ${cycleInfo.cycleDay} of your cycle · **${cycleInfo.phase}**
@@ -618,6 +623,7 @@ function buildNonCyclingInsightPrompt(
   recentMessages: { content: string; role: string }[],
   checkinMessages: { content: string; metadata: any; created_at: string }[],
   boundaries: TopicBoundary[] = [],
+  memoryNotes: string[] = [],
 ): string {
   const stageSuppressed = hasStageBoundary(boundaries, lifeStage);
   const firstName = userName.split(" ")[0];
@@ -720,7 +726,7 @@ function buildNonCyclingInsightPrompt(
     ? `\n- NO UTERUS (hysterectomy, ovaries intact): She is NOT menopausal — her ovaries still cycle, so hormone patterns still apply. But she will NEVER bleed again: never ask for, reference, or imply a period date, Day 1, a late/due period, or "when your period starts". Any cycle day or phase here is an ESTIMATE with no bleed anchor — hedge it ("roughly", "estimated") and lean on her tracked symptoms over calendar timing.`
     : "";
 
-  return `You are Logan. You're ${firstName}'s companion through her ${stageLabel.toLowerCase()} journey. You're not clinical — you're the friend who just gets it.${buildBoundaryRuleBlock(boundaries)}${buildBcMethodRule(participant)}
+  return `You are Logan. You're ${firstName}'s companion through her ${stageLabel.toLowerCase()} journey. You're not clinical — you're the friend who just gets it.${buildBoundaryRuleBlock(boundaries)}${buildBcMethodRule(participant)}${buildMemoryBlock(memoryNotes)}
 
 CONTEXT:
 - Life stage: **${stageLabel}**

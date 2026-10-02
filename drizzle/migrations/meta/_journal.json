@@ -64,6 +64,13 @@
       "when": 1790939837638,
       "tag": "0008_insight_feedback_events",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790940425576,
+      "tag": "0009_user_memory_notes",
+      "breakpoints": true
     }
   ]
 }
