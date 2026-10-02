@@ -33,34 +33,49 @@ export async function extractCorrection(
 ): Promise<{ clear: true; note: string } | { clear: false } | null> {
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 8000);
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const timer = setTimeout(() => controller.abort(), 15000);
+    const system = [
+      "A woman's health assistant showed her an insight about her body. She replied that it isn't quite right.",
+      'Return only json {"clear":true,"note":"..."} or {"clear":false}.',
+      "note: one plain sentence in third person about what is true for her, max 25 words, e.g. \"Her energy dips before her period, not after.\"",
+      "Only use what she actually said. No medication. If her reply doesn't say what is actually true for her, return clear:false.",
+    ].join("\n");
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
       method: "POST",
       signal: controller.signal,
-      headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "fetch" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        temperature: 0,
-        max_tokens: 200,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content: [
-              "A woman's health assistant showed her an insight about her body. She replied that it isn't quite right.",
-              'Return json {"clear":true,"note":"..."} or {"clear":false}.',
-              "note: one plain sentence in third person about what is true for her, max 25 words, e.g. \"Her energy dips before her period, not after.\"",
-              "Only use what she actually said. No medication. If her reply doesn't say what is actually true for her, return clear:false.",
-            ].join("\n"),
-          },
-          { role: "user", content: `INSIGHT:\n${insight.slice(0, 1200)}\n\nHER REPLY:\n${correction.slice(0, 800)}` },
-        ],
+        model: "openai/gpt-6-astra",
+        instructions: system,
+        input: `INSIGHT:\n${insight.slice(0, 1200)}\n\nHER REPLY:\n${correction.slice(0, 800)}`,
+        stream: true,
+        store: false,
+        reasoning: { effort: "low", summary: "auto" },
+        include: ["reasoning.encrypted_content"],
       }),
     });
+    if (!res.ok || !res.body) { clearTimeout(timer); console.warn("[correction] gateway", res.status, await res.text()); return null; }
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "", raw = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+        if (!line.startsWith("data:")) continue;
+        const data = line.slice(5).trim();
+        if (!data || data === "[DONE]") continue;
+        try {
+          const ev = JSON.parse(data);
+          if (ev.type === "response.output_text.delta") raw += ev.delta ?? "";
+          if (ev.type === "response.failed" || ev.type === "error") { clearTimeout(timer); return null; }
+        } catch { /* partial line */ }
+      }
+    }
     clearTimeout(timer);
-    if (!res.ok) { console.warn("[correction] gateway", res.status, await res.text()); return null; }
-    const json = await res.json();
-    const raw = String(json?.choices?.[0]?.message?.content ?? "");
     const m = raw.match(/\{[\s\S]*\}/);
     if (!m) return null;
     const p = JSON.parse(m[0]);
