@@ -1,3 +1,4 @@
+import { buildBcMethodRule, detectBcMethod, BC_METHOD_LABELS } from "../_shared/bcMethod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
@@ -3019,6 +3020,18 @@ serve(async (req) => {
       }
 
 
+      // Specific method named in chat ("I got a copper IUD last month"): save it,
+      // re-read, and only confirm what actually persisted. Never touches life_stage.
+      const chatBcMethod = bcNegativeSignal ? null : detectBcMethod(userMessage);
+      if (chatBcMethod && (participant as any).birth_control_method !== chatBcMethod) {
+        await supabase.from("participants").update({ birth_control_method: chatBcMethod }).eq("id", participant.id);
+        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshed) participant = refreshed;
+        if ((participant as any).birth_control_method === chatBcMethod) {
+          bcMethodSavedNote = `\n\nSYSTEM NOTE: You just saved her birth control type as "${BC_METHOD_LABELS[chatBcMethod]}". Briefly confirm that in one short clause, then answer her.`;
+        }
+      }
+
       if (perimenopauseSignal && !cyclingSignal && !recentPostpartumVeto && participant.life_stage !== "perimenopause") {
         await supabase
           .from("participants")
@@ -4331,6 +4344,7 @@ serve(async (req) => {
     // Active boundaries — absolute, highest priority, applied before anything else.
     if (activeBoundaries.length > 0) {
       systemPrompt += buildBoundaryRuleBlock(activeBoundaries);
+      systemPrompt += buildBcMethodRule(participant, { allowAsk: true }) + bcMethodSavedNote;
     }
 
     // No-write-no-claim for the boundary just requested in this message.

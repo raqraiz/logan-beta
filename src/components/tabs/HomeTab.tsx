@@ -273,7 +273,7 @@ const IRREGULAR_SUCCEED_HIM: string[] = [
   "If she's exploring coming off BC, ask how you can help — it can take months to recalibrate.",
 ];
 const IRREGULAR_DONTMESS_HIM: string[] = [
-  "Don't tell her 'it's just your birth control' if she names a real symptom.",
+  "Don't tell her 'it's just her birth control' if she names a real symptom.",
   "Don't make jokes about hormones — her chemistry is being managed, not malfunctioning.",
   "Don't pressure her on contraception choices — it's her body, her call.",
   "Don't assume libido shifts are about you. BC affects desire for many women.",
