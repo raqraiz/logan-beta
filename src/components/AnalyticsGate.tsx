@@ -33,10 +33,7 @@ export function AnalyticsGate() {
 
     // LiveSession: public pages, or admin testing. Once loaded it can't be
     // switched off in place, so reload into a clean page when she signs in.
-    if (publicContext) {
-      if (userId === null || isPublicPath(location.pathname)) enableLiveSession();
-      return;
-    }
+    if (userId === null) { enableLiveSession(); return; }
     let cancelled = false;
     (async () => {
       let adminTesting = false;
@@ -53,7 +50,7 @@ export function AnalyticsGate() {
 
   if (!userId || consent || isPublicPath(location.pathname)) return null;
   return (
-    <div className="fixed inset-x-3 bottom-3 z-[60] mx-auto max-w-md rounded-2xl border border-border/50 bg-card/90 p-4 text-sm shadow-lg backdrop-blur-xl">
+    <div className="fixed inset-x-3 top-3 z-[60] mx-auto max-w-md rounded-2xl border border-border/50 bg-card/90 p-4 text-sm shadow-lg backdrop-blur-xl">
       <p className="text-foreground">Can we collect anonymous usage stats to improve Logan? Nothing you write or log is included.</p>
       <div className="mt-3 flex justify-end gap-2">
         <button type="button" onClick={() => setAnalyticsConsent("denied")} className="rounded-full px-3 py-1.5 text-muted-foreground hover:text-foreground">No thanks</button>
