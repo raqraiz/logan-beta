@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { trackMessageFailures } from "../_shared/messageFailures.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -128,7 +129,7 @@ serve(async (req) => {
       });
     }
 
-    const admin = createClient(supabaseUrl, serviceKey);
+    const admin = trackMessageFailures(createClient(supabaseUrl, serviceKey), "import-blood-test");
 
     // Build image / pdf parts
     const imageParts: { type: "image_url"; image_url: { url: string } }[] = [];

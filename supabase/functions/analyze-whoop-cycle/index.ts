@@ -2,6 +2,7 @@
 // (b) suggest optimizations. Posts an assistant chat message tagged
 // metadata.source = "whoop_cycle_brief". Throttled to 1/day per user.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { trackMessageFailures } from "../_shared/messageFailures.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -197,7 +198,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+    const admin = trackMessageFailures(createClient(SUPABASE_URL, SERVICE_KEY), "analyze-whoop-cycle");
 
     const body = await req.json().catch(() => ({}));
     const userId = body?.user_id;

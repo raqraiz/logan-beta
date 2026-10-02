@@ -12,6 +12,7 @@ import {
   type TopicBoundary,
 } from "../_shared/topicBoundaries.ts";
 import { fetchMemoryNotes, buildMemoryBlock } from "../_shared/memoryNotes.ts";
+import { trackMessageFailures } from "../_shared/messageFailures.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -62,7 +63,7 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = trackMessageFailures(createClient(supabaseUrl, supabaseServiceKey), "generate-insight");
 
     // Check if onboarding is complete
     const { data: messages } = await supabase

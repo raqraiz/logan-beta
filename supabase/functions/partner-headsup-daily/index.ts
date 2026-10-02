@@ -5,6 +5,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { partnerHeadsupAdminIds, partnerHeadsupFlagOn } from "../_shared/partnerHeadsupFlag.ts";
 import { processHeadsups } from "./drafts.ts";
+import { trackMessageFailures } from "../_shared/messageFailures.ts";
 
 const MAX_USERS_PER_RUN = 1000;
 // Scheduled offers only trigger on a romantic partner mention (family/friends can still ask or use Settings).
@@ -43,7 +44,7 @@ function nextWindowStart(lastPeriodStart: string | null, cycleLen: number | null
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const admin = trackMessageFailures(createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!), "partner-headsup-daily");
   const result = { checked: 0, offered_symptom: 0, offered_pre_window: 0, drafts: 0, updated: 0, expired: 0, checkins: 0, pushes: 0 };
   try {
     const flagOn = await partnerHeadsupFlagOn(admin);
