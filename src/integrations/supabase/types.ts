@@ -987,6 +987,7 @@ export type Database = {
           age: number | null
           anchor_symptom: string | null
           birth_control_method: string | null
+          birth_control_method_asked_at: string | null
           birth_control_status: string | null
           consent_given: boolean | null
           consent_given_at: string | null
@@ -1033,6 +1034,7 @@ export type Database = {
           age?: number | null
           anchor_symptom?: string | null
           birth_control_method?: string | null
+          birth_control_method_asked_at?: string | null
           birth_control_status?: string | null
           consent_given?: boolean | null
           consent_given_at?: string | null
@@ -1079,6 +1081,7 @@ export type Database = {
           age?: number | null
           anchor_symptom?: string | null
           birth_control_method?: string | null
+          birth_control_method_asked_at?: string | null
           birth_control_status?: string | null
           consent_given?: boolean | null
           consent_given_at?: string | null

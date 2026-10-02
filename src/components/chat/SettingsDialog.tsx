@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BC_METHOD_OPTIONS } from "@/lib/bcMethod";
+import { BC_METHOD_OPTIONS, isHormonalMethod } from "@/lib/bcMethod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -60,6 +60,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [cycleLen, setCycleLen] = useState<number>(28);
   const [bcMethod, setBcMethod] = useState<string | null>(null);
+  const [bcSyncNote, setBcSyncNote] = useState(false);
   const [phaseLens, setPhaseLens] = useState<Required<PhaseLengths>>(() => defaultPhaseLengths(28));
 
 
@@ -328,7 +329,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
             </div>
           )}
 
-          {(((stage === "cycling" || stage === "irregular" || stage === "perimenopause") && onHormonalBc === true) || stage === "postpartum") && (
+          {(((stage === "cycling" || stage === "irregular" || stage === "perimenopause") && (onHormonalBc === true || bcMethod === "copper_iud")) || stage === "postpartum") && (
             <div className="mt-4 p-3 rounded-lg border border-border/50 bg-accent/20 space-y-2">
               <div className="text-sm font-medium">Which kind of birth control?</div>
               <div className="text-xs text-muted-foreground">Logan only talks about pill breaks if you take a pill with a monthly break.</div>
@@ -339,7 +340,14 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
                     <button
                       key={o.value || "clear"}
                       type="button"
-                      onClick={() => setBcMethod(o.value || null)}
+                      onClick={() => {
+                        const v = o.value || null;
+                        setBcMethod(v);
+                        // Keep the hormonal yes/no answer consistent with the method.
+                        if (v === "copper_iud") { setOnHormonalBc(false); setBcSyncNote(true); }
+                        else if (isHormonalMethod(v)) { setOnHormonalBc(true); setBcSyncNote(false); }
+                        else setBcSyncNote(false);
+                      }}
                       className={`px-3 py-1.5 rounded-full border text-xs transition-colors ${active ? "border-primary bg-primary/15 text-foreground" : "border-border/50 bg-card/60 text-muted-foreground hover:bg-card/90"}`}
                     >
                       {o.label}
@@ -347,6 +355,9 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
                   );
                 })}
               </div>
+              {bcSyncNote && bcMethod === "copper_iud" && (
+                <div className="text-xs text-muted-foreground">Copper IUDs don't use hormones, so Logan will track your natural cycle.</div>
+              )}
             </div>
           )}
 

@@ -115,9 +115,43 @@ export function buildBcMethodRule(p: ParticipantLike, opts: { allowAsk?: boolean
       break;
     default:
       lines.push("- Method unknown or unsure: say 'your birth control', never 'the pill' or 'your pill'. Don't assume bleeding, breaks or suppression.");
-      if (opts.allowAsk && !method) {
-        lines.push("- You MAY ask her once, casually, which kind she uses (pill with a break, daily pill, mini pill, hormonal or copper IUD, implant, shot, ring or patch) — only when it's relevant to her question, and only if you haven't already asked in the conversation above. Once she answers, never ask again.");
+      if (opts.allowAsk && canAskBcMethod(p)) {
+        lines.push("- You MAY ask her, casually, which kind of birth control she uses (pill with a break, daily pill, mini pill, hormonal or copper IUD, implant, shot, ring or patch), only when it's relevant to her question. Use the words 'which kind' or 'what kind' when you ask.");
+      } else if (opts.allowAsk && !method) {
+        lines.push("- Do NOT ask her which kind of birth control she uses. That question has already been asked.");
       }
   }
   return lines.join("\n");
+}
+
+export const HORMONAL_BC_METHODS: readonly BcMethod[] = [
+  "combined_pill_with_breaks", "continuous_pill", "progestin_only_pill",
+  "hormonal_iud", "implant", "injection", "ring_or_patch",
+];
+export function isHormonalMethod(v: unknown): boolean {
+  return typeof v === "string" && (HORMONAL_BC_METHODS as readonly string[]).includes(v);
+}
+
+/** Chat may ask only when method is NULL and it has never been asked (stored flag). */
+export function canAskBcMethod(p: any): boolean {
+  return !!p && !p.birth_control_method && !p.birth_control_method_asked_at;
+}
+
+/** Did Logan's reply ask which kind of birth control she uses? */
+export function didAskBcMethod(reply: string): boolean {
+  const t = (reply || "").toLowerCase();
+  if (!t.includes("?")) return false;
+  return /\b(which|what)\s+(kind|type|sort)\b[^?]{0,60}\b(birth control|contraception|bc|pill|iud)\b/.test(t)
+    || /\b(birth control|contraception)\b[^?]{0,40}\b(which|what)\s+(kind|type)\b/.test(t);
+}
+
+/**
+ * Single source of truth for the "how is she on contraception" framing used by
+ * life-stage prompt blocks. Copper IUD = natural cycle; hormonal/unknown = steady-state.
+ */
+export function bcFramingSummary(p: any): string {
+  const m = p?.birth_control_method;
+  if (m === "copper_iud") return "uses a copper IUD (non-hormonal, natural cycle)";
+  if (isBcMethod(m)) return `is on hormonal birth control (${BC_METHOD_LABELS[m as BcMethod]})`;
+  return "is on hormonal birth control (type unknown)";
 }

@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { Zap, Brain, AlertTriangle } from "lucide-react";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
 import { isCycleStale } from "@/lib/cycleCalculations";
+import { allowsHormonalBcCopy } from "@/lib/bcMethod";
 import { useStageBoundary, isStageHidden, stageKeyForLifeStage } from "@/hooks/useStageBoundary";
 
 interface DailyBriefingHeroProps {
@@ -11,6 +12,7 @@ interface DailyBriefingHeroProps {
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
   /** true = on hormonal BC, false = confirmed not on BC, null/undefined = unknown */
   onHormonalBc?: boolean | null;
+  bcMethod?: string | null;
   postpartumStartDate?: string;
   postpartumActive?: boolean;
   lossDate?: string;
@@ -115,12 +117,13 @@ export function DailyBriefingHero({
   dueDate,
   pregnancyLmp,
   onHormonalBc,
+  bcMethod,
   onCircleClick,
 }: DailyBriefingHeroProps) {
   const { stageKey, loading: boundaryLoading } = useStageBoundary();
   const hideStage = isStageHidden(stageKey, lifeStage);
   const stagePending = boundaryLoading && !!stageKeyForLifeStage(lifeStage);
-  const isSteadyByPill = onHormonalBc === true;
+  const isSteadyByPill = onHormonalBc === true && allowsHormonalBcCopy(bcMethod);
   const isIrregular = lifeStage === "irregular";
   const isLoss = lifeStage === "pregnancy_loss";
   const isPregnant = lifeStage === "pregnant";

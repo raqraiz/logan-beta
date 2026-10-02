@@ -50,7 +50,7 @@ import { HomeTab } from "@/components/tabs/HomeTab";
 import { PlanTab } from "@/components/tabs/PlanTab";
 import { usePresence } from "@/hooks/usePresence";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
-import { BC_METHOD_OPTIONS } from "@/lib/bcMethod";
+import { bcMethodOptionsFor } from "@/lib/bcMethod";
 interface SymptomCategory {
   label: string;
   symptoms: string[];
@@ -126,6 +126,7 @@ interface CycleData {
   currentPeriodEndDate?: string | null;
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
   onHormonalBc?: boolean | null;
+  bcMethod?: string | null;
   postpartumStartDate?: string;
   postpartumActive?: boolean;
   lossDate?: string;
@@ -206,6 +207,7 @@ const Chat = () => {
   const [dueDate, setDueDate] = useState<string | null>(null);
   const [pregnancyLmp, setPregnancyLmp] = useState<string | null>(null);
   const [onHormonalBc, setOnHormonalBc] = useState<boolean | null>(null);
+  const [bcMethod, setBcMethod] = useState<string | null>(null);
   // Authoritative cycle data from `participants` table — wins over chat metadata
   const [participantCycle, setParticipantCycle] = useState<{
     lastPeriodStart: string | null;
@@ -521,6 +523,9 @@ const Chat = () => {
           if ((row as any).on_hormonal_bc !== undefined) {
             setOnHormonalBc((row as any).on_hormonal_bc ?? null);
           }
+          if ((row as any).birth_control_method !== undefined) {
+            setBcMethod((row as any).birth_control_method ?? null);
+          }
         }
       )
       .subscribe();
@@ -550,6 +555,7 @@ const Chat = () => {
         dueDate: dueDate || undefined,
         pregnancyLmp: pregnancyLmp || undefined,
         onHormonalBc,
+        bcMethod,
       });
       return;
     }
@@ -604,6 +610,7 @@ const Chat = () => {
           cycleLengthDays: metadata.cycle_length_days,
           lifeStage: lifeStage === "irregular" ? "irregular" : "cycling",
           onHormonalBc,
+          bcMethod,
         });
         return;
       }
@@ -614,6 +621,7 @@ const Chat = () => {
         cycleLengthDays: cycleLengthDays || 28,
         lifeStage: lifeStage === "irregular" ? "irregular" : "cycling",
         onHormonalBc,
+        bcMethod,
         needsPeriodStart: true,
       });
       return;
@@ -629,11 +637,12 @@ const Chat = () => {
         currentPeriodEndDate: participantCycle?.currentPeriodEndDate ?? null,
         lifeStage: lifeStage === "irregular" ? "irregular" : "cycling",
         onHormonalBc,
+        bcMethod,
         postpartumStartDate: postpartumStartDate || undefined,
         postpartumActive: postpartumActive && !!postpartumStartDate,
       });
     }
-  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, postpartumActive, lossDate, dueDate, pregnancyLmp, onHormonalBc, participantCycle]);
+  }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, postpartumActive, lossDate, dueDate, pregnancyLmp, onHormonalBc, bcMethod, participantCycle]);
 
   // Scroll to bottom on initial load
   const hasScrolledToBottom = useRef(false);
@@ -782,7 +791,7 @@ const Chat = () => {
     try {
       const { data } = await supabase
         .from("participants")
-        .select("life_stage, on_hormonal_bc, postpartum_start_date, postpartum_active, loss_date, due_date, pregnancy_lmp, last_period_start, cycle_length_days, timezone, current_period_end_date, period_pending_since, period_still_active, menstruation_days, follicular_days, ovulation_window_days, luteal_days")
+        .select("life_stage, on_hormonal_bc, birth_control_method, postpartum_start_date, postpartum_active, loss_date, due_date, pregnancy_lmp, last_period_start, cycle_length_days, timezone, current_period_end_date, period_pending_since, period_still_active, menstruation_days, follicular_days, ovulation_window_days, luteal_days")
         .eq("email", user.email)
         .single();
       if (data?.life_stage) {
@@ -809,6 +818,9 @@ const Chat = () => {
       }
       if ((data as any)?.on_hormonal_bc !== undefined) {
         setOnHormonalBc((data as any).on_hormonal_bc ?? null);
+      }
+      if ((data as any)?.birth_control_method !== undefined) {
+        setBcMethod((data as any).birth_control_method ?? null);
       }
       if (data) {
         setPhaseLengthPrefs({
@@ -2120,7 +2132,7 @@ const Chat = () => {
                     <div className={`mt-3 max-w-xs ${pickerBusyClass}`}>
                       <p className="text-sm text-foreground mb-2">Which kind?</p>
                       <div className="flex flex-wrap gap-2">
-                        {[...BC_METHOD_OPTIONS, { value: "skip", label: "Skip" }].map((option) => (
+                        {[...bcMethodOptionsFor(bcFollowup.base === "non_hormonal" ? "non_hormonal" : "hormonal"), { value: "skip", label: "Skip" }].map((option) => (
                           <button
                             key={option.value}
                             onClick={() => {
