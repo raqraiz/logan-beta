@@ -630,7 +630,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       // Hormonal-BC lines only for hormonal methods or unknown — never copper IUD.
       return allowsHormonalBcCopy(cycleData.bcMethod)
         ? IRREGULAR_SUCCEED_HER
-        : IRREGULAR_SUCCEED_HER.filter((t) => !/hormonal (BC|birth control)/i.test(t));
+        : IRREGULAR_SUCCEED_HER.filter((t) => !t.startsWith("Hormonal BC flattens your cycle"));
     }
     if (isStale) {
       return isSucceed ? STALE_SUCCEED_HER : STALE_DONTMESS_HER;
