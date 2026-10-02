@@ -92,7 +92,7 @@ export function buildExampleMessage(i: ExampleInput): string {
   if (i.includeDates) {
     const range = i.window
       ? `from about ${WEEKDAY(i.window.start)} to ${WEEKDAY(i.window.end)}`
-      : "from about Thursday to Sunday";
+      : "from about Thursday to Tuesday";
     parts.push(`The next few days, ${range}, are usually my harder stretch.`);
   } else {
     parts.push("The next few days are usually my harder stretch.");
