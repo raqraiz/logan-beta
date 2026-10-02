@@ -279,7 +279,7 @@ const Chat = () => {
   const [headsupSetupOpen, setHeadsupSetupOpen] = useState(false);
   useEffect(() => {
     const handler = () => {
-      setActiveTab("chat");
+      setActiveTab("ask");
       setHeadsupSetupOpen(true);
       setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 150);
     };
