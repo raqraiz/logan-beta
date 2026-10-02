@@ -626,11 +626,15 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       return isSucceed ? PERIMENOPAUSE_SUCCEED_HER : PERIMENOPAUSE_DONTMESS_HER;
     }
     if (isIrregular) {
-      if (!isSucceed) return IRREGULAR_DONTMESS_HER;
+      if (!isSucceed) {
+        return allowsHormonalBcCopy(cycleData.bcMethod)
+          ? IRREGULAR_DONTMESS_HER
+          : IRREGULAR_DONTMESS_HER.filter((t) => !t.startsWith("Don't skip blood work"));
+      }
       // Hormonal-BC lines only for hormonal methods or unknown — never copper IUD.
       return allowsHormonalBcCopy(cycleData.bcMethod)
         ? IRREGULAR_SUCCEED_HER
-        : IRREGULAR_SUCCEED_HER.filter((t) => !t.startsWith("Hormonal BC flattens your cycle"));
+        : IRREGULAR_SUCCEED_HER.filter((t) => !t.startsWith("Hormonal BC flattens your cycle") && !t.includes("hormonal birth control can deplete"));
     }
     if (isStale) {
       return isSucceed ? STALE_SUCCEED_HER : STALE_DONTMESS_HER;

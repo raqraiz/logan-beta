@@ -155,3 +155,8 @@ export function bcFramingSummary(p: any): string {
   if (isBcMethod(m)) return `is on hormonal birth control (${BC_METHOD_LABELS[m as BcMethod]})`;
   return "is on hormonal birth control (type unknown)";
 }
+
+/** Consistency rule (mirrors Settings): copper IUD => on_hormonal_bc false; hormonal method => true; else null (leave as is). */
+export function hormonalAnswerForMethod(v: unknown): boolean | null {
+  return v === "copper_iud" ? false : isHormonalMethod(v) ? true : null;
+}
