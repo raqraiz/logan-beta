@@ -1,0 +1,2 @@
+ALTER TABLE public.chat_messages DROP CONSTRAINT chat_messages_message_type_check;
+ALTER TABLE public.chat_messages ADD CONSTRAINT chat_messages_message_type_check CHECK (message_type IS NULL OR message_type = ANY (ARRAY['text','reaction','onboarding','resource_offer','resource','checkin','partner_headsup_ask','partner_headsup_checkin','partner_headsup_draft','partner_headsup_keep','partner_headsup_offer','partner_headsup_sendnow','partner_headsup_shared']));

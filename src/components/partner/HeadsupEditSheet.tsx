@@ -40,7 +40,7 @@ export function HeadsupEditSheet({ open, onOpenChange, name, text, includeFooter
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="headsup-surface max-h-[92vh]">
+      <DrawerContent className="headsup-surface headsup-solid max-h-[92vh]">
         <div className="mx-auto w-full max-w-md px-4 pb-6 pt-2 space-y-4 overflow-y-auto">
           <div className="flex items-center justify-between">
             <button className="min-h-[44px] text-sm text-muted-foreground" onClick={() => onOpenChange(false)}>Cancel</button>
