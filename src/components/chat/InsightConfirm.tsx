@@ -33,15 +33,16 @@ export function InsightConfirm({ userId, messageId, insightType }: Props) {
     }
   };
 
+  const btn = "text-[11px] font-normal text-muted-foreground underline-offset-2 hover:text-foreground hover:underline";
   return (
-    <div ref={ref} className="mt-2 flex items-center gap-2 text-xs">
+    <div ref={ref} className="mt-1.5 flex items-center gap-3 text-[11px] font-normal text-muted-foreground [font-family:'Quicksand',system-ui,sans-serif]">
       {answer ? (
-        <span className="text-muted-foreground">{answer === "confirmed" ? "Thanks, noted." : "Tell me what's different and I'll adjust."}</span>
+        <span>{answer === "confirmed" ? "Thanks, noted." : "Tell me what's different and I'll adjust."}</span>
       ) : (
         <>
-          <span className="text-muted-foreground">Sound like you?</span>
-          <button type="button" data-track="insight.confirm" onClick={() => choose("confirmed")} className="rounded-full border border-border/60 px-3 py-1 text-foreground hover:bg-muted/50">That's right</button>
-          <button type="button" data-track="insight.not_quite" onClick={() => choose("not_confirmed")} className="rounded-full border border-border/60 px-3 py-1 text-foreground hover:bg-muted/50">Not quite</button>
+          <span>Sound like you?</span>
+          <button type="button" data-track="insight.confirm" onClick={() => choose("confirmed")} className={btn}>That's right</button>
+          <button type="button" data-track="insight.not_quite" onClick={() => choose("not_confirmed")} className={btn}>Not quite</button>
         </>
       )}
     </div>
