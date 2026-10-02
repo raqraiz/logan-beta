@@ -28,8 +28,9 @@ const Body = z.discriminatedUnion("action", [
 function detectLang(samples: string[]): "en" | "he" | "es" {
   const joined = samples.join(" ");
   if (/[\u0590-\u05FF]/.test(joined)) return "he";
-  const es = (joined.toLowerCase().match(/\b(que|estoy|pero|porque|hoy|tengo|muy|gracias|cómo|mi|qué|también)\b/g) ?? []).length;
-  return es >= 3 ? "es" : "en";
+  const es = (joined.toLowerCase().match(/\b(que|estoy|pero|porque|hoy|tengo|muy|gracias|como|siento|también|estás)\b/g) ?? []).length;
+  const en = (joined.toLowerCase().match(/\b(the|i|and|to|my|is|you|feel|what|so|me|for|it)\b/g) ?? []).length;
+  return es >= 3 && es > en ? "es" : "en";
 }
 const LANG_NAME = { en: "English", he: "Hebrew", es: "Spanish" } as const;
 
