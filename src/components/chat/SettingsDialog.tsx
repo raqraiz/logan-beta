@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BC_METHOD_OPTIONS, isHormonalMethod } from "@/lib/bcMethod";
+import { BC_METHOD_OPTIONS, hormonalAnswerForMethod } from "@/lib/bcMethod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -344,8 +344,8 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
                         const v = o.value || null;
                         setBcMethod(v);
                         // Keep the hormonal yes/no answer consistent with the method.
-                        if (v === "copper_iud") { setOnHormonalBc(false); setBcSyncNote(true); }
-                        else if (isHormonalMethod(v)) { setOnHormonalBc(true); setBcSyncNote(false); }
+                        const synced = hormonalAnswerForMethod(v);
+                        if (synced !== null) { setOnHormonalBc(synced); setBcSyncNote(synced === false); }
                         else setBcSyncNote(false);
                       }}
                       className={`px-3 py-1.5 rounded-full border text-xs transition-colors ${active ? "border-primary bg-primary/15 text-foreground" : "border-border/50 bg-card/60 text-muted-foreground hover:bg-card/90"}`}

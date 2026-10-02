@@ -34,3 +34,7 @@ export function bcMethodOptionsFor(parent: "hormonal" | "non_hormonal") {
 
 /** Hormonal-BC copy may show only for hormonal methods or unknown (NULL). */
 export const allowsHormonalBcCopy = (v: string | null | undefined) => !v || isHormonalMethod(v);
+
+/** Consistency rule: copper IUD => hormonal answer "No"; any hormonal method => "Yes"; otherwise unchanged (null). */
+export const hormonalAnswerForMethod = (v: string | null | undefined): boolean | null =>
+  v === "copper_iud" ? false : isHormonalMethod(v) ? true : null;
