@@ -256,7 +256,7 @@ const IRREGULAR_SUCCEED_HER: string[] = [
   "Hormonal BC flattens your cycle — your daily levers are sleep, protein, and stress, not phase timing.",
   "Strength train 2-3x a week. Steady hormones still need steady muscle work.",
   "Track sleep quality and mood for two weeks — patterns matter more than calendar days for you.",
-  "Hydrate and prioritize iron-rich meals — the pill can deplete B6, B12, magnesium, and zinc.",
+  "Hydrate and prioritize iron-rich meals — some hormonal birth control can deplete B6, B12, magnesium, and zinc.",
   "Notice your own rhythms — energy, focus, libido shifts still exist, they're just not phase-locked.",
 ];
 const IRREGULAR_DONTMESS_HER: string[] = [
@@ -273,7 +273,7 @@ const IRREGULAR_SUCCEED_HIM: string[] = [
   "If she's exploring coming off BC, ask how you can help — it can take months to recalibrate.",
 ];
 const IRREGULAR_DONTMESS_HIM: string[] = [
-  "Don't tell her 'it's just the pill' if she names a real symptom.",
+  "Don't tell her 'it's just your birth control' if she names a real symptom.",
   "Don't make jokes about hormones — her chemistry is being managed, not malfunctioning.",
   "Don't pressure her on contraception choices — it's her body, her call.",
   "Don't assume libido shifts are about you. BC affects desire for many women.",
