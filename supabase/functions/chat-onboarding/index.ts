@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { detectBcOrNoPeriod } from "../_shared/bcDetection.ts";
+import { extractMethodToken } from "../_shared/bcMethod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -327,7 +328,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { action, userMessage, selectedSymptoms, anchorSymptom, selectedDate } = body;
+    const { action, userMessage: rawUserMessage, selectedSymptoms, anchorSymptom, selectedDate } = body;
 
     console.log("Chat onboarding action:", action, "for user:", user.id);
 
@@ -624,6 +625,11 @@ serve(async (req) => {
         // Feeding answer seeds the editable breastfeeding flag used by the
         // postpartum exit rule (never breastfed => false, so exit rests on
         // cycle regularity alone).
+        // Method only accompanies a "yes / hormonal / non-hormonal" BC answer.
+        if ((currentQuestion.field === "on_hormonal_bc" && parsedValue === true)
+          || (currentQuestion.field === "birth_control_status" && (parsedValue === "hormonal" || parsedValue === "non_hormonal"))) {
+          updateData.birth_control_method = bcMethodToken ?? null;
+        }
         if (currentQuestion.field === "feeding_status") {
           updateData.is_breastfeeding = parsedValue === "breastfeeding" || parsedValue === "combination";
         }
