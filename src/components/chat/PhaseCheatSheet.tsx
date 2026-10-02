@@ -1,3 +1,4 @@
+import { formatFollowUpQuestion } from "@/lib/formatFollowUpQuestion";
 import { useState } from "react";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
 import { Zap, Shield, Moon, TrendingUp, Heart, ChevronDown } from "lucide-react";
@@ -208,7 +209,7 @@ export function PhaseCheatSheet({ phase, cycleDay, cycleLengthDays, anchorSympto
                     <p className="text-xs text-foreground font-medium leading-snug">{answered}</p>
                   ) : (
                     <div className="flex items-center gap-1">
-                      <p className="text-xs text-muted-foreground leading-snug flex-1">{info.note}</p>
+                      <p className="text-xs text-muted-foreground leading-snug flex-1">{formatFollowUpQuestion(info.note)}</p>
                       <ChevronDown className={`w-3 h-3 text-muted-foreground/50 shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                     </div>
                   )}
