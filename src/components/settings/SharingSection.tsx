@@ -1,13 +1,20 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { HEADSUP_OPEN_EVENT, headsupStatus } from "@/lib/partnerHeadsup";
+import { usePartnerHeadsupFlag } from "@/hooks/usePartnerHeadsupFlag";
 
 interface Props {
   userId?: string;
   onOpenSetup: () => void;
 }
 
-export function SharingSection({ userId, onOpenSetup }: Props) {
+export function SharingSection(props: Props) {
+  const visible = usePartnerHeadsupFlag(props.userId);
+  if (!visible) return null;
+  return <SharingSectionInner {...props} />;
+}
+
+function SharingSectionInner({ userId, onOpenSetup }: Props) {
   const [status, setStatus] = useState<"Off" | "On" | "Paused">("Off");
 
   useEffect(() => {

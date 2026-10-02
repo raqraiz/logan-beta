@@ -55,6 +55,7 @@ import { bcMethodOptionsFor } from "@/lib/bcMethod";
 import { PartnerHeadsupOfferCard } from "@/components/partner/PartnerHeadsupOfferCard";
 import { PartnerHeadsupSetup } from "@/components/partner/PartnerHeadsupSetup";
 import { HEADSUP_OPEN_EVENT } from "@/lib/partnerHeadsup";
+import { usePartnerHeadsupFlag } from "@/hooks/usePartnerHeadsupFlag";
 interface SymptomCategory {
   label: string;
   symptoms: string[];
@@ -277,7 +278,9 @@ const Chat = () => {
   }, [trackPageView]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [headsupSetupOpen, setHeadsupSetupOpen] = useState(false);
+  const headsupVisible = usePartnerHeadsupFlag(user?.id);
   useEffect(() => {
+    if (!headsupVisible) return;
     const handler = () => {
       setActiveTab("ask");
       setHeadsupSetupOpen(true);
@@ -285,7 +288,7 @@ const Chat = () => {
     };
     window.addEventListener(HEADSUP_OPEN_EVENT, handler);
     return () => window.removeEventListener(HEADSUP_OPEN_EVENT, handler);
-  }, []);
+  }, [headsupVisible]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
@@ -2016,7 +2019,7 @@ const Chat = () => {
                       })()}
 
                       {/* Resource offer card (Logan suggesting a downloadable) */}
-                      {(message.message_type === "partner_headsup_offer" || message.message_type === "partner_headsup_ask") && user && (
+                      {headsupVisible && (message.message_type === "partner_headsup_offer" || message.message_type === "partner_headsup_ask") && user && (
                         <PartnerHeadsupOfferCard
                           userId={user.id}
                           kind={message.message_type === "partner_headsup_ask" ? "ask" : "offer"}
@@ -2385,7 +2388,7 @@ const Chat = () => {
               );
             })
           )}
-          {headsupSetupOpen && user && (
+          {headsupVisible && headsupSetupOpen && user && (
             <div className="px-1 pb-4">
               <PartnerHeadsupSetup userId={user.id} onClose={() => setHeadsupSetupOpen(false)} />
             </div>
