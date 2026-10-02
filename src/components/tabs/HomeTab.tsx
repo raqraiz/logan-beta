@@ -1,3 +1,4 @@
+import { allowsHormonalBcCopy } from "@/lib/bcMethod";
 import { Loader2 } from "lucide-react";
 import { useState, useCallback } from "react";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
@@ -458,6 +459,7 @@ interface CycleData {
   lastPeriodStart?: string;
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
   onHormonalBc?: boolean | null;
+  bcMethod?: string | null;
   postpartumStartDate?: string;
   postpartumActive?: boolean;
   lossDate?: string;
@@ -624,7 +626,11 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       return isSucceed ? PERIMENOPAUSE_SUCCEED_HER : PERIMENOPAUSE_DONTMESS_HER;
     }
     if (isIrregular) {
-      return isSucceed ? IRREGULAR_SUCCEED_HER : IRREGULAR_DONTMESS_HER;
+      if (!isSucceed) return IRREGULAR_DONTMESS_HER;
+      // Hormonal-BC lines only for hormonal methods or unknown — never copper IUD.
+      return allowsHormonalBcCopy(cycleData.bcMethod)
+        ? IRREGULAR_SUCCEED_HER
+        : IRREGULAR_SUCCEED_HER.filter((t) => !/hormonal (BC|birth control)/i.test(t));
     }
     if (isStale) {
       return isSucceed ? STALE_SUCCEED_HER : STALE_DONTMESS_HER;
@@ -727,6 +733,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
               cycleLengthDays={cycleData.cycleLengthDays}
               lifeStage={cycleData.lifeStage}
               onHormonalBc={cycleData.onHormonalBc}
+              bcMethod={cycleData.bcMethod}
               postpartumStartDate={cycleData.postpartumStartDate}
               postpartumActive={cycleData.postpartumActive}
               lossDate={cycleData.lossDate}
