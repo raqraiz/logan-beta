@@ -161,3 +161,38 @@ export async function extractCorrection(
     return null;
   }
 }
+
+/**
+ * After a new note is saved, deactivates older active notes about the same topic
+ * (e.g. a confirmed pattern she later corrected, or vice versa) so only her latest version stays active.
+ * Never throws; on any failure the older notes are simply left as they are.
+ */
+export async function supersedeSameTopic(client: Client, userId: string, newNoteId: string, newNote: string, apiKey: string): Promise<void> {
+  try {
+    const { data } = await client.from("user_memory_notes").select("id, note")
+      .eq("user_id", userId).eq("active", true).in("source", ["insight_confirmed", "insight_correction"])
+      .neq("id", newNoteId).order("created_at", { ascending: false }).limit(30);
+    const older = (data ?? []) as { id: string; note: string }[];
+    if (!older.length) return;
+    const raw = await streamModel(
+      [
+        "You compare short notes about one woman's body and cycle.",
+        "Given a NEW note and a numbered list of OLDER notes, return the numbers of older notes about the SAME topic (same symptom or experience and timing question), which the new note replaces.",
+        "Different symptoms or unrelated topics are NOT the same topic. When unsure, leave it out.",
+        'Return only json {"same":[numbers]}.',
+      ].join("\n"),
+      `NEW:\n${newNote}\n\nOLDER:\n${older.map((o, i) => `${i + 1}. ${o.note}`).join("\n")}`,
+      apiKey,
+    );
+    const m = raw?.match(/\{[\s\S]*\}/);
+    if (!m) return;
+    const nums: unknown = JSON.parse(m[0])?.same;
+    if (!Array.isArray(nums)) return;
+    const ids = nums.map((n) => older[Number(n) - 1]?.id).filter(Boolean) as string[];
+    if (!ids.length) return;
+    const { error } = await client.from("user_memory_notes").update({ active: false }).eq("user_id", userId).in("id", ids);
+    if (error) console.warn("[memory] supersede update failed", error.message);
+  } catch (e) {
+    console.warn("[memory] supersede failed", (e as Error).message);
+  }
+}
