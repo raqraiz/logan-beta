@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS user_memory_notes_confirmed_once ON public.user_memory_notes (user_id, source_message_id) WHERE source = 'insight_confirmed';

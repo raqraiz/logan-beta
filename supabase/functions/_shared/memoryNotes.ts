@@ -5,24 +5,97 @@ type Client = any;
 
 export const CORRECTION_PREFIX_RE = /^\s*that'?s not quite right\s*:/i;
 
-export async function fetchMemoryNotes(client: Client, userId: string): Promise<string[]> {
+export interface MemoryNotes { corrections: string[]; confirmed: string[] }
+
+export async function fetchMemoryNotes(client: Client, userId: string): Promise<MemoryNotes> {
   try {
     const { data } = await client
       .from("user_memory_notes")
-      .select("note")
+      .select("note, source")
       .eq("user_id", userId)
       .eq("active", true)
       .order("created_at", { ascending: false })
-      .limit(15);
-    return (data ?? []).map((r: { note: string }) => r.note);
+      .limit(25);
+    const rows = (data ?? []) as { note: string; source: string }[];
+    return {
+      corrections: rows.filter((r) => r.source !== "insight_confirmed").map((r) => r.note).slice(0, 15),
+      confirmed: rows.filter((r) => r.source === "insight_confirmed").map((r) => r.note).slice(0, 10),
+    };
   } catch {
-    return [];
+    return { corrections: [], confirmed: [] };
   }
 }
 
-export function buildMemoryBlock(notes: string[]): string {
-  if (!notes.length) return "";
-  return `\n\nWHAT SHE HAS TOLD YOU ABOUT HERSELF (her own corrections; these override any pattern you inferred from her data or general cycle patterns. Never contradict them, and never resurface a pattern she corrected unless she brings it up):\n${notes.map((n) => `- ${n}`).join("\n")}`;
+export function buildMemoryBlock(notes: MemoryNotes): string {
+  let out = "";
+  if (notes.corrections.length) {
+    out += `\n\nWHAT SHE HAS TOLD YOU ABOUT HERSELF (her own corrections; these override everything else, including confirmed patterns below, any pattern you inferred from her data, and general cycle patterns. Never contradict them, and never resurface a pattern she corrected unless she brings it up):\n${notes.corrections.map((n) => `- ${n}`).join("\n")}`;
+  }
+  if (notes.confirmed.length) {
+    out += `\n\nPATTERNS SHE CONFIRMED ARE TRUE FOR HER (treat as reliable, lower priority than her corrections above; refer to them naturally, don't repeat them every time):\n${notes.confirmed.map((n) => `- ${n}`).join("\n")}`;
+  }
+  return out;
+}
+
+/** Turns an insight she confirmed into a short second-person note. */
+export async function extractConfirmedPattern(insight: string, apiKey: string): Promise<string | null> {
+  const raw = await streamModel(
+    [
+      "A woman's health assistant showed her an insight about her body and she confirmed it is right.",
+      'Return only json {"note":"..."} or {"note":null} if the insight states no pattern about her.',
+      'note: one plain sentence in second person stating the pattern, max 25 words, no em dashes, no medication, e.g. "Headaches tend to show up about two days before your period."',
+    ].join("\n"),
+    `INSIGHT:\n${insight.slice(0, 1200)}`,
+    apiKey,
+  );
+  if (!raw) return null;
+  const m = raw.match(/\{[\s\S]*\}/);
+  if (!m) return null;
+  try {
+    const p = JSON.parse(m[0]);
+    return typeof p?.note === "string" && p.note.trim() ? p.note.trim().replace(/\s*\u2014\s*/g, ", ").slice(0, 300) : null;
+  } catch { return null; }
+}
+
+async function streamModel(instructions: string, input: string, apiKey: string): Promise<string | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+      method: "POST",
+      signal: controller.signal,
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "fetch" },
+      body: JSON.stringify({
+        model: "openai/gpt-6-astra", instructions, input, stream: true, store: false,
+        reasoning: { effort: "low", summary: "auto" }, include: ["reasoning.encrypted_content"],
+      }),
+    });
+    if (!res.ok || !res.body) { console.warn("[memory] gateway", res.status, await res.text()); return null; }
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "", raw = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+        if (!line.startsWith("data:")) continue;
+        const data = line.slice(5).trim();
+        if (!data || data === "[DONE]") continue;
+        try {
+          const ev = JSON.parse(data);
+          if (ev.type === "response.output_text.delta") raw += ev.delta ?? "";
+          if (ev.type === "response.failed" || ev.type === "error") return null;
+        } catch { /* partial line */ }
+      }
+    }
+    return raw;
+  } catch (e) {
+    console.warn("[memory] model failed", (e as Error).message);
+    return null;
+  } finally { clearTimeout(timer); }
 }
 
 /** Turns her correction into a short note, or flags that it's unclear. */
