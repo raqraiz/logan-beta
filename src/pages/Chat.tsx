@@ -50,7 +50,7 @@ import { HomeTab } from "@/components/tabs/HomeTab";
 import { PlanTab } from "@/components/tabs/PlanTab";
 import { usePresence } from "@/hooks/usePresence";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
-import { BC_METHOD_OPTIONS } from "@/lib/bcMethod";
+import { bcMethodOptionsFor } from "@/lib/bcMethod";
 interface SymptomCategory {
   label: string;
   symptoms: string[];
@@ -2120,7 +2120,7 @@ const Chat = () => {
                     <div className={`mt-3 max-w-xs ${pickerBusyClass}`}>
                       <p className="text-sm text-foreground mb-2">Which kind?</p>
                       <div className="flex flex-wrap gap-2">
-                        {[...BC_METHOD_OPTIONS, { value: "skip", label: "Skip" }].map((option) => (
+                        {[...bcMethodOptionsFor(bcFollowup.base === "non_hormonal" ? "non_hormonal" : "hormonal"), { value: "skip", label: "Skip" }].map((option) => (
                           <button
                             key={option.value}
                             onClick={() => {
