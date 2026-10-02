@@ -1145,27 +1145,48 @@ export type Database = {
       }
       partner_headsup_events: {
         Row: {
+          checkin_sent_at: string | null
           created_at: string
           id: string
+          kind: string
+          low_confidence: boolean
+          notified_at: string | null
+          opened_at: string | null
           outcome: string | null
+          predicted_period_start: string | null
           status: string
           user_id: string
+          window_end: string | null
           window_start: string
         }
         Insert: {
+          checkin_sent_at?: string | null
           created_at?: string
           id?: string
+          kind?: string
+          low_confidence?: boolean
+          notified_at?: string | null
+          opened_at?: string | null
           outcome?: string | null
+          predicted_period_start?: string | null
           status: string
           user_id: string
+          window_end?: string | null
           window_start: string
         }
         Update: {
+          checkin_sent_at?: string | null
           created_at?: string
           id?: string
+          kind?: string
+          low_confidence?: boolean
+          notified_at?: string | null
+          opened_at?: string | null
           outcome?: string | null
+          predicted_period_start?: string | null
           status?: string
           user_id?: string
+          window_end?: string | null
           window_start?: string
         }
         Relationships: []
@@ -1221,6 +1242,27 @@ export type Database = {
           timing?: string
           user_id?: string
           whatsapp_number?: string | null
+        }
+        Relationships: []
+      }
+      partner_headsup_style_examples: {
+        Row: {
+          created_at: string
+          id: string
+          text: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          text: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          text?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1331,6 +1373,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      push_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       resource_feedback: {
         Row: {
