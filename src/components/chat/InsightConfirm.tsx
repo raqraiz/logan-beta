@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { logInsightAction, setPendingCorrection, CORRECTION_PREFIX } from "@/lib/insightFeedback";
-import { PREFILL_CHAT_EVENT } from "@/lib/chatEvents";
+import { PREFILL_CHAT_EVENT } from "@/lib/partnerHeadsupClient";
 
 interface Props { userId: string; messageId: string; insightType?: string | null }
 
