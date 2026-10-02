@@ -92,6 +92,13 @@
       "when": 1790941680208,
       "tag": "0012_chat_messages_headsup_types",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790941990128,
+      "tag": "0013_message_failures",
+      "breakpoints": true
     }
   ]
 }
