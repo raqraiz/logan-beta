@@ -4537,29 +4537,51 @@ serve(async (req) => {
 
 
 
-    // Smart truncation: keep first 10 (onboarding/profile context) + last 50 (recent conversation)
-    const allMessages = (recentMessages || [])
-      .filter(m => m.role === "user" || m.role === "assistant")
-      .map(m => ({
-        role: m.role as "user" | "assistant",
-        content: m.content
-      }));
-
-    let conversationHistory: { role: "user" | "assistant"; content: string }[];
-    const FIRST_N = 10;
+    // History window: last 50 messages only. Onboarding answers live in structured
+    // profile fields injected into the system prompt, so no head pin is needed.
     const LAST_N = 50;
+    const windowed = (recentMessages || [])
+      .filter(m => m.role === "user" || m.role === "assistant")
+      .slice(-LAST_N);
 
-    if (allMessages.length <= FIRST_N + LAST_N) {
-      conversationHistory = allMessages;
-    } else {
-      const first = allMessages.slice(0, FIRST_N);
-      const last = allMessages.slice(-LAST_N);
-      conversationHistory = [
-        ...first,
-        { role: "assistant" as const, content: "[Earlier conversation omitted for brevity]" },
-        ...last,
-      ];
+    // Date separators (user's local time zone) so the model knows how old each part is.
+    const historyTz = (participant as any)?.timezone || "UTC";
+    const localDay = (d: Date) => {
+      try {
+        return new Intl.DateTimeFormat("en-CA", { timeZone: historyTz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+      } catch {
+        return d.toISOString().slice(0, 10);
+      }
+    };
+    const todayLocal = localDay(new Date());
+    const dayDiff = (a: string, b: string) =>
+      Math.round((Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / 86400000);
+    const separatorFor = (day: string) => {
+      const n = dayDiff(day, todayLocal);
+      const label = new Date(day + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+      const ago = n <= 0 ? "today" : n === 1 ? "yesterday" : `${n} days ago`;
+      return `[Messages from ${label} - ${ago}]`;
+    };
+
+    const conversationHistory: { role: "user" | "assistant" | "system"; content: string }[] = [];
+    let prevDay: string | null = null;
+    for (const m of windowed) {
+      const day = m.created_at ? localDay(new Date(m.created_at)) : todayLocal;
+      if (day !== prevDay) {
+        conversationHistory.push({ role: "system", content: separatorFor(day) });
+        prevDay = day;
+      }
+      conversationHistory.push({ role: m.role as "user" | "assistant", content: m.content });
     }
+    if (prevDay !== todayLocal && conversationHistory.length > 0) {
+      // Current turn (appended below if missing) belongs to today.
+      const willAppend = !(windowed.length && windowed[windowed.length - 1].role === "user"
+        && (windowed[windowed.length - 1].content || "").trim() === (userMessage || "").trim());
+      if (willAppend) conversationHistory.push({ role: "system", content: separatorFor(todayLocal) });
+    }
+
+    systemPrompt += `\n\nTIME AWARENESS: Conversation history includes date markers. Situations described in older messages (trips, arguments, stressful weeks, illnesses) are PAST unless she brings them up again. Never describe a past situation as happening now. If an older situation seems relevant, ask whether it's still going on instead of assuming. Lasting facts (her kids, her partner, her life stage) can be used freely. Never repeat or quote the date markers in your replies.`;
+    systemPrompt += `\n\nVENT / OPEN-ENDED OPENER: When she says she wants to vent or opens with something open-ended and emotional without details, do not recap her situation or list what you think is going on. Respond briefly and warmly and invite her to share, e.g. "I'm here. What's going on?" Let her lead. Don't tell her what she's feeling or how heavy something is; respond to what she actually shares. In that opening reply, do not mention her cycle day or phase and add no "---" deep dive; her phase can be mentioned lightly only after she has shared what's going on. Phase accuracy rules still apply whenever a phase is mentioned.`;
 
     // The current user turn is already persisted in chat_messages by the client before
     // this function runs, so it normally arrives via the fetched history. Only append it
