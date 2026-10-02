@@ -47,7 +47,6 @@ export function harderWindow(lastPeriodStart: string | null, cycleLen: number | 
   let guard = 0;
   // Advance until the window end (period day 2) is today or later.
   while (addDays(next, 1) < localToday && guard < 60) { next = addDays(next, cycleLen); guard++; }
-  if (next === lastPeriodStart) next = addDays(next, cycleLen); // the logged period itself is not "next"
   return { start: addDays(next, -3), end: addDays(next, 1), periodStart: next };
 }
 
