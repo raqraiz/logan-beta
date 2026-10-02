@@ -329,6 +329,9 @@ serve(async (req) => {
 
     const body = await req.json();
     const { action, userMessage: rawUserMessage, selectedSymptoms, anchorSymptom, selectedDate } = body;
+    // Birth-control "Which kind?" chips ride along as "<answer>|method:<value>".
+    const bcMethodToken = typeof rawUserMessage === "string" ? extractMethodToken(rawUserMessage) : undefined;
+    const userMessage = typeof rawUserMessage === "string" ? rawUserMessage.replace(/\|?method:[a-z_]+/i, "").trim() : rawUserMessage;
 
     console.log("Chat onboarding action:", action, "for user:", user.id);
 
