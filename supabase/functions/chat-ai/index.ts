@@ -13,6 +13,7 @@ import {
   isValidStageKey,
   type TopicBoundary,
 } from "../_shared/topicBoundaries.ts";
+import { fetchMemoryNotes, buildMemoryBlock, extractCorrection, CORRECTION_PREFIX_RE } from "../_shared/memoryNotes.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -4336,6 +4337,40 @@ serve(async (req) => {
 
     const activeBoundaries: TopicBoundary[] = await fetchActiveBoundaries(supabase, user.id);
 
+    // --- Insight correction ("That's not quite right: ...") ---
+    // No-write-no-claim: only confirm "I'll remember" once the note is saved.
+    let correctionState: "none" | "saved" | "unclear" | "failed" = "none";
+    let correctionNote = "";
+    if (CORRECTION_PREFIX_RE.test(userMessage)) {
+      const { data: lastInsight } = await supabase
+        .from("chat_messages")
+        .select("id, content")
+        .eq("user_id", user.id)
+        .eq("role", "assistant")
+        .contains("metadata", { insight_type: "proactive" })
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const correctionText = userMessage.replace(CORRECTION_PREFIX_RE, "").trim();
+      if (!correctionText) {
+        correctionState = "unclear";
+      } else {
+        const result = await extractCorrection(lastInsight?.content ?? "", correctionText, lovableApiKey);
+        if (result?.clear) {
+          const { error: noteErr } = await supabase.from("user_memory_notes").insert({
+            user_id: user.id, note: result.note, source: "insight_correction", source_message_id: lastInsight?.id ?? null,
+          });
+          if (noteErr) { console.error("[correction] insert failed:", noteErr.message); correctionState = "failed"; }
+          else { correctionState = "saved"; correctionNote = result.note; }
+        } else if (result && !result.clear) {
+          correctionState = "unclear";
+        } else {
+          correctionState = "failed";
+        }
+      }
+    }
+    const memoryNotes = await fetchMemoryNotes(supabase, user.id);
+
     const backfillBlock = backfillConfirmation ? `\n\n${backfillConfirmation}\n` : "";
     const libraryBlock = libraryConfirmation ? `\n\n${libraryConfirmation}\n` : "";
 
@@ -4354,6 +4389,14 @@ serve(async (req) => {
       systemPrompt += buildBoundaryRuleBlock(activeBoundaries);
     }
     systemPrompt += buildBcMethodRule(participant, { allowAsk: true }) + bcMethodSavedNote;
+    systemPrompt += buildMemoryBlock(memoryNotes);
+    if (correctionState === "saved") {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only, overrides length/format rules): She just corrected an insight you gave her. This was SAVED: "${correctionNote}". Reply in 1-2 short plain sentences: thank her and confirm what you'll remember, in second person, e.g. "Got it, thanks for telling me. I'll remember that your energy dips before your period, not after." No science, no follow-up advice, no question.`;
+    } else if (correctionState === "unclear") {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only, overrides length/format rules): She said your last insight wasn't quite right, but it's not clear what is true for her instead. Ask exactly ONE short, warm question to find out (e.g. "Thanks for saying. What feels different for you?"). Do NOT claim you'll remember anything yet.`;
+    } else if (correctionState === "failed") {
+      systemPrompt += `\n\nRUNTIME CONTEXT (this turn only): She corrected your last insight but saving it FAILED. Thank her and acknowledge what she said, but do NOT promise you'll remember it.`;
+    }
 
     // No-write-no-claim for the boundary just requested in this message.
     if (boundarySaveState === "saved") {
