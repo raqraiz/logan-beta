@@ -584,7 +584,7 @@ Generate a JSON object:
 
 3. "starters": 3 replies (2-4 words each). One confirms ("Yeah exactly"), one pushes back ("Not today actually"), one opens up ("Tell me more").
 
-4. "cheat_sheet": Personalized energy/focus/emotions/nutrition for THIS user in THIS phase. Each has "level" (high/medium/low/variable) and "note" (max 12 words). Notes must be INQUIRY-BASED — ask the user how they're feeling, don't tell them. Frame each note as a gentle question or check-in that invites them to reflect. Never declare what they're experiencing. During high-performing phases, levels should reflect the strengths (e.g., energy: high, focus: high).
+4. "cheat_sheet": Personalized energy/focus/emotions/nutrition for THIS user in THIS phase. Each has "level" (high/medium/low/variable) and "note" (max 12 words). Notes must be INQUIRY-BASED — ask the user how they're feeling, don't tell them. Frame each note as a gentle question or check-in that invites them to reflect. Never declare what they're experiencing. Any question in a note is a full sentence that starts with a capital letter and ends with "?". During high-performing phases, levels should reflect the strengths (e.g., energy: high, focus: high).
    - "energy": Ask how their energy is today given their phase.
    - "focus": Ask about their mental clarity or creative state.
    - "emotions": Ask what their emotional landscape feels like right now.
@@ -767,7 +767,7 @@ Generate a JSON object:
 
 3. "starters": 3 replies (2-4 words each). One confirms, one pushes back, one opens up.
 
-4. "cheat_sheet": Personalized energy/focus/emotions/nutrition. Each has "level" (high/medium/low/variable) and "note" (max 12 words, inquiry-based).
+4. "cheat_sheet": Personalized energy/focus/emotions/nutrition. Each has "level" (high/medium/low/variable) and "note" (max 12 words, inquiry-based; any question is a full sentence starting with a capital letter and ending with "?").
 
 VOICE:
 - Friend who just knows, not a coach
