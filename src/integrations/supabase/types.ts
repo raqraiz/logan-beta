@@ -2155,8 +2155,14 @@ export type Database = {
           insights_corrected: number
           insights_not_confirmed: number
           insights_shown: number
+          reactions_negative: number
+          reactions_positive: number
           week: string
         }[]
+      }
+      admin_set_user_internal: {
+        Args: { _internal: boolean; _user_id: string }
+        Returns: undefined
       }
       count_onboarded_users: { Args: never; Returns: number }
       evaluate_postpartum_regularity: {

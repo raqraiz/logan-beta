@@ -78,6 +78,13 @@
       "when": 1790940906747,
       "tag": "0010_profiles_analytics_consent",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790941092149,
+      "tag": "0011_measurement_internal_and_reactions",
+      "breakpoints": true
     }
   ]
 }
