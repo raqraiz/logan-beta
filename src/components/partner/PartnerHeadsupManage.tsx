@@ -191,7 +191,7 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange, onCloseSettin
                   ))}
                 </ul>
               )}
-              <p className="text-xs text-muted-foreground">Logan keeps only the date and what happened. The message itself isn't stored after you send it.</p>
+              <p className="text-xs text-muted-foreground">Logan keeps the date and what happened. Messages aren't stored after you send them, except your last few edits, which help drafts sound like you.</p>
             </div>
 
             <div className="space-y-2 pt-1">
