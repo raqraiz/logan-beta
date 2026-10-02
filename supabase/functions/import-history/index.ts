@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { BlobReader, ZipReader, TextWriter } from "https://deno.land/x/zipjs@v2.7.45/index.js";
 import { parse as parseCsv } from "https://deno.land/std@0.224.0/csv/parse.ts";
+import { trackMessageFailures } from "../_shared/messageFailures.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -417,7 +418,7 @@ serve(async (req) => {
       });
     }
 
-    const admin = createClient(supabaseUrl, serviceKey);
+    const admin = trackMessageFailures(createClient(supabaseUrl, serviceKey), "import-history");
 
     // Rate limit: max 3 imports / 24h
     const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();

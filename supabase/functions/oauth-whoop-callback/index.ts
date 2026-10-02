@@ -1,5 +1,6 @@
 // Whoop OAuth callback: exchange code, store tokens, redirect back to app
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { trackMessageFailures } from "../_shared/messageFailures.ts";
 
 const WHOOP_TOKEN = "https://api.prod.whoop.com/oauth/oauth2/token";
 const APP_URL = "https://asklogan.ai";
@@ -86,7 +87,7 @@ Deno.serve(async (req) => {
       }
     } catch (_) { /* ignore */ }
 
-    const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+    const admin = trackMessageFailures(createClient(SUPABASE_URL, SERVICE_KEY), "oauth-whoop-callback");
     const { error: upsertErr } = await admin
       .from("user_integrations")
       .upsert({

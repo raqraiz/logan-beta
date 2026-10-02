@@ -1,3 +1,4 @@
+import { trackedSupabase } from "@/lib/messageFailures";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -286,7 +287,7 @@ function HeadsupReviewDialog({ open, onOpenChange, userId, name, relationship, p
     void enableHeadsupPush(userId).then((s) => {
       if (s !== "registered" && s !== "not-configured") toast({ title: "Notifications", description: PUSH_STATUS_COPY[s] });
     }).catch(() => {});
-    await supabase.from("chat_messages").insert({
+    await trackedSupabase.from("chat_messages").insert({
       user_id: userId,
       role: "assistant",
       content: `All set. I'll have the first one ready the ${timing === "evening_before" ? "evening before" : "morning of"} your next harder stretch.`,
@@ -296,7 +297,7 @@ function HeadsupReviewDialog({ open, onOpenChange, userId, name, relationship, p
     const { data: pc } = await supabase.from("participants").select("last_period_start, cycle_length_days").eq("user_id", userId).maybeSingle();
     const w = currentOrNextWindow(pc?.last_period_start, pc?.cycle_length_days);
     if (w && (w.inside || (w.daysUntil > 0 && w.daysUntil <= 3))) {
-      await supabase.from("chat_messages").insert({
+      await trackedSupabase.from("chat_messages").insert({
         user_id: userId,
         role: "assistant",
         message_type: "partner_headsup_sendnow",

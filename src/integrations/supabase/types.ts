@@ -939,6 +939,33 @@ export type Database = {
         }
         Relationships: []
       }
+      message_failures: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          message_type: string | null
+          source: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          message_type?: string | null
+          source?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          message_type?: string | null
+          source?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       notification_preferences: {
         Row: {
           created_at: string

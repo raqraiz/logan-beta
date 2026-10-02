@@ -1,3 +1,4 @@
+import { logMessageFailure } from "./messageFailures.ts";
 // deno-lint-ignore-file no-explicit-any
 // Shared partner heads-up helpers (server). Window logic mirrors src/lib/partnerHeadsup.ts.
 
@@ -88,6 +89,7 @@ export async function sendPush(admin: any, userId: string, title: string, body: 
     if (res.ok) { any = true; continue; }
     const txt = await res.text();
     console.error(`[push] send failed [${res.status}]: ${txt}`);
+    await logMessageFailure(admin, userId, "push", "partner-headsup-daily", `push [${res.status}]: ${txt.slice(0, 200)}`);
     if (res.status === 404 || (res.status === 400 && /INVALID_ARGUMENT|UNREGISTERED/.test(txt))) {
       await admin.from("push_tokens").delete().eq("id", t.id);
     }

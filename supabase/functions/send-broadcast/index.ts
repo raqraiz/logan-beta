@@ -1,6 +1,7 @@
 // Send a broadcast message to a segmented set of users by inserting an
 // assistant message into each recipient's chat_messages table.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { trackMessageFailures } from "../_shared/messageFailures.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -78,7 +79,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const admin = createClient(supabaseUrl, serviceKey);
+    const admin = trackMessageFailures(createClient(supabaseUrl, serviceKey), "send-broadcast");
     const { data: roleRow } = await admin
       .from("user_roles")
       .select("role")

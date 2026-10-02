@@ -5,6 +5,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
 import { cycleConfidence, harderWindow, helpPhrase, localParts, weekdayOf } from "../_shared/partnerHeadsup.ts";
 import { partnerHeadsupVisibleFor } from "../_shared/partnerHeadsupFlag.ts";
+import { trackMessageFailures } from "../_shared/messageFailures.ts";
 
 const MODEL = "openai/gpt-6-astra";
 const json = (b: unknown, status = 200) =>
@@ -81,7 +82,7 @@ Deno.serve(async (req) => {
     const { data: u } = await userClient.auth.getUser();
     if (!u?.user) return json({ error: "Unauthorized" }, 401);
     const uid = u.user.id;
-    const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const admin = trackMessageFailures(createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!), "partner-headsup-draft");
     if (!(await partnerHeadsupVisibleFor(admin, uid))) return json({ error: "Not available" }, 403);
 
     const parsed = Body.safeParse(await req.json());

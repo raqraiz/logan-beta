@@ -14,6 +14,7 @@ import {
   type TopicBoundary,
 } from "../_shared/topicBoundaries.ts";
 import { fetchMemoryNotes, buildMemoryBlock, extractCorrection, CORRECTION_PREFIX_RE } from "../_shared/memoryNotes.ts";
+import { trackMessageFailures } from "../_shared/messageFailures.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1157,7 +1158,7 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = trackMessageFailures(createClient(supabaseUrl, supabaseServiceKey), "chat-ai");
 
     const body = await req.json();
     const rawUserMessage = body.userMessage;

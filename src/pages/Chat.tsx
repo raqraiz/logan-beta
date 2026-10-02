@@ -1,3 +1,4 @@
+import { trackedSupabase } from "@/lib/messageFailures";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -979,7 +980,7 @@ const Chat = () => {
 
     // Store as a silent user message with metadata for personalization
     try {
-      await supabase.from("chat_messages").insert({
+      await trackedSupabase.from("chat_messages").insert({
         user_id: user.id,
         role: "user",
         content: `[check-in] ${dimension}: ${response}`,
@@ -1034,7 +1035,7 @@ const Chat = () => {
 
     try {
       // Insert the user's message into the database
-      const { data: insertedRow, error: insertError } = await supabase
+      const { data: insertedRow, error: insertError } = await trackedSupabase
         .from("chat_messages")
         .insert({
           user_id: user.id,
@@ -1153,7 +1154,7 @@ const Chat = () => {
             : displayLabel ?? formatOnboardingEcho(messageContent);
 
       if (!skipMessageInsert) {
-        const { error } = await supabase.from("chat_messages").insert({
+        const { error } = await trackedSupabase.from("chat_messages").insert({
           user_id: user.id,
           role: "user",
           content: displayContent,
@@ -1260,7 +1261,7 @@ const Chat = () => {
     let messageStored = skipMessageInsert;
     try {
       if (!skipMessageInsert) {
-        const { error } = await supabase.from("chat_messages").insert({
+        const { error } = await trackedSupabase.from("chat_messages").insert({
           user_id: user.id, role: "user", content: displayContent, message_type: "text",
         });
         if (error) throw error;
@@ -1432,7 +1433,7 @@ const Chat = () => {
         .contains("metadata", { reaction_to: messageId });
       
       // Insert new reaction with context for learning
-      const { error } = await supabase.from("chat_messages").insert({
+      const { error } = await trackedSupabase.from("chat_messages").insert({
         user_id: user.id,
         role: "user",
         content: emoji,
