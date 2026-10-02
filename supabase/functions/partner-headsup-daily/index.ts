@@ -83,6 +83,7 @@ Deno.serve(async (req) => {
 
       // Has she mentioned a close person in chat?
       const { data: mention } = await admin.from("chat_messages").select("content").eq("user_id", uid).eq("role", "user")
+        .gte("created_at", new Date(Date.now() - 30 * 86400000).toISOString())
         .filter("content", "imatch", PARTNER_PG).order("created_at", { ascending: false }).limit(1);
       if (!mention?.length) continue;
 
