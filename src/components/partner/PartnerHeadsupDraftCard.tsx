@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { HEADSUP_FOOTER } from "@/lib/partnerHeadsup";
 import {
   HEADSUP_UPDATED_EVENT, PREFILL_CHAT_EVENT, generateDraft, saveStyleExample, shareSheet, whatsappUrl,
-  type HeadsupDraftResponse,, openTopLevel } from "@/lib/partnerHeadsupClient";
+  type HeadsupDraftResponse, openTopLevel } from "@/lib/partnerHeadsupClient";
 import { HeadsupEditSheet } from "./HeadsupEditSheet";
 
 interface Props {

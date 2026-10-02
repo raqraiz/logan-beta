@@ -321,7 +321,7 @@ const Chat = () => {
       window.removeEventListener(OPEN_CHAT_EVENT, openChat);
       window.removeEventListener(PREFILL_CHAT_EVENT, prefill);
     };
-  }, []);
+  },[user?.id]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
