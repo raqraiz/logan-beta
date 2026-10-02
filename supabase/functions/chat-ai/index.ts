@@ -5094,6 +5094,30 @@ serve(async (req) => {
       const friction = /\b(fight|fought|argu(e|ed|ing|ment)|snapp(ed|ing)|yell(ed|ing)?|annoy(ed|ing)|frustrat(ed|ing)|doesn'?t (get|understand)|don'?t (get|understand)|tension|upset with|mad at|angry at|resent)\b/i;
       const frictionMention = closePerson.test(userMessage) && friction.test(userMessage);
 
+      // Heads-ups on: "send [name] a heads-up" or "hard day, want [name] to know" shows a draft card right away.
+      const askSendHeadsup = /\bheads[\s-]?up\b/i.test(userMessage) && /\b(send|write|draft|text|message|give)\b/i.test(userMessage);
+      const hardDayWantKnow = /\b(hard|rough|bad|tough|awful|terrible|horrible)\s+(day|one|morning|night)\b/i.test(userMessage)
+        && /\b(want|need|wish|like)\b[^.?!]{0,40}\b(know|tell|let\s+\w+\s+know|understand)\b/i.test(userMessage);
+      if (isOnboardingComplete && (askSendHeadsup || hardDayWantKnow) && await partnerHeadsupVisibleFor(supabase, user.id)) {
+        const { data: hsOn } = await supabase.from("partner_headsup_settings").select("enabled, partner_name").eq("user_id", user.id).maybeSingle();
+        if (hsOn?.enabled) {
+          const describesToday = hardDayWantKnow || /\b(today|right now|feel|feeling|tired|exhausted|drained|cranky|overwhelmed|low)\b/i.test(userMessage);
+          const { data: srcMsg } = await supabase.from("chat_messages").select("id").eq("user_id", user.id).eq("role", "user")
+            .order("created_at", { ascending: false }).limit(1).maybeSingle();
+          const today = new Date().toISOString().slice(0, 10);
+          const { data: ev } = await supabase.from("partner_headsup_events").insert({
+            user_id: user.id, kind: "on_demand", window_start: today, window_end: today, status: "drafted", recipient_name: hsOn.partner_name,
+          }).select("id").maybeSingle();
+          if (ev?.id) {
+            await supabase.from("chat_messages").insert({
+              user_id: user.id, role: "assistant", message_type: "partner_headsup_draft",
+              content: `Draft for ${hsOn.partner_name || "them"}`,
+              metadata: { event_id: ev.id, mode: describesToday ? "today" : "predicted", kind: "on_demand", source_message_id: describesToday ? srcMsg?.id : undefined },
+            });
+          }
+        }
+      }
+
       if (isOnboardingComplete && (askHelpExplain || frictionMention) && await partnerHeadsupVisibleFor(supabase, user.id)) {
         const { data: hs } = await supabase.from("partner_headsup_settings").select("enabled").eq("user_id", user.id).maybeSingle();
         if (!hs?.enabled) {
