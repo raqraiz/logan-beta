@@ -50,6 +50,13 @@
       "when": 1790938724779,
       "tag": "0006_partner_headsup_part2",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790938817242,
+      "tag": "0007_headsup_event_recipient_name",
+      "breakpoints": true
     }
   ]
 }

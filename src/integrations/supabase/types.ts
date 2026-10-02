@@ -1154,6 +1154,7 @@ export type Database = {
           opened_at: string | null
           outcome: string | null
           predicted_period_start: string | null
+          recipient_name: string | null
           status: string
           user_id: string
           window_end: string | null
@@ -1169,6 +1170,7 @@ export type Database = {
           opened_at?: string | null
           outcome?: string | null
           predicted_period_start?: string | null
+          recipient_name?: string | null
           status: string
           user_id: string
           window_end?: string | null
@@ -1184,6 +1186,7 @@ export type Database = {
           opened_at?: string | null
           outcome?: string | null
           predicted_period_start?: string | null
+          recipient_name?: string | null
           status?: string
           user_id?: string
           window_end?: string | null

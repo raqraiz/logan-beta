@@ -1,0 +1,1 @@
+ALTER TABLE public.partner_headsup_events ADD COLUMN IF NOT EXISTS recipient_name text CHECK (recipient_name IS NULL OR char_length(recipient_name) <= 60);
