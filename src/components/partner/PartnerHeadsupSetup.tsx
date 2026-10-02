@@ -13,6 +13,7 @@ import {
   type HeadsupRelationship,
   type HeadsupTiming,
 } from "@/lib/partnerHeadsup";
+import { PUSH_STATUS_COPY, currentOrNextWindow, enableHeadsupPush } from "@/lib/partnerHeadsupClient";
 
 const chip = (active: boolean) =>
   `min-h-[44px] px-4 rounded-full border text-sm font-medium transition-colors ${
