@@ -14,7 +14,7 @@ import {
   type HeadsupRelationship,
   type HeadsupTiming,
 } from "@/lib/partnerHeadsup";
-import { PUSH_STATUS_COPY, currentOrNextWindow, enableHeadsupPush } from "@/lib/partnerHeadsupClient";
+import { PUSH_STATUS_COPY, currentOrNextWindow, enableHeadsupPush, isHardToPredict, openTopLevel, whatsappUrl } from "@/lib/partnerHeadsupClient";
 
 const chip = (active: boolean) =>
   `min-h-[44px] px-4 rounded-full border text-sm font-medium transition-colors ${
@@ -233,13 +233,39 @@ interface ReviewProps {
   helps: string[];
   timing: HeadsupTiming;
   onEnabled: () => void;
+  /** Preview mode: no consent text, no "Turn on"; offers "Send this preview to myself" and "Looks good". */
+  preview?: { includeDates: boolean; includeMood: boolean; includeHelps: boolean; includeFooter: boolean };
 }
 
-function HeadsupReviewDialog({ open, onOpenChange, userId, name, relationship, phone, helps, timing, onEnabled }: ReviewProps) {
-  const [includeDates, setIncludeDates] = useState(true);
-  const [includeMood, setIncludeMood] = useState(true);
-  const [includeHelps, setIncludeHelps] = useState(true);
-  const [includeFooter, setIncludeFooter] = useState(true);
+/** Loads her saved settings and opens the review dialog in preview mode. */
+export function HeadsupPreviewDialog({ userId, open, onOpenChange }: { userId: string; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const [row, setRow] = useState<Record<string, any> | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    supabase.from("partner_headsup_settings").select("*").eq("user_id", userId).maybeSingle().then(({ data }) => setRow(data));
+  }, [open, userId]);
+  if (!row) return null;
+  return (
+    <HeadsupReviewDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      userId={userId}
+      name={row.partner_name || "them"}
+      relationship={(row.relationship as HeadsupRelationship) ?? "partner"}
+      phone={row.whatsapp_number}
+      helps={row.helps ?? []}
+      timing={(row.timing as HeadsupTiming) ?? "evening_before"}
+      onEnabled={() => onOpenChange(false)}
+      preview={{ includeDates: row.include_dates, includeMood: row.include_mood, includeHelps: row.include_helps, includeFooter: row.include_footer }}
+    />
+  );
+}
+
+function HeadsupReviewDialog({ open, onOpenChange, userId, name, relationship, phone, helps, timing, onEnabled, preview }: ReviewProps) {
+  const [includeDates, setIncludeDates] = useState(preview?.includeDates ?? true);
+  const [includeMood, setIncludeMood] = useState(preview?.includeMood ?? true);
+  const [includeHelps, setIncludeHelps] = useState(preview?.includeHelps ?? true);
+  const [includeFooter, setIncludeFooter] = useState(preview?.includeFooter ?? true);
   const [saving, setSaving] = useState(false);
   const [harderWindow, setWindow] = useState<{ start: Date; end: Date } | null>(null);
 
@@ -287,14 +313,25 @@ function HeadsupReviewDialog({ open, onOpenChange, userId, name, relationship, p
     void enableHeadsupPush(userId).then((s) => {
       if (s !== "registered" && s !== "not-configured") toast({ title: "Notifications", description: PUSH_STATUS_COPY[s] });
     }).catch(() => {});
+    const { data: pc } = await supabase.from("participants").select("last_period_start, cycle_length_days").eq("user_id", userId).maybeSingle();
+    const hard = await isHardToPredict(userId);
+    let first: string;
+    const nw = currentOrNextWindow(pc?.last_period_start, pc?.cycle_length_days);
+    if (!hard && nw) {
+      const target = new Date(`${nw.start}T12:00:00`);
+      if (timing === "evening_before") target.setDate(target.getDate() - 1);
+      const when = target.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+      first = `All set. Your next heads-up for ${name} will be ready on ${timing === "morning_of" ? "the morning of" : "the evening of"} ${when}, ${timing === "morning_of" ? "the day your harder stretch usually starts" : "the day before your harder stretch usually starts"}.`;
+    } else {
+      first = `All set. Your cycle is hard to predict right now, so I won't guess dates for ${name}. When you tell me things are tough, I'll offer to write something for them. You can also write one anytime.`;
+    }
     await trackedSupabase.from("chat_messages").insert({
       user_id: userId,
       role: "assistant",
-      content: `All set. I'll have the first one ready the ${timing === "evening_before" ? "evening before" : "morning of"} your next harder stretch.`,
-      message_type: "text",
-      metadata: { partner_headsup: "enabled" },
+      content: `${first}\n\nBefore each one, I'll ask what feels hardest that week, so it never reads like a copy.`,
+      message_type: "partner_headsup_allset",
+      metadata: { partner_headsup: "enabled", partner_name: name },
     });
-    const { data: pc } = await supabase.from("participants").select("last_period_start, cycle_length_days").eq("user_id", userId).maybeSingle();
     const w = currentOrNextWindow(pc?.last_period_start, pc?.cycle_length_days);
     if (w && (w.inside || (w.daysUntil > 0 && w.daysUntil <= 3))) {
       await trackedSupabase.from("chat_messages").insert({
@@ -322,7 +359,7 @@ function HeadsupReviewDialog({ open, onOpenChange, userId, name, relationship, p
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="headsup-surface sm:max-w-md max-h-[92vh] overflow-y-auto rounded-[20px]">
-        <DialogTitle className="headsup-headline text-[32px] leading-tight">Here's what {name} would get</DialogTitle>
+        <DialogTitle className="headsup-headline text-[32px] leading-tight">{preview ? `What ${name} would get` : `Here's what ${name} would get`}</DialogTitle>
         <DialogDescription className="sr-only">Review the example message before turning on heads-ups.</DialogDescription>
 
         <div className="headsup-enter rounded-[20px] border border-border/50 bg-card/70 p-4 space-y-2">
@@ -331,7 +368,7 @@ function HeadsupReviewDialog({ open, onOpenChange, userId, name, relationship, p
           {includeFooter && <p className="text-xs font-light text-muted-foreground">{HEADSUP_FOOTER}</p>}
         </div>
 
-        <div className="space-y-1">
+        {!preview && <div className="space-y-1">
           <div className="text-xs font-medium text-muted-foreground">Included</div>
           {rows.map(([label, value, set]) => (
             <label key={label} className="flex min-h-[44px] items-center justify-between border-b border-border/40 text-sm">
@@ -339,15 +376,23 @@ function HeadsupReviewDialog({ open, onOpenChange, userId, name, relationship, p
               <Switch checked={value} onCheckedChange={set} />
             </label>
           ))}
-        </div>
+        </div>}
 
         <div className="rounded-[20px] bg-muted/60 p-4 space-y-1">
           <div className="text-xs font-medium">Never included</div>
           <p className="text-xs text-muted-foreground">
-            Symptom details, bleeding, fertility, or anything you've said to Logan in chat.
+            Medical details, bleeding, fertility, or anything you've told Logan in chat.
           </p>
         </div>
 
+        {preview ? (
+          <div className="space-y-2">
+            <button className={primaryBtn} onClick={() => openTopLevel(whatsappUrl(includeFooter ? `${example}\n\n${HEADSUP_FOOTER}` : example, null))}>
+              Send this preview to myself
+            </button>
+            <button className="min-h-[44px] w-full rounded-full text-sm font-medium" onClick={() => onOpenChange(false)}>Looks good</button>
+          </div>
+        ) : (<>
         <p className="text-xs font-light text-muted-foreground">
           Logan never contacts {name}. {name}'s number stays on your account and is only used to open your chat. You send each message yourself, from your own WhatsApp.
         </p>
@@ -356,6 +401,7 @@ function HeadsupReviewDialog({ open, onOpenChange, userId, name, relationship, p
           <button className={primaryBtn} disabled={saving} onClick={turnOn}>Turn on heads-ups</button>
           <p className="text-center text-xs font-light text-muted-foreground">You can pause or turn this off any time.</p>
         </div>
+        </>)}
       </DialogContent>
     </Dialog>
   );
