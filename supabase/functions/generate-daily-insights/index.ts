@@ -150,7 +150,7 @@ serve(async (req) => {
     // Serve the cache when nothing about her situation changed today.
     const { data: cached } = await service
       .from("daily_home_insights")
-      .select("succeed_text, dont_mess_up_text, succeed_him_text, dont_mess_up_him_text, context_key")
+      .select("succeed_text, dont_mess_up_text, succeed_partner_text, dont_mess_up_partner_text, context_key")
       .eq("user_id", userId)
       .eq("local_date", localDate)
       .maybeSingle();
@@ -159,8 +159,8 @@ serve(async (req) => {
       return json({
         succeed: String(cached.succeed_text).split("\n").filter(Boolean),
         dontMessUp: String(cached.dont_mess_up_text).split("\n").filter(Boolean),
-        succeedHim: String(cached.succeed_him_text ?? "").split("\n").filter(Boolean),
-        dontMessUpHim: String(cached.dont_mess_up_him_text ?? "").split("\n").filter(Boolean),
+        succeedPartner: String(cached.succeed_partner_text ?? "").split("\n").filter(Boolean),
+        dontMessUpPartner: String(cached.dont_mess_up_partner_text ?? "").split("\n").filter(Boolean),
         cached: true,
       });
     }
@@ -274,17 +274,17 @@ ${symptomContext}
 ${chatFactContext}
 
 
-Write four lists — two addressed to her, two addressed to her partner ("him"):
+Write four lists, two addressed to her and two addressed to her partner:
 - "succeed": 3 things that will make today go well for her, given her exact state.
 - "dontMessUp": 3 specific traps to avoid today, given her exact state.
-- "succeedHim": 3 things her partner can do today to support her, given her exact state.
-- "dontMessUpHim": 3 things her partner should avoid doing today, given her exact state.
+- "succeedPartner": exactly 3 things her partner can do today to support her.
+- "dontMessUpPartner": exactly 3 things her partner should avoid today.
 
-The him lists speak TO her partner ABOUT her ("she"/"her"), never to her. They draw on the same state, symptoms and recent-message context as the her lists.
+The partner lists speak directly TO the partner as "you" (example: "Take dinner off the plate tonight."). Never assume the partner's gender. No gendered gifts or stereotypes (no cologne, flowers, "date night", "man up" and similar). They draw on the same state, symptoms and recent-message context as her lists.
 
-Rules: each item is ONE sentence, max 14 words, concrete and actionable. Grace over guilt — never shaming. No emojis, no markdown, no numbering, no headers. Vary the wording day to day; do not sound like a generic template.
+Rules for every item: ONE sentence, 8 words or fewer, concrete and actionable, plain everyday words. Never start with "Prioritize" or "Refrain from". Never use the words "ensure", "nurture" or "self-care". Never use em dashes or en dashes. Grace over guilt, never shaming. No emojis, no markdown, no numbering, no headers. Vary the wording day to day.
 
-Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."],"succeedHim":["...","...","..."],"dontMessUpHim":["...","...","..."]}`;
+Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."],"succeedPartner":["...","...","..."],"dontMessUpPartner":["...","...","..."]}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -314,15 +314,15 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
 
     let succeed: string[] = [];
     let dontMessUp: string[] = [];
-    let succeedHim: string[] = [];
-    let dontMessUpHim: string[] = [];
+    let succeedPartner: string[] = [];
+    let dontMessUpPartner: string[] = [];
     const asList = (v: unknown) => (Array.isArray(v) ? v.map(String).filter(Boolean) : []);
     try {
       const parsed = JSON.parse(cleaned);
       succeed = asList(parsed.succeed);
       dontMessUp = asList(parsed.dontMessUp);
-      succeedHim = asList(parsed.succeedHim);
-      dontMessUpHim = asList(parsed.dontMessUpHim);
+      succeedPartner = asList(parsed.succeedPartner);
+      dontMessUpPartner = asList(parsed.dontMessUpPartner);
     } catch (_e) {
       console.error("Failed to parse AI output:", cleaned.slice(0, 300));
     }
@@ -330,6 +330,36 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
     if (succeed.length < 2 || dontMessUp.length < 2) {
       return json({ error: "fallback_required" }, 422);
     }
+
+    // Partner tips: max 8 words, banned words, no dashes. Bad tips are regenerated, never truncated.
+    const BANNED_TIP = /[—–]|\b(ensure|nurture|self-care|self care|prioriti[sz]e|refrain)\b/i;
+    const tipOk = (t: string) => t.trim().split(/\s+/).length <= 8 && !BANNED_TIP.test(t);
+    const fixTips = async (list: string[], kind: "do" | "avoid"): Promise<string[]> => {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const badIdx = list.map((t, i) => (tipOk(t) ? -1 : i)).filter((i) => i >= 0);
+        if (!badIdx.length) break;
+        try {
+          const r = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "openai/gpt-6-astra",
+              instructions: `${systemPrompt}\n\nRewrite only the given partner tips. Each must be 8 words or fewer, addressed to the partner as "you", gender-neutral, plain words, no dashes, no "ensure", "nurture", "self-care", "Prioritize" or "Refrain from". Keep the same meaning. These are things to ${kind === "do" ? "do" : "avoid"} today. Return ONLY a JSON array of strings, same order.`,
+              input: JSON.stringify(badIdx.map((i) => list[i])),
+            }),
+          });
+          if (!r.ok) break;
+          const d = await r.json();
+          const text: string = d.output_text ?? (d.output ?? []).flatMap((o: { content?: { text?: string }[] }) => o.content ?? []).map((c: { text?: string }) => c.text ?? "").join("");
+          const arr = JSON.parse(text.replace(/```json/gi, "").replace(/```/g, "").trim());
+          if (!Array.isArray(arr)) break;
+          list = [...list];
+          badIdx.forEach((i, k) => { if (typeof arr[k] === "string" && arr[k].trim()) list[i] = arr[k].trim(); });
+        } catch { break; }
+      }
+      return list.filter(tipOk).slice(0, 3);
+    };
+    [succeedPartner, dontMessUpPartner] = await Promise.all([fixTips(succeedPartner, "do"), fixTips(dontMessUpPartner, "avoid")]);
 
     // Post-generation guard: strip any line that breaches an active loss boundary.
     // If a list ends up too short, substitute neutral everyday tips (never an empty
@@ -362,15 +392,15 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
       };
       succeed = guard(succeed, NEUTRAL_SUCCEED);
       dontMessUp = guard(dontMessUp, NEUTRAL_DONTMESS);
-      succeedHim = guard(succeedHim, NEUTRAL_SUCCEED_HIM);
-      dontMessUpHim = guard(dontMessUpHim, NEUTRAL_DONTMESS_HIM);
+      succeedPartner = guard(succeedPartner, NEUTRAL_SUCCEED_HIM);
+      dontMessUpPartner = guard(dontMessUpPartner, NEUTRAL_DONTMESS_HIM);
     }
 
     succeed = succeed.slice(0, 4);
     dontMessUp = dontMessUp.slice(0, 4);
     // Him lists are best-effort: too few items simply falls back to the static set.
-    succeedHim = succeedHim.length >= 2 ? succeedHim.slice(0, 4) : [];
-    dontMessUpHim = dontMessUpHim.length >= 2 ? dontMessUpHim.slice(0, 4) : [];
+    succeedPartner = succeedPartner.length >= 2 ? succeedPartner.slice(0, 4) : [];
+    dontMessUpPartner = dontMessUpPartner.length >= 2 ? dontMessUpPartner.slice(0, 4) : [];
 
     // Unique constraint is (user_id, local_date) — a context change overwrites today's row.
     const { error: upsertErr } = await service
@@ -381,8 +411,8 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
           local_date: localDate,
           succeed_text: succeed.join("\n"),
           dont_mess_up_text: dontMessUp.join("\n"),
-          succeed_him_text: succeedHim.length ? succeedHim.join("\n") : null,
-          dont_mess_up_him_text: dontMessUpHim.length ? dontMessUpHim.join("\n") : null,
+          succeed_partner_text: succeedPartner.length ? succeedPartner.join("\n") : null,
+          dont_mess_up_partner_text: dontMessUpPartner.length ? dontMessUpPartner.join("\n") : null,
           context_key: contextKey,
           generated_at: new Date().toISOString(),
         },
@@ -390,7 +420,7 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
       );
     if (upsertErr) console.error("daily_home_insights upsert failed:", upsertErr.message);
 
-    return json({ succeed, dontMessUp, succeedHim, dontMessUpHim, cached: false });
+    return json({ succeed, dontMessUp, succeedPartner, dontMessUpPartner, cached: false });
   } catch (e) {
     console.error("generate-daily-insights error:", e);
     return json({ error: "An internal error occurred" }, 500);

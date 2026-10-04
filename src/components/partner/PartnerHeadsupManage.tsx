@@ -33,6 +33,7 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange }: Props) {
   const [editing, setEditing] = useState<string | null>(null); // person id or "new"
   const [nameIn, setNameIn] = useState("");
   const [phoneIn, setPhoneIn] = useState("");
+  const [relIn, setRelIn] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
 
   const load = async () => {
@@ -60,6 +61,7 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange }: Props) {
     setEditing(p?.id ?? "new");
     setNameIn(p?.name ?? "");
     setPhoneIn(p?.whatsapp_number ?? "");
+    setRelIn(p?.relationship ?? null);
   };
 
   const savePerson = async () => {
@@ -71,8 +73,8 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange }: Props) {
       if (!num) { toast({ title: "Add the country code", description: "For example +44 or +972." }); return; }
     }
     const { error } = editing === "new"
-      ? await supabase.from("headsup_people").insert({ user_id: userId, name: n, whatsapp_number: num })
-      : await supabase.from("headsup_people").update({ name: n, whatsapp_number: num }).eq("id", editing!);
+      ? await supabase.from("headsup_people").insert({ user_id: userId, name: n, whatsapp_number: num, relationship: relIn })
+      : await supabase.from("headsup_people").update({ name: n, whatsapp_number: num, relationship: relIn }).eq("id", editing!);
     if (error) { toast({ title: "Couldn't save", description: error.message, variant: "destructive" }); return; }
     setEditing(null);
     setPeople(await loadPeople(userId));
@@ -100,6 +102,12 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange }: Props) {
     <div className="pb-3 space-y-2">
       <input value={nameIn} onChange={(e) => setNameIn(e.target.value)} placeholder="Name" maxLength={60} className={input} autoFocus />
       <input value={phoneIn} onChange={(e) => setPhoneIn(e.target.value)} placeholder="WhatsApp number (optional), e.g. +44 7700 900123" inputMode="tel" className={input} />
+      <div className="flex flex-wrap gap-2">
+        {([["partner", "Partner"], ["family", "Family"], ["friend", "Friend"]] as const).map(([v, l]) => (
+          <button key={v} type="button" onClick={() => setRelIn(relIn === v ? null : v)}
+            className={`min-h-[36px] px-3 rounded-full border text-xs font-medium ${relIn === v ? "headsup-chip-active" : "border-border/60 bg-card/60"}`}>{l}</button>
+        ))}
+      </div>
       <div className="flex flex-wrap gap-2">
         <button className={ghost} disabled={!nameIn.trim()} onClick={() => void savePerson()}>Save</button>
         <button className={ghost} onClick={() => setEditing(null)}>Cancel</button>

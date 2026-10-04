@@ -1,3 +1,4 @@
+import { PartnerTodayCard } from "@/components/partner/PartnerTodayCard";
 import { allowsHormonalBcCopy } from "@/lib/bcMethod";
 import { Loader2 } from "lucide-react";
 import { useState, useCallback } from "react";
@@ -645,7 +646,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     const isSucceed = widgetId.startsWith("succeed");
     // Same generation call as HER — phase-derived, so skipped while stale.
     if (dailyInsights && !isStale) {
-      const generated = isSucceed ? dailyInsights.succeedHim : dailyInsights.dontMessUpHim;
+      const generated = isSucceed ? dailyInsights.succeedPartner : dailyInsights.dontMessUpPartner;
       if (generated.length) return generated;
     }
     if (hideStage) return isSucceed ? NEUTRAL_SUCCEED_HIM : NEUTRAL_DONTMESS_HIM;
@@ -864,6 +865,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       case "succeed_him":
         return (
           <div className="w-full" key={id}>
+            {userId && <div className="mb-3"><PartnerTodayCard userId={userId} help={getTipsHim("succeed")} skip={getTipsHim("dontmessup")} /></div>}
             <TipCard label={label} tips={getTipsHim("succeed")} phase={stagePhase} widgetId="succeed_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} icon={Heart} />
           </div>
         );

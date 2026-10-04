@@ -120,6 +120,13 @@
       "when": 1791108732878,
       "tag": "0016_headsup_people_and_feature_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791139823783,
+      "tag": "0017_partner_tip_columns_and_relationship",
+      "breakpoints": true
     }
   ]
 }

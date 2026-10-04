@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toE164 } from "@/lib/partnerHeadsup";
 import {
   FOCUS_OPTIONS, HEADSUP_UPDATED_EVENT, LAST_OPENING_KEY, generateDraft, loadPeople, openTopLevel, saveStyleExample, shareSheet, whatsappUrl,
-  type HeadsupPerson,
+  type HeadsupPerson, type PartnerTips,
 } from "@/lib/partnerHeadsupClient";
 
 interface Props {
@@ -13,9 +13,31 @@ interface Props {
   cacheKey: string;
   eventId?: string;
   preselect?: string[];
+  partnerTips?: PartnerTips;
+  initialPersonId?: string;
 }
 
-type Cached = { text: string; generated: string; focus: string[]; personId: string | null; typedName: string };
+type TipBlocks = { help: string | null; skip: string | null; helpOn: boolean; skipOn: boolean };
+type Cached = { text: string; generated: string; focus: string[]; personId: string | null; typedName: string; blocks?: TipBlocks };
+
+const trimDot = (t: string) => t.trim().replace(/[.!]+$/, "");
+const lower = (t: string) => (/^I\b/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1));
+/** "What would help today: A, and b." / "What won't: c." Short, never the full lists. */
+export function buildTipBlocks(tips?: PartnerTips): { help: string | null; skip: string | null } {
+  const h = (tips?.help ?? []).map(trimDot).filter(Boolean);
+  const k = (tips?.skip ?? []).map((t) => trimDot(t).replace(/^(don'?t|do not|avoid)\s+/i, "")).filter(Boolean);
+  return {
+    help: h.length ? `What would help today: ${h[0]}${h[1] ? `, and ${lower(h[1])}` : ""}.` : null,
+    skip: k.length ? `What won't: ${lower(k[0])}.` : null,
+  };
+}
+const withBlocks = (text: string, b: TipBlocks | undefined) => {
+  if (!b) return text;
+  const parts = [text.trimEnd()];
+  if (b.helpOn && b.help) parts.push(b.help);
+  if (b.skipOn && b.skip) parts.push(b.skip);
+  return parts.join("\n\n");
+};
 const primary = "headsup-primary min-h-[44px] w-full rounded-full px-5 text-sm font-medium transition-opacity disabled:opacity-40";
 const chipCls = (on: boolean) =>
   `min-h-[36px] px-3 rounded-full border text-xs font-medium transition-colors disabled:opacity-40 ${on ? "headsup-chip-active" : "border-border/60 bg-card/60 text-foreground hover:bg-card"}`;
@@ -34,7 +56,7 @@ function swapGreeting(text: string, from: string | null, to: string | null): str
 }
 
 /** The one heads-up draft card. Draft text lives only on this device until sent or dismissed. */
-export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId, preselect }: Props) {
+export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId, preselect, partnerTips, initialPersonId }: Props) {
   const storageKey = `headsup-draft:${cacheKey}`;
   const [status, setStatus] = useState<string | null>(eventId ? null : "drafted");
   const [recipient, setRecipient] = useState<string | null>(null);
@@ -43,7 +65,7 @@ export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId, preselect }
     try { const raw = localStorage.getItem(storageKey); return raw ? JSON.parse(raw) : null; } catch { return null; }
   });
   const [focus, setFocus] = useState<string[]>(() => cached?.focus ?? (preselect ?? []).filter((p) => FOCUS_OPTIONS.includes(p)).slice(0, 2));
-  const [personId, setPersonId] = useState<string | null>(cached?.personId ?? null);
+  const [personId, setPersonId] = useState<string | null>(cached?.personId ?? initialPersonId ?? null);
   const [typedName, setTypedName] = useState(cached?.typedName ?? "");
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
@@ -79,7 +101,16 @@ export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId, preselect }
       try { const v = localStorage.getItem(LAST_OPENING_KEY); avoid = v ? Number(v) : undefined; } catch { /* ignore */ }
       const r = await generateDraft({ name: forName ?? undefined, focus: f, avoid_opening: avoid });
       try { localStorage.setItem(LAST_OPENING_KEY, String(r.opening)); } catch { /* ignore */ }
-      persist({ text: r.text, generated: r.text, focus: f, personId: pid, typedName: typed });
+      setCached((prev) => {
+        const tb = buildTipBlocks(partnerTips);
+        const blocks: TipBlocks | undefined = prev?.blocks
+          ? { ...prev.blocks }
+          : tb.help || tb.skip ? { ...tb, helpOn: !!tb.help, skipOn: !!tb.skip } : undefined;
+        const text = withBlocks(r.text, blocks);
+        const next = { text, generated: text, focus: f, personId: pid, typedName: typed, blocks };
+        try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* ignore */ }
+        return next;
+      });
     } catch (e) { setErr((e as Error).message); }
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -106,6 +137,22 @@ export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId, preselect }
     const { data } = await supabase.from("headsup_people").insert({ user_id: userId, name: n, whatsapp_number: num }).select("id, name, whatsapp_number, last_used_at").maybeSingle();
     if (data) { setPeople((ps) => [data as HeadsupPerson, ...(ps ?? [])]); selectPerson(data as HeadsupPerson); }
     setAdding(false); setNewName(""); setNewPhone("");
+  };
+
+  /** Off: remove the block only if its text is untouched; otherwise leave her edit and just turn the chip off. */
+  const toggleBlock = (which: "help" | "skip") => {
+    if (!cached?.blocks) return;
+    const b = cached.blocks;
+    const block = b[which];
+    const on = which === "help" ? b.helpOn : b.skipOn;
+    if (!block) return;
+    let text = cached.text;
+    if (on) {
+      if (text.includes(block)) text = text.replace(`\n\n${block}`, "").replace(block, "").replace(/\n{3,}/g, "\n\n").trimEnd();
+    } else {
+      text = `${text.trimEnd()}\n\n${block}`;
+    }
+    persist({ ...cached, text, blocks: { ...b, [which === "help" ? "helpOn" : "skipOn"]: !on } });
   };
 
   const toggleFocus = (v: string) => {
@@ -229,6 +276,13 @@ export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId, preselect }
             <button key={o} className={chipCls(focus.includes(o))} disabled={loading || (!focus.includes(o) && focus.length >= 2)} onClick={() => toggleFocus(o)}>{o}</button>
           ))}
         </div>
+
+        {cached?.blocks && (cached.blocks.help || cached.blocks.skip) && (
+          <div className="flex flex-wrap items-center gap-2">
+            {cached.blocks.help && <button className={chipCls(cached.blocks.helpOn)} onClick={() => toggleBlock("help")}>How to help</button>}
+            {cached.blocks.skip && <button className={chipCls(cached.blocks.skipOn)} onClick={() => toggleBlock("skip")}>What to skip</button>}
+          </div>
+        )}
 
         {firstTime && (
           <div className="rounded-[12px] bg-muted/60 p-3 text-xs text-muted-foreground">
