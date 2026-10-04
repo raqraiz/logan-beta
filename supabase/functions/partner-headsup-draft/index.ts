@@ -3,7 +3,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
-import { cycleConfidence, harderWindow, helpPhrase, isHardToPredict, localParts, weekdayOf } from "../_shared/partnerHeadsup.ts";
+import { helpPhrase } from "../_shared/partnerHeadsup.ts";
 import { partnerHeadsupVisibleFor } from "../_shared/partnerHeadsupFlag.ts";
 import { trackMessageFailures } from "../_shared/messageFailures.ts";
 
@@ -14,15 +14,9 @@ const json = (b: unknown, status = 200) =>
 const Body = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("generate"),
-    mode: z.enum(["predicted", "today", "undated"]),
-    source_message_id: z.string().uuid().optional(),
     name: z.string().max(60).optional(),
-    relationship: z.enum(["partner", "family", "friend"]).optional(),
-    use_defaults: z.boolean().optional(),
-    adjust: z.enum(["shorter", "warmer", "lighter", "funny"]).optional(),
-    language: z.enum(["en", "he", "es"]).optional(),
-    current_text: z.string().max(1200).optional(),
     focus: z.array(z.string().trim().min(1).max(40)).max(2).optional(),
+    avoid_opening: z.number().int().min(0).max(9).optional(),
   }),
   z.object({ action: z.literal("save_style"), text: z.string().min(1).max(1000) }),
 ]);
@@ -98,89 +92,47 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
-    const [{ data: s }, { data: p }, { data: recent }, { data: styles }] = await Promise.all([
+    const [{ data: s }, { data: recent }, { data: styles }] = await Promise.all([
       admin.from("partner_headsup_settings").select("*").eq("user_id", uid).maybeSingle(),
-      admin.from("participants").select("last_period_start, cycle_length_days, timezone").eq("user_id", uid).maybeSingle(),
       admin.from("chat_messages").select("content").eq("user_id", uid).eq("role", "user").order("created_at", { ascending: false }).limit(12),
       admin.from("partner_headsup_style_examples").select("text").eq("user_id", uid).order("created_at", { ascending: false }).limit(3),
     ]);
-
-    const userLang = detectLang((recent ?? []).map((r) => r.content));
-    const lang = b.language ?? userLang;
-    const name = (b.name || s?.partner_name || "").trim() || "there";
-    const relationship = b.relationship ?? s?.relationship ?? null;
-    const defaults = b.use_defaults || !s;
-    const inc = {
-      dates: defaults ? true : s!.include_dates,
-      mood: defaults ? true : s!.include_mood,
-      helps: defaults ? true : s!.include_helps,
-    };
+    const lang = detectLang((recent ?? []).map((r) => r.content));
+    const name = (b.name || "").trim();
+    const inc = { mood: s ? s.include_mood : true, helps: s ? s.include_helps : true };
     const helps: string[] = (s?.helps ?? []).map(helpPhrase);
-
-    let feeling = "";
-    // When she picked chips, her own chat words are never used, only the chips.
-    if (b.mode === "today" && b.source_message_id && !b.focus) {
-      const { data: m } = await admin.from("chat_messages").select("content, user_id").eq("id", b.source_message_id).maybeSingle();
-      if (m?.user_id === uid) feeling = m.content;
-    }
-
-    const local = localParts(p?.timezone);
-    const win = harderWindow(p?.last_period_start ?? null, p?.cycle_length_days ?? null, local.date);
-    const conf = await cycleConfidence(admin, uid);
-    const hard = await isHardToPredict(admin, uid, local.date);
-    const undated = b.mode === "undated" || conf.low || hard || !win;
-    // Vary the opening each time so it never reads like a copy (no message text is stored to compare against).
-    const { count: sentCount } = await admin.from("partner_headsup_events").select("id", { count: "exact", head: true }).eq("user_id", uid).eq("status", "opened");
+    // Rotate openings; never the same as the previous draft (client passes the last one used).
     const OPENINGS = [
-      "Open with a short greeting and get straight to the point.",
-      "Open by naming the days first, then the greeting can be skipped.",
-      "Open with what would help most, then explain why.",
-      "Open with a warm, slightly playful line before the heads-up.",
+      "Open with a short, simple greeting and get straight to the point.",
+      "Open with what would help most tonight, then say why.",
+      "Open with a warm, slightly playful line.",
       "Open with a simple 'quick one from me' style line.",
+      "Open by saying today has been a lot, in plain words.",
     ];
-    const opening = OPENINGS[(sentCount ?? 0) % OPENINGS.length];
-    const focusList = b.focus ?? null;
-
-    let timing = "";
-    if (b.mode === "today") timing = "It is about today only. Base it on how she says she feels today, without any symptom detail.";
-    else if (!inc.dates) timing = "Do not mention any days or dates. Say 'the next few days'.";
-    else if (undated) timing = "Do not name days. Say 'in the next week or so'.";
-    else timing = `Her harder stretch is from about ${weekdayOf(win!.start)} to ${weekdayOf(win!.end)}. Name those two weekdays.`;
+    let opening = Math.floor(Math.random() * OPENINGS.length);
+    if (opening === b.avoid_opening) opening = (opening + 1) % OPENINGS.length;
+    const focusList = b.focus ?? [];
 
     const prompt = [
-      `Write a short WhatsApp message that a woman will send, as herself, to ${name}${relationship ? ` (her ${relationship})` : ""}, giving a heads-up that she is having, or about to have, a harder few days.`,
+      `Write a short WhatsApp message that a woman will send, as herself, to ${name || "someone close to her"}, letting them know today is a harder one and how they could help.`,
       "Rules:",
-      "- First person, as her. Under 60 words. Warm and plain. No em dashes or en dashes. No emojis unless her style examples use them. No hashtags.",
-      "- Never mention bleeding, periods, menstruation, cycles, PMS, hormones, fertility, sex, medication, or any symptom detail (no pain, cramps, headaches, etc.).",
-      `- Use the name "${name}" only if natural. ${relationship === "partner" ? 'A greeting like "Hey love" is fine.' : ""} Never assume ${name}'s gender: no gendered words or pronouns for them.`,
+      "- First person, as her. Under 55 words. Warm, calm and plain. Never critical, blaming or accusatory, even if things are tense between them. No em dashes or en dashes. No emojis unless her style examples use them. No hashtags.",
+      "- Never mention bleeding, periods, menstruation, cycles, PMS, hormones, fertility, sex, medication, or any symptom detail. Never mention dates or days of the week; keep it about today / tonight.",
+      name ? `- Start with a greeting that uses the name "${name}" (e.g. "Hey ${name},"). Never assume their gender.` : '- Start with a greeting without a name, e.g. "Hey,". Never assume their gender.',
       `- Write in ${LANG_NAME[lang]}.`,
-      `- ${timing}`,
-      focusList && focusList.length
-        ? `- Build the message around what feels hardest for her this time: ${focusList.join("; ")}. Turn each into how she'd like support, in plain general terms, never medical. Say it's not about them.`
-        : focusList ? "- Do not describe her mood or energy; keep it to what helps."
-        : inc.mood ? "- Include a light line about lower energy / shorter fuse, and that it's not about them." : "- Do not describe her mood or energy.",
-      `- ${opening} Do not start with "Hey love, a heads-up from me", and do not reuse the first sentence of her past wording below.`,
-      inc.helps && helps.length ? `- End with what helps: ${helps.join("; ")}.` : "- Do not list what helps.",
-      feeling ? `\nHow she says she feels today (use the feeling, drop any symptom or body detail):\n"""${feeling.slice(0, 600)}"""` : "",
-      styles?.length ? `\nHer own past wording, match this voice and phrasing:\n${styles.map((x) => `"""${x.text}"""`).join("\n")}` : "",
-      b.adjust && b.current_text ? `\nRewrite this current draft to be ${b.adjust === "funny" ? "lighter and a bit funny" : b.adjust}, keeping the same facts:\n"""${b.current_text}"""` : "",
-      b.language && b.current_text && !b.adjust ? `\nTranslate and adapt this current draft into ${LANG_NAME[lang]}:\n"""${b.current_text}"""` : "",
-      "\nExamples of the tone:",
-      '"Hey love, a heads-up from me. The next few days, from about Thursday to Sunday, are usually my harder stretch. Lower energy, shorter fuse. It\'s not about you. What helps: taking dinner off my plate, a bit of extra patience, and space without asking why."',
+      focusList.length
+        ? `- Build it around what feels hardest today: ${focusList.join("; ")}. Turn each into how she'd like support, in plain general terms. Say it's not about them.`
+        : inc.mood ? "- Include a light line that she's running low today and that it's not about them." : "- Do not describe her mood or energy.",
+      `- ${OPENINGS[opening]}`,
+      inc.helps && helps.length ? `- End with what helps: ${helps.join("; ")}.` : "- End with one simple, concrete ask.",
+      styles?.length ? `\nHer own past wording, match this voice:\n${styles.map((x) => `"""${x.text}"""`).join("\n")}` : "",
+      "\nExample of the tone:",
       '"Hey love, today\'s a rough one for me. Low energy and not much patience left. It\'s not about you. Could you take dinner tonight and give me a bit of space?"',
       "\nReturn only the message text.",
     ].filter(Boolean).join("\n");
 
     const text = await callModel(prompt);
-    return json({
-      text,
-      language: lang,
-      user_language: userLang,
-      undated: b.mode !== "today" && undated,
-      cycles_used: conf.n,
-      window: win && !undated ? { start: win.start, end: win.end, period_start: win.periodStart } : null,
-      cycle_length_days: p?.cycle_length_days ?? null,
-    });
+    return json({ text, opening });
   } catch (e) {
     const status = (e as any)?.status ?? 500;
     console.error("[partner-headsup-draft]", status, e);
