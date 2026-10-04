@@ -21,3 +21,20 @@ export function MessageFailuresCard() {
     </Card>
   );
 }
+
+/** How many times users asked for heads-ups prepared ahead of time. */
+export function ScheduledHeadsupRequestsCard() {
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    supabase.from("feature_requests").select("id", { count: "exact", head: true }).eq("feature", "scheduled_headsup")
+      .then(({ count }) => setCount(count ?? 0));
+  }, []);
+  return (
+    <Card>
+      <CardContent className="p-4 text-center">
+        <p className="text-2xl font-bold text-foreground">{count ?? "…"}</p>
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Scheduled heads-up requests</p>
+      </CardContent>
+    </Card>
+  );
+}

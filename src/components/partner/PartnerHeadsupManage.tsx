@@ -4,236 +4,176 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import { HEADSUP_HELP_OPTIONS, toE164, type HeadsupSettingsRow } from "@/lib/partnerHeadsup";
-import {
-  HEADSUP_UPDATED_EVENT, OPEN_CHAT_EVENT, PUSH_STATUS_COPY, enableHeadsupPush, endOfCurrentCycle, isHardToPredict, isPushConfigured,
-  startOnDemandDraft,
-} from "@/lib/partnerHeadsupClient";
-import { HeadsupPreviewDialog } from "./PartnerHeadsupSetup";
+import { toE164 } from "@/lib/partnerHeadsup";
+import { HEADSUP_UPDATED_EVENT, loadPeople, type HeadsupPerson } from "@/lib/partnerHeadsupClient";
 
 interface Props {
   userId: string;
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  onCloseSettings: () => void;
 }
 
-type EventRow = { id: string; window_start: string; status: string; outcome: string | null; kind: string; focus: string[] | null };
+type EventRow = { id: string; window_start: string; status: string; outcome: string | null; recipient_name: string | null; focus: string[] | null };
 const STATUS_LABEL: Record<string, string> = { opened: "Sent", skipped: "Skipped", expired: "Missed" };
 const OUTCOME_LABEL: Record<string, string> = { helped: "Sent. It helped", no_difference: "Sent. No real difference", didnt_land: "Sent. Didn't land well" };
 const historyLabel = (e: EventRow) => {
-  const base = (e.status === "opened" && e.outcome && OUTCOME_LABEL[e.outcome]) || STATUS_LABEL[e.status];
+  let base = (e.status === "opened" && e.outcome && OUTCOME_LABEL[e.outcome]) || STATUS_LABEL[e.status];
+  if (e.status === "opened" && e.recipient_name) base = base.replace(/^Sent/, `Sent to ${e.recipient_name}`);
   if (e.status !== "opened" || !e.focus?.length) return base;
   const f = e.focus.map((x, i) => (i === 0 ? x : x.charAt(0).toLowerCase() + x.slice(1))).join(", ");
   return `${base} · ${f}`;
 };
-const chipCls = (on: boolean) =>
-  `min-h-[40px] px-4 rounded-full border text-sm transition-colors ${on ? "headsup-chip-active" : "border-border/60 bg-card/60 hover:bg-card"}`;
-const primary = "headsup-primary min-h-[44px] w-full rounded-full px-5 text-sm font-medium transition-opacity disabled:opacity-40";
-const ghost = "min-h-[44px] w-full rounded-full border border-border/60 px-5 text-sm font-medium hover:bg-card transition-colors";
+const input = "w-full min-h-[44px] rounded-full border border-border/60 bg-background/60 px-4 text-sm outline-none focus:border-[hsl(var(--headsup-accent))]";
+const ghost = "min-h-[40px] rounded-full border border-border/60 px-4 text-sm font-medium hover:bg-card transition-colors disabled:opacity-40";
 
-export function PartnerHeadsupManage({ userId, open, onOpenChange, onCloseSettings }: Props) {
-  const [s, setS] = useState<HeadsupSettingsRow | null>(null);
+export function PartnerHeadsupManage({ userId, open, onOpenChange }: Props) {
+  const [enabled, setEnabled] = useState(true);
+  const [people, setPeople] = useState<HeadsupPerson[]>([]);
   const [events, setEvents] = useState<EventRow[]>([]);
-  const [editing, setEditing] = useState<null | "whatsapp" | "timing" | "helps" | "included">(null);
-  const [phone, setPhone] = useState("");
-  const [custom, setCustom] = useState("");
-  const [hard, setHard] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null); // person id or "new"
+  const [nameIn, setNameIn] = useState("");
+  const [phoneIn, setPhoneIn] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
 
   const load = async () => {
-    const [{ data: st }, { data: ev }] = await Promise.all([
-      supabase.from("partner_headsup_settings").select("*").eq("user_id", userId).maybeSingle(),
-      supabase.from("partner_headsup_events").select("id, window_start, status, outcome, kind, focus").eq("user_id", userId)
-        .in("status", ["opened", "skipped", "expired"]).order("window_start", { ascending: false }).limit(30),
+    const [{ data: st }, ppl, { data: ev }] = await Promise.all([
+      supabase.from("partner_headsup_settings").select("enabled").eq("user_id", userId).maybeSingle(),
+      loadPeople(userId),
+      supabase.from("partner_headsup_events").select("id, window_start, status, outcome, recipient_name, focus").eq("user_id", userId)
+        .in("status", ["opened", "skipped", "expired"]).order("window_start", { ascending: false }).limit(50),
     ]);
-    setS(st as HeadsupSettingsRow | null);
-    setPhone(st?.whatsapp_number ?? "");
+    setEnabled(st ? st.enabled : true);
+    setPeople(ppl);
     setEvents((ev ?? []) as EventRow[]);
   };
-  useEffect(() => { if (open) void isHardToPredict(userId).then(setHard); }, [open, userId]);
   useEffect(() => { if (open) void load(); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, userId]);
 
-  const patch = async (p: Partial<HeadsupSettingsRow>) => {
-    if (!s) return;
-    setS({ ...s, ...p });
-    const { error } = await supabase.from("partner_headsup_settings").update(p).eq("user_id", userId);
+  const setOn = async (v: boolean) => {
+    setEnabled(v);
+    const { error } = await supabase.from("partner_headsup_settings").upsert({ user_id: userId, enabled: v }, { onConflict: "user_id" });
     if (error) toast({ title: "Couldn't save", description: error.message, variant: "destructive" });
     globalThis.dispatchEvent(new CustomEvent(HEADSUP_UPDATED_EVENT));
   };
 
-  const name = s?.partner_name || "them";
-
-  const writeNow = async () => {
-    const messageId = await startOnDemandDraft(userId, s?.partner_name ?? null);
-    if (!messageId) { toast({ title: "Couldn't start a draft", description: "Please try again.", variant: "destructive" }); return; }
-    onOpenChange(false);
-    onCloseSettings();
-    globalThis.dispatchEvent(new CustomEvent(OPEN_CHAT_EVENT, { detail: { focusMessageId: messageId } }));
+  const startEdit = (p: HeadsupPerson | null) => {
+    setEditing(p?.id ?? "new");
+    setNameIn(p?.name ?? "");
+    setPhoneIn(p?.whatsapp_number ?? "");
   };
 
-  const pause = async () => {
-    const { data: pc } = await supabase.from("participants").select("last_period_start, cycle_length_days").eq("user_id", userId).maybeSingle();
-    await patch({ paused_until: endOfCurrentCycle(pc?.last_period_start, pc?.cycle_length_days) });
+  const savePerson = async () => {
+    const n = nameIn.trim();
+    if (!n) return;
+    let num: string | null = null;
+    if (phoneIn.trim()) {
+      num = toE164(phoneIn);
+      if (!num) { toast({ title: "Add the country code", description: "For example +44 or +972." }); return; }
+    }
+    const { error } = editing === "new"
+      ? await supabase.from("headsup_people").insert({ user_id: userId, name: n, whatsapp_number: num })
+      : await supabase.from("headsup_people").update({ name: n, whatsapp_number: num }).eq("id", editing!);
+    if (error) { toast({ title: "Couldn't save", description: error.message, variant: "destructive" }); return; }
+    setEditing(null);
+    setPeople(await loadPeople(userId));
+  };
+
+  const deletePerson = async (id: string) => {
+    await supabase.from("headsup_people").delete().eq("id", id);
+    setEditing(null);
+    setPeople(await loadPeople(userId));
   };
 
   const deleteAll = async () => {
     await supabase.from("partner_headsup_events").delete().eq("user_id", userId);
     await supabase.from("partner_headsup_style_examples").delete().eq("user_id", userId);
+    await supabase.from("headsup_people").delete().eq("user_id", userId);
     await supabase.from("partner_headsup_settings").delete().eq("user_id", userId);
+    await supabase.from("partner_headsup_settings").insert({ user_id: userId, enabled: false });
     globalThis.dispatchEvent(new CustomEvent(HEADSUP_UPDATED_EVENT));
     onOpenChange(false);
   };
 
-  const notify = async () => {
-    try { const r = await enableHeadsupPush(userId); if (PUSH_STATUS_COPY[r]) toast({ title: "Notifications", description: PUSH_STATUS_COPY[r] }); }
-    catch { toast({ title: "Notifications", description: "Couldn't turn on notifications." }); }
-  };
+  const sentCount = events.filter((e) => e.status === "opened").length;
 
-  const paused = !!s?.paused_until && s.paused_until >= new Date().toLocaleDateString("en-CA");
-  const helpLabel = (v: string) => HEADSUP_HELP_OPTIONS.find((o) => o.value === v)?.label ?? v;
-  const toggleHelp = (v: string) => s && patch({ helps: s.helps.includes(v) ? s.helps.filter((h) => h !== v) : [...s.helps, v] });
-
-  const Row = ({ label, value, k }: { label: string; value: string; k: NonNullable<typeof editing> }) => (
-    <button className="flex w-full min-h-[48px] items-center justify-between gap-3 py-2 text-left" onClick={() => setEditing(editing === k ? null : k)}>
-      <span className="text-sm">{label}</span>
-      <span className="flex items-center gap-1 text-sm text-muted-foreground truncate">{value}<ChevronRight className="h-4 w-4 shrink-0" /></span>
-    </button>
+  const editor = (
+    <div className="pb-3 space-y-2">
+      <input value={nameIn} onChange={(e) => setNameIn(e.target.value)} placeholder="Name" maxLength={60} className={input} autoFocus />
+      <input value={phoneIn} onChange={(e) => setPhoneIn(e.target.value)} placeholder="WhatsApp number (optional), e.g. +44 7700 900123" inputMode="tel" className={input} />
+      <div className="flex flex-wrap gap-2">
+        <button className={ghost} disabled={!nameIn.trim()} onClick={() => void savePerson()}>Save</button>
+        <button className={ghost} onClick={() => setEditing(null)}>Cancel</button>
+        {editing !== "new" && (
+          <button className="min-h-[40px] rounded-full px-4 text-sm text-destructive hover:bg-destructive/10" onClick={() => void deletePerson(editing!)}>Delete</button>
+        )}
+      </div>
+    </div>
   );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="headsup-surface headsup-solid sm:max-w-md max-h-[92vh] overflow-y-auto rounded-[20px] space-y-4">
-        <DialogTitle className="headsup-headline text-[32px] leading-tight">Heads-ups for {name}</DialogTitle>
-        <DialogDescription className="sr-only">Manage partner heads-ups</DialogDescription>
-        {!s ? (
-          <p className="text-sm text-muted-foreground">Heads-ups aren't set up.</p>
+        <DialogTitle className="headsup-headline text-[32px] leading-tight">Heads-ups</DialogTitle>
+        <DialogDescription className="text-sm text-muted-foreground">
+          When you tell me things are tough, I'll offer to help you tell someone close.
+        </DialogDescription>
+
+        {showHistory ? (
+          <div className="space-y-3">
+            <button className="text-sm text-muted-foreground" onClick={() => setShowHistory(false)}>‹ Back</button>
+            <h4 className="text-sm font-medium">History</h4>
+            {events.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Nothing yet.</p>
+            ) : (
+              <ul className="space-y-1">
+                {events.map((e) => (
+                  <li key={e.id} className="flex items-center justify-between gap-3 text-sm">
+                    <span>{new Date(`${e.window_start}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                    <span className="text-right text-muted-foreground">{historyLabel(e)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="text-xs text-muted-foreground">Logan keeps the date, who it was for, and what it was about. Messages aren't stored after you send them, except your last few edits, which help drafts sound like you.</p>
+          </div>
         ) : (
           <>
-            <div className="space-y-2">
-              <button className={primary} onClick={writeNow}>Write one now</button>
-              <button className={ghost} onClick={() => setPreviewOpen(true)}>See what {name} would get</button>
-            </div>
-            <HeadsupPreviewDialog userId={userId} open={previewOpen} onOpenChange={setPreviewOpen} />
-
-            <div className="rounded-[20px] border border-border/50 px-4 py-2 divide-y divide-border/40">
+            <div className="rounded-[20px] border border-border/50 px-4 py-2">
               <div className="flex min-h-[48px] items-center justify-between">
-                <span className="text-sm font-medium">Heads-ups on</span>
-                <Switch checked={s.enabled} onCheckedChange={(v) => patch({ enabled: v, ...(v ? { paused_until: null } : {}) })} />
-              </div>
-              <div>
-                <Row label={`${name}'s WhatsApp`} value={s.whatsapp_number ?? "Not added"} k="whatsapp" />
-                {editing === "whatsapp" && (
-                  <div className="pb-3 space-y-2">
-                    <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+44 7700 900123" inputMode="tel"
-                      className="w-full min-h-[44px] rounded-full border border-border/60 bg-background/60 px-4 text-sm outline-none focus:border-[hsl(var(--headsup-accent))]" />
-                    <button className={ghost} onClick={async () => {
-                      if (!phone.trim()) { await patch({ whatsapp_number: null }); setEditing(null); return; }
-                      const e164 = toE164(phone);
-                      if (!e164) { toast({ title: "Add the country code", description: "For example +44 or +972." }); return; }
-                      await patch({ whatsapp_number: e164 }); setEditing(null);
-                    }}>Save</button>
-                  </div>
-                )}
-              </div>
-              <div>
-                <Row label="Ready" value={s.timing === "morning_of" ? "That morning" : "The evening before"} k="timing" />
-                {editing === "timing" && (
-                  <div className="pb-3 flex flex-wrap gap-2">
-                    <button className={chipCls(s.timing === "evening_before")} onClick={() => patch({ timing: "evening_before" })}>The evening before</button>
-                    <button className={chipCls(s.timing === "morning_of")} onClick={() => patch({ timing: "morning_of" })}>That morning</button>
-                  </div>
-                )}
-              </div>
-              <div>
-                <Row label="What helps" value={s.helps.length ? `${s.helps.length} selected` : "None"} k="helps" />
-                {editing === "helps" && (
-                  <div className="pb-3 space-y-2">
-                    <div className="flex flex-wrap gap-2">
-                      {[...HEADSUP_HELP_OPTIONS.map((o) => o.value), ...s.helps.filter((h) => !HEADSUP_HELP_OPTIONS.some((o) => o.value === h))].map((v) => (
-                        <button key={v} className={chipCls(s.helps.includes(v))} onClick={() => toggleHelp(v)}>{helpLabel(v)}</button>
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      <input value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="Add your own" maxLength={60}
-                        className="flex-1 min-h-[44px] rounded-full border border-border/60 bg-background/60 px-4 text-sm outline-none" />
-                      <button className="min-h-[44px] px-4 rounded-full border border-border/60 text-sm" disabled={!custom.trim()}
-                        onClick={() => { patch({ helps: [...s.helps, custom.trim()] }); setCustom(""); }}>Add</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div>
-                <Row label="What's included" value={[s.include_dates && "Dates", s.include_mood && "Mood", s.include_helps && "Helps"].filter(Boolean).join(", ") || "Minimal"} k="included" />
-                {editing === "included" && (
-                  <div className="pb-3 space-y-2">
-                    {([
-                      ["Rough dates", "include_dates"],
-                      ["Energy and mood, in general terms", "include_mood"],
-                      ["What helps", "include_helps"],
-                      ['The "Sent with Logan" line', "include_footer"],
-                    ] as const).map(([label, key]) => (
-                      <div key={key} className="flex min-h-[44px] items-center justify-between">
-                        <span className="text-sm">{label}</span>
-                        <Switch checked={s[key]} onCheckedChange={(v) => patch({ [key]: v } as Partial<HeadsupSettingsRow>)} />
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <span className="text-sm font-medium">Offer heads-ups</span>
+                <Switch checked={enabled} onCheckedChange={(v) => void setOn(v)} />
               </div>
             </div>
 
             <div className="space-y-2">
-              <h4 className="text-sm font-medium">When I'll offer one</h4>
-              <div className="rounded-[20px] border border-border/50 px-4 py-2 divide-y divide-border/40">
-                <div className="flex min-h-[56px] items-center justify-between gap-3 py-2">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2 text-sm">
-                      Before your harder days
-                      {hard && <span className="rounded-full border border-border/60 px-2 py-0.5 text-[11px] text-muted-foreground">Paused</span>}
-                    </div>
-                    {hard && <p className="text-xs text-muted-foreground">Your cycle is hard to predict right now. I'll turn this back on when it settles.</p>}
+              <h4 className="text-[11px] font-medium tracking-[0.12em] text-muted-foreground">PEOPLE</h4>
+              <div className="rounded-[20px] border border-border/50 px-4 py-1 divide-y divide-border/40">
+                {people.map((p) => (
+                  <div key={p.id}>
+                    <button className="flex w-full min-h-[48px] items-center justify-between gap-3 py-2 text-left" onClick={() => (editing === p.id ? setEditing(null) : startEdit(p))}>
+                      <span className="text-sm">{p.name}</span>
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">{p.whatsapp_number ? "WhatsApp saved · Edit" : "No number · Edit"}<ChevronRight className="h-4 w-4" /></span>
+                    </button>
+                    {editing === p.id && editor}
                   </div>
-                  <Switch checked={s.offer_before_harder_days} onCheckedChange={(v) => patch({ offer_before_harder_days: v })} />
-                </div>
-                <div className="flex min-h-[56px] items-center justify-between gap-3 py-2">
-                  <div className="space-y-0.5">
-                    <div className="text-sm">When you tell me it's a hard day</div>
-                    <p className="text-xs text-muted-foreground">I offer, you decide. At most once a day.</p>
-                  </div>
-                  <Switch checked={s.offer_on_hard_days} onCheckedChange={(v) => patch({ offer_on_hard_days: v })} />
+                ))}
+                <div>
+                  <button className="flex w-full min-h-[48px] items-center text-sm headsup-accent-text" onClick={() => (editing === "new" ? setEditing(null) : startEdit(null))}>+ Add someone</button>
+                  {editing === "new" && editor}
                 </div>
               </div>
             </div>
 
-            {isPushConfigured() && (
-              <button className="text-xs text-muted-foreground underline underline-offset-2" onClick={notify}>Get a notification when a draft is ready</button>
-            )}
-
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium">History</h4>
-              {events.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Nothing yet.</p>
-              ) : (
-                <ul className="space-y-1">
-                  {events.map((e) => (
-                    <li key={e.id} className="flex items-center justify-between text-sm">
-                      <span>{new Date(`${e.window_start}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                      <span className="text-muted-foreground">{historyLabel(e)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <p className="text-xs text-muted-foreground">Logan keeps the date and what happened. Messages aren't stored after you send them, except your last few edits, which help drafts sound like you.</p>
-            </div>
-
-            <div className="space-y-2 pt-1">
-              <button className={ghost} onClick={pause} disabled={paused || !s.enabled}>{paused ? "Paused for this cycle" : "Pause for this cycle"}</button>
-              <button className="min-h-[44px] w-full rounded-full px-5 text-sm text-destructive hover:bg-destructive/10 transition-colors" onClick={deleteAll}>
-                Turn off and delete history
+            <div className="rounded-[20px] border border-border/50 px-4 py-1">
+              <button className="flex w-full min-h-[48px] items-center justify-between" onClick={() => setShowHistory(true)}>
+                <span className="text-sm">History</span>
+                <span className="flex items-center gap-1 text-sm text-muted-foreground">{sentCount} sent<ChevronRight className="h-4 w-4" /></span>
               </button>
             </div>
+
+            <button className="min-h-[44px] w-full rounded-full px-5 text-sm text-destructive hover:bg-destructive/10 transition-colors" onClick={() => void deleteAll()}>
+              Turn off and delete history
+            </button>
           </>
         )}
       </DialogContent>

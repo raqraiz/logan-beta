@@ -1177,6 +1177,8 @@ serve(async (req) => {
       .replace(/[\u2018\u2019\u02BC\u055A\uFF07]/g, "'")
       .replace(/[\u201C\u201D]/g, '"')
       .replace(/[\u2013\u2014]/g, "-");
+    const headsupSchedAsk = HEADSUP_SCHED_RE.test(userMessage);
+    const headsupHarm = HEADSUP_HARM_RE.test(userMessage);
 
     if (userMessage.length > 4000) {
       return new Response(
@@ -4581,6 +4583,7 @@ serve(async (req) => {
     }
 
     systemPrompt += `\n\nTIME AWARENESS: Conversation history includes date markers. Situations described in older messages (trips, arguments, stressful weeks, illnesses) are PAST unless she brings them up again. Never describe a past situation as happening now. If an older situation seems relevant, ask whether it's still going on instead of assuming. Lasting facts (her kids, her partner, her life stage) can be used freely. Never repeat or quote the date markers in your replies.`;
+    systemPrompt += `\n\nSAFETY AT HOME: If she describes fear, threats, being controlled, or any harm at home, stay with her. Do not suggest messaging or explaining things to that person. Gently ask if she is safe right now and offer support resources (a local domestic abuse helpline or emergency services if she's in danger), without pushing.`;
     systemPrompt += `\n\nVENT / OPEN-ENDED OPENER: When she says she wants to vent or opens with something open-ended and emotional without details, do not recap her situation or list what you think is going on. Respond briefly and warmly and invite her to share, e.g. "I'm here. What's going on?" Let her lead. Don't tell her what she's feeling or how heavy something is; respond to what she actually shares. In that opening reply, do not mention her cycle day or phase and add no "---" deep dive; her phase can be mentioned lightly only after she has shared what's going on. Phase accuracy rules still apply whenever a phase is mentioned.`;
 
     // The current user turn is already persisted in chat_messages by the client before
@@ -4991,6 +4994,9 @@ serve(async (req) => {
     // (Day-1 prompt splice, starter merge). Runs only when nothing persisted.
     // The pre-strip text is kept so the library safety net below can still read
     // the names Logan claimed, even though the user never sees the claim.
+    if (headsupSchedAsk && isOnboardingComplete) {
+      finalAssistantMessage = "I can't prepare them ahead of time yet, but I've noted that you'd like it. Whenever things feel tough, tell me and I'll write one with you.";
+    }
     const preGuardReplyText = finalAssistantMessage;
     if (loggedSymptomNames.length === 0 && backfillConfirmation.length === 0 && hasLoggingClaim(finalAssistantMessage)) {
       const rewritten = stripUnbackedLoggingClaims(finalAssistantMessage);
@@ -5151,97 +5157,33 @@ serve(async (req) => {
       }
     }
 
-    // --- Partner heads-up offer / ask (opt-in; Logan never messages anyone) ---
+    // --- Heads-up offer (chat-triggered only; Logan never messages anyone) ---
     try {
-      const askHelpExplain = /\b(help me|how (do|can|should) i)\b[^.?!]{0,40}\b(explain|tell|say to|talk to|let)\b[^.?!]{0,40}\b(my\s+)?(partner|husband|wife|boyfriend|girlfriend|fianc[eé]e?|spouse|mom|mum|dad|mother|father|sister|brother|family|friend|roommate)\b/i.test(userMessage);
-      const closePerson = /\b(my\s+)(partner|husband|wife|boyfriend|girlfriend|fianc[eé]e?|spouse|mom|mum|dad|mother|father|sister|brother|friend|roommate)\b/i;
-      const friction = /\b(fight|fought|argu(e|ed|ing|ment)|snapp(ed|ing)|yell(ed|ing)?|annoy(ed|ing)|frustrat(ed|ing)|doesn'?t (get|understand)|don'?t (get|understand)|tension|upset with|mad at|angry at|resent)\b/i;
-      const frictionMention = closePerson.test(userMessage) && friction.test(userMessage);
-
-      // Heads-ups on: "send [name] a heads-up" or "hard day, want [name] to know" shows a draft card right away.
-      const askSendHeadsup = /\bheads[\s-]?up\b/i.test(userMessage) && /\b(send|write|draft|text|message|give)\b/i.test(userMessage);
-      const hardDayWantKnow = /\b(hard|rough|bad|tough|awful|terrible|horrible)\s+(day|one|morning|night)\b/i.test(userMessage)
-        && /\b(want|need|wish|like)\b[^.?!]{0,40}\b(know|tell|let\s+\w+\s+know|understand)\b/i.test(userMessage);
-      if (isOnboardingComplete && (askSendHeadsup || hardDayWantKnow) && await partnerHeadsupVisibleFor(supabase, user.id)) {
-        const { data: hsOn } = await supabase.from("partner_headsup_settings").select("enabled, partner_name").eq("user_id", user.id).maybeSingle();
-        if (hsOn?.enabled) {
-          const describesToday = hardDayWantKnow || /\b(today|right now|feel|feeling|tired|exhausted|drained|cranky|overwhelmed|low)\b/i.test(userMessage);
-          const { data: srcMsg } = await supabase.from("chat_messages").select("id").eq("user_id", user.id).eq("role", "user")
-            .order("created_at", { ascending: false }).limit(1).maybeSingle();
-          const today = new Date().toISOString().slice(0, 10);
-          const { data: ev } = await supabase.from("partner_headsup_events").insert({
-            user_id: user.id, kind: "on_demand", window_start: today, window_end: today, status: "drafted", recipient_name: hsOn.partner_name,
-          }).select("id").maybeSingle();
-          if (ev?.id) {
-            await supabase.from("chat_messages").insert({
-              user_id: user.id, role: "assistant", message_type: "partner_headsup_draft",
-              content: `Draft for ${hsOn.partner_name || "them"}`,
-              metadata: { event_id: ev.id, mode: describesToday ? "today" : "predicted", kind: "on_demand", source_message_id: describesToday ? srcMsg?.id : undefined },
-            });
+      if (isOnboardingComplete && await partnerHeadsupVisibleFor(supabase, user.id)) {
+        const { data: hs } = await supabase.from("partner_headsup_settings").select("enabled").eq("user_id", user.id).maybeSingle();
+        const offersOn = !hs || hs.enabled;
+        if (headsupSchedAsk) {
+          await supabase.from("feature_requests").insert({ user_id: user.id, feature: "scheduled_headsup" });
+          if (offersOn) {
+            await supabase.from("chat_messages").insert({ user_id: user.id, role: "assistant", message_type: "partner_headsup_schedreq", content: "", metadata: { partner_headsup: "schedreq" } });
           }
-        }
-      }
-
-      // Hard-day offer (heads-ups on, not paused, offer_on_hard_days): three chips after Logan's reply.
-      // At most once per calendar day, never in onboarding, never when it's about conflict with the partner.
-      const hardDayRe = /\b((hard|rough|bad|tough|awful|terrible|horrible|crap|shit)\s+(day|one|morning|week)|exhausted|drained|no energy|low energy|so tired|wiped( out)?|irritable|cranky|snappy|short[- ]fuse|on edge|overwhelmed|can'?t cope|feeling low|feel(ing)? (so )?(low|down|sad|flat)|miserable|low mood|depressed)\b/i;
-      if (isOnboardingComplete && !askSendHeadsup && !hardDayWantKnow && !frictionMention && hardDayRe.test(userMessage)
-        && await partnerHeadsupVisibleFor(supabase, user.id)) {
-        const { data: hd } = await supabase.from("partner_headsup_settings").select("enabled, paused_until, offer_on_hard_days, partner_name").eq("user_id", user.id).maybeSingle();
-        const todayIso = new Date().toISOString().slice(0, 10);
-        const partnerName = (hd?.partner_name || "").trim();
-        const escName = partnerName.replace(/[.*+?^$|()[\]{}\\]/g, "\\$&");
-        const aboutPartner = !!partnerName && new RegExp("\\b" + escName + "\\b", "i").test(userMessage) && friction.test(userMessage);
-        if (hd?.enabled && hd.offer_on_hard_days && !(hd.paused_until && hd.paused_until >= todayIso) && !aboutPartner) {
+        } else if (offersOn && !headsupHarm && HEADSUP_TRIGGER_RE.test(userMessage)) {
           const dayStart = new Date(); dayStart.setUTCHours(0, 0, 0, 0);
           const { data: already } = await supabase.from("chat_messages").select("id").eq("user_id", user.id)
             .eq("message_type", "partner_headsup_hardday").gte("created_at", dayStart.toISOString()).limit(1);
           if (!already?.length) {
             const m = userMessage.toLowerCase();
             const pre: string[] = [];
-            if (/energy|exhausted|drained|tired|wiped/.test(m)) pre.push("Low energy");
-            if (/irritab|cranky|snappy|short[- ]fuse|on edge|patience/.test(m)) pre.push("Short fuse");
-            if (/overwhelm|can'?t cope|quiet|space|alone/.test(m)) pre.push("Need quiet");
-            if (/sleep|insomnia/.test(m)) pre.push("Sleep is off");
-            if (/low|down|sad|flat|miserable|depress/.test(m) && !/low energy/.test(m)) pre.push("Feeling low");
+            if (/energy|exhausted|drained|tired|wiped|depleted|running on empty/.test(m)) pre.push("Low energy");
+            if (/irritab|cranky|snapp|short[- ]fuse|on edge|patience|frustrat|annoy|tension|fight|argu/.test(m)) pre.push("Short fuse");
+            if (/overwhelm|can'?t cope|too much|quiet|space|alone|on my plate/.test(m)) pre.push("Need quiet");
+            if (/\blow\b|down|sad|flat|miserable|misunderstood|alone|cry/.test(m) && !/low energy/.test(m)) pre.push("Feeling low");
+            const { data: person } = await supabase.from("headsup_people").select("name").eq("user_id", user.id)
+              .order("last_used_at", { ascending: false, nullsFirst: false }).limit(1).maybeSingle();
             await supabase.from("chat_messages").insert({
               user_id: user.id, role: "assistant", message_type: "partner_headsup_hardday", content: "",
-              metadata: { partner_headsup: "hardday_offer", partner_name: partnerName || "them", preselect: pre.slice(0, 2) },
+              metadata: { partner_headsup: "offer", partner_name: person?.name ?? null, preselect: [...new Set(pre)].slice(0, 2) },
             });
-          }
-        }
-      }
-
-      if (isOnboardingComplete && (askHelpExplain || frictionMention) && await partnerHeadsupVisibleFor(supabase, user.id)) {
-        const { data: hs } = await supabase.from("partner_headsup_settings").select("enabled").eq("user_id", user.id).maybeSingle();
-        if (!hs?.enabled) {
-          if (askHelpExplain) {
-            await supabase.from("chat_messages").insert({
-              user_id: user.id, role: "assistant", message_type: "text",
-              content: "Of course. I can write something for this week right now.",
-              metadata: { partner_headsup: "ask_intro" },
-            });
-            await supabase.from("chat_messages").insert({
-              user_id: user.id, role: "assistant", message_type: "partner_headsup_ask",
-              content: "Or I can have a short heads-up ready before your harder days every cycle, so you don't have to explain it each time. You'd see every one first.",
-              metadata: {},
-            });
-          } else {
-            // At most once every 2 cycles.
-            const gapDays = Math.max(2 * (participant?.cycle_length_days || 28), 28);
-            const { data: recentOffer } = await supabase.from("chat_messages").select("id")
-              .eq("user_id", user.id).eq("message_type", "partner_headsup_offer")
-              .gte("created_at", new Date(Date.now() - gapDays * 86400000).toISOString()).limit(1);
-            if (!recentOffer || recentOffer.length === 0) {
-              const nameMatch = userMessage.match(/\bmy\s+(?:partner|husband|wife|boyfriend|girlfriend|fianc[eé]e?|spouse|mom|mum|dad|mother|father|sister|brother|friend|roommate)\s*,?\s+([A-Z][a-z]{1,20})\b/);
-              const relMatch = userMessage.match(closePerson);
-              const who = nameMatch?.[1] || (relMatch ? `your ${relMatch[2].toLowerCase()}` : "them");
-              await supabase.from("chat_messages").insert({
-                user_id: user.id, role: "assistant", message_type: "partner_headsup_offer",
-                content: `Want me to draft a short heads-up you can send ${who} before those days? You'll see every message first. Nothing goes to ${who} unless you send it.`,
-                metadata: {},
-              });
-            }
           }
         }
       }

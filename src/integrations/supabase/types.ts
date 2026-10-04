@@ -533,6 +533,27 @@ export type Database = {
         }
         Relationships: []
       }
+      feature_requests: {
+        Row: {
+          created_at: string
+          feature: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          feature: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          feature?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       feedback: {
         Row: {
           action_taken: boolean | null
@@ -641,6 +662,33 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
+        }
+        Relationships: []
+      }
+      headsup_people: {
+        Row: {
+          created_at: string
+          id: string
+          last_used_at: string | null
+          name: string
+          user_id: string
+          whatsapp_number: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          name: string
+          user_id: string
+          whatsapp_number?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          name?: string
+          user_id?: string
+          whatsapp_number?: string | null
         }
         Relationships: []
       }
