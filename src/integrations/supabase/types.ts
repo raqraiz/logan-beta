@@ -343,11 +343,13 @@ export type Database = {
           context_key: string
           created_at: string
           dont_mess_up_him_text: string | null
+          dont_mess_up_partner_text: string | null
           dont_mess_up_text: string
           generated_at: string
           id: string
           local_date: string
           succeed_him_text: string | null
+          succeed_partner_text: string | null
           succeed_text: string
           user_id: string
         }
@@ -355,11 +357,13 @@ export type Database = {
           context_key: string
           created_at?: string
           dont_mess_up_him_text?: string | null
+          dont_mess_up_partner_text?: string | null
           dont_mess_up_text: string
           generated_at?: string
           id?: string
           local_date: string
           succeed_him_text?: string | null
+          succeed_partner_text?: string | null
           succeed_text: string
           user_id: string
         }
@@ -367,11 +371,13 @@ export type Database = {
           context_key?: string
           created_at?: string
           dont_mess_up_him_text?: string | null
+          dont_mess_up_partner_text?: string | null
           dont_mess_up_text?: string
           generated_at?: string
           id?: string
           local_date?: string
           succeed_him_text?: string | null
+          succeed_partner_text?: string | null
           succeed_text?: string
           user_id?: string
         }
@@ -671,6 +677,7 @@ export type Database = {
           id: string
           last_used_at: string | null
           name: string
+          relationship: string | null
           user_id: string
           whatsapp_number: string | null
         }
@@ -679,6 +686,7 @@ export type Database = {
           id?: string
           last_used_at?: string | null
           name: string
+          relationship?: string | null
           user_id: string
           whatsapp_number?: string | null
         }
@@ -687,6 +695,7 @@ export type Database = {
           id?: string
           last_used_at?: string | null
           name?: string
+          relationship?: string | null
           user_id?: string
           whatsapp_number?: string | null
         }
