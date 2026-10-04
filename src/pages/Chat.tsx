@@ -2118,7 +2118,7 @@ const Chat = () => {
                         </span>
                         
                         {/* Thumbs up/down feedback for assistant messages */}
-                        {message.role === "assistant" && !showInteractiveInput && (
+                        {message.role === "assistant" && !showInteractiveInput && message.message_type !== "partner_headsup_shared" && (
                           <MessageFeedback
                             messageId={message.id}
                             onFeedback={sendFeedback}
