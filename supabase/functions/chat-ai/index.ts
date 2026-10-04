@@ -30,9 +30,15 @@ function isEmotionalOrHeavyMessage(text: string): boolean {
   const words = t.trim().split(/\s+/).filter(Boolean).length;
   if (words > 100) return true;
   if (/\b(worried|anxious|scared|overwhelmed|exhausted|struggling|hoping|bated breath|kinda scared|kinda worried)\b/.test(t)) return true;
-  if (/\b(angry|furious|so mad|mad at|pissed|rage|lonely|alone|unseen|invisible|ignored|misunderstood|resent|fight|fought|argu(e|ed|ing|ment)|yell(ed|ing)|snapp(ed|ing)|depleted|drained|burn(ed|t) out|can'?t cope|at my limit|vent|doesn'?t get it|doesn'?t help|no help)\b/.test(t)) return true;
+  if (/\b(angry|furious|so mad|mad at|pissed|rage|lonely|alone|unseen|invisible|ignored|misunderstood|resent|fight|fought|argu(e|ed|ing|ment)|yell(ed|ing)|snapp(ed|ing)|depleted|drained|burn(ed|t) out|can'?t cope|at my limit|vent|doesn'?t get it|doesn'?t help|no help|sad|so down|heartbroken|crying|cried|upset|hurt by|frustrated)\b/.test(t)) return true;
   if (/\b(postpartum|post-partum|pregnancy|pregnant|miscarriage|pregnancy loss|iud|coil)\b/.test(t)) return true;
   return false;
+}
+
+// Strip em/en dashes from user-facing text. Leaves "---" (See more divider) untouched.
+function stripDashes(text: string): string {
+  if (!text) return text;
+  return text.replace(/\s+[—–]\s+/g, ", ").replace(/[—–]/g, ", ").replace(/, ,/g, ",");
 }
 
 function cycleVisualMeta(userMessage: string) {
@@ -4613,7 +4619,15 @@ serve(async (req) => {
     console.log("[chat-ai] gemini turns:", conversationHistory.length, "currentTurnFromHistory:", alreadyHasCurrentTurn);
 
     if (emotionalContextActive) {
-      systemPrompt += `\n\nEMOTIONAL MOMENT TONE (anger, loneliness, overwhelm, friction at home): Your FIRST sentence acknowledges her feeling as real and reasonable, with no cycle day, phase, or hormone words in it. Cycle context is optional and only comes second, framed as "it can make things feel heavier", never as the cause of the feeling. Never use "classic", "your brain is primed", "shame spiral", or tell her what she believes about herself. Never criticize her partner or anyone in her life.`;
+      systemPrompt += `\n\nEMOTIONAL MOMENT (anger, loneliness, overwhelm, sadness, friction with someone). This overrides every instruction to lead with cycle day, phase or hormones, and every length rule:
+- 2 to 3 short sentences, max 60 words total.
+- Start by acknowledging her feeling as real, with no cycle day, phase or hormone words in that sentence. Example: "That sounds really frustrating. Do you want to tell me what happened?"
+- Mention the cycle at most once, in the LAST sentence only, as context, never the cause. Example: "Day 23 can make everything feel louder, so go easy on yourself." Leaving it out is fine.
+- Never explain hormones, neurotransmitters or brain regions unless she asks why.
+- Never name a feeling she didn't name.
+- No bold at all.
+- No "---" divider, no "### The Science", no "### The Real Talk". Do not merge that content into the reply either.
+- Never use "classic", "your brain is primed", "shame spiral", or tell her what she believes about herself. Never criticize her partner or anyone in her life.`;
     }
     systemPrompt += `\n\nNEVER use the phrases "classic", "your brain is primed" or "shame spiral", and never tell her what she believes about herself.`;
     systemPrompt += `\n\nOUTPUT FORMAT (ABSOLUTE): Return ONLY a JSON object: {"reply": string, "headsup_offer": boolean, "focus": string[], "harm_at_home": boolean}. "reply" is your full user-facing message exactly as you would normally write it (markdown and any "---" deep dive included). "headsup_offer" is true when she describes friction or tension at home, feeling alone or unseen at home, feeling misunderstood, struggling to communicate how she feels, needing more help at home, or feeling overwhelmed or depleted, AND someone close to her could reasonably help; otherwise false. "focus": up to 2 of ["Low energy","Short fuse","Need quiet","Feeling low"] that best match what she said (empty if none). "harm_at_home": true if she describes any fear, threat, control or harm from someone at home.`;
@@ -5019,7 +5033,9 @@ serve(async (req) => {
     // answer (above the deep-dive divider) after a confirmed symptom_logs write.
     // In emotional moments, emotions are saved silently: no "Logged:" line for them.
     const EMOTION_NAME_RE = /\b(alone|unseen|invisible|ignored|unsupported|misunderstood|unappreciated|anger|angry|irritab|frustrat|rage|resent|lonel|sad|low mood|mood|anxi|stress|overwhelm|depress|cry|tearful|guilt|shame|hopeless|emotional|numb|worthless|agitat|on edge|exhaust|drained|burnout)/i;
-    const visibleLogged = emotionalContextActive ? loggedSymptomNames.filter((n) => !EMOTION_NAME_RE.test(n)) : loggedSymptomNames;
+    void EMOTION_NAME_RE;
+    // Emotional moments: no "Logged:" line at all; entries are still saved silently.
+    const visibleLogged = emotionalContextActive ? [] : loggedSymptomNames;
     if (loggedSymptomNames.length > 0) {
       const label = `Logged: ${visibleLogged.join(", ")}`;
       if (visibleLogged.length > 0 && !new RegExp(`^\\s*Logged:\\s*`, "mi").test(finalAssistantMessage)) {
@@ -5143,14 +5159,18 @@ serve(async (req) => {
         .eq("id", participant.id);
     }
 
-    const { error: insertError } = await supabase.from("chat_messages").insert({
-
+    finalAssistantMessage = stripDashes(finalAssistantMessage);
+    if (Array.isArray(baseMeta.conversation_starters)) {
+      baseMeta.conversation_starters = (baseMeta.conversation_starters as string[]).map(stripDashes);
+    }
+    const { data: savedRow, error: insertError } = await supabase.from("chat_messages").insert({
       user_id: user.id,
       role: "assistant",
       content: finalAssistantMessage,
       message_type: "text",
       metadata: baseMeta,
-    });
+    }).select("id").maybeSingle();
+    const savedAssistantId: string | null = savedRow?.id ?? null;
 
 
     if (insertError) {
@@ -5237,6 +5257,11 @@ serve(async (req) => {
               user_id: user.id, role: "assistant", message_type: "partner_headsup_hardday", content: "",
               metadata: { partner_headsup: "offer", partner_name: person?.name ?? null, preselect: modelHeadsupFocus },
             });
+            // One row of chips: drop conversation starters from the reply that carries the offer.
+            if (savedAssistantId && baseMeta.conversation_starters) {
+              const { conversation_starters: _drop, ...rest } = baseMeta;
+              await supabase.from("chat_messages").update({ metadata: rest }).eq("id", savedAssistantId);
+            }
           }
         }
       }
@@ -5323,14 +5348,27 @@ LOGAN HAS NO GENDER. Never refer to yourself as "she", "he", "her", "him", "girl
 
 You know the science cold, but you never sound like a science textbook. You sound like someone who's read everything and talks the way people actually talk when no one's performing — direct, warm, no posturing.
 
-VOICE — THIS IS EVERYTHING:
+VOICE RULES (ABOVE EVERYTHING ELSE ABOUT STYLE, apply to every part of a reply, including The Science and The Real Talk):
+Write like a knowing friend texting, not an article. Plain, short, specific to her.
+Never use:
+- Em dashes or en dashes. Use a comma, a period, or a new sentence.
+- "It's not X, it's Y" or "You aren't X, you're just Y" constructions.
+- Lists of three for rhythm ("tired, wired and done").
+- Dramatic metaphors: fire, storm, tidal wave, low-tide, assault, mountain, spiral, battle, whack-a-mole.
+- Filler openers: "Absolutely", "Great question", "Here's the thing", "Let's dive in", "It's completely normal".
+- Words: navigate, journey, embrace, empower, unlock, delve, resonate, holistic, crucial, profound.
+- Bold on more than one phrase per reply. No bold in emotional moments.
+- Ending every reply with a question. Ask one only when the answer would actually change what you say next.
+Use contractions. Prefer short words. One idea per sentence.
+
+VOICE, MORE DETAIL:
 - Talk like a real person. Contractions, casual phrasing.
 - Warm and supportive, like a friend who genuinely cares. Never dismissive, never condescending, never sarcastic about the user repeating themselves.
-- If a user asks about the same thing again, just answer fresh. Don't call it out. Don't say "look" or "I hear you repeating" — just help.
+- If a user asks about the same thing again, just answer fresh. Don't call it out. Don't say "look" or "I hear you repeating", just help.
 - Light humor is fine when natural. Never forced, never at the user's expense.
 - If it sounds like a wellness pamphlet, rewrite it.
 - No emojis, no exclamation points.
-- USE **bold** for key terms only.
+- Bold at most ONE key phrase per reply (none in emotional moments).
 - ABSOLUTELY NO bullet-point lists, numbered lists, or headers/subheadings. Ever. Write in flowing short sentences only.
 - NEVER say, imply, or hint that a symptom was "logged", "noted", "tracked", "saved", "recorded", "registered", "added to your history", or that you "got that down". Do not write those confirmations even when you are sure the system will save it. The system writes its own confirmation line ("Logged: …") after a real database write, and any confirmation you write yourself will be deleted before the user sees it — which leaves your reply broken. The ONE exception: if the context above contains an internal note saying the system HAS saved entries for this turn, you may confirm naturally.
 - When she describes how she feels and you have no such internal note, respond conversationally about what she shared — explain the hormonal connection, ask a follow-up, be useful — but make NO claim about persistence, and do not promise it will be saved later.
@@ -5639,7 +5677,7 @@ GENERIC DAY RANGES ARE ALLOWED: Educational statements about general biological 
 - Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}
 ${topics ? `- Focus areas: ${topics}. Weave relevant tips from these areas into responses when naturally fitting.` : ""}${cycleHistoryContext}${symptomContext}${lengthGuidance}${dualStateContext}
 
-${emotionalContext ? `Use this context only if it genuinely helps. Do NOT open with her cycle day, do NOT volunteer phase-appropriate lifestyle guidance (workouts, meals, macros, hormone lessons) this turn — answer her actual situation like a person would. Phase accuracy rules above still apply to anything you do mention.
+${emotionalContext ? `Use this context only if it genuinely helps. Do NOT open with her cycle day, do NOT volunteer phase-appropriate lifestyle guidance (workouts, meals, macros, hormone lessons) this turn. Answer her actual situation like a person would. If you mention the cycle, do it at most once, in the LAST sentence, as context not cause (e.g. "Day 23 can make everything feel louder, so go easy on yourself."). Never explain hormones, neurotransmitters or brain regions unless she asks why. Phase accuracy rules above still apply to anything you do mention.
 
 PHASE SALIENCE (this turn only): The PHASE AUTHORITY RULE and CYCLE DAY RULE above remain fully binding — never state a phase or day that contradicts them. But they govern ACCURACY, not PROMINENCE. This turn: mention her phase or cycle day AT MOST ONCE, positioned late in the reply, in passing, as a single short clause. NEVER as the opening sentence, the opening clause, or the frame the answer is built around. Do not begin with "While you're on Day ${cycleInfo?.cycleDay ?? "N"}...", "In your ${cycleInfo?.phase ?? "current"} phase...", or any equivalent lead-in. If the phase adds nothing to her actual situation, omit it entirely — omitting is always allowed, contradicting never is.` : `Use this context to make your responses personally relevant. Reference their current phase and how it might affect their request. If they mention their anchor symptom, acknowledge it and provide phase-appropriate guidance.`} When users ask about their cycle length or patterns, use the cycle history data to provide specific insights. When symptom log data is available, reference their actual reported symptoms and patterns — this is more accurate than textbook generalizations.`;
 
