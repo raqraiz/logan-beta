@@ -2060,7 +2060,7 @@ const Chat = () => {
                       )}
                       {headsupVisible && message.message_type === "partner_headsup_hardday" && user && (
                         <PartnerHeadsupOfferChips userId={user.id} messageId={message.id}
-                          name={message.metadata?.partner_headsup === "offer" ? ((message.metadata?.partner_name as string) || null) : null}
+                          name={(message.metadata as Record<string, unknown> | null)?.partner_headsup === "offer" ? ((message.metadata?.partner_name as string) || null) : null}
                           preselect={Array.isArray(message.metadata?.preselect) ? (message.metadata.preselect as string[]) : []} />
                       )}
                       {headsupVisible && message.message_type === "partner_headsup_schedreq" && user && (
