@@ -5017,7 +5017,7 @@ serve(async (req) => {
     // The ONLY place the user is told a symptom was saved. Appended to the main
     // answer (above the deep-dive divider) after a confirmed symptom_logs write.
     // In emotional moments, emotions are saved silently: no "Logged:" line for them.
-    const EMOTION_NAME_RE = /\b(anger|angry|irritab|frustrat|rage|resent|lonel|sad|low mood|mood|anxi|stress|overwhelm|depress|cry|tearful|guilt|shame|hopeless|emotional|numb|worthless|agitat|on edge|exhaust|drained|burnout)/i;
+    const EMOTION_NAME_RE = /\b(alone|unseen|invisible|ignored|unsupported|misunderstood|unappreciated|anger|angry|irritab|frustrat|rage|resent|lonel|sad|low mood|mood|anxi|stress|overwhelm|depress|cry|tearful|guilt|shame|hopeless|emotional|numb|worthless|agitat|on edge|exhaust|drained|burnout)/i;
     const visibleLogged = emotionalContextActive ? loggedSymptomNames.filter((n) => !EMOTION_NAME_RE.test(n)) : loggedSymptomNames;
     if (loggedSymptomNames.length > 0) {
       const label = `Logged: ${visibleLogged.join(", ")}`;
