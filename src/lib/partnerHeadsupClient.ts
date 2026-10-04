@@ -41,9 +41,9 @@ export async function saveStyleExample(text: string) {
   await supabase.functions.invoke("partner-headsup-draft", { body: { action: "save_style", text } });
 }
 
-export type HeadsupPerson = { id: string; name: string; whatsapp_number: string | null; last_used_at: string | null };
+export type HeadsupPerson = { id: string; name: string; whatsapp_number: string | null; last_used_at: string | null; relationship?: string | null };
 export async function loadPeople(userId: string): Promise<HeadsupPerson[]> {
-  const { data } = await supabase.from("headsup_people").select("id, name, whatsapp_number, last_used_at").eq("user_id", userId)
+  const { data } = await supabase.from("headsup_people").select("id, name, whatsapp_number, last_used_at, relationship").eq("user_id", userId)
     .order("last_used_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false });
   return (data ?? []) as HeadsupPerson[];
 }
@@ -64,12 +64,19 @@ export function openTopLevel(url: string) {
   }
 }
 
+/** Home "For X today": her saved Partner first, else the most recently used person. */
+export function pickHomePerson(people: HeadsupPerson[]): HeadsupPerson | null {
+  return people.find((p) => p.relationship === "partner") ?? people[0] ?? null;
+}
+
+export type PartnerTips = { help: string[]; skip: string[] };
+
 export const FOCUS_OPTIONS = ["Low energy", "Short fuse", "Need quiet", "Feeling low"];
 export const LAST_OPENING_KEY = "headsup-last-opening";
 export const HEADSUP_FOCUS_KEY = (cacheKey: string) => `headsup-focus:${cacheKey}`;
 
 /** Opens (or reopens) today's unfinished draft card in chat. Returns the chat message id. */
-export async function startOnDemandDraft(userId: string, extra: { preselect?: string[] } = {}): Promise<string | null> {
+export async function startOnDemandDraft(userId: string, extra: { preselect?: string[]; partnerTips?: PartnerTips; personId?: string } = {}): Promise<string | null> {
   const { trackedSupabase } = await import("@/lib/messageFailures");
   const today = new Date().toLocaleDateString("en-CA");
   const { data: existing } = await supabase.from("partner_headsup_events").select("id")
@@ -90,7 +97,7 @@ export async function startOnDemandDraft(userId: string, extra: { preselect?: st
   }
   const { data: msg, error: mErr } = await trackedSupabase.from("chat_messages").insert({
     user_id: userId, role: "assistant", message_type: "partner_headsup_draft", content: "Here's a start. Change anything, it's yours.",
-    metadata: { event_id: eventId, kind: "on_demand", preselect: (extra.preselect ?? []).slice(0, 2) },
+    metadata: { event_id: eventId, kind: "on_demand", preselect: (extra.preselect ?? []).slice(0, 2), ...(extra.partnerTips ? { partner_tips: extra.partnerTips } : {}), ...(extra.personId ? { person_id: extra.personId } : {}) },
   }).select("id").maybeSingle();
   if (mErr || !msg) return null;
   return msg.id;

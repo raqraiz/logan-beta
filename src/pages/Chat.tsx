@@ -1974,6 +1974,8 @@ const Chat = () => {
                           cacheKey={message.id}
                           eventId={typeof message.metadata?.event_id === "string" ? (message.metadata.event_id as string) : undefined}
                           preselect={Array.isArray(message.metadata?.preselect) ? (message.metadata.preselect as string[]) : undefined}
+                          partnerTips={message.metadata?.partner_tips as { help: string[]; skip: string[] } | undefined}
+                          initialPersonId={typeof message.metadata?.person_id === "string" ? (message.metadata.person_id as string) : undefined}
                         />
                       ) : message.message_type === "partner_headsup_hardday" ? null : message.message_type === "partner_headsup_schedreq" ? null : message.message_type === "partner_headsup_shared" ? (
                         <p className="text-xs text-muted-foreground">{message.content.replace(/^Heads-up shared with (.+?)\.?$/, "Opened WhatsApp for $1.").replace(/^Heads-up shared\.?$/, "Opened WhatsApp.")}</p>
