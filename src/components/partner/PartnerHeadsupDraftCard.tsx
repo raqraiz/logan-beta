@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { HEADSUP_FOOTER } from "@/lib/partnerHeadsup";
 import {
-  HEADSUP_UPDATED_EVENT, PREFILL_CHAT_EVENT, generateDraft, saveStyleExample, shareSheet, whatsappUrl,
+  FOCUS_OPTIONS, HEADSUP_FOCUS_KEY, HEADSUP_UPDATED_EVENT, PREFILL_CHAT_EVENT, generateDraft, saveStyleExample, shareSheet, whatsappUrl,
   type HeadsupDraftResponse, openTopLevel } from "@/lib/partnerHeadsupClient";
 import { HeadsupEditSheet } from "./HeadsupEditSheet";
 
@@ -16,20 +16,34 @@ interface Props {
   kind: "scheduled" | "on_demand";
   sourceMessageId?: string;
   justThisWeek?: boolean;
+  /** Opened from the hard-day chips: "JUST FOR TODAY" label, "Not this time" button. */
+  hardDay?: boolean;
+  preselect?: string[];
 }
 
 type Cached = HeadsupDraftResponse & { includeFooter: boolean; edited?: boolean };
 const primary = "headsup-primary min-h-[44px] w-full rounded-full px-5 text-sm font-medium transition-opacity disabled:opacity-40";
+const chipCls = (on: boolean) =>
+  `min-h-[44px] px-4 rounded-full border text-sm font-medium transition-colors disabled:opacity-40 ${on ? "headsup-chip-active" : "border-border/60 bg-card/60 text-foreground hover:bg-card"}`;
 const ghost = "min-h-[44px] flex-1 rounded-full border border-border/60 bg-card/60 px-4 text-sm font-medium hover:bg-card transition-colors";
 const fmt = (s: string) => new Date(`${s}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 const wd = (s: string) => new Date(`${s}T12:00:00`).toLocaleDateString("en-US", { weekday: "long" });
 
 /** Draft card in chat. The draft text lives only on this device until sent, then is cleared. */
-export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId: initialEventId, mode, kind, sourceMessageId, justThisWeek }: Props) {
+export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId: initialEventId, mode, kind, sourceMessageId, justThisWeek, hardDay, preselect }: Props) {
   const storageKey = `headsup-draft:${cacheKey}`;
   const [eventId, setEventId] = useState(initialEventId);
   const [status, setStatus] = useState<string | null>(initialEventId ? null : "drafted");
-  const [settings, setSettings] = useState<{ partner_name: string | null; whatsapp_number: string | null; include_footer: boolean; relationship: string | null; enabled: boolean } | null>(null);
+  const [settings, setSettings] = useState<{ partner_name: string | null; whatsapp_number: string | null; include_footer: boolean; relationship: string | null; enabled: boolean; include_mood: boolean; helps: string[]; timing: string } | null>(null);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  // Chips she picked for this draft (null = not asked yet). Kept on this device only until the draft is done.
+  const focusKey = HEADSUP_FOCUS_KEY(cacheKey);
+  const [focus, setFocus] = useState<string[] | null>(() => {
+    try { const raw = localStorage.getItem(focusKey); return raw ? JSON.parse(raw) : null; } catch { return null; }
+  });
+  const [picked, setPicked] = useState<string[]>(() => (preselect ?? []).slice(0, 2));
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customText, setCustomText] = useState("");
   const [nameInput, setNameInput] = useState("");
   const [name, setName] = useState<string | null>(null);
   const [draft, setDraft] = useState<Cached | null>(() => {
@@ -42,9 +56,10 @@ export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId: initialEven
   const [acting, setActing] = useState(false);
 
   useEffect(() => {
-    supabase.from("partner_headsup_settings").select("partner_name, whatsapp_number, include_footer, relationship, enabled").eq("user_id", userId).maybeSingle()
+    supabase.from("partner_headsup_settings").select("partner_name, whatsapp_number, include_footer, relationship, enabled, include_mood, helps, timing").eq("user_id", userId).maybeSingle()
       .then(({ data }) => {
         setSettings(data);
+        setSettingsLoaded(true);
         if (data?.partner_name) setName(data.partner_name);
       });
     if (initialEventId) {
@@ -55,13 +70,19 @@ export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId: initialEven
 
   const persist = (d: Cached | null) => {
     setDraft(d);
+    if (!d) { try { localStorage.removeItem(focusKey); } catch { /* ignore */ } }
     try { d ? localStorage.setItem(storageKey, JSON.stringify(d)) : localStorage.removeItem(storageKey); } catch { /* ignore */ }
   };
 
   const genBase = {
     mode, source_message_id: sourceMessageId, name: name ?? undefined,
     use_defaults: !!justThisWeek, relationship: justThisWeek && !settings ? undefined : settings?.relationship ?? undefined,
+    ...(focus ? { focus } : {}),
+    // Her own words are never sent once chips are in play; only the chips.
+    ...(focus ? { source_message_id: undefined } : {}),
   };
+  const askFocus = settingsLoaded && (settings ? settings.include_mood : true);
+  const focusReady = !askFocus || focus !== null;
 
   const generate = useCallback(async () => {
     setLoading(true); setErr(null);
@@ -71,16 +92,23 @@ export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId: initialEven
     } catch (e) { setErr((e as Error).message); }
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [name, settings, mode, sourceMessageId, justThisWeek]);
+  }, [name, settings, mode, sourceMessageId, justThisWeek, focus]);
 
   useEffect(() => {
-    if (status === "drafted" && name && !draft && !loading && !err) generate();
-  }, [status, name, draft, loading, err, generate]);
+    if (status === "drafted" && name && settingsLoaded && focusReady && !draft && !loading && !err) generate();
+  }, [status, name, settingsLoaded, focusReady, draft, loading, err, generate]);
+
+  const chooseFocus = async (f: string[]) => {
+    setFocus(f);
+    try { localStorage.setItem(focusKey, JSON.stringify(f)); } catch { /* ignore */ }
+    if (eventId && f.length) await supabase.from("partner_headsup_events").update({ focus: f }).eq("id", eventId);
+  };
+  const togglePick = (v: string) => setPicked((p) => (p.includes(v) ? p.filter((x) => x !== v) : p.length >= 2 ? p : [...p, v]));
 
   const ensureEvent = async (newStatus: "opened" | "skipped") => {
     const now = new Date().toISOString();
     // sent_at records her tap on WhatsApp/Share; delivery itself can't be confirmed.
-    const patch = { status: newStatus, ...(newStatus === "opened" ? { opened_at: now, sent_at: now } : {}) };
+    const patch = { status: newStatus, ...(newStatus === "opened" ? { opened_at: now, sent_at: now } : {}), ...(focus?.length ? { focus } : {}) };
     if (eventId) { await supabase.from("partner_headsup_events").update(patch).eq("id", eventId); return; }
     const today = new Date().toLocaleDateString("en-CA");
     const { data } = await supabase.from("partner_headsup_events").insert({
@@ -162,11 +190,47 @@ export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId: initialEven
     );
   }
 
+  if (askFocus && focus === null && !draft) {
+    const line = hardDay
+      ? "On it. From what you said, these sound hardest today. Change anything you like."
+      : kind === "scheduled" && mode === "predicted"
+      ? `Your harder stretch usually starts ${settings?.timing === "morning_of" ? "today" : "tomorrow"}. Before I write to ${name}, what feels hardest this time?`
+      : `Before I write to ${name}, what feels hardest right now?`;
+    const customs = picked.filter((p) => !FOCUS_OPTIONS.includes(p));
+    const hasHelps = (settings?.helps?.length ?? 0) > 0;
+    return (
+      <div id={`headsup-${cacheKey}`} className="headsup-surface headsup-enter w-full space-y-3">
+        {hardDay && <div className="text-[11px] font-medium tracking-[0.12em] headsup-gradient-text">JUST FOR TODAY</div>}
+        <p className="text-sm">{line}</p>
+        <p className="text-xs text-muted-foreground">Pick up to 2</p>
+        <div className="flex flex-wrap gap-2">
+          {[...FOCUS_OPTIONS, ...customs].map((o) => (
+            <button key={o} className={chipCls(picked.includes(o))} onClick={() => togglePick(o)} disabled={!picked.includes(o) && picked.length >= 2}>{o}</button>
+          ))}
+          <button className={chipCls(customOpen)} onClick={() => setCustomOpen((c) => !c)} disabled={picked.length >= 2 && !customOpen}>Add your own</button>
+        </div>
+        {customOpen && (
+          <div className="flex gap-2">
+            <input value={customText} onChange={(e) => setCustomText(e.target.value)} maxLength={40} autoFocus
+              className="flex-1 min-h-[44px] rounded-full border border-border/60 bg-background/60 px-4 text-sm outline-none focus:border-[hsl(var(--headsup-accent))]" />
+            <button className={chipCls(false)} disabled={!customText.trim() || picked.length >= 2}
+              onClick={() => { const t = customText.trim(); if (t && !picked.includes(t)) setPicked((p) => [...p, t].slice(0, 2)); setCustomText(""); setCustomOpen(false); }}>Add</button>
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">{name} sees how you'd like support, never medical details.</p>
+        <button className={primary} disabled={picked.length === 0} onClick={() => void chooseFocus(picked)}>Write it</button>
+        {hasHelps && (
+          <button className="w-full text-center text-sm text-muted-foreground underline underline-offset-2" onClick={() => void chooseFocus([])}>Same as usual</button>
+        )}
+      </div>
+    );
+  }
+
   const showDates = mode === "predicted" && draft && !draft.undated && draft.window && draft.cycles_used > 0;
 
   return (
     <div id={`headsup-${cacheKey}`} className="headsup-surface headsup-enter w-full space-y-3">
-      <div className="text-[11px] font-medium tracking-[0.12em] headsup-gradient-text">DRAFT FOR {name.toUpperCase()}</div>
+      <div className="text-[11px] font-medium tracking-[0.12em] headsup-gradient-text">{hardDay ? "JUST FOR TODAY" : `DRAFT FOR ${name.toUpperCase()}`}</div>
       {loading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Writing it as you…</div>}
       {err && (
         <div className="space-y-2">
@@ -205,7 +269,7 @@ export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId: initialEven
             <button className={primary} onClick={send} disabled={acting}>Send to {name} on WhatsApp</button>
             <div className="flex gap-2">
               <button className={ghost} onClick={() => setEditOpen(true)} disabled={acting}>Edit</button>
-              <button className={ghost} onClick={skip} disabled={acting}>Skip this time</button>
+              <button className={ghost} onClick={skip} disabled={acting}>{hardDay ? "Not this time" : "Skip this time"}</button>
             </div>
             <button className="w-full text-center text-xs text-muted-foreground underline underline-offset-2" onClick={shareOther} disabled={acting}>
               No WhatsApp? Share another way

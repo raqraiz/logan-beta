@@ -103,7 +103,6 @@ export function PartnerHeadsupHardDayCard({ userId, messageId, name, preselect }
   const finish = () => { markSeen(messageId); setDone(true); };
   const write = async () => {
     finish();
-    await say(userId, "On it. From what you said, these sound hardest today. Change anything you like.", { partner_headsup: "hardday_write" });
     const id = await startOnDemandDraft(userId, name, { mode: "today", hard_day: true, preselect });
     if (id) globalThis.dispatchEvent(new CustomEvent(OPEN_CHAT_EVENT, { detail: { focusMessageId: id } }));
   };
