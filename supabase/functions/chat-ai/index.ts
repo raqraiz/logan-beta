@@ -30,6 +30,7 @@ function isEmotionalOrHeavyMessage(text: string): boolean {
   const words = t.trim().split(/\s+/).filter(Boolean).length;
   if (words > 100) return true;
   if (/\b(worried|anxious|scared|overwhelmed|exhausted|struggling|hoping|bated breath|kinda scared|kinda worried)\b/.test(t)) return true;
+  if (/\b(angry|furious|so mad|mad at|pissed|rage|lonely|alone|unseen|invisible|ignored|misunderstood|resent|fight|fought|argu(e|ed|ing|ment)|yell(ed|ing)|snapp(ed|ing)|depleted|drained|burn(ed|t) out|can'?t cope|at my limit|vent|doesn'?t get it|doesn'?t help|no help)\b/.test(t)) return true;
   if (/\b(postpartum|post-partum|pregnancy|pregnant|miscarriage|pregnancy loss|iud|coil)\b/.test(t)) return true;
   return false;
 }
@@ -1117,8 +1118,9 @@ function getCycleDayForToday(lastPeriodStart: string, timezone: string): number 
 }
 
 
-// Heads-up trigger: friction at home, feeling misunderstood, or overwhelmed/depleted.
-const HEADSUP_TRIGGER_RE = /\b(angry with|mad at|furious|fight|fought|argu(e|ed|ing|ment)|tension|snapp(ed|ing) at|yell(ed|ing)|(doesn'?t|don'?t|never) (get it|get me|understand|listen|help)|misunderstood|nobody (gets|understands)|can'?t (explain|get through|make (him|her|them) understand)|doesn'?t see|overwhelm(ed|ing)?|can'?t cope|too much on my plate|everything on my plate|depleted|drained|running on empty|burn(ed|t) out|exhausted|at my limit|can'?t do (this|it all)|(hard|rough|tough|awful) (day|night|week))\b/i;
+// Heads-up trigger is judged by the main reply model (headsup_offer). This only
+// catches explicit asks for help with people at home, which bypass the daily limit.
+const HEADSUP_ASK_RE = /\b(could use|need|want) (more |some )?help (at home|around the house|from (him|her|them|my (husband|wife|partner|boyfriend|girlfriend)))\b|\bhow (do|can|should) i (tell|explain (it |this |that )?to|talk to|ask) (him|her|them|my (husband|wife|partner|boyfriend|girlfriend|fianc[eé]e?|spouse|mom|family))\b/i;
 // Fear, threats, control or harm at home: never offer a heads-up.
 const HEADSUP_HARM_RE = /\b(afraid of (him|her|them)|scared of (him|her|them)|threat(en)?(ed|s|ing)?|hit me|hits me|hurt(s)? me|push(ed)? me|chok(e|ed|ing)|abus(e|ed|ive)|controls? (me|my)|controlling|won'?t let me|not safe|unsafe|violent|violence|kill)\b/i;
 // Asking for heads-ups ahead of time / on a schedule.
@@ -4610,6 +4612,12 @@ serve(async (req) => {
     }
     console.log("[chat-ai] gemini turns:", conversationHistory.length, "currentTurnFromHistory:", alreadyHasCurrentTurn);
 
+    if (emotionalContextActive) {
+      systemPrompt += `\n\nEMOTIONAL MOMENT TONE (anger, loneliness, overwhelm, friction at home): Your FIRST sentence acknowledges her feeling as real and reasonable, with no cycle day, phase, or hormone words in it. Cycle context is optional and only comes second, framed as "it can make things feel heavier", never as the cause of the feeling. Never use "classic", "your brain is primed", "shame spiral", or tell her what she believes about herself. Never criticize her partner or anyone in her life.`;
+    }
+    systemPrompt += `\n\nNEVER use the phrases "classic", "your brain is primed" or "shame spiral", and never tell her what she believes about herself.`;
+    systemPrompt += `\n\nOUTPUT FORMAT (ABSOLUTE): Return ONLY a JSON object: {"reply": string, "headsup_offer": boolean, "focus": string[], "harm_at_home": boolean}. "reply" is your full user-facing message exactly as you would normally write it (markdown and any "---" deep dive included). "headsup_offer" is true when she describes friction or tension at home, feeling alone or unseen at home, feeling misunderstood, struggling to communicate how she feels, needing more help at home, or feeling overwhelmed or depleted, AND someone close to her could reasonably help; otherwise false. "focus": up to 2 of ["Low energy","Short fuse","Need quiet","Feeling low"] that best match what she said (empty if none). "harm_at_home": true if she describes any fear, threat, control or harm from someone at home.`;
+
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -4623,7 +4631,8 @@ serve(async (req) => {
           ...conversationHistory
         ],
         temperature: 0.7,
-        max_tokens: 600
+        max_tokens: 1000,
+        response_format: { type: "json_object" },
       }),
     });
 
@@ -4651,7 +4660,26 @@ serve(async (req) => {
     }
 
     const aiData = await aiResponse.json();
-    let assistantMessage = aiData.choices?.[0]?.message?.content || "I'm not sure how to respond to that. Could you try rephrasing?";
+    const rawModelOut: string = aiData.choices?.[0]?.message?.content || "";
+    let modelHeadsupOffer = false;
+    let modelHeadsupFocus: string[] = [];
+    let modelHarm = false;
+    let assistantMessage = "";
+    try {
+      const m = rawModelOut.match(/\{[\s\S]*\}/);
+      const parsed = JSON.parse(m ? m[0] : rawModelOut);
+      assistantMessage = typeof parsed?.reply === "string" ? parsed.reply : "";
+      modelHeadsupOffer = parsed?.headsup_offer === true;
+      modelHarm = parsed?.harm_at_home === true;
+      const FOCUS_OK = ["Low energy", "Short fuse", "Need quiet", "Feeling low"];
+      modelHeadsupFocus = Array.isArray(parsed?.focus) ? parsed.focus.filter((f: unknown) => typeof f === "string" && FOCUS_OK.includes(f)).slice(0, 2) : [];
+    } catch (e) {
+      console.warn("[chat-ai] structured reply parse failed, using raw text", (e as Error)?.message);
+      const rx = rawModelOut.match(/"reply"\s*:\s*"((?:[^"\\]|\\.)*)/);
+      if (rx) { try { assistantMessage = JSON.parse(`"${rx[1]}"`); } catch { assistantMessage = rx[1]; } }
+      else assistantMessage = rawModelOut;
+    }
+    if (!assistantMessage.trim()) assistantMessage = "I'm not sure how to respond to that. Could you try rephrasing?";
 
     // SAFETY: strip any leaked system/meta instructions the model may have echoed
     // back into the user-visible reply (e.g. "[!IMPORTANT] ...", "[CRITICAL] ...",
@@ -4930,6 +4958,8 @@ serve(async (req) => {
 - Each reply is 2-6 words, written from the USER'S perspective (first person, casual, like texting back).
 - They MUST directly respond to or extend Logan's last message — not generic prompts.
 - Mix: one that acknowledges ("Yeah that's me"), one that digs deeper ("Tell me more"), one that changes topic ("What about workouts?"). Never argumentative or contradictory — the user may be in a sensitive state.
+- NEVER criticize, blame, judge or mock her partner or anyone in her life (no "He never listens", "He's so selfish").${emotionalContextActive ? `
+- She is in an emotional moment: use only neutral, self-centered options like "Tell me more", "It's been building", "I need a break". No cycle, phase or hormone topics.` : ""}
 - No questions ending in "?" unless natural. No emojis. No quotes.
 - Return ONLY a JSON array of 3 strings, nothing else. Example: ["Yeah exactly","Not really though","Tell me more"]`
             },
@@ -4987,9 +5017,12 @@ serve(async (req) => {
     // --- Pass 1: server-authored logging confirmation ---
     // The ONLY place the user is told a symptom was saved. Appended to the main
     // answer (above the deep-dive divider) after a confirmed symptom_logs write.
+    // In emotional moments, emotions are saved silently: no "Logged:" line for them.
+    const EMOTION_NAME_RE = /\b(alone|unseen|invisible|ignored|unsupported|misunderstood|unappreciated|anger|angry|irritab|frustrat|rage|resent|lonel|sad|low mood|mood|anxi|stress|overwhelm|depress|cry|tearful|guilt|shame|hopeless|emotional|numb|worthless|agitat|on edge|exhaust|drained|burnout)/i;
+    const visibleLogged = emotionalContextActive ? loggedSymptomNames.filter((n) => !EMOTION_NAME_RE.test(n)) : loggedSymptomNames;
     if (loggedSymptomNames.length > 0) {
-      const label = `Logged: ${loggedSymptomNames.join(", ")}`;
-      if (!new RegExp(`^\\s*Logged:\\s*`, "mi").test(finalAssistantMessage)) {
+      const label = `Logged: ${visibleLogged.join(", ")}`;
+      if (visibleLogged.length > 0 && !new RegExp(`^\\s*Logged:\\s*`, "mi").test(finalAssistantMessage)) {
         const divider = "\n---\n";
         const idx = finalAssistantMessage.indexOf(divider);
         finalAssistantMessage = idx >= 0
@@ -5177,22 +5210,32 @@ serve(async (req) => {
           if (offersOn) {
             await supabase.from("chat_messages").insert({ user_id: user.id, role: "assistant", message_type: "partner_headsup_schedreq", content: "", metadata: { partner_headsup: "schedreq" } });
           }
-        } else if (offersOn && !headsupHarm && safeTest(HEADSUP_TRIGGER_RE, userMessage)) {
-          const dayStart = new Date(); dayStart.setUTCHours(0, 0, 0, 0);
-          const { data: already } = await supabase.from("chat_messages").select("id").eq("user_id", user.id)
-            .eq("message_type", "partner_headsup_hardday").gte("created_at", dayStart.toISOString()).limit(1);
-          if (!already?.length) {
-            const m = userMessage.toLowerCase();
-            const pre: string[] = [];
-            if (/energy|exhausted|drained|tired|wiped|depleted|running on empty/.test(m)) pre.push("Low energy");
-            if (/irritab|cranky|snapp|short[- ]fuse|on edge|patience|frustrat|annoy|tension|fight|argu/.test(m)) pre.push("Short fuse");
-            if (/overwhelm|can'?t cope|too much|quiet|space|alone|on my plate/.test(m)) pre.push("Need quiet");
-            if (/\blow\b|down|sad|flat|miserable|misunderstood|alone|cry/.test(m) && !/low energy/.test(m)) pre.push("Feeling low");
+        } else if (offersOn && !headsupHarm && !modelHarm && (modelHeadsupOffer || safeTest(HEADSUP_ASK_RE, userMessage))) {
+          const explicitAsk = safeTest(HEADSUP_ASK_RE, userMessage);
+          let limited = false;
+          if (!explicitAsk) {
+            const { data: prof } = await supabase.from("profiles").select("is_internal").eq("id", user.id).maybeSingle();
+            if (!prof?.is_internal) {
+              const dayStart = new Date(); dayStart.setUTCHours(0, 0, 0, 0);
+              const { data: offers } = await supabase.from("chat_messages").select("id, created_at").eq("user_id", user.id)
+                .eq("message_type", "partner_headsup_hardday").gte("created_at", dayStart.toISOString()).order("created_at", { ascending: true });
+              if (offers?.length) {
+                const { data: drafts } = await supabase.from("chat_messages").select("created_at").eq("user_id", user.id)
+                  .eq("message_type", "partner_headsup_draft").gte("created_at", offers[0].created_at);
+                // An offer counts toward the limit unless she tapped "Write something for…" (a draft followed it).
+                limited = offers.some((o, i) => {
+                  const next = offers[i + 1]?.created_at;
+                  return !(drafts || []).some((d) => d.created_at >= o.created_at && (!next || d.created_at < next));
+                });
+              }
+            }
+          }
+          if (!limited) {
             const { data: person } = await supabase.from("headsup_people").select("name").eq("user_id", user.id)
               .order("last_used_at", { ascending: false, nullsFirst: false }).limit(1).maybeSingle();
             await supabase.from("chat_messages").insert({
               user_id: user.id, role: "assistant", message_type: "partner_headsup_hardday", content: "",
-              metadata: { partner_headsup: "offer", partner_name: person?.name ?? null, preselect: [...new Set(pre)].slice(0, 2) },
+              metadata: { partner_headsup: "offer", partner_name: person?.name ?? null, preselect: modelHeadsupFocus },
             });
           }
         }
