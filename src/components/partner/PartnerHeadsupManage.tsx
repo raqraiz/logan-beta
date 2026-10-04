@@ -103,6 +103,12 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange }: Props) {
       <input value={nameIn} onChange={(e) => setNameIn(e.target.value)} placeholder="Name" maxLength={60} className={input} autoFocus />
       <input value={phoneIn} onChange={(e) => setPhoneIn(e.target.value)} placeholder="WhatsApp number (optional), e.g. +44 7700 900123" inputMode="tel" className={input} />
       <div className="flex flex-wrap gap-2">
+        {([["partner", "Partner"], ["family", "Family"], ["friend", "Friend"]] as const).map(([v, l]) => (
+          <button key={v} type="button" onClick={() => setRelIn(relIn === v ? null : v)}
+            className={`min-h-[36px] px-3 rounded-full border text-xs font-medium ${relIn === v ? "headsup-chip-active" : "border-border/60 bg-card/60"}`}>{l}</button>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-2">
         <button className={ghost} disabled={!nameIn.trim()} onClick={() => void savePerson()}>Save</button>
         <button className={ghost} onClick={() => setEditing(null)}>Cancel</button>
         {editing !== "new" && (
