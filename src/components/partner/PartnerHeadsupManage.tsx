@@ -1,4 +1,3 @@
-import { trackedSupabase } from "@/lib/messageFailures";
 import { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,8 +6,10 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { HEADSUP_HELP_OPTIONS, toE164, type HeadsupSettingsRow } from "@/lib/partnerHeadsup";
 import {
-  HEADSUP_UPDATED_EVENT, OPEN_CHAT_EVENT, PUSH_STATUS_COPY, enableHeadsupPush, endOfCurrentCycle, isPushConfigured,
+  HEADSUP_UPDATED_EVENT, OPEN_CHAT_EVENT, PUSH_STATUS_COPY, enableHeadsupPush, endOfCurrentCycle, isHardToPredict, isPushConfigured,
+  startOnDemandDraft,
 } from "@/lib/partnerHeadsupClient";
+import { HeadsupPreviewDialog } from "./PartnerHeadsupSetup";
 
 interface Props {
   userId: string;
@@ -17,10 +18,15 @@ interface Props {
   onCloseSettings: () => void;
 }
 
-type EventRow = { id: string; window_start: string; status: string; outcome: string | null; kind: string };
+type EventRow = { id: string; window_start: string; status: string; outcome: string | null; kind: string; focus: string[] | null };
 const STATUS_LABEL: Record<string, string> = { opened: "Sent", skipped: "Skipped", expired: "Missed" };
 const OUTCOME_LABEL: Record<string, string> = { helped: "Sent. It helped", no_difference: "Sent. No real difference", didnt_land: "Sent. Didn't land well" };
-const historyLabel = (e: EventRow) => (e.status === "opened" && e.outcome && OUTCOME_LABEL[e.outcome]) || STATUS_LABEL[e.status];
+const historyLabel = (e: EventRow) => {
+  const base = (e.status === "opened" && e.outcome && OUTCOME_LABEL[e.outcome]) || STATUS_LABEL[e.status];
+  if (e.status !== "opened" || !e.focus?.length) return base;
+  const f = e.focus.map((x, i) => (i === 0 ? x : x.charAt(0).toLowerCase() + x.slice(1))).join(", ");
+  return `${base} · ${f}`;
+};
 const chipCls = (on: boolean) =>
   `min-h-[40px] px-4 rounded-full border text-sm transition-colors ${on ? "headsup-chip-active" : "border-border/60 bg-card/60 hover:bg-card"}`;
 const primary = "headsup-primary min-h-[44px] w-full rounded-full px-5 text-sm font-medium transition-opacity disabled:opacity-40";
@@ -32,17 +38,20 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange, onCloseSettin
   const [editing, setEditing] = useState<null | "whatsapp" | "timing" | "helps" | "included">(null);
   const [phone, setPhone] = useState("");
   const [custom, setCustom] = useState("");
+  const [hard, setHard] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const load = async () => {
     const [{ data: st }, { data: ev }] = await Promise.all([
       supabase.from("partner_headsup_settings").select("*").eq("user_id", userId).maybeSingle(),
-      supabase.from("partner_headsup_events").select("id, window_start, status, outcome, kind").eq("user_id", userId)
+      supabase.from("partner_headsup_events").select("id, window_start, status, outcome, kind, focus").eq("user_id", userId)
         .in("status", ["opened", "skipped", "expired"]).order("window_start", { ascending: false }).limit(30),
     ]);
     setS(st as HeadsupSettingsRow | null);
     setPhone(st?.whatsapp_number ?? "");
     setEvents((ev ?? []) as EventRow[]);
   };
+  useEffect(() => { if (open) void isHardToPredict(userId).then(setHard); }, [open, userId]);
   useEffect(() => { if (open) void load(); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, userId]);
 
@@ -57,33 +66,8 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange, onCloseSettin
   const name = s?.partner_name || "them";
 
   const writeNow = async () => {
-    const today = new Date().toLocaleDateString("en-CA");
-    // Reopen today's unfinished on-demand draft instead of making another.
-    const { data: existing } = await supabase.from("partner_headsup_events").select("id")
-      .eq("user_id", userId).eq("kind", "on_demand").eq("status", "drafted").eq("window_start", today)
-      .order("created_at", { ascending: false }).limit(1).maybeSingle();
-    let messageId: string | undefined;
-    if (existing) {
-      const { data: m } = await supabase.from("chat_messages").select("id").eq("user_id", userId)
-        .eq("message_type", "partner_headsup_draft").eq("metadata->>event_id", existing.id).limit(1).maybeSingle();
-      messageId = m?.id;
-    }
-    if (!messageId) {
-      let eventId = existing?.id;
-      if (!eventId) {
-        const { data: ev, error } = await supabase.from("partner_headsup_events").insert({
-          user_id: userId, kind: "on_demand", window_start: today, window_end: today, status: "drafted", recipient_name: s?.partner_name,
-        }).select("id").maybeSingle();
-        if (error || !ev) { toast({ title: "Couldn't start a draft", description: "Please try again.", variant: "destructive" }); return; }
-        eventId = ev.id;
-      }
-      const { data: msg, error: mErr } = await trackedSupabase.from("chat_messages").insert({
-        user_id: userId, role: "assistant", message_type: "partner_headsup_draft", content: `Draft for ${name}`,
-        metadata: { event_id: eventId, mode: "predicted", kind: "on_demand" },
-      }).select("id").maybeSingle();
-      if (mErr || !msg) { toast({ title: "Couldn't start a draft", description: "Please try again.", variant: "destructive" }); return; }
-      messageId = msg.id;
-    }
+    const messageId = await startOnDemandDraft(userId, s?.partner_name ?? null);
+    if (!messageId) { toast({ title: "Couldn't start a draft", description: "Please try again.", variant: "destructive" }); return; }
     onOpenChange(false);
     onCloseSettings();
     globalThis.dispatchEvent(new CustomEvent(OPEN_CHAT_EVENT, { detail: { focusMessageId: messageId } }));
@@ -127,7 +111,11 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange, onCloseSettin
           <p className="text-sm text-muted-foreground">Heads-ups aren't set up.</p>
         ) : (
           <>
-            <button className={primary} onClick={writeNow}>Write one now</button>
+            <div className="space-y-2">
+              <button className={primary} onClick={writeNow}>Write one now</button>
+              <button className={ghost} onClick={() => setPreviewOpen(true)}>See what {name} would get</button>
+            </div>
+            <HeadsupPreviewDialog userId={userId} open={previewOpen} onOpenChange={setPreviewOpen} />
 
             <div className="rounded-[20px] border border-border/50 px-4 py-2 divide-y divide-border/40">
               <div className="flex min-h-[48px] items-center justify-between">
@@ -193,6 +181,29 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange, onCloseSettin
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">When I'll offer one</h4>
+              <div className="rounded-[20px] border border-border/50 px-4 py-2 divide-y divide-border/40">
+                <div className="flex min-h-[56px] items-center justify-between gap-3 py-2">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2 text-sm">
+                      Before your harder days
+                      {hard && <span className="rounded-full border border-border/60 px-2 py-0.5 text-[11px] text-muted-foreground">Paused</span>}
+                    </div>
+                    {hard && <p className="text-xs text-muted-foreground">Your cycle is hard to predict right now. I'll turn this back on when it settles.</p>}
+                  </div>
+                  <Switch checked={s.offer_before_harder_days} onCheckedChange={(v) => patch({ offer_before_harder_days: v })} />
+                </div>
+                <div className="flex min-h-[56px] items-center justify-between gap-3 py-2">
+                  <div className="space-y-0.5">
+                    <div className="text-sm">When you tell me it's a hard day</div>
+                    <p className="text-xs text-muted-foreground">I offer, you decide. At most once a day.</p>
+                  </div>
+                  <Switch checked={s.offer_on_hard_days} onCheckedChange={(v) => patch({ offer_on_hard_days: v })} />
+                </div>
               </div>
             </div>
 

@@ -27,6 +27,8 @@ export interface HeadsupSettingsRow {
   enabled: boolean;
   paused_until: string | null;
   consent_at: string | null;
+  offer_on_hard_days: boolean;
+  offer_before_harder_days: boolean;
 }
 
 /** Normalise a typed phone number to E.164. Requires a country code. */
