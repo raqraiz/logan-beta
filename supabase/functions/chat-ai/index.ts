@@ -62,7 +62,7 @@ function isShortFollowUp(text: string): boolean {
 // it is NOT a continuation of the emotional thread.
 function introducesNewTopic(text: string): boolean {
   const t = (text || "").toLowerCase();
-  return /\b(dinner|lunch|breakfast|snack|recipe|meal|eat|eating|food|protein|calories|workout|exercise|gym|run|surf|training|weight|sleep|supplement|vitamin|cycle length|period start|log|track|symptom|widget|settings|subscription|credits|price|weather)\b/.test(t);
+  return /\b(head|headache|headaches|migraine|cramp|cramps|ache|aches|bloat|bloating|nausea|dizzy|acne|breast|back pain|dinner|lunch|breakfast|snack|recipe|meal|eat|eating|food|protein|calories|workout|exercise|gym|run|surf|training|weight|sleep|supplement|vitamin|cycle length|period start|log|track|symptom|widget|settings|subscription|credits|price|weather)\b/.test(t);
 }
 
 // Emotional context persists for a short window: if a recent user turn was
