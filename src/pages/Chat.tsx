@@ -1976,9 +1976,14 @@ const Chat = () => {
                           preselect={Array.isArray(message.metadata?.preselect) ? (message.metadata.preselect as string[]) : undefined}
                         />
                       ) : message.message_type === "partner_headsup_hardday" ? null : message.message_type === "partner_headsup_schedreq" ? null : message.message_type === "partner_headsup_shared" ? (
-                        <span className="inline-flex items-center rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground">{message.content}</span>
+                        <p className="text-xs text-muted-foreground">{message.content.replace(/^Heads-up shared with (.+?)\.?$/, "Opened WhatsApp for $1.").replace(/^Heads-up shared\.?$/, "Opened WhatsApp.")}</p>
                       ) : message.role === "assistant" ? (
-                        <MarkdownMessage content={message.content} />
+                        <>
+                          {typeof (message.metadata as Record<string, unknown> | null)?.system_line === "string" && (
+                            <p className="mb-1 text-xs text-muted-foreground">{(message.metadata as Record<string, unknown>).system_line as string}</p>
+                          )}
+                          <MarkdownMessage content={message.content} />
+                        </>
                       ) : (
                         <p className="whitespace-pre-wrap">
                           <HighlightedText
@@ -2113,7 +2118,7 @@ const Chat = () => {
                         </span>
                         
                         {/* Thumbs up/down feedback for assistant messages */}
-                        {message.role === "assistant" && !showInteractiveInput && (
+                        {message.role === "assistant" && !showInteractiveInput && message.message_type !== "partner_headsup_shared" && (
                           <MessageFeedback
                             messageId={message.id}
                             onFeedback={sendFeedback}

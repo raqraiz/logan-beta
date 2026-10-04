@@ -116,18 +116,22 @@ Deno.serve(async (req) => {
     const prompt = [
       `Write a short WhatsApp message that a woman will send, as herself, to ${name || "someone close to her"}, letting them know today is a harder one and how they could help.`,
       "Rules:",
-      "- First person, as her. Under 55 words. Warm, calm and plain. Never critical, blaming or accusatory, even if things are tense between them. No em dashes or en dashes. No emojis unless her style examples use them. No hashtags.",
+      "- It must read like she typed it in one go. Maximum 3 sentences and maximum 45 words in total. Count before answering.",
+      "- Never use the same content word twice (for example 'quiet', 'help', 'tonight', 'today', 'low'). Never repeat an idea.",
+      "- First person, as her. Warm, calm and plain. Never critical, blaming or accusatory, even if things are tense between them. No em dashes or en dashes. No emojis unless her style examples use them. No hashtags. No lists.",
       "- Never mention bleeding, periods, menstruation, cycles, PMS, hormones, fertility, sex, medication, or any symptom detail. Never mention dates or days of the week; keep it about today / tonight.",
       name ? `- Start with a greeting that uses the name "${name}" (e.g. "Hey ${name},"). Never assume their gender.` : '- Start with a greeting without a name, e.g. "Hey,". Never assume their gender.',
       `- Write in ${LANG_NAME[lang]}.`,
       focusList.length
-        ? `- Build it around what feels hardest today: ${focusList.join("; ")}. Turn each into how she'd like support, in plain general terms. Say it's not about them.`
+        ? `- Let this shape the feeling, in her own plain words (do not copy these labels): ${focusList.join("; ")}. Say it's not about them.`
         : inc.mood ? "- Include a light line that she's running low today and that it's not about them." : "- Do not describe her mood or energy.",
       `- ${OPENINGS[opening]}`,
-      inc.helps && helps.length ? `- End with what helps: ${helps.join("; ")}.` : "- End with one simple, concrete ask.",
+      inc.helps && helps.length
+        ? `- Things that usually help her: ${helps.join("; ")}. Pick at most ONE of these and phrase it naturally as a single concrete ask. Never paste them verbatim and never list several.`
+        : "- End with one simple, concrete ask.",
       styles?.length ? `\nHer own past wording, match this voice:\n${styles.map((x) => `"""${x.text}"""`).join("\n")}` : "",
-      "\nExample of the tone:",
-      '"Hey love, today\'s a rough one for me. Low energy and not much patience left. It\'s not about you. Could you take dinner tonight and give me a bit of space?"',
+      "\nExample of the tone and length:",
+      `"Hey ${name || "Levy"}, today's a harder one for me and I'm running low. It's not about you. Could you take the kids tonight so I can have a bit of quiet?"`,
       "\nReturn only the message text.",
     ].filter(Boolean).join("\n");
 

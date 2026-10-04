@@ -48,11 +48,20 @@ export async function loadPeople(userId: string): Promise<HeadsupPerson[]> {
   return (data ?? []) as HeadsupPerson[];
 }
 
-/** Opens a link (e.g. WhatsApp) in a top-level window, never inside the preview frame. */
+/** Opens a link (e.g. WhatsApp) via a real <a target="_blank" rel="noopener noreferrer">; falls back to same-window navigation. */
 export function openTopLevel(url: string) {
-  const w = window.open(url, "_blank");
-  if (w) { try { w.opener = null; } catch { /* ignore */ } return; }
-  try { (window.top ?? window).location.href = url; } catch { window.location.href = url; }
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch {
+    window.location.href = url;
+  }
 }
 
 export const FOCUS_OPTIONS = ["Low energy", "Short fuse", "Need quiet", "Feeling low"];
