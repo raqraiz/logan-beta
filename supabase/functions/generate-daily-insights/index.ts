@@ -339,20 +339,19 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
         const badIdx = list.map((t, i) => (tipOk(t) ? -1 : i)).filter((i) => i >= 0);
         if (!badIdx.length) break;
         try {
-          const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          const r = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
             method: "POST",
             headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-              model: "google/gemini-3-flash-preview",
-              messages: [
-                { role: "system", content: `${systemPrompt}\n\nRewrite only the given partner tips. Each must be 8 words or fewer, addressed to the partner as "you", gender-neutral, plain words, no dashes, no "ensure", "nurture", "self-care", "Prioritize" or "Refrain from". Keep the same meaning. These are things to ${kind === "do" ? "do" : "avoid"} today. Return ONLY a JSON array of strings, same order.` },
-                { role: "user", content: JSON.stringify(badIdx.map((i) => list[i])) },
-              ],
+              model: "openai/gpt-6-astra",
+              instructions: `${systemPrompt}\n\nRewrite only the given partner tips. Each must be 8 words or fewer, addressed to the partner as "you", gender-neutral, plain words, no dashes, no "ensure", "nurture", "self-care", "Prioritize" or "Refrain from". Keep the same meaning. These are things to ${kind === "do" ? "do" : "avoid"} today. Return ONLY a JSON array of strings, same order.`,
+              input: JSON.stringify(badIdx.map((i) => list[i])),
             }),
           });
           if (!r.ok) break;
           const d = await r.json();
-          const arr = JSON.parse(String(d.choices?.[0]?.message?.content ?? "").replace(/```json/gi, "").replace(/```/g, "").trim());
+          const text: string = d.output_text ?? (d.output ?? []).flatMap((o: { content?: { text?: string }[] }) => o.content ?? []).map((c: { text?: string }) => c.text ?? "").join("");
+          const arr = JSON.parse(text.replace(/```json/gi, "").replace(/```/g, "").trim());
           if (!Array.isArray(arr)) break;
           list = [...list];
           badIdx.forEach((i, k) => { if (typeof arr[k] === "string" && arr[k].trim()) list[i] = arr[k].trim(); });
