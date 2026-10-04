@@ -1,4 +1,4 @@
-import { MessageFailuresCard } from "@/components/admin/MessageFailuresCard";
+import { MessageFailuresCard, ScheduledHeadsupRequestsCard } from "@/components/admin/MessageFailuresCard";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { onboardedProfiles, countOnboardedUsers } from "@/lib/onboardedUsers";
@@ -1312,6 +1312,7 @@ export const OverviewTab = () => {
           </CardContent>
         </Card>
         <MessageFailuresCard />
+        <ScheduledHeadsupRequestsCard />
         <Popover>
           <PopoverTrigger asChild>
             <Card className="cursor-pointer hover:border-primary/50 transition-colors">
