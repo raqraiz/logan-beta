@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { HEADSUP_OPEN_EVENT, headsupStatus } from "@/lib/partnerHeadsup";
 import { usePartnerHeadsupFlag } from "@/hooks/usePartnerHeadsupFlag";
 import { PartnerHeadsupManage } from "@/components/partner/PartnerHeadsupManage";
 
@@ -16,28 +15,24 @@ export function SharingSection(props: Props) {
 }
 
 function SharingSectionInner({ userId, onOpenSetup }: Props) {
-  const [status, setStatus] = useState<"Off" | "On" | "Paused">("Off");
+  const [status, setStatus] = useState<"Off" | "On">("On");
 
   useEffect(() => {
     if (!userId) return;
     const load = () =>
       supabase
         .from("partner_headsup_settings")
-        .select("enabled, paused_until")
+        .select("enabled")
         .eq("user_id", userId)
         .maybeSingle()
-        .then(({ data }) => setStatus(headsupStatus(data)));
+        .then(({ data }) => setStatus(!data || data.enabled ? "On" : "Off"));
     load();
     window.addEventListener("logan:headsup-updated", load);
     return () => window.removeEventListener("logan:headsup-updated", load);
   }, [userId]);
 
   const [manageOpen, setManageOpen] = useState(false);
-  const open = () => {
-    if (status !== "Off" && userId) { setManageOpen(true); return; }
-    onOpenSetup();
-    setTimeout(() => window.dispatchEvent(new CustomEvent(HEADSUP_OPEN_EVENT)), 50);
-  };
+  const open = () => setManageOpen(true);
 
   return (
     <div className="headsup-surface border-t border-border/50 pt-4 space-y-3">
@@ -46,16 +41,16 @@ function SharingSectionInner({ userId, onOpenSetup }: Props) {
 
       <div className="rounded-[20px] border border-border/50 p-4 space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-medium">Partner heads-ups</span>
+          <span className="text-sm font-medium">Heads-ups</span>
           <span className={`rounded-full px-3 py-0.5 text-xs font-medium ${status === "On" ? "headsup-chip-active" : "bg-muted text-muted-foreground"}`}>
             {status}
           </span>
         </div>
         <p className="text-xs text-muted-foreground">
-          A short message you send before your harder days, so the people close to you know what helps.
+          When you tell me things are tough, I'll offer to help you tell someone close.
         </p>
         <button onClick={open} className="headsup-primary min-h-[44px] rounded-full px-5 text-sm font-medium">
-          {status === "Off" ? "Set up" : "Manage"}
+          Manage
         </button>
       </div>
 
@@ -71,7 +66,7 @@ function SharingSectionInner({ userId, onOpenSetup }: Props) {
         You can turn off any kind of sharing and delete its history at any time.
       </p>
       {userId && (
-        <PartnerHeadsupManage userId={userId} open={manageOpen} onOpenChange={setManageOpen} onCloseSettings={onOpenSetup} />
+        <PartnerHeadsupManage userId={userId} open={manageOpen} onOpenChange={setManageOpen} />
       )}
     </div>
   );

@@ -53,12 +53,9 @@ import { PlanTab } from "@/components/tabs/PlanTab";
 import { usePresence } from "@/hooks/usePresence";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
 import { bcMethodOptionsFor } from "@/lib/bcMethod";
-import { PartnerHeadsupOfferCard } from "@/components/partner/PartnerHeadsupOfferCard";
-import { PartnerHeadsupSetup } from "@/components/partner/PartnerHeadsupSetup";
-import { HEADSUP_OPEN_EVENT } from "@/lib/partnerHeadsup";
 import { usePartnerHeadsupFlag } from "@/hooks/usePartnerHeadsupFlag";
 import { PartnerHeadsupDraftCard } from "@/components/partner/PartnerHeadsupDraftCard";
-import { PartnerHeadsupAllSetCard, PartnerHeadsupCheckinCard, PartnerHeadsupHardDayCard, PartnerHeadsupKeepCard, PartnerHeadsupResumeCard, PartnerHeadsupSendNowCard } from "@/components/partner/PartnerHeadsupMiniCards";
+import { PartnerHeadsupCheckinCard, PartnerHeadsupOfferChips, PartnerHeadsupWriteNowChip } from "@/components/partner/PartnerHeadsupMiniCards";
 import { OPEN_CHAT_EVENT, PREFILL_CHAT_EVENT } from "@/lib/partnerHeadsupClient";
 import { InsightConfirm } from "@/components/chat/InsightConfirm";
 import { consumePendingCorrection, takeLinkedCorrectionId } from "@/lib/insightFeedback";
@@ -290,18 +287,7 @@ const Chat = () => {
     trackPageView(window.location.pathname);
   }, [trackPageView]);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [headsupSetupOpen, setHeadsupSetupOpen] = useState(false);
   const headsupVisible = usePartnerHeadsupFlag(user?.id);
-  useEffect(() => {
-    if (!headsupVisible) return;
-    const handler = () => {
-      setActiveTab("ask");
-      setHeadsupSetupOpen(true);
-      setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 150);
-    };
-    window.addEventListener(HEADSUP_OPEN_EVENT, handler);
-    return () => window.removeEventListener(HEADSUP_OPEN_EVENT, handler);
-  }, [headsupVisible]);
   useEffect(() => {
     const openChat = async (e: Event) => {
       setActiveTab("ask");
@@ -1981,13 +1967,11 @@ const Chat = () => {
                           userId={user.id}
                           cacheKey={message.id}
                           eventId={typeof message.metadata?.event_id === "string" ? (message.metadata.event_id as string) : undefined}
-                          mode={(message.metadata?.mode as "predicted" | "today" | "undated") ?? "predicted"}
-                          kind={(message.metadata?.kind as "scheduled" | "on_demand") ?? "on_demand"}
-                          sourceMessageId={typeof message.metadata?.source_message_id === "string" ? (message.metadata.source_message_id as string) : undefined}
-                          hardDay={message.metadata?.hard_day === true}
                           preselect={Array.isArray(message.metadata?.preselect) ? (message.metadata.preselect as string[]) : undefined}
                         />
-                      ) : message.message_type === "partner_headsup_hardday" ? null : message.message_type === "partner_headsup_shared" ? (
+                      ) : message.message_type === "partner_headsup_hardday" ? null : message.message_type === "partner_headsup_schedreq" ? (
+                        <MarkdownMessage content="I can't prepare them ahead of time yet, but I've noted that you'd like it. Whenever things feel tough, tell me and I'll write one with you." />
+                      ) : message.message_type === "partner_headsup_shared" ? (
                         <span className="inline-flex items-center rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground">{message.content}</span>
                       ) : message.role === "assistant" ? (
                         <MarkdownMessage content={message.content} />
@@ -2073,31 +2057,16 @@ const Chat = () => {
                       })()}
 
                       {/* Resource offer card (Logan suggesting a downloadable) */}
-                      {headsupVisible && (message.message_type === "partner_headsup_offer" || message.message_type === "partner_headsup_ask") && user && (
-                        <PartnerHeadsupOfferCard
-                          userId={user.id}
-                          cacheKey={message.id}
-                          kind={message.message_type === "partner_headsup_ask" ? "ask" : "offer"}
-                        />
-                      )}
                       {headsupVisible && message.message_type === "partner_headsup_checkin" && typeof message.metadata?.event_id === "string" && user && (
                         <PartnerHeadsupCheckinCard userId={user.id} eventId={message.metadata.event_id as string} />
                       )}
-                      {headsupVisible && message.message_type === "partner_headsup_keep" && user && (
-                        <PartnerHeadsupKeepCard userId={user.id} />
-                      )}
-                      {headsupVisible && message.message_type === "partner_headsup_sendnow" && user && (
-                        <PartnerHeadsupSendNowCard userId={user.id} cacheKey={message.id} />
-                      )}
-                      {headsupVisible && message.message_type === "partner_headsup_allset" && user && (
-                        <PartnerHeadsupAllSetCard userId={user.id} name={(message.metadata?.partner_name as string) || "them"} />
-                      )}
                       {headsupVisible && message.message_type === "partner_headsup_hardday" && user && (
-                        <PartnerHeadsupHardDayCard userId={user.id} messageId={message.id} name={(message.metadata?.partner_name as string) || "them"}
+                        <PartnerHeadsupOfferChips userId={user.id} messageId={message.id}
+                          name={message.metadata?.partner_headsup === "offer" ? ((message.metadata?.partner_name as string) || null) : null}
                           preselect={Array.isArray(message.metadata?.preselect) ? (message.metadata.preselect as string[]) : []} />
                       )}
-                      {headsupVisible && message.message_type === "partner_headsup_resume" && user && (
-                        <PartnerHeadsupResumeCard userId={user.id} messageId={message.id} />
+                      {headsupVisible && message.message_type === "partner_headsup_schedreq" && user && (
+                        <PartnerHeadsupWriteNowChip userId={user.id} messageId={message.id} />
                       )}
 
                       {message.message_type === "resource_offer" && message.metadata?.resource_type && user && (
@@ -2464,11 +2433,6 @@ const Chat = () => {
                 </div>
               );
             })
-          )}
-          {headsupVisible && headsupSetupOpen && user && (
-            <div className="px-1 pb-4">
-              <PartnerHeadsupSetup userId={user.id} onClose={() => setHeadsupSetupOpen(false)} />
-            </div>
           )}
           <div ref={scrollRef} />
         </div>
