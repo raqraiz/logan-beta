@@ -331,6 +331,37 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
       return json({ error: "fallback_required" }, 422);
     }
 
+    // Partner tips: max 8 words, banned words, no dashes. Bad tips are regenerated, never truncated.
+    const BANNED_TIP = /[—–]|\b(ensure|nurture|self-care|self care|prioriti[sz]e|refrain)\b/i;
+    const tipOk = (t: string) => t.trim().split(/\s+/).length <= 8 && !BANNED_TIP.test(t);
+    const fixTips = async (list: string[], kind: "do" | "avoid"): Promise<string[]> => {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const badIdx = list.map((t, i) => (tipOk(t) ? -1 : i)).filter((i) => i >= 0);
+        if (!badIdx.length) break;
+        try {
+          const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-3-flash-preview",
+              messages: [
+                { role: "system", content: `${systemPrompt}\n\nRewrite only the given partner tips. Each must be 8 words or fewer, addressed to the partner as "you", gender-neutral, plain words, no dashes, no "ensure", "nurture", "self-care", "Prioritize" or "Refrain from". Keep the same meaning. These are things to ${kind === "do" ? "do" : "avoid"} today. Return ONLY a JSON array of strings, same order.` },
+                { role: "user", content: JSON.stringify(badIdx.map((i) => list[i])) },
+              ],
+            }),
+          });
+          if (!r.ok) break;
+          const d = await r.json();
+          const arr = JSON.parse(String(d.choices?.[0]?.message?.content ?? "").replace(/```json/gi, "").replace(/```/g, "").trim());
+          if (!Array.isArray(arr)) break;
+          list = [...list];
+          badIdx.forEach((i, k) => { if (typeof arr[k] === "string" && arr[k].trim()) list[i] = arr[k].trim(); });
+        } catch { break; }
+      }
+      return list.filter(tipOk).slice(0, 3);
+    };
+    [succeedPartner, dontMessUpPartner] = await Promise.all([fixTips(succeedPartner, "do"), fixTips(dontMessUpPartner, "avoid")]);
+
     // Post-generation guard: strip any line that breaches an active loss boundary.
     // If a list ends up too short, substitute neutral everyday tips (never an empty
     // section, and never the client's static loss-themed fallback).

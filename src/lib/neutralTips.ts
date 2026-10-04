@@ -12,11 +12,11 @@ export const NEUTRAL_DONTMESS_HER = [
 ];
 export const NEUTRAL_SUCCEED_HIM = [
   "Handle dinner tonight without being asked.",
-  "Suggest a short walk together this evening.",
-  "Ask what would make her evening easier, then do it.",
+  "Suggest a short walk together tonight.",
+  "Ask what would help tonight, then do it.",
 ];
 export const NEUTRAL_DONTMESS_HIM = [
-  "Don't make plans for her evening without checking first.",
-  "Don't leave the small chores for her to notice.",
-  "Don't push a conversation she doesn't feel like having.",
+  "Don't fill her evening without checking first.",
+  "Don't leave small chores for her to notice.",
+  "Don't push a talk she isn't up for.",
 ];
