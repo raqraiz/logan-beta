@@ -274,15 +274,15 @@ ${symptomContext}
 ${chatFactContext}
 
 
-Write four lists — two addressed to her, two addressed to her partner ("him"):
+Write four lists, two addressed to her and two addressed to her partner:
 - "succeed": 3 things that will make today go well for her, given her exact state.
 - "dontMessUp": 3 specific traps to avoid today, given her exact state.
-- "succeedPartner": 3 things her partner can do today to support her, given her exact state.
-- "dontMessUpPartner": 3 things her partner should avoid doing today, given her exact state.
+- "succeedPartner": exactly 3 things her partner can do today to support her.
+- "dontMessUpPartner": exactly 3 things her partner should avoid today.
 
-The him lists speak TO her partner ABOUT her ("she"/"her"), never to her. They draw on the same state, symptoms and recent-message context as the her lists.
+The partner lists speak directly TO the partner as "you" (example: "Take dinner off the plate tonight."). Never assume the partner's gender. No gendered gifts or stereotypes (no cologne, flowers, "date night", "man up" and similar). They draw on the same state, symptoms and recent-message context as her lists.
 
-Rules: each item is ONE sentence, max 14 words, concrete and actionable. Grace over guilt — never shaming. No emojis, no markdown, no numbering, no headers. Vary the wording day to day; do not sound like a generic template.
+Rules for every item: ONE sentence, 8 words or fewer, concrete and actionable, plain everyday words. Never start with "Prioritize" or "Refrain from". Never use the words "ensure", "nurture" or "self-care". Never use em dashes or en dashes. Grace over guilt, never shaming. No emojis, no markdown, no numbering, no headers. Vary the wording day to day.
 
 Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."],"succeedPartner":["...","...","..."],"dontMessUpPartner":["...","...","..."]}`;
 
