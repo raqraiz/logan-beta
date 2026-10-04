@@ -77,7 +77,7 @@ export function toFirstPerson(t: string): string {
     .replace(/\bshe's\b/gi, "I'm").replace(/\bshe is\b/gi, "I am").replace(/\bshe was\b/gi, "I was")
     .replace(/\bshe'll\b/gi, "I'll").replace(/\bshe'd\b/gi, "I'd").replace(/\bshe\b/gi, "I")
     .replace(/\bherself\b/gi, "myself").replace(/\bhers\b/gi, "mine")
-    .replace(/\bher\b(?=\s+(?:own|mood|moods|evening|day|night|morning|plans?|feelings?|needs?|energy|body|chores?|plate|pace|lead|cues?|schedule|words|mind|list|shoulders|back|feet|space|limits|calendar|patience|irritability|snap|tone|quiet|rest|sleep|cravings?|choices?|preferences?)\b)/gi, "my")
+    .replace(/\bher\b(?=\s+[a-z])(?!\s+(?:space|time|company|room|a|an|the|some|alone|rest|sleep|know|be|feel|decide|choose|lead|take|do|have|go|vent|talk|in|to|up|down|out|off|back|first|tonight|today|without|with|and|or|when|if|what|how|extra|breathe|unwind|recharge|nap|sit|lie|set|pick|call)\b)/gi, "my")
     .replace(/\bher\b/gi, "me")
     .replace(/\bI (needs|wants|feels|has|asks|seems|says|likes|gets)\b/g, (_m, v: string) => `I ${v === "has" ? "have" : v.slice(0, -1)}`);
 }
