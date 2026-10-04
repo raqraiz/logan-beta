@@ -4541,7 +4541,7 @@ serve(async (req) => {
     // profile fields injected into the system prompt, so no head pin is needed.
     const LAST_N = 50;
     const windowed = (recentMessages || [])
-      .filter(m => m.role === "user" || m.role === "assistant")
+      .filter(m => (m.role === "user" || m.role === "assistant") && !!(m.content ?? "").trim())
       .slice(-LAST_N);
 
     // Date separators (user's local time zone) so the model knows how old each part is.
