@@ -77,7 +77,7 @@ export function toFirstPerson(t: string): string {
     .replace(/\bshe's\b/gi, "I'm").replace(/\bshe is\b/gi, "I am").replace(/\bshe was\b/gi, "I was")
     .replace(/\bshe'll\b/gi, "I'll").replace(/\bshe'd\b/gi, "I'd").replace(/\bshe\b/gi, "I")
     .replace(/\bherself\b/gi, "myself").replace(/\bhers\b/gi, "mine")
-    .replace(/\bher\b(?=\s+(?:own\s+)?[a-z]+(?:s|ing|ed)?\b)(?!\s+(?:a|an|the|some|space|time|alone|know|be|feel|rest|sleep|talk|vent|decide|choose|lead|take|do|have|go|in|to|up|down|out|off|back|first|tonight|today)\b)/gi, "my")
+    .replace(/\bher\b(?=\s+(?:own|mood|moods|evening|day|night|morning|plans?|feelings?|needs?|energy|body|chores?|plate|pace|lead|cues?|schedule|words|mind|list|shoulders|back|feet|space|limits|calendar|patience|irritability|snap|tone|quiet|rest|sleep|cravings?|choices?|preferences?)\b)/gi, "my")
     .replace(/\bher\b/gi, "me")
     .replace(/\bI (needs|wants|feels|has|asks|seems|says|likes|gets)\b/g, (_m, v: string) => `I ${v === "has" ? "have" : v.slice(0, -1)}`);
 }
@@ -102,7 +102,8 @@ function refreshDraftTips(messageId: string, tips: PartnerTips) {
   const key = `headsup-draft:${messageId}`;
   try {
     const raw = localStorage.getItem(key);
-    if (!raw) return; // not generated yet; the card builds it from metadata
+    // Not generated yet: the card picks these tips up instead of the message's older ones.
+    if (!raw) { localStorage.setItem(`headsup-tips:${messageId}`, JSON.stringify(tips)); return; }
     const c = JSON.parse(raw) as DraftCache;
     const tb = buildTipBlocks(tips);
     const blocks: TipBlocksState = { ...tb, helpOn: !!tb.help, skipOn: !!tb.skip };
@@ -134,9 +135,6 @@ export async function startOnDemandDraft(userId: string, extra: { preselect?: st
       .eq("message_type", "partner_headsup_draft").eq("metadata->>event_id", existing.id).limit(1).maybeSingle();
     if (m?.id) {
       if (extra.partnerTips) {
-        const { data: full } = await supabase.from("chat_messages").select("metadata").eq("id", m.id).maybeSingle();
-        const meta = (full?.metadata ?? {}) as Record<string, unknown>;
-        await supabase.from("chat_messages").update({ metadata: { ...meta, partner_tips: extra.partnerTips } } as never).eq("id", m.id);
         refreshDraftTips(m.id, extra.partnerTips);
       }
       return m.id;

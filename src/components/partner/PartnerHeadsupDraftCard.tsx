@@ -91,7 +91,9 @@ export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId, preselect, 
       const r = await generateDraft({ name: forName ?? undefined, focus: f, avoid_opening: avoid });
       try { localStorage.setItem(LAST_OPENING_KEY, String(r.opening)); } catch { /* ignore */ }
       setCached((prev) => {
-        const tb = buildTipBlocks(partnerTips);
+        let tips = partnerTips;
+        try { const o = localStorage.getItem(`headsup-tips:${cacheKey}`); if (o) { tips = JSON.parse(o); localStorage.removeItem(`headsup-tips:${cacheKey}`); } } catch { /* ignore */ }
+        const tb = buildTipBlocks(tips);
         const blocks: TipBlocks | undefined = prev?.blocks
           ? { ...prev.blocks }
           : tb.help || tb.skip ? { ...tb, helpOn: !!tb.help, skipOn: !!tb.skip } : undefined;
