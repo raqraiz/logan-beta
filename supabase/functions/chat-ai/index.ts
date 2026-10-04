@@ -5182,6 +5182,35 @@ serve(async (req) => {
         }
       }
 
+      // Hard-day offer (heads-ups on, not paused, offer_on_hard_days): three chips after Logan's reply.
+      // At most once per calendar day, never in onboarding, never when it's about conflict with the partner.
+      const hardDayRe = /\b((hard|rough|bad|tough|awful|terrible|horrible|crap|shit)\s+(day|one|morning|week)|exhausted|drained|no energy|low energy|so tired|wiped( out)?|irritable|cranky|snappy|short[- ]fuse|on edge|overwhelmed|can'?t cope|feeling low|feel(ing)? (so )?(low|down|sad|flat)|miserable|low mood|depressed)\b/i;
+      if (isOnboardingComplete && !askSendHeadsup && !hardDayWantKnow && !frictionMention && hardDayRe.test(userMessage)
+        && await partnerHeadsupVisibleFor(supabase, user.id)) {
+        const { data: hd } = await supabase.from("partner_headsup_settings").select("enabled, paused_until, offer_on_hard_days, partner_name").eq("user_id", user.id).maybeSingle();
+        const todayIso = new Date().toISOString().slice(0, 10);
+        const partnerName = (hd?.partner_name || "").trim();
+        const aboutPartner = partnerName && new RegExp(`\\b${partnerName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(userMessage) && friction.test(userMessage);
+        if (hd?.enabled && hd.offer_on_hard_days && !(hd.paused_until && hd.paused_until >= todayIso) && !aboutPartner) {
+          const dayStart = new Date(); dayStart.setUTCHours(0, 0, 0, 0);
+          const { data: already } = await supabase.from("chat_messages").select("id").eq("user_id", user.id)
+            .eq("message_type", "partner_headsup_hardday").gte("created_at", dayStart.toISOString()).limit(1);
+          if (!already?.length) {
+            const m = userMessage.toLowerCase();
+            const pre: string[] = [];
+            if (/energy|exhausted|drained|tired|wiped/.test(m)) pre.push("Low energy");
+            if (/irritab|cranky|snappy|short[- ]fuse|on edge|patience/.test(m)) pre.push("Short fuse");
+            if (/overwhelm|can'?t cope|quiet|space|alone/.test(m)) pre.push("Need quiet");
+            if (/sleep|insomnia/.test(m)) pre.push("Sleep is off");
+            if (/low|down|sad|flat|miserable|depress/.test(m) && !/low energy/.test(m)) pre.push("Feeling low");
+            await supabase.from("chat_messages").insert({
+              user_id: user.id, role: "assistant", message_type: "partner_headsup_hardday", content: "",
+              metadata: { partner_headsup: "hardday_offer", partner_name: partnerName || "them", preselect: pre.slice(0, 2) },
+            });
+          }
+        }
+      }
+
       if (isOnboardingComplete && (askHelpExplain || frictionMention) && await partnerHeadsupVisibleFor(supabase, user.id)) {
         const { data: hs } = await supabase.from("partner_headsup_settings").select("enabled").eq("user_id", user.id).maybeSingle();
         if (!hs?.enabled) {
