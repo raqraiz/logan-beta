@@ -96,3 +96,23 @@ export async function sendPush(admin: any, userId: string, title: string, body: 
   }
   return any;
 }
+
+/**
+ * Hard to predict: fewer than 2 completed cycles, last 3 cycle lengths differ by more than 7 days,
+ * or today is 7+ days past her longest recorded cycle length. No date-based drafts while true.
+ */
+export async function isHardToPredict(admin: any, userId: string, localToday: string): Promise<boolean> {
+  const { data: p } = await admin.from("participants").select("id, last_period_start").eq("user_id", userId).maybeSingle();
+  if (!p?.id) return true;
+  const { data: rows } = await admin.from("cycle_history").select("cycle_length_days")
+    .eq("participant_id", p.id).order("cycle_start_date", { ascending: false }).limit(60);
+  const lens = (rows ?? []).map((r: any) => Number(r.cycle_length_days)).filter((x: number) => x > 0);
+  if (lens.length < 2) return true;
+  const last3 = lens.slice(0, 3);
+  if (Math.max(...last3) - Math.min(...last3) > 7) return true;
+  if (p.last_period_start && /^\d{4}-\d{2}-\d{2}$/.test(p.last_period_start)) {
+    const days = Math.round((new Date(`${localToday}T12:00:00Z`).getTime() - new Date(`${p.last_period_start}T12:00:00Z`).getTime()) / 86400000);
+    if (days >= Math.max(...lens) + 7) return true;
+  }
+  return false;
+}

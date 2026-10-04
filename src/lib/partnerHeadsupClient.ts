@@ -120,3 +120,55 @@ export function openTopLevel(url: string) {
   if (w) { try { w.opener = null; } catch { /* ignore */ } return; }
   try { (window.top ?? window).location.href = url; } catch { window.location.href = url; }
 }
+
+/** Mirrors the server isHardToPredict rule (see _shared/partnerHeadsup.ts). */
+export async function isHardToPredict(userId: string): Promise<boolean> {
+  const { data: p } = await supabase.from("participants").select("id, last_period_start").eq("user_id", userId).maybeSingle();
+  if (!p?.id) return true;
+  const { data: rows } = await supabase.from("cycle_history").select("cycle_length_days")
+    .eq("participant_id", p.id).order("cycle_start_date", { ascending: false }).limit(60);
+  const lens = (rows ?? []).map((r) => Number(r.cycle_length_days)).filter((x) => x > 0);
+  if (lens.length < 2) return true;
+  const last3 = lens.slice(0, 3);
+  if (Math.max(...last3) - Math.min(...last3) > 7) return true;
+  if (p.last_period_start && /^\d{4}-\d{2}-\d{2}$/.test(p.last_period_start)) {
+    const today = new Date().toLocaleDateString("en-CA");
+    const days = Math.round((new Date(`${today}T12:00:00`).getTime() - new Date(`${p.last_period_start}T12:00:00`).getTime()) / 86400000);
+    if (days >= Math.max(...lens) + 7) return true;
+  }
+  return false;
+}
+
+export const FOCUS_OPTIONS = ["Low energy", "Short fuse", "Need quiet", "Sleep is off", "Feeling low"];
+export const HEADSUP_FOCUS_KEY = (cacheKey: string) => `headsup-focus:${cacheKey}`;
+
+/** Opens (or reopens) today's on-demand draft card in chat. Returns the chat message id. */
+export async function startOnDemandDraft(
+  userId: string, partnerName: string | null,
+  extra: { mode?: "predicted" | "today"; hard_day?: boolean; preselect?: string[] } = {},
+): Promise<string | null> {
+  const { trackedSupabase } = await import("@/lib/messageFailures");
+  const today = new Date().toLocaleDateString("en-CA");
+  const { data: existing } = await supabase.from("partner_headsup_events").select("id")
+    .eq("user_id", userId).eq("kind", "on_demand").eq("status", "drafted").eq("window_start", today)
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (existing && !extra.hard_day) {
+    const { data: m } = await supabase.from("chat_messages").select("id").eq("user_id", userId)
+      .eq("message_type", "partner_headsup_draft").eq("metadata->>event_id", existing.id).limit(1).maybeSingle();
+    if (m?.id) return m.id;
+  }
+  let eventId = existing?.id;
+  if (!eventId) {
+    const { data: ev, error } = await supabase.from("partner_headsup_events").insert({
+      user_id: userId, kind: "on_demand", window_start: today, window_end: today, status: "drafted", recipient_name: partnerName,
+    }).select("id").maybeSingle();
+    if (error || !ev) return null;
+    eventId = ev.id;
+  }
+  const { data: msg, error: mErr } = await trackedSupabase.from("chat_messages").insert({
+    user_id: userId, role: "assistant", message_type: "partner_headsup_draft", content: `Draft for ${partnerName || "them"}`,
+    metadata: { event_id: eventId, mode: extra.mode ?? "predicted", kind: "on_demand", ...(extra.hard_day ? { hard_day: true, preselect: extra.preselect ?? [] } : {}) },
+  }).select("id").maybeSingle();
+  if (mErr || !msg) return null;
+  return msg.id;
+}
