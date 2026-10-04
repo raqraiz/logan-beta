@@ -33,6 +33,7 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange }: Props) {
   const [editing, setEditing] = useState<string | null>(null); // person id or "new"
   const [nameIn, setNameIn] = useState("");
   const [phoneIn, setPhoneIn] = useState("");
+  const [relIn, setRelIn] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
 
   const load = async () => {
@@ -60,6 +61,7 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange }: Props) {
     setEditing(p?.id ?? "new");
     setNameIn(p?.name ?? "");
     setPhoneIn(p?.whatsapp_number ?? "");
+    setRelIn(p?.relationship ?? null);
   };
 
   const savePerson = async () => {
@@ -71,8 +73,8 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange }: Props) {
       if (!num) { toast({ title: "Add the country code", description: "For example +44 or +972." }); return; }
     }
     const { error } = editing === "new"
-      ? await supabase.from("headsup_people").insert({ user_id: userId, name: n, whatsapp_number: num })
-      : await supabase.from("headsup_people").update({ name: n, whatsapp_number: num }).eq("id", editing!);
+      ? await supabase.from("headsup_people").insert({ user_id: userId, name: n, whatsapp_number: num, relationship: relIn })
+      : await supabase.from("headsup_people").update({ name: n, whatsapp_number: num, relationship: relIn }).eq("id", editing!);
     if (error) { toast({ title: "Couldn't save", description: error.message, variant: "destructive" }); return; }
     setEditing(null);
     setPeople(await loadPeople(userId));
