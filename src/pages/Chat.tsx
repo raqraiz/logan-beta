@@ -1979,8 +1979,8 @@ const Chat = () => {
                         <p className="text-xs text-muted-foreground">{message.content.replace(/^Heads-up shared with (.+?)\.?$/, "Opened WhatsApp for $1.").replace(/^Heads-up shared\.?$/, "Opened WhatsApp.")}</p>
                       ) : message.role === "assistant" ? (
                         <>
-                          {typeof message.metadata?.system_line === "string" && (
-                            <p className="mb-1 text-xs text-muted-foreground">{message.metadata.system_line as string}</p>
+                          {typeof (message.metadata as Record<string, unknown> | null)?.system_line === "string" && (
+                            <p className="mb-1 text-xs text-muted-foreground">{(message.metadata as Record<string, unknown>).system_line as string}</p>
                           )}
                           <MarkdownMessage content={message.content} />
                         </>
