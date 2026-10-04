@@ -342,10 +342,12 @@ export type Database = {
         Row: {
           context_key: string
           created_at: string
+          dont_me_text: string | null
           dont_mess_up_him_text: string | null
           dont_mess_up_partner_text: string | null
           dont_mess_up_text: string
           generated_at: string
+          help_me_text: string | null
           id: string
           local_date: string
           succeed_him_text: string | null
@@ -356,10 +358,12 @@ export type Database = {
         Insert: {
           context_key: string
           created_at?: string
+          dont_me_text?: string | null
           dont_mess_up_him_text?: string | null
           dont_mess_up_partner_text?: string | null
           dont_mess_up_text: string
           generated_at?: string
+          help_me_text?: string | null
           id?: string
           local_date: string
           succeed_him_text?: string | null
@@ -370,10 +374,12 @@ export type Database = {
         Update: {
           context_key?: string
           created_at?: string
+          dont_me_text?: string | null
           dont_mess_up_him_text?: string | null
           dont_mess_up_partner_text?: string | null
           dont_mess_up_text?: string
           generated_at?: string
+          help_me_text?: string | null
           id?: string
           local_date?: string
           succeed_him_text?: string | null

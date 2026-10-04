@@ -127,6 +127,13 @@
       "when": 1791139823783,
       "tag": "0017_partner_tip_columns_and_relationship",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791140599592,
+      "tag": "0018_partner_tips_first_person",
+      "breakpoints": true
     }
   ]
 }
