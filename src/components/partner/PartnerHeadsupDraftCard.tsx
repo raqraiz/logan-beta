@@ -138,8 +138,11 @@ export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId, preselect }
     persist(null);
     setRecipient(sentTo);
     setStatus("opened");
-    await trackedSupabase.from("chat_messages").insert({ user_id: userId, role: "assistant", message_type: "partner_headsup_shared", content: sentTo ? `Heads-up shared with ${sentTo}` : "Heads-up shared", metadata: {} });
-    await trackedSupabase.from("chat_messages").insert({ user_id: userId, role: "assistant", message_type: "text", content: "Done. I hope tonight's a little lighter. I'm here if you want to talk any of it through.", metadata: { partner_headsup: "sent" } });
+    await trackedSupabase.from("chat_messages").insert({
+      user_id: userId, role: "assistant", message_type: "text",
+      content: "I hope tonight's a little lighter. I'm here if you want to talk any of it through.",
+      metadata: { partner_headsup: "sent", system_line: sentTo ? `Opened WhatsApp for ${sentTo}.` : "Opened WhatsApp." },
+    });
     globalThis.dispatchEvent(new CustomEvent(HEADSUP_UPDATED_EVENT));
     setActing(false);
   };
@@ -161,7 +164,7 @@ export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId, preselect }
   };
 
   if (status === null) return <div className="py-2"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>;
-  if (status === "opened") return <p className="text-sm text-muted-foreground">{recipient ? `Heads-up shared with ${recipient}.` : "Heads-up shared."}</p>;
+  if (status === "opened") return <p className="text-sm text-muted-foreground">{recipient ? `Opened WhatsApp for ${recipient}.` : "Opened WhatsApp."}</p>;
   if (status === "skipped") return <p className="text-sm text-muted-foreground">Not this time.</p>;
   if (status !== "drafted") return <p className="text-sm text-muted-foreground">This draft is no longer current.</p>;
 
