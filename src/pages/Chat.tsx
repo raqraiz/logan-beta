@@ -121,6 +121,8 @@ interface ChatMessage {
     event_id?: string;
     hard_day?: boolean;
     preselect?: string[];
+    partner_tips?: { help: string[]; skip: string[] };
+    person_id?: string;
     partner_name?: string;
     mode?: string;
     kind?: string;
