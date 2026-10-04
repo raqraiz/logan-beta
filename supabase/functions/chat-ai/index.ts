@@ -4957,6 +4957,8 @@ serve(async (req) => {
 - Each reply is 2-6 words, written from the USER'S perspective (first person, casual, like texting back).
 - They MUST directly respond to or extend Logan's last message — not generic prompts.
 - Mix: one that acknowledges ("Yeah that's me"), one that digs deeper ("Tell me more"), one that changes topic ("What about workouts?"). Never argumentative or contradictory — the user may be in a sensitive state.
+- NEVER criticize, blame, judge or mock her partner or anyone in her life (no "He never listens", "He's so selfish").${emotionalContextActive ? `
+- She is in an emotional moment: use only neutral, self-centered options like "Tell me more", "It's been building", "I need a break". No cycle, phase or hormone topics.` : ""}
 - No questions ending in "?" unless natural. No emojis. No quotes.
 - Return ONLY a JSON array of 3 strings, nothing else. Example: ["Yeah exactly","Not really though","Tell me more"]`
             },
@@ -5014,9 +5016,12 @@ serve(async (req) => {
     // --- Pass 1: server-authored logging confirmation ---
     // The ONLY place the user is told a symptom was saved. Appended to the main
     // answer (above the deep-dive divider) after a confirmed symptom_logs write.
+    // In emotional moments, emotions are saved silently: no "Logged:" line for them.
+    const EMOTION_NAME_RE = /\b(anger|angry|irritab|frustrat|rage|resent|lonel|sad|low mood|mood|anxi|stress|overwhelm|depress|cry|tearful|guilt|shame|hopeless|emotional|numb|worthless|agitat|on edge|exhaust|drained|burnout)/i;
+    const visibleLogged = emotionalContextActive ? loggedSymptomNames.filter((n) => !EMOTION_NAME_RE.test(n)) : loggedSymptomNames;
     if (loggedSymptomNames.length > 0) {
-      const label = `Logged: ${loggedSymptomNames.join(", ")}`;
-      if (!new RegExp(`^\\s*Logged:\\s*`, "mi").test(finalAssistantMessage)) {
+      const label = `Logged: ${visibleLogged.join(", ")}`;
+      if (visibleLogged.length > 0 && !new RegExp(`^\\s*Logged:\\s*`, "mi").test(finalAssistantMessage)) {
         const divider = "\n---\n";
         const idx = finalAssistantMessage.indexOf(divider);
         finalAssistantMessage = idx >= 0
