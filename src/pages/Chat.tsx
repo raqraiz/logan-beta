@@ -1886,6 +1886,12 @@ const Chat = () => {
                   ? "negative" as const
                   : null;
 
+              // Heads-up offer chips render inside the reply they follow (one bubble,
+              // one timestamp, one thumbs row, no conversation starters).
+              const nextMsg = filteredMessages[index + 1];
+              const attachedOffer = message.role === "assistant" && message.message_type !== "partner_headsup_hardday" && nextMsg?.message_type === "partner_headsup_hardday" ? nextMsg : null;
+              if (message.message_type === "partner_headsup_hardday" && prevMessage?.role === "assistant") return null;
+
               return (
                 <div
                   key={message.id}
@@ -2091,6 +2097,11 @@ const Chat = () => {
                       
                       {message.role === "assistant" && ["proactive", "awareness", "symptom_validation"].includes(message.metadata?.insight_type as string) && !showInteractiveInput && (
                         <InsightConfirm userId={user.id} messageId={message.id} insightType={message.metadata.insight_type} />
+                      )}
+                      {attachedOffer && headsupVisible && user && (
+                        <PartnerHeadsupOfferChips userId={user.id} messageId={attachedOffer.id}
+                          name={(attachedOffer.metadata as Record<string, unknown> | null)?.partner_headsup === "offer" ? ((attachedOffer.metadata?.partner_name as string) || null) : null}
+                          preselect={Array.isArray(attachedOffer.metadata?.preselect) ? (attachedOffer.metadata.preselect as string[]) : []} />
                       )}
                       <div className={`flex items-center gap-2 mt-1 ${
                         message.role === "user" ? "justify-end" : "justify-start"
@@ -2348,6 +2359,8 @@ const Chat = () => {
                   {/* Conversation starters — persist until used; only swap the selected one */}
                   {isLastMessage && 
                    message.role === "assistant" && 
+                   !attachedOffer &&
+                   message.message_type !== "partner_headsup_hardday" &&
                    !isOnboarding && (() => {
                     const cyclingPool = [
                       "I just need to vent", "Why do I feel off today?", "What's my energy like today?",
