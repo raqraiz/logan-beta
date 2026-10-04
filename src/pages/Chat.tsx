@@ -1969,9 +1969,7 @@ const Chat = () => {
                           eventId={typeof message.metadata?.event_id === "string" ? (message.metadata.event_id as string) : undefined}
                           preselect={Array.isArray(message.metadata?.preselect) ? (message.metadata.preselect as string[]) : undefined}
                         />
-                      ) : message.message_type === "partner_headsup_hardday" ? null : message.message_type === "partner_headsup_schedreq" ? (
-                        <MarkdownMessage content="I can't prepare them ahead of time yet, but I've noted that you'd like it. Whenever things feel tough, tell me and I'll write one with you." />
-                      ) : message.message_type === "partner_headsup_shared" ? (
+                      ) : message.message_type === "partner_headsup_hardday" ? null : message.message_type === "partner_headsup_schedreq" ? null : message.message_type === "partner_headsup_shared" ? (
                         <span className="inline-flex items-center rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground">{message.content}</span>
                       ) : message.role === "assistant" ? (
                         <MarkdownMessage content={message.content} />
