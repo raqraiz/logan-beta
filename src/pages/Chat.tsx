@@ -122,6 +122,9 @@ interface ChatMessage {
     broadcast_title?: string | null;
     broadcast_id?: string | null;
     event_id?: string;
+    hard_day?: boolean;
+    preselect?: string[];
+    partner_name?: string;
     mode?: string;
     kind?: string;
     source_message_id?: string;
