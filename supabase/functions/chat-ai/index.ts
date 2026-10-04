@@ -30,6 +30,7 @@ function isEmotionalOrHeavyMessage(text: string): boolean {
   const words = t.trim().split(/\s+/).filter(Boolean).length;
   if (words > 100) return true;
   if (/\b(worried|anxious|scared|overwhelmed|exhausted|struggling|hoping|bated breath|kinda scared|kinda worried)\b/.test(t)) return true;
+  if (/\b(angry|furious|so mad|mad at|pissed|rage|lonely|alone|unseen|invisible|ignored|misunderstood|resent|fight|fought|argu(e|ed|ing|ment)|yell(ed|ing)|snapp(ed|ing)|depleted|drained|burn(ed|t) out|can'?t cope|at my limit|vent|doesn'?t get it|doesn'?t help|no help)\b/.test(t)) return true;
   if (/\b(postpartum|post-partum|pregnancy|pregnant|miscarriage|pregnancy loss|iud|coil)\b/.test(t)) return true;
   return false;
 }
