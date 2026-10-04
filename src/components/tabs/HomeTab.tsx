@@ -645,7 +645,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
     const isSucceed = widgetId.startsWith("succeed");
     // Same generation call as HER — phase-derived, so skipped while stale.
     if (dailyInsights && !isStale) {
-      const generated = isSucceed ? dailyInsights.succeedHim : dailyInsights.dontMessUpHim;
+      const generated = isSucceed ? dailyInsights.succeedPartner : dailyInsights.dontMessUpPartner;
       if (generated.length) return generated;
     }
     if (hideStage) return isSucceed ? NEUTRAL_SUCCEED_HIM : NEUTRAL_DONTMESS_HIM;

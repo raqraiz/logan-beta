@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 export interface ForecastDailyInsights {
   succeed: string[];
   dontMessUp: string[];
-  succeedHim: string[];
-  dontMessUpHim: string[];
+  succeedPartner: string[];
+  dontMessUpPartner: string[];
 }
 
 interface CycleForecastProps {
@@ -262,7 +262,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   const [historyKey, setHistoryKey] = useState<string | null>(null);
   const [historyRow, setHistoryRow] = useState<{
     dont_mess_up_text: string | null;
-    dont_mess_up_him_text: string | null;
+    dont_mess_up_partner_text: string | null;
   } | null>(null);
 
   useEffect(() => {
@@ -275,7 +275,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
     (async () => {
       const { data } = await supabase
         .from("daily_home_insights")
-        .select("dont_mess_up_text, dont_mess_up_him_text")
+        .select("dont_mess_up_text, dont_mess_up_partner_text")
         .eq("user_id", userId)
         .eq("local_date", selectedKey)
         .maybeSingle();
@@ -288,9 +288,9 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
 
   const historyReady = isPastSelected && historyKey === selectedKey;
   const liveHer = isTodaySelected ? todayInsights?.dontMessUp ?? [] : [];
-  const liveHim = isTodaySelected ? todayInsights?.dontMessUpHim ?? [] : [];
+  const liveHim = isTodaySelected ? todayInsights?.dontMessUpPartner ?? [] : [];
   const histHer = historyReady ? splitLines(historyRow?.dont_mess_up_text) : [];
-  const histHim = historyReady ? splitLines(historyRow?.dont_mess_up_him_text) : [];
+  const histHim = historyReady ? splitLines(historyRow?.dont_mess_up_partner_text) : [];
 
   const rotatedHer = rotateForDay(selectedTips ?? [], selectedCycleDay ?? 1);
   const rotatedHim = rotateForDay(selectedPartnerTips ?? [], selectedCycleDay ?? 1);

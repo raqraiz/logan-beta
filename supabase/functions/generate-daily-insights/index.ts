@@ -150,7 +150,7 @@ serve(async (req) => {
     // Serve the cache when nothing about her situation changed today.
     const { data: cached } = await service
       .from("daily_home_insights")
-      .select("succeed_text, dont_mess_up_text, succeed_him_text, dont_mess_up_him_text, context_key")
+      .select("succeed_text, dont_mess_up_text, succeed_partner_text, dont_mess_up_partner_text, context_key")
       .eq("user_id", userId)
       .eq("local_date", localDate)
       .maybeSingle();
@@ -159,8 +159,8 @@ serve(async (req) => {
       return json({
         succeed: String(cached.succeed_text).split("\n").filter(Boolean),
         dontMessUp: String(cached.dont_mess_up_text).split("\n").filter(Boolean),
-        succeedHim: String(cached.succeed_him_text ?? "").split("\n").filter(Boolean),
-        dontMessUpHim: String(cached.dont_mess_up_him_text ?? "").split("\n").filter(Boolean),
+        succeedPartner: String(cached.succeed_partner_text ?? "").split("\n").filter(Boolean),
+        dontMessUpPartner: String(cached.dont_mess_up_partner_text ?? "").split("\n").filter(Boolean),
         cached: true,
       });
     }
@@ -277,14 +277,14 @@ ${chatFactContext}
 Write four lists — two addressed to her, two addressed to her partner ("him"):
 - "succeed": 3 things that will make today go well for her, given her exact state.
 - "dontMessUp": 3 specific traps to avoid today, given her exact state.
-- "succeedHim": 3 things her partner can do today to support her, given her exact state.
-- "dontMessUpHim": 3 things her partner should avoid doing today, given her exact state.
+- "succeedPartner": 3 things her partner can do today to support her, given her exact state.
+- "dontMessUpPartner": 3 things her partner should avoid doing today, given her exact state.
 
 The him lists speak TO her partner ABOUT her ("she"/"her"), never to her. They draw on the same state, symptoms and recent-message context as the her lists.
 
 Rules: each item is ONE sentence, max 14 words, concrete and actionable. Grace over guilt — never shaming. No emojis, no markdown, no numbering, no headers. Vary the wording day to day; do not sound like a generic template.
 
-Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."],"succeedHim":["...","...","..."],"dontMessUpHim":["...","...","..."]}`;
+Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."],"succeedPartner":["...","...","..."],"dontMessUpPartner":["...","...","..."]}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -314,15 +314,15 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
 
     let succeed: string[] = [];
     let dontMessUp: string[] = [];
-    let succeedHim: string[] = [];
-    let dontMessUpHim: string[] = [];
+    let succeedPartner: string[] = [];
+    let dontMessUpPartner: string[] = [];
     const asList = (v: unknown) => (Array.isArray(v) ? v.map(String).filter(Boolean) : []);
     try {
       const parsed = JSON.parse(cleaned);
       succeed = asList(parsed.succeed);
       dontMessUp = asList(parsed.dontMessUp);
-      succeedHim = asList(parsed.succeedHim);
-      dontMessUpHim = asList(parsed.dontMessUpHim);
+      succeedPartner = asList(parsed.succeedPartner);
+      dontMessUpPartner = asList(parsed.dontMessUpPartner);
     } catch (_e) {
       console.error("Failed to parse AI output:", cleaned.slice(0, 300));
     }
@@ -362,15 +362,15 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
       };
       succeed = guard(succeed, NEUTRAL_SUCCEED);
       dontMessUp = guard(dontMessUp, NEUTRAL_DONTMESS);
-      succeedHim = guard(succeedHim, NEUTRAL_SUCCEED_HIM);
-      dontMessUpHim = guard(dontMessUpHim, NEUTRAL_DONTMESS_HIM);
+      succeedPartner = guard(succeedPartner, NEUTRAL_SUCCEED_HIM);
+      dontMessUpPartner = guard(dontMessUpPartner, NEUTRAL_DONTMESS_HIM);
     }
 
     succeed = succeed.slice(0, 4);
     dontMessUp = dontMessUp.slice(0, 4);
     // Him lists are best-effort: too few items simply falls back to the static set.
-    succeedHim = succeedHim.length >= 2 ? succeedHim.slice(0, 4) : [];
-    dontMessUpHim = dontMessUpHim.length >= 2 ? dontMessUpHim.slice(0, 4) : [];
+    succeedPartner = succeedPartner.length >= 2 ? succeedPartner.slice(0, 4) : [];
+    dontMessUpPartner = dontMessUpPartner.length >= 2 ? dontMessUpPartner.slice(0, 4) : [];
 
     // Unique constraint is (user_id, local_date) — a context change overwrites today's row.
     const { error: upsertErr } = await service
@@ -381,8 +381,8 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
           local_date: localDate,
           succeed_text: succeed.join("\n"),
           dont_mess_up_text: dontMessUp.join("\n"),
-          succeed_him_text: succeedHim.length ? succeedHim.join("\n") : null,
-          dont_mess_up_him_text: dontMessUpHim.length ? dontMessUpHim.join("\n") : null,
+          succeed_partner_text: succeedPartner.length ? succeedPartner.join("\n") : null,
+          dont_mess_up_partner_text: dontMessUpPartner.length ? dontMessUpPartner.join("\n") : null,
           context_key: contextKey,
           generated_at: new Date().toISOString(),
         },
@@ -390,7 +390,7 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
       );
     if (upsertErr) console.error("daily_home_insights upsert failed:", upsertErr.message);
 
-    return json({ succeed, dontMessUp, succeedHim, dontMessUpHim, cached: false });
+    return json({ succeed, dontMessUp, succeedPartner, dontMessUpPartner, cached: false });
   } catch (e) {
     console.error("generate-daily-insights error:", e);
     return json({ error: "An internal error occurred" }, 500);
