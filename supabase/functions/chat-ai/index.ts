@@ -1177,6 +1177,8 @@ serve(async (req) => {
       .replace(/[\u2018\u2019\u02BC\u055A\uFF07]/g, "'")
       .replace(/[\u201C\u201D]/g, '"')
       .replace(/[\u2013\u2014]/g, "-");
+    const headsupSchedAsk = HEADSUP_SCHED_RE.test(userMessage);
+    const headsupHarm = HEADSUP_HARM_RE.test(userMessage);
 
     if (userMessage.length > 4000) {
       return new Response(
@@ -4581,6 +4583,7 @@ serve(async (req) => {
     }
 
     systemPrompt += `\n\nTIME AWARENESS: Conversation history includes date markers. Situations described in older messages (trips, arguments, stressful weeks, illnesses) are PAST unless she brings them up again. Never describe a past situation as happening now. If an older situation seems relevant, ask whether it's still going on instead of assuming. Lasting facts (her kids, her partner, her life stage) can be used freely. Never repeat or quote the date markers in your replies.`;
+    systemPrompt += `\n\nSAFETY AT HOME: If she describes fear, threats, being controlled, or any harm at home, stay with her. Do not suggest messaging or explaining things to that person. Gently ask if she is safe right now and offer support resources (a local domestic abuse helpline or emergency services if she's in danger), without pushing.`;
     systemPrompt += `\n\nVENT / OPEN-ENDED OPENER: When she says she wants to vent or opens with something open-ended and emotional without details, do not recap her situation or list what you think is going on. Respond briefly and warmly and invite her to share, e.g. "I'm here. What's going on?" Let her lead. Don't tell her what she's feeling or how heavy something is; respond to what she actually shares. In that opening reply, do not mention her cycle day or phase and add no "---" deep dive; her phase can be mentioned lightly only after she has shared what's going on. Phase accuracy rules still apply whenever a phase is mentioned.`;
 
     // The current user turn is already persisted in chat_messages by the client before
