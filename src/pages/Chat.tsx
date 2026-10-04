@@ -58,7 +58,7 @@ import { PartnerHeadsupSetup } from "@/components/partner/PartnerHeadsupSetup";
 import { HEADSUP_OPEN_EVENT } from "@/lib/partnerHeadsup";
 import { usePartnerHeadsupFlag } from "@/hooks/usePartnerHeadsupFlag";
 import { PartnerHeadsupDraftCard } from "@/components/partner/PartnerHeadsupDraftCard";
-import { PartnerHeadsupCheckinCard, PartnerHeadsupKeepCard, PartnerHeadsupSendNowCard } from "@/components/partner/PartnerHeadsupMiniCards";
+import { PartnerHeadsupAllSetCard, PartnerHeadsupCheckinCard, PartnerHeadsupHardDayCard, PartnerHeadsupKeepCard, PartnerHeadsupResumeCard, PartnerHeadsupSendNowCard } from "@/components/partner/PartnerHeadsupMiniCards";
 import { OPEN_CHAT_EVENT, PREFILL_CHAT_EVENT } from "@/lib/partnerHeadsupClient";
 import { InsightConfirm } from "@/components/chat/InsightConfirm";
 import { consumePendingCorrection, takeLinkedCorrectionId } from "@/lib/insightFeedback";
@@ -122,6 +122,9 @@ interface ChatMessage {
     broadcast_title?: string | null;
     broadcast_id?: string | null;
     event_id?: string;
+    hard_day?: boolean;
+    preselect?: string[];
+    partner_name?: string;
     mode?: string;
     kind?: string;
     source_message_id?: string;
@@ -1981,8 +1984,10 @@ const Chat = () => {
                           mode={(message.metadata?.mode as "predicted" | "today" | "undated") ?? "predicted"}
                           kind={(message.metadata?.kind as "scheduled" | "on_demand") ?? "on_demand"}
                           sourceMessageId={typeof message.metadata?.source_message_id === "string" ? (message.metadata.source_message_id as string) : undefined}
+                          hardDay={message.metadata?.hard_day === true}
+                          preselect={Array.isArray(message.metadata?.preselect) ? (message.metadata.preselect as string[]) : undefined}
                         />
-                      ) : message.message_type === "partner_headsup_shared" ? (
+                      ) : message.message_type === "partner_headsup_hardday" ? null : message.message_type === "partner_headsup_shared" ? (
                         <span className="inline-flex items-center rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground">{message.content}</span>
                       ) : message.role === "assistant" ? (
                         <MarkdownMessage content={message.content} />
@@ -2083,6 +2088,16 @@ const Chat = () => {
                       )}
                       {headsupVisible && message.message_type === "partner_headsup_sendnow" && user && (
                         <PartnerHeadsupSendNowCard userId={user.id} cacheKey={message.id} />
+                      )}
+                      {headsupVisible && message.message_type === "partner_headsup_allset" && user && (
+                        <PartnerHeadsupAllSetCard userId={user.id} name={(message.metadata?.partner_name as string) || "them"} />
+                      )}
+                      {headsupVisible && message.message_type === "partner_headsup_hardday" && user && (
+                        <PartnerHeadsupHardDayCard userId={user.id} messageId={message.id} name={(message.metadata?.partner_name as string) || "them"}
+                          preselect={Array.isArray(message.metadata?.preselect) ? (message.metadata.preselect as string[]) : []} />
+                      )}
+                      {headsupVisible && message.message_type === "partner_headsup_resume" && user && (
+                        <PartnerHeadsupResumeCard userId={user.id} messageId={message.id} />
                       )}
 
                       {message.message_type === "resource_offer" && message.metadata?.resource_type && user && (

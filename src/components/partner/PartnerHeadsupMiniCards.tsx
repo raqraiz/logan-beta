@@ -1,7 +1,8 @@
 import { trackedSupabase } from "@/lib/messageFailures";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { HEADSUP_UPDATED_EVENT } from "@/lib/partnerHeadsupClient";
+import { HEADSUP_UPDATED_EVENT, OPEN_CHAT_EVENT, startOnDemandDraft } from "@/lib/partnerHeadsupClient";
+import { HeadsupPreviewDialog } from "./PartnerHeadsupSetup";
 import { PartnerHeadsupDraftCard } from "./PartnerHeadsupDraftCard";
 
 const chip = "min-h-[44px] px-4 rounded-full border border-border/60 bg-card/60 text-sm font-medium text-foreground hover:bg-card transition-colors disabled:opacity-40";
@@ -71,6 +72,64 @@ export function PartnerHeadsupSendNowCard({ userId, cacheKey }: { userId: string
     <div className="mt-2 flex flex-wrap gap-2">
       <button className={chip} onClick={() => setState("draft")}>Yes, draft it</button>
       <button className={chip} onClick={() => setState("dismissed")}>Wait until then</button>
+    </div>
+  );
+}
+
+const seenKey = (id: string) => `headsup-chip-done:${id}`;
+const isSeen = (id: string) => { try { return !!localStorage.getItem(seenKey(id)); } catch { return false; } };
+const markSeen = (id: string) => { try { localStorage.setItem(seenKey(id), "1"); } catch { /* ignore */ } };
+
+/** Under the "All set" message: preview and write-now buttons. */
+export function PartnerHeadsupAllSetCard({ userId, name }: { userId: string; name: string }) {
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const writeNow = async () => {
+    const id = await startOnDemandDraft(userId, name);
+    if (id) globalThis.dispatchEvent(new CustomEvent(OPEN_CHAT_EVENT, { detail: { focusMessageId: id } }));
+  };
+  return (
+    <div className="mt-2 flex flex-wrap gap-2">
+      <button className={chip} onClick={() => setPreviewOpen(true)}>See what {name} would get</button>
+      <button className={chip} onClick={writeNow}>Write one now</button>
+      <HeadsupPreviewDialog userId={userId} open={previewOpen} onOpenChange={setPreviewOpen} />
+    </div>
+  );
+}
+
+/** After she says it's a hard day (heads-ups on): three choices. */
+export function PartnerHeadsupHardDayCard({ userId, messageId, name, preselect }: { userId: string; messageId: string; name: string; preselect: string[] }) {
+  const [done, setDone] = useState(() => isSeen(messageId));
+  if (done) return null;
+  const finish = () => { markSeen(messageId); setDone(true); };
+  const write = async () => {
+    finish();
+    const id = await startOnDemandDraft(userId, name, { mode: "today", hard_day: true, preselect });
+    if (id) globalThis.dispatchEvent(new CustomEvent(OPEN_CHAT_EVENT, { detail: { focusMessageId: id } }));
+  };
+  const justSay = async () => { finish(); await say(userId, "I'm glad you said it. I'm here.", { partner_headsup: "hardday_just_say" }); };
+  return (
+    <div className="mt-2 flex flex-wrap gap-2">
+      <button className={chip} onClick={finish}>Talk it through</button>
+      <button className={chip} onClick={write}>Write something for {name}</button>
+      <button className={chip} onClick={justSay}>I just needed to say it</button>
+    </div>
+  );
+}
+
+/** "Your cycle looks steadier..." Yes / Not yet. */
+export function PartnerHeadsupResumeCard({ userId, messageId }: { userId: string; messageId: string }) {
+  const [done, setDone] = useState(() => isSeen(messageId));
+  if (done) return null;
+  const pick = async (yes: boolean) => {
+    markSeen(messageId); setDone(true);
+    await supabase.from("partner_headsup_settings").update({ offer_before_harder_days: yes }).eq("user_id", userId);
+    await say(userId, yes ? "Great. I'll have them ready ahead of time again." : "Okay. I'll keep offering when you tell me things are tough.", { partner_headsup: yes ? "resume_yes" : "resume_not_yet" });
+    globalThis.dispatchEvent(new CustomEvent(HEADSUP_UPDATED_EVENT));
+  };
+  return (
+    <div className="mt-2 flex flex-wrap gap-2">
+      <button className={chip} onClick={() => pick(true)}>Yes</button>
+      <button className={chip} onClick={() => pick(false)}>Not yet</button>
     </div>
   );
 }

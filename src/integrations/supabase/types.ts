@@ -1201,6 +1201,7 @@ export type Database = {
         Row: {
           checkin_sent_at: string | null
           created_at: string
+          focus: string[] | null
           id: string
           kind: string
           low_confidence: boolean
@@ -1218,6 +1219,7 @@ export type Database = {
         Insert: {
           checkin_sent_at?: string | null
           created_at?: string
+          focus?: string[] | null
           id?: string
           kind?: string
           low_confidence?: boolean
@@ -1235,6 +1237,7 @@ export type Database = {
         Update: {
           checkin_sent_at?: string | null
           created_at?: string
+          focus?: string[] | null
           id?: string
           kind?: string
           low_confidence?: boolean
@@ -1262,6 +1265,8 @@ export type Database = {
           include_footer: boolean
           include_helps: boolean
           include_mood: boolean
+          offer_before_harder_days: boolean
+          offer_on_hard_days: boolean
           partner_name: string | null
           paused_until: string | null
           relationship: string | null
@@ -1279,6 +1284,8 @@ export type Database = {
           include_footer?: boolean
           include_helps?: boolean
           include_mood?: boolean
+          offer_before_harder_days?: boolean
+          offer_on_hard_days?: boolean
           partner_name?: string | null
           paused_until?: string | null
           relationship?: string | null
@@ -1296,6 +1303,8 @@ export type Database = {
           include_footer?: boolean
           include_helps?: boolean
           include_mood?: boolean
+          offer_before_harder_days?: boolean
+          offer_on_hard_days?: boolean
           partner_name?: string | null
           paused_until?: string | null
           relationship?: string | null
