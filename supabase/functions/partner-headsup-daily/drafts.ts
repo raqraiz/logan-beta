@@ -1,6 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
 // Scheduled drafts, period-shift updates, expiry and check-ins for one user. Called hourly per user.
-import { addDays, cycleConfidence, harderWindow, localParts, sendPush, weekdayOf } from "../_shared/partnerHeadsup.ts";
+import { addDays, cycleConfidence, harderWindow, isHardToPredict, localParts, sendPush, weekdayOf } from "../_shared/partnerHeadsup.ts";
 
 type Person = { user_id: string; last_period_start: string | null; cycle_length_days: number | null; timezone: string | null };
 export type DraftResult = { drafts: number; updated: number; expired: number; checkins: number; pushes: number };
@@ -13,6 +13,32 @@ async function postDraftCard(admin: any, uid: string, eventId: string, intro: st
     metadata: { event_id: eventId, mode, kind: "scheduled" },
   });
   if (extra) await admin.from("chat_messages").insert({ user_id: uid, role: "assistant", message_type: "text", content: extra, metadata: { partner_headsup: "draft_followup", event_id: eventId } });
+}
+
+/** Once per cycle when date-based heads-ups pause; once when the cycle steadies again. */
+async function postPredictStateChange(admin: any, uid: string, name: string, hard: boolean, cycleStart: string | null) {
+  const { data: last } = await admin.from("chat_messages").select("metadata").eq("user_id", uid)
+    .in("metadata->>partner_headsup", ["predict_paused", "predict_resume_ask"]).order("created_at", { ascending: false }).limit(1);
+  const lastKind = last?.[0]?.metadata?.partner_headsup ?? null;
+  if (hard) {
+    if (lastKind === "predict_paused" && last[0].metadata?.cycle_start === cycleStart) return;
+    // Not before she ever had date-based heads-ups working: only announce when it changes or a new cycle begins while paused.
+    if (lastKind === null) {
+      const { data: s } = await admin.from("partner_headsup_settings").select("created_at").eq("user_id", uid).maybeSingle();
+      if (s && Date.now() - new Date(s.created_at).getTime() < 86400000) return; // "All set" already explained it.
+    }
+    await admin.from("chat_messages").insert({
+      user_id: uid, role: "assistant", message_type: "text",
+      content: `Your cycle is running longer than usual, so I've paused date-based heads-ups for ${name}. When you tell me things are tough, I'll offer to write something instead.`,
+      metadata: { partner_headsup: "predict_paused", cycle_start: cycleStart },
+    });
+  } else if (lastKind === "predict_paused") {
+    await admin.from("chat_messages").insert({
+      user_id: uid, role: "assistant", message_type: "partner_headsup_resume",
+      content: "Your cycle looks steadier. Want me to start getting heads-ups ready ahead of time again?",
+      metadata: { partner_headsup: "predict_resume_ask" },
+    });
+  }
 }
 
 export async function processHeadsups(admin: any, p: Person, r: DraftResult): Promise<void> {
@@ -58,8 +84,10 @@ export async function processHeadsups(admin: any, p: Person, r: DraftResult): Pr
 
     // Scheduled draft for the next window.
     const paused = s.paused_until && s.paused_until >= local.date;
+    const hard = await isHardToPredict(admin, uid, local.date);
+    await postPredictStateChange(admin, uid, name, hard, p.last_period_start);
     const win = harderWindow(p.last_period_start, p.cycle_length_days, local.date);
-    if (!paused && win) {
+    if (!paused && win && !hard && s.offer_before_harder_days !== false) {
       const targetDate = s.timing === "morning_of" ? win.start : addDays(win.start, -1);
       const targetHour = s.timing === "morning_of" ? 8 : 18;
       if (local.date === targetDate && local.hour >= targetHour) {
@@ -79,6 +107,12 @@ export async function processHeadsups(admin: any, p: Person, r: DraftResult): Pr
               await postDraftCard(admin, uid, ev.id,
                 "Your timing has moved around lately, so I can't be sure when your harder days will land. Here's a version without exact dates.",
                 "undated", name, "Or tell me how today feels, and I'll make it more specific.");
+            } else if (s.include_mood) {
+              // The draft card itself asks "what feels hardest this time?" first.
+              await admin.from("chat_messages").insert({
+                user_id: uid, role: "assistant", message_type: "partner_headsup_draft", content: `Draft for ${name}`,
+                metadata: { event_id: ev.id, mode: "predicted", kind: "scheduled" },
+              });
             } else {
               await postDraftCard(admin, uid, ev.id,
                 `Your harder stretch usually starts around ${weekdayOf(win.start)}. Here's a heads-up for ${name}, written as you.`,

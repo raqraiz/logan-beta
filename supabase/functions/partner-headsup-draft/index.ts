@@ -3,7 +3,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
-import { cycleConfidence, harderWindow, helpPhrase, localParts, weekdayOf } from "../_shared/partnerHeadsup.ts";
+import { cycleConfidence, harderWindow, helpPhrase, isHardToPredict, localParts, weekdayOf } from "../_shared/partnerHeadsup.ts";
 import { partnerHeadsupVisibleFor } from "../_shared/partnerHeadsupFlag.ts";
 import { trackMessageFailures } from "../_shared/messageFailures.ts";
 
@@ -22,6 +22,7 @@ const Body = z.discriminatedUnion("action", [
     adjust: z.enum(["shorter", "warmer", "lighter", "funny"]).optional(),
     language: z.enum(["en", "he", "es"]).optional(),
     current_text: z.string().max(1200).optional(),
+    focus: z.array(z.string().trim().min(1).max(40)).max(2).optional(),
   }),
   z.object({ action: z.literal("save_style"), text: z.string().min(1).max(1000) }),
 ]);
@@ -117,7 +118,8 @@ Deno.serve(async (req) => {
     const helps: string[] = (s?.helps ?? []).map(helpPhrase);
 
     let feeling = "";
-    if (b.mode === "today" && b.source_message_id) {
+    // When she picked chips, her own chat words are never used, only the chips.
+    if (b.mode === "today" && b.source_message_id && !b.focus) {
       const { data: m } = await admin.from("chat_messages").select("content, user_id").eq("id", b.source_message_id).maybeSingle();
       if (m?.user_id === uid) feeling = m.content;
     }
@@ -125,7 +127,19 @@ Deno.serve(async (req) => {
     const local = localParts(p?.timezone);
     const win = harderWindow(p?.last_period_start ?? null, p?.cycle_length_days ?? null, local.date);
     const conf = await cycleConfidence(admin, uid);
-    const undated = b.mode === "undated" || conf.low || !win;
+    const hard = await isHardToPredict(admin, uid, local.date);
+    const undated = b.mode === "undated" || conf.low || hard || !win;
+    // Vary the opening each time so it never reads like a copy (no message text is stored to compare against).
+    const { count: sentCount } = await admin.from("partner_headsup_events").select("id", { count: "exact", head: true }).eq("user_id", uid).eq("status", "opened");
+    const OPENINGS = [
+      "Open with a short greeting and get straight to the point.",
+      "Open by naming the days first, then the greeting can be skipped.",
+      "Open with what would help most, then explain why.",
+      "Open with a warm, slightly playful line before the heads-up.",
+      "Open with a simple 'quick one from me' style line.",
+    ];
+    const opening = OPENINGS[(sentCount ?? 0) % OPENINGS.length];
+    const focusList = b.focus ?? null;
 
     let timing = "";
     if (b.mode === "today") timing = "It is about today only. Base it on how she says she feels today, without any symptom detail.";
@@ -141,7 +155,11 @@ Deno.serve(async (req) => {
       `- Use the name "${name}" only if natural. ${relationship === "partner" ? 'A greeting like "Hey love" is fine.' : ""} Never assume ${name}'s gender: no gendered words or pronouns for them.`,
       `- Write in ${LANG_NAME[lang]}.`,
       `- ${timing}`,
-      inc.mood ? "- Include a light line about lower energy / shorter fuse, and that it's not about them." : "- Do not describe her mood or energy.",
+      focusList && focusList.length
+        ? `- Build the message around what feels hardest for her this time: ${focusList.join("; ")}. Turn each into how she'd like support, in plain general terms, never medical. Say it's not about them.`
+        : focusList ? "- Do not describe her mood or energy; keep it to what helps."
+        : inc.mood ? "- Include a light line about lower energy / shorter fuse, and that it's not about them." : "- Do not describe her mood or energy.",
+      `- ${opening} Do not start with "Hey love, a heads-up from me", and do not reuse the first sentence of her past wording below.`,
       inc.helps && helps.length ? `- End with what helps: ${helps.join("; ")}.` : "- Do not list what helps.",
       feeling ? `\nHow she says she feels today (use the feeling, drop any symptom or body detail):\n"""${feeling.slice(0, 600)}"""` : "",
       styles?.length ? `\nHer own past wording, match this voice and phrasing:\n${styles.map((x) => `"""${x.text}"""`).join("\n")}` : "",
