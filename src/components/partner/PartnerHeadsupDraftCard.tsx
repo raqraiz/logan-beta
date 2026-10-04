@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toE164 } from "@/lib/partnerHeadsup";
 import {
-  FOCUS_OPTIONS, HEADSUP_UPDATED_EVENT, LAST_OPENING_KEY, generateDraft, loadPeople, openTopLevel, saveStyleExample, shareSheet, whatsappUrl,
+  FOCUS_OPTIONS, HEADSUP_UPDATED_EVENT, buildTipBlocks, LAST_OPENING_KEY, generateDraft, loadPeople, openTopLevel, saveStyleExample, shareSheet, whatsappUrl,
   type HeadsupPerson, type PartnerTips,
 } from "@/lib/partnerHeadsupClient";
 
@@ -18,19 +18,8 @@ interface Props {
 }
 
 type TipBlocks = { help: string | null; skip: string | null; helpOn: boolean; skipOn: boolean };
-type Cached = { text: string; generated: string; focus: string[]; personId: string | null; typedName: string; blocks?: TipBlocks };
+type Cached = { text: string; generated: string; focus: string[]; personId: string | null; typedName: string; blocks?: TipBlocks; base?: string };
 
-const trimDot = (t: string) => t.trim().replace(/[.!]+$/, "");
-const lower = (t: string) => (/^I\b/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1));
-/** "What would help today: A, and b." / "What won't: c." Short, never the full lists. */
-export function buildTipBlocks(tips?: PartnerTips): { help: string | null; skip: string | null } {
-  const h = (tips?.help ?? []).map(trimDot).filter(Boolean);
-  const k = (tips?.skip ?? []).map((t) => trimDot(t).replace(/^(don'?t|do not|avoid)\s+/i, "")).filter(Boolean);
-  return {
-    help: h.length ? `What would help today: ${h[0]}${h[1] ? `, and ${lower(h[1])}` : ""}.` : null,
-    skip: k.length ? `What won't: ${lower(k[0])}.` : null,
-  };
-}
 const withBlocks = (text: string, b: TipBlocks | undefined) => {
   if (!b) return text;
   const parts = [text.trimEnd()];
@@ -107,7 +96,7 @@ export function PartnerHeadsupDraftCard({ userId, cacheKey, eventId, preselect, 
           ? { ...prev.blocks }
           : tb.help || tb.skip ? { ...tb, helpOn: !!tb.help, skipOn: !!tb.skip } : undefined;
         const text = withBlocks(r.text, blocks);
-        const next = { text, generated: text, focus: f, personId: pid, typedName: typed, blocks };
+        const next = { text, generated: text, base: r.text, focus: f, personId: pid, typedName: typed, blocks };
         try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* ignore */ }
         return next;
       });

@@ -865,7 +865,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
       case "succeed_him":
         return (
           <div className="w-full" key={id}>
-            {userId && <div className="mb-3"><PartnerTodayCard userId={userId} help={getTipsHim("succeed")} skip={getTipsHim("dontmessup")} /></div>}
+            {userId && <div className="mb-3"><PartnerTodayCard userId={userId} help={getTipsHim("succeed")} skip={getTipsHim("dontmessup")} meTips={dailyInsights && !isStale && dailyInsights.succeedPartner.length && dailyInsights.helpMe.length ? { help: dailyInsights.helpMe, skip: dailyInsights.dontMe } : undefined} /></div>}
             <TipCard label={label} tips={getTipsHim("succeed")} phase={stagePhase} widgetId="succeed_him" cycleDay={cycleData.cycleDay} cycleLengthDays={cycleData.cycleLengthDays} icon={Heart} />
           </div>
         );

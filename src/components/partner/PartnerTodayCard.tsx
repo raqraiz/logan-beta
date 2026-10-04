@@ -3,17 +3,19 @@ import { Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePartnerHeadsupFlag } from "@/hooks/usePartnerHeadsupFlag";
 import {
-  HEADSUP_UPDATED_EVENT, OPEN_CHAT_EVENT, loadPeople, pickHomePerson, startOnDemandDraft, type HeadsupPerson,
+  HEADSUP_UPDATED_EVENT, OPEN_CHAT_EVENT, toFirstPerson, type PartnerTips, loadPeople, pickHomePerson, startOnDemandDraft, type HeadsupPerson,
 } from "@/lib/partnerHeadsupClient";
 
 interface Props {
   userId: string;
   help: string[];
   skip: string[];
+  /** Stored first-person versions from the tips function; falls back to converting help/skip. */
+  meTips?: PartnerTips;
 }
 
 /** Home: today's top partner tip, addressed to her Partner (else most recent person). */
-export function PartnerTodayCard({ userId, help, skip }: Props) {
+export function PartnerTodayCard({ userId, help, skip, meTips }: Props) {
   const visible = usePartnerHeadsupFlag(userId);
   const [person, setPerson] = useState<HeadsupPerson | null>(null);
   const [enabled, setEnabled] = useState(false);
@@ -38,7 +40,7 @@ export function PartnerTodayCard({ userId, help, skip }: Props) {
 
   const send = async () => {
     setBusy(true);
-    const id = await startOnDemandDraft(userId, { partnerTips: { help: help.slice(0, 2), skip: skip.slice(0, 1) }, personId: person?.id });
+    const id = await startOnDemandDraft(userId, { partnerTips: meTips ?? { help: help.slice(0, 2).map(toFirstPerson), skip: skip.slice(0, 1).map(toFirstPerson) }, personId: person?.id });
     setBusy(false);
     if (id) globalThis.dispatchEvent(new CustomEvent(OPEN_CHAT_EVENT, { detail: { focusMessageId: id } }));
   };
