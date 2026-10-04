@@ -1117,6 +1117,16 @@ function getCycleDayForToday(lastPeriodStart: string, timezone: string): number 
 }
 
 
+// Heads-up trigger: friction at home, feeling misunderstood, or overwhelmed/depleted.
+const HEADSUP_TRIGGER_RE = /\b(angry with|mad at|furious|fight|fought|argu(e|ed|ing|ment)|tension|snapp(ed|ing) at|yell(ed|ing)|(doesn'?t|don'?t|never) (get it|get me|understand|listen|help)|misunderstood|nobody (gets|understands)|can'?t (explain|get through|make (him|her|them) understand)|doesn'?t see|overwhelm(ed|ing)?|can'?t cope|too much on my plate|everything on my plate|depleted|drained|running on empty|burn(ed|t) out|exhausted|at my limit|can'?t do (this|it all)|(hard|rough|tough|awful) (day|night|week))\b/i;
+// Fear, threats, control or harm at home: never offer a heads-up.
+const HEADSUP_HARM_RE = /\b(afraid of (him|her|them)|scared of (him|her|them)|threat(en)?(ed|s|ing)?|hit me|hits me|hurt(s)? me|push(ed)? me|chok(e|ed|ing)|abus(e|ed|ive)|controls? (me|my)|controlling|won'?t let me|not safe|unsafe|violent|violence|kill)\b/i;
+// Asking for heads-ups ahead of time / on a schedule.
+const HEADSUP_SCHED_RE = /\bheads[\s-]?ups?\b[^.?!]{0,80}\b(ahead of time|in advance|before my period|before (each|every|my next)|every (month|cycle|week)|on a schedule|schedule|automatic(ally)?|each (month|cycle))\b|\b(schedule|automatic(ally)?|every (month|cycle))\b[^.?!]{0,60}\bheads[\s-]?ups?\b/i;
+function safeTest(re: RegExp, text: string): boolean {
+  try { return re.test(text); } catch (e) { console.error("[partner-headsup] detection failed", e); return false; }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -1177,8 +1187,8 @@ serve(async (req) => {
       .replace(/[\u2018\u2019\u02BC\u055A\uFF07]/g, "'")
       .replace(/[\u201C\u201D]/g, '"')
       .replace(/[\u2013\u2014]/g, "-");
-    const headsupSchedAsk = HEADSUP_SCHED_RE.test(userMessage);
-    const headsupHarm = HEADSUP_HARM_RE.test(userMessage);
+    const headsupSchedAsk = safeTest(HEADSUP_SCHED_RE, userMessage);
+    const headsupHarm = safeTest(HEADSUP_HARM_RE, userMessage);
 
     if (userMessage.length > 4000) {
       return new Response(
@@ -5167,7 +5177,7 @@ serve(async (req) => {
           if (offersOn) {
             await supabase.from("chat_messages").insert({ user_id: user.id, role: "assistant", message_type: "partner_headsup_schedreq", content: "", metadata: { partner_headsup: "schedreq" } });
           }
-        } else if (offersOn && !headsupHarm && HEADSUP_TRIGGER_RE.test(userMessage)) {
+        } else if (offersOn && !headsupHarm && safeTest(HEADSUP_TRIGGER_RE, userMessage)) {
           const dayStart = new Date(); dayStart.setUTCHours(0, 0, 0, 0);
           const { data: already } = await supabase.from("chat_messages").select("id").eq("user_id", user.id)
             .eq("message_type", "partner_headsup_hardday").gte("created_at", dayStart.toISOString()).limit(1);
