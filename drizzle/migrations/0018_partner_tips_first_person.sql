@@ -1,0 +1,3 @@
+ALTER TABLE public.daily_home_insights ADD COLUMN IF NOT EXISTS help_me_text text, ADD COLUMN IF NOT EXISTS dont_me_text text;
+COMMENT ON COLUMN public.daily_home_insights.help_me_text IS 'First-person (her voice) versions of the top 2 partner succeed tips, newline separated';
+COMMENT ON COLUMN public.daily_home_insights.dont_me_text IS 'First-person version of the top partner dont tip, verb kept, no leading Dont';

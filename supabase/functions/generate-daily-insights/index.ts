@@ -150,7 +150,7 @@ serve(async (req) => {
     // Serve the cache when nothing about her situation changed today.
     const { data: cached } = await service
       .from("daily_home_insights")
-      .select("succeed_text, dont_mess_up_text, succeed_partner_text, dont_mess_up_partner_text, context_key")
+      .select("succeed_text, dont_mess_up_text, succeed_partner_text, dont_mess_up_partner_text, help_me_text, dont_me_text, context_key")
       .eq("user_id", userId)
       .eq("local_date", localDate)
       .maybeSingle();
@@ -161,6 +161,8 @@ serve(async (req) => {
         dontMessUp: String(cached.dont_mess_up_text).split("\n").filter(Boolean),
         succeedPartner: String(cached.succeed_partner_text ?? "").split("\n").filter(Boolean),
         dontMessUpPartner: String(cached.dont_mess_up_partner_text ?? "").split("\n").filter(Boolean),
+        helpMe: String(cached.help_me_text ?? "").split("\n").filter(Boolean),
+        dontMe: String(cached.dont_me_text ?? "").split("\n").filter(Boolean),
         cached: true,
       });
     }
@@ -284,7 +286,11 @@ The partner lists speak directly TO the partner as "you" (example: "Take dinner 
 
 Rules for every item: ONE sentence, 8 words or fewer, concrete and actionable, plain everyday words. Never start with "Prioritize" or "Refrain from". Never use the words "ensure", "nurture" or "self-care". Never use em dashes or en dashes. Grace over guilt, never shaming. No emojis, no markdown, no numbering, no headers. Vary the wording day to day.
 
-Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."],"succeedPartner":["...","...","..."],"dontMessUpPartner":["...","...","..."]}`;
+Also return her own first-person versions of the partner tips, for a message she sends herself:
+- "helpMe": the first 2 "succeedPartner" tips rewritten in her voice (her/she becomes me/I/my), same meaning, starting with the verb, lowercase-ready (example: "Give me some space to be alone", "Keep things quiet tonight").
+- "dontMe": the first "dontMessUpPartner" tip in her voice with the leading "Don't" removed and the verb kept as is (example: "Take my short mood personally").
+
+Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."],"succeedPartner":["...","...","..."],"dontMessUpPartner":["...","...","..."],"helpMe":["...","..."],"dontMe":["..."]}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -316,6 +322,8 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
     let dontMessUp: string[] = [];
     let succeedPartner: string[] = [];
     let dontMessUpPartner: string[] = [];
+    let helpMe: string[] = [];
+    let dontMe: string[] = [];
     const asList = (v: unknown) => (Array.isArray(v) ? v.map(String).filter(Boolean) : []);
     try {
       const parsed = JSON.parse(cleaned);
@@ -323,6 +331,8 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
       dontMessUp = asList(parsed.dontMessUp);
       succeedPartner = asList(parsed.succeedPartner);
       dontMessUpPartner = asList(parsed.dontMessUpPartner);
+      helpMe = asList(parsed.helpMe).slice(0, 2);
+      dontMe = asList(parsed.dontMe).slice(0, 1);
     } catch (_e) {
       console.error("Failed to parse AI output:", cleaned.slice(0, 300));
     }
@@ -359,7 +369,11 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
       }
       return list.filter(tipOk).slice(0, 3);
     };
+    const origTop = [succeedPartner[0], succeedPartner[1], dontMessUpPartner[0]].join("|");
     [succeedPartner, dontMessUpPartner] = await Promise.all([fixTips(succeedPartner, "do"), fixTips(dontMessUpPartner, "avoid")]);
+    // First-person versions must match the partner tips shown; drop them if the tops changed (client converts instead).
+    if ([succeedPartner[0], succeedPartner[1], dontMessUpPartner[0]].join("|") !== origTop || helpMe.some((t) => BANNED_TIP.test(t)) || dontMe.some((t) => BANNED_TIP.test(t))) { helpMe = []; dontMe = []; }
+    dontMe = dontMe.map((t) => t.replace(/^(don'?t|do not)\s+/i, ""));
 
     // Post-generation guard: strip any line that breaches an active loss boundary.
     // If a list ends up too short, substitute neutral everyday tips (never an empty
@@ -394,6 +408,7 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
       dontMessUp = guard(dontMessUp, NEUTRAL_DONTMESS);
       succeedPartner = guard(succeedPartner, NEUTRAL_SUCCEED_HIM);
       dontMessUpPartner = guard(dontMessUpPartner, NEUTRAL_DONTMESS_HIM);
+      if ([...helpMe, ...dontMe].some(mentionsLoss) || succeedPartner === NEUTRAL_SUCCEED_HIM) { helpMe = []; dontMe = []; }
     }
 
     succeed = succeed.slice(0, 4);
@@ -413,6 +428,8 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
           dont_mess_up_text: dontMessUp.join("\n"),
           succeed_partner_text: succeedPartner.length ? succeedPartner.join("\n") : null,
           dont_mess_up_partner_text: dontMessUpPartner.length ? dontMessUpPartner.join("\n") : null,
+          help_me_text: succeedPartner.length && helpMe.length ? helpMe.join("\n") : null,
+          dont_me_text: dontMessUpPartner.length && dontMe.length ? dontMe.join("\n") : null,
           context_key: contextKey,
           generated_at: new Date().toISOString(),
         },
@@ -420,7 +437,7 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
       );
     if (upsertErr) console.error("daily_home_insights upsert failed:", upsertErr.message);
 
-    return json({ succeed, dontMessUp, succeedPartner, dontMessUpPartner, cached: false });
+    return json({ succeed, dontMessUp, succeedPartner, dontMessUpPartner, helpMe: succeedPartner.length ? helpMe : [], dontMe: dontMessUpPartner.length ? dontMe : [], cached: false });
   } catch (e) {
     console.error("generate-daily-insights error:", e);
     return json({ error: "An internal error occurred" }, 500);

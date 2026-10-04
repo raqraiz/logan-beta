@@ -71,6 +71,54 @@ export function pickHomePerson(people: HeadsupPerson[]): HeadsupPerson | null {
 
 export type PartnerTips = { help: string[]; skip: string[] };
 
+/** Fallback when no stored first-person version exists: partner tip about "her" -> her own voice. */
+export function toFirstPerson(t: string): string {
+  return t
+    .replace(/\bshe's\b/gi, "I'm").replace(/\bshe is\b/gi, "I am").replace(/\bshe was\b/gi, "I was")
+    .replace(/\bshe'll\b/gi, "I'll").replace(/\bshe'd\b/gi, "I'd").replace(/\bshe\b/gi, "I")
+    .replace(/\bherself\b/gi, "myself").replace(/\bhers\b/gi, "mine")
+    .replace(/\bher\b(?=\s+[a-z])(?!\s+(?:space|time|company|room|a|an|the|some|alone|rest|sleep|know|be|feel|decide|choose|lead|take|do|have|go|vent|talk|in|to|up|down|out|off|back|first|tonight|today|without|with|and|or|when|if|what|how|extra|breathe|unwind|recharge|nap|sit|lie|set|pick|call)\b)/gi, "my")
+    .replace(/\bher\b/gi, "me")
+    .replace(/\bI (needs|wants|feels|has|asks|seems|says|likes|gets)\b/g, (_m, v: string) => `I ${v === "has" ? "have" : v.slice(0, -1)}`);
+}
+
+/** Lines the draft card appends; stored in localStorage per chat message. */
+export function buildTipBlocks(tips?: PartnerTips): { help: string | null; skip: string | null } {
+  const trimDot = (t: string) => t.trim().replace(/[.!]+$/, "");
+  const lower = (t: string) => (/^I\b/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1));
+  const h = (tips?.help ?? []).map(trimDot).filter(Boolean);
+  const k = (tips?.skip ?? []).map((t) => trimDot(t).replace(/^(don'?t|do not)\s+/i, "")).filter(Boolean);
+  return {
+    help: h.length ? `What would help today: ${lower(h[0])}${h[1] ? `, and ${lower(h[1])}` : ""}.` : null,
+    skip: k.length ? `Please don't: ${lower(k[0])}.` : null,
+  };
+}
+
+type TipBlocksState = { help: string | null; skip: string | null; helpOn: boolean; skipOn: boolean };
+type DraftCache = { text: string; generated: string; base?: string; blocks?: TipBlocksState; [k: string]: unknown };
+
+/** Existing unsent draft: unedited -> rebuild with new lines; edited -> append new lines at the end. */
+function refreshDraftTips(messageId: string, tips: PartnerTips) {
+  const key = `headsup-draft:${messageId}`;
+  try {
+    const raw = localStorage.getItem(key);
+    // Not generated yet: the card picks these tips up instead of the message's older ones.
+    if (!raw) { localStorage.setItem(`headsup-tips:${messageId}`, JSON.stringify(tips)); return; }
+    const c = JSON.parse(raw) as DraftCache;
+    const tb = buildTipBlocks(tips);
+    const blocks: TipBlocksState = { ...tb, helpOn: !!tb.help, skipOn: !!tb.skip };
+    const extra = [blocks.help, blocks.skip].filter(Boolean) as string[];
+    const edited = c.text !== c.generated;
+    let base = c.base;
+    if (!base) {
+      base = c.generated;
+      for (const b of [c.blocks?.help, c.blocks?.skip]) if (b) base = base.replace(`\n\n${b}`, "");
+    }
+    const text = edited ? [c.text.trimEnd(), ...extra].join("\n\n") : [base.trimEnd(), ...extra].join("\n\n");
+    localStorage.setItem(key, JSON.stringify({ ...c, text, generated: edited ? c.generated : text, base, blocks }));
+  } catch { /* ignore */ }
+}
+
 export const FOCUS_OPTIONS = ["Low energy", "Short fuse", "Need quiet", "Feeling low"];
 export const LAST_OPENING_KEY = "headsup-last-opening";
 export const HEADSUP_FOCUS_KEY = (cacheKey: string) => `headsup-focus:${cacheKey}`;
@@ -85,7 +133,12 @@ export async function startOnDemandDraft(userId: string, extra: { preselect?: st
   if (existing) {
     const { data: m } = await supabase.from("chat_messages").select("id").eq("user_id", userId)
       .eq("message_type", "partner_headsup_draft").eq("metadata->>event_id", existing.id).limit(1).maybeSingle();
-    if (m?.id) return m.id;
+    if (m?.id) {
+      if (extra.partnerTips) {
+        refreshDraftTips(m.id, extra.partnerTips);
+      }
+      return m.id;
+    }
   }
   let eventId = existing?.id;
   if (!eventId) {
