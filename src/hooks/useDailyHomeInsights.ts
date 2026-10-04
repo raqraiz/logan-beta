@@ -20,9 +20,6 @@ export interface DailyInsights {
   /** Partner-facing lists from the same generation call; empty means fall back to static. */
   succeedPartner: string[];
   dontMessUpPartner: string[];
-  /** Her-voice versions of the top 2 partner succeed tips / top 1 don't tip (verb kept, no "Don't"). */
-  helpMe: string[];
-  dontMe: string[];
 }
 
 function localDateKey(): string {
@@ -69,7 +66,7 @@ export function useDailyHomeInsights(ctx: DailyInsightContext) {
       try {
         const { data: row } = await supabase
           .from("daily_home_insights")
-          .select("succeed_text, dont_mess_up_text, succeed_partner_text, dont_mess_up_partner_text, help_me_text, dont_me_text, context_key")
+          .select("succeed_text, dont_mess_up_text, succeed_partner_text, dont_mess_up_partner_text, context_key")
           .eq("user_id", userId)
           .eq("local_date", localDate)
           .maybeSingle();
@@ -81,8 +78,6 @@ export function useDailyHomeInsights(ctx: DailyInsightContext) {
               dontMessUp: String(row.dont_mess_up_text).split("\n").filter(Boolean),
               succeedPartner: String(row.succeed_partner_text ?? "").split("\n").filter(Boolean),
               dontMessUpPartner: String(row.dont_mess_up_partner_text ?? "").split("\n").filter(Boolean),
-              helpMe: String(row.help_me_text ?? "").split("\n").filter(Boolean),
-              dontMe: String(row.dont_me_text ?? "").split("\n").filter(Boolean),
             });
           }
           return;
@@ -112,8 +107,6 @@ export function useDailyHomeInsights(ctx: DailyInsightContext) {
           dontMessUp: data.dontMessUp,
           succeedPartner: Array.isArray(data.succeedPartner) ? data.succeedPartner : [],
           dontMessUpPartner: Array.isArray(data.dontMessUpPartner) ? data.dontMessUpPartner : [],
-          helpMe: Array.isArray(data.helpMe) ? data.helpMe : [],
-          dontMe: Array.isArray(data.dontMe) ? data.dontMe : [],
         });
       } catch {
         if (!cancelled) setInsights(null);
