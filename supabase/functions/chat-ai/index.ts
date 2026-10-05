@@ -4575,6 +4575,7 @@ serve(async (req) => {
     const emotionalFollowUp = isEmotionalFollowUp(userMessage, recentMessages as any);
     const emotionalContextActive = isEmotionalOrHeavyMessage(userMessage) || emotionalFollowUp;
     let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext + backfillBlock + libraryBlock + libraryGuidance, emotionalContextActive, activeBoundaries);
+    systemPrompt += anchorPromptRule(currentCycleAnchorType(participant));
 
     // Active boundaries — absolute, highest priority, applied before anything else.
     if (activeBoundaries.length > 0) {
