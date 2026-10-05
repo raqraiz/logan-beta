@@ -13,6 +13,7 @@ interface DailyBriefingHeroProps {
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
   /** true = on hormonal BC, false = confirmed not on BC, null/undefined = unknown */
   onHormonalBc?: boolean | null;
+  cycleAnchorType?: "bleed" | "marker";
   bcMethod?: string | null;
   postpartumStartDate?: string;
   postpartumActive?: boolean;
@@ -118,6 +119,7 @@ export function DailyBriefingHero({
   dueDate,
   pregnancyLmp,
   onHormonalBc,
+  cycleAnchorType,
   bcMethod,
   onCircleClick,
 }: DailyBriefingHeroProps) {
