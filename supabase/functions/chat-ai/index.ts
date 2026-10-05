@@ -2369,7 +2369,8 @@ serve(async (req) => {
           todayLocal.setUTCDate(todayLocal.getUTCDate() - (targetDay - 1));
           const formattedDate = todayLocal.toISOString().split("T")[0];
 
-          const cycleDayPayload: Record<string, unknown> = { last_period_start: formattedDate };
+          // "Today is Day N" / "I'm on Day 1" with no bleed wording: keep the current anchor type.
+          const cycleDayPayload: Record<string, unknown> = { last_period_start: formattedDate, cycle_anchor_type: currentCycleAnchorType(participant) };
           if (participant.life_stage === "postpartum") {
             cycleDayPayload.life_stage = "cycling";
             cycleDayPayload.postpartum_active = true;
