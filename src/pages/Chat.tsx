@@ -1582,12 +1582,47 @@ const Chat = () => {
           onPeriodUpdate={async (date: Date) => {
             if (!user?.id) return;
             const iso = format(date, "yyyy-MM-dd");
+            // Edit cycle: only the date changes, the anchor type stays as-is.
             await updateParticipant(user.id, {
               last_period_start: iso,
               period_pending_since: null,
               period_still_active: false,
               current_period_end_date: null,
-            });
+            } as any);
+          }}
+          onCycleMarkerStart={async (date: Date) => {
+            if (!user?.id) return;
+            const iso = format(date, "yyyy-MM-dd");
+            // "New cycle started" button → explicit marker (no bleed).
+            // Archive previous cycle keeping its own type, same 15-60 day gate.
+            try {
+              const { data: p } = await (supabase as any)
+                .from("participants")
+                .select("id, last_period_start, cycle_anchor_type")
+                .eq("email", user.email!)
+                .single();
+              if (p?.last_period_start && p?.id) {
+                const prev = new Date(p.last_period_start + "T12:00:00Z").getTime();
+                const next = new Date(iso + "T12:00:00Z").getTime();
+                const diff = Math.round((next - prev) / 86400000);
+                if (diff >= 15 && diff <= 60) {
+                  await (supabase as any).from("cycle_history").insert({
+                    participant_id: p.id,
+                    cycle_start_date: p.last_period_start,
+                    cycle_end_date: iso,
+                    cycle_length_days: diff,
+                    cycle_anchor_type: p.cycle_anchor_type || "bleed",
+                  });
+                }
+              }
+            } catch {}
+            await updateParticipant(user.id, {
+              last_period_start: iso,
+              cycle_anchor_type: "marker",
+              period_pending_since: null,
+              period_still_active: false,
+              current_period_end_date: null,
+            } as any);
           }}
           onCycleLengthUpdate={async (days: number) => {
             if (!user?.id) return;
@@ -1647,12 +1682,13 @@ const Chat = () => {
           onPeriodUpdate={async (date: Date) => {
             if (!user?.id) return;
             const iso = format(date, "yyyy-MM-dd");
+            // Edit cycle: date changes only, anchor type preserved.
             await updateParticipant(user.id, {
               last_period_start: iso,
               period_pending_since: null,
               period_still_active: false,
               current_period_end_date: null,
-            });
+            } as any);
           }}
         />
       )}
