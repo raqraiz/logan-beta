@@ -150,6 +150,7 @@ interface CycleData {
   dueDate?: string;
   pregnancyLmp?: string;
   needsPeriodStart?: boolean;
+  cycleAnchorType?: "bleed" | "marker";
 }
 
 const MESSAGES_PER_PAGE = 100;
@@ -233,6 +234,7 @@ const Chat = () => {
     currentPeriodEndDate: string | null;
     periodPendingSince: string | null;
     periodStillActive: boolean;
+    cycleAnchorType?: "bleed" | "marker";
   } | null>(null);
   // A message may only render live cycle values if it was created today (in the
   // user's timezone). Older messages keep their stored per-message snapshot.
@@ -538,6 +540,7 @@ const Chat = () => {
             currentPeriodEndDate: row.current_period_end_date ?? null,
             periodPendingSince: row.period_pending_since ?? null,
             periodStillActive: !!row.period_still_active,
+            cycleAnchorType: row.cycle_anchor_type === "marker" ? "marker" : "bleed",
           });
           if (row.life_stage) {
             // Birth date is the entry gate for postpartum. Postpartum with no
@@ -682,6 +685,7 @@ const Chat = () => {
         bcMethod,
         postpartumStartDate: postpartumStartDate || undefined,
         postpartumActive: postpartumActive && !!postpartumStartDate,
+        cycleAnchorType: participantCycle?.cycleAnchorType ?? "bleed",
       });
     }
   }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, postpartumActive, lossDate, dueDate, pregnancyLmp, onHormonalBc, bcMethod, participantCycle]);
@@ -833,7 +837,7 @@ const Chat = () => {
     try {
       const { data } = await supabase
         .from("participants")
-        .select("life_stage, on_hormonal_bc, birth_control_method, postpartum_start_date, postpartum_active, loss_date, due_date, pregnancy_lmp, last_period_start, cycle_length_days, timezone, current_period_end_date, period_pending_since, period_still_active, menstruation_days, follicular_days, ovulation_window_days, luteal_days")
+        .select("life_stage, on_hormonal_bc, birth_control_method, postpartum_start_date, postpartum_active, loss_date, due_date, pregnancy_lmp, last_period_start, cycle_length_days, timezone, current_period_end_date, period_pending_since, period_still_active, menstruation_days, follicular_days, ovulation_window_days, luteal_days, cycle_anchor_type")
         .eq("email", user.email)
         .single();
       if (data?.life_stage) {
@@ -901,6 +905,7 @@ const Chat = () => {
           currentPeriodEndDate: (data as any).current_period_end_date ?? null,
           periodPendingSince: (data as any).period_pending_since ?? null,
           periodStillActive: !!(data as any).period_still_active,
+          cycleAnchorType: (data as any).cycle_anchor_type === "marker" ? "marker" : "bleed",
         });
       }
     } catch (e) {
@@ -1599,7 +1604,7 @@ const Chat = () => {
               const { data: p } = await (supabase as any)
                 .from("participants")
                 .select("id, last_period_start, cycle_anchor_type")
-                .eq("email", user.email!)
+                .eq("user_id", user.id)
                 .single();
               if (p?.last_period_start && p?.id) {
                 const prev = new Date(p.last_period_start + "T12:00:00Z").getTime();
