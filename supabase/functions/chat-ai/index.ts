@@ -3002,40 +3002,103 @@ serve(async (req) => {
         );
       }
 
-      if (irregularSignal && !cyclingSignal && !perimenopauseSignal && !recentPostpartumVeto && participant.life_stage !== "irregular") {
-        await supabase
-          .from("participants")
-          .update({
-            life_stage: "irregular",
-            ...(bcPositiveSignal ? { on_hormonal_bc: true } : {}),
-            // She says she has no real period — an old stored Day 1 would keep
-            // feeding cycling math. Clear it. Stating a real date later moves
-            // her back to cycling (handled by the cycling detector).
-            ...(sharedBcDetection.noRealPeriod ? { last_period_start: null } : {}),
-          })
-          .eq("id", participant.id);
-        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
-        if (refreshed) participant = refreshed;
-
-        const msg = bcPositiveSignal
-          ? `Done — switched your account to **hormonal birth control / irregular cycle** mode. I'll stop predicting natural phases and instead focus on steady-state levers: sleep, protein, strength, stress, hydration, and the micronutrients hormonal BC can deplete (B6, B12, magnesium, zinc, folate). Anything specific you want to dig into first?`
-          : `Done — switched your account to **irregular cycle** mode. I'll stop predicting exact phases and focus on steady-state levers instead: sleep, protein, strength, stress, and hydration. Anything specific you want to dig into first?`;
-        await supabase.from("chat_messages").insert({
-          user_id: user.id,
-          role: "assistant",
-          content: msg,
-          message_type: "text",
-          metadata: { life_stage_updated: "irregular", ...(bcPositiveSignal ? { on_hormonal_bc_updated: true } : {}) },
-        });
-        return new Response(
-          JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      // --- Tracking-mode switches -------------------------------------------
+      // Product rule: chat NEVER changes her tracking mode without her asking
+      // or confirming. A birth control mention (incl. hormonal IUD) never
+      // writes life_stage and never triggers a switch offer on its own.
+      const trimmedMsg = userMessage.trim();
+      const isQuestionLike = /\?\s*$/.test(trimmedMsg)
+        || /^(?:what|how|why|does|do|can|could|is|are|should|would|will|if)\b/i.test(trimmedMsg);
+      const modeVerb = String.raw`(?:switch|put|move|change|set|take|turn)`;
+      const modeObj = String.raw`(?:me|my\s+(?:account|tracking|mode|settings?|profile))`;
+      const toCyclingReq = /^regular cycle tracking\.?$/i.test(trimmedMsg)
+        || new RegExp(`\\b${modeVerb}\\s+${modeObj}\\s+(?:back\\s+)?(?:to|on|onto|into)\\s+(?:the\\s+)?(?:regular|normal|natural)?\\s*(?:cycles?|cycling|cycle\\s+tracking|phase\\s+tracking|phases)\\b`, "i").test(userMessage)
+        || /\b(?:turn|switch)\s+(?:my\s+)?(?:cycle|phase)\s+tracking\s+(?:back\s+)?on\b/i.test(userMessage);
+      const toIrregularReq = !toCyclingReq && (
+        /^birth control \/ irregular\.?$/i.test(trimmedMsg)
+        || new RegExp(`\\b${modeVerb}\\s+${modeObj}\\s+(?:back\\s+)?(?:to|on|onto|into)\\s+(?:the\\s+)?(?:irregular|birth\\s+control|hormonal\\s+(?:birth\\s+control|bc)|bc|steady)\\b`, "i").test(userMessage)
+      );
+      const vagueModeReq = !toCyclingReq && !toIrregularReq
+        && new RegExp(`\\b${modeVerb}\\s+(?:me\\s+back\\b|my\\s+(?:tracking\\s+)?mode\\b|(?:my\\s+)?tracking\\s+mode\\b)`, "i").test(userMessage);
+      // Only "no monthly pattern at all" earns a switch offer. Questions never do.
+      const noPatternStatement = !isQuestionLike && (
+        /\bi\s+(?:don'?t|do\s+not)\s+(?:really\s+)?(?:cycle|have\s+(?:a\s+|any\s+)?(?:monthly\s+)?(?:pattern|cycle|rhythm))\b/i.test(userMessage)
+        || /\bi\s+have\s+no\s+(?:monthly\s+)?(?:pattern|cycle|rhythm)\b/i.test(userMessage)
+      );
+      const isYesSwitch = /^yes,?\s+switch\s+it\.?$/i.test(trimmedMsg);
+      const isNoKeep = /^no,?\s+keep\s+my\s+cycle\.?$/i.test(trimmedMsg);
+      let pendingIrregularOffer = false;
+      if (isYesSwitch || isNoKeep) {
+        const { data: lastAsst } = await supabase
+          .from("chat_messages").select("metadata")
+          .eq("user_id", user.id).eq("role", "assistant")
+          .order("created_at", { ascending: false }).limit(1).maybeSingle();
+        pendingIrregularOffer = (lastAsst?.metadata as any)?.mode_switch_offer === "irregular";
       }
 
-      // Already in the right life stage, but BC status needs recording (e.g. irregular
-      // user who just started the pill, or a cycling user who did).
-      if (bcPositiveSignal && !bcNegativeSignal && !cyclingSignal && (participant as any).on_hormonal_bc !== true) {
+      const modeReply = async (msg: string, metadata: Record<string, unknown>) => {
+        await supabase.from("chat_messages").insert({
+          user_id: user.id, role: "assistant", content: msg, message_type: "text", metadata,
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, lifeStageUpdated: !!metadata.life_stage_updated }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      };
+      // Write, re-read, and report only what actually persisted.
+      const writeLifeStage = async (target: "cycling" | "irregular"): Promise<boolean> => {
+        const { error } = await supabase.from("participants").update({ life_stage: target }).eq("id", participant.id);
+        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshed) participant = refreshed;
+        return !error && refreshed?.life_stage === target;
+      };
+      const modeWriteFailed = `I couldn't change your tracking mode just now. You can switch it in Settings, or try me again in a moment.`;
+
+      if (pendingIrregularOffer && isNoKeep) {
+        return await modeReply(`Okay, I'll keep tracking your cycle as it is.`, { mode_switch_declined: true });
+      }
+      if ((pendingIrregularOffer && isYesSwitch) || toIrregularReq) {
+        if (participant.life_stage === "irregular") {
+          return await modeReply(`You're already on birth control / irregular tracking, so nothing needed changing.`, {});
+        }
+        const ok = await writeLifeStage("irregular");
+        return await modeReply(
+          ok
+            ? `Done. Switched your tracking to **birth control / irregular** mode. I'll stop predicting phases and focus on your day-to-day patterns instead.`
+            : modeWriteFailed,
+          ok ? { life_stage_updated: "irregular" } : {},
+        );
+      }
+      if (toCyclingReq) {
+        if (participant.life_stage === "cycling" || participant.life_stage === "perimenopause") {
+          return await modeReply(`You're already on regular cycle tracking, so nothing needed changing.`, {});
+        }
+        const ok = await writeLifeStage("cycling");
+        return await modeReply(
+          ok
+            ? `Done. Switched you back to **regular cycle tracking**. I'll predict your phases from your logged period again.`
+            : modeWriteFailed,
+          ok ? { life_stage_updated: "cycling" } : {},
+        );
+      }
+      if (vagueModeReq) {
+        return await modeReply(`Which tracking mode do you want?`, {
+          conversation_starters: ["Regular cycle tracking", "Birth control / irregular"],
+        });
+      }
+      if (noPatternStatement && !recentPostpartumVeto && participant.life_stage !== "irregular") {
+        return await modeReply(`Want me to switch your tracking to birth control / irregular mode?`, {
+          mode_switch_offer: "irregular",
+          conversation_starters: ["Yes, switch it", "No, keep my cycle"],
+        });
+      }
+      // irregularSignal is intentionally no longer a write trigger. It only
+      // feeds the postpartum-veto hedge above.
+      void irregularSignal;
+
+      // Already-saved BC status: record it from a clear statement only.
+      // Questions ("what if I'm on mirena?") never write.
+      if (!isQuestionLike && bcPositiveSignal && !bcNegativeSignal && !cyclingSignal && (participant as any).on_hormonal_bc !== true) {
         await supabase
           .from("participants")
           .update({ on_hormonal_bc: true })
@@ -3047,7 +3110,7 @@ serve(async (req) => {
 
       // Specific method named in chat ("I got a copper IUD last month"): save it,
       // re-read, and only confirm what actually persisted. Never touches life_stage.
-      const chatBcMethod = bcNegativeSignal ? null : detectBcMethod(userMessage);
+      const chatBcMethod = (bcNegativeSignal || isQuestionLike) ? null : detectBcMethod(userMessage);
       if (chatBcMethod && (participant as any).birth_control_method !== chatBcMethod) {
         const syncedHormonal = hormonalAnswerForMethod(chatBcMethod);
         await supabase.from("participants").update({
