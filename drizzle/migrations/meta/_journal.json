@@ -134,6 +134,13 @@
       "when": 1791169648737,
       "tag": "0018_add_cycle_anchor_type",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791170253866,
+      "tag": "0019_cycle_updates_marker_note_insert",
+      "breakpoints": true
     }
   ]
 }
