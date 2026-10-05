@@ -522,7 +522,9 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
   if (lifeStage === "pregnant") {
     return <PregnancyCircle size={size} dueDate={dueDate} pregnancyLmp={pregnancyLmp} />;
   }
-  if (lifeStage === "irregular") {
+  // Phase tracking off (irregular mode) is decided by life_stage only.
+  // A hormonal IUD on a cycling account still gets the full ring.
+  if (!isPhaseTrackingOn(lifeStage)) {
     return <LifeStageBadge lifeStage="irregular" size={size} onHormonalBc={onHormonalBc} />;
   }
   // Stale Day 1: running well past her expected next period with nothing new

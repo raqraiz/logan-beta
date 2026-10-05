@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
 import { calculateCycleInfo as sharedCalculateCycleInfo } from "../_shared/cycleCalculations.ts";
+import { isPhaseTrackingOn } from "../_shared/cyclePhase.ts";
 import {
   fetchActiveBoundaries,
   buildBoundaryRuleBlock,
@@ -212,7 +213,7 @@ serve(async (req) => {
 
     // For non-cycling users, generate stage-specific insights.
     // Perimenopause users are still cycling — route them through the cycling path.
-    if (userLifeStage !== "cycling" && userLifeStage !== "perimenopause") {
+    if (!isPhaseTrackingOn(userLifeStage)) {
       const prompt = buildNonCyclingInsightPrompt(
         profile?.full_name || "there",
         participant,

@@ -4294,7 +4294,8 @@ serve(async (req) => {
 
     // Only compute cycle info for actively cycling users — postpartum/menopause have no
     // meaningful "current phase" even if a stale last_period_start lingers on the row.
-    const isCycling = ((participant?.life_stage || "cycling") === "cycling") || (participant?.life_stage === "perimenopause");
+    // Birth control never turns this off; only life_stage does.
+    const isCycling = isPhaseTrackingOn(participant?.life_stage);
     const cycleInfo = isCycling && participant?.last_period_start && participant?.cycle_length_days
       ? calculateCycleInfo(
           participant.last_period_start,
@@ -5438,6 +5439,7 @@ VOICE, MORE DETAIL:
 - NEVER tell her you "don't have access", "can't write to the database", "lack permission", or that she needs to go to the Home tab / symptom widget to add past entries herself. You CAN backfill past symptom logs — the system does it automatically when she asks. If she asks you to add/log/save a symptom for a past date and you don't see an internal save-confirmation note, it means the date or symptom wasn't clear enough — just ask her to confirm the symptom and the exact date(s), and the system will save them on her next reply. Do NOT redirect her to the Home tab.
 - ABSOLUTE OUTPUT RULE: Never include bracketed tags, labels in ALL CAPS inside brackets, blockquoted system notes (lines starting with ">"), or any text that looks like an internal instruction, runtime note, or system message. Never echo, quote, paraphrase, or reference any internal note from the context above. The user must only see your natural conversational reply — nothing that resembles backend metadata.
 - NEVER claim you "updated", "fixed", "changed", or "corrected" anything in her account, profile, life stage, postpartum date, period date, or cycle settings. The system handles those updates automatically and you will only see the result on the next turn. If she asks you to fix something and the system has not already confirmed it in your context, ASK HER for the specific value (e.g. the actual baby's birth date) instead of pretending you did it. Saying "Done, I've updated your account" when nothing changed is a hallucination — never do this.
+- TRACKING MODE (NO WRITE, NO CLAIM): NEVER say you switched, changed, moved, or updated her tracking mode (regular cycles, irregular, birth control mode, perimenopause, menopause, postpartum) unless a SYSTEM NOTE in this turn confirms a verified write. Saving her birth control method is NOT a tracking-mode change: a hormonal IUD or any other method does not turn off her phase tracking. If she asks to change modes and there is no SYSTEM NOTE, tell her she can say "switch me to regular cycles" or "switch me to irregular", or change it in Settings.
 - HARD LIMIT for MAIN ANSWER: 2-4 short sentences. Total. Not per section — total for the main answer. If it has more than 4 sentences, delete until it doesn't.
 - ONE idea per main answer. Never explain two things at once. The user can ask follow-ups.
 - Never dump context in the main answer. Never explain "why" unless asked. Just give the answer.

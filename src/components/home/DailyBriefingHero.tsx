@@ -3,6 +3,7 @@ import { Zap, Brain, AlertTriangle } from "lucide-react";
 import { ChatCycleCircle } from "@/components/chat/ChatCycleCircle";
 import { isCycleStale } from "@/lib/cycleCalculations";
 import { allowsHormonalBcCopy } from "@/lib/bcMethod";
+import { isPhaseTrackingOn } from "@/lib/cyclePhase";
 import { useStageBoundary, isStageHidden, stageKeyForLifeStage } from "@/hooks/useStageBoundary";
 
 interface DailyBriefingHeroProps {
@@ -123,8 +124,11 @@ export function DailyBriefingHero({
   const { stageKey, loading: boundaryLoading } = useStageBoundary();
   const hideStage = isStageHidden(stageKey, lifeStage);
   const stagePending = boundaryLoading && !!stageKeyForLifeStage(lifeStage);
-  const isSteadyByPill = onHormonalBc === true && allowsHormonalBcCopy(bcMethod);
+  // Phase tracking is driven by life_stage only. Birth control copy and the
+  // "On birth control" badge appear only when phase tracking is off.
+  const phaseTrackingOn = isPhaseTrackingOn(lifeStage);
   const isIrregular = lifeStage === "irregular";
+  const isSteadyByPill = isIrregular && !phaseTrackingOn && onHormonalBc === true && allowsHormonalBcCopy(bcMethod);
   const isLoss = lifeStage === "pregnancy_loss";
   const isPregnant = lifeStage === "pregnant";
   const isNonCycling = !!lifeStage && (lifeStage === "postpartum" || lifeStage === "menopause" || lifeStage === "pregnancy_loss" || lifeStage === "pregnant");
@@ -210,9 +214,11 @@ export function DailyBriefingHero({
                           : lifeStage === "pregnant"
                             ? "Pregnant"
                             : (onHormonalBc === true ? "On birth control" : "Irregular"))
-                  : isStale
-                    ? "Period overdue"
-                    : phase}
+                  : isIrregular && !phaseTrackingOn
+                    ? (onHormonalBc === true ? "On birth control" : "Irregular")
+                    : isStale
+                      ? "Period overdue"
+                      : phase}
               </span>
             </div>
             )}

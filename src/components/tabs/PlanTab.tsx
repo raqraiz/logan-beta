@@ -569,10 +569,12 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
 
   // Non-cycling life stages get tailored content
   const isNonCycling = cycleData?.lifeStage === "postpartum" || cycleData?.lifeStage === "menopause" || cycleData?.lifeStage === "pregnancy_loss" || cycleData?.lifeStage === "pregnant";
+  // Irregular mode: phase tracking off, same rule as Home, ring and Ask.
+  const phaseTrackingOff = !isNonCycling && !isPhaseTrackingOn(cycleData?.lifeStage);
 
-  // Stage boundary active: no stage label, count, or stage-specific guidance.
-  // Show general wellness cards instead (copy approved verbatim).
-  if (isNonCycling && hideStage) {
+  // Stage boundary active, or phase tracking off: no stage/phase label, count,
+  // or phase-specific guidance. Show general wellness cards instead.
+  if ((isNonCycling && hideStage) || phaseTrackingOff) {
     const GENERAL_CARDS = [
       { key: "gen-movement", name: "Movement", title: "Move in whatever way feels good", Icon: Dumbbell, iconBg: "bg-primary/10", iconColor: "text-primary", dot: "bg-primary",
         items: ["A walk counts. So does five minutes of stretching.", "If your body is asking for rest, that's a real answer."] },
