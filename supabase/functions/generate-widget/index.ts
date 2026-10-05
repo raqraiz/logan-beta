@@ -1,3 +1,4 @@
+import { anchorPromptRule, currentCycleAnchorType } from "../_shared/cycleAnchor.ts";
 import { buildBcMethodRule, bcFramingSummary } from "../_shared/bcMethod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
@@ -92,13 +93,13 @@ serve(async (req) => {
       const { data: participant } = await supabaseService
         .from("participants")
         .select(
-          "cycle_length_days, last_period_start, life_stage, postpartum_start_date, postpartum_active, timezone, current_period_end_date, period_pending_since, period_still_active, menstruation_days, follicular_days, ovulation_window_days, luteal_days, birth_control_method, on_hormonal_bc, birth_control_status",
+          "cycle_length_days, last_period_start, life_stage, postpartum_start_date, postpartum_active, timezone, current_period_end_date, period_pending_since, period_still_active, menstruation_days, follicular_days, ovulation_window_days, luteal_days, birth_control_method, on_hormonal_bc, birth_control_status, cycle_anchor_type",
         )
         .eq("email", userEmail)
         .maybeSingle();
 
       if (participant?.life_stage) lifeStage = participant.life_stage;
-      bcRule = buildBcMethodRule(participant as any);
+      bcRule = buildBcMethodRule(participant as any) + anchorPromptRule(currentCycleAnchorType(participant));
       bcParticipant = participant;
       postpartumActive = !!participant?.postpartum_active;
 
