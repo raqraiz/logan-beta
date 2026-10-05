@@ -2033,6 +2033,7 @@ serve(async (req) => {
           if (prevSource) {
             const prevStart = parseDateOnly(prevSource);
             const diffDays = prevStart ? Math.round((parsed.getTime() - prevStart.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+            // 15-60 day gate: outside it, no history row; the participant row still updates.
             if (diffDays >= 15 && diffDays <= 60) {
               previousCycleLength = diffDays;
               inferredCycleLength = diffDays;
@@ -2041,11 +2042,17 @@ serve(async (req) => {
                 cycle_start_date: prevSource,
                 cycle_end_date: formattedDate,
                 cycle_length_days: diffDays,
+                // Archived cycle keeps the type it had before this write.
+                cycle_anchor_type: currentCycleAnchorType(participant),
               });
             }
           }
 
-          const periodDatePayload: Record<string, unknown> = { last_period_start: formattedDate };
+          // Chat date correction: only the date changes, the anchor type stays as-is.
+          const periodDatePayload: Record<string, unknown> = {
+            last_period_start: formattedDate,
+            cycle_anchor_type: currentCycleAnchorType(participant),
+          };
           if (inferredCycleLength) periodDatePayload.cycle_length_days = inferredCycleLength;
           if (participant.life_stage === "postpartum") {
             periodDatePayload.life_stage = "cycling";
@@ -2155,7 +2162,7 @@ serve(async (req) => {
           const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
           const { data: lastArchived } = await supabase
             .from("cycle_history")
-            .select("cycle_start_date, cycle_length_days, created_at")
+            .select("cycle_start_date, cycle_length_days, created_at, cycle_anchor_type")
             .eq("participant_id", participant.id)
             .gte("created_at", cutoff)
             .order("created_at", { ascending: false })
@@ -2168,6 +2175,7 @@ serve(async (req) => {
               cycle_day: 99, // sentinel > 1 so downstream guard passes
               _from_archive: true,
               _archive_row_id: (lastArchived as any).id,
+              _anchor_type: (lastArchived as any).cycle_anchor_type,
             };
             // Also delete the bad archive row so we don't have a phantom 22-day cycle.
             try {
@@ -2186,8 +2194,17 @@ serve(async (req) => {
           const restoredStart = previousCycleMeta.last_period_start as string;
           const restoredLengthRaw = previousCycleMeta.cycle_length_days;
           const restoredLength = typeof restoredLengthRaw === "number" ? restoredLengthRaw : Number(restoredLengthRaw);
+          // Undo: restore the archived cycle's own type when known, else the type
+          // saved with the earlier message, else keep the current type.
+          const restoredAnchorType =
+            previousCycleMeta._anchor_type === "marker" || previousCycleMeta._anchor_type === "bleed"
+              ? previousCycleMeta._anchor_type
+              : previousCycleMeta.cycle_anchor_type === "marker" || previousCycleMeta.cycle_anchor_type === "bleed"
+                ? previousCycleMeta.cycle_anchor_type
+                : currentCycleAnchorType(participant);
           const restorePayload: Record<string, unknown> = {
             last_period_start: restoredStart,
+            cycle_anchor_type: restoredAnchorType,
             period_pending_since: null,
             period_still_active: false,
             current_period_end_date: null,
@@ -3199,6 +3216,8 @@ serve(async (req) => {
             life_stage: "pregnancy_loss",
             loss_date: today,
             last_period_start: null,
+            // Anchor cleared: reset type so a later "keep current type" write can't inherit a stale marker.
+            cycle_anchor_type: "bleed",
             postpartum_active: false,
             postpartum_start_date: null,
           })
@@ -3293,6 +3312,7 @@ serve(async (req) => {
             life_stage: "pregnant",
             pregnancy_lmp: lmp,
             last_period_start: null,
+            cycle_anchor_type: "bleed",
             postpartum_active: false,
             postpartum_start_date: null,
             loss_date: null,
