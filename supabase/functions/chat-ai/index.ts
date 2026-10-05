@@ -1503,11 +1503,20 @@ serve(async (req) => {
       const formattedDate = statedPeriodStart || periodStartDate.toISOString().split("T")[0];
 
 
+      // Anchor type: read the CURRENT type before any write. The archived row keeps
+      // the old cycle's type; the participant row gets the new one.
+      const currentAnchorType = currentCycleAnchorType(participant);
+      // Bleed wording (or answering a period check-in) => 'bleed'. A bare
+      // "today is Day 1" / "I'm on Day 1" with no bleed wording keeps the type.
+      const hasBleedWording = BLEED_WORDING_RE.test(userMessage) || wasPeridCheckin || isUnambiguousStartPhrase;
+      const newAnchorType = hasBleedWording ? "bleed" : currentAnchorType;
+
       let previousCycleLength: number | null = null;
       if (participant.last_period_start) {
         const prevStart = parseDateOnly(participant.last_period_start);
         const newStart = parseDateOnly(formattedDate);
         const diffDays = prevStart && newStart ? Math.round((newStart.getTime() - prevStart.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+        // 15-60 day gate: outside it, no history row, but the participant row still updates below.
         if (diffDays >= 15 && diffDays <= 60) {
           previousCycleLength = diffDays;
           await supabase
@@ -1517,6 +1526,7 @@ serve(async (req) => {
               cycle_start_date: participant.last_period_start,
               cycle_end_date: formattedDate,
               cycle_length_days: diffDays,
+              cycle_anchor_type: currentAnchorType,
             });
         }
       }
@@ -1525,6 +1535,7 @@ serve(async (req) => {
       // Postpartum → cycling: keep postpartum_start_date intact (it's the baby's birth date)
       const periodUpdatePayload: Record<string, unknown> = {
         last_period_start: formattedDate,
+        cycle_anchor_type: newAnchorType,
         // She confirmed Day 1 — clear any pending "haven't started yet" flag.
         period_pending_since: null,
       };
