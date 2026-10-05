@@ -167,7 +167,7 @@ serve(async (req) => {
 
     const { data: bcRow } = await service
       .from("participants")
-      .select("birth_control_method, on_hormonal_bc, birth_control_status")
+      .select("birth_control_method, on_hormonal_bc, birth_control_status, cycle_anchor_type")
       .eq("user_id", userId)
       .maybeSingle();
     const bcRule = buildBcMethodRule(bcRow as any);
