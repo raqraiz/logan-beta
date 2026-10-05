@@ -18,6 +18,7 @@ interface ChatCycleCircleProps {
   postpartumStartDate?: string;
   /** Source of truth for birth-control copy. null/undefined = unknown -> no BC wording */
   onHormonalBc?: boolean | null;
+  cycleAnchorType?: "bleed" | "marker";
   /** When true (and lifeStage='cycling'), overlay a small postpartum recovery badge */
   postpartumActive?: boolean;
   lossDate?: string;
@@ -148,7 +149,7 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
 }
 
 // Static badge for non-cycling/steady life stages (postpartum, menopause, irregular/on-the-pill, pregnancy loss, pregnant, or stale cycling)
-function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDate, pregnancyLmp, steadyReason, onHormonalBc, neutral = false }: { lifeStage: "postpartum" | "menopause" | "perimenopause" | "irregular" | "steady" | "pregnancy_loss" | "pregnant"; size: "sm" | "md"; postpartumStartDate?: string; lossDate?: string; dueDate?: string; pregnancyLmp?: string; steadyReason?: "pill" | "stale"; onHormonalBc?: boolean | null; neutral?: boolean }) {
+function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDate, pregnancyLmp, steadyReason, onHormonalBc, neutral = false, cycleAnchorType }: { lifeStage: "postpartum" | "menopause" | "perimenopause" | "irregular" | "steady" | "pregnancy_loss" | "pregnant"; size: "sm" | "md"; postpartumStartDate?: string; lossDate?: string; dueDate?: string; pregnancyLmp?: string; steadyReason?: "pill" | "stale"; onHormonalBc?: boolean | null; neutral?: boolean; cycleAnchorType?: "bleed" | "marker" }) {
   const stageKey =
     lifeStage === "postpartum" ? "Postpartum" :
     lifeStage === "menopause" ? "Menopause" :
@@ -177,7 +178,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
   const bcLabel = onHormonalBc === true ? "Hormonal BC" : "Own rhythm";
   let subLabel = lifeStage === "postpartum" ? "Recovery" : lifeStage === "menopause" ? "Transition" : lifeStage === "perimenopause" ? "Transition" : lifeStage === "pregnancy_loss" ? "Recovery" : bcLabel;
   if (lifeStage === "steady") {
-    subLabel = steadyReason === "stale" ? "Period overdue" : bcLabel;
+    subLabel = steadyReason === "stale" ? (cycleAnchorType === "marker" ? "Cycle running long" : "Period overdue") : bcLabel;
   }
   if (lifeStage === "irregular") {
     subLabel = onHormonalBc === true ? "On birth control / irregular" : "Irregular cycle";
@@ -492,7 +493,7 @@ function PregnancyCircle({ size, dueDate, pregnancyLmp }: { size: "sm" | "md"; d
 }
 
 
-export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling", postpartumStartDate, postpartumActive = false, lossDate, dueDate, pregnancyLmp, onHormonalBc = null }: ChatCycleCircleProps) {
+export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md", lifeStage = "cycling", postpartumStartDate, postpartumActive = false, lossDate, dueDate, pregnancyLmp, onHormonalBc = null, cycleAnchorType }: ChatCycleCircleProps) {
   const { stageKey, loading: boundaryLoading } = useStageBoundary();
   const isStageUser = !!stageKeyForLifeStage(lifeStage) || (postpartumActive && !!postpartumStartDate);
   // Never flash the stage version before the boundary check resolves.
@@ -506,7 +507,7 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
   const hideStage = isStageHidden(stageKey, lifeStage);
   if (hideStage) {
     return (
-      <LifeStageBadge
+      <LifeStageBadge cycleAnchorType={cycleAnchorType}
         lifeStage={lifeStage as "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant"}
         size={size}
         neutral
@@ -515,10 +516,10 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
   }
   // Postpartum/menopause/pregnancy-loss/pregnant/irregular users get a static badge.
   if (lifeStage === "postpartum" || lifeStage === "menopause" || lifeStage === "perimenopause") {
-    return <LifeStageBadge lifeStage={lifeStage} size={size} postpartumStartDate={postpartumStartDate} />;
+    return <LifeStageBadge cycleAnchorType={cycleAnchorType} lifeStage={lifeStage} size={size} postpartumStartDate={postpartumStartDate} />;
   }
   if (lifeStage === "pregnancy_loss") {
-    return <LifeStageBadge lifeStage="pregnancy_loss" size={size} lossDate={lossDate} />;
+    return <LifeStageBadge cycleAnchorType={cycleAnchorType} lifeStage="pregnancy_loss" size={size} lossDate={lossDate} />;
   }
   if (lifeStage === "pregnant") {
     return <PregnancyCircle size={size} dueDate={dueDate} pregnancyLmp={pregnancyLmp} />;
@@ -526,13 +527,13 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
   // Phase tracking off (irregular mode) is decided by life_stage only.
   // A hormonal IUD on a cycling account still gets the full ring.
   if (!isPhaseTrackingOn(lifeStage)) {
-    return <LifeStageBadge lifeStage="irregular" size={size} onHormonalBc={onHormonalBc} />;
+    return <LifeStageBadge cycleAnchorType={cycleAnchorType} lifeStage="irregular" size={size} onHormonalBc={onHormonalBc} />;
   }
   // Stale Day 1: running well past her expected next period with nothing new
   // logged. Stop asserting a day/phase — show the existing Overdue state.
   // Logging a new period resets cycleDay, which exits this state immediately.
   if (isCycleStale(cycleDay, cycleLengthDays)) {
-    return <LifeStageBadge lifeStage="steady" steadyReason="stale" size={size} onHormonalBc={onHormonalBc} />;
+    return <LifeStageBadge cycleAnchorType={cycleAnchorType} lifeStage="steady" steadyReason="stale" size={size} onHormonalBc={onHormonalBc} />;
   }
 
   const showPpBadge = postpartumActive && !!postpartumStartDate && stageKey !== "postpartum";

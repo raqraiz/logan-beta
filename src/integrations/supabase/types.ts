@@ -259,6 +259,7 @@ export type Database = {
       cycle_history: {
         Row: {
           created_at: string
+          cycle_anchor_type: string
           cycle_end_date: string
           cycle_length_days: number
           cycle_start_date: string
@@ -271,6 +272,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          cycle_anchor_type?: string
           cycle_end_date: string
           cycle_length_days: number
           cycle_start_date: string
@@ -283,6 +285,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          cycle_anchor_type?: string
           cycle_end_date?: string
           cycle_length_days?: number
           cycle_start_date?: string
@@ -1128,6 +1131,7 @@ export type Database = {
           consent_given_at: string | null
           created_at: string
           current_period_end_date: string | null
+          cycle_anchor_type: string
           cycle_length_days: number | null
           cycle_length_user_override: boolean
           cycle_regularity: string | null
@@ -1175,6 +1179,7 @@ export type Database = {
           consent_given_at?: string | null
           created_at?: string
           current_period_end_date?: string | null
+          cycle_anchor_type?: string
           cycle_length_days?: number | null
           cycle_length_user_override?: boolean
           cycle_regularity?: string | null
@@ -1222,6 +1227,7 @@ export type Database = {
           consent_given_at?: string | null
           created_at?: string
           current_period_end_date?: string | null
+          cycle_anchor_type?: string
           cycle_length_days?: number | null
           cycle_length_user_override?: boolean
           cycle_regularity?: string | null

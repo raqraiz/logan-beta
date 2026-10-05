@@ -1,3 +1,4 @@
+import { anchorPromptRule, currentCycleAnchorType } from "../_shared/cycleAnchor.ts";
 import { buildBcMethodRule,  } from "../_shared/bcMethod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
@@ -167,10 +168,10 @@ serve(async (req) => {
 
     const { data: bcRow } = await service
       .from("participants")
-      .select("birth_control_method, on_hormonal_bc, birth_control_status")
+      .select("birth_control_method, on_hormonal_bc, birth_control_status, cycle_anchor_type")
       .eq("user_id", userId)
       .maybeSingle();
-    const bcRule = buildBcMethodRule(bcRow as any);
+    const bcRule = buildBcMethodRule(bcRow as any) + anchorPromptRule(currentCycleAnchorType(bcRow));
 
     // Recent symptoms (last 21 days) with freshness so the model can hedge.
     const since = new Date(Date.now() - 21 * 86400000).toISOString();

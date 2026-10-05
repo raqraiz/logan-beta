@@ -6,6 +6,7 @@ import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
 import { calculateCycleInfo as sharedCalculateCycleInfo, isCycleStale } from "../_shared/cycleCalculations.ts";
 import { isPhaseTrackingOn } from "../_shared/cyclePhase.ts";
 import { detectBcOrNoPeriod } from "../_shared/bcDetection.ts";
+import { currentCycleAnchorType, BLEED_WORDING_RE, CYCLE_MARKER_PHRASE_RE, markerEligible, anchorPromptRule } from "../_shared/cycleAnchor.ts";
 import {
   fetchActiveBoundaries,
   buildBoundaryRuleBlock,
@@ -1481,6 +1482,82 @@ serve(async (req) => {
       return result;
     }
 
+    // ── Non-bleed cycle marker (cycling + hormonal BC only) ──────────────
+    // Offer when she says a new cycle started without bleed words. Write only
+    // after an explicit Yes to that offer, then re-read before confirming.
+    {
+      const lastMeta = (lastAssistantMsg?.metadata as any) || {};
+      const offerPending = lastMeta.cycle_marker_offer === true;
+      const trimmed = userMessage.trim();
+      const saidYes = /^(yes|yeah|yep|yup|sure|ok(?:ay)?|please|do it|mark it)\b/i.test(trimmed);
+      const saidNo = /^(no|nope|not now|don'?t|nah)\b/i.test(trimmed);
+      const tzM = participant?.timezone || "UTC";
+      const todayM = new Date().toLocaleDateString("en-CA", { timeZone: tzM });
+
+      if (participant && offerPending && saidYes && markerEligible(participant)) {
+        const markerDate = typeof lastMeta.suggested_marker_date === "string" ? lastMeta.suggested_marker_date : todayM;
+        const prevType = currentCycleAnchorType(participant);
+        const prevStart = participant.last_period_start as string | null;
+        let archivedLen: number | null = null;
+        if (prevStart) {
+          const a = parseDateOnly(prevStart);
+          const b = parseDateOnly(markerDate);
+          const diff = a && b ? Math.round((b.getTime() - a.getTime()) / 86400000) : 0;
+          // Same 15-60 day gate as period resets: outside it, no history row.
+          if (diff >= 15 && diff <= 60) {
+            archivedLen = diff;
+            await supabase.from("cycle_history").insert({
+              participant_id: participant.id,
+              cycle_start_date: prevStart,
+              cycle_end_date: markerDate,
+              cycle_length_days: diff,
+              cycle_anchor_type: prevType,
+            });
+          }
+        }
+        await supabase.from("participants").update({
+          last_period_start: markerDate,
+          cycle_anchor_type: "marker",
+          period_pending_since: null,
+          current_period_end_date: null,
+        }).eq("id", participant.id);
+        const { data: reread } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        const saved = reread?.last_period_start === markerDate && (reread as any)?.cycle_anchor_type === "marker";
+        if (reread) participant = reread;
+        const info = saved ? calculateCycleInfo(markerDate, participant.cycle_length_days || 28, tzM) : null;
+        const msg = saved
+          ? `Marked. Your new cycle starts ${markerDate === todayM ? "today" : "on " + markerDate}, and I'll count from there.${archivedLen ? ` Your last cycle was ${archivedLen} days.` : ""}`
+          : `I couldn't save that just now. Try again in a moment, or use "New cycle started" on Home.`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id, role: "assistant", content: msg, message_type: "text",
+          metadata: saved
+            ? { cycle_day: info?.cycleDay, cycle_phase: info?.phase, cycle_length_days: participant.cycle_length_days || 28, last_period_start: markerDate, cycle_anchor_type: "marker", timezone: tzM, period_update: true, new_period_start: markerDate, cycle_marker_saved: true }
+            : { cycle_marker_failed: true },
+        });
+        return new Response(JSON.stringify({ success: true, message: msg, cycleInfo: info, periodUpdated: saved }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (participant && offerPending && saidNo) {
+        const msg = `No problem, I'll leave your cycle as it is.`;
+        await supabase.from("chat_messages").insert({ user_id: user.id, role: "assistant", content: msg, message_type: "text" });
+        return new Response(JSON.stringify({ success: true, message: msg }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const isMarkerPhrase = CYCLE_MARKER_PHRASE_RE.test(userMessage)
+        && !BLEED_WORDING_RE.test(userMessage)
+        && !/\?/.test(userMessage)
+        && !/\b(spotting|spot|discharge)\b/i.test(userMessage)
+        && !/\b(might|maybe|could|should|will|would|if|when will|soon|tomorrow)\b/i.test(userMessage);
+      if (participant && isMarkerPhrase && markerEligible(participant)) {
+        const msg = `Want me to mark today as the start of a new cycle? I'll count your days from here.`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id, role: "assistant", content: msg, message_type: "text",
+          metadata: { cycle_marker_offer: true, suggested_marker_date: todayM },
+        });
+        return new Response(JSON.stringify({ success: true, message: msg }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
     if (isPeriodConfirmation && participant) {
       let periodStartDate = new Date();
 
@@ -1503,11 +1580,20 @@ serve(async (req) => {
       const formattedDate = statedPeriodStart || periodStartDate.toISOString().split("T")[0];
 
 
+      // Anchor type: read the CURRENT type before any write. The archived row keeps
+      // the old cycle's type; the participant row gets the new one.
+      const currentAnchorType = currentCycleAnchorType(participant);
+      // Bleed wording (or answering a period check-in) => 'bleed'. A bare
+      // "today is Day 1" / "I'm on Day 1" with no bleed wording keeps the type.
+      const hasBleedWording = BLEED_WORDING_RE.test(userMessage) || wasPeridCheckin || isUnambiguousStartPhrase;
+      const newAnchorType = hasBleedWording ? "bleed" : currentAnchorType;
+
       let previousCycleLength: number | null = null;
       if (participant.last_period_start) {
         const prevStart = parseDateOnly(participant.last_period_start);
         const newStart = parseDateOnly(formattedDate);
         const diffDays = prevStart && newStart ? Math.round((newStart.getTime() - prevStart.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+        // 15-60 day gate: outside it, no history row, but the participant row still updates below.
         if (diffDays >= 15 && diffDays <= 60) {
           previousCycleLength = diffDays;
           await supabase
@@ -1517,6 +1603,7 @@ serve(async (req) => {
               cycle_start_date: participant.last_period_start,
               cycle_end_date: formattedDate,
               cycle_length_days: diffDays,
+              cycle_anchor_type: currentAnchorType,
             });
         }
       }
@@ -1525,6 +1612,7 @@ serve(async (req) => {
       // Postpartum → cycling: keep postpartum_start_date intact (it's the baby's birth date)
       const periodUpdatePayload: Record<string, unknown> = {
         last_period_start: formattedDate,
+        cycle_anchor_type: newAnchorType,
         // She confirmed Day 1 — clear any pending "haven't started yet" flag.
         period_pending_since: null,
       };
@@ -2022,6 +2110,7 @@ serve(async (req) => {
           if (prevSource) {
             const prevStart = parseDateOnly(prevSource);
             const diffDays = prevStart ? Math.round((parsed.getTime() - prevStart.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+            // 15-60 day gate: outside it, no history row; the participant row still updates.
             if (diffDays >= 15 && diffDays <= 60) {
               previousCycleLength = diffDays;
               inferredCycleLength = diffDays;
@@ -2030,11 +2119,17 @@ serve(async (req) => {
                 cycle_start_date: prevSource,
                 cycle_end_date: formattedDate,
                 cycle_length_days: diffDays,
+                // Archived cycle keeps the type it had before this write.
+                cycle_anchor_type: currentCycleAnchorType(participant),
               });
             }
           }
 
-          const periodDatePayload: Record<string, unknown> = { last_period_start: formattedDate };
+          // Chat date correction: only the date changes, the anchor type stays as-is.
+          const periodDatePayload: Record<string, unknown> = {
+            last_period_start: formattedDate,
+            cycle_anchor_type: currentCycleAnchorType(participant),
+          };
           if (inferredCycleLength) periodDatePayload.cycle_length_days = inferredCycleLength;
           if (participant.life_stage === "postpartum") {
             periodDatePayload.life_stage = "cycling";
@@ -2144,7 +2239,7 @@ serve(async (req) => {
           const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
           const { data: lastArchived } = await supabase
             .from("cycle_history")
-            .select("cycle_start_date, cycle_length_days, created_at")
+            .select("cycle_start_date, cycle_length_days, created_at, cycle_anchor_type")
             .eq("participant_id", participant.id)
             .gte("created_at", cutoff)
             .order("created_at", { ascending: false })
@@ -2157,6 +2252,7 @@ serve(async (req) => {
               cycle_day: 99, // sentinel > 1 so downstream guard passes
               _from_archive: true,
               _archive_row_id: (lastArchived as any).id,
+              _anchor_type: (lastArchived as any).cycle_anchor_type,
             };
             // Also delete the bad archive row so we don't have a phantom 22-day cycle.
             try {
@@ -2175,8 +2271,17 @@ serve(async (req) => {
           const restoredStart = previousCycleMeta.last_period_start as string;
           const restoredLengthRaw = previousCycleMeta.cycle_length_days;
           const restoredLength = typeof restoredLengthRaw === "number" ? restoredLengthRaw : Number(restoredLengthRaw);
+          // Undo: restore the archived cycle's own type when known, else the type
+          // saved with the earlier message, else keep the current type.
+          const restoredAnchorType =
+            previousCycleMeta._anchor_type === "marker" || previousCycleMeta._anchor_type === "bleed"
+              ? previousCycleMeta._anchor_type
+              : previousCycleMeta.cycle_anchor_type === "marker" || previousCycleMeta.cycle_anchor_type === "bleed"
+                ? previousCycleMeta.cycle_anchor_type
+                : currentCycleAnchorType(participant);
           const restorePayload: Record<string, unknown> = {
             last_period_start: restoredStart,
+            cycle_anchor_type: restoredAnchorType,
             period_pending_since: null,
             period_still_active: false,
             current_period_end_date: null,
@@ -2264,7 +2369,8 @@ serve(async (req) => {
           todayLocal.setUTCDate(todayLocal.getUTCDate() - (targetDay - 1));
           const formattedDate = todayLocal.toISOString().split("T")[0];
 
-          const cycleDayPayload: Record<string, unknown> = { last_period_start: formattedDate };
+          // "Today is Day N" / "I'm on Day 1" with no bleed wording: keep the current anchor type.
+          const cycleDayPayload: Record<string, unknown> = { last_period_start: formattedDate, cycle_anchor_type: currentCycleAnchorType(participant) };
           if (participant.life_stage === "postpartum") {
             cycleDayPayload.life_stage = "cycling";
             cycleDayPayload.postpartum_active = true;
@@ -3188,6 +3294,8 @@ serve(async (req) => {
             life_stage: "pregnancy_loss",
             loss_date: today,
             last_period_start: null,
+            // Anchor cleared: reset type so a later "keep current type" write can't inherit a stale marker.
+            cycle_anchor_type: "bleed",
             postpartum_active: false,
             postpartum_start_date: null,
           })
@@ -3282,6 +3390,7 @@ serve(async (req) => {
             life_stage: "pregnant",
             pregnancy_lmp: lmp,
             last_period_start: null,
+            cycle_anchor_type: "bleed",
             postpartum_active: false,
             postpartum_start_date: null,
             loss_date: null,
@@ -4467,6 +4576,7 @@ serve(async (req) => {
     const emotionalFollowUp = isEmotionalFollowUp(userMessage, recentMessages as any);
     const emotionalContextActive = isEmotionalOrHeavyMessage(userMessage) || emotionalFollowUp;
     let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext + backfillBlock + libraryBlock + libraryGuidance, emotionalContextActive, activeBoundaries);
+    systemPrompt += anchorPromptRule(currentCycleAnchorType(participant));
 
     // Active boundaries — absolute, highest priority, applied before anything else.
     if (activeBoundaries.length > 0) {

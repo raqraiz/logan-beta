@@ -13,6 +13,7 @@ interface DailyBriefingHeroProps {
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
   /** true = on hormonal BC, false = confirmed not on BC, null/undefined = unknown */
   onHormonalBc?: boolean | null;
+  cycleAnchorType?: "bleed" | "marker";
   bcMethod?: string | null;
   postpartumStartDate?: string;
   postpartumActive?: boolean;
@@ -118,6 +119,7 @@ export function DailyBriefingHero({
   dueDate,
   pregnancyLmp,
   onHormonalBc,
+  cycleAnchorType,
   bcMethod,
   onCircleClick,
 }: DailyBriefingHeroProps) {
@@ -153,7 +155,9 @@ export function DailyBriefingHero({
     : isPregnant
       ? "Growing a human is a full-time job. Rest is part of the work."
       : isStale
-        ? "It's been a while since your last logged period, so I'm not guessing at a phase. Log your Day 1 and I'll pick the thread back up."
+        ? (cycleAnchorType === "marker"
+          ? "It's been a while since the cycle start you marked, so I'm not guessing at a phase. Mark a new cycle start and I'll pick the thread back up."
+          : "It's been a while since your last logged period, so I'm not guessing at a phase. Log your Day 1 and I'll pick the thread back up.")
         : isSteadyByPill
           ? "Hormonal birth control evens out your cycle. Let's focus on sleep, energy, and stress today."
           : isIrregular
@@ -184,7 +188,7 @@ export function DailyBriefingHero({
               disabled={!onCircleClick || isNonCycling}
               className="transition-opacity duration-200 active:opacity-80 hover:opacity-95 disabled:hover:opacity-100"
             >
-              <ChatCycleCircle
+              <ChatCycleCircle cycleAnchorType={cycleAnchorType}
                 cycleDay={cycleDay}
                 phase={phase}
                 cycleLengthDays={cycleLengthDays}
@@ -217,7 +221,7 @@ export function DailyBriefingHero({
                   : isIrregular && !phaseTrackingOn
                     ? (onHormonalBc === true ? "On birth control" : "Irregular")
                     : isStale
-                      ? "Period overdue"
+                      ? (cycleAnchorType === "marker" ? "Cycle running long" : "Period overdue")
                       : phase}
               </span>
             </div>

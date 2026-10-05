@@ -1,3 +1,4 @@
+import { anchorPromptRule, currentCycleAnchorType } from "../_shared/cycleAnchor.ts";
 import { buildBcMethodRule, bcFramingSummary } from "../_shared/bcMethod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -226,7 +227,7 @@ serve(async (req) => {
 
       let aiResult;
       try {
-        aiResult = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt);
+        aiResult = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt + anchorPromptRule(currentCycleAnchorType(participant)));
       } catch (aiErr) {
         const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
         console.error("AI insight generation failed, removing placeholder:", msg);
@@ -402,7 +403,7 @@ serve(async (req) => {
 
       let aiResult;
       try {
-        aiResult = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt);
+        aiResult = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt + anchorPromptRule(currentCycleAnchorType(participant)));
       } catch (aiErr) {
         const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
         console.error("AI insight generation failed, removing placeholder:", msg);
