@@ -371,7 +371,10 @@ serve(async (req) => {
         ? `Day ${cycleInfo.cycleDay} — that's ${cycleInfo.cycleDay - (participant.cycle_length_days || 28)} days past your expected cycle length`
         : `Day ${cycleInfo.cycleDay}, wrapping up **luteal**`;
 
-      const checkinContent = `${dayLabel}. Your period could arrive any time now.\n\nHas it started yet? If so, I'll reset your cycle so everything stays accurate — your insights, your phase, all of it.`;
+      const isMarkerAnchor = currentCycleAnchorType(participant) === "marker";
+      const checkinContent = isMarkerAnchor
+        ? `Day ${cycleInfo.cycleDay} of your cycle.\n\nFeels like a new cycle might have started?`
+        : `${dayLabel}. Your period could arrive any time now.\n\nHas it started yet? If so, I'll reset your cycle so everything stays accurate — your insights, your phase, all of it.`;
 
       await supabase.from("chat_messages").update({
         content: checkinContent,
@@ -385,8 +388,11 @@ serve(async (req) => {
           timezone: participant.timezone || "UTC",
           insight_type: "proactive",
           period_checkin: true,
+          ...(isMarkerAnchor ? { marker_checkin: true, cycle_anchor_type: "marker" } : {}),
           generated_at: new Date().toISOString(),
-          conversation_starters: ["Yes, it started today", "Started yesterday", "Not yet"]
+          conversation_starters: isMarkerAnchor
+            ? ["Yes, mark it", "Not yet", "I got a bleed"]
+            : ["Yes, it started today", "Started yesterday", "Not yet"]
         }
       }).eq("id", placeholderId);
     } else {

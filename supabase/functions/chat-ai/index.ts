@@ -1456,7 +1456,8 @@ serve(async (req) => {
       (!referencesHistoricalDate && (
         (periodConfirmPatterns.some(p => p.test(userMessage)) && (wasPeridCheckin || mentionsPeriodWord || isUnambiguousStartPhrase)) ||
         (isBareYes && wasPeridCheckin)
-      ))
+      )) ||
+      (wasPeridCheckin && /^\s*i\s+got\s+a\s+bleed\b/i.test(userMessage))
 
     );
 
@@ -1487,14 +1488,28 @@ serve(async (req) => {
     // after an explicit Yes to that offer, then re-read before confirming.
     {
       const lastMeta = (lastAssistantMsg?.metadata as any) || {};
-      const offerPending = lastMeta.cycle_marker_offer === true;
+      const markerCheckin = lastMeta.marker_checkin === true;
+      const offerPending = lastMeta.cycle_marker_offer === true || markerCheckin;
+      const MARKER_NOTES = ["Spotting", "Symptoms eased", "Just felt it reset", "Other"];
+      // Optional one-tap note after a chat marker save. Skipped = nothing happens.
+      if (participant && lastMeta.marker_note_offer === true) {
+        const note = MARKER_NOTES.find((n) => n.toLowerCase() === userMessage.trim().toLowerCase());
+        if (note) {
+          const { error: noteErr } = await supabase.from("cycle_updates").insert({
+            participant_id: participant.id, update_type: "cycle_marker", description: note,
+          });
+          const msg = noteErr ? `I couldn't save that note, but your cycle start is marked.` : `Noted.`;
+          await supabase.from("chat_messages").insert({ user_id: user.id, role: "assistant", content: msg, message_type: "text" });
+          return new Response(JSON.stringify({ success: true, message: msg }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
       const trimmed = userMessage.trim();
       const saidYes = /^(yes|yeah|yep|yup|sure|ok(?:ay)?|please|do it|mark it)\b/i.test(trimmed);
       const saidNo = /^(no|nope|not now|don'?t|nah)\b/i.test(trimmed);
       const tzM = participant?.timezone || "UTC";
       const todayM = new Date().toLocaleDateString("en-CA", { timeZone: tzM });
 
-      if (participant && offerPending && saidYes && markerEligible(participant)) {
+      if (participant && offerPending && saidYes && (markerCheckin || markerEligible(participant))) {
         const markerDate = typeof lastMeta.suggested_marker_date === "string" ? lastMeta.suggested_marker_date : todayM;
         const prevType = currentCycleAnchorType(participant);
         const prevStart = participant.last_period_start as string | null;
@@ -1531,13 +1546,13 @@ serve(async (req) => {
         await supabase.from("chat_messages").insert({
           user_id: user.id, role: "assistant", content: msg, message_type: "text",
           metadata: saved
-            ? { cycle_day: info?.cycleDay, cycle_phase: info?.phase, cycle_length_days: participant.cycle_length_days || 28, last_period_start: markerDate, cycle_anchor_type: "marker", timezone: tzM, period_update: true, new_period_start: markerDate, cycle_marker_saved: true }
+            ? { cycle_day: info?.cycleDay, cycle_phase: info?.phase, cycle_length_days: participant.cycle_length_days || 28, last_period_start: markerDate, cycle_anchor_type: "marker", timezone: tzM, period_update: true, new_period_start: markerDate, cycle_marker_saved: true, marker_note_offer: true, conversation_starters: MARKER_NOTES }
             : { cycle_marker_failed: true },
         });
         return new Response(JSON.stringify({ success: true, message: msg, cycleInfo: info, periodUpdated: saved }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      if (participant && offerPending && saidNo) {
+      if (participant && lastMeta.cycle_marker_offer === true && saidNo) {
         const msg = `No problem, I'll leave your cycle as it is.`;
         await supabase.from("chat_messages").insert({ user_id: user.id, role: "assistant", content: msg, message_type: "text" });
         return new Response(JSON.stringify({ success: true, message: msg }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -2125,10 +2140,11 @@ serve(async (req) => {
             }
           }
 
-          // Chat date correction: only the date changes, the anchor type stays as-is.
+          // Bleed wording ("my period started Aug 1") => 'bleed'. A plain date
+          // correction with no bleed wording keeps the current type.
           const periodDatePayload: Record<string, unknown> = {
             last_period_start: formattedDate,
-            cycle_anchor_type: currentCycleAnchorType(participant),
+            cycle_anchor_type: BLEED_WORDING_RE.test(userMessage) ? "bleed" : currentCycleAnchorType(participant),
           };
           if (inferredCycleLength) periodDatePayload.cycle_length_days = inferredCycleLength;
           if (participant.life_stage === "postpartum") {
@@ -2370,7 +2386,7 @@ serve(async (req) => {
           const formattedDate = todayLocal.toISOString().split("T")[0];
 
           // "Today is Day N" / "I'm on Day 1" with no bleed wording: keep the current anchor type.
-          const cycleDayPayload: Record<string, unknown> = { last_period_start: formattedDate, cycle_anchor_type: currentCycleAnchorType(participant) };
+          const cycleDayPayload: Record<string, unknown> = { last_period_start: formattedDate, cycle_anchor_type: BLEED_WORDING_RE.test(userMessage) ? "bleed" : currentCycleAnchorType(participant) };
           if (participant.life_stage === "postpartum") {
             cycleDayPayload.life_stage = "cycling";
             cycleDayPayload.postpartum_active = true;

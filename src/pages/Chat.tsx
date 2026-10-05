@@ -1595,7 +1595,7 @@ const Chat = () => {
               current_period_end_date: null,
             } as any);
           }}
-          onCycleMarkerStart={async (date: Date) => {
+          onCycleMarkerStart={async (date: Date, note?: string | null) => {
             if (!user?.id) return;
             const iso = format(date, "yyyy-MM-dd");
             // "New cycle started" button → explicit marker (no bleed).
@@ -1628,6 +1628,20 @@ const Chat = () => {
               period_still_active: false,
               current_period_end_date: null,
             } as any);
+            // Optional note chip. Never blocks the save.
+            if (note) {
+              try {
+                const { data: pp } = await (supabase as any)
+                  .from("participants").select("id").eq("user_id", user.id).single();
+                if (pp?.id) {
+                  await (supabase as any).from("cycle_updates").insert({
+                    participant_id: pp.id,
+                    update_type: "cycle_marker",
+                    description: note,
+                  });
+                }
+              } catch (e) { console.error("cycle marker note failed", e); }
+            }
           }}
           onCycleLengthUpdate={async (days: number) => {
             if (!user?.id) return;

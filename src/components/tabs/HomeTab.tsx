@@ -470,6 +470,8 @@ interface CycleData {
   cycleAnchorType?: "bleed" | "marker";
 }
 
+const CYCLE_MARKER_NOTES = ["Spotting", "Symptoms eased", "Just felt it reset", "Other"];
+
 interface HomeTabProps {
   cycleData: CycleData | null;
   anchorSymptom?: string | null;
