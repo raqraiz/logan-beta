@@ -1,5 +1,6 @@
 import { type PhaseLengths, getPhaseLengthPrefs } from "@/lib/phaseLengths";
 import { calculateCycleInfoShared, isCycleStale } from "@/lib/cycleCalculations";
+import { isPhaseTrackingOn } from "@/lib/cyclePhase";
 import { getPostpartumTimeline } from "@/lib/postpartumTimeline";
 import { useStageBoundary, isStageHidden, stageKeyForLifeStage } from "@/hooks/useStageBoundary";
 

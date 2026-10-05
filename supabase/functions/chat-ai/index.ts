@@ -4,6 +4,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
 import { calculateCycleInfo as sharedCalculateCycleInfo, isCycleStale } from "../_shared/cycleCalculations.ts";
+import { isPhaseTrackingOn } from "../_shared/cyclePhase.ts";
 import { detectBcOrNoPeriod } from "../_shared/bcDetection.ts";
 import {
   fetchActiveBoundaries,
@@ -3121,7 +3122,7 @@ serve(async (req) => {
         if (refreshed) participant = refreshed;
         if ((participant as any).birth_control_method === chatBcMethod &&
             (syncedHormonal === null || (participant as any).on_hormonal_bc === syncedHormonal)) {
-          bcMethodSavedNote = `\n\nSYSTEM NOTE: You just saved her birth control type as "${BC_METHOD_LABELS[chatBcMethod]}". Briefly confirm that in one short clause, then answer her.`;
+          bcMethodSavedNote = `\n\nSYSTEM NOTE: You just saved her birth control type as "${BC_METHOD_LABELS[chatBcMethod]}". Briefly confirm that in one short clause, then answer her. This does NOT change her tracking mode: never say you switched or changed her mode.`;
         }
       }
 
