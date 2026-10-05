@@ -153,7 +153,9 @@ export function DailyBriefingHero({
     : isPregnant
       ? "Growing a human is a full-time job. Rest is part of the work."
       : isStale
-        ? "It's been a while since your last logged period, so I'm not guessing at a phase. Log your Day 1 and I'll pick the thread back up."
+        ? (cycleAnchorType === "marker"
+          ? "It's been a while since the cycle start you marked, so I'm not guessing at a phase. Mark a new cycle start and I'll pick the thread back up."
+          : "It's been a while since your last logged period, so I'm not guessing at a phase. Log your Day 1 and I'll pick the thread back up.")
         : isSteadyByPill
           ? "Hormonal birth control evens out your cycle. Let's focus on sleep, energy, and stress today."
           : isIrregular
@@ -217,7 +219,7 @@ export function DailyBriefingHero({
                   : isIrregular && !phaseTrackingOn
                     ? (onHormonalBc === true ? "On birth control" : "Irregular")
                     : isStale
-                      ? "Period overdue"
+                      ? (cycleAnchorType === "marker" ? "Cycle running long" : "Period overdue")
                       : phase}
               </span>
             </div>

@@ -177,7 +177,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
   const bcLabel = onHormonalBc === true ? "Hormonal BC" : "Own rhythm";
   let subLabel = lifeStage === "postpartum" ? "Recovery" : lifeStage === "menopause" ? "Transition" : lifeStage === "perimenopause" ? "Transition" : lifeStage === "pregnancy_loss" ? "Recovery" : bcLabel;
   if (lifeStage === "steady") {
-    subLabel = steadyReason === "stale" ? "Period overdue" : bcLabel;
+    subLabel = steadyReason === "stale" ? (cycleAnchorType === "marker" ? "Cycle running long" : "Period overdue") : bcLabel;
   }
   if (lifeStage === "irregular") {
     subLabel = onHormonalBc === true ? "On birth control / irregular" : "Irregular cycle";
