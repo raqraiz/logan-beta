@@ -1343,16 +1343,44 @@ serve(async (req) => {
 
 
     // --- Period confirmation detection ---
-    const { data: lastAssistantMsg } = await supabase
+    const { data: recentAssistantMsgs } = await supabase
       .from("chat_messages")
-      .select("content, metadata")
+      .select("content, metadata, created_at")
       .eq("user_id", user.id)
       .eq("role", "assistant")
       .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
-    
-    const wasPeridCheckin = (lastAssistantMsg?.metadata as any)?.period_checkin === true;
+      .limit(3);
+    const lastAssistantMsg = (recentAssistantMsgs || [])[0] || null;
+
+    // Check-in answer window: a check-in within her last 3 assistant messages,
+    // sent the same local day, and not yet answered (no pending flag or period
+    // reset written since it was sent).
+    const findOpenCheckin = (flag: "period_checkin" | "marker_checkin"): any | null => {
+      const tzW = (participant as any)?.timezone || "UTC";
+      const localDay = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: tzW });
+      const today = localDay(new Date());
+      const msgs = (recentAssistantMsgs || []) as any[];
+      for (let i = 0; i < msgs.length; i++) {
+        const m = msgs[i];
+        if ((m.metadata as any)?.[flag] !== true) continue;
+        const sentDay = localDay(new Date(m.created_at));
+        if (sentDay !== today) return null;
+        const answeredInChat = msgs.slice(0, i).some((n) => {
+          const md = (n.metadata as any) || {};
+          return md.period_update === true || md.cycle_marker_saved === true;
+        });
+        if (answeredInChat) return null;
+        const pending = (participant as any)?.period_pending_since as string | null;
+        if (pending && pending >= sentDay) return null;
+        const lps = (participant as any)?.last_period_start as string | null;
+        if (lps && lps >= sentDay) return null;
+        return m;
+      }
+      return null;
+    };
+    const openPeriodCheckin = findOpenCheckin("period_checkin");
+    const openMarkerCheckin = findOpenCheckin("marker_checkin");
+    const wasPeridCheckin = !!openPeriodCheckin;
     const lastAssistantContent = typeof lastAssistantMsg?.content === "string" ? lastAssistantMsg.content : "";
 
     // Recent user turns — used so a day number stated earlier in the thread
@@ -1487,8 +1515,10 @@ serve(async (req) => {
     // Offer when she says a new cycle started without bleed words. Write only
     // after an explicit Yes to that offer, then re-read before confirming.
     {
-      const lastMeta = (lastAssistantMsg?.metadata as any) || {};
-      const markerCheckin = lastMeta.marker_checkin === true;
+      const markerCheckin = !!openMarkerCheckin;
+      const lastMeta = markerCheckin && !(lastAssistantMsg?.metadata as any)?.cycle_marker_offer
+        ? ((openMarkerCheckin.metadata as any) || {})
+        : ((lastAssistantMsg?.metadata as any) || {});
       const offerPending = lastMeta.cycle_marker_offer === true || markerCheckin;
       const MARKER_NOTES = ["Spotting", "Symptoms eased", "Just felt it reset", "Other"];
       // Optional one-tap note after a chat marker save. Skipped = nothing happens.
