@@ -474,7 +474,7 @@ interface HomeTabProps {
   cycleData: CycleData | null;
   anchorSymptom?: string | null;
   onPeriodUpdate?: (date: Date) => void;
-  onCycleMarkerStart?: (date: Date) => Promise<void> | void;
+  onCycleMarkerStart?: (date: Date, note?: string | null) => Promise<void> | void;
   onCycleLengthUpdate?: (days: number) => void;
   onPhaseOverride?: (phase: "auto" | "Menstruation" | "Follicular" | "Ovulation" | "Luteal") => void;
   onPostpartumDeclare?: () => void;
@@ -491,6 +491,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
   const [showMarker, setShowMarker] = useState(false);
   const [markerDate, setMarkerDate] = useState<Date | undefined>(new Date());
   const [markerSaving, setMarkerSaving] = useState(false);
+  const [markerNote, setMarkerNote] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [editedLength, setEditedLength] = useState<number>(28);
   const [editedPhase, setEditedPhase] = useState<"auto" | "Menstruation" | "Follicular" | "Ovulation" | "Luteal">("auto");
@@ -1023,6 +1024,21 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
           <div className="flex justify-center">
             <Calendar mode="single" selected={markerDate} onSelect={setMarkerDate} disabled={(d) => d > new Date()} className="p-3 pointer-events-auto" />
           </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">Add a note (optional)</p>
+            <div className="flex flex-wrap gap-2">
+              {CYCLE_MARKER_NOTES.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setMarkerNote(markerNote === n ? null : n)}
+                  className={`text-xs rounded-full border px-3 py-1 transition-colors ${markerNote === n ? "bg-primary text-primary-foreground border-primary" : "border-border text-foreground"}`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={() => setShowMarker(false)}>Cancel</Button>
             <Button
@@ -1031,7 +1047,8 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
                 if (!markerDate || !onCycleMarkerStart) return;
                 setMarkerSaving(true);
                 try {
-                  await onCycleMarkerStart(markerDate);
+                  await onCycleMarkerStart(markerDate, markerNote);
+                  setMarkerNote(null);
                   setShowMarker(false);
                   toast("Marked. Counting your cycle from here.");
                 } finally { setMarkerSaving(false); }
