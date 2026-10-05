@@ -6,6 +6,7 @@ import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
 import { calculateCycleInfo as sharedCalculateCycleInfo, isCycleStale } from "../_shared/cycleCalculations.ts";
 import { isPhaseTrackingOn } from "../_shared/cyclePhase.ts";
 import { detectBcOrNoPeriod } from "../_shared/bcDetection.ts";
+import { currentCycleAnchorType, BLEED_WORDING_RE, CYCLE_MARKER_PHRASE_RE, markerEligible, anchorPromptRule } from "../_shared/cycleAnchor.ts";
 import {
   fetchActiveBoundaries,
   buildBoundaryRuleBlock,
@@ -1479,6 +1480,82 @@ serve(async (req) => {
       const result = new Date(now);
       result.setDate(result.getDate() - diff);
       return result;
+    }
+
+    // ── Non-bleed cycle marker (cycling + hormonal BC only) ──────────────
+    // Offer when she says a new cycle started without bleed words. Write only
+    // after an explicit Yes to that offer, then re-read before confirming.
+    {
+      const lastMeta = (lastAssistantMsg?.metadata as any) || {};
+      const offerPending = lastMeta.cycle_marker_offer === true;
+      const trimmed = userMessage.trim();
+      const saidYes = /^(yes|yeah|yep|yup|sure|ok(?:ay)?|please|do it|mark it)\b/i.test(trimmed);
+      const saidNo = /^(no|nope|not now|don'?t|nah)\b/i.test(trimmed);
+      const tzM = participant?.timezone || "UTC";
+      const todayM = new Date().toLocaleDateString("en-CA", { timeZone: tzM });
+
+      if (participant && offerPending && saidYes && markerEligible(participant)) {
+        const markerDate = typeof lastMeta.suggested_marker_date === "string" ? lastMeta.suggested_marker_date : todayM;
+        const prevType = currentCycleAnchorType(participant);
+        const prevStart = participant.last_period_start as string | null;
+        let archivedLen: number | null = null;
+        if (prevStart) {
+          const a = parseDateOnly(prevStart);
+          const b = parseDateOnly(markerDate);
+          const diff = a && b ? Math.round((b.getTime() - a.getTime()) / 86400000) : 0;
+          // Same 15-60 day gate as period resets: outside it, no history row.
+          if (diff >= 15 && diff <= 60) {
+            archivedLen = diff;
+            await supabase.from("cycle_history").insert({
+              participant_id: participant.id,
+              cycle_start_date: prevStart,
+              cycle_end_date: markerDate,
+              cycle_length_days: diff,
+              cycle_anchor_type: prevType,
+            });
+          }
+        }
+        await supabase.from("participants").update({
+          last_period_start: markerDate,
+          cycle_anchor_type: "marker",
+          period_pending_since: null,
+          current_period_end_date: null,
+        }).eq("id", participant.id);
+        const { data: reread } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        const saved = reread?.last_period_start === markerDate && (reread as any)?.cycle_anchor_type === "marker";
+        if (reread) participant = reread;
+        const info = saved ? calculateCycleInfo(markerDate, participant.cycle_length_days || 28, tzM) : null;
+        const msg = saved
+          ? `Marked. Your new cycle starts ${markerDate === todayM ? "today" : "on " + markerDate}, and I'll count from there.${archivedLen ? ` Your last cycle was ${archivedLen} days.` : ""}`
+          : `I couldn't save that just now. Try again in a moment, or use "New cycle started" on Home.`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id, role: "assistant", content: msg, message_type: "text",
+          metadata: saved
+            ? { cycle_day: info?.cycleDay, cycle_phase: info?.phase, cycle_length_days: participant.cycle_length_days || 28, last_period_start: markerDate, cycle_anchor_type: "marker", timezone: tzM, period_update: true, new_period_start: markerDate, cycle_marker_saved: true }
+            : { cycle_marker_failed: true },
+        });
+        return new Response(JSON.stringify({ success: true, message: msg, cycleInfo: info, periodUpdated: saved }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (participant && offerPending && saidNo) {
+        const msg = `No problem, I'll leave your cycle as it is.`;
+        await supabase.from("chat_messages").insert({ user_id: user.id, role: "assistant", content: msg, message_type: "text" });
+        return new Response(JSON.stringify({ success: true, message: msg }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const isMarkerPhrase = CYCLE_MARKER_PHRASE_RE.test(userMessage)
+        && !BLEED_WORDING_RE.test(userMessage)
+        && !/\?/.test(userMessage)
+        && !/\b(spotting|spot|discharge)\b/i.test(userMessage)
+        && !/\b(might|maybe|could|should|will|would|if|when will|soon|tomorrow)\b/i.test(userMessage);
+      if (participant && isMarkerPhrase && markerEligible(participant)) {
+        const msg = `Want me to mark today as the start of a new cycle? I'll count your days from here.`;
+        await supabase.from("chat_messages").insert({
+          user_id: user.id, role: "assistant", content: msg, message_type: "text",
+          metadata: { cycle_marker_offer: true, suggested_marker_date: todayM },
+        });
+        return new Response(JSON.stringify({ success: true, message: msg }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
 
     if (isPeriodConfirmation && participant) {
