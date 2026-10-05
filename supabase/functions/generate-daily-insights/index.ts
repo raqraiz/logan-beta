@@ -209,14 +209,15 @@ serve(async (req) => {
       stageContext = `She is postpartum, ${postpartumWeeks ?? 0} weeks since birth (recovery stage: ${postpartumPhase}). She is NOT cycling. Never mention a menstrual cycle phase or cycle day.`;
     } else if (lifeStage === "menopause" || lifeStage === "perimenopause") {
       stageContext = `She is in ${lifeStage}. Do not name a cycle phase or day number. Focus on sleep, strength, protein, temperature regulation and mood.`;
-    } else if (lifeStage === "irregular") {
-      stageContext = `Her cycle is irregular or externally regulated by hormonal birth control. Do not name a phase or day number. Focus on steady-state levers.`;
     } else if (lifeStage === "pregnant") {
       stageContext = `She is pregnant. Do not name a menstrual cycle phase. Focus on safe, supportive guidance.`;
     } else if (lifeStage === "pregnancy_loss") {
       stageContext = stageSuppressed
         ? `Do not name a menstrual cycle phase or day number. Keep everything neutral and everyday: sleep, energy, nourishment, movement, mood. Do NOT reference loss, grief, healing, recovery, or anything she has been through.`
         : `She is recovering from a pregnancy loss. Be gentle, never minimize, never rush her timeline.`;
+    } else if (!isPhaseTrackingOn(lifeStage)) {
+      // Phase tracking off is decided by life_stage only, never by birth control.
+      stageContext = `Her cycle is irregular or externally regulated by hormonal birth control. Do not name a phase or day number. Focus on steady-state levers.`;
     } else {
       stageContext = `She is on Day ${cycleDay ?? 1} of a ${cycleLengthDays}-day cycle, in her ${phase} phase.`;
     }

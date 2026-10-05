@@ -4,6 +4,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
 import { calculateCycleInfo as sharedCalculateCycleInfo, isCycleStale } from "../_shared/cycleCalculations.ts";
+import { isPhaseTrackingOn } from "../_shared/cyclePhase.ts";
 import { detectBcOrNoPeriod } from "../_shared/bcDetection.ts";
 import {
   fetchActiveBoundaries,
@@ -3002,40 +3003,103 @@ serve(async (req) => {
         );
       }
 
-      if (irregularSignal && !cyclingSignal && !perimenopauseSignal && !recentPostpartumVeto && participant.life_stage !== "irregular") {
-        await supabase
-          .from("participants")
-          .update({
-            life_stage: "irregular",
-            ...(bcPositiveSignal ? { on_hormonal_bc: true } : {}),
-            // She says she has no real period — an old stored Day 1 would keep
-            // feeding cycling math. Clear it. Stating a real date later moves
-            // her back to cycling (handled by the cycling detector).
-            ...(sharedBcDetection.noRealPeriod ? { last_period_start: null } : {}),
-          })
-          .eq("id", participant.id);
-        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
-        if (refreshed) participant = refreshed;
-
-        const msg = bcPositiveSignal
-          ? `Done — switched your account to **hormonal birth control / irregular cycle** mode. I'll stop predicting natural phases and instead focus on steady-state levers: sleep, protein, strength, stress, hydration, and the micronutrients hormonal BC can deplete (B6, B12, magnesium, zinc, folate). Anything specific you want to dig into first?`
-          : `Done — switched your account to **irregular cycle** mode. I'll stop predicting exact phases and focus on steady-state levers instead: sleep, protein, strength, stress, and hydration. Anything specific you want to dig into first?`;
-        await supabase.from("chat_messages").insert({
-          user_id: user.id,
-          role: "assistant",
-          content: msg,
-          message_type: "text",
-          metadata: { life_stage_updated: "irregular", ...(bcPositiveSignal ? { on_hormonal_bc_updated: true } : {}) },
-        });
-        return new Response(
-          JSON.stringify({ success: true, message: msg, lifeStageUpdated: true }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      // --- Tracking-mode switches -------------------------------------------
+      // Product rule: chat NEVER changes her tracking mode without her asking
+      // or confirming. A birth control mention (incl. hormonal IUD) never
+      // writes life_stage and never triggers a switch offer on its own.
+      const trimmedMsg = userMessage.trim();
+      const isQuestionLike = /\?\s*$/.test(trimmedMsg)
+        || /^(?:what|how|why|does|do|can|could|is|are|should|would|will|if)\b/i.test(trimmedMsg);
+      const modeVerb = String.raw`(?:switch|put|move|change|set|take|turn)`;
+      const modeObj = String.raw`(?:me|my\s+(?:account|tracking|mode|settings?|profile))`;
+      const toCyclingReq = /^regular cycle tracking\.?$/i.test(trimmedMsg)
+        || new RegExp(`\\b${modeVerb}\\s+${modeObj}\\s+(?:back\\s+)?(?:to|on|onto|into)\\s+(?:the\\s+)?(?:regular|normal|natural)?\\s*(?:cycles?|cycling|cycle\\s+tracking|phase\\s+tracking|phases)\\b`, "i").test(userMessage)
+        || /\b(?:turn|switch)\s+(?:my\s+)?(?:cycle|phase)\s+tracking\s+(?:back\s+)?on\b/i.test(userMessage);
+      const toIrregularReq = !toCyclingReq && (
+        /^birth control \/ irregular\.?$/i.test(trimmedMsg)
+        || new RegExp(`\\b${modeVerb}\\s+${modeObj}\\s+(?:back\\s+)?(?:to|on|onto|into)\\s+(?:the\\s+)?(?:irregular|birth\\s+control|hormonal\\s+(?:birth\\s+control|bc)|bc|steady)\\b`, "i").test(userMessage)
+      );
+      const vagueModeReq = !toCyclingReq && !toIrregularReq
+        && new RegExp(`\\b${modeVerb}\\s+(?:me\\s+back\\b|my\\s+(?:tracking\\s+)?mode\\b|(?:my\\s+)?tracking\\s+mode\\b)`, "i").test(userMessage);
+      // Only "no monthly pattern at all" earns a switch offer. Questions never do.
+      const noPatternStatement = !isQuestionLike && (
+        /\bi\s+(?:don'?t|do\s+not)\s+(?:really\s+)?(?:cycle|have\s+(?:a\s+|any\s+)?(?:monthly\s+)?(?:pattern|cycle|rhythm))\b/i.test(userMessage)
+        || /\bi\s+have\s+no\s+(?:monthly\s+)?(?:pattern|cycle|rhythm)\b/i.test(userMessage)
+      );
+      const isYesSwitch = /^yes,?\s+switch\s+it\.?$/i.test(trimmedMsg);
+      const isNoKeep = /^no,?\s+keep\s+my\s+cycle\.?$/i.test(trimmedMsg);
+      let pendingIrregularOffer = false;
+      if (isYesSwitch || isNoKeep) {
+        const { data: lastAsst } = await supabase
+          .from("chat_messages").select("metadata")
+          .eq("user_id", user.id).eq("role", "assistant")
+          .order("created_at", { ascending: false }).limit(1).maybeSingle();
+        pendingIrregularOffer = (lastAsst?.metadata as any)?.mode_switch_offer === "irregular";
       }
 
-      // Already in the right life stage, but BC status needs recording (e.g. irregular
-      // user who just started the pill, or a cycling user who did).
-      if (bcPositiveSignal && !bcNegativeSignal && !cyclingSignal && (participant as any).on_hormonal_bc !== true) {
+      const modeReply = async (msg: string, metadata: Record<string, unknown>) => {
+        await supabase.from("chat_messages").insert({
+          user_id: user.id, role: "assistant", content: msg, message_type: "text", metadata,
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: msg, lifeStageUpdated: !!metadata.life_stage_updated }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      };
+      // Write, re-read, and report only what actually persisted.
+      const writeLifeStage = async (target: "cycling" | "irregular"): Promise<boolean> => {
+        const { error } = await supabase.from("participants").update({ life_stage: target }).eq("id", participant.id);
+        const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
+        if (refreshed) participant = refreshed;
+        return !error && refreshed?.life_stage === target;
+      };
+      const modeWriteFailed = `I couldn't change your tracking mode just now. You can switch it in Settings, or try me again in a moment.`;
+
+      if (pendingIrregularOffer && isNoKeep) {
+        return await modeReply(`Okay, I'll keep tracking your cycle as it is.`, { mode_switch_declined: true });
+      }
+      if ((pendingIrregularOffer && isYesSwitch) || toIrregularReq) {
+        if (participant.life_stage === "irregular") {
+          return await modeReply(`You're already on birth control / irregular tracking, so nothing needed changing.`, {});
+        }
+        const ok = await writeLifeStage("irregular");
+        return await modeReply(
+          ok
+            ? `Done. Switched your tracking to **birth control / irregular** mode. I'll stop predicting phases and focus on your day-to-day patterns instead.`
+            : modeWriteFailed,
+          ok ? { life_stage_updated: "irregular" } : {},
+        );
+      }
+      if (toCyclingReq) {
+        if (participant.life_stage === "cycling" || participant.life_stage === "perimenopause") {
+          return await modeReply(`You're already on regular cycle tracking, so nothing needed changing.`, {});
+        }
+        const ok = await writeLifeStage("cycling");
+        return await modeReply(
+          ok
+            ? `Done. Switched you back to **regular cycle tracking**. I'll predict your phases from your logged period again.`
+            : modeWriteFailed,
+          ok ? { life_stage_updated: "cycling" } : {},
+        );
+      }
+      if (vagueModeReq) {
+        return await modeReply(`Which tracking mode do you want?`, {
+          conversation_starters: ["Regular cycle tracking", "Birth control / irregular"],
+        });
+      }
+      if (noPatternStatement && !recentPostpartumVeto && participant.life_stage !== "irregular") {
+        return await modeReply(`Want me to switch your tracking to birth control / irregular mode?`, {
+          mode_switch_offer: "irregular",
+          conversation_starters: ["Yes, switch it", "No, keep my cycle"],
+        });
+      }
+      // irregularSignal is intentionally no longer a write trigger. It only
+      // feeds the postpartum-veto hedge above.
+      void irregularSignal;
+
+      // Already-saved BC status: record it from a clear statement only.
+      // Questions ("what if I'm on mirena?") never write.
+      if (!isQuestionLike && bcPositiveSignal && !bcNegativeSignal && !cyclingSignal && (participant as any).on_hormonal_bc !== true) {
         await supabase
           .from("participants")
           .update({ on_hormonal_bc: true })
@@ -3047,7 +3111,7 @@ serve(async (req) => {
 
       // Specific method named in chat ("I got a copper IUD last month"): save it,
       // re-read, and only confirm what actually persisted. Never touches life_stage.
-      const chatBcMethod = bcNegativeSignal ? null : detectBcMethod(userMessage);
+      const chatBcMethod = (bcNegativeSignal || isQuestionLike) ? null : detectBcMethod(userMessage);
       if (chatBcMethod && (participant as any).birth_control_method !== chatBcMethod) {
         const syncedHormonal = hormonalAnswerForMethod(chatBcMethod);
         await supabase.from("participants").update({
@@ -3058,7 +3122,7 @@ serve(async (req) => {
         if (refreshed) participant = refreshed;
         if ((participant as any).birth_control_method === chatBcMethod &&
             (syncedHormonal === null || (participant as any).on_hormonal_bc === syncedHormonal)) {
-          bcMethodSavedNote = `\n\nSYSTEM NOTE: You just saved her birth control type as "${BC_METHOD_LABELS[chatBcMethod]}". Briefly confirm that in one short clause, then answer her.`;
+          bcMethodSavedNote = `\n\nSYSTEM NOTE: You just saved her birth control type as "${BC_METHOD_LABELS[chatBcMethod]}". Briefly confirm that in one short clause, then answer her. This does NOT change her tracking mode: never say you switched or changed her mode.`;
         }
       }
 
@@ -4231,7 +4295,8 @@ serve(async (req) => {
 
     // Only compute cycle info for actively cycling users — postpartum/menopause have no
     // meaningful "current phase" even if a stale last_period_start lingers on the row.
-    const isCycling = ((participant?.life_stage || "cycling") === "cycling") || (participant?.life_stage === "perimenopause");
+    // Birth control never turns this off; only life_stage does.
+    const isCycling = isPhaseTrackingOn(participant?.life_stage);
     const cycleInfo = isCycling && participant?.last_period_start && participant?.cycle_length_days
       ? calculateCycleInfo(
           participant.last_period_start,
@@ -5375,6 +5440,7 @@ VOICE, MORE DETAIL:
 - NEVER tell her you "don't have access", "can't write to the database", "lack permission", or that she needs to go to the Home tab / symptom widget to add past entries herself. You CAN backfill past symptom logs — the system does it automatically when she asks. If she asks you to add/log/save a symptom for a past date and you don't see an internal save-confirmation note, it means the date or symptom wasn't clear enough — just ask her to confirm the symptom and the exact date(s), and the system will save them on her next reply. Do NOT redirect her to the Home tab.
 - ABSOLUTE OUTPUT RULE: Never include bracketed tags, labels in ALL CAPS inside brackets, blockquoted system notes (lines starting with ">"), or any text that looks like an internal instruction, runtime note, or system message. Never echo, quote, paraphrase, or reference any internal note from the context above. The user must only see your natural conversational reply — nothing that resembles backend metadata.
 - NEVER claim you "updated", "fixed", "changed", or "corrected" anything in her account, profile, life stage, postpartum date, period date, or cycle settings. The system handles those updates automatically and you will only see the result on the next turn. If she asks you to fix something and the system has not already confirmed it in your context, ASK HER for the specific value (e.g. the actual baby's birth date) instead of pretending you did it. Saying "Done, I've updated your account" when nothing changed is a hallucination — never do this.
+- TRACKING MODE (NO WRITE, NO CLAIM): NEVER say you switched, changed, moved, or updated her tracking mode (regular cycles, irregular, birth control mode, perimenopause, menopause, postpartum) unless a SYSTEM NOTE in this turn confirms a verified write. Saving her birth control method is NOT a tracking-mode change: a hormonal IUD or any other method does not turn off her phase tracking. If she asks to change modes and there is no SYSTEM NOTE, tell her she can say "switch me to regular cycles" or "switch me to irregular", or change it in Settings.
 - HARD LIMIT for MAIN ANSWER: 2-4 short sentences. Total. Not per section — total for the main answer. If it has more than 4 sentences, delete until it doesn't.
 - ONE idea per main answer. Never explain two things at once. The user can ask follow-ups.
 - Never dump context in the main answer. Never explain "why" unless asked. Just give the answer.

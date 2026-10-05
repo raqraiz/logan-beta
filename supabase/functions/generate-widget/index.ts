@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
 import { calculateCycleInfo, isCycleStale } from "../_shared/cycleCalculations.ts";
+import { isPhaseTrackingOn } from "../_shared/cyclePhase.ts";
 import { fetchActiveBoundaries, buildBoundaryRuleBlock, hasStageBoundary } from "../_shared/topicBoundaries.ts";
 
 const corsHeaders = {
@@ -111,7 +112,10 @@ serve(async (req) => {
           getPostpartumTimeline(participant.postpartum_start_date, { timezone: participant?.timezone || "UTC" })?.weeks ?? 0,
         );
       }
-      if (participant?.last_period_start && lifeStage !== "postpartum" && lifeStage !== "menopause" && lifeStage !== "irregular") {
+      // Phase tracking decided by life_stage only (never birth control).
+      // Pregnancy stages keep their existing behaviour.
+      const computesCycle = isPhaseTrackingOn(lifeStage) || lifeStage === "pregnant" || lifeStage === "pregnancy_loss";
+      if (participant?.last_period_start && computesCycle) {
         // Single source of truth — same calculator the cycle ring / chat use,
         // so this card can never show a phase the badge doesn't also show.
         const info = calculateCycleInfo(participant.last_period_start, cycleLengthDays, {
@@ -157,7 +161,7 @@ serve(async (req) => {
     let stageContext: string;
     if (stageSuppressed) {
       // No stage label at all when she's asked not to hear about it.
-      stageContext = hasCycleInfo && lifeStage !== "postpartum" && lifeStage !== "menopause" && lifeStage !== "irregular" && !isStaleCycle
+      stageContext = hasCycleInfo && isPhaseTrackingOn(lifeStage) && !isStaleCycle
         ? `The user is on Day ${cycleDay} of ${cycleLengthDays} in their ${phase} phase. Frame guidance around general well-being: sleep, movement, food, mood.`
         : `Frame guidance around general well-being: sleep, movement, food, mood. ${noCycleRule}`;
     } else if (lifeStage === "postpartum") {
