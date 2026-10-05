@@ -1,4 +1,5 @@
 import { isPhaseTrackingOn } from "@/lib/cyclePhase";
+import { isCycleStale } from "@/lib/cycleCalculations";
 import { useState, useEffect, useMemo } from "react";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
 import { supabase } from "@/integrations/supabase/client";
@@ -571,7 +572,9 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
   // Non-cycling life stages get tailored content
   const isNonCycling = cycleData?.lifeStage === "postpartum" || cycleData?.lifeStage === "menopause" || cycleData?.lifeStage === "pregnancy_loss" || cycleData?.lifeStage === "pregnant";
   // Irregular mode: phase tracking off, same rule as Home, ring and Ask.
-  const phaseTrackingOff = !isNonCycling && !isPhaseTrackingOn(cycleData?.lifeStage);
+  // Stale cycle: same rule as Home and the ring, so Plan never asserts a stale phase.
+  const planStale = cycleData?.lifeStage === "cycling" && isCycleStale(currentDay, cycleLength);
+  const phaseTrackingOff = (!isNonCycling && !isPhaseTrackingOn(cycleData?.lifeStage)) || planStale;
 
   // Stage boundary active, or phase tracking off: no stage/phase label, count,
   // or phase-specific guidance. Show general wellness cards instead.
