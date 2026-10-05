@@ -8,3 +8,5 @@
 - Google Analytics and LiveSession are injected only by AnalyticsGate (src/lib/thirdPartyAnalytics.ts): signed-out pages, or GA after consent / LiveSession for admin testing; never add their tags to index.html.
 - Insight corrections become rows in user_memory_notes via chat-ai (_shared/memoryNotes.ts) and are injected into chat, opener and daily-insight prompts; confirmation only after the row is saved.
 - Partner-facing daily tips live in daily_home_insights.succeed_partner_text / dont_mess_up_partner_text (the *_him_text columns are deprecated, never write them); Home picks the saved person with relationship 'partner' first, because the most recent recipient may not be her partner.
+
+- Every write to participants.last_period_start sets cycle_anchor_type explicitly (bleed for period statements, marker for "New cycle started", current type for date edits); archived cycle_history rows take the type read before the update. Why: the anchor type drives copy only and must never be inherited by accident.
