@@ -467,12 +467,14 @@ interface CycleData {
   dueDate?: string;
   pregnancyLmp?: string;
   needsPeriodStart?: boolean;
+  cycleAnchorType?: "bleed" | "marker";
 }
 
 interface HomeTabProps {
   cycleData: CycleData | null;
   anchorSymptom?: string | null;
   onPeriodUpdate?: (date: Date) => void;
+  onCycleMarkerStart?: (date: Date) => Promise<void> | void;
   onCycleLengthUpdate?: (days: number) => void;
   onPhaseOverride?: (phase: "auto" | "Menstruation" | "Follicular" | "Ovulation" | "Luteal") => void;
   onPostpartumDeclare?: () => void;
@@ -482,10 +484,13 @@ interface HomeTabProps {
 
 // ── HomeTab ───────────────────────────────────────────────
 
-export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengthUpdate, onPhaseOverride, onPostpartumDeclare, onStillCyclingDeclare, userId }: HomeTabProps) {
+export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarkerStart, onCycleLengthUpdate, onPhaseOverride, onPostpartumDeclare, onStillCyclingDeclare, userId }: HomeTabProps) {
   useTrackFeature("home_tab");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showMarker, setShowMarker] = useState(false);
+  const [markerDate, setMarkerDate] = useState<Date | undefined>(new Date());
+  const [markerSaving, setMarkerSaving] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [editedLength, setEditedLength] = useState<number>(28);
   const [editedPhase, setEditedPhase] = useState<"auto" | "Menstruation" | "Follicular" | "Ovulation" | "Luteal">("auto");
@@ -770,6 +775,20 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
                 Edit cycle
               </button>
             )}
+
+            {/* Non-bleed anchor: cycling + hormonal BC only. Regular editing stays above. */}
+            {cycleData.lifeStage === "cycling" && cycleData.onHormonalBc === true && onCycleMarkerStart && (
+              <button
+                onClick={() => { setMarkerDate(new Date()); setShowMarker(true); }}
+                className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-full px-2.5 py-1 border border-border/40 bg-background/60 backdrop-blur"
+              >
+                <Sparkles className="w-3 h-3" />
+                New cycle started
+              </button>
+            )}
+            {cycleData.cycleAnchorType === "marker" && (
+              <p className="mt-1 text-[11px] text-muted-foreground">Counting from the cycle start you marked</p>
+            )}
           </div>
         );
       }
@@ -990,6 +1009,38 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleLengt
           </div>
         </div>
       )}
+
+      {/* New cycle marker dialog */}
+      <Dialog open={showMarker} onOpenChange={setShowMarker}>
+        <DialogContent className="max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>New cycle started</DialogTitle>
+            <DialogDescription>
+              Pick the day your new cycle started. Logan will count your cycle days from here.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center">
+            <Calendar mode="single" selected={markerDate} onSelect={setMarkerDate} disabled={(d) => d > new Date()} className="p-3 pointer-events-auto" />
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setShowMarker(false)}>Cancel</Button>
+            <Button
+              disabled={!markerDate || markerSaving}
+              onClick={async () => {
+                if (!markerDate || !onCycleMarkerStart) return;
+                setMarkerSaving(true);
+                try {
+                  await onCycleMarkerStart(markerDate);
+                  setShowMarker(false);
+                  toast("Marked. Counting your cycle from here.");
+                } finally { setMarkerSaving(false); }
+              }}
+            >
+              {markerSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Date picker dialog */}
       <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
