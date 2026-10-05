@@ -507,7 +507,7 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
   const hideStage = isStageHidden(stageKey, lifeStage);
   if (hideStage) {
     return (
-      <LifeStageBadge
+      <LifeStageBadge cycleAnchorType={cycleAnchorType}
         lifeStage={lifeStage as "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant"}
         size={size}
         neutral

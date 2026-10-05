@@ -188,7 +188,7 @@ export function DailyBriefingHero({
               disabled={!onCircleClick || isNonCycling}
               className="transition-opacity duration-200 active:opacity-80 hover:opacity-95 disabled:hover:opacity-100"
             >
-              <ChatCycleCircle
+              <ChatCycleCircle cycleAnchorType={cycleAnchorType}
                 cycleDay={cycleDay}
                 phase={phase}
                 cycleLengthDays={cycleLengthDays}
