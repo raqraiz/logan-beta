@@ -227,7 +227,7 @@ serve(async (req) => {
 
       let aiResult;
       try {
-        aiResult = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt);
+        aiResult = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt + anchorPromptRule(currentCycleAnchorType(participant)));
       } catch (aiErr) {
         const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
         console.error("AI insight generation failed, removing placeholder:", msg);
@@ -403,7 +403,7 @@ serve(async (req) => {
 
       let aiResult;
       try {
-        aiResult = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt);
+        aiResult = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt + anchorPromptRule(currentCycleAnchorType(participant)));
       } catch (aiErr) {
         const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
         console.error("AI insight generation failed, removing placeholder:", msg);
@@ -814,7 +814,7 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [
-        { role: "system", content: "You are Logan. You predict what women feel before they notice it themselves, based on their cycle. You're not clinical. You're the friend who just knows. Always respond in valid JSON." + anchorPromptRule(currentCycleAnchorType(participant)) },
+        { role: "system", content: "You are Logan. You predict what women feel before they notice it themselves, based on their cycle. You're not clinical. You're the friend who just knows. Always respond in valid JSON." },
         { role: "user", content: prompt }
       ],
       max_tokens: 400,
