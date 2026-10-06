@@ -88,12 +88,12 @@ export const TrialChat = () => {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [authView, setAuthView] = useState<"signup" | "signin">("signup");
   const [theme, setTheme] = useState<"dark" | "light">(() => {
-    if (typeof window === "undefined") return "dark";
-    return (localStorage.getItem("logan-landing-theme") as "dark" | "light") || "dark";
+    if (typeof window === "undefined") return "light";
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   });
 
   useEffect(() => {
-    localStorage.setItem("logan-landing-theme", theme);
+    document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
 
   const [waitlistEmail, setWaitlistEmail] = useState("");
@@ -253,9 +253,9 @@ export const TrialChat = () => {
     <div className={`landing-page ${theme === "light" ? "theme-light" : ""} h-[100svh] supports-[height:100dvh]:h-[100dvh] text-foreground flex flex-col relative overflow-hidden`}>
       <div className="absolute inset-0 pointer-events-none">
         {/* Subtle radial glows — teal top-left, violet/magenta bottom-right */}
-        <div className={`absolute top-0 left-0 w-[600px] h-[600px] rounded-full blur-3xl ${theme === "light" ? "opacity-20" : "opacity-40"}`}
+        <div className={`hidden absolute top-0 left-0 w-[600px] h-[600px] rounded-full blur-3xl ${theme === "light" ? "opacity-20" : "opacity-40"}`}
              style={{ background: "radial-gradient(circle, #2BD4D9 0%, transparent 70%)", transform: "translate(-30%, -30%)" }} />
-        <div className={`absolute bottom-0 right-0 w-[600px] h-[600px] rounded-full blur-3xl ${theme === "light" ? "opacity-5" : "opacity-30"}`}
+        <div className={`hidden absolute bottom-0 right-0 w-[600px] h-[600px] rounded-full blur-3xl ${theme === "light" ? "opacity-5" : "opacity-30"}`}
              style={{ background: "radial-gradient(circle, #A22BE8 0%, transparent 70%)", transform: "translate(25%, 25%)" }} />
       </div>
 

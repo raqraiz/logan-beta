@@ -80,7 +80,7 @@ export function SymptomPieChart({ logs, compact = false }: SymptomPieChartProps)
       <div className="flex items-center justify-between mb-1">
         <h4
           className="text-[11px] font-semibold uppercase tracking-widest text-foreground/70"
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          style={{ fontFamily: "'Quicksand', sans-serif" }}
         >
           Symptom Breakdown
         </h4>
@@ -141,7 +141,7 @@ export function SymptomPieChart({ logs, compact = false }: SymptomPieChartProps)
                   const pct = Math.round((v / totalEntries) * 100);
                   return (
                     <div className="rounded-lg border border-border/60 bg-popover/95 px-3 py-2 shadow-elevated">
-                      <p className="text-[11px] font-medium text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                      <p className="text-[11px] font-medium text-foreground" style={{ fontFamily: "'Quicksand', sans-serif" }}>
                         {name}
                       </p>
                       <p className="text-[10px] text-muted-foreground">
@@ -158,7 +158,7 @@ export function SymptomPieChart({ logs, compact = false }: SymptomPieChartProps)
           {!compact && (
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Top</span>
-              <span className="text-sm font-bold text-foreground leading-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              <span className="text-sm font-bold text-foreground leading-tight" style={{ fontFamily: "'Quicksand', sans-serif" }}>
                 {topPct}%
               </span>
               <span className="text-[9px] text-primary/80 truncate max-w-[4.5rem] text-center leading-tight">
