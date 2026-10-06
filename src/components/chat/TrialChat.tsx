@@ -191,7 +191,7 @@ export const TrialChat = () => {
         body: { email, source: "landing_hero" },
       }).catch((e) => console.warn("Brevo sync failed:", e));
       setWaitlistDone(true);
-      toast({ title: "You're on the list 💚", description: "I'll be in touch soon." });
+      toast({ title: "You're on the list", description: "I'll be in touch soon." });
     } catch (err) {
       console.error("Waitlist error:", err);
       toast({ title: "Something went wrong", description: "Try again in a moment.", variant: "destructive" });

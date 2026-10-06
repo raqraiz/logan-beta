@@ -858,11 +858,11 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
               {expandedSection === "mood" && (
                 <div className="px-4 pb-4 space-y-3 border-t border-border/15 pt-3" onClick={(e) => e.stopPropagation()}>
                   <div className="rounded-lg px-3 py-2.5 border border-border/20 bg-muted/30">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">🧬 Hormonal shift</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Hormonal shift</p>
                     <p className="text-xs text-muted-foreground">{moodGuide.hormonalShift}</p>
                   </div>
                   <div className={cn("rounded-lg px-3 py-2.5 border", stageBgFaint, stageBorder)}>
-                    <p className={cn("text-xs font-medium mb-1", stageColor)}>⚡ Heads up</p>
+                    <p className={cn("text-xs font-medium mb-1", stageColor)}>Heads up</p>
                     <p className="text-xs text-muted-foreground">{moodGuide.headsUp}</p>
                   </div>
                   <div><p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">What to do</p><p className="text-xs text-muted-foreground">{moodGuide.selfCare}</p></div>
@@ -874,11 +874,11 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
                         <ChevronRight className="w-3 h-3 transition-transform group-open:rotate-90" />If you have a partner or kids
                       </summary>
                       <div className="mt-2 space-y-2">
-                        <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5"><p className="text-[10px] font-semibold text-primary/80 mb-0.5">💑 With a partner</p><p className="text-xs text-muted-foreground">{moodGuide.relationships.withPartner}</p></div>
-                        <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5"><p className="text-[10px] font-semibold text-primary/80 mb-0.5">👨‍👩‍👧‍👦 With kids / teens</p><p className="text-xs text-muted-foreground">{moodGuide.relationships.withKids}</p></div>
+                        <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5"><p className="text-[10px] font-semibold text-primary/80 mb-0.5">With a partner</p><p className="text-xs text-muted-foreground">{moodGuide.relationships.withPartner}</p></div>
+                        <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5"><p className="text-[10px] font-semibold text-primary/80 mb-0.5">With kids / teens</p><p className="text-xs text-muted-foreground">{moodGuide.relationships.withKids}</p></div>
                       </div>
                     </details>
-                    <div className="rounded-lg bg-phase-follicular/5 border border-phase-follicular/15 px-3 py-2.5"><p className="text-xs font-medium text-phase-follicular mb-1">💡 Try this</p><p className="text-xs text-muted-foreground">{moodGuide.relationships.strategy}</p></div>
+                    <div className="rounded-lg bg-phase-follicular/5 border border-phase-follicular/15 px-3 py-2.5"><p className="text-xs font-medium text-phase-follicular mb-1">Try this</p><p className="text-xs text-muted-foreground">{moodGuide.relationships.strategy}</p></div>
                   </div>
                 </div>
               )}
@@ -1005,7 +1005,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             {expandedSection === "mood" && (
               <div className="px-4 pb-4 space-y-3 border-t border-border/15 pt-3" onClick={(e) => e.stopPropagation()}>
                 <div className="rounded-lg bg-phase-menstruation/5 border border-phase-menstruation/15 px-3 py-2.5">
-                  <p className="text-xs font-medium text-phase-menstruation mb-1">⚡ Heads up</p>
+                  <p className="text-xs font-medium text-phase-menstruation mb-1">Heads up</p>
                   <p className="text-xs text-muted-foreground">{moodGuide.headsUp}</p>
                 </div>
                 <div>
@@ -1026,17 +1026,17 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
                     </summary>
                     <div className="mt-2 space-y-2">
                       <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5">
-                        <p className="text-[10px] font-semibold text-primary/80 mb-0.5">💑 With a partner</p>
+                        <p className="text-[10px] font-semibold text-primary/80 mb-0.5">With a partner</p>
                         <p className="text-xs text-muted-foreground">{moodGuide.relationships.withPartner}</p>
                       </div>
                       <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5">
-                        <p className="text-[10px] font-semibold text-primary/80 mb-0.5">👨‍👩‍👧‍👦 With kids / teens</p>
+                        <p className="text-[10px] font-semibold text-primary/80 mb-0.5">With kids / teens</p>
                         <p className="text-xs text-muted-foreground">{moodGuide.relationships.withKids}</p>
                       </div>
                     </div>
                   </details>
                   <div className="rounded-lg bg-phase-follicular/5 border border-phase-follicular/15 px-3 py-2.5">
-                    <p className="text-xs font-medium text-phase-follicular mb-1">💡 Try this</p>
+                    <p className="text-xs font-medium text-phase-follicular mb-1">Try this</p>
                     <p className="text-xs text-muted-foreground">{moodGuide.relationships.strategy}</p>
                   </div>
                 </div>

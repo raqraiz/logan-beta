@@ -8,7 +8,7 @@ type Rect = { top: number; left: number; width: number; height: number };
 const STEPS = [
   {
     target: "home",
-    text: "Quick tour, tap through. 🏠\n\nHome is your daily check-in, log symptoms, meals, and weight, and see what to expect today.",
+    text: "Quick tour, tap through.\n\nHome is your daily check-in, log symptoms, meals, and weight, and see what to expect today.",
   },
   {
     target: "ask",

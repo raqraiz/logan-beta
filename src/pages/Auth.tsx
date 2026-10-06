@@ -50,7 +50,7 @@ const Auth = () => {
       } else if (event === "USER_UPDATED") {
         // Password was successfully updated
         toast({
-          title: "Password updated! 🎉",
+          title: "Password updated!",
           description: "You can now log in with your new password.",
         });
         setView("login");
@@ -96,7 +96,7 @@ const Auth = () => {
         if (error) throw error;
         
         toast({
-          title: "Check your email 📧",
+          title: "Check your email",
           description: "We've sent you a password reset link.",
         });
         setView("login");
@@ -121,7 +121,7 @@ const Auth = () => {
         await supabase.auth.signOut();
         
         toast({
-          title: "Password updated! 🎉",
+          title: "Password updated!",
           description: "You can now log in with your new password.",
         });
         setView("login");
@@ -144,7 +144,7 @@ const Auth = () => {
             password,
           });
           if (error) throw error;
-          toast({ title: "Welcome back! 🤖" });
+          toast({ title: "Welcome back!" });
         } else {
           const detectedTimezone = (() => {
             try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch { return null; }
@@ -175,7 +175,7 @@ const Auth = () => {
             } catch (e) {
               console.error("Welcome email invoke error:", e);
             }
-            toast({ title: "Welcome to Logan 🎉" });
+            toast({ title: "Welcome to Logan" });
           }
         }
       }

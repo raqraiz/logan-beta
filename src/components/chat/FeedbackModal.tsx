@@ -9,10 +9,10 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2, Send } from "lucide-react";
 
 const CATEGORIES = [
-  { value: "bug", label: "🐛 Bug report" },
-  { value: "feature", label: "💡 Feature request" },
-  { value: "general", label: "💬 General feedback" },
-  { value: "content", label: "📝 Content / accuracy" },
+  { value: "bug", label: "Bug report" },
+  { value: "feature", label: "Feature request" },
+  { value: "general", label: "General feedback" },
+  { value: "content", label: "Content / accuracy" },
 ];
 
 interface FeedbackModalProps {
@@ -43,7 +43,7 @@ export const FeedbackModal = ({ open, onOpenChange }: FeedbackModalProps) => {
       return;
     }
 
-    toast({ title: "Thanks for your feedback! 💜", description: "It helps us make Logan better." });
+    toast({ title: "Thanks for your feedback!", description: "It helps us make Logan better." });
     setMessage("");
     setCategory("general");
     onOpenChange(false);

@@ -58,7 +58,7 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
           redirectTo: `${window.location.origin}/reset-password`,
         });
         if (error) throw error;
-        toast({ title: "Check your email 📧", description: "We've sent you a password reset link." });
+        toast({ title: "Check your email", description: "We've sent you a password reset link." });
         setView("signin");
         setEmail("");
       } catch (error) {
@@ -126,7 +126,7 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
           } catch (e) {
             console.error("Welcome email invoke error:", e);
           }
-          toast({ title: "Welcome to Logan 🎉" });
+          toast({ title: "Welcome to Logan" });
           onAuthSuccess?.();
         }
       } else {

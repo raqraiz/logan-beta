@@ -116,7 +116,7 @@ export function ReferralCard({ userId }: ReferralCardProps) {
     <div className="border-t border-border/50 pt-4">
       <Label className="text-sm font-medium mb-2 block">Invite friends</Label>
       <p className="text-xs text-muted-foreground mb-3">
-        Share your link and help Logan grow 🌱
+        Share your link and help Logan grow
       </p>
 
       <div className="mb-3 rounded-xl border border-primary/25 bg-primary/10 backdrop-blur-sm px-4 py-3 flex items-center gap-3 shadow-sm">
