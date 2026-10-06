@@ -2,10 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Quicksand:wght@300;400;500;600;700&display=swap');
 
 /* Landing-page brand gradient — magenta → violet → teal */
 :root {
+    --ring-track: #EEE9DF;
+    --chart-bar: #0E8A8F;
   --gradient-brand: linear-gradient(90deg, #FF2E92 0%, #A22BE8 50%, #2BD4D9 100%);
 }
 .landing-brand-text {
@@ -73,10 +74,10 @@
     --logan-blue: 183 83% 26%;
 
     /* Phase colors (unchanged) */
-    --phase-menstruation: 355 78% 60%;
-    --phase-follicular: 152 60% 52%;
-    --phase-ovulation: 40 90% 56%;
-    --phase-luteal: 270 60% 65%;
+    --phase-menstruation: var(--foreground);
+    --phase-follicular: var(--foreground);
+    --phase-ovulation: var(--foreground);
+    --phase-luteal: var(--foreground);
 
     /* Calm, flat surfaces */
     --gradient-hero: hsl(var(--primary));
@@ -107,6 +108,8 @@
   }
 
   .dark {
+    --ring-track: #35302A;
+    --chart-bar: #0E8A8F;
     --background: 30 22% 7%;
     --foreground: 42 31% 94%;
     --card: 30 13% 12%;
@@ -305,3 +308,10 @@ html:not(.dark) .headsup-primary, .theme-light .headsup-primary { background: hs
 .headsup-solid { background: hsl(var(--background)) !important; backdrop-filter: none !important; }
 .theme-light .headsup-solid { background: hsl(var(--background)) !important; }
 .headsup-surface [role="switch"][data-state="checked"] { background-color: hsl(var(--headsup-accent)); }
+
+@layer utilities {
+  /* Sentence-case labels: no uppercase letter-spaced styling */
+  .uppercase { text-transform: none !important; }
+  .uppercase[class*="tracking-"] { letter-spacing: normal !important; }
+  .tabular-nums, .font-numeric { font-family: 'Quicksand', system-ui, sans-serif; font-weight: 700; }
+}

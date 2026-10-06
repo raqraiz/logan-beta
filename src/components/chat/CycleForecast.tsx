@@ -44,10 +44,10 @@ function getPhaseForDay(day: number, cycleLength: number, menstruationEnd: numbe
 }
 
 const PHASE_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
-  Menstruation: { bg: "bg-phase-menstruation/20", text: "text-phase-menstruation", dot: "bg-phase-menstruation" },
-  Follicular:   { bg: "bg-phase-follicular/20",   text: "text-phase-follicular",   dot: "bg-phase-follicular" },
-  Ovulation:    { bg: "bg-phase-ovulation/20",     text: "text-phase-ovulation",     dot: "bg-phase-ovulation" },
-  Luteal:       { bg: "bg-phase-luteal/20",         text: "text-phase-luteal",         dot: "bg-phase-luteal" },
+  Menstruation: { bg: "bg-card", text: "text-foreground", dot: "bg-phase-menstruation" },
+  Follicular:   { bg: "bg-card",   text: "text-foreground",   dot: "bg-phase-follicular" },
+  Ovulation:    { bg: "bg-card",     text: "text-foreground",     dot: "bg-phase-ovulation" },
+  Luteal:       { bg: "bg-card",         text: "text-foreground",         dot: "bg-phase-luteal" },
 };
 
 const PHASE_SOLID: Record<string, string> = {
@@ -174,7 +174,7 @@ function splitLines(text: string | null | undefined): string[] {
 
 function EnergyBar({ value, color }: { value: number; color: string }) {
   return (
-    <div className="w-full h-1.5 rounded-full bg-muted/30 overflow-hidden">
+    <div className="w-full h-1.5 rounded-full bg-[var(--ring-track)] overflow-hidden">
       <div className={`h-full rounded-full ${color} transition-all duration-300`} style={{ width: `${value * 100}%` }} />
     </div>
   );
@@ -394,12 +394,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                     )}
                   </p>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3">
-                    {PHASES.map((p) => (
-                      <div key={p} className="flex items-center gap-1.5">
-                        <span className={`w-2.5 h-2.5 rounded-full ${PHASE_SOLID[p]}`} />
-                        <span className="text-xs text-muted-foreground">{p}</span>
-                      </div>
-                    ))}
+                    {[["Period","#C4247A"],["Fertile window","#0E8A8F"]].map(([l,c]) => (<div key={l} className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: c }} /><span className="text-xs text-muted-foreground">{l}</span></div>))}
                   </div>
                   {/* Disclaimer */}
                   <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 mb-3">
@@ -444,13 +439,14 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                           className={`
                             aspect-square rounded-lg flex items-center justify-center text-sm font-medium transition-all duration-150
                             ${!inMonth ? "opacity-30" : ""}
-                            ${isSelected ? `ring-2 ring-primary scale-110 ${colors.bg}` : ""}
-                            ${isToday && !isSelected ? "ring-2 ring-primary/60 bg-primary/10" : ""}
-                            ${!isSelected && !isToday && inMonth ? colors.bg : ""}
+                            ${isSelected && !isToday ? "ring-1 ring-foreground" : ""}
+                            ${isToday ? "bg-[#23201C] text-[#F4F1EA] rounded-full" : ""}
+                            relative flex-col
                             hover:scale-105 active:scale-95
                           `}
                         >
-                          <span className={isToday ? "text-primary font-bold" : colors.text}>{format(date, "d")}</span>
+                          <span className={isToday ? "text-[#F4F1EA] font-bold" : "text-foreground"}>{format(date, "d")}</span>
+{(ph === "Menstruation" || ph === "Ovulation") && <span className="absolute bottom-1 w-1 h-1 rounded-full" style={{ background: ph === "Menstruation" ? "#C4247A" : "#0E8A8F" }} />}
                         </button>
                       );
                     })}
@@ -498,17 +494,17 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                       <div className="px-4 py-3 space-y-2.5">
                         <div className="flex items-center gap-3">
                           <span className="text-[10px] text-muted-foreground uppercase tracking-wider w-16">Energy</span>
-                          <EnergyBar value={selectedMetrics.energy} color="bg-phase-follicular" />
+                          <EnergyBar value={selectedMetrics.energy} color="bg-[#0E8A8F]" />
                           <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(selectedMetrics.energy * 100)}%</span>
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="text-[10px] text-muted-foreground uppercase tracking-wider w-16">Focus</span>
-                          <EnergyBar value={selectedMetrics.focus} color="bg-phase-ovulation" />
+                          <EnergyBar value={selectedMetrics.focus} color="bg-[#0E8A8F]" />
                           <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(selectedMetrics.focus * 100)}%</span>
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="text-[10px] text-muted-foreground uppercase tracking-wider w-16">Symptom</span>
-                          <EnergyBar value={selectedMetrics.symptomRisk} color="bg-phase-menstruation" />
+                          <EnergyBar value={selectedMetrics.symptomRisk} color="bg-[#0E8A8F]" />
                           <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(selectedMetrics.symptomRisk * 100)}%</span>
                         </div>
                       </div>
@@ -595,12 +591,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
               <p className="text-xs text-muted-foreground mb-3">Tap any date to see insights for that day</p>
 
               <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3">
-                {PHASES.map((p) => (
-                  <div key={p} className="flex items-center gap-1.5">
-                    <span className={`w-2.5 h-2.5 rounded-full ${PHASE_SOLID[p]}`} />
-                    <span className="text-xs text-muted-foreground">{p}</span>
-                  </div>
-                ))}
+                {[["Period","#C4247A"],["Fertile window","#0E8A8F"]].map(([l,c]) => (<div key={l} className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: c }} /><span className="text-xs text-muted-foreground">{l}</span></div>))}
               </div>
               {/* Disclaimer */}
               <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 mb-3">
@@ -646,13 +637,14 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                       className={`
                         aspect-square rounded-lg flex items-center justify-center text-sm font-medium transition-all duration-150
                         ${!inMonth ? "opacity-30" : ""}
-                        ${isSelected ? `ring-2 ring-primary scale-110 ${colors.bg}` : ""}
-                        ${isToday && !isSelected ? "ring-2 ring-primary/60 bg-primary/10" : ""}
-                        ${!isSelected && !isToday && inMonth ? colors.bg : ""}
+                        ${isSelected && !isToday ? "ring-1 ring-foreground" : ""}
+                        ${isToday ? "bg-[#23201C] text-[#F4F1EA] rounded-full" : ""}
+                        relative flex-col
                         hover:scale-105 active:scale-95
                       `}
                     >
-                      <span className={isToday ? "text-primary font-bold" : colors.text}>{format(date, "d")}</span>
+                      <span className={isToday ? "text-[#F4F1EA] font-bold" : "text-foreground"}>{format(date, "d")}</span>
+{(ph === "Menstruation" || ph === "Ovulation") && <span className="absolute bottom-1 w-1 h-1 rounded-full" style={{ background: ph === "Menstruation" ? "#C4247A" : "#0E8A8F" }} />}
                     </button>
                   );
                 })}
@@ -687,17 +679,17 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                   <div className="px-4 py-3 space-y-2.5">
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] text-muted-foreground uppercase tracking-wider w-16">Energy</span>
-                      <EnergyBar value={selectedMetrics.energy} color="bg-phase-follicular" />
+                      <EnergyBar value={selectedMetrics.energy} color="bg-[#0E8A8F]" />
                       <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(selectedMetrics.energy * 100)}%</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] text-muted-foreground uppercase tracking-wider w-16">Focus</span>
-                      <EnergyBar value={selectedMetrics.focus} color="bg-phase-ovulation" />
+                      <EnergyBar value={selectedMetrics.focus} color="bg-[#0E8A8F]" />
                       <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(selectedMetrics.focus * 100)}%</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] text-muted-foreground uppercase tracking-wider w-16">Symptom</span>
-                      <EnergyBar value={selectedMetrics.symptomRisk} color="bg-phase-menstruation" />
+                      <EnergyBar value={selectedMetrics.symptomRisk} color="bg-[#0E8A8F]" />
                       <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(selectedMetrics.symptomRisk * 100)}%</span>
                     </div>
                   </div>

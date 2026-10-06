@@ -57,43 +57,43 @@ function PpBadgeInside({ postpartumStartDate, size }: { postpartumStartDate?: st
 
 const PHASE_STYLES: Record<string, { color: string; ringColor: string; hex: string }> = {
   Menstruation: {
-    color: "text-phase-menstruation",
-    ringColor: "stroke-phase-menstruation",
+    color: "text-foreground",
+    ringColor: "text-foreground",
     hex: "#E05262",
   },
   Follicular: {
-    color: "text-phase-follicular",
-    ringColor: "stroke-phase-follicular",
+    color: "text-foreground",
+    ringColor: "text-foreground",
     hex: "#3DBF8A",
   },
   Ovulation: {
-    color: "text-phase-ovulation",
-    ringColor: "stroke-phase-ovulation",
+    color: "text-foreground",
+    ringColor: "text-foreground",
     hex: "#E8A830",
   },
   Luteal: {
-    color: "text-phase-luteal",
-    ringColor: "stroke-phase-luteal",
+    color: "text-foreground",
+    ringColor: "text-foreground",
     hex: "#9B6DD7",
   },
   Postpartum: {
-    color: "text-pink-400",
-    ringColor: "stroke-pink-400",
+    color: "text-foreground",
+    ringColor: "text-foreground",
     hex: "#F472B6",
   },
   Menopause: {
-    color: "text-amber-400",
-    ringColor: "stroke-amber-400",
+    color: "text-foreground",
+    ringColor: "text-foreground",
     hex: "#FBBF24",
   },
   Perimenopause: {
-    color: "text-amber-300",
-    ringColor: "stroke-amber-300",
+    color: "text-foreground",
+    ringColor: "text-foreground",
     hex: "#FCD34D",
   },
   Overdue: {
-    color: "text-amber-300",
-    ringColor: "stroke-amber-300",
+    color: "text-foreground",
+    ringColor: "text-foreground",
     hex: "#FCD34D",
   },
 };
@@ -119,7 +119,7 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
           cx="50" cy="50" r={radius}
           fill="none"
           strokeWidth={trackWidth}
-          stroke="#EEE9DF"
+          stroke="var(--ring-track)"
         />
         {/* Progress arc */}
         <circle
@@ -135,9 +135,9 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
       </svg>
       {/* Center text */}
       <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-        <span className={`${fontSize} font-semibold text-[#23201C] font-display`}>{cycleDay}</span>
+        <span className={`${fontSize} font-semibold text-foreground font-display`}>{cycleDay}</span>
         {showPhase ? (
-          <span className={`${labelSize} font-medium text-[#6E675F]`}>{phase}</span>
+          <span className={`${labelSize} font-medium text-muted-foreground`}>{phase}</span>
         ) : (
           <span className={`${labelSize} text-muted-foreground uppercase tracking-wide`}>Day</span>
         )}
@@ -154,11 +154,11 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
     lifeStage === "perimenopause" ? "Perimenopause" :
     "Follicular"; // reuse a calm teal-ish for irregular/steady
   const styles = lifeStage === "irregular" || lifeStage === "steady"
-    ? { color: "text-primary", ringColor: "stroke-primary", hex: "#15B88C" }
+    ? { color: "text-foreground", ringColor: "text-foreground", hex: "#15B88C" }
     : lifeStage === "pregnancy_loss"
-      ? { color: "text-rose-300", ringColor: "stroke-rose-300", hex: "#D4A5A5" }
+      ? { color: "text-foreground", ringColor: "text-foreground", hex: "#D4A5A5" }
       : lifeStage === "pregnant"
-        ? { color: "text-emerald-300", ringColor: "stroke-emerald-300", hex: "#86D7B5" }
+        ? { color: "text-foreground", ringColor: "text-foreground", hex: "#86D7B5" }
         : PHASE_STYLES[stageKey];
   const stageLabel =
     lifeStage === "postpartum" ? "Postpartum" :
@@ -278,7 +278,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
             cx="50" cy="50" r={radius}
             fill="none"
             strokeWidth="3.5"
-            stroke="#EEE9DF"
+            stroke="var(--ring-track)"
             opacity="0.9"
           />
           <circle
@@ -295,7 +295,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
           {showGlyph ? (
             <span className="text-[14px] leading-none" aria-hidden>{glyph}</span>
           ) : (
-            <span className="text-[11px] font-semibold leading-none font-display text-[#23201C]">
+            <span className="text-[11px] font-semibold leading-none font-display text-foreground">
               {displayNumber}
             </span>
           )}
@@ -312,7 +312,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
             cx="50" cy="50" r={radius}
             fill="none"
             strokeWidth="5"
-            stroke="#EEE9DF"
+            stroke="var(--ring-track)"
             opacity="0.9"
           />
           <circle
@@ -329,7 +329,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
           {showGlyph ? (
             <span className="text-4xl leading-none" aria-hidden>{glyph}</span>
           ) : (
-            <span className="text-4xl font-semibold leading-none font-display text-[#23201C]">
+            <span className="text-4xl font-semibold leading-none font-display text-foreground">
               {displayNumber}
             </span>
           )}
@@ -390,19 +390,19 @@ function PregnancyCircle({ size, dueDate, pregnancyLmp }: { size: "sm" | "md"; d
           {/* Trimester track segments */}
           <circle
             cx="50" cy="50" r={radius}
-            fill="none" strokeWidth="3" stroke={T1} opacity="0.35"
+            fill="none" strokeWidth="3" stroke="var(--ring-track)"
             strokeDasharray={`${seg1 - gap} ${circumference - seg1 + gap}`}
             strokeDashoffset={0}
           />
           <circle
             cx="50" cy="50" r={radius}
-            fill="none" strokeWidth="3" stroke={T2} opacity="0.35"
+            fill="none" strokeWidth="3" stroke="var(--ring-track)"
             strokeDasharray={`${seg2 - gap} ${circumference - seg2 + gap}`}
             strokeDashoffset={-seg1}
           />
           <circle
             cx="50" cy="50" r={radius}
-            fill="none" strokeWidth="3" stroke={T3} opacity="0.35"
+            fill="none" strokeWidth="3" stroke="var(--ring-track)"
             strokeDasharray={`${seg3 - gap} ${circumference - seg3 + gap}`}
             strokeDashoffset={-(seg1 + seg2)}
           />
@@ -410,13 +410,13 @@ function PregnancyCircle({ size, dueDate, pregnancyLmp }: { size: "sm" | "md"; d
           <circle
             cx="50" cy="50" r={radius} fill="none" strokeWidth="3" strokeLinecap="round"
             strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
-            stroke="#86D7B5"
+            stroke="url(#logan-ring-grad)"
             style={{ transition: "stroke-dashoffset 0.6s ease" }}
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center z-20">
           {gestWeeks !== null ? (
-            <span className="text-[11px] font-bold leading-none text-emerald-300">{gestWeeks}w</span>
+            <span className="text-[11px] font-bold leading-none text-foreground font-display">{gestWeeks}w</span>
           ) : (
             <span className="text-[14px] leading-none" aria-hidden>{glyph}</span>
           )}
@@ -435,19 +435,19 @@ function PregnancyCircle({ size, dueDate, pregnancyLmp }: { size: "sm" | "md"; d
           {/* Trimester segments */}
           <circle
             cx="50" cy="50" r={radius}
-            fill="none" strokeWidth="5" stroke={T1} opacity="0.3"
+            fill="none" strokeWidth="5" stroke="var(--ring-track)"
             strokeDasharray={`${seg1 - gap} ${circumference - seg1 + gap}`}
             strokeDashoffset={0}
           />
           <circle
             cx="50" cy="50" r={radius}
-            fill="none" strokeWidth="5" stroke={T2} opacity="0.3"
+            fill="none" strokeWidth="5" stroke="var(--ring-track)"
             strokeDasharray={`${seg2 - gap} ${circumference - seg2 + gap}`}
             strokeDashoffset={-seg1}
           />
           <circle
             cx="50" cy="50" r={radius}
-            fill="none" strokeWidth="5" stroke={T3} opacity="0.3"
+            fill="none" strokeWidth="5" stroke="var(--ring-track)"
             strokeDasharray={`${seg3 - gap} ${circumference - seg3 + gap}`}
             strokeDashoffset={-(seg1 + seg2)}
           />
@@ -455,7 +455,7 @@ function PregnancyCircle({ size, dueDate, pregnancyLmp }: { size: "sm" | "md"; d
           <circle
             cx="50" cy="50" r={radius} fill="none" strokeWidth="3.5" strokeLinecap="round"
             strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
-            stroke="#86D7B5"
+            stroke="url(#logan-ring-grad)"
             style={{ transition: "stroke-dashoffset 0.8s ease" }}
           />
         </svg>
@@ -464,7 +464,7 @@ function PregnancyCircle({ size, dueDate, pregnancyLmp }: { size: "sm" | "md"; d
           {gestWeeks !== null ? (
             <>
               <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold leading-none text-emerald-300">{gestWeeks}</span>
+                <span className="text-4xl font-bold leading-none text-foreground font-display">{gestWeeks}</span>
                 <span className="text-sm text-muted-foreground">/ 40w</span>
               </div>
               <span className="text-xs text-muted-foreground mt-2">{trimesterLabel}</span>
@@ -476,7 +476,7 @@ function PregnancyCircle({ size, dueDate, pregnancyLmp }: { size: "sm" | "md"; d
             </>
           ) : (
             <>
-              <span className="text-2xl font-bold text-emerald-300 mt-1">Pregnant</span>
+              <span className="text-2xl font-bold text-foreground font-display mt-1">Pregnant</span>
               <span className="text-xs text-muted-foreground mt-1">Add LMP or due date</span>
             </>
           )}
@@ -543,7 +543,7 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
     return (
       <div className="relative w-10 h-10 flex-shrink-0 group cursor-pointer transition-colors duration-200">
         <svg className="w-full h-full -rotate-90 relative z-10" viewBox="0 0 100 100"><defs><linearGradient id="logan-ring-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#FF2E92" /><stop offset="50%" stopColor="#A22BE8" /><stop offset="100%" stopColor="#2BD4D9" /></linearGradient></defs>
-          <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="5" stroke="#EEE9DF" />
+          <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="5" stroke="var(--ring-track)" />
           <circle
             cx="50" cy="50" r={radius} fill="none" strokeWidth="5" strokeLinecap="round"
             strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
@@ -551,7 +551,7 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-          <span className={`text-xs font-semibold text-[#23201C] font-display`}>{cycleDay}</span>
+          <span className={`text-xs font-semibold text-foreground font-display`}>{cycleDay}</span>
         </div>
         {showPpBadge && <PpBadgeInside postpartumStartDate={postpartumStartDate} size="sm" />}
       </div>

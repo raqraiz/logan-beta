@@ -1982,7 +1982,7 @@ const Chat = () => {
                       className={`relative max-w-[85%] rounded-2xl px-4 py-3 ${
                         message.role === "user"
                           ? "bg-[rgba(43,212,217,0.42)] text-[#23201C]"
-                          : "bg-white text-[#23201C] border border-border"
+                          : "bg-card text-card-foreground border border-border"
                       } ${searching && isMatch ? "ring-2 ring-primary" : ""}`}
                     >
                       {/* Cycle visual first for insight messages — recomputed live
