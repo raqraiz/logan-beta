@@ -1,3 +1,4 @@
+import { CALM_VOICE_RULE } from "../_shared/voiceRule.ts";
 import { anchorPromptRule, currentCycleAnchorType } from "../_shared/cycleAnchor.ts";
 import { buildBcMethodRule, bcFramingSummary } from "../_shared/bcMethod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -99,7 +100,7 @@ serve(async (req) => {
         .maybeSingle();
 
       if (participant?.life_stage) lifeStage = participant.life_stage;
-      bcRule = buildBcMethodRule(participant as any) + anchorPromptRule(currentCycleAnchorType(participant));
+      bcRule = buildBcMethodRule(participant as any) + anchorPromptRule(currentCycleAnchorType(participant)) + CALM_VOICE_RULE;
       bcParticipant = participant;
       postpartumActive = !!participant?.postpartum_active;
 

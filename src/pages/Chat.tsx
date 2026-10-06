@@ -1944,7 +1944,7 @@ const Chat = () => {
                     <div
                       className={`relative max-w-[85%] rounded-2xl px-4 py-3 ${
                         message.role === "user"
-                          ? "bg-[rgba(43,212,217,0.42)] text-[#23201C]"
+                          ? "bg-[var(--user-bubble)] text-[var(--user-bubble-fg)]"
                           : "bg-card text-card-foreground border border-border"
                       } ${searching && isMatch ? "ring-2 ring-primary" : ""}`}
                     >
@@ -2135,7 +2135,7 @@ const Chat = () => {
                         message.role === "user" ? "justify-end" : "justify-start"
                       }`}>
                         <span className={`text-xs ${
-                          message.role === "user" ? "text-[#23201C]/60" : "text-muted-foreground"
+                          message.role === "user" ? "text-[var(--user-bubble-time)]" : "text-muted-foreground"
                         }`}>
                           {format(new Date(message.created_at), "h:mm a")}
                         </span>
@@ -2572,7 +2572,7 @@ const Chat = () => {
               <Button 
                 type="submit" 
                 size="icon" 
-                className="h-11 w-11 bg-[#23201C] text-[#F4F1EA] hover:bg-[#23201C]/90"
+                className="h-11 w-11 bg-[var(--send-bg)] text-[var(--send-fg)] hover:bg-[var(--send-bg)] hover:opacity-90 disabled:opacity-100 disabled:bg-[var(--send-off-bg)] disabled:text-[var(--send-off-fg)]"
                 disabled={!inputValue.trim() || isSending}
               >
                 {isSending ? (
