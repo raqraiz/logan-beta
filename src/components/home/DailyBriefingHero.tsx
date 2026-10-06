@@ -205,7 +205,7 @@ export function DailyBriefingHero({
             {stagePending ? (
               <div className="h-5 w-24 rounded-full bg-muted/30 animate-pulse" />
             ) : !hideStage && (
-            {(() => { const tint = !neutral && !isNonCycling && !(isIrregular && !phaseTrackingOn) && !isStale ? PHASE_TINTS[phase] : undefined; return (
+            (() => { const tint = !neutral && !isNonCycling && !(isIrregular && !phaseTrackingOn) && !isStale ? PHASE_TINTS[phase] : undefined; return (
             <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${tint ? "" : phaseBg}`} style={tint ? { background: tint.fill, color: tint.ink } : undefined}>
               <span className={`w-1.5 h-1.5 rounded-full bg-current ${tint ? "" : phaseText}`} />
               <span className={`text-[11px] font-semibold ${tint ? "" : phaseText}`}>
@@ -226,7 +226,7 @@ export function DailyBriefingHero({
                       : (tint ? tint.label : phase)}
               </span>
             </div>
-            ); })()}
+            ); })()
             )}
 
             {stagePending ? (
