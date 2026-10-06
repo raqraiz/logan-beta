@@ -1,3 +1,4 @@
+import { PHASE_TINTS, PHASE_ORDER } from "@/lib/phaseTints";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
 import { supabase } from "@/integrations/supabase/client";
@@ -394,7 +395,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                     )}
                   </p>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3">
-                    {[["Period","#C4247A"],["Fertile window","#0E8A8F"]].map(([l,c]) => (<div key={l} className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: c }} /><span className="text-xs text-muted-foreground">{l}</span></div>))}
+                    {PHASE_ORDER.map((k) => [PHASE_TINTS[k].label, PHASE_TINTS[k].ink]).map(([l,c]) => (<div key={l} className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: c }} /><span className="text-xs text-muted-foreground">{l}</span></div>))}
                   </div>
                   {/* Disclaimer */}
                   <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 mb-3">
@@ -436,17 +437,18 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                         <button
                           key={date.toISOString()}
                           onClick={() => setSelectedDate(isSelected ? null : date)}
+                          style={isToday ? undefined : date > today ? { borderColor: PHASE_TINTS[ph]?.ink } : { background: PHASE_TINTS[ph]?.fill }}
                           className={`
                             aspect-square rounded-full flex items-center justify-center text-sm font-medium transition-all duration-150
                             ${!inMonth ? "opacity-30" : ""}
                             ${isSelected && !isToday ? "ring-1 ring-foreground" : ""}
-                            ${isToday ? "bg-[#23201C] text-[#F4F1EA] rounded-full" : ""}
+                            ${isToday ? "bg-[#23201C] text-[#F4F1EA] rounded-full" : date > today ? "border border-dashed" : ""}
                             relative flex-col
                             hover:scale-105 active:scale-95
                           `}
                         >
-                          <span className={isToday ? "text-[#F4F1EA] font-bold" : "text-foreground"}>{format(date, "d")}</span>
-{(ph === "Menstruation" || ph === "Ovulation") && <span className="absolute bottom-1 w-1 h-1 rounded-full" style={{ background: ph === "Menstruation" ? "#C4247A" : "#0E8A8F" }} />}
+                          <span className={isToday ? "text-[#F4F1EA] font-bold" : "text-[#23201C]"}>{format(date, "d")}</span>
+{!isToday && (cd === 1 || getPhaseForDay(cd - 1, cycleLengthDays, menstruationEndDay) !== ph) && <span className="text-[8px] leading-none font-medium" style={{ color: PHASE_TINTS[ph]?.ink }}>{PHASE_TINTS[ph]?.label}</span>}
                         </button>
                       );
                     })}
@@ -591,7 +593,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
               <p className="text-xs text-muted-foreground mb-3">Tap any date to see insights for that day</p>
 
               <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3">
-                {[["Period","#C4247A"],["Fertile window","#0E8A8F"]].map(([l,c]) => (<div key={l} className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: c }} /><span className="text-xs text-muted-foreground">{l}</span></div>))}
+                {PHASE_ORDER.map((k) => [PHASE_TINTS[k].label, PHASE_TINTS[k].ink]).map(([l,c]) => (<div key={l} className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: c }} /><span className="text-xs text-muted-foreground">{l}</span></div>))}
               </div>
               {/* Disclaimer */}
               <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 mb-3">
@@ -634,17 +636,18 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                     <button
                       key={date.toISOString()}
                       onClick={() => setSelectedDate(isSelected ? null : date)}
+                          style={isToday ? undefined : date > today ? { borderColor: PHASE_TINTS[ph]?.ink } : { background: PHASE_TINTS[ph]?.fill }}
                       className={`
                         aspect-square rounded-full flex items-center justify-center text-sm font-medium transition-all duration-150
                         ${!inMonth ? "opacity-30" : ""}
                         ${isSelected && !isToday ? "ring-1 ring-foreground" : ""}
-                        ${isToday ? "bg-[#23201C] text-[#F4F1EA] rounded-full" : ""}
+                        ${isToday ? "bg-[#23201C] text-[#F4F1EA] rounded-full" : date > today ? "border border-dashed" : ""}
                         relative flex-col
                         hover:scale-105 active:scale-95
                       `}
                     >
-                      <span className={isToday ? "text-[#F4F1EA] font-bold" : "text-foreground"}>{format(date, "d")}</span>
-{(ph === "Menstruation" || ph === "Ovulation") && <span className="absolute bottom-1 w-1 h-1 rounded-full" style={{ background: ph === "Menstruation" ? "#C4247A" : "#0E8A8F" }} />}
+                      <span className={isToday ? "text-[#F4F1EA] font-bold" : "text-[#23201C]"}>{format(date, "d")}</span>
+{!isToday && (cd === 1 || getPhaseForDay(cd - 1, cycleLengthDays, menstruationEndDay) !== ph) && <span className="text-[8px] leading-none font-medium" style={{ color: PHASE_TINTS[ph]?.ink }}>{PHASE_TINTS[ph]?.label}</span>}
                     </button>
                   );
                 })}

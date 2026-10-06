@@ -1,3 +1,4 @@
+import type React from "react";
 import { User, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -13,9 +14,9 @@ interface BottomTabBarProps {
 
 const GRAD_ID = "logan-tab-grad";
 
-function RingIcon({ className }: { className?: string }) {
+function RingIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className} style={style}>
       <circle cx="12" cy="12" r="8" />
     </svg>
   );
