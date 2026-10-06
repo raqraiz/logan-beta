@@ -42,6 +42,13 @@
 /* Logan Design System - calm, warm, follows the device light/dark setting (light default) */
 @layer base {
   :root {
+    --tint-men-fill: rgba(255,46,146,0.16); --tint-men-ink: #C4247A;
+    --tint-fol-fill: rgba(162,43,232,0.12); --tint-fol-ink: #8A34C9;
+    --tint-ovu-fill: rgba(43,212,217,0.24); --tint-ovu-ink: #0B7479;
+    --tint-lut-fill: #EEE9DF; --tint-lut-ink: #6E675F;
+    --tint-day: #23201C; --today-bg: #23201C; --today-fg: #F4F1EA;
+    --user-bubble: rgba(43,212,217,0.42); --user-bubble-fg: #23201C; --user-bubble-time: rgba(35,32,28,0.6);
+    --send-bg: #23201C; --send-fg: #F4F1EA; --send-off-bg: #EEE9DF; --send-off-fg: #6E675F;
     --background: 42 31% 94%;
     --foreground: 34 11% 12%;
     --card: 0 0% 100%;
@@ -108,6 +115,13 @@
   }
 
   .dark {
+    --tint-men-fill: rgba(255,46,146,0.22); --tint-men-ink: #FF7AB8;
+    --tint-fol-fill: rgba(162,43,232,0.24); --tint-fol-ink: #C68BF2;
+    --tint-ovu-fill: rgba(43,212,217,0.22); --tint-ovu-ink: #5FE0E4;
+    --tint-lut-fill: rgba(244,241,234,0.10); --tint-lut-ink: #B3AA9F;
+    --tint-day: #F4F1EA; --today-bg: #F4F1EA; --today-fg: #23201C;
+    --user-bubble: rgba(43,212,217,0.30); --user-bubble-fg: #F4F1EA; --user-bubble-time: rgba(244,241,234,0.7);
+    --send-bg: #F4F1EA; --send-fg: #23201C; --send-off-bg: #35302A; --send-off-fg: #B3AA9F;
     --ring-track: #35302A;
     --chart-bar: #0E8A8F;
     --background: 30 22% 7%;
