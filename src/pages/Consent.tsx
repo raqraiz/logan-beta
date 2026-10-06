@@ -82,9 +82,9 @@ const Consent = () => {
               <h2 className="text-xl font-display font-semibold text-foreground">4. Who has access</h2>
               <p className="text-muted-foreground">Logan runs on the following third-party infrastructure:</p>
               <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                <li>Supabase — database and authentication</li>
-                <li>Google Gemini — AI responses (your messages are processed to generate Logan's replies; Google's data use policy applies)</li>
-                <li>Lovable — app development platform</li>
+                <li>Supabase, database and authentication</li>
+                <li>Google Gemini, AI responses (your messages are processed to generate Logan's replies; Google's data use policy applies)</li>
+                <li>Lovable, app development platform</li>
               </ul>
               <p className="text-muted-foreground">These providers have their own privacy policies. We choose providers with strong privacy practices.</p>
             </section>

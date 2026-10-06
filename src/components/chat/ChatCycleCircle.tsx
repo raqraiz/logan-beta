@@ -171,7 +171,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
 
 
   // Calculate weeks postpartum (or a default number for menopause/irregular)
-  let displayNumber = "—";
+  let displayNumber = ", ";
   // BC copy is driven ONLY by on_hormonal_bc. null/undefined = unknown -> neutral wording.
   const bcLabel = onHormonalBc === true ? "Hormonal BC" : "Own rhythm";
   let subLabel = lifeStage === "postpartum" ? "Recovery" : lifeStage === "menopause" ? "Transition" : lifeStage === "perimenopause" ? "Transition" : lifeStage === "pregnancy_loss" ? "Recovery" : bcLabel;
@@ -196,7 +196,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
       subLabel = weeks === 1 ? "Week" : "Weeks";
     }
   } else if (lifeStage === "postpartum") {
-    displayNumber = "—";
+    displayNumber = ", ";
     subLabel = "Week";
   }
   if (lifeStage === "pregnancy_loss") {

@@ -158,7 +158,7 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
             <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 inline-block max-w-[90%]">
               <p className="text-foreground text-sm">
                 {isForgotPassword
-                  ? "No worries — enter your email and I'll send you a link to reset your password."
+                  ? "No worries, enter your email and I'll send you a link to reset your password."
                   : "Welcome back. Sign in to pick up where we left off."}
               </p>
             </div>

@@ -227,12 +227,12 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
       </div>
       {!isBreastfeeding && !regularPeriodsConfirmed && (
         <p className="text-xs text-muted-foreground/90 border-t border-border/40 pt-2">
-          Postpartum guidance stays on for now — still confirming your cycle's back to a regular rhythm.
+          Postpartum guidance stays on for now, still confirming your cycle's back to a regular rhythm.
         </p>
       )}
       {!isBreastfeeding && regularPeriodsConfirmed && (
         <p className="text-xs text-muted-foreground/90 border-t border-border/40 pt-2">
-          Your cycle looks regular again — saving this will move you out of postpartum mode.
+          Your cycle looks regular again, saving this will move you out of postpartum mode.
         </p>
       )}
     </div>
@@ -297,12 +297,12 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
               <RadioGroupItem value="pregnant" id="stage-pregnant" className="mt-0.5" />
               <div className="flex-1">
                 <div className="text-sm font-medium">Pregnant 🌱</div>
-                <div className="text-xs text-muted-foreground">Logan pauses cycle tracking and switches to trimester-aware support — symptoms, nutrition, safe movement, and red-flag guardrails.</div>
+                <div className="text-xs text-muted-foreground">Logan pauses cycle tracking and switches to trimester-aware support, symptoms, nutrition, safe movement, and red-flag guardrails.</div>
               </div>
             </label>
           </RadioGroup>
           <p className="text-[11px] text-muted-foreground/80 mt-3">
-            Tip: you can also just tell Logan in chat — e.g. "I'm actually still cycling" — and it'll switch automatically.
+            Tip: you can also just tell Logan in chat, e.g. "I'm actually still cycling", and it'll switch automatically.
           </p>
 
           {(stage === "cycling" || stage === "irregular" || stage === "perimenopause") && (
@@ -368,7 +368,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
             <div className="mt-4 p-3 rounded-lg border border-border/50 bg-accent/20 space-y-2">
               <div className="text-sm font-medium">Had a hysterectomy?</div>
               <div className="text-xs text-muted-foreground">
-                If your uterus was removed but your ovaries are still there, you still cycle hormonally — you just won't bleed. Logan will stop asking you for period dates.
+                If your uterus was removed but your ovaries are still there, you still cycle hormonally, you just won't bleed. Logan will stop asking you for period dates.
               </div>
               {/* POLARITY: "Yes" = uterus removed => has_uterus = false. "No" = intact => true. */}
               <RadioGroup
@@ -444,7 +444,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
                   className="mt-1"
                 />
                 <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">
-                  Logan will hold a gentle, no-pressure space. When you're ready to track cycles again, switch back to "Cycling" — your data stays.
+                  Logan will hold a gentle, no-pressure space. When you're ready to track cycles again, switch back to "Cycling", your data stays.
                 </p>
               </div>
             </div>
@@ -537,7 +537,7 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
         <div className="border-t border-border/50 pt-4">
           <Label htmlFor="timezone" className="text-sm font-medium mb-2 block">Timezone</Label>
           <p className="text-xs text-muted-foreground mb-3">
-            Used to calculate your cycle day accurately. Auto-detected from your device — only change this if it's wrong.
+            Used to calculate your cycle day accurately. Auto-detected from your device, only change this if it's wrong.
           </p>
           <div className="flex gap-2">
             <Input

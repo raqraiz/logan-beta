@@ -54,7 +54,7 @@ export function SymptomPieChart({ logs, compact = false }: SymptomPieChartProps)
       data: chartData,
       totalEntries: total,
       sortedLength: sorted.length,
-      topName: topEntry?.[0] ?? "—",
+      topName: topEntry?.[0] ?? ", ",
       topPct: topP,
     };
   }, [logs]);

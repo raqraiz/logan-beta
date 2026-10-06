@@ -87,7 +87,7 @@ const DISCHARGE_TYPES: DischargeType[] = [
     key: "egg_white",
     label: "Egg white (fertile)",
     short: "Egg white",
-    description: "Clear, slippery and stretchy — looks and feels like raw egg white. Stretches an inch or more between your fingers without breaking.",
+    description: "Clear, slippery and stretchy, looks and feels like raw egg white. Stretches an inch or more between your fingers without breaking.",
     fertility: "peak",
     swatch: "bg-cyan-100/60 border-cyan-200/60",
     texture: "stretchy",
@@ -96,7 +96,7 @@ const DISCHARGE_TYPES: DischargeType[] = [
     key: "spotting",
     label: "Spotting / Bloody",
     short: "Spotting",
-    description: "Pink, red or brown tinge. Light enough that you don't need a pad — just a smear when you wipe.",
+    description: "Pink, red or brown tinge. Light enough that you don't need a pad, just a smear when you wipe.",
     fertility: "alert",
     swatch: "bg-rose-200/60 border-rose-300/60",
     texture: "spotting",
@@ -105,7 +105,7 @@ const DISCHARGE_TYPES: DischargeType[] = [
     key: "unusual",
     label: "Unusual (check in)",
     short: "Unusual",
-    description: "Grey, green, frothy, chunky like cottage cheese, or with a strong odor. Worth flagging — could be an imbalance or infection.",
+    description: "Grey, green, frothy, chunky like cottage cheese, or with a strong odor. Worth flagging, could be an imbalance or infection.",
     fertility: "alert",
     swatch: "bg-lime-100/40 border-lime-200/40",
     texture: "creamy",
@@ -163,7 +163,7 @@ function Swatch({ type }: { type: DischargeType }) {
       )}
       {type.texture === "dry" && (
         <div className="absolute inset-0 flex items-center justify-center text-amber-700/40 text-[10px]">
-          —
+          , 
         </div>
       )}
     </div>
@@ -274,7 +274,7 @@ export function DischargeTrackerWidget({
           <div>
             <p className="text-sm font-medium text-foreground/90">Cervical fluid today</p>
             <p className="text-[10px] text-muted-foreground">
-              Tap what matches — descriptions in plain language
+              Tap what matches, descriptions in plain language
             </p>
           </div>
         </div>
@@ -293,7 +293,7 @@ export function DischargeTrackerWidget({
             <p className="text-muted-foreground">
               It's one of the most reliable real-time signals of where you are
               in your cycle. Wetness and stretch rise as estrogen rises around
-              ovulation — egg-white fluid means you're in your fertile window.
+              ovulation, egg-white fluid means you're in your fertile window.
               After ovulation, progesterone makes things drier or sticky again.
             </p>
             <p className="text-muted-foreground mt-2">
@@ -378,7 +378,7 @@ export function DischargeTrackerWidget({
         </div>
         {lifeStage === "irregular" && (
           <p className="text-[11px] text-muted-foreground/70 pt-2">
-            Phase estimates are approximate — your cycle may not follow a predictable pattern.
+            Phase estimates are approximate, your cycle may not follow a predictable pattern.
           </p>
         )}
       </div>

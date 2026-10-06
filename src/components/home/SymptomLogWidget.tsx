@@ -897,7 +897,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                                     onClick={() => setShowHidden(true)}
                                     className="normal-case tracking-normal text-[10px] text-muted-foreground/60 hover:text-foreground underline underline-offset-2"
                                   >
-                                    All hidden — manage
+                                    All hidden, manage
                                   </button>
                                 </div>
                               </div>
@@ -963,7 +963,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                   {q && SYMPTOM_CATEGORIES.every(c => !c.symptoms.some(n => n.toLowerCase().includes(q)))
                     && !communitySymptoms.some(c => c.name.toLowerCase().includes(q)) && (
                     <div className="py-3 text-center">
-                      <p className="text-xs text-muted-foreground mb-2">No symptoms found — try a different term</p>
+                      <p className="text-xs text-muted-foreground mb-2">No symptoms found, try a different term</p>
                       <button
                         onClick={() => { setNewSymptom(search); setShowAddForm(true); setSearch(""); }}
                         className="text-xs text-primary hover:underline inline-flex items-center gap-1"
@@ -1016,7 +1016,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                 {suggestions.length > 0 && (
                   <div className="rounded-lg border border-border/40 bg-card/60 p-2.5 space-y-2">
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60">
-                      Already tracked — pick one?
+                      Already tracked, pick one?
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {suggestions.map(name => (
@@ -1034,7 +1034,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                       disabled={addingSymptom}
                       className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
                     >
-                      None of these — add "{newSymptom.trim()}" as new
+                      None of these, add "{newSymptom.trim()}" as new
                     </button>
                   </div>
                 )}

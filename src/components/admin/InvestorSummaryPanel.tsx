@@ -27,7 +27,7 @@ const chartConfig: ChartConfig = {
   trend: { label: "Trend", color: "hsl(25 95% 55%)" },
 };
 
-const fmt = (n: number | null) => (n === null ? "—" : String(Math.round(n * 10) / 10));
+const fmt = (n: number | null) => (n === null ? ", " : String(Math.round(n * 10) / 10));
 
 export const InvestorSummaryPanel = () => {
   const [rangeFrom, setRangeFrom] = useState<Date>(() => startOfMonth(new Date()));
@@ -179,7 +179,7 @@ export const InvestorSummaryPanel = () => {
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm">
-              {format(rangeFrom, "MMM d, yyyy")} — {format(rangeTo, "MMM d, yyyy")}
+              {format(rangeFrom, "MMM d, yyyy")}, {format(rangeTo, "MMM d, yyyy")}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="end">

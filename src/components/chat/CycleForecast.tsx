@@ -95,24 +95,24 @@ function getDayMetrics(day: number, cycleLength: number, menstruationEnd: number
 
 const PHASE_TIPS: Record<string, string[]> = {
   Menstruation: [
-    "Don't schedule anything you can cancel tomorrow — you'll want to.",
+    "Don't schedule anything you can cancel tomorrow, you'll want to.",
     "Skip the intense workout. A walk counts. Your body is recovering.",
     "Eat warm, iron-rich food. Now is not the time for a salad cleanse.",
     "If someone irritates you, wait 24 hours before responding.",
     "Go to bed 30 minutes earlier than you think you need to.",
   ],
   Follicular: [
-    "Don't waste this energy on busywork — tackle the hard thing first.",
+    "Don't waste this energy on busywork, tackle the hard thing first.",
     "Say yes to the social plan. You actually have the bandwidth right now.",
     "Start the project you've been putting off. Motivation is real today.",
-    "Eat enough protein — your muscles recover faster this week.",
+    "Eat enough protein, your muscles recover faster this week.",
     "Don't overcommit for next week. Luteal-you will not have this energy.",
   ],
   Ovulation: [
-    "Have the hard conversation today — you'll handle it with grace.",
+    "Have the hard conversation today, you'll handle it with grace.",
     "Push for the PR or the big presentation. You're at peak performance.",
     "Don't make long-term commitments based on how invincible you feel.",
-    "Stay hydrated — the estrogen surge can cause subtle dehydration.",
+    "Stay hydrated, the estrogen surge can cause subtle dehydration.",
     "Warm up properly. Ligament injury risk is quietly elevated right now.",
   ],
   Luteal: [
@@ -120,38 +120,38 @@ const PHASE_TIPS: Record<string, string[]> = {
     "Don't send the emotional text. Write it, sleep on it, revisit tomorrow.",
     "Eat the carbs. Your brain needs serotonin and fighting cravings backfires.",
     "Cancel the optional plans without guilt. Protect your energy.",
-    "When you feel like everything is falling apart — it's progesterone, not reality.",
+    "When you feel like everything is falling apart, it's progesterone, not reality.",
   ],
 };
 
 const PARTNER_TIPS: Record<string, string[]> = {
   Menstruation: [
-    "Don't ask 'what's wrong?' — just bring her tea and a blanket.",
-    "Take one thing off her plate without being asked. Dishes, kids, dinner — pick one.",
+    "Don't ask 'what's wrong?', just bring her tea and a blanket.",
+    "Take one thing off her plate without being asked. Dishes, kids, dinner, pick one.",
     "She's not being dramatic. Her pain is real and her patience is gone. Don't test it.",
     "Don't suggest she 'just take a painkiller and push through.' Read the room.",
     "If she snaps at you, don't take it personally. She'll feel guilty about it later without your help.",
   ],
   Follicular: [
-    "She's got energy again — match it. Plan something fun together.",
+    "She's got energy again, match it. Plan something fun together.",
     "This is your window to bring up the thing you've been sitting on. She can handle it now.",
-    "Don't coast just because she's in a good mood. Show up — she notices.",
+    "Don't coast just because she's in a good mood. Show up, she notices.",
     "Support the new idea or project she's excited about. Her confidence is climbing.",
     "If you've been meaning to apologize for something, now's the time. She's receptive.",
   ],
   Ovulation: [
-    "She's at her sharpest and most social. Don't be boring — step up.",
+    "She's at her sharpest and most social. Don't be boring, step up.",
     "Plan the date night. She's feeling herself and wants to connect.",
-    "If you disagree on something, bring it up now — she'll debate fairly, not emotionally.",
+    "If you disagree on something, bring it up now, she'll debate fairly, not emotionally.",
     "Don't be intimidated by her confidence. Hype her up, not down.",
-    "Pay attention. She's giving you her best self right now — notice it and say something.",
+    "Pay attention. She's giving you her best self right now, notice it and say something.",
   ],
   Luteal: [
-    "She's not picking fights — her brain is literally wired to notice threats right now.",
+    "She's not picking fights, her brain is literally wired to notice threats right now.",
     "Don't say 'is it that time of the month?' Ever. Just don't.",
     "Bring her comfort food without commentary. No diet advice. No jokes.",
     "Handle bedtime or the morning routine without being asked. She's running on fumes.",
-    "When she says 'I'm fine' — she's not. Sit with her. You don't have to fix it.",
+    "When she says 'I'm fine', she's not. Sit with her. You don't have to fix it.",
   ],
 };
 
@@ -187,7 +187,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   const periodStart = useMemo(() => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodStart)) {
       const [y, m, d] = lastPeriodStart.split("-").map(Number);
-      return new Date(y, m - 1, d); // local midnight — safe for differenceInCalendarDays
+      return new Date(y, m - 1, d); // local midnight, safe for differenceInCalendarDays
     }
     const parsed = parseISO(lastPeriodStart);
     return isValid(parsed) ? parsed : today;
@@ -528,7 +528,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                         <div className="px-3 py-2 border-t border-border/15 flex items-center gap-2">
                           <Heart className="w-3 h-3 text-phase-menstruation shrink-0" />
                           <p className="text-[11px] text-muted-foreground">
-                            <span className="text-foreground font-medium">{anchorSymptom}</span> risk is elevated — plan ahead
+                            <span className="text-foreground font-medium">{anchorSymptom}</span> risk is elevated, plan ahead
                           </p>
                         </div>
                       )}
@@ -536,7 +536,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                     <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
                       <div className="px-3 py-2.5">
                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
-                          <Users className="w-3 h-3" /> For him — how not to mess up today
+                          <Users className="w-3 h-3" /> For him, how not to mess up today
                           <span className="ml-auto normal-case tracking-normal text-[9px] text-muted-foreground/60">{sourceLabel(himSource)}</span>
                         </p>
                         <ul className="space-y-1.5">
@@ -715,7 +715,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                     <div className="px-3 py-2 border-t border-border/15 flex items-center gap-2">
                       <Heart className="w-3 h-3 text-phase-menstruation shrink-0" />
                       <p className="text-[11px] text-muted-foreground">
-                        <span className="text-foreground font-medium">{anchorSymptom}</span> risk is elevated — plan ahead
+                        <span className="text-foreground font-medium">{anchorSymptom}</span> risk is elevated, plan ahead
                       </p>
                     </div>
                   )}
@@ -723,7 +723,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                 <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
                   <div className="px-3 py-2.5">
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
-                      <Users className="w-3 h-3" /> For him — how not to mess up today
+                      <Users className="w-3 h-3" /> For him, how not to mess up today
                       <span className="ml-auto normal-case tracking-normal text-[9px] text-muted-foreground/60">{sourceLabel(himSource)}</span>
                     </p>
                     <ul className="space-y-1.5">

@@ -473,7 +473,7 @@ export function ProfilesTab() {
     const lines: string[] = [];
 
     lines.push(`═══════════════════════════════════════`);
-    lines.push(`  USER REPORT — ${profile.full_name}`);
+    lines.push(`  USER REPORT, ${profile.full_name}`);
     lines.push(`  Exported ${format(new Date(), "MMMM d, yyyy 'at' h:mm a")}`);
     lines.push(`═══════════════════════════════════════`);
     lines.push(``);
@@ -766,19 +766,19 @@ export function ProfilesTab() {
                           <div className="grid grid-cols-2 gap-2 text-sm">
                             <div>
                               <p className="text-muted-foreground">Week</p>
-                              <p className="font-medium">{gestWeeks !== null ? `Week ${gestWeeks}` : "—"}</p>
+                              <p className="font-medium">{gestWeeks !== null ? `Week ${gestWeeks}` : ", "}</p>
                             </div>
                             <div>
                               <p className="text-muted-foreground">Trimester</p>
-                              <p className="font-medium">{trimester ? `T${trimester}` : "—"}</p>
+                              <p className="font-medium">{trimester ? `T${trimester}` : ", "}</p>
                             </div>
                             <div>
                               <p className="text-muted-foreground">LMP</p>
-                              <p className="font-medium">{pregLmp ? format(new Date(pregLmp + "T12:00:00Z"), "MMM d, yyyy") : "—"}</p>
+                              <p className="font-medium">{pregLmp ? format(new Date(pregLmp + "T12:00:00Z"), "MMM d, yyyy") : ", "}</p>
                             </div>
                             <div>
                               <p className="text-muted-foreground">Due date</p>
-                              <p className="font-medium">{due ? format(new Date(due + "T12:00:00Z"), "MMM d, yyyy") : "—"}</p>
+                              <p className="font-medium">{due ? format(new Date(due + "T12:00:00Z"), "MMM d, yyyy") : ", "}</p>
                             </div>
                             {!pregLmp && !due && (
                               <div className="col-span-2">

@@ -299,14 +299,14 @@ export function HistoryImportDialog({
             </TabsContent>
 
             <TabsContent value="csv" className="text-sm text-muted-foreground space-y-3 mt-3">
-              <p>Most period trackers (Clue, Flo, Natural Cycles, Stardust, Apple Cycle Tracking) let you export a CSV from settings. Upload it as-is — Logan auto-detects the columns.</p>
+              <p>Most period trackers (Clue, Flo, Natural Cycles, Stardust, Apple Cycle Tracking) let you export a CSV from settings. Upload it as-is, Logan auto-detects the columns.</p>
               <Button className="w-full" onClick={() => fileRef.current?.click()}>
                 <Upload className="w-4 h-4 mr-2" /> Choose .csv
               </Button>
             </TabsContent>
 
             <TabsContent value="paste" className="text-sm text-muted-foreground space-y-3 mt-3">
-              <p>Copy rows directly from Excel, Google Sheets, Numbers, or Notes — Logan reads commas or tabs.</p>
+              <p>Copy rows directly from Excel, Google Sheets, Numbers, or Notes, Logan reads commas or tabs.</p>
               <Textarea
                 value={pasted}
                 onChange={(e) => setPasted(e.target.value)}
@@ -370,7 +370,7 @@ export function HistoryImportDialog({
             </TabsContent>
 
             <TabsContent value="bloodtest" className="text-sm text-muted-foreground space-y-3 mt-3">
-              <p>Upload a PDF report or snap photos/screenshots of your lab results (Labcorp, Quest, hospital portal, anything). Logan reads markers like ferritin, vitamin D, thyroid (TSH/T3/T4), sex hormones, HbA1c, lipids — up to {MAX_SCREENSHOTS} files at a time — and references them in chat.</p>
+              <p>Upload a PDF report or snap photos/screenshots of your lab results (Labcorp, Quest, hospital portal, anything). Logan reads markers like ferritin, vitamin D, thyroid (TSH/T3/T4), sex hormones, HbA1c, lipids, up to {MAX_SCREENSHOTS} files at a time, and references them in chat.</p>
               {labImages.length > 0 && (
                 <div className="grid grid-cols-3 gap-2">
                   {labImages.map((f, i) => {
@@ -424,7 +424,7 @@ export function HistoryImportDialog({
                 </Button>
               </div>
               <p className="text-[11px] text-muted-foreground/80">
-                PDFs work best (up to 20 MB). For photos: results table fully in frame and in focus. Logan won't diagnose — it surfaces patterns to bring to your clinician.
+                PDFs work best (up to 20 MB). For photos: results table fully in frame and in focus. Logan won't diagnose, it surfaces patterns to bring to your clinician.
               </p>
             </TabsContent>
 

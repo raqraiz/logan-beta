@@ -155,7 +155,7 @@ export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged, 
               <div className="flex items-baseline justify-between mb-1">
                 <div>
                   <p className="text-2xl font-bold tabular-nums">
-                    {latest ? display(Number(latest.weight_kg)).toFixed(1) : "—"}
+                    {latest ? display(Number(latest.weight_kg)).toFixed(1) : ", "}
                     <span className="text-sm font-normal text-muted-foreground ml-1">{unit}</span>
                   </p>
                   <p className="text-xs text-muted-foreground">
@@ -288,7 +288,7 @@ export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged, 
                       <div className="grid grid-cols-2 gap-2">
                         {phaseAverages.map(p => {
                           const delta = p.count ? p.avg - overallAvg : 0;
-                          const deltaStr = delta === 0 ? "—" : `${delta > 0 ? "+" : ""}${delta.toFixed(1)} ${unit}`;
+                          const deltaStr = delta === 0 ? ", " : `${delta > 0 ? "+" : ""}${delta.toFixed(1)} ${unit}`;
                           const deltaColor = !p.count ? "text-muted-foreground" : Math.abs(delta) < 0.2 ? "text-muted-foreground" : delta > 0 ? "text-amber-500" : "text-emerald-500";
                           return (
                             <div key={p.phase} className="rounded-xl border border-border/40 p-3 bg-card/60">
@@ -312,7 +312,7 @@ export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged, 
                       </div>
                       {peakPhase && lowPhase && peakPhase.phase !== lowPhase.phase && phaseSpread > 0.2 ? (
                         <p className="text-[11px] text-muted-foreground mt-3">
-                          You weigh about <span className="font-medium text-foreground">{phaseSpread.toFixed(1)} {unit}</span> more on average in <span className="font-medium" style={{ color: PHASE_COLORS[peakPhase.phase] }}>{peakPhase.phase}</span> than in <span className="font-medium" style={{ color: PHASE_COLORS[lowPhase.phase] }}>{lowPhase.phase}</span> — common, mostly water retention.
+                          You weigh about <span className="font-medium text-foreground">{phaseSpread.toFixed(1)} {unit}</span> more on average in <span className="font-medium" style={{ color: PHASE_COLORS[peakPhase.phase] }}>{peakPhase.phase}</span> than in <span className="font-medium" style={{ color: PHASE_COLORS[lowPhase.phase] }}>{lowPhase.phase}</span>, common, mostly water retention.
                         </p>
                       ) : (
                         <p className="text-[11px] text-muted-foreground mt-3">

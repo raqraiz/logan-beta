@@ -30,7 +30,7 @@ export const CYCLE_GLOSSARY: GlossaryTerm[] = [
   {
     term: "Ovulation",
     aliases: ["ovulatory", "ovulating", "ovulate"],
-    short: "When an egg is released — usually around the middle of your cycle.",
+    short: "When an egg is released, usually around the middle of your cycle.",
     detail:
       "Estrogen peaks and LH surges. Energy and confidence are often at their highest. This window typically lasts 3–5 days around the actual egg release.",
   },
@@ -58,21 +58,21 @@ export const CYCLE_GLOSSARY: GlossaryTerm[] = [
   {
     term: "FSH",
     aliases: ["follicle-stimulating hormone", "follicle stimulating hormone"],
-    short: "Follicle-Stimulating Hormone — it tells your ovaries to prepare an egg.",
+    short: "Follicle-Stimulating Hormone, it tells your ovaries to prepare an egg.",
     detail:
       "FSH rises at the start of your cycle to stimulate follicle growth. It works alongside estrogen in the follicular phase.",
   },
   {
     term: "LH",
     aliases: ["luteinizing hormone"],
-    short: "Luteinizing Hormone — the trigger for ovulation.",
+    short: "Luteinizing Hormone, the trigger for ovulation.",
     detail:
       "LH surges sharply just before ovulation, signaling the release of the egg. Ovulation tests detect this surge.",
   },
   {
     term: "PMS",
     aliases: ["premenstrual syndrome", "pre-menstrual"],
-    short: "Premenstrual Syndrome — symptoms that appear in the late luteal phase.",
+    short: "Premenstrual Syndrome, symptoms that appear in the late luteal phase.",
     detail:
       "Caused by the drop in progesterone and estrogen before your period. Common symptoms include mood changes, bloating, fatigue, and cravings. Tracking helps you anticipate and prepare.",
   },
@@ -88,7 +88,7 @@ export const CYCLE_GLOSSARY: GlossaryTerm[] = [
     aliases: [],
     short: "The one symptom you want to track most closely.",
     detail:
-      "Logan uses your anchor symptom as a focal point for personalized insights. It's the signal that matters most to you — whether that's fatigue, mood dips, cramps, or something else.",
+      "Logan uses your anchor symptom as a focal point for personalized insights. It's the signal that matters most to you, whether that's fatigue, mood dips, cramps, or something else.",
   },
 ];
 

@@ -9,7 +9,7 @@ const LOW_SAMPLE = 10;
 /** "…" while loading, real value when resolved, never 0 as a stand-in. */
 const fmt = (v: number | null | undefined, suffix = "", loading = false) => {
   if (loading) return "…";
-  if (v === null || v === undefined) return "—";
+  if (v === null || v === undefined) return ", ";
   return `${v}${suffix}`;
 };
 
@@ -48,7 +48,7 @@ export function LifeStageEngagementSection() {
             onClick={load}
             className="text-xs text-destructive underline underline-offset-2 py-4"
           >
-            Failed — retry
+            Failed, retry
           </button>
         ) : (
           <>

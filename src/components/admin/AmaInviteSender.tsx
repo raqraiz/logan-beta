@@ -95,7 +95,7 @@ export const AmaInviteSender = () => {
               <span>
                 Eligible now:{" "}
                 <span className="font-semibold text-foreground">
-                  {loading ? "…" : eligible ?? "—"}
+                  {loading ? "…" : eligible ?? ", "}
                 </span>
               </span>
               <span>

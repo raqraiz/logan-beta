@@ -55,7 +55,7 @@ export const FeedbackModal = ({ open, onOpenChange }: FeedbackModalProps) => {
         <DialogHeader>
           <DialogTitle className="text-lg">Send feedback</DialogTitle>
           <DialogDescription>
-            We're building Logan with you — tell us what's working, what's not, or what you wish it did.
+            We're building Logan with you, tell us what's working, what's not, or what you wish it did.
           </DialogDescription>
         </DialogHeader>
 

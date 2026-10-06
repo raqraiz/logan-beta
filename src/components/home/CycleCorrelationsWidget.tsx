@@ -125,7 +125,7 @@ export function CycleCorrelationsWidget({
         ) : trackers.length === 0 ? (
           <div className="space-y-3">
             <p className="text-sm text-foreground/80 leading-snug">
-              Wondering if something — surfing, mood, focus, loneliness — is tied to your cycle?
+              Wondering if something, surfing, mood, focus, loneliness, is tied to your cycle?
               Track it daily and Logan will show you the pattern.
             </p>
             <Button
@@ -217,7 +217,7 @@ export function CycleCorrelationsWidget({
             </Button>
             {lifeStage === "irregular" && (
               <p className="text-[11px] text-muted-foreground/70 px-1">
-                Phase estimates are approximate — your cycle may not follow a predictable pattern.
+                Phase estimates are approximate, your cycle may not follow a predictable pattern.
               </p>
             )}
           </div>

@@ -432,7 +432,7 @@ export function CycleCorrelationDetail({
                 </div>
 
                 <p className="text-[10px] text-muted-foreground/55 text-center leading-snug px-2">
-                  Typical hormone curves overlaid on your logged intensity — see which hormones may be driving each pattern.
+                  Typical hormone curves overlaid on your logged intensity, see which hormones may be driving each pattern.
                 </p>
               </div>
             )}

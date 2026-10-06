@@ -19,7 +19,7 @@ interface TrialMessage {
 }
 
 const FEELING_CHIPS = [
-  "Nobody's tracking me anymore — just the baby.",
+  "Nobody's tracking me anymore, just the baby.",
   "I'm still healing from birth and no one's tracking that.",
   "I feel like a different person two weeks a month",
   "I never know when to push or rest",
@@ -47,7 +47,7 @@ const TESTIMONIALS = [
     name: "Founding Member",
   },
   {
-    quote: "My husband loves it too — he says it's like you have a friend who understands you now.",
+    quote: "My husband loves it too, he says it's like you have a friend who understands you now.",
     name: "Founding Member",
   },
   {
@@ -317,7 +317,7 @@ export const TrialChat = () => {
                   The cycle app that actually <span className="landing-brand-text">keeps up.</span>
                 </h1>
                 <p className="text-lg sm:text-xl text-muted-foreground mt-8 leading-relaxed max-w-2xl">
-                  Meet Logan, the companion that reads your energy, mood, and shifts — so nothing catches you off guard.
+                  Meet Logan, the companion that reads your energy, mood, and shifts, so nothing catches you off guard.
                   For every body, in every stage, whatever your cycle looks like.
                 </p>
 
@@ -413,7 +413,7 @@ export const TrialChat = () => {
                     return (
                       <figure key={i} className={`bg-card/40 border border-border/50 rounded-2xl p-6 ${i === 3 ? "sm:col-span-3" : ""}`} style={{ borderTop: `3px solid ${tops[i]}` }}>
                         <blockquote className="text-base text-foreground/90 leading-relaxed">"{t.quote}"</blockquote>
-                        <figcaption className="text-sm text-muted-foreground mt-4">— {t.name}</figcaption>
+                        <figcaption className="text-sm text-muted-foreground mt-4">,  {t.name}</figcaption>
                       </figure>
                     );
                   })}
@@ -659,7 +659,7 @@ export const TrialChat = () => {
                 onClick={() => setShowAuth(true)}
                 className="text-[11px] text-primary hover:text-primary/80 transition-colors font-medium"
               >
-                Skip — create account →
+                Skip, create account →
               </button>
             </div>
           </form>

@@ -64,7 +64,7 @@ function parseContent(raw: string, format: WidgetFormat): ParsedContent {
     const m = trimmed.match(/(\d+(?:\.\d+)?\s*[%/]?\d*)/);
     if (m) {
       const value = m[1];
-      const label = trimmed.replace(m[0], "").replace(/^[\s—\-:]+/, "").trim();
+      const label = trimmed.replace(m[0], "").replace(/^[\s, \-:]+/, "").trim();
       return { kind: "stat", stat: { value, label } };
     }
   }

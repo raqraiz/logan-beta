@@ -100,7 +100,7 @@ export function ReferralCard({ userId }: ReferralCardProps) {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Logan — health & performance for women",
+          title: "Logan, health & performance for women",
           text: shareText,
           url: link,
         });
@@ -141,7 +141,7 @@ export function ReferralCard({ userId }: ReferralCardProps) {
           ) : count === 0 ? (
             <>
               <p className="text-base font-display font-semibold text-foreground leading-tight">
-                No one yet — share your link to get started
+                No one yet, share your link to get started
               </p>
               <p className="text-[11px] text-muted-foreground">
                 Your first invite is the hardest one.
@@ -153,7 +153,7 @@ export function ReferralCard({ userId }: ReferralCardProps) {
                 {count} friend{count === 1 ? "" : "s"} joined so far
               </p>
               <p className="text-[11px] text-muted-foreground">
-                {count === 1 ? "Your first invite landed — nice." : "Thanks for spreading the word."}
+                {count === 1 ? "Your first invite landed, nice." : "Thanks for spreading the word."}
               </p>
             </>
           )}
@@ -164,7 +164,7 @@ export function ReferralCard({ userId }: ReferralCardProps) {
         <Skeleton className="h-10 w-full" />
       ) : !code ? (
         <p className="text-xs text-muted-foreground rounded-lg border border-border/50 px-3 py-2">
-          Your referral link isn't ready yet. Try again in a moment — if it keeps
+          Your referral link isn't ready yet. Try again in a moment, if it keeps
           happening, let us know.
         </p>
       ) : (

@@ -188,7 +188,7 @@ export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartP
         <HormoneChartSVG cycleDay={cycleDay} phase={phase} cycleLengthDays={cycleLengthDays} w={400} h={180} />
         <p className="text-xs sm:text-xs text-sm text-muted-foreground leading-relaxed px-1">
           <span className="font-medium" style={{ color }}>{phase}</span>
-          {" "}— <AnnotatedText text={tip} />
+          {" "},  <AnnotatedText text={tip} />
         </p>
         <p className="text-[10px] text-muted-foreground/50 text-center">Tap to expand</p>
       </div>
@@ -199,7 +199,7 @@ export function HormoneChart({ cycleDay, phase, cycleLengthDays }: HormoneChartP
             <HormoneChartSVG cycleDay={cycleDay} phase={phase} cycleLengthDays={cycleLengthDays} w={500} h={260} />
             <p className="text-sm text-muted-foreground leading-relaxed px-1">
               <span className="font-medium" style={{ color }}>{phase}</span>
-              {" "}— <AnnotatedText text={tip} />
+              {" "},  <AnnotatedText text={tip} />
             </p>
             {/* Hormone descriptions */}
             <div className="grid grid-cols-2 gap-2 pt-2">

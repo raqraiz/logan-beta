@@ -152,7 +152,7 @@ export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays,
               </div>
               {lifeStage === "irregular" && (
                 <p className="text-[11px] text-muted-foreground/70 pt-1">
-                  Phase estimates are approximate — your cycle may not follow a predictable pattern.
+                  Phase estimates are approximate, your cycle may not follow a predictable pattern.
                 </p>
               )}
             </div>

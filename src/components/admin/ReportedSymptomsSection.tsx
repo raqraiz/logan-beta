@@ -154,7 +154,7 @@ export const ReportedSymptomsSection = () => {
           )}
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Symptom entries flagged by users — remove or dismiss
+          Symptom entries flagged by users, remove or dismiss
         </p>
       </CardHeader>
       <CardContent>
@@ -169,7 +169,7 @@ export const ReportedSymptomsSection = () => {
               onClick={load}
               className="text-xs text-destructive hover:underline"
             >
-              Failed — retry
+              Failed, retry
             </button>
           </div>
         ) : entries.length === 0 ? (
@@ -231,7 +231,7 @@ export const ReportedSymptomsSection = () => {
                         <p key={r.id} className="text-[10px] text-muted-foreground">
                           {names[r.reporter_id] ?? "Unknown"} ·{" "}
                           {format(new Date(r.created_at), "MMM d, p")}
-                          {r.details ? ` — “${r.details}”` : ""}
+                          {r.details ? `, “${r.details}”` : ""}
                         </p>
                       ))}
                     </div>

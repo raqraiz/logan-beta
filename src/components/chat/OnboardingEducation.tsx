@@ -140,7 +140,7 @@ export function CycleBasicsCard() {
 
       {showText && (
         <p className="text-xs text-muted-foreground leading-relaxed animate-fade-in">
-          Tap any phase to learn more. Your cycle repeats roughly every 28 days — Logan tracks where you are so you can stop guessing.
+          Tap any phase to learn more. Your cycle repeats roughly every 28 days, Logan tracks where you are so you can stop guessing.
         </p>
       )}
     </div>
@@ -184,7 +184,7 @@ export function HormoneBasicsCard({ lifeStage = "cycling" }: { lifeStage?: Hormo
     lifeStage === "irregular"
       ? "Your hormones follow a similar pattern, but the timing is less predictable."
       : lifeStage === "postpartum"
-      ? "Your hormones are rebuilding — this pattern will return as your cycle regulates."
+      ? "Your hormones are rebuilding, this pattern will return as your cycle regulates."
       : null;
 
   const W = 280, H = 100;
@@ -309,7 +309,7 @@ export function HormoneBasicsCard({ lifeStage = "cycling" }: { lifeStage?: Hormo
           onMouseEnter={() => setHoveredHormone("estrogen")}
           onMouseLeave={() => setHoveredHormone(null)}
         >
-          <span className="w-5 h-[2px] rounded-full bg-phase-follicular inline-block" /> Estrogen — drives energy & mood
+          <span className="w-5 h-[2px] rounded-full bg-phase-follicular inline-block" /> Estrogen, drives energy & mood
         </span>
         <span
           className="flex items-center gap-1.5 cursor-pointer transition-opacity"
@@ -317,12 +317,12 @@ export function HormoneBasicsCard({ lifeStage = "cycling" }: { lifeStage?: Hormo
           onMouseEnter={() => setHoveredHormone("progesterone")}
           onMouseLeave={() => setHoveredHormone(null)}
         >
-          <span className="w-5 h-[2px] rounded-full bg-phase-luteal inline-block" /> Progesterone — calming, then drops
+          <span className="w-5 h-[2px] rounded-full bg-phase-luteal inline-block" /> Progesterone, calming, then drops
         </span>
       </div>
 
       <p className="text-xs text-muted-foreground leading-relaxed">
-        These two hormones rise and fall every cycle. When they shift, so does your mood, energy, and focus. That's not random — it's biology you can learn to read.
+        These two hormones rise and fall every cycle. When they shift, so does your mood, energy, and focus. That's not random, it's biology you can learn to read.
       </p>
 
       {stageNote && (
@@ -404,15 +404,15 @@ function DecliningHormonesCard({ animate }: { animate: boolean }) {
       {/* Legend */}
       <div className="flex gap-4 text-[10px]">
         <span className="flex items-center gap-1.5">
-          <span className="w-5 h-[2px] rounded-full bg-phase-follicular inline-block" /> Estrogen — erratic, trending down
+          <span className="w-5 h-[2px] rounded-full bg-phase-follicular inline-block" /> Estrogen, erratic, trending down
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-5 h-[2px] rounded-full bg-phase-luteal inline-block" /> Progesterone — steady decline
+          <span className="w-5 h-[2px] rounded-full bg-phase-luteal inline-block" /> Progesterone, steady decline
         </span>
       </div>
 
       <p className="text-xs text-muted-foreground leading-relaxed">
-        In this stage, hormones don't follow a predictable monthly cycle. Estrogen swings unpredictably while progesterone quietly falls — which is why symptoms can feel random. Logan learns your pattern instead of assuming one.
+        In this stage, hormones don't follow a predictable monthly cycle. Estrogen swings unpredictably while progesterone quietly falls, which is why symptoms can feel random. Logan learns your pattern instead of assuming one.
       </p>
     </div>
   );
@@ -487,7 +487,7 @@ export function SymptomExplainerCard() {
       </div>
 
       <p className="text-xs text-muted-foreground leading-relaxed">
-        Based on a ~{TOTAL_DAYS}-day cycle. Your phases may vary — Logan adjusts to your actual pattern.
+        Based on a ~{TOTAL_DAYS}-day cycle. Your phases may vary, Logan adjusts to your actual pattern.
       </p>
     </div>
   );
@@ -624,15 +624,15 @@ export function NotSureButton({ field, onUseDefault, disabled }: NotSureButtonPr
     },
     last_period: {
       title: "Can't remember exactly?",
-      explanation: "Try to think about your last period — even a rough guess helps Logan get started. You can always update this later as you track.",
+      explanation: "Try to think about your last period, even a rough guess helps Logan get started. You can always update this later as you track.",
       default: "approximate",
       defaultLabel: "It was about 2 weeks ago",
     },
     irregular_last_period: {
-      title: "No worries — you can skip this",
+      title: "No worries, you can skip this",
       explanation: "Logan works without a last period date. If you remember later, you can add it anytime in settings.",
       default: "not sure",
-      defaultLabel: "Skip this — I'm not sure",
+      defaultLabel: "Skip this, I'm not sure",
     },
   };
 

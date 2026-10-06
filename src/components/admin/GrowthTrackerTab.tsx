@@ -221,7 +221,7 @@ export const GrowthTrackerTab = () => {
         <CardHeader>
           <CardTitle>Daily log</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            Live from signup data — one row per day since Jul 1, 2026.
+            Live from signup data, one row per day since Jul 1, 2026.
           </p>
         </CardHeader>
         <CardContent>

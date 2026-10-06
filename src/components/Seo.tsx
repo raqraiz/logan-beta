@@ -7,34 +7,34 @@ type Meta = { title: string; description: string };
 
 const ROUTE_META: Record<string, Meta> = {
   "/": {
-    title: "Logan — Intelligent Cycle Guidance",
+    title: "Logan, Intelligent Cycle Guidance",
     description:
       "Your AI-powered cycle companion. Personalized insights to optimize energy, focus, and recovery across your menstrual cycle.",
   },
   "/auth/callback": {
-    title: "Signing you in — Logan",
+    title: "Signing you in, Logan",
     description: "Completing your secure sign-in to Logan.",
   },
   "/logan-admin-access": {
-    title: "Sign in — Logan",
+    title: "Sign in, Logan",
     description: "Sign in to Logan to access your personalized cycle guidance.",
   },
   "/admin": {
-    title: "Admin — Logan",
+    title: "Admin, Logan",
     description: "Logan admin dashboard.",
   },
   "/consent": {
-    title: "Consent — Logan",
+    title: "Consent, Logan",
     description: "Review and provide consent to use Logan.",
   },
   "/reset-password": {
-    title: "Reset password — Logan",
+    title: "Reset password, Logan",
     description: "Reset your Logan account password.",
   },
 };
 
 const DEFAULT_META: Meta = {
-  title: "Logan — Intelligent Cycle Guidance",
+  title: "Logan, Intelligent Cycle Guidance",
   description:
     "Your AI-powered cycle companion for energy, focus, and recovery.",
 };
