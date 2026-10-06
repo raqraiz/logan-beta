@@ -315,3 +315,21 @@ html:not(.dark) .headsup-primary, .theme-light .headsup-primary { background: hs
   .uppercase[class*="tracking-"] { letter-spacing: normal !important; }
   .tabular-nums, .font-numeric { font-family: 'Quicksand', system-ui, sans-serif; font-weight: 700; }
 }
+
+@layer components {
+  /* Selected chips/options: ink fill, paper text, check mark. Unselected: card with soft outline. */
+  button[aria-pressed="true"]:not([role="switch"]),
+  [data-chip][data-selected="true"],
+  [role="radio"][aria-checked="true"][data-chip] {
+    background-color: #23201C !important;
+    color: #F4F1EA !important;
+    border-color: #23201C !important;
+  }
+  button[aria-pressed="true"]:not([role="switch"])::before,
+  [data-chip][data-selected="true"]::before { content: "✓ "; white-space: pre; }
+  button[aria-pressed="false"]:not([role="switch"]),
+  [data-chip][data-selected="false"] {
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+  }
+}
