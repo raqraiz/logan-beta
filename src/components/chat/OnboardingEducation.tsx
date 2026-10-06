@@ -92,7 +92,7 @@ export function CycleBasicsCard() {
                 <text
                   x={label.x} y={label.y}
                   textAnchor="middle" dominantBaseline="central"
-                  fill="hsl(210, 15%, 50%)" fontSize="7" fontFamily="Space Grotesk, sans-serif"
+                  fill="hsl(210, 15%, 50%)" fontSize="7" fontFamily="Quicksand, sans-serif"
                 >
                   {day}
                 </text>
@@ -101,10 +101,10 @@ export function CycleBasicsCard() {
           })}
 
           {/* Center */}
-          <text x={cx} y={cy - 6} textAnchor="middle" fill="hsl(210, 20%, 97%)" fontSize="14" fontWeight="600" fontFamily="Space Grotesk, sans-serif">
+          <text x={cx} y={cy - 6} textAnchor="middle" fill="hsl(210, 20%, 97%)" fontSize="14" fontWeight="600" fontFamily="Quicksand, sans-serif">
             ~28
           </text>
-          <text x={cx} y={cy + 8} textAnchor="middle" fill="hsl(210, 15%, 50%)" fontSize="8" fontFamily="DM Sans, sans-serif">
+          <text x={cx} y={cy + 8} textAnchor="middle" fill="hsl(210, 15%, 50%)" fontSize="8" fontFamily="Quicksand, sans-serif">
             day cycle
           </text>
         </svg>
@@ -211,7 +211,7 @@ export function HormoneBasicsCard({ lifeStage = "cycling" }: { lifeStage?: Hormo
               <text
                 x={band.x + band.w / 2} y={H - 6}
                 textAnchor="middle" fontSize="7" fill="hsl(210, 15%, 45%)"
-                fontFamily="DM Sans, sans-serif"
+                fontFamily="Quicksand, sans-serif"
               >
                 {band.label}
               </text>

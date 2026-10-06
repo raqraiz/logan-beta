@@ -32,7 +32,7 @@ export const LoganFullLogo = ({ size = "md", className }: LoganFullLogoProps) =>
         x="0"
         y="35"
         fill="currentColor"
-        fontFamily="Quicksand, 'DM Sans', sans-serif"
+        fontFamily="Quicksand, sans-serif"
         fontWeight="300"
         fontSize="34"
       >
@@ -56,7 +56,7 @@ export const LoganFullLogo = ({ size = "md", className }: LoganFullLogoProps) =>
         x="41"
         y="35"
         fill="currentColor"
-        fontFamily="Quicksand, 'DM Sans', sans-serif"
+        fontFamily="Quicksand, sans-serif"
         fontWeight="300"
         fontSize="34"
       >

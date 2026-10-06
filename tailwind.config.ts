@@ -14,8 +14,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['DM Sans', 'sans-serif'],
-        display: ['Space Grotesk', 'sans-serif'],
+        sans: ['Quicksand', 'system-ui', 'sans-serif'],
+        display: ['Cormorant Garamond', 'Georgia', 'serif'],
+        serif: ['Cormorant Garamond', 'Georgia', 'serif'],
       },
       colors: {
         border: "hsl(var(--border))",
