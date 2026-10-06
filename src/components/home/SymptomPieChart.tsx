@@ -13,14 +13,14 @@ interface SymptomLog {
 // Premium gradient palette — each slice gets a rich gradient that glows on the dark canvas.
 // Stored as [start, end] pairs for radial gradient rendering.
 export const PIE_GRADIENTS: [string, string][] = [
-  ["hsl(168 85% 48%)", "hsl(168 70% 36%)"],   // teal primary
-  ["hsl(270 70% 68%)", "hsl(270 60% 55%)"],   // violet
-  ["hsl(340 80% 68%)", "hsl(340 65% 52%)"],   // pink
-  ["hsl(40 95% 62%)", "hsl(35 85% 48%)"],      // amber
-  ["hsl(200 85% 65%)", "hsl(200 70% 50%)"],   // blue
-  ["hsl(145 65% 58%)", "hsl(140 55% 45%)"],   // green
-  ["hsl(15 80% 65%)", "hsl(15 65% 50%)"],      // coral
-  ["hsl(220 12% 55%)", "hsl(220 10% 40%)"],    // slate Other
+  ["#0E8A8F", "#0E8A8F"],
+  ["#22C3CE", "#22C3CE"],
+  ["#6E675F", "#6E675F"],
+  ["#4FA6AA", "#4FA6AA"],
+  ["#7AD9DF", "#7AD9DF"],
+  ["#A39C93", "#A39C93"],
+  ["#0A6468", "#0A6468"],
+  ["#C9C3BA", "#C9C3BA"],
 ];
 
 export const PIE_COLORS = PIE_GRADIENTS.map(([a]) => a);
