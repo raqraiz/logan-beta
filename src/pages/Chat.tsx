@@ -2649,6 +2649,8 @@ const Chat = () => {
     <SettingsDialog
       open={settingsOpen}
       onOpenChange={setSettingsOpen}
+      onOpenFeedback={() => setFeedbackOpen(true)}
+      onSignOut={handleSignOut}
       userEmail={user?.email || undefined}
       userId={user?.id}
       currentLifeStage={lifeStage}

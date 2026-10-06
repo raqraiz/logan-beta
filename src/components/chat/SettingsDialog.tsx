@@ -40,6 +40,8 @@ interface SettingsDialogProps {
   currentLifeStage: LifeStage;
   onUpdated?: (newStage: LifeStage) => void;
   onHistoryImported?: () => void;
+  onOpenFeedback?: () => void;
+  onSignOut?: () => void;
 }
 
 export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentLifeStage, onUpdated, onHistoryImported, onOpenFeedback, onSignOut }: SettingsDialogProps) {
