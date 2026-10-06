@@ -333,3 +333,4 @@ html:not(.dark) .headsup-primary, .theme-light .headsup-primary { background: hs
     border: 1px solid hsl(var(--border));
   }
 }
+@layer utilities { .tracking-wide, .tracking-wider, .tracking-widest { letter-spacing: normal !important; } }
