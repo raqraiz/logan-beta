@@ -1516,30 +1516,9 @@ const Chat = () => {
       <header className="shrink-0 border-b border-border/50 bg-card z-10">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
            <div className="flex items-center gap-3">
-             {cycleData ? (
-                 <ChatCycleCircle
-                   cycleDay={cycleData.cycleDay}
-                   phase={cycleData.phase}
-                   cycleLengthDays={cycleData.cycleLengthDays}
-                   size="sm"
-                   lifeStage={cycleData.lifeStage}
-                   postpartumStartDate={cycleData.postpartumStartDate}
-                   postpartumActive={cycleData.postpartumActive}
-                   lossDate={cycleData.lossDate}
-                   dueDate={cycleData.dueDate}
-                   pregnancyLmp={cycleData.pregnancyLmp}
-                   onHormonalBc={cycleData.onHormonalBc}
-                 />
-             ) : (
-               <LoganLogo size="sm" />
-             )}
-              <div>
-                <h1 className="text-foreground"><LoganFullLogo size="sm" /></h1>
-              </div>
+              <h1 className="text-foreground"><LoganFullLogo size="sm" /></h1>
            </div>
-          <div className="flex items-center gap-3">
-            {/* Credit balance hidden — free access during alpha */}
-
+          <div className="flex items-center gap-2">
             {effectiveTab === "ask" && (
               <Button
                 variant="ghost"
@@ -1551,31 +1530,15 @@ const Chat = () => {
                 <Search className="w-4 h-4" />
               </Button>
             )}
-
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setFeedbackOpen(true)}
-              aria-label="Send feedback"
-              title="Send feedback"
-            >
-              <Megaphone className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Feedback</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
+              type="button"
               onClick={() => setSettingsOpen(true)}
               aria-label="Settings"
               title="Settings"
+              className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-sm font-bold text-foreground"
             >
-              <SettingsIcon className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>
-              <LogOut className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Sign out</span>
-            </Button>
+              {(user?.user_metadata?.first_name || user?.user_metadata?.full_name || user?.email || "?").trim().charAt(0).toUpperCase()}
+            </button>
           </div>
         </div>
       </header>
