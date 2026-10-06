@@ -203,7 +203,7 @@ export function MealPlanSetupDialog({
           </DialogTitle>
           <DialogDescription>
             {editMode
-              ? "Tweak any setting below — we'll regenerate from your changes."
+              ? "Tweak any setting below, we'll regenerate from your changes."
               : "Tailored to where you are right now in your cycle. Takes a few seconds."}
           </DialogDescription>
         </DialogHeader>

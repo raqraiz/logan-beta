@@ -305,7 +305,7 @@ export const AttributionTab = () => {
                     <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                       {new Date(r.created_at).toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="text-sm">{r.email ?? "—"}</TableCell>
+                    <TableCell className="text-sm">{r.email ?? ", "}</TableCell>
                     <TableCell className="text-sm">
                       {display(r.utm_source) === NONE
                         ? (classifyReferrer(r.referrer)?.source ?? NONE)
@@ -318,10 +318,10 @@ export const AttributionTab = () => {
                     </TableCell>
                     <TableCell className="text-sm">{display(r.utm_campaign)}</TableCell>
                     <TableCell className="text-sm">
-                      {r.referred_by ? (referrerMap[r.referred_by] ?? "…") : "—"}
+                      {r.referred_by ? (referrerMap[r.referred_by] ?? "…") : ", "}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground truncate max-w-[240px]">
-                      {r.referrer || "—"}
+                      {r.referrer || ", "}
                     </TableCell>
                   </TableRow>
                 ))}

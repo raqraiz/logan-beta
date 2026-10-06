@@ -375,7 +375,7 @@ export function NotificationsTab() {
 
             {aiSuggestions.length > 0 && (
               <div className="space-y-2 pt-2 border-t border-primary/10">
-                <p className="text-xs font-medium text-foreground">Smart enhancements — toggle to apply:</p>
+                <p className="text-xs font-medium text-foreground">Smart enhancements, toggle to apply:</p>
                 <div className="space-y-1.5">
                   {aiSuggestions.map((s) => {
                     const active = activeSuggestionIds.includes(s.id);
@@ -406,7 +406,7 @@ export function NotificationsTab() {
           </div>
 
           <div className="space-y-2">
-            <Label>Title (internal — not shown to users)</Label>
+            <Label>Title (internal, not shown to users)</Label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Menu Builder launch" />
           </div>
 
@@ -441,7 +441,7 @@ export function NotificationsTab() {
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Adds a tappable button under the message that takes the user straight to the feature — no need to write "you'll find it under…" in the message.
+              Adds a tappable button under the message that takes the user straight to the feature, no need to write "you'll find it under…" in the message.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <Select value={ctaTab} onValueChange={(v) => { setCtaTab(v as CtaTab); if (v !== "plan") setCtaPlanSection(""); }}>
@@ -529,7 +529,7 @@ export function NotificationsTab() {
                 </SelectContent>
               </Select>
               <p className="text-[11px] text-muted-foreground">
-                "Onboarded only" targets users who finished onboarding. "Incomplete" reaches people who signed up but never finished — ignored when specific users are selected.
+                "Onboarded only" targets users who finished onboarding. "Incomplete" reaches people who signed up but never finished, ignored when specific users are selected.
               </p>
             </div>
 
@@ -539,7 +539,7 @@ export function NotificationsTab() {
                 <Label className="text-xs text-muted-foreground">
                   Specific users {filters.participant_ids.length > 0 && (
                     <span className="text-primary">
-                      ({filters.participant_ids.length} selected — overrides other filters)
+                      ({filters.participant_ids.length} selected, overrides other filters)
                     </span>
                   )}
                 </Label>

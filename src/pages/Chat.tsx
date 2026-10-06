@@ -694,7 +694,7 @@ const Chat = () => {
   // Scroll to bottom on initial load
   const hasScrolledToBottom = useRef(false);
   useEffect(() => {
-    if (isOnboarding) return; // Disable auto-scroll during onboarding — let users read at their own pace
+    if (isOnboarding) return; // Disable auto-scroll during onboarding, let users read at their own pace
     if (messages.length > 0 && !hasScrolledToBottom.current) {
       hasScrolledToBottom.current = true;
       // Use setTimeout to ensure DOM is rendered
@@ -706,7 +706,7 @@ const Chat = () => {
 
   // Auto-scroll on new messages
   useEffect(() => {
-    if (isOnboarding) return; // Disable auto-scroll during onboarding — let users read at their own pace
+    if (isOnboarding) return; // Disable auto-scroll during onboarding, let users read at their own pace
     if (messages.length === 0) return;
     if (!hasScrolledToBottom.current) return; // skip until initial scroll done
     const lastMsg = messages[messages.length - 1];
@@ -1205,7 +1205,7 @@ const Chat = () => {
     } catch (error) {
       if (requestId !== onboardingRequestIdRef.current) return;
       console.error("Error sending message:", error);
-      setOnboardingError("Something went wrong — try again");
+      setOnboardingError("Something went wrong, try again");
       setOnboardingRetry(() => () => {
         void sendOnboardingResponse(messageContent, symptoms, anchor, date, messageStored);
       });
@@ -1289,7 +1289,7 @@ const Chat = () => {
     } catch (error) {
       if (requestId !== onboardingRequestIdRef.current) return;
       console.error("Error sending message:", error);
-      setOnboardingError("Something went wrong — try again");
+      setOnboardingError("Something went wrong, try again");
       setOnboardingRetry(() => () => {
         void sendOnboardingResponseWithBody(displayContent, body, messageStored);
       });
@@ -1350,7 +1350,7 @@ const Chat = () => {
     } catch (error) {
       if (requestId !== onboardingRequestIdRef.current) return;
       console.error("Go back error:", error);
-      setOnboardingError("Something went wrong — try again");
+      setOnboardingError("Something went wrong, try again");
       setOnboardingRetry(() => () => {
         void goBackToStep(targetStep);
       });
@@ -1390,7 +1390,7 @@ const Chat = () => {
     } catch (error) {
       if (requestId !== onboardingRequestIdRef.current) return;
       console.error("Error saving topics:", error);
-      setOnboardingError("Something went wrong — try again");
+      setOnboardingError("Something went wrong, try again");
       setOnboardingRetry(() => () => {
         void saveInlineTopics(topics);
       });
@@ -1982,7 +1982,7 @@ const Chat = () => {
                       className={`relative max-w-[85%] rounded-2xl px-4 py-3 ${
                         message.role === "user"
                           ? "bg-[rgba(43,212,217,0.42)] text-[#23201C]"
-                          : "bg-white text-[#23201C] border border-border"
+                          : "bg-card text-card-foreground border border-border"
                       } ${searching && isMatch ? "ring-2 ring-primary" : ""}`}
                     >
                       {/* Cycle visual first for insight messages — recomputed live
@@ -2172,7 +2172,7 @@ const Chat = () => {
                         message.role === "user" ? "justify-end" : "justify-start"
                       }`}>
                         <span className={`text-xs ${
-                          message.role === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
+                          message.role === "user" ? "text-[#23201C]/60" : "text-muted-foreground"
                         }`}>
                           {format(new Date(message.created_at), "h:mm a")}
                         </span>
@@ -2233,7 +2233,7 @@ const Chat = () => {
                             variant="ghost"
                             size="sm"
                             disabled={isSending}
-                            onClick={() => sendOnboardingResponse("Skip — I'd rather not say", undefined, undefined, undefined, false, "Skipped")}
+                            onClick={() => sendOnboardingResponse("Skip, I'd rather not say", undefined, undefined, undefined, false, "Skipped")}
                             className="text-muted-foreground"
                           >
                             Skip
@@ -2250,7 +2250,7 @@ const Chat = () => {
                       {[
                         { value: "cycling", label: "I have a regular cycle", desc: "Currently menstruating" },
                         { value: "irregular", label: "Irregular or on hormonal BC", desc: "PMOS (formerly PCOS), unpredictable cycles, or pill/IUD/implant" },
-                        { value: "pregnant", label: "Pregnant 🌱", desc: "Currently pregnant" },
+                        { value: "pregnant", label: "Pregnant", desc: "Currently pregnant" },
                         { value: "postpartum", label: "Postpartum", desc: "Had a baby. Periods back or not, pick this." },
                         { value: "pregnancy_loss", label: "Pregnancy loss", desc: "Miscarriage or loss, whenever it happened" },
                         { value: "perimenopause", label: "Perimenopause", desc: "Still getting periods, but the pattern is shifting" },
@@ -2323,7 +2323,7 @@ const Chat = () => {
                   {showInteractiveInput && inputType === "uterus_picker" && (
                     <div className={`mt-3 flex flex-col gap-2 max-w-xs ${pickerBusyClass}`}>
                       {[
-                        { value: "uterus_removed_yes", label: "Yes", desc: "Uterus removed, ovaries still there — no periods, but your hormones still cycle" },
+                        { value: "uterus_removed_yes", label: "Yes", desc: "Uterus removed, ovaries still there, no periods, but your hormones still cycle" },
                         { value: "uterus_removed_no", label: "No", desc: "My uterus is intact" },
                         { value: "uterus_prefer_not", label: "Prefer not to say", desc: "Logan won't assume either way" },
                       ].map((option) => (
@@ -2409,7 +2409,7 @@ const Chat = () => {
                             sendOnboardingResponse("28");
                           } else if (message.metadata?.show_not_sure === "irregular_last_period") {
                             // Skip without persisting any date — Logan works without it for irregular users
-                            sendOnboardingResponse("Not sure — skip");
+                            sendOnboardingResponse("Not sure, skip");
                           } else {
                             const twoWeeksAgo = new Date();
                             twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
@@ -2550,7 +2550,7 @@ const Chat = () => {
             {showTopicPrompt && !isOnboarding && (
               <div className="mb-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2">
                 <p className="text-sm font-medium text-foreground">Choose your Focus Areas</p>
-                <p className="text-xs text-muted-foreground">Pick the topics you want Logan to focus on — diet, exercise, sleep, and more.</p>
+                <p className="text-xs text-muted-foreground">Pick the topics you want Logan to focus on, diet, exercise, sleep, and more.</p>
                 <TopicPicker
                   onSubmit={saveInlineTopics}
                   isSubmitting={isSending}

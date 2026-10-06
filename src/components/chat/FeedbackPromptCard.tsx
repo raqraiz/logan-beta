@@ -11,7 +11,7 @@ export const FeedbackPromptCard = ({ onGiveFeedback, onDismiss }: FeedbackPrompt
     <div className="flex items-center gap-3 rounded-xl border border-border bg-card/80 backdrop-blur px-3 py-2.5">
       <Megaphone className="w-4 h-4 text-primary shrink-0" />
       <p className="text-sm text-foreground/80 flex-1 leading-snug">
-        Quick thought — how's Logan working for you so far?
+        Quick thought, how's Logan working for you so far?
       </p>
       <Button size="sm" variant="secondary" onClick={onGiveFeedback}>
         Give feedback

@@ -60,24 +60,24 @@ import {
 
 const DONT_MESS_UP_HER: Record<string, string[]> = {
   Menstruation: [
-    "Don't schedule anything you can cancel tomorrow — you'll want to.",
+    "Don't schedule anything you can cancel tomorrow, you'll want to.",
     "Skip the intense workout. A walk counts. Your body is recovering.",
     "Eat warm, iron-rich food. Now is not the time for a salad cleanse.",
     "If someone irritates you, wait 24 hours before responding.",
     "Go to bed 30 minutes earlier than you think you need to.",
   ],
   Follicular: [
-    "Don't waste this energy on busywork — tackle the hard thing first.",
+    "Don't waste this energy on busywork, tackle the hard thing first.",
     "Say yes to the social plan. You actually have the bandwidth right now.",
     "Start the project you've been putting off. Motivation is real today.",
-    "Eat enough protein — your muscles recover faster this week.",
+    "Eat enough protein, your muscles recover faster this week.",
     "Don't overcommit for next week. Luteal-you will not have this energy.",
   ],
   Ovulation: [
-    "Have the hard conversation today — you'll handle it with grace.",
+    "Have the hard conversation today, you'll handle it with grace.",
     "Push for the PR or the big presentation. You're at peak performance.",
     "Don't make long-term commitments based on how invincible you feel.",
-    "Stay hydrated — the estrogen surge can cause subtle dehydration.",
+    "Stay hydrated, the estrogen surge can cause subtle dehydration.",
     "Warm up properly. Ligament injury risk is quietly elevated right now.",
   ],
   Luteal: [
@@ -85,51 +85,51 @@ const DONT_MESS_UP_HER: Record<string, string[]> = {
     "Don't send the emotional text. Write it, sleep on it, revisit tomorrow.",
     "Eat the carbs. Your brain needs serotonin and fighting cravings backfires.",
     "Cancel the optional plans without guilt. Protect your energy.",
-    "When you feel like everything is falling apart — it's progesterone, not reality.",
+    "When you feel like everything is falling apart, it's progesterone, not reality.",
   ],
 };
 
 const DONT_MESS_UP_HIM: Record<string, string[]> = {
   Menstruation: [
-    "Don't ask 'what's wrong?' — just bring her tea and a blanket.",
-    "Take one thing off her plate without being asked. Dishes, kids, dinner — pick one.",
+    "Don't ask 'what's wrong?', just bring her tea and a blanket.",
+    "Take one thing off her plate without being asked. Dishes, kids, dinner, pick one.",
     "She's not being dramatic. Her pain is real and her patience is gone. Don't test it.",
     "Don't suggest she 'just take a painkiller and push through.' Read the room.",
     "If she snaps at you, don't take it personally. She'll feel guilty about it later without your help.",
   ],
   Follicular: [
-    "She's got energy again — match it. Plan something fun together.",
+    "She's got energy again, match it. Plan something fun together.",
     "This is your window to bring up the thing you've been sitting on. She can handle it now.",
-    "Don't coast just because she's in a good mood. Show up — she notices.",
+    "Don't coast just because she's in a good mood. Show up, she notices.",
     "Support the new idea or project she's excited about. Her confidence is climbing.",
     "If you've been meaning to apologize for something, now's the time. She's receptive.",
   ],
   Ovulation: [
-    "She's at her sharpest and most social. Don't be boring — step up.",
+    "She's at her sharpest and most social. Don't be boring, step up.",
     "Plan the date night. She's feeling herself and wants to connect.",
-    "If you disagree on something, bring it up now — she'll debate fairly, not emotionally.",
+    "If you disagree on something, bring it up now, she'll debate fairly, not emotionally.",
     "Don't be intimidated by her confidence. Hype her up, not down.",
-    "Pay attention. She's giving you her best self right now — notice it and say something.",
+    "Pay attention. She's giving you her best self right now, notice it and say something.",
   ],
   Luteal: [
-    "She's not picking fights — her brain is literally wired to notice threats right now.",
+    "She's not picking fights, her brain is literally wired to notice threats right now.",
     "Don't say 'is it that time of the month?' Ever. Just don't.",
     "Bring her comfort food without commentary. No diet advice. No jokes.",
     "Handle bedtime or the morning routine without being asked. She's running on fumes.",
-    "When she says 'I'm fine' — she's not. Sit with her. You don't have to fix it.",
+    "When she says 'I'm fine', she's not. Sit with her. You don't have to fix it.",
   ],
 };
 
 const SUCCEED_HER: Record<string, string[]> = {
   Menstruation: [
     "Journal for 5 minutes. Clarity comes easier when your body is slowing down.",
-    "Batch-cook something nourishing — future you should be grateful.",
+    "Batch-cook something nourishing, future you should be grateful.",
     "Use this low-energy window to plan your week ahead. Strategy over hustle.",
     "Do one kind thing for yourself that costs nothing. A bath, a nap, silence.",
     "Reflect on last cycle's wins. You accomplished more than you remember.",
   ],
   Follicular: [
-    "Brainstorm and start — this is your creative superpower phase.",
+    "Brainstorm and start, this is your creative superpower phase.",
     "Book the thing you've been nervous about. Your confidence is rising.",
     "Network or reconnect with someone. You're naturally magnetic right now.",
     "Try a new workout or recipe. Your brain craves novelty this week.",
@@ -137,15 +137,15 @@ const SUCCEED_HER: Record<string, string[]> = {
   ],
   Ovulation: [
     "Negotiate the raise, pitch the idea, lead the meeting. You're built for this today.",
-    "Record a voice memo of your ideas — you may be sharper than you should be next week.",
+    "Record a voice memo of your ideas, you may be sharper than you should be next week.",
     "Celebrate a recent win out loud. Own it. You earned it.",
-    "Strengthen a relationship — your empathy and communication peak now.",
+    "Strengthen a relationship, your empathy and communication peak now.",
     "Do the scary thing. Your risk tolerance is at its highest.",
   ],
   Luteal: [
-    "Finish and polish — your detail-oriented brain catches what others miss.",
+    "Finish and polish, your detail-oriented brain catches what others miss.",
     "Organize your space. Nesting energy is real and productive.",
-    "Write the honest feedback, review, or reflection. Your filter is off — use it wisely.",
+    "Write the honest feedback, review, or reflection. Your filter is off, use it wisely.",
     "Meal-prep comfort food so you're not relying on willpower later.",
     "Say no to one thing that drains you. Boundaries are a success strategy.",
   ],
@@ -156,11 +156,11 @@ const SUCCEED_HIM: Record<string, string[]> = {
     "Run a hot bath for her without being asked. Small effort, huge impact.",
     "Pick up dinner so she doesn't have to think about it.",
     "Send her a text that says 'I've got everything handled tonight.'",
-    "Watch her favorite show with her — even if it's not your thing.",
+    "Watch her favorite show with her, even if it's not your thing.",
     "Ask 'what would make tonight easier?' and actually do it.",
   ],
   Follicular: [
-    "Suggest an adventure — hike, day trip, trying a new restaurant. She's game.",
+    "Suggest an adventure, hike, day trip, trying a new restaurant. She's game.",
     "Start a project together. Her creative energy is contagious right now.",
     "Compliment something specific she did, not just how she looks.",
     "Be playful. She has the bandwidth for fun and wants you to match it.",
@@ -168,10 +168,10 @@ const SUCCEED_HIM: Record<string, string[]> = {
   ],
   Ovulation: [
     "Tell her she's impressive. She won't fish for it, but she'll light up.",
-    "Be her hype man in public — brag about her to friends.",
+    "Be her hype man in public, brag about her to friends.",
     "Plan something romantic. She's feeling connected and wants closeness.",
     "Ask her opinion on something you're working on. She'll see angles you miss.",
-    "Match her energy. She's operating at 100% — show up fully.",
+    "Match her energy. She's operating at 100%, show up fully.",
   ],
   Luteal: [
     "Anticipate what she needs before she has to ask. Proactive > reactive.",
@@ -189,123 +189,123 @@ const SUCCEED_HIM: Record<string, string[]> = {
 
 const MENOPAUSE_SUCCEED_HER: string[] = [
   "Lift heavy 2-3x a week. Strength training is your bone and brain insurance now.",
-  "Protect sleep aggressively — cool room, no late alcohol, consistent bedtime.",
-  "Eat protein at every meal (30g+) — muscle preservation is your top priority.",
+  "Protect sleep aggressively, cool room, no late alcohol, consistent bedtime.",
+  "Eat protein at every meal (30g+), muscle preservation is your top priority.",
   "Track hot flashes and triggers for one week. Patterns lead to control.",
-  "Invest in this chapter — many women describe it as their most powerful, free, and clear.",
+  "Invest in this chapter, many women describe it as their most powerful, free, and clear.",
 ];
 
 const MENOPAUSE_DONTMESS_HER: string[] = [
-  "Don't push through symptoms alone. HRT and other tools exist — talk to a menopause-trained doctor.",
+  "Don't push through symptoms alone. HRT and other tools exist, talk to a menopause-trained doctor.",
   "Don't drop protein or strength work. Sarcopenia accelerates fast in this window.",
   "Don't assume brain fog is permanent. Sleep, protein, and movement move the needle.",
-  "Don't dismiss anxiety or mood shifts as 'just stress' — estrogen drop is real.",
+  "Don't dismiss anxiety or mood shifts as 'just stress', estrogen drop is real.",
   "Don't believe the story that this is the end. It's a transition, not a verdict.",
 ];
 
 const MENOPAUSE_SUCCEED_HIM: string[] = [
   "Adjust the thermostat without comment. Be the climate control, not the critic.",
-  "Cheer her strength training — it's not vanity, it's longevity.",
-  "Plan low-stress activity together — walks, weekend trips, shared hobbies.",
-  "Listen when she names what's hard. You don't need to solve — just witness.",
+  "Cheer her strength training, it's not vanity, it's longevity.",
+  "Plan low-stress activity together, walks, weekend trips, shared hobbies.",
+  "Listen when she names what's hard. You don't need to solve, just witness.",
   "Show up for the new chapter. Many couples report their best years after this transition.",
 ];
 
 const MENOPAUSE_DONTMESS_HIM: string[] = [
   "Don't joke about hot flashes, mood, or 'the change'. Ever.",
-  "Don't take mood shifts personally — declining estrogen rewires the nervous system.",
+  "Don't take mood shifts personally, declining estrogen rewires the nervous system.",
   "Don't assume intimacy works the same. Ask, adapt, stay close in other ways.",
   "Don't expect her to push through symptoms alone. Encourage real medical support.",
-  "Don't write off her ambitions because she's 'in menopause'. She's not done — she's reloading.",
+  "Don't write off her ambitions because she's 'in menopause'. She's not done, she's reloading.",
 ];
 
 // ── Perimenopause tips ──────────────────────────
 // She is STILL cycling, but the pattern is shifting. Never use "menopause" framing here.
 const PERIMENOPAUSE_SUCCEED_HER: string[] = [
-  "Track cycle length, flow, sleep, and mood every day — perimenopause is a pattern game.",
+  "Track cycle length, flow, sleep, and mood every day, perimenopause is a pattern game.",
   "Lift heavy 2-3x a week. Strength training protects bone and muscle as estrogen swings.",
-  "Anchor sleep: cool room, no late alcohol, consistent bedtime — sleep is your first lever.",
-  "Eat protein at every meal (30g+) and watch blood sugar — swings hit harder now.",
-  "Ask your doctor about perimenopause specifically — many providers miss it. Bring your tracked data.",
+  "Anchor sleep: cool room, no late alcohol, consistent bedtime, sleep is your first lever.",
+  "Eat protein at every meal (30g+) and watch blood sugar, swings hit harder now.",
+  "Ask your doctor about perimenopause specifically, many providers miss it. Bring your tracked data.",
 ];
 
 const PERIMENOPAUSE_DONTMESS_HER: string[] = [
-  "Don't let anyone tell you it's 'just menopause' — you're still cycling. Perimenopause is its own thing.",
-  "Don't push through new symptoms alone — hot flashes, sleep loss, mood shifts are real and treatable.",
+  "Don't let anyone tell you it's 'just menopause', you're still cycling. Perimenopause is its own thing.",
+  "Don't push through new symptoms alone, hot flashes, sleep loss, mood shifts are real and treatable.",
   "Don't drop strength work or protein. The window to protect bone and muscle is now.",
-  "Don't assume your old cycle rules still apply — pattern is shifting, so keep tracking.",
-  "Don't dismiss sharper anxiety or rage as 'just stress' — hormone swings drive a lot of it.",
+  "Don't assume your old cycle rules still apply, pattern is shifting, so keep tracking.",
+  "Don't dismiss sharper anxiety or rage as 'just stress', hormone swings drive a lot of it.",
 ];
 
 const PERIMENOPAUSE_SUCCEED_HIM: string[] = [
   "Learn the difference: perimenopause = still cycling, pattern shifting. Menopause = 12+ months no period.",
   "Adjust the thermostat without comment. Be the climate control, not the critic.",
-  "Cheer her strength training and protein focus — it's longevity, not vanity.",
-  "Listen when she names what's changed. You don't need to solve — just witness.",
+  "Cheer her strength training and protein focus, it's longevity, not vanity.",
+  "Listen when she names what's changed. You don't need to solve, just witness.",
   "Back her on getting real medical support. Many doctors still miss perimenopause.",
 ];
 
 const PERIMENOPAUSE_DONTMESS_HIM: string[] = [
-  "Don't call her menopausal. She's still cycling — perimenopause is its own stage.",
+  "Don't call her menopausal. She's still cycling, perimenopause is its own stage.",
   "Don't joke about hot flashes, mood swings, or 'the change'. Ever.",
-  "Don't take sharper mood shifts personally — estrogen swings rewire the nervous system.",
+  "Don't take sharper mood shifts personally, estrogen swings rewire the nervous system.",
   "Don't assume intimacy works the same. Ask, adapt, stay close in other ways.",
   "Don't expect her to push through alone. Encourage real medical support.",
 ];
 
 // Irregular / hormonal birth control — phase prediction doesn't apply.
 const IRREGULAR_SUCCEED_HER: string[] = [
-  "Hormonal BC flattens your cycle — your daily levers are sleep, protein, and stress, not phase timing.",
+  "Hormonal BC flattens your cycle, your daily levers are sleep, protein, and stress, not phase timing.",
   "Strength train 2-3x a week. Steady hormones still need steady muscle work.",
-  "Track sleep quality and mood for two weeks — patterns matter more than calendar days for you.",
-  "Hydrate and prioritize iron-rich meals — some hormonal birth control can deplete B6, B12, magnesium, and zinc.",
-  "Notice your own rhythms — energy, focus, libido shifts still exist, they're just not phase-locked.",
+  "Track sleep quality and mood for two weeks, patterns matter more than calendar days for you.",
+  "Hydrate and prioritize iron-rich meals, some hormonal birth control can deplete B6, B12, magnesium, and zinc.",
+  "Notice your own rhythms, energy, focus, libido shifts still exist, they're just not phase-locked.",
 ];
 const IRREGULAR_DONTMESS_HER: string[] = [
-  "Don't expect 'phase-based' advice to map cleanly — your hormones are externally set, not cycling.",
+  "Don't expect 'phase-based' advice to map cleanly, your hormones are externally set, not cycling.",
   "Don't skip blood work. Hormonal BC can mask underlying issues worth knowing about.",
-  "Don't ignore persistent low mood or low libido — they're worth raising with your doctor.",
-  "Don't assume you can't get pregnant if you miss doses or change formulations — confirm with your provider.",
-  "Don't compare your day to a cycling friend's — your baseline is different, not worse.",
+  "Don't ignore persistent low mood or low libido, they're worth raising with your doctor.",
+  "Don't assume you can't get pregnant if you miss doses or change formulations, confirm with your provider.",
+  "Don't compare your day to a cycling friend's, your baseline is different, not worse.",
 ];
 const IRREGULAR_SUCCEED_HIM: string[] = [
-  "Don't ask 'what phase are you in?' — she's on hormonal BC, the rhythm is steady.",
+  "Don't ask 'what phase are you in?', she's on hormonal BC, the rhythm is steady.",
   "Notice her actual mood and energy day-to-day instead of guessing from a calendar.",
-  "Support consistent sleep and meals — those move her needle more than any phase strategy.",
-  "If she's exploring coming off BC, ask how you can help — it can take months to recalibrate.",
+  "Support consistent sleep and meals, those move her needle more than any phase strategy.",
+  "If she's exploring coming off BC, ask how you can help, it can take months to recalibrate.",
 ];
 const IRREGULAR_DONTMESS_HIM: string[] = [
   "Don't tell her 'it's just her birth control' if she names a real symptom.",
-  "Don't make jokes about hormones — her chemistry is being managed, not malfunctioning.",
-  "Don't pressure her on contraception choices — it's her body, her call.",
+  "Don't make jokes about hormones, her chemistry is being managed, not malfunctioning.",
+  "Don't pressure her on contraception choices, it's her body, her call.",
   "Don't assume libido shifts are about you. BC affects desire for many women.",
 ];
 
 // Stale Day 1 — no confirmed period well past her expected next one, so no
 // phase is asserted. Steady-state guidance only, same tone shift as chat.
 const STALE_SUCCEED_HER: string[] = [
-  "Log your period the day it starts — one Day 1 gets your whole picture back.",
+  "Log your period the day it starts, one Day 1 gets your whole picture back.",
   "Anchor your sleep. A consistent wake time steadies energy more than any phase strategy right now.",
-  "Hydrate and eat protein at breakfast — boring, but it works at every point in a cycle.",
+  "Hydrate and eat protein at breakfast, boring, but it works at every point in a cycle.",
   "Move gently most days. A walk or light strength session beats guessing at an 'optimal' window.",
-  "Notice how you actually feel today — your body is a better signal right now than a calendar.",
+  "Notice how you actually feel today, your body is a better signal right now than a calendar.",
 ];
 const STALE_DONTMESS_HER: string[] = [
-  "Don't blame 'your hormones' for every off day — without a recent Day 1, nobody can say where you are.",
+  "Don't blame 'your hormones' for every off day, without a recent Day 1, nobody can say where you are.",
   "Don't push through exhaustion assuming it'll pass with a phase. Rest now, reassess after a real period.",
-  "Don't panic if your period is late — cycles drift. Log it when it comes and the picture sharpens.",
+  "Don't panic if your period is late, cycles drift. Log it when it comes and the picture sharpens.",
   "Don't overhaul your routine off a stale date. Small, consistent habits beat phase-chasing right now.",
-  "If your period is 60+ days gone, that's worth mentioning to your doctor — not alarming, just worth a note.",
+  "If your period is 60+ days gone, that's worth mentioning to your doctor, not alarming, just worth a note.",
 ];
 const STALE_SUCCEED_HIM: string[] = [
-  "She hasn't logged a period in a while, so don't guess at phases — ask how she's actually feeling.",
+  "She hasn't logged a period in a while, so don't guess at phases, ask how she's actually feeling.",
   "Support the basics: consistent meals, earlier nights, a walk together. Those help regardless of timing.",
-  "If her period shows up, that's useful info for her — not a headline. Stay low-key about it.",
+  "If her period shows up, that's useful info for her, not a headline. Stay low-key about it.",
 ];
 const STALE_DONTMESS_HIM: string[] = [
-  "Don't ask 'aren't you late?' — if she's tracking it, she already knows. Pressure doesn't help.",
+  "Don't ask 'aren't you late?', if she's tracking it, she already knows. Pressure doesn't help.",
   "Don't chalk her mood up to PMS when no recent period confirms where she is in a cycle.",
-  "Don't suggest she 'just relax and it'll come' — if it's been a long stretch, a doctor visit is the smart move, and you can offer to help make it happen.",
+  "Don't suggest she 'just relax and it'll come', if it's been a long stretch, a doctor visit is the smart move, and you can offer to help make it happen.",
 ];
 
 
@@ -567,33 +567,33 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
   const ppPhase = getPostpartumPhase(cycleData.postpartumStartDate);
   const LOSS_SUCCEED_HER = [
     "Rest is productive right now. Your body just did something enormous.",
-    "Eat warm, iron-rich meals — red meat, lentils, leafy greens. You lost blood.",
+    "Eat warm, iron-rich meals, red meat, lentils, leafy greens. You lost blood.",
     "Let people show up. Texts, meals, walks. You don't have to be okay.",
     "Sleep when you can. Grief is exhausting in ways nothing else is.",
   ];
   const LOSS_DONTMESS_HER = [
     "Don't rush yourself back to 'normal'. There's no schedule for healing.",
     "Don't compare your loss to anyone else's. Yours is real, full stop.",
-    "Heavy bleeding (soaking a pad an hour), fever, or severe pain — call your provider today.",
+    "Heavy bleeding (soaking a pad an hour), fever, or severe pain, call your provider today.",
     "Don't avoid the feelings to feel better faster. They come back louder.",
   ];
   const LOSS_SUCCEED_HIM = [
     "Show up without trying to fix it. Sit with her. Bring water, food, quiet.",
     "Use the word. Say 'our baby', say 'the miscarriage'. Don't tiptoe.",
-    "Handle the logistics — appointments, meals, messages — so she can rest.",
+    "Handle the logistics, appointments, meals, messages, so she can rest.",
     "Grieve too. This was your loss as well. Don't disappear into 'being strong'.",
   ];
   const LOSS_DONTMESS_HIM = [
     "Never say 'at least…' anything. Not 'at least it was early', not 'at least you can try again'.",
     "Don't push timelines. Not for sex, not for trying, not for 'feeling better'.",
     "Don't go silent. Even a 'thinking of you' text matters when she can't speak.",
-    "Watch for warning signs — heavy bleeding, fever, dark thoughts. Help her call her doctor.",
+    "Watch for warning signs, heavy bleeding, fever, dark thoughts. Help her call her doctor.",
   ];
   const PREG_SUCCEED_HER = [
     "Eat little + often. Protein and complex carbs steady nausea and energy.",
-    "Hydrate. Pregnancy doubles your blood volume — water + electrolytes matter.",
+    "Hydrate. Pregnancy doubles your blood volume, water + electrolytes matter.",
     "Sleep on your side (especially after 20 weeks). Pillow between knees helps.",
-    "Move daily, gently. Walking, prenatal yoga, swimming — your nervous system needs it.",
+    "Move daily, gently. Walking, prenatal yoga, swimming, your nervous system needs it.",
   ];
   const PREG_DONTMESS_HER = [
     "Heavy bleeding, severe pain, fever 100.4°F+, reduced fetal movement → call your provider TODAY.",
@@ -603,15 +603,15 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
   ];
   const PREG_SUCCEED_HIM = [
     "Stock the fridge. Make 'safe foods' easy to grab when nausea hits.",
-    "Handle one weekly logistic — appointment, registry, freezer meal. Take it off her plate.",
-    "Ask 'what would help right now?' — and actually do it without a debrief.",
+    "Handle one weekly logistic, appointment, registry, freezer meal. Take it off her plate.",
+    "Ask 'what would help right now?', and actually do it without a debrief.",
     "Go to the appointments you can. Being there is the point.",
   ];
   const PREG_DONTMESS_HIM = [
     "Don't say 'you're glowing' when she's exhausted. Say 'you're doing the hardest work.'",
     "Don't comment on her body, weight, or eating. Ever.",
     "Don't disappear into work. She needs presence more than productivity right now.",
-    "Watch for warning signs — bleeding, severe headaches, swelling, fever, dark thoughts. Help her call.",
+    "Watch for warning signs, bleeding, severe headaches, swelling, fever, dark thoughts. Help her call.",
   ];
 
   const getTipsHer = (widgetId: string): string[] => {
@@ -1133,7 +1133,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
                         .eq("user_id", userId)
                         .gte("logged_date", newStartISO);
                       if ((count ?? 0) > 0) {
-                        toast("Heads up — logged symptoms now fall in a different phase", {
+                        toast("Heads up, logged symptoms now fall in a different phase", {
                           description: "Your past entries didn't move, but their phase context shifted.",
                         });
                       }

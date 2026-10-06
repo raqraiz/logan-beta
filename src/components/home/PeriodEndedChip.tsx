@@ -82,7 +82,7 @@ export function PeriodEndedChip({ userId, cycleDay, lastPeriodStart }: Props) {
     } else {
       setEndDate(value);
       setOpen(false);
-      toast({ title: "Got it — shifted to Follicular" });
+      toast({ title: "Got it, shifted to Follicular" });
     }
   };
 
@@ -159,7 +159,7 @@ export function PeriodEndedChip({ userId, cycleDay, lastPeriodStart }: Props) {
             </button>
           )}
           <p className="text-[10px] text-muted-foreground mt-2 leading-snug">
-            Shifts your phase to Follicular the day after — so Logan's tips match where you actually are.
+            Shifts your phase to Follicular the day after, so Logan's tips match where you actually are.
           </p>
         </PopoverContent>
       </Popover>

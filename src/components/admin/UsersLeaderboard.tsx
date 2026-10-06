@@ -128,7 +128,7 @@ export const UsersLeaderboard = () => {
         profiles.map((p) => ({
           id: p.id,
           name: p.full_name || "Unnamed",
-          email: p.email || "—",
+          email: p.email || ", ",
           joinedAt: p.created_at,
           messages: msgCount.get(p.id) ?? 0,
           timeMin: sessionStats.get(p.id)?.timeMin ?? 0,

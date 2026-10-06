@@ -8,15 +8,15 @@ type Rect = { top: number; left: number; width: number; height: number };
 const STEPS = [
   {
     target: "home",
-    text: "Quick tour — tap through. 🏠\n\nHome is your daily check-in — log symptoms, meals, and weight, and see what to expect today.",
+    text: "Quick tour, tap through.\n\nHome is your daily check-in, log symptoms, meals, and weight, and see what to expect today.",
   },
   {
     target: "ask",
-    text: "Ask is right here — anytime something feels off, ask me. No 3am googling.",
+    text: "Ask is right here, anytime something feels off, ask me. No 3am googling.",
   },
   {
     target: "plan",
-    text: "Plan lays out your whole week — mood, workouts, and nutrition, built for exactly where you are.",
+    text: "Plan lays out your whole week, mood, workouts, and nutrition, built for exactly where you are.",
   },
 ] as const;
 

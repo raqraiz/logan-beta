@@ -86,10 +86,10 @@ export function InstallPWABanner({ userId }: InstallPWABannerProps) {
         <div className="flex-1 space-y-2">
           <div>
             <h3 className="text-sm font-semibold text-foreground">
-              📱 Add Logan to your home screen
+              Add Logan to your home screen
             </h3>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              Get the full app experience — no browser bar, no tabs, just Logan.
+              Get the full app experience, no browser bar, no tabs, just Logan.
             </p>
           </div>
           <ol className="text-xs text-muted-foreground space-y-1 pl-4 list-decimal marker:text-primary/70">

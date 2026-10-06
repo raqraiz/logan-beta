@@ -62,7 +62,7 @@ export function AdminManagement() {
         toast({ title: data.error, variant: "destructive" });
         return;
       }
-      toast({ title: "Admin added 🎉" });
+      toast({ title: "Admin added" });
       setNewAdminEmail("");
       fetchAdmins();
     } catch (error: any) {

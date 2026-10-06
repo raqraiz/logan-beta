@@ -43,7 +43,7 @@ function startOfWeek(d: Date): Date {
 
 function fmtRange(start: Date, end: Date) {
   const o: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-  return `${start.toLocaleDateString(undefined, o)} – ${end.toLocaleDateString(undefined, o)}`;
+  return `${start.toLocaleDateString(undefined, o)}, ${end.toLocaleDateString(undefined, o)}`;
 }
 
 export const ReferralsPanel = () => {
@@ -255,10 +255,10 @@ export const ReferralsPanel = () => {
                 <TableBody>
                   {referrerRows.map((r) => (
                     <TableRow key={r.user_id}>
-                      <TableCell className="font-medium text-foreground">{r.full_name ?? "—"}</TableCell>
-                      <TableCell className="text-sm">{r.email ?? "—"}</TableCell>
+                      <TableCell className="font-medium text-foreground">{r.full_name ?? ", "}</TableCell>
+                      <TableCell className="text-sm">{r.email ?? ", "}</TableCell>
                       <TableCell className="text-sm">
-                        {r.referral_code ? <Badge variant="outline" className="font-mono">{r.referral_code}</Badge> : "—"}
+                        {r.referral_code ? <Badge variant="outline" className="font-mono">{r.referral_code}</Badge> : ", "}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{r.count}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">

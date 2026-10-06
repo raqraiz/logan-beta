@@ -173,9 +173,9 @@ export function AllSymptomsChart({
     const top = peakPhase.items.slice(0, 2).map((i) => esc(i.name));
     const phase = esc(peakPhase.phase);
     if (top.length === 2) {
-      return `Your hardest stretch is **${phase}** — **${top[0]}** and **${top[1]}** lead the pattern.`;
+      return `Your hardest stretch is **${phase}**, **${top[0]}** and **${top[1]}** lead the pattern.`;
     }
-    return `Your hardest stretch is **${phase}** — **${top[0]}** leads the pattern.`;
+    return `Your hardest stretch is **${phase}**, **${top[0]}** leads the pattern.`;
   }, [peakPhase]);
 
   if (isNonCycling) {
@@ -401,7 +401,7 @@ export function AllSymptomsChart({
                     </span>
                   </div>
                   <span className="text-[9px] text-muted-foreground/55 tabular-nums">
-                    {p.load > 0 ? `${p.load.toFixed(1)}/5` : "—"}
+                    {p.load > 0 ? `${p.load.toFixed(1)}/5` : ", "}
                   </span>
                 </div>
                 {top.length === 0 ? (
@@ -440,7 +440,7 @@ export function AllSymptomsChart({
 
       {lifeStage === "irregular" && (
         <p className="px-4 pb-2 pt-1 text-[11px] text-muted-foreground/70">
-          Phase estimates are approximate — your cycle may not follow a predictable pattern.
+          Phase estimates are approximate, your cycle may not follow a predictable pattern.
         </p>
       )}
 

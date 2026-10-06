@@ -151,7 +151,7 @@ export function DailyBriefingHero({
   const headline = hideStage
     ? "Here's your day."
     : isLoss
-    ? "Healing in progress. There's no timeline for this — only your pace."
+    ? "Healing in progress. There's no timeline for this, only your pace."
     : isPregnant
       ? "Growing a human is a full-time job. Rest is part of the work."
       : isStale

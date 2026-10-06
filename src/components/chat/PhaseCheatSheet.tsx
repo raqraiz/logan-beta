@@ -240,7 +240,7 @@ export function PhaseCheatSheet({ phase, cycleDay, cycleLengthDays, anchorSympto
         <div className="px-4 py-2 border-t border-border/15 flex items-center gap-2">
           <Heart className="w-3 h-3 text-primary shrink-0" />
           <p className="text-xs text-muted-foreground">
-            <span className="text-foreground font-medium">Watch for {anchorSymptom.toLowerCase()}</span> — it tends to peak in this phase
+            <span className="text-foreground font-medium">Watch for {anchorSymptom.toLowerCase()}</span>, it tends to peak in this phase
           </p>
         </div>
       )}

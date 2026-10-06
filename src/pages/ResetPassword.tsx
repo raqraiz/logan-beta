@@ -32,7 +32,7 @@ const ResetPassword = () => {
 
       if (event === "USER_UPDATED") {
         toast({
-          title: "Password updated! 🎉",
+          title: "Password updated!",
           description: "You can now sign in with your new password.",
         });
         navigate("/");
@@ -133,7 +133,7 @@ const ResetPassword = () => {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
       await supabase.auth.signOut();
-      toast({ title: "Password updated! 🎉", description: "Please sign in with your new password." });
+      toast({ title: "Password updated!", description: "Please sign in with your new password." });
       navigate("/");
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });

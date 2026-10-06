@@ -117,28 +117,28 @@ const WORKOUT_GUIDANCE: Record<string, {
   athleticDecision: string;
 }> = {
   Menstruation: {
-    intensity: "Low — Recovery",
+    intensity: "Low, Recovery",
     loadCapacity: 25,
-    readiness: "Low — protect & recover",
+    readiness: "Low, protect & recover",
     suggestion: "Your body is recovering. Light movement helps cramps and mood, but this is not the time to load heavy or chase PRs.",
     examples: ["Gentle yoga", "20-min walk", "Stretching / foam roll"],
-    riskFlag: "Injury risk is higher — joints are looser due to hormonal shifts. Avoid max lifts and explosive movements.",
+    riskFlag: "Injury risk is higher, joints are looser due to hormonal shifts. Avoid max lifts and explosive movements.",
     trainingNote: "Deload or active recovery. Keep volume low. This rest sets up your next training block.",
     athleticDecision: "Skip intensity. Any strength work should be at 50-60% of max. Focus on mobility and tissue quality.",
   },
   Follicular: {
-    intensity: "Moderate → High — Build Phase",
+    intensity: "Moderate → High, Build Phase",
     loadCapacity: 70,
-    readiness: "Rising — build & progress",
-    suggestion: "Energy and strength are climbing. Your body responds well to progressive overload right now — ramp up gradually.",
+    readiness: "Rising, build & progress",
+    suggestion: "Energy and strength are climbing. Your body responds well to progressive overload right now, ramp up gradually.",
     examples: ["Strength training", "Tempo runs", "Skill work / new movements"],
     trainingNote: "Best window to increase volume and intensity. Your muscles recover faster and adapt better during this phase.",
     athleticDecision: "Add volume. Your body clears fatigue faster now. Good time to introduce new loads or movement patterns.",
   },
   Ovulation: {
-    intensity: "Peak — Performance Window",
+    intensity: "Peak, Performance Window",
     loadCapacity: 95,
-    readiness: "Peak — test & compete",
+    readiness: "Peak, test & compete",
     suggestion: "You're at your strongest and most explosive. Go for PRs, test maxes, compete. This is your green light.",
     examples: ["HIIT / CrossFit", "Heavy lifts / PRs", "Race day / competition"],
     riskFlag: "ACL & ligament injury risk peaks around ovulation due to estrogen surge. Warm up thoroughly and focus on knee/ankle stability.",
@@ -146,14 +146,14 @@ const WORKOUT_GUIDANCE: Record<string, {
     athleticDecision: "Schedule maximal efforts, speed work, and competitions here. Power output and reaction time are at their best.",
   },
   Luteal: {
-    intensity: "High → Low — Taper & Protect",
+    intensity: "High → Low, Taper & Protect",
     loadCapacity: 50,
-    readiness: "Declining — maintain & deload",
-    suggestion: "Front-load harder sessions in early luteal. As energy drops, shift to maintenance and recovery — don't fight it.",
+    readiness: "Declining, maintain & deload",
+    suggestion: "Front-load harder sessions in early luteal. As energy drops, shift to maintenance and recovery, don't fight it.",
     examples: ["Moderate strength (early)", "Swimming / steady-state (mid)", "Walks / mobility (late)"],
-    riskFlag: "Perceived effort increases — you're not weaker, it just feels harder. Core temp is elevated. Hydrate extra.",
-    trainingNote: "Reduce volume in the back half. Your body is retaining more water and core temp is higher — don't panic about feeling 'off.'",
-    athleticDecision: "Maintain intensity early, then taper. Shift to steady-state cardio and lower rep ranges. Don't chase numbers — protect gains.",
+    riskFlag: "Perceived effort increases, you're not weaker, it just feels harder. Core temp is elevated. Hydrate extra.",
+    trainingNote: "Reduce volume in the back half. Your body is retaining more water and core temp is higher, don't panic about feeling 'off.'",
+    athleticDecision: "Maintain intensity early, then taper. Shift to steady-state cardio and lower rep ranges. Don't chase numbers, protect gains.",
   },
 };
 
@@ -162,22 +162,22 @@ const NUTRITION_GUIDANCE: Record<string, { focus: string; foods: string[]; avoid
   Menstruation: {
     focus: "Replenish iron & reduce inflammation",
     foods: ["Red meat / lentils + Vitamin C", "Warm soups & stews", "Dark chocolate (magnesium)"],
-    avoid: "Excess caffeine & processed sugar — they worsen cramps",
+    avoid: "Excess caffeine & processed sugar, they worsen cramps",
   },
   Follicular: {
     focus: "Support estrogen metabolism",
     foods: ["Cruciferous veggies (broccoli, kale)", "Fermented foods (kimchi, yogurt)", "Lean protein & seeds"],
-    avoid: "Skipping meals — your metabolism needs consistent fuel",
+    avoid: "Skipping meals, your metabolism needs consistent fuel",
   },
   Ovulation: {
     focus: "Clear excess estrogen, stay hydrated",
     foods: ["Fiber-rich veggies & whole grains", "Berries & antioxidant-rich fruit", "Light, fresh meals"],
-    avoid: "Heavy, greasy food — it can amplify bloating",
+    avoid: "Heavy, greasy food, it can amplify bloating",
   },
   Luteal: {
     focus: "Boost serotonin & manage cravings",
     foods: ["Complex carbs (sweet potato, oats)", "Magnesium-rich foods (nuts, seeds)", "Dark leafy greens"],
-    avoid: "Ignoring cravings completely — lean into them smartly",
+    avoid: "Ignoring cravings completely, lean into them smartly",
   },
 };
 
@@ -185,47 +185,47 @@ const NUTRITION_GUIDANCE: Record<string, { focus: string; foods: string[]; avoid
 // ── Mood guidance by phase ──
 const MOOD_GUIDANCE: Record<string, { outlook: string; headsUp: string; selfCare: string; relationships: { people: string; withPartner: string; withKids: string; strategy: string } }> = {
   Menstruation: {
-    outlook: "Recharging — be gentle with yourself",
-    headsUp: "Energy is low and everything takes more effort right now. That's not a failure — it's biology. The hump passes in a few days.",
-    selfCare: "You're doing your best even when it doesn't feel like it. Do less on purpose. Rest isn't lazy — it's how you come back stronger.",
+    outlook: "Recharging, be gentle with yourself",
+    headsUp: "Energy is low and everything takes more effort right now. That's not a failure, it's biology. The hump passes in a few days.",
+    selfCare: "You're doing your best even when it doesn't feel like it. Do less on purpose. Rest isn't lazy, it's how you come back stronger.",
     relationships: {
-      people: "You may feel off — shorter fuse, less patience, then guilt about it. Name it early: 'I'm running on empty right now.' One sentence changes everything.",
-      withPartner: "Let them know you're in your lowest window. It's not about them — one heads-up prevents a spiral.",
-      withKids: "Your fuse is shortest right now. Keep things simple. You don't have to be perfect today — just present.",
-      strategy: "Remind yourself: this is temporary. In a few days you should feel like a completely different person — because you might be.",
+      people: "You may feel off, shorter fuse, less patience, then guilt about it. Name it early: 'I'm running on empty right now.' One sentence changes everything.",
+      withPartner: "Let them know you're in your lowest window. It's not about them, one heads-up prevents a spiral.",
+      withKids: "Your fuse is shortest right now. Keep things simple. You don't have to be perfect today, just present.",
+      strategy: "Remind yourself: this is temporary. In a few days you should feel like a completely different person, because you might be.",
     },
   },
   Follicular: {
     outlook: "Powerful, sharp & rising",
-    headsUp: "The fog is lifting. You're starting to feel like yourself again — productive, energetic, clear-headed. This is real. Lean into it.",
-    selfCare: "You feel strong and capable right now — because you are. Use this window for the things that matter most to you.",
+    headsUp: "The fog is lifting. You're starting to feel like yourself again, productive, energetic, clear-headed. This is real. Lean into it.",
+    selfCare: "You feel strong and capable right now, because you are. Use this window for the things that matter most to you.",
     relationships: {
-      people: "You have bandwidth again. If there's anything to repair from your harder days, now is the time — you can handle it without it escalating.",
+      people: "You have bandwidth again. If there's anything to repair from your harder days, now is the time, you can handle it without it escalating.",
       withPartner: "This is your reconnection window. You have the energy for real conversations and quality time.",
       withKids: "Your energy is back and your communication is crisp. Great time for the harder conversations or just being fully present.",
-      strategy: "The hard days weren't who you are — they were a phase. Literally. This version of you was always coming back.",
+      strategy: "The hard days weren't who you are, they were a phase. Literally. This version of you was always coming back.",
     },
   },
   Ovulation: {
     outlook: "Strongest, sharpest, most confident",
-    headsUp: "This is you at full power — communication on point, energy high, facing challenges with a calm, collected mindset. Enjoy it.",
+    headsUp: "This is you at full power, communication on point, energy high, facing challenges with a calm, collected mindset. Enjoy it.",
     selfCare: "You feel powerful and strong right now. Have the hard conversation. Take on the big task. Just don't overcommit for future-you.",
     relationships: {
-      people: "Your best window for real connection. You can show up without the irritability filter — be honest, be present, be generous.",
-      withPartner: "If something needs to be said, say it now. Date night, real talk — you should handle it with grace.",
-      withKids: "You can handle the chaos and the attitudes with energy to spare. Lean in — these are the moments that build the relationship bank.",
+      people: "Your best window for real connection. You can show up without the irritability filter, be honest, be present, be generous.",
+      withPartner: "If something needs to be said, say it now. Date night, real talk, you should handle it with grace.",
+      withKids: "You can handle the chaos and the attitudes with energy to spare. Lean in, these are the moments that build the relationship bank.",
       strategy: "Bookmark this feeling. When the hard days hit, remembering 'I was this person three days ago' helps you give yourself grace.",
     },
   },
   Luteal: {
-    outlook: "Energy fading — guard your peace",
-    headsUp: "These are the days when everything sets you over the edge and you can't seem to regain control. It's not you — it's progesterone dropping. The hump passes.",
+    outlook: "Energy fading, guard your peace",
+    headsUp: "These are the days when everything sets you over the edge and you can't seem to regain control. It's not you, it's progesterone dropping. The hump passes.",
     selfCare: "When the guilt creeps in after every pitfall, remember: you're in your hardest phase and you knew it was coming. Be a little gentler with yourself.",
     relationships: {
-      people: "Everything feels bigger right now — a comment, a look, a tone. Your communication may feel off. That's this phase, not a personality flaw.",
+      people: "Everything feels bigger right now, a comment, a look, a tone. Your communication may feel off. That's this phase, not a personality flaw.",
       withPartner: "Tell them before you're in it: 'My hard days start around day X.' It removes the guesswork and the guilt spiral.",
-      withKids: "Low energy + their attitudes = the moment you say something you regret. Lower the bar. Walk away when you need to. That's not weakness — it's wisdom.",
-      strategy: "You're doing your best even when it doesn't feel like it. This window is temporary — better days are just ahead and you should begin to feel like yourself again.",
+      withKids: "Low energy + their attitudes = the moment you say something you regret. Lower the bar. Walk away when you need to. That's not weakness, it's wisdom.",
+      strategy: "You're doing your best even when it doesn't feel like it. This window is temporary, better days are just ahead and you should begin to feel like yourself again.",
     },
   },
 };
@@ -249,49 +249,49 @@ const DIMENSION_CONFIG: Record<string, { icon: React.ComponentType<{ className?:
 // Anchor symptom insight per phase
 const ANCHOR_INSIGHTS: Record<string, Record<string, string>> = {
   Menstruation: {
-    Bloating: "Bloating tends to ease as your period progresses — stay hydrated and reduce sodium.",
+    Bloating: "Bloating tends to ease as your period progresses, stay hydrated and reduce sodium.",
     Cramps: "Cramps are typically strongest now. Gentle heat and magnesium can help.",
-    Fatigue: "Your energy is at its lowest — honor rest and skip intense workouts.",
+    Fatigue: "Your energy is at its lowest, honor rest and skip intense workouts.",
     Headaches: "Hormonal headaches may peak. Stay hydrated and consider magnesium.",
     "Mood swings": "Emotions may still feel raw. Give yourself permission to slow down.",
-    Acne: "Breakouts from last phase may linger. Gentle skincare — don't over-treat.",
+    Acne: "Breakouts from last phase may linger. Gentle skincare, don't over-treat.",
     Cravings: "Cravings may ease as hormones stabilize. Warm, nourishing foods help.",
-    "Brain fog": "Mental clarity is low — keep tasks simple and avoid big decisions.",
+    "Brain fog": "Mental clarity is low, keep tasks simple and avoid big decisions.",
     Anxiety: "Anxiety often softens during your period as progesterone drops fully.",
     Insomnia: "Sleep may actually improve now. Lean into earlier bedtimes.",
   },
   Follicular: {
-    Bloating: "Bloating should be minimal — your body is in its lightest phase.",
-    Cramps: "Cramps are behind you. Energy is building — enjoy the relief.",
+    Bloating: "Bloating should be minimal, your body is in its lightest phase.",
+    Cramps: "Cramps are behind you. Energy is building, enjoy the relief.",
     Fatigue: "Energy is climbing steadily. This is your window to tackle big tasks.",
     Headaches: "Headaches are less likely now as estrogen rises smoothly.",
     "Mood swings": "Mood is stabilizing and optimism is building. Ride this wave.",
     Acne: "Skin is clearing up as estrogen rises. Great time for active skincare.",
     Cravings: "Cravings are typically low. Your appetite is balanced and manageable.",
-    "Brain fog": "Mental sharpness is returning — schedule your most demanding work here.",
+    "Brain fog": "Mental sharpness is returning, schedule your most demanding work here.",
     Anxiety: "Anxiety tends to be low. Use this calm window for planning ahead.",
     Insomnia: "Sleep quality is generally good. Maintain your routine.",
   },
   Ovulation: {
     Bloating: "Some mid-cycle bloating is normal from the hormonal surge.",
     Cramps: "Mild ovulation cramps (mittelschmerz) are normal and brief.",
-    Fatigue: "You're at peak energy — make the most of it before the shift.",
+    Fatigue: "You're at peak energy, make the most of it before the shift.",
     Headaches: "The estrogen peak can trigger headaches in some. Stay hydrated.",
     "Mood swings": "You're feeling your best socially. Have important conversations now.",
     Acne: "Skin is at its best. Testosterone peaks may cause minor oiliness.",
-    Cravings: "Appetite is moderate. You may not feel as hungry — that's normal.",
+    Cravings: "Appetite is moderate. You may not feel as hungry, that's normal.",
     "Brain fog": "Peak mental clarity. Your brain is firing on all cylinders.",
     Anxiety: "Confidence is high but the post-ovulation drop can feel sudden.",
-    Insomnia: "Sleep may feel lighter around ovulation — it's a temporary hormonal effect.",
+    Insomnia: "Sleep may feel lighter around ovulation, it's a temporary hormonal effect.",
   },
   Luteal: {
     Bloating: "Bloating is likely building as progesterone rises. Reduce salt and stay active.",
     Cramps: "Pre-menstrual cramping may start. Magnesium and gentle movement help.",
-    Fatigue: "Energy is declining — front-load demanding tasks early in this phase.",
+    Fatigue: "Energy is declining, front-load demanding tasks early in this phase.",
     Headaches: "Headache risk increases as estrogen drops. Track triggers like caffeine.",
     "Mood swings": "Energy dips as progesterone peaks then drops. Warn your inner circle.",
     Acne: "Hormonal breakouts are most likely now. Stick to your routine, don't panic-treat.",
-    Cravings: "Cravings are peaking — lean into complex carbs and dark chocolate.",
+    Cravings: "Cravings are peaking, lean into complex carbs and dark chocolate.",
     "Brain fog": "Focus may feel scattered. Break tasks into smaller chunks.",
     Anxiety: "Anxiety tends to spike in the late luteal phase. Breathwork and boundaries help.",
     Insomnia: "Sleep disruption is common. Avoid screens late and try magnesium before bed.",
@@ -513,7 +513,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
       if (f.mood < 0.35) {
         items.push({
           day: format(f.date, "EEE"),
-          message: `Day ${f.cycleDay} — energy may be lower. Plan lighter and ask for help.`,
+          message: `Day ${f.cycleDay}, energy may be lower. Plan lighter and ask for help.`,
           type: "warning",
         });
         break;
@@ -521,7 +521,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
       if (f.energy > 0.8 && forecast[0].energy < 0.6) {
         items.push({
           day: format(f.date, "EEE"),
-          message: `Day ${f.cycleDay} — energy surge coming. Schedule your hardest workout here.`,
+          message: `Day ${f.cycleDay}, energy surge coming. Schedule your hardest workout here.`,
           type: "boost",
         });
         break;
@@ -674,12 +674,12 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
       : null;
     const lossLabel =
       lossDaysAgo === null
-        ? "Early recovery — one day at a time"
+        ? "Early recovery, one day at a time"
         : lossDaysAgo <= 14
-          ? "Acute recovery — rest and be gentle"
+          ? "Acute recovery, rest and be gentle"
           : lossDaysAgo <= 42
-            ? "Physical healing — body finding its way back"
-            : "Ongoing recovery — grief has no timeline";
+            ? "Physical healing, body finding its way back"
+            : "Ongoing recovery, grief has no timeline";
 
     const MENO_WORKOUT = {
       suggestion: "Strength training protects bone density and manages symptoms. Consistency matters more than intensity.",
@@ -690,14 +690,14 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
     const MENO_NUTRITION = {
       focus: "Bone health & hormone balance",
       foods: ["Calcium-rich foods (dairy, leafy greens)", "Vitamin D sources", "Phytoestrogens (soy, flaxseed)", "Magnesium (nuts, seeds)"],
-      avoid: "Excess alcohol and caffeine — they can worsen hot flashes and sleep disruption",
+      avoid: "Excess alcohol and caffeine, they can worsen hot flashes and sleep disruption",
     };
 
     const MENO_MOOD = {
-      outlook: "Transition — embrace the change",
-      hormonalShift: "Estrogen and progesterone are declining for good. The brain, bones, and metabolism all respond — this is system-wide, not 'just hormones'.",
-      headsUp: "Declining estrogen affects mood, sleep, and cognitive function. Brain fog, irritability, and anxiety are hormonal — not personal failings.",
-      selfCare: "Protect your sleep aggressively. Stress management isn't optional now — it's medicine.",
+      outlook: "Transition, embrace the change",
+      hormonalShift: "Estrogen and progesterone are declining for good. The brain, bones, and metabolism all respond, this is system-wide, not 'just hormones'.",
+      headsUp: "Declining estrogen affects mood, sleep, and cognitive function. Brain fog, irritability, and anxiety are hormonal, not personal failings.",
+      selfCare: "Protect your sleep aggressively. Stress management isn't optional now, it's medicine.",
       relationships: {
         people: "You may feel more reactive or withdrawn. Naming it ('my hormones are making this harder') removes shame and invites support.",
         withPartner: "Intimacy may shift. Open conversation about what feels different builds closeness instead of distance.",
@@ -709,19 +709,19 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
     // ── Pregnancy content, trimester-aware ──
     const PREG_WORKOUT_BY_TRI = {
       1: {
-        suggestion: "Gentle movement is safe and helpful. Fatigue is real — honor it. Skip anything with fall risk or breath-holding.",
+        suggestion: "Gentle movement is safe and helpful. Fatigue is real, honor it. Skip anything with fall risk or breath-holding.",
         examples: ["Walking", "Prenatal yoga", "Swimming", "Light strength"],
         trainingNote: "First trimester fatigue peaks around weeks 8–12. Consistency beats intensity. Stop if you feel dizzy, breathless, or crampy.",
       },
       2: {
-        suggestion: "Often the most energetic trimester. Maintain strength and cardio at a moderate effort — talk test, not breath test.",
+        suggestion: "Often the most energetic trimester. Maintain strength and cardio at a moderate effort, talk test, not breath test.",
         examples: ["Prenatal strength", "Swimming", "Stationary bike", "Prenatal Pilates"],
         trainingNote: "Avoid supine (flat-on-back) work after ~16 weeks. Skip contact sports and anything with a fall risk. Pelvic floor work pays dividends.",
       },
       3: {
         suggestion: "Focus on mobility, pelvic floor, and gentle strength. Prep the body for labor without draining reserves.",
         examples: ["Walking", "Prenatal yoga", "Birth-prep mobility", "Light resistance"],
-        trainingNote: "Center of gravity is shifting — balance work matters. Listen for pelvic pressure or Braxton Hicks; back off when they show up.",
+        trainingNote: "Center of gravity is shifting, balance work matters. Listen for pelvic pressure or Braxton Hicks; back off when they show up.",
       },
     } as const;
 
@@ -738,45 +738,45 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
       },
       3: {
         focus: "Energy, iron stores, and hydration for late-term demands",
-        foods: ["Complex carbs for steady energy", "Iron + vitamin C combos", "Fiber for constipation", "Water — dehydration triggers Braxton Hicks"],
+        foods: ["Complex carbs for steady energy", "Iron + vitamin C combos", "Fiber for constipation", "Water, dehydration triggers Braxton Hicks"],
         avoid: "Excess sodium if swelling is significant, alcohol, unpasteurized dairy. Small frequent meals ease reflux.",
       },
     } as const;
 
     const PREG_MOOD_BY_TRI = {
       1: {
-        outlook: "First trimester — real, invisible work",
-        hormonalShift: "hCG surges and progesterone climbs. Nausea, exhaustion, and mood swings are hormonal — not weakness.",
-        headsUp: "Anxiety around miscarriage risk is common and normal. If low mood or panic feels persistent, tell your clinician — perinatal mood support is real medicine.",
+        outlook: "First trimester, real, invisible work",
+        hormonalShift: "hCG surges and progesterone climbs. Nausea, exhaustion, and mood swings are hormonal, not weakness.",
+        headsUp: "Anxiety around miscarriage risk is common and normal. If low mood or panic feels persistent, tell your clinician, perinatal mood support is real medicine.",
         selfCare: "Rest without guilt. Say no more than usual. Hydrate and eat before nausea hits, not after.",
         relationships: {
           people: "You may not be ready to share yet. That's your call, on your timeline. Choose one or two trusted people to lean on.",
           withPartner: "Symptoms are invisible from the outside. Naming what you feel ('I'm nauseous and wiped') helps them show up.",
-          withKids: "If you already have kids, low-energy connection counts — reading, cuddles, screen time without shame.",
+          withKids: "If you already have kids, low-energy connection counts, reading, cuddles, screen time without shame.",
           strategy: "The first trimester is often the hardest and the loneliest. It gets easier. Most people feel like themselves again by weeks 14–16.",
         },
       },
       2: {
-        outlook: "Second trimester — often the sweet spot",
+        outlook: "Second trimester, often the sweet spot",
         hormonalShift: "hCG drops, progesterone stabilizes. Energy usually returns. Bump becomes visible, movement (quickening) begins around 18–22 weeks.",
-        headsUp: "Mood is often better here — but perinatal anxiety and depression can still show up. Body image shifts are real. Talk to someone if you're struggling.",
-        selfCare: "Use the energy window for what matters — sleep hygiene, gentle movement, connection. Don't overspend it.",
+        headsUp: "Mood is often better here, but perinatal anxiety and depression can still show up. Body image shifts are real. Talk to someone if you're struggling.",
+        selfCare: "Use the energy window for what matters, sleep hygiene, gentle movement, connection. Don't overspend it.",
         relationships: {
           people: "You may want to share more widely now. Boundaries around advice and belly-touching are yours to set.",
           withPartner: "Involve them in appointments and baby prep. Shared experience now builds partnership later.",
           withKids: "Talk about the sibling to come in simple terms. Preserve one-on-one time with existing kids.",
-          strategy: "Nesting energy is real. Use it, but don't force it — plenty of parents skip the nursery-Pinterest phase and are just fine.",
+          strategy: "Nesting energy is real. Use it, but don't force it, plenty of parents skip the nursery-Pinterest phase and are just fine.",
         },
       },
       3: {
-        outlook: "Third trimester — big body, big feelings",
+        outlook: "Third trimester, big body, big feelings",
         hormonalShift: "Relaxin loosens joints, cortisol shifts sleep, oxytocin rises. Anticipation and anxiety often coexist.",
-        headsUp: "Prenatal anxiety and depression are real and treatable. Insomnia in late pregnancy is common — but exhaustion + hopelessness is not something to tough out.",
-        selfCare: "Nap without guilt. Move daily. Practice slowing your breath — it's the same tool you'll use in labor.",
+        headsUp: "Prenatal anxiety and depression are real and treatable. Insomnia in late pregnancy is common, but exhaustion + hopelessness is not something to tough out.",
+        selfCare: "Nap without guilt. Move daily. Practice slowing your breath, it's the same tool you'll use in labor.",
         relationships: {
           people: "Ask directly for what you need. Vague hints get ignored; specific requests get met.",
           withPartner: "Talk through birth preferences, postpartum support, division of night duty. Better to negotiate now than at 3am with a newborn.",
-          withKids: "Prepare them for the shift honestly and gently. Tantrums about the baby are normal — hold both truths at once.",
+          withKids: "Prepare them for the shift honestly and gently. Tantrums about the baby are normal, hold both truths at once.",
           strategy: "You don't need a perfect birth plan. You need flexibility, a support person who knows what you want, and permission to change your mind.",
         },
       },
@@ -784,27 +784,27 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
 
     // ── Pregnancy loss content ──
     const LOSS_WORKOUT = {
-      suggestion: "Rest is the assignment. When you're ready, gentle walking and breath work — nothing that leaves you drained.",
+      suggestion: "Rest is the assignment. When you're ready, gentle walking and breath work, nothing that leaves you drained.",
       examples: ["Walking", "Restorative yoga", "Stretching", "Breath work"],
       trainingNote: "Physical recovery timelines vary. Bleeding, cramping, and fatigue can last weeks. Wait for medical clearance before returning to intensity.",
     };
 
     const LOSS_NUTRITION = {
       focus: "Replenishment, iron, and comfort",
-      foods: ["Iron-rich foods (red meat, lentils, spinach)", "Vitamin C to help iron absorption", "Warm, easy meals", "Hydration — grief dehydrates"],
+      foods: ["Iron-rich foods (red meat, lentils, spinach)", "Vitamin C to help iron absorption", "Warm, easy meals", "Hydration, grief dehydrates"],
       avoid: "There are no rules. Eat what you can, when you can. Comfort food counts.",
     };
 
     const LOSS_MOOD = {
       outlook: "Grief has no timeline",
       hormonalShift: "Pregnancy hormones drop rapidly after loss. Weepiness, night sweats, and mood swings are physical, not just emotional.",
-      headsUp: "Grief comes in waves — anniversaries, due dates, and pregnant people around you can trigger fresh waves. This is not backsliding.",
+      headsUp: "Grief comes in waves, anniversaries, due dates, and pregnant people around you can trigger fresh waves. This is not backsliding.",
       selfCare: "Lower the bar. Sleep, water, one meal you can keep down. Rituals of remembrance help when they feel right.",
       relationships: {
         people: "You get to decide who to tell and how. 'I'm not okay and I don't want to talk about it' is a complete sentence.",
         withPartner: "You may grieve on different timelines and in different ways. That's normal, not a rupture.",
-        withKids: "Age-appropriate honesty is okay — 'the baby couldn't grow' is enough. Kids notice sadness; naming it makes them safer, not sadder.",
-        strategy: "Perinatal loss support groups and therapists exist. You don't have to move through this alone, and 'moving on' is not the goal — integrating is.",
+        withKids: "Age-appropriate honesty is okay, 'the baby couldn't grow' is enough. Kids notice sadness; naming it makes them safer, not sadder.",
+        strategy: "Perinatal loss support groups and therapists exist. You don't have to move through this alone, and 'moving on' is not the goal, integrating is.",
       },
     };
 
@@ -858,11 +858,11 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
               {expandedSection === "mood" && (
                 <div className="px-4 pb-4 space-y-3 border-t border-border/15 pt-3" onClick={(e) => e.stopPropagation()}>
                   <div className="rounded-lg px-3 py-2.5 border border-border/20 bg-muted/30">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">🧬 Hormonal shift</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Hormonal shift</p>
                     <p className="text-xs text-muted-foreground">{moodGuide.hormonalShift}</p>
                   </div>
                   <div className={cn("rounded-lg px-3 py-2.5 border", stageBgFaint, stageBorder)}>
-                    <p className={cn("text-xs font-medium mb-1", stageColor)}>⚡ Heads up</p>
+                    <p className={cn("text-xs font-medium mb-1", stageColor)}>Heads up</p>
                     <p className="text-xs text-muted-foreground">{moodGuide.headsUp}</p>
                   </div>
                   <div><p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">What to do</p><p className="text-xs text-muted-foreground">{moodGuide.selfCare}</p></div>
@@ -874,11 +874,11 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
                         <ChevronRight className="w-3 h-3 transition-transform group-open:rotate-90" />If you have a partner or kids
                       </summary>
                       <div className="mt-2 space-y-2">
-                        <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5"><p className="text-[10px] font-semibold text-primary/80 mb-0.5">💑 With a partner</p><p className="text-xs text-muted-foreground">{moodGuide.relationships.withPartner}</p></div>
-                        <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5"><p className="text-[10px] font-semibold text-primary/80 mb-0.5">👨‍👩‍👧‍👦 With kids / teens</p><p className="text-xs text-muted-foreground">{moodGuide.relationships.withKids}</p></div>
+                        <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5"><p className="text-[10px] font-semibold text-primary/80 mb-0.5">With a partner</p><p className="text-xs text-muted-foreground">{moodGuide.relationships.withPartner}</p></div>
+                        <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5"><p className="text-[10px] font-semibold text-primary/80 mb-0.5">With kids / teens</p><p className="text-xs text-muted-foreground">{moodGuide.relationships.withKids}</p></div>
                       </div>
                     </details>
-                    <div className="rounded-lg bg-phase-follicular/5 border border-phase-follicular/15 px-3 py-2.5"><p className="text-xs font-medium text-phase-follicular mb-1">💡 Try this</p><p className="text-xs text-muted-foreground">{moodGuide.relationships.strategy}</p></div>
+                    <div className="rounded-lg bg-phase-follicular/5 border border-phase-follicular/15 px-3 py-2.5"><p className="text-xs font-medium text-phase-follicular mb-1">Try this</p><p className="text-xs text-muted-foreground">{moodGuide.relationships.strategy}</p></div>
                   </div>
                 </div>
               )}
@@ -1005,7 +1005,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             {expandedSection === "mood" && (
               <div className="px-4 pb-4 space-y-3 border-t border-border/15 pt-3" onClick={(e) => e.stopPropagation()}>
                 <div className="rounded-lg bg-phase-menstruation/5 border border-phase-menstruation/15 px-3 py-2.5">
-                  <p className="text-xs font-medium text-phase-menstruation mb-1">⚡ Heads up</p>
+                  <p className="text-xs font-medium text-phase-menstruation mb-1">Heads up</p>
                   <p className="text-xs text-muted-foreground">{moodGuide.headsUp}</p>
                 </div>
                 <div>
@@ -1026,17 +1026,17 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
                     </summary>
                     <div className="mt-2 space-y-2">
                       <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5">
-                        <p className="text-[10px] font-semibold text-primary/80 mb-0.5">💑 With a partner</p>
+                        <p className="text-[10px] font-semibold text-primary/80 mb-0.5">With a partner</p>
                         <p className="text-xs text-muted-foreground">{moodGuide.relationships.withPartner}</p>
                       </div>
                       <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2.5">
-                        <p className="text-[10px] font-semibold text-primary/80 mb-0.5">👨‍👩‍👧‍👦 With kids / teens</p>
+                        <p className="text-[10px] font-semibold text-primary/80 mb-0.5">With kids / teens</p>
                         <p className="text-xs text-muted-foreground">{moodGuide.relationships.withKids}</p>
                       </div>
                     </div>
                   </details>
                   <div className="rounded-lg bg-phase-follicular/5 border border-phase-follicular/15 px-3 py-2.5">
-                    <p className="text-xs font-medium text-phase-follicular mb-1">💡 Try this</p>
+                    <p className="text-xs font-medium text-phase-follicular mb-1">Try this</p>
                     <p className="text-xs text-muted-foreground">{moodGuide.relationships.strategy}</p>
                   </div>
                 </div>

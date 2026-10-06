@@ -282,7 +282,7 @@ export const EmailsTab = () => {
                           )}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground">—</span>
+                        <span className="text-muted-foreground">, </span>
                       )}
                     </td>
                     <td className="py-2 pr-3 text-muted-foreground">

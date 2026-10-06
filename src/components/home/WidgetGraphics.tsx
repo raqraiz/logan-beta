@@ -4,17 +4,17 @@
  */
 
 const PHASE_HSL: Record<string, string> = {
-  Menstruation: "hsl(355, 78%, 60%)",
-  Follicular: "hsl(152, 60%, 52%)",
-  Ovulation: "hsl(40, 90%, 56%)",
-  Luteal: "hsl(270, 60%, 65%)",
+  Menstruation: "#0E8A8F",
+  Follicular: "#0E8A8F",
+  Ovulation: "#0E8A8F",
+  Luteal: "#0E8A8F",
 };
 
 const PHASE_HSL_DIM: Record<string, string> = {
-  Menstruation: "hsl(355, 78%, 60%, 0.15)",
-  Follicular: "hsl(152, 60%, 52%, 0.15)",
-  Ovulation: "hsl(40, 90%, 56%, 0.15)",
-  Luteal: "hsl(270, 60%, 65%, 0.15)",
+  Menstruation: "var(--ring-track)",
+  Follicular: "var(--ring-track)",
+  Ovulation: "var(--ring-track)",
+  Luteal: "var(--ring-track)",
 };
 
 /* Mini phase arc – shows current position in a tiny ring */

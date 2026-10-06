@@ -4,10 +4,10 @@ import { cn } from "@/lib/utils";
 export type TabId = "home" | "ask" | "plan";
 
 const PHASE_HEX: Record<string, string> = {
-  Menstruation: "#E05262",
-  Follicular: "#3DBF8A",
-  Ovulation: "#E8A830",
-  Luteal: "#9B6DD7",
+  Menstruation: "hsl(var(--foreground))",
+  Follicular: "hsl(var(--foreground))",
+  Ovulation: "hsl(var(--foreground))",
+  Luteal: "hsl(var(--foreground))",
 };
 
 interface BottomTabBarProps {

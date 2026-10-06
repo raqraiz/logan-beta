@@ -238,7 +238,7 @@ function SessionDetail({ session }: { session: SessionRecord }) {
               </span>
               <span>{emoji}</span>
               <span className="text-foreground/80 truncate">
-                {action} {detail && <span className="text-muted-foreground">— {detail}</span>}
+                {action} {detail && <span className="text-muted-foreground">,  {detail}</span>}
               </span>
             </div>
           );
@@ -1152,7 +1152,7 @@ export const OverviewTab = () => {
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm">
-              {format(rangeFrom, "MMM d, yyyy")} — {format(rangeTo, "MMM d, yyyy")}
+              {format(rangeFrom, "MMM d, yyyy")}, {format(rangeTo, "MMM d, yyyy")}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
@@ -1194,7 +1194,7 @@ export const OverviewTab = () => {
                 className="text-xs font-medium text-destructive underline underline-offset-2"
                 title={allTimeUsersError}
               >
-                Failed — retry
+                Failed, retry
               </button>
             ) : allTimeUsersLoading && allTimeUsers === null ? (
               <div className="h-8 flex items-center justify-center">
@@ -1220,7 +1220,7 @@ export const OverviewTab = () => {
                     className="text-xs font-medium text-destructive underline underline-offset-2"
                     title={sessionsError}
                   >
-                    Failed — retry
+                    Failed, retry
                   </button>
                 ) : sessionsLoading ? (
                   <div className="h-8 flex items-center justify-center">
@@ -1238,7 +1238,7 @@ export const OverviewTab = () => {
                       className="inline-flex items-center rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive"
                       title={todayTimeError}
                     >
-                      Today: failed — retry
+                      Today: failed, retry
                     </button>
                   ) : todayTimeLoading ? (
                     <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground">
@@ -1278,7 +1278,7 @@ export const OverviewTab = () => {
                     className="text-xs font-medium text-destructive underline underline-offset-2"
                     title={eligibleError}
                   >
-                    Failed — retry
+                    Failed, retry
                   </button>
                 ) : (
                   <p className="text-2xl font-bold text-foreground">
@@ -1304,7 +1304,7 @@ export const OverviewTab = () => {
           <CardContent className="p-4 text-center">
             <BarChart3 className="w-5 h-5 mx-auto mb-1 text-teal-500" />
             <p className="text-2xl font-bold text-foreground">
-              {activityLoading || !eligibleIds ? "…" : activeMetrics.avgDailyUsers ?? "—"}
+              {activityLoading || !eligibleIds ? "…" : activeMetrics.avgDailyUsers ?? ", "}
             </p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
               Avg Daily Users <InfoTip text={METRIC_TOOLTIPS.avgDailyUsers} />
@@ -1355,12 +1355,12 @@ export const OverviewTab = () => {
                   className="text-destructive underline underline-offset-2"
                   title={todayIndexError ?? eligibleError ?? undefined}
                 >
-                  Failed — retry
+                  Failed, retry
                 </button>
               ) : todayIndexLoading || !eligibleIds
                 ? "…"
                 : activeMetrics.stickiness === null
-                  ? "—"
+                  ? ", "
                   : `${activeMetrics.stickiness}%`}{" "}
               <InfoTip text={METRIC_TOOLTIPS.stickiness} />
             </p>
@@ -1375,7 +1375,7 @@ export const OverviewTab = () => {
           <CardContent className="p-4 text-center">
             <TrendingUp className="w-5 h-5 mx-auto mb-1 text-purple-500" />
             <p className="text-2xl font-bold text-foreground">
-              {activityLoading || !eligibleIds ? "…" : activeMetrics.avgWeeklyUsers ?? "—"}
+              {activityLoading || !eligibleIds ? "…" : activeMetrics.avgWeeklyUsers ?? ", "}
             </p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
               Avg Weekly Users (Mon–Sun) <InfoTip text={METRIC_TOOLTIPS.avgWeeklyUsers} />
@@ -1386,7 +1386,7 @@ export const OverviewTab = () => {
           <CardContent className="p-4 text-center">
             <MessageSquare className="w-5 h-5 mx-auto mb-1 text-purple-500" />
             <p className="text-2xl font-bold text-foreground">
-              {activityLoading ? "…" : activeMetrics.avgMsgsPerUser ?? "—"}
+              {activityLoading ? "…" : activeMetrics.avgMsgsPerUser ?? ", "}
             </p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
               Avg Msgs/User <InfoTip text={METRIC_TOOLTIPS.avgMsgsPerUser} />
@@ -1397,7 +1397,7 @@ export const OverviewTab = () => {
           <CardContent className="p-4 text-center">
             <Clock className="w-5 h-5 mx-auto mb-1 text-orange-500" />
             <p className="text-2xl font-bold text-foreground">
-              {activityLoading ? "…" : activeMetrics.avgSessionsPerUser ?? "—"}
+              {activityLoading ? "…" : activeMetrics.avgSessionsPerUser ?? ", "}
             </p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
               Avg Sessions/User <InfoTip text={METRIC_TOOLTIPS.avgSessionsPerUser} />
@@ -1413,7 +1413,7 @@ export const OverviewTab = () => {
             </p>
             <p className="text-[10px] text-muted-foreground mt-0.5">
               {messageSplitError
-                ? "Failed — retry"
+                ? "Failed, retry"
                 : messageSplit
                   ? `${messageSplit.fromUsers} from users · ${messageSplit.fromLogan} from Logan`
                   : "…"}
@@ -1440,7 +1440,7 @@ export const OverviewTab = () => {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Circle className="w-3 h-3 fill-accent text-accent animate-pulse" />
-            Live — {onlineUsers.length} user{onlineUsers.length !== 1 ? "s" : ""} online
+            Live, {onlineUsers.length} user{onlineUsers.length !== 1 ? "s" : ""} online
           </CardTitle>
         </CardHeader>
         <CardContent>

@@ -131,7 +131,7 @@ export function LabResultsHistory({ open, onOpenChange, userId }: Props) {
                               )}
                             </div>
                             <div className={`text-[13px] font-medium tabular-nums whitespace-nowrap ${flagCls}`}>
-                              {m.value_numeric ?? m.value_text ?? "—"}
+                              {m.value_numeric ?? m.value_text ?? ", "}
                               {m.unit ? ` ${m.unit}` : ""}
                               {flag && flag !== "normal" && (
                                 <span className="ml-1.5 text-[10px] uppercase opacity-70">{flag}</span>

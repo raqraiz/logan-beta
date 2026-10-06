@@ -59,7 +59,7 @@ async function fetchAll<T>(table: "profiles" | "chat_messages" | "symptom_logs",
   return rows;
 }
 
-const fmtDate = (iso: string | null) => (iso ? format(new Date(iso), "MMM d, yyyy") : "—");
+const fmtDate = (iso: string | null) => (iso ? format(new Date(iso), "MMM d, yyyy") : ", ");
 
 export const ReferralLeaderboardTab = () => {
   const [loading, setLoading] = useState(true);
@@ -110,7 +110,7 @@ export const ReferralLeaderboardTab = () => {
             return {
               id: p.id,
               name: p.full_name || "Unnamed",
-              email: p.email || "—",
+              email: p.email || ", ",
               signupDate: p.created_at,
               symptomLogs: symptomCount.get(p.id) ?? 0,
               chatMessages: chatCount.get(p.id) ?? 0,
@@ -133,7 +133,7 @@ export const ReferralLeaderboardTab = () => {
           result.push({
             id: referrerId,
             name: referrer?.full_name || "Unknown referrer",
-            email: referrer?.email || "—",
+            email: referrer?.email || ", ",
             totalReferrals: referred.length,
             activeReferrals: referred.filter((r) => r.active).length,
             symptomLogs,

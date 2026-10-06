@@ -422,9 +422,9 @@ export function CycleAnalytics({
               <div className="grid grid-cols-2 gap-3">
                 <StatCard
                   label="Week"
-                  value={gestWeeks !== null ? `${gestWeeks}w ${gestDayOfWeek ?? 0}d` : "—"}
+                  value={gestWeeks !== null ? `${gestWeeks}w ${gestDayOfWeek ?? 0}d` : ", "}
                 />
-                <StatCard label="Trimester" value={trimester ? `T${trimester}` : "—"} />
+                <StatCard label="Trimester" value={trimester ? `T${trimester}` : ", "} />
               </div>
             </div>
             <Separator />
@@ -433,11 +433,11 @@ export function CycleAnalytics({
               <div className="grid grid-cols-2 gap-3">
                 <StatCard
                   label="LMP"
-                  value={pregnancyLmp ? format(new Date(pregnancyLmp + "T12:00:00Z"), "MMM d") : "—"}
+                  value={pregnancyLmp ? format(new Date(pregnancyLmp + "T12:00:00Z"), "MMM d") : ", "}
                 />
                 <StatCard
                   label="Due date"
-                  value={dueDate ? format(new Date(dueDate + "T12:00:00Z"), "MMM d") : "—"}
+                  value={dueDate ? format(new Date(dueDate + "T12:00:00Z"), "MMM d") : ", "}
                 />
               </div>
               {daysToDue !== null && (
@@ -479,8 +479,8 @@ export function CycleAnalytics({
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Cycle Length</h3>
               <div className="grid grid-cols-3 gap-3">
                 <StatCard label="Current" value={`${currentCycleLength}d`} />
-                <StatCard label="Typical" value={avgLength ? `${avgLength}d` : "—"} />
-                <StatCard label="Variance" value={variance !== null ? `±${variance}d` : "—"} />
+                <StatCard label="Typical" value={avgLength ? `${avgLength}d` : ", "} />
+                <StatCard label="Variance" value={variance !== null ? `±${variance}d` : ", "} />
               </div>
               {lengths.length > 0 && (
                 <p className="text-[11px] text-muted-foreground mt-2">
@@ -698,7 +698,7 @@ export function CycleAnalytics({
                           </div>
                           <p className={`text-[10px] ${sumMismatch ? "text-destructive" : "text-muted-foreground"}`}>
                             Sum: {draftSum}d / {row.cycle_length_days}d
-                            {sumMismatch ? " — adjust to match" : " ✓"}
+                            {sumMismatch ? ", adjust to match" : " ✓"}
                           </p>
                           <div className="flex justify-between gap-1.5">
                             {hasCustomPhases ? (
