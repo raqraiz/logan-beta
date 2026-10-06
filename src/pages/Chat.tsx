@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
+import { LoganFullLogo } from "@/components/LoganFullLogo";
 
 import { Send, Loader2, LogOut, ChevronLeft, ChevronRight, ArrowDown, MessageSquarePlus, MessageCircle, Settings as SettingsIcon, Paperclip, Search, X, ChevronUp, ChevronDown, Megaphone } from "lucide-react";
 import { FeedbackModal } from "@/components/chat/FeedbackModal";
@@ -1533,7 +1534,7 @@ const Chat = () => {
                <LoganLogo size="sm" />
              )}
               <div>
-                <h1 className="font-display font-semibold text-foreground">Logan</h1>
+                <h1 className="text-foreground"><LoganFullLogo size="sm" /></h1>
               </div>
            </div>
           <div className="flex items-center gap-3">
@@ -1980,8 +1981,8 @@ const Chat = () => {
                     <div
                       className={`relative max-w-[85%] rounded-2xl px-4 py-3 ${
                         message.role === "user"
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-card border border-border"
+                          ? "bg-[rgba(43,212,217,0.42)] text-[#23201C]"
+                          : "bg-white text-[#23201C] border border-border"
                       } ${searching && isMatch ? "ring-2 ring-primary" : ""}`}
                     >
                       {/* Cycle visual first for insight messages — recomputed live
@@ -2608,7 +2609,7 @@ const Chat = () => {
               <Button 
                 type="submit" 
                 size="icon" 
-                className="h-11 w-11"
+                className="h-11 w-11 bg-[#23201C] text-[#F4F1EA] hover:bg-[#23201C]/90"
                 disabled={!inputValue.trim() || isSending}
               >
                 {isSending ? (

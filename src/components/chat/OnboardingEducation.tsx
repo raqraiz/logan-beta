@@ -250,7 +250,7 @@ export function HormoneBasicsCard({ lifeStage = "cycling" }: { lifeStage?: Hormo
             <g className="animate-fade-in" style={{ animationDelay: "0.8s", animationFillMode: "both" }}>
               <circle cx="95" cy="18" r="2.5" fill="hsl(152, 60%, 52%)" />
               <line x1="95" y1="20" x2="95" y2="30" stroke="hsl(152, 60%, 52%)" strokeWidth="0.5" strokeDasharray="1,1" />
-              <text x="95" y="36" textAnchor="middle" fontSize="6" fill="hsl(152, 60%, 65%)" fontFamily="Space Grotesk">
+              <text x="95" y="36" textAnchor="middle" fontSize="6" fill="hsl(152, 60%, 65%)" fontFamily="Quicksand">
                 estrogen peak
               </text>
             </g>
@@ -279,7 +279,7 @@ export function HormoneBasicsCard({ lifeStage = "cycling" }: { lifeStage?: Hormo
             <g className="animate-fade-in" style={{ animationDelay: "1.4s", animationFillMode: "both" }}>
               <circle cx="195" cy="18" r="2.5" fill="hsl(270, 60%, 65%)" />
               <line x1="195" y1="20" x2="195" y2="30" stroke="hsl(270, 60%, 65%)" strokeWidth="0.5" strokeDasharray="1,1" />
-              <text x="195" y="36" textAnchor="middle" fontSize="6" fill="hsl(270, 60%, 75%)" fontFamily="Space Grotesk">
+              <text x="195" y="36" textAnchor="middle" fontSize="6" fill="hsl(270, 60%, 75%)" fontFamily="Quicksand">
                 progesterone peak
               </text>
             </g>
@@ -289,15 +289,15 @@ export function HormoneBasicsCard({ lifeStage = "cycling" }: { lifeStage?: Hormo
           {animate && (
             <g className="animate-fade-in" style={{ animationDelay: "1.8s", animationFillMode: "both" }}>
               <line x1="155" y1={pad.top} x2="155" y2={H - pad.bottom} stroke="hsl(210, 15%, 35%)" strokeWidth="0.5" strokeDasharray="2,2" />
-              <text x="155" y={pad.top - 2} textAnchor="middle" fontSize="5.5" fill="hsl(210, 15%, 50%)" fontFamily="DM Sans">
+              <text x="155" y={pad.top - 2} textAnchor="middle" fontSize="5.5" fill="hsl(210, 15%, 50%)" fontFamily="Quicksand">
                 crossover
               </text>
             </g>
           )}
 
           {/* Y-axis label */}
-          <text x="4" y={pad.top + 4} fontSize="5" fill="hsl(210, 15%, 40%)" fontFamily="DM Sans">high</text>
-          <text x="4" y={H - pad.bottom - 2} fontSize="5" fill="hsl(210, 15%, 40%)" fontFamily="DM Sans">low</text>
+          <text x="4" y={pad.top + 4} fontSize="5" fill="hsl(210, 15%, 40%)" fontFamily="Quicksand">high</text>
+          <text x="4" y={H - pad.bottom - 2} fontSize="5" fill="hsl(210, 15%, 40%)" fontFamily="Quicksand">low</text>
         </svg>
       </div>
 
@@ -381,12 +381,12 @@ function DecliningHormonesCard({ animate }: { animate: boolean }) {
           {animate && (
             <>
               <g className="animate-fade-in" style={{ animationDelay: "0.8s", animationFillMode: "both" }}>
-                <text x={pad.left + 40} y={12} fontSize="6" fill="#F4F1EA" fontFamily="Space Grotesk">
+                <text x={pad.left + 40} y={12} fontSize="6" fill="#F4F1EA" fontFamily="Quicksand">
                   erratic fluctuations
                 </text>
               </g>
               <g className="animate-fade-in" style={{ animationDelay: "1.2s", animationFillMode: "both" }}>
-                <text x={W - pad.right - 4} y={H - pad.bottom - 4} textAnchor="end" fontSize="6" fill="#F4F1EA" fontFamily="Space Grotesk">
+                <text x={W - pad.right - 4} y={H - pad.bottom - 4} textAnchor="end" fontSize="6" fill="#F4F1EA" fontFamily="Quicksand">
                   gradual decline
                 </text>
               </g>
@@ -394,10 +394,10 @@ function DecliningHormonesCard({ animate }: { animate: boolean }) {
           )}
 
           {/* Axis labels */}
-          <text x="4" y={pad.top + 4} fontSize="5" fill="hsl(210, 15%, 40%)" fontFamily="DM Sans">high</text>
-          <text x="4" y={H - pad.bottom - 2} fontSize="5" fill="hsl(210, 15%, 40%)" fontFamily="DM Sans">low</text>
-          <text x={pad.left} y={H - 6} fontSize="6" fill="hsl(210, 15%, 45%)" fontFamily="DM Sans">earlier</text>
-          <text x={W - pad.right} y={H - 6} textAnchor="end" fontSize="6" fill="hsl(210, 15%, 45%)" fontFamily="DM Sans">now</text>
+          <text x="4" y={pad.top + 4} fontSize="5" fill="hsl(210, 15%, 40%)" fontFamily="Quicksand">high</text>
+          <text x="4" y={H - pad.bottom - 2} fontSize="5" fill="hsl(210, 15%, 40%)" fontFamily="Quicksand">low</text>
+          <text x={pad.left} y={H - 6} fontSize="6" fill="hsl(210, 15%, 45%)" fontFamily="Quicksand">earlier</text>
+          <text x={W - pad.right} y={H - 6} textAnchor="end" fontSize="6" fill="hsl(210, 15%, 45%)" fontFamily="Quicksand">now</text>
         </svg>
       </div>
 
@@ -576,11 +576,11 @@ export function AnchorExplainerCard({ lifeStage }: { lifeStage?: string | null }
           {/* Labels */}
           {animate && (
             <>
-              <text x={cx} y={cy + 20} textAnchor="middle" fontSize="6.5" fill="hsl(var(--primary))" fontWeight="600" fontFamily="Space Grotesk">
+              <text x={cx} y={cy + 20} textAnchor="middle" fontSize="6.5" fill="hsl(var(--primary))" fontWeight="600" fontFamily="Quicksand">
                 anchor
               </text>
-              <text x="16" y="24" fontSize="5.5" fill="hsl(210, 15%, 40%)" fontFamily="DM Sans">other</text>
-              <text x="82" y="90" fontSize="5.5" fill="hsl(210, 15%, 40%)" fontFamily="DM Sans">other</text>
+              <text x="16" y="24" fontSize="5.5" fill="hsl(210, 15%, 40%)" fontFamily="Quicksand">other</text>
+              <text x="82" y="90" fontSize="5.5" fill="hsl(210, 15%, 40%)" fontFamily="Quicksand">other</text>
             </>
           )}
         </svg>

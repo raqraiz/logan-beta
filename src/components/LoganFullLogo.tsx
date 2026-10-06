@@ -22,8 +22,9 @@ export const LoganFullLogo = ({ size = "md", className }: LoganFullLogoProps) =>
     >
       <defs>
         <linearGradient id="logan-o-gradient" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#2BD4D9" />
-          <stop offset="100%" stopColor="#15B88C" />
+          <stop offset="0%" stopColor="#FF2E92" />
+          <stop offset="50%" stopColor="#A22BE8" />
+          <stop offset="100%" stopColor="#2BD4D9" />
         </linearGradient>
       </defs>
 
@@ -33,7 +34,7 @@ export const LoganFullLogo = ({ size = "md", className }: LoganFullLogoProps) =>
         y="35"
         fill="currentColor"
         fontFamily="Quicksand, sans-serif"
-        fontWeight="300"
+        fontWeight="600"
         fontSize="34"
       >
         L
@@ -41,23 +42,20 @@ export const LoganFullLogo = ({ size = "md", className }: LoganFullLogoProps) =>
 
       {/* Gradient ring "o" — lowercase-sized, gap at the top */}
       <circle
-        cx="30"
-        cy="27"
-        r="8"
+        cx="31"
+        cy="26.5"
+        r="7.3"
         stroke="url(#logan-o-gradient)"
-        strokeWidth="2.5"
-        strokeDasharray="46 4"
-        strokeLinecap="round"
-        transform="rotate(-95 30 27)"
+        strokeWidth="2.6"
       />
 
       {/* "gan" */}
       <text
-        x="41"
+        x="40.5"
         y="35"
         fill="currentColor"
         fontFamily="Quicksand, sans-serif"
-        fontWeight="300"
+        fontWeight="600"
         fontSize="34"
       >
         gan

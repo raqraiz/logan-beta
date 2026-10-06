@@ -189,6 +189,10 @@
   }
 
   a { color: hsl(var(--link)); }
+  button, input, textarea, select, label { font-family: 'Quicksand', system-ui, sans-serif; }
+  .font-display, .font-serif { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 600; }
+  .font-bold.tabular-nums, .tabular-nums { font-weight: 700; }
+  .font-mono { font-family: 'Quicksand', system-ui, sans-serif; }
   :focus-visible { outline-color: hsl(var(--ring)); }
 }
 
