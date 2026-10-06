@@ -1,3 +1,4 @@
+import { CALM_VOICE_RULE } from "../_shared/voiceRule.ts";
 import { anchorPromptRule, currentCycleAnchorType } from "../_shared/cycleAnchor.ts";
 import { buildBcMethodRule, bcFramingSummary } from "../_shared/bcMethod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -227,7 +228,7 @@ serve(async (req) => {
 
       let aiResult;
       try {
-        aiResult = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt + anchorPromptRule(currentCycleAnchorType(participant)));
+        aiResult = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt + anchorPromptRule(currentCycleAnchorType(participant)) + CALM_VOICE_RULE);
       } catch (aiErr) {
         const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
         console.error("AI insight generation failed, removing placeholder:", msg);
@@ -409,7 +410,7 @@ serve(async (req) => {
 
       let aiResult;
       try {
-        aiResult = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt + anchorPromptRule(currentCycleAnchorType(participant)));
+        aiResult = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt + anchorPromptRule(currentCycleAnchorType(participant)) + CALM_VOICE_RULE);
       } catch (aiErr) {
         const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
         console.error("AI insight generation failed, removing placeholder:", msg);
