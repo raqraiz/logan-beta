@@ -9,6 +9,7 @@ import {
   mentionsLoss,
 } from "../_shared/topicBoundaries.ts";
 import { fetchMemoryNotes, buildMemoryBlock } from "../_shared/memoryNotes.ts";
+import { isPhaseTrackingOn } from "../_shared/cyclePhase.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
