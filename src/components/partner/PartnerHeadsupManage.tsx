@@ -154,7 +154,7 @@ export function PartnerHeadsupManage({ userId, open, onOpenChange }: Props) {
             </div>
 
             <div className="space-y-2">
-              <h4 className="text-[11px] font-medium tracking-[0.12em] text-muted-foreground">PEOPLE</h4>
+              <h4 className="text-[11px] font-medium text-muted-foreground">People</h4>
               <div className="rounded-[20px] border border-border/50 px-4 py-1 divide-y divide-border/40">
                 {people.map((p) => (
                   <div key={p.id}>
