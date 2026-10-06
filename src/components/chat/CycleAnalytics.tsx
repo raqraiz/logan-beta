@@ -1,3 +1,4 @@
+import { PHASE_TINTS } from "@/lib/phaseTints";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -418,7 +419,7 @@ export function CycleAnalytics({
           </DialogHeader>
           <div className="space-y-5">
             <div>
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Gestational Age</h3>
+              <h3 className="text-xs font-medium text-muted-foreground mb-2">Gestational Age</h3>
               <div className="grid grid-cols-2 gap-3">
                 <StatCard
                   label="Week"
@@ -429,7 +430,7 @@ export function CycleAnalytics({
             </div>
             <Separator />
             <div>
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Key Dates</h3>
+              <h3 className="text-xs font-medium text-muted-foreground mb-2">Key Dates</h3>
               <div className="grid grid-cols-2 gap-3">
                 <StatCard
                   label="LMP"
@@ -476,7 +477,7 @@ export function CycleAnalytics({
           <div className="space-y-5">
             {/* Cycle Length */}
             <div>
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Cycle Length</h3>
+              <h3 className="text-xs font-medium text-muted-foreground mb-2">Cycle length</h3>
               <div className="grid grid-cols-3 gap-3">
                 <StatCard label="Current" value={`${currentCycleLength}d`} />
                 <StatCard label="Typical" value={avgLength ? `${avgLength}d` : ", "} />
@@ -502,7 +503,7 @@ export function CycleAnalytics({
 
             {/* Period Length */}
             <div>
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Period Length</h3>
+              <h3 className="text-xs font-medium text-muted-foreground mb-2">Period length</h3>
               <StatCard
                 label={currentMenstruationDays !== null ? "This cycle" : "Estimated"}
                 value={currentMenstruationDays !== null ? `${currentMenstruationDays} day${currentMenstruationDays !== 1 ? "s" : ""}` : "3–7 days"}
@@ -513,16 +514,16 @@ export function CycleAnalytics({
 
             {/* Regularity Score */}
             <div>
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Cycle Regularity</h3>
+              <h3 className="text-xs font-medium text-muted-foreground mb-2">Cycle regularity</h3>
               {regularityScore !== null ? (
                 <div className="flex items-center gap-3">
                   <div className="relative w-12 h-12 flex-shrink-0">
                     <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                      <circle cx="18" cy="18" r="14" fill="none" strokeWidth="3" className="stroke-muted" />
+                      <circle cx="18" cy="18" r="14" fill="none" strokeWidth="3" stroke="#EEE9DF" />
                       <circle
                         cx="18" cy="18" r="14" fill="none" strokeWidth="3"
                         strokeLinecap="round"
-                        className="stroke-primary"
+                        stroke="#0E8A8F"
                         strokeDasharray={`${(regularityScore / 100) * 88} 88`}
                       />
                     </svg>
@@ -544,14 +545,14 @@ export function CycleAnalytics({
 
             {/* Phase Segmentation */}
             <div>
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Phase Breakdown</h3>
+              <h3 className="text-xs font-medium text-muted-foreground mb-2">Phase breakdown</h3>
               {/* Bar */}
               <div className="flex rounded-full overflow-hidden h-3 mb-3">
                 {phases.map((p) => (
                   <div
                     key={p.name}
-                    className={`${p.color} transition-all`}
-                    style={{ width: `${(p.days / Math.max(1, phaseTotal)) * 100}%` }}
+                    className="transition-all"
+                    style={{ background: PHASE_TINTS[p.name].fill, width: `${(p.days / Math.max(1, phaseTotal)) * 100}%` }}
                   />
                 ))}
               </div>
@@ -559,9 +560,9 @@ export function CycleAnalytics({
               <div className="grid grid-cols-2 gap-2">
                 {phases.map((p) => (
                   <div key={p.name} className="flex items-center gap-2">
-                    <div className={`w-2.5 h-2.5 rounded-full ${p.color}`} />
-                    <span className="text-xs text-muted-foreground">
-                      {p.name} <span className="text-foreground font-medium">{usingCustomPhases ? "" : "~"}{p.range}d</span>
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: PHASE_TINTS[p.name].ink }} />
+                    <span className="text-xs font-medium" style={{ color: PHASE_TINTS[p.name].ink }}>
+                      {PHASE_TINTS[p.name].label} <span className="font-semibold">{usingCustomPhases ? "" : "~"}{p.range}d</span>
                     </span>
                   </div>
                 ))}
@@ -579,7 +580,7 @@ export function CycleAnalytics({
             <div>
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Tracked Cycles
+                  Tracked cycles
                 </h3>
                 {!adding && participantId && (
                   <Button
@@ -805,8 +806,8 @@ function CycleLengthChart({
 
   return (
     <div>
-      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-        Cycle Length Over Time
+      <h3 className="text-xs font-medium text-muted-foreground mb-2">
+        Cycle length over time
       </h3>
       <div className="rounded-xl bg-muted/30 border border-border/30 p-2">
         <div className="h-40 w-full">

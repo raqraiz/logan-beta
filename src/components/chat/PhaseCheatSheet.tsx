@@ -1,3 +1,4 @@
+import { PHASE_TINTS } from "@/lib/phaseTints";
 import { formatFollowUpQuestion } from "@/lib/formatFollowUpQuestion";
 import { useState } from "react";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
@@ -172,7 +173,7 @@ export function PhaseCheatSheet({ phase, cycleDay, cycleLengthDays, anchorSympto
         <div className="flex items-center gap-2">
           {defaults.icon}
           <div>
-            <h4 className={`text-sm font-semibold ${defaults.color}`}>{phase}</h4>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-sm font-semibold" style={{ background: PHASE_TINTS[phase]?.fill, color: PHASE_TINTS[phase]?.ink }}><span className="w-1.5 h-1.5 rounded-full bg-current" />{PHASE_TINTS[phase]?.label ?? phase}</span>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{defaults.tagline}</p>
           </div>
         </div>
