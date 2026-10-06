@@ -96,7 +96,7 @@ function MetricBar({ icon: Icon, label, value, color }: { icon: any; label: stri
   return (
     <div className="flex items-center gap-2">
       <Icon className={`w-3.5 h-3.5 ${color} shrink-0`} />
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 w-14 shrink-0">{label}</span>
+      <span className="text-[10px] text-muted-foreground/70 w-14 shrink-0">{label}</span>
       <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#EEE9DF" }}>
         <div
           className="h-full rounded-full transition-all duration-500"
@@ -206,7 +206,7 @@ export function DailyBriefingHero({
             ) : !hideStage && (
             <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${phaseBg}`}>
               <span className={`w-1.5 h-1.5 rounded-full bg-current ${phaseText}`} />
-              <span className={`text-[11px] font-semibold uppercase tracking-wider ${phaseText}`}>
+              <span className={`text-[11px] font-semibold ${phaseText}`}>
                 {isNonCycling
                   ? (lifeStage === "postpartum"
                       ? "Postpartum"

@@ -139,7 +139,7 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
         {showPhase ? (
           <span className={`${labelSize} font-medium text-muted-foreground`}>{phase}</span>
         ) : (
-          <span className={`${labelSize} text-muted-foreground uppercase tracking-wide`}>Day</span>
+          <span className={`${labelSize} text-muted-foreground`}>Day</span>
         )}
       </div>
     </div>
@@ -469,7 +469,7 @@ function PregnancyCircle({ size, dueDate, pregnancyLmp }: { size: "sm" | "md"; d
               </div>
               <span className="text-xs text-muted-foreground mt-2">{trimesterLabel}</span>
               {dueDate && (
-                <span className="text-[10px] text-muted-foreground/70 mt-0.5 uppercase tracking-wider">
+                <span className="text-[10px] text-muted-foreground/70 mt-0.5">
                   Due {new Date(dueDate + "T12:00:00Z").toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                 </span>
               )}
