@@ -1,4 +1,4 @@
-import { PHASE_TINTS, PHASE_ORDER } from "@/lib/phaseTints";
+import { PHASE_TINTS, PHASE_ORDER, halfFill } from "@/lib/phaseTints";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
 import { supabase } from "@/integrations/supabase/client";
@@ -426,32 +426,47 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                     ))}
                   </div>
                   <div className="grid grid-cols-7 gap-1.5">
-                    {calendarDays.map((date) => {
+                    {(() => {
+                      const isPhaseStart = (date: Date) => {
+                        const cd = getCycleDayForDate(date);
+                        const ph = getPhaseForDay(cd, cycleLengthDays, menstruationEndDay);
+                        return cd === 1 || getPhaseForDay(cd - 1, cycleLengthDays, menstruationEndDay) !== ph;
+                      };
+                      const labelRows = new Set(calendarDays.map((d, i) => (isPhaseStart(d) ? Math.floor(i / 7) : -1)));
+                      return calendarDays.map((date, idx) => {
                       const inMonth = isSameMonth(date, currentMonth);
                       const isToday = isSameDay(date, today);
                       const isSelected = selectedDate && isSameDay(date, selectedDate);
                       const cd = getCycleDayForDate(date);
                       const ph = getPhaseForDay(cd, cycleLengthDays, menstruationEndDay);
-                      const colors = PHASE_COLORS[ph];
+                      const tint = PHASE_TINTS[ph];
+                      const predicted = !isToday && date > today;
+                      const rowHasLabel = labelRows.has(Math.floor(idx / 7));
+                      const showLabel = isPhaseStart(date);
                       return (
+                        <div key={date.toISOString()} className={`flex flex-col ${!inMonth ? "opacity-30" : ""}`}>
+                          {rowHasLabel && (
+                            <span className="h-4 text-[12px] leading-4 font-semibold whitespace-nowrap overflow-visible" style={{ color: showLabel ? tint?.ink : "transparent" }}>
+                              {showLabel ? tint?.label : "."}
+                            </span>
+                          )}
                         <button
-                          key={date.toISOString()}
                           onClick={() => setSelectedDate(isSelected ? null : date)}
-                          style={isToday ? undefined : date > today ? { borderColor: PHASE_TINTS[ph]?.ink } : { background: PHASE_TINTS[ph]?.fill }}
+                          style={isToday ? { background: "var(--today-bg)" } : predicted ? { background: halfFill(tint?.fill ?? "transparent"), borderColor: tint?.ink } : { background: tint?.fill }}
                           className={`
                             aspect-square rounded-full flex items-center justify-center text-sm font-medium transition-all duration-150
-                            ${!inMonth ? "opacity-30" : ""}
                             ${isSelected && !isToday ? "ring-1 ring-foreground" : ""}
-                            ${isToday ? "bg-[#23201C] text-[#F4F1EA] rounded-full" : date > today ? "border border-dashed" : ""}
-                            relative flex-col
+                            ${predicted ? "border border-dashed" : ""}
+                            relative
                             hover:scale-105 active:scale-95
                           `}
                         >
-                          <span className={isToday ? "text-[#F4F1EA] font-bold" : "text-[#23201C]"}>{format(date, "d")}</span>
-{!isToday && (cd === 1 || getPhaseForDay(cd - 1, cycleLengthDays, menstruationEndDay) !== ph) && <span className="text-[8px] leading-none font-medium" style={{ color: PHASE_TINTS[ph]?.ink }}>{PHASE_TINTS[ph]?.label}</span>}
+                          <span className={isToday ? "font-bold" : ""} style={{ color: isToday ? "var(--today-fg)" : "var(--tint-day)" }}>{format(date, "d")}</span>
                         </button>
+                        </div>
                       );
-                    })}
+                    });
+                    })()}
                   </div>
                 </div>
               </>
@@ -624,33 +639,47 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                 ))}
               </div>
               <div className="grid grid-cols-7 gap-1.5">
-                {calendarDays.map((date) => {
-                  const inMonth = isSameMonth(date, currentMonth);
-                  const isToday = isSameDay(date, today);
-                  const isSelected = selectedDate && isSameDay(date, selectedDate);
-                  const cd = getCycleDayForDate(date);
-                  const ph = getPhaseForDay(cd, cycleLengthDays, menstruationEndDay);
-                  const colors = PHASE_COLORS[ph];
-
-                  return (
-                    <button
-                      key={date.toISOString()}
-                      onClick={() => setSelectedDate(isSelected ? null : date)}
-                          style={isToday ? undefined : date > today ? { borderColor: PHASE_TINTS[ph]?.ink } : { background: PHASE_TINTS[ph]?.fill }}
-                      className={`
-                        aspect-square rounded-full flex items-center justify-center text-sm font-medium transition-all duration-150
-                        ${!inMonth ? "opacity-30" : ""}
-                        ${isSelected && !isToday ? "ring-1 ring-foreground" : ""}
-                        ${isToday ? "bg-[#23201C] text-[#F4F1EA] rounded-full" : date > today ? "border border-dashed" : ""}
-                        relative flex-col
-                        hover:scale-105 active:scale-95
-                      `}
-                    >
-                      <span className={isToday ? "text-[#F4F1EA] font-bold" : "text-[#23201C]"}>{format(date, "d")}</span>
-{!isToday && (cd === 1 || getPhaseForDay(cd - 1, cycleLengthDays, menstruationEndDay) !== ph) && <span className="text-[8px] leading-none font-medium" style={{ color: PHASE_TINTS[ph]?.ink }}>{PHASE_TINTS[ph]?.label}</span>}
-                    </button>
-                  );
-                })}
+                {(() => {
+                      const isPhaseStart = (date: Date) => {
+                        const cd = getCycleDayForDate(date);
+                        const ph = getPhaseForDay(cd, cycleLengthDays, menstruationEndDay);
+                        return cd === 1 || getPhaseForDay(cd - 1, cycleLengthDays, menstruationEndDay) !== ph;
+                      };
+                      const labelRows = new Set(calendarDays.map((d, i) => (isPhaseStart(d) ? Math.floor(i / 7) : -1)));
+                      return calendarDays.map((date, idx) => {
+                      const inMonth = isSameMonth(date, currentMonth);
+                      const isToday = isSameDay(date, today);
+                      const isSelected = selectedDate && isSameDay(date, selectedDate);
+                      const cd = getCycleDayForDate(date);
+                      const ph = getPhaseForDay(cd, cycleLengthDays, menstruationEndDay);
+                      const tint = PHASE_TINTS[ph];
+                      const predicted = !isToday && date > today;
+                      const rowHasLabel = labelRows.has(Math.floor(idx / 7));
+                      const showLabel = isPhaseStart(date);
+                      return (
+                        <div key={date.toISOString()} className={`flex flex-col ${!inMonth ? "opacity-30" : ""}`}>
+                          {rowHasLabel && (
+                            <span className="h-4 text-[12px] leading-4 font-semibold whitespace-nowrap overflow-visible" style={{ color: showLabel ? tint?.ink : "transparent" }}>
+                              {showLabel ? tint?.label : "."}
+                            </span>
+                          )}
+                        <button
+                          onClick={() => setSelectedDate(isSelected ? null : date)}
+                          style={isToday ? { background: "var(--today-bg)" } : predicted ? { background: halfFill(tint?.fill ?? "transparent"), borderColor: tint?.ink } : { background: tint?.fill }}
+                          className={`
+                            aspect-square rounded-full flex items-center justify-center text-sm font-medium transition-all duration-150
+                            ${isSelected && !isToday ? "ring-1 ring-foreground" : ""}
+                            ${predicted ? "border border-dashed" : ""}
+                            relative
+                            hover:scale-105 active:scale-95
+                          `}
+                        >
+                          <span className={isToday ? "font-bold" : ""} style={{ color: isToday ? "var(--today-fg)" : "var(--tint-day)" }}>{format(date, "d")}</span>
+                        </button>
+                        </div>
+                      );
+                    });
+                    })()}
               </div>
             </div>
           </div>
