@@ -593,7 +593,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
       <div className="flex-1 overflow-y-auto pb-20">
         <div className="max-w-lg md:max-w-4xl mx-auto px-4 py-5 space-y-4">
           <div>
-            <h2 className="font-display font-semibold text-lg text-foreground">Your Week</h2>
+            <h2 className="font-display font-semibold text-lg text-foreground">Your week</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {GENERAL_CARDS.map(({ key, name, title, Icon, iconBg, iconColor, dot, items }) => (
@@ -835,7 +835,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
       <div className="flex-1 overflow-y-auto pb-20">
         <div className="max-w-lg md:max-w-4xl mx-auto px-4 py-5 space-y-4">
           <div>
-            <h2 className="font-display font-semibold text-lg text-foreground">Your Week</h2>
+            <h2 className="font-display font-semibold text-lg text-foreground">Your week</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               <span className={cn("font-medium", stageColor)}>{stageLabel}</span>
               {subLabel}
@@ -961,7 +961,7 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             className="w-full flex items-center justify-between text-left"
           >
             <div>
-              <h2 className="font-display font-semibold text-lg text-foreground">Your Week</h2>
+              <h2 className="font-display font-semibold text-lg text-foreground">Your week</h2>
               <p className="text-sm text-muted-foreground mt-0.5">
                 <span className={cn("font-medium", PHASE_COLOR[currentPhase])}>{currentPhase}</span>
                 {cycleData && <> · Day {currentDay} of {cycleLength}</>}

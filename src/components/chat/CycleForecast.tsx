@@ -364,7 +364,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                 >
                   <div className="flex items-center gap-2">
                     <Calendar className="w-5 h-5 text-primary" />
-                    <h3 className="font-display font-semibold text-lg text-foreground">Cycle Forecast</h3>
+                    <h3 className="font-display font-semibold text-lg text-foreground">Cycle forecast</h3>
                   </div>
                   <ChevronRight className={`w-5 h-5 text-muted-foreground transition-transform shrink-0 ${forecastOpen ? "rotate-90" : ""}`} />
                 </button>
@@ -437,7 +437,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                           key={date.toISOString()}
                           onClick={() => setSelectedDate(isSelected ? null : date)}
                           className={`
-                            aspect-square rounded-lg flex items-center justify-center text-sm font-medium transition-all duration-150
+                            aspect-square rounded-full flex items-center justify-center text-sm font-medium transition-all duration-150
                             ${!inMonth ? "opacity-30" : ""}
                             ${isSelected && !isToday ? "ring-1 ring-foreground" : ""}
                             ${isToday ? "bg-[#23201C] text-[#F4F1EA] rounded-full" : ""}
@@ -574,7 +574,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
           <ChevronLeft className="w-4 h-4" />
           Back
         </button>
-        <h2 className="font-display font-semibold text-sm">Cycle Forecast</h2>
+        <h2 className="font-display font-semibold text-sm">Cycle forecast</h2>
         <div className="w-12" />
       </div>
 
@@ -586,7 +586,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
             <div className="px-4 md:px-0 pt-4 pb-2">
               <div className="flex items-center gap-2 mb-1">
                 <Calendar className="w-5 h-5 text-primary" />
-                <h3 className="font-display font-semibold text-base text-foreground">Cycle Forecast</h3>
+                <h3 className="font-display font-semibold text-base text-foreground">Cycle forecast</h3>
               </div>
               <p className="text-xs text-muted-foreground mb-3">Tap any date to see insights for that day</p>
 
@@ -635,7 +635,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
                       key={date.toISOString()}
                       onClick={() => setSelectedDate(isSelected ? null : date)}
                       className={`
-                        aspect-square rounded-lg flex items-center justify-center text-sm font-medium transition-all duration-150
+                        aspect-square rounded-full flex items-center justify-center text-sm font-medium transition-all duration-150
                         ${!inMonth ? "opacity-30" : ""}
                         ${isSelected && !isToday ? "ring-1 ring-foreground" : ""}
                         ${isToday ? "bg-[#23201C] text-[#F4F1EA] rounded-full" : ""}

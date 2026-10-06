@@ -135,7 +135,7 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
       </svg>
       {/* Center text */}
       <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-        <span className={`${fontSize} font-semibold text-foreground font-display`}>{cycleDay}</span>
+        <span className={`${fontSize} font-semibold text-foreground font-display`} style={{ fontVariantNumeric: "lining-nums" }}>{cycleDay}</span>
         {showPhase ? (
           <span className={`${labelSize} font-medium text-muted-foreground`}>{phase}</span>
         ) : (
