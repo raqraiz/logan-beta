@@ -9,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { updateParticipant } from "@/lib/participantWrite";
-import { Loader2, Upload, Trash2, FileText } from "lucide-react";
+import { Loader2, Upload, Trash2, FileText, Megaphone, LogOut } from "lucide-react";
 import { HistoryImportDialog } from "./HistoryImportDialog";
 import { ProviderConnectCard } from "@/components/settings/ProviderConnectCard";
 import { ReferralCard } from "@/components/settings/ReferralCard";
@@ -40,9 +40,11 @@ interface SettingsDialogProps {
   currentLifeStage: LifeStage;
   onUpdated?: (newStage: LifeStage) => void;
   onHistoryImported?: () => void;
+  onOpenFeedback?: () => void;
+  onSignOut?: () => void;
 }
 
-export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentLifeStage, onUpdated, onHistoryImported }: SettingsDialogProps) {
+export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentLifeStage, onUpdated, onHistoryImported, onOpenFeedback, onSignOut }: SettingsDialogProps) {
   const [stage, setStage] = useState<LifeStage>(currentLifeStage);
   const [saving, setSaving] = useState(false);
   const [importerOpen, setImporterOpen] = useState(false);
@@ -587,6 +589,21 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
         <PrivacySection />
 
         <ReferralCard userId={userId} />
+
+        {(onOpenFeedback || onSignOut) && (
+          <div className="flex flex-col gap-2">
+            {onOpenFeedback && (
+              <Button variant="outline" className="w-full" onClick={() => { onOpenChange(false); onOpenFeedback(); }}>
+                <Megaphone className="w-4 h-4 mr-2" /> Send feedback
+              </Button>
+            )}
+            {onSignOut && (
+              <Button variant="outline" className="w-full" onClick={() => { onOpenChange(false); onSignOut(); }}>
+                <LogOut className="w-4 h-4 mr-2" /> Sign out
+              </Button>
+            )}
+          </div>
+        )}
 
         <div className="border-t border-destructive/30 pt-4">
           <Label className="text-sm font-medium mb-2 block text-destructive">Danger zone</Label>

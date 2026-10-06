@@ -1,14 +1,7 @@
-import { Home, Target } from "lucide-react";
+import { User, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type TabId = "home" | "ask" | "plan";
-
-const PHASE_HEX: Record<string, string> = {
-  Menstruation: "hsl(var(--foreground))",
-  Follicular: "hsl(var(--foreground))",
-  Ovulation: "hsl(var(--foreground))",
-  Luteal: "hsl(var(--foreground))",
-};
 
 interface BottomTabBarProps {
   activeTab: TabId;
@@ -18,86 +11,63 @@ interface BottomTabBarProps {
   phase?: string;
 }
 
-export function BottomTabBar({ activeTab, onTabChange, cycleDay, cycleLengthDays, phase }: BottomTabBarProps) {
-  const hasCycle = cycleDay != null && cycleLengthDays != null && phase != null;
-  const progress = hasCycle ? Math.min(cycleDay! / cycleLengthDays!, 1) * 100 : 0;
-  const radius = 22;
-  const strokeWidth = 1.5;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (progress / 100) * circumference;
-  const phaseColor = phase ? (PHASE_HEX[phase] || PHASE_HEX.Follicular) : PHASE_HEX.Follicular;
+const GRAD_ID = "logan-tab-grad";
 
+function RingIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className}>
+      <circle cx="12" cy="12" r="8" />
+    </svg>
+  );
+}
+
+const TABS: { id: TabId; label: string; tour: string; Icon: any }[] = [
+  { id: "home", label: "You", tour: "home", Icon: User },
+  { id: "ask", label: "Logan", tour: "ask", Icon: RingIcon },
+  { id: "plan", label: "Plan", tour: "plan", Icon: Target },
+];
+
+export function BottomTabBar({ activeTab, onTabChange }: BottomTabBarProps) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50">
-      <div className="relative bg-card border-t border-white/5">
-        <div className="max-w-md mx-auto flex items-end justify-around h-16 px-6 pb-2">
-          {/* Home tab */}
-          <button
-            onClick={() => onTabChange("home")}
-            className={cn(
-              "flex flex-col items-center justify-end gap-0.5 flex-1 transition-colors",
-              activeTab === "home" ? "text-primary" : "text-muted-foreground"
-            )}
-          >
-            <span data-tour="home" className="flex flex-col items-center gap-0.5">
-              <Home className="w-5 h-5" />
-              <span className={cn("text-sm font-medium", activeTab === "home" && "font-semibold")}>Home</span>
-            </span>
-          </button>
-
-          {/* Ask tab — cycle ring raised above, label aligned with others */}
-          <button
-            onClick={() => onTabChange("ask")}
-            className={cn(
-              "flex flex-col items-center justify-end flex-1 transition-colors",
-              activeTab === "ask" ? "text-primary" : "text-muted-foreground"
-            )}
-          >
-            {/* Raised circle with ring — Ask text inside, positioned at bottom to align with Home/Plan */}
-            <div data-tour="ask" className={cn(
-              "relative w-12 h-12 rounded-full bg-card flex items-center justify-center transition-all duration-200 -mt-6",
-              activeTab === "ask" ? "scale-105" : ""
-            )}>
-              <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 48 48">
-                <circle
-                  cx="24" cy="24" r="22"
-                  fill="none"
-                  strokeWidth="1.5"
-                  stroke="hsl(var(--border) / 0.3)"
-                />
-                {hasCycle && (
-                  <circle
-                    cx="24" cy="24" r="22"
-                    fill="none"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={strokeDashoffset}
-                    stroke={phaseColor}
-                    style={{ transition: "stroke-dashoffset 0.6s ease" }}
+      {/* Shared gradient for active icon strokes */}
+      <svg width="0" height="0" className="absolute" aria-hidden>
+        <defs>
+          <linearGradient id={GRAD_ID} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#FF2E92" />
+            <stop offset="50%" stopColor="#A22BE8" />
+            <stop offset="100%" stopColor="#2BD4D9" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="relative bg-card border-t border-border">
+        <div className="max-w-md mx-auto flex items-center justify-around h-16 px-6">
+          {TABS.map(({ id, label, tour, Icon }) => {
+            const active = activeTab === id;
+            return (
+              <button
+                key={id}
+                onClick={() => onTabChange(id)}
+                className="flex flex-col items-center justify-center flex-1 h-full"
+                aria-current={active ? "page" : undefined}
+              >
+                <span data-tour={tour} className="flex flex-col items-center gap-1">
+                  <Icon
+                    className={cn("w-6 h-6", active ? "tab-icon-active" : "text-muted-foreground")}
+                    style={active ? { stroke: `url(#${GRAD_ID})` } : undefined}
                   />
-                )}
-              </svg>
-              <span className={cn(
-                "text-sm font-bold relative z-10 transition-colors",
-                activeTab === "ask" ? "text-primary" : "text-muted-foreground"
-              )}>Ask</span>
-            </div>
-          </button>
-
-          {/* Plan tab */}
-          <button
-            onClick={() => onTabChange("plan")}
-            className={cn(
-              "flex flex-col items-center justify-end gap-0.5 flex-1 transition-colors",
-              activeTab === "plan" ? "text-primary" : "text-muted-foreground"
-            )}
-          >
-            <span data-tour="plan" className="flex flex-col items-center gap-0.5">
-              <Target className="w-5 h-5" />
-              <span className={cn("text-sm font-medium", activeTab === "plan" && "font-semibold")}>Plan</span>
-            </span>
-          </button>
+                  <span
+                    className={cn(
+                      "text-xs",
+                      active ? "text-foreground font-bold" : "text-muted-foreground font-medium"
+                    )}
+                  >
+                    {label}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </nav>

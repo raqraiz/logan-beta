@@ -96,11 +96,11 @@ function MetricBar({ icon: Icon, label, value, color }: { icon: any; label: stri
   return (
     <div className="flex items-center gap-2">
       <Icon className={`w-3.5 h-3.5 ${color} shrink-0`} />
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 w-14 shrink-0">{label}</span>
-      <div className="flex-1 h-1.5 rounded-full bg-muted/30 overflow-hidden">
+      <span className="text-[10px] text-muted-foreground/70 w-14 shrink-0">{label}</span>
+      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#EEE9DF" }}>
         <div
-          className={`h-full rounded-full bg-current ${color} transition-all duration-500`}
-          style={{ width: `${value * 100}%` }}
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${value * 100}%`, background: "#0E8A8F" }}
         />
       </div>
       <span className="text-[10px] text-muted-foreground/70 w-8 text-right tabular-nums">{Math.round(value * 100)}%</span>
@@ -168,13 +168,12 @@ export function DailyBriefingHero({
   return (
     <div className="w-full max-w-sm">
       <div className="relative rounded-2xl border border-border/30 bg-card overflow-hidden">
-        <div className={`absolute inset-0 bg-gradient-to-br ${phaseAccent} pointer-events-none`} />
 
         <div className="relative px-5 pt-5 pb-4">
           {/* Date strip */}
           <div className="flex items-center justify-between mb-4">
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-semibold">
-              Today's Briefing
+            <p className="text-xs text-muted-foreground font-semibold">
+              Today's briefing
             </p>
             <p className="text-[11px] text-muted-foreground/70">
               {format(new Date(), "EEE, MMM d")}
@@ -207,7 +206,7 @@ export function DailyBriefingHero({
             ) : !hideStage && (
             <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${phaseBg}`}>
               <span className={`w-1.5 h-1.5 rounded-full bg-current ${phaseText}`} />
-              <span className={`text-[11px] font-semibold uppercase tracking-wider ${phaseText}`}>
+              <span className={`text-[11px] font-semibold ${phaseText}`}>
                 {isNonCycling
                   ? (lifeStage === "postpartum"
                       ? "Postpartum"

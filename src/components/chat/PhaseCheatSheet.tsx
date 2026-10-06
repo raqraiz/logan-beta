@@ -106,7 +106,7 @@ function LevelDots({ level }: { level: Level }) {
       {[1, 2, 3].map((i) => (
         <div
           key={i}
-          className={`w-1.5 h-1.5 rounded-full ${i <= filled ? color : "bg-muted/30"} ${level === "variable" && i <= filled ? "animate-pulse" : ""}`}
+          className={`w-1.5 h-1.5 rounded-full ${i <= filled ? "bg-[#0E8A8F]" : "bg-[#EEE9DF]"} ${level === "variable" && i <= filled ? "animate-pulse" : ""}`}
         />
       ))}
     </div>
@@ -195,7 +195,6 @@ export function PhaseCheatSheet({ phase, cycleDay, cycleLengthDays, anchorSympto
                 onClick={() => !answered && setExpandedDim(isExpanded ? null : dim)}
               >
                 <div className="flex items-center gap-1.5 w-20 shrink-0 pt-0.5">
-                  <span className="text-xs">{meta.icon}</span>
                   <span className={`text-xs font-medium ${LEVEL_TEXT[info.level]}`}>{meta.label}</span>
                 </div>
                 <div className="flex-1 min-w-0">
