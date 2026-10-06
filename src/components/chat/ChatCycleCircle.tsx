@@ -112,16 +112,14 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
 
   return (
     <div className={`relative ${ringSize} flex-shrink-0`}>
-      {/* Inner disc with subtle depth */}
-      <div className="absolute inset-[6px] rounded-full bg-[hsl(220,10%,8%)] shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)]" />
       {/* SVG ring */}
-      <svg className="w-full h-full -rotate-90 relative z-10" viewBox="0 0 100 100">
+      <svg className="w-full h-full -rotate-90 relative z-10" viewBox="0 0 100 100"><defs><linearGradient id="logan-ring-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#FF2E92" /><stop offset="50%" stopColor="#A22BE8" /><stop offset="100%" stopColor="#2BD4D9" /></linearGradient></defs>
         {/* Track */}
         <circle
           cx="50" cy="50" r={radius}
           fill="none"
           strokeWidth={trackWidth}
-          stroke="hsl(220 10% 16%)"
+          stroke="#EEE9DF"
         />
         {/* Progress arc */}
         <circle
@@ -131,15 +129,15 @@ function CycleRing({ cycleDay, phase, cycleLengthDays, ringSize, fontSize, label
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
-          stroke={styles.hex}
+          stroke="url(#logan-ring-grad)"
           style={{ transition: "stroke-dashoffset 0.6s ease" }}
         />
       </svg>
       {/* Center text */}
       <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-        <span className={`${fontSize} font-bold ${styles.color}`}>{cycleDay}</span>
+        <span className={`${fontSize} font-semibold text-[#23201C] font-display`}>{cycleDay}</span>
         {showPhase ? (
-          <span className={`${labelSize} font-medium ${styles.color} opacity-80`}>{phase}</span>
+          <span className={`${labelSize} font-medium text-[#6E675F]`}>{phase}</span>
         ) : (
           <span className={`${labelSize} text-muted-foreground uppercase tracking-wide`}>Day</span>
         )}
@@ -275,13 +273,12 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
   if (size === "sm") {
     return (
       <div className="relative w-10 h-10 flex-shrink-0" title={`${label}${subLabel ? ` · ${subLabel}` : ""}`}>
-        <div className="absolute inset-[3px] rounded-full bg-[hsl(220,10%,8%)]" />
-        <svg className="w-full h-full relative z-10" viewBox="0 0 100 100">
+        <svg className="w-full h-full relative z-10" viewBox="0 0 100 100"><defs><linearGradient id="logan-ring-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#FF2E92" /><stop offset="50%" stopColor="#A22BE8" /><stop offset="100%" stopColor="#2BD4D9" /></linearGradient></defs>
           <circle
             cx="50" cy="50" r={radius}
             fill="none"
             strokeWidth="3.5"
-            stroke="hsl(var(--muted))"
+            stroke="#EEE9DF"
             opacity="0.9"
           />
           <circle
@@ -289,7 +286,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
             fill="none"
             strokeWidth="2.5"
             strokeLinecap="round"
-            stroke={styles.hex}
+            stroke="url(#logan-ring-grad)"
             strokeDasharray={dashAttr}
             opacity="0.95"
           />
@@ -298,7 +295,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
           {showGlyph ? (
             <span className="text-[14px] leading-none" aria-hidden>{glyph}</span>
           ) : (
-            <span className="text-[11px] font-bold leading-none" style={{ color: styles.hex }}>
+            <span className="text-[11px] font-semibold leading-none font-display text-[#23201C]">
               {displayNumber}
             </span>
           )}
@@ -310,13 +307,12 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
   return (
     <div className="flex items-center justify-center py-4">
       <div className="relative w-56 h-56 flex-shrink-0">
-        <div className="absolute inset-[6px] rounded-full bg-[hsl(220,10%,8%)] shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)]" />
-        <svg className="w-full h-full relative z-10" viewBox="0 0 100 100">
+        <svg className="w-full h-full relative z-10" viewBox="0 0 100 100"><defs><linearGradient id="logan-ring-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#FF2E92" /><stop offset="50%" stopColor="#A22BE8" /><stop offset="100%" stopColor="#2BD4D9" /></linearGradient></defs>
           <circle
             cx="50" cy="50" r={radius}
             fill="none"
             strokeWidth="5"
-            stroke="hsl(var(--muted))"
+            stroke="#EEE9DF"
             opacity="0.9"
           />
           <circle
@@ -324,7 +320,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
             fill="none"
             strokeWidth="3"
             strokeLinecap="round"
-            stroke={styles.hex}
+            stroke="url(#logan-ring-grad)"
             strokeDasharray={dashAttrLg}
             opacity="0.9"
           />
@@ -333,7 +329,7 @@ function LifeStageBadge({ lifeStage, size, postpartumStartDate, lossDate, dueDat
           {showGlyph ? (
             <span className="text-4xl leading-none" aria-hidden>{glyph}</span>
           ) : (
-            <span className="text-4xl font-bold leading-none" style={{ color: styles.hex }}>
+            <span className="text-4xl font-semibold leading-none font-display text-[#23201C]">
               {displayNumber}
             </span>
           )}
@@ -390,8 +386,7 @@ function PregnancyCircle({ size, dueDate, pregnancyLmp }: { size: "sm" | "md"; d
   if (size === "sm") {
     return (
       <div className="relative w-10 h-10 flex-shrink-0" title={`${trimesterLabel}${gestWeeks !== null ? ` · Week ${gestWeeks}` : ""}`}>
-        <div className="absolute inset-[3px] rounded-full bg-[hsl(220,10%,8%)]" />
-        <svg className="w-full h-full -rotate-90 relative z-10" viewBox="0 0 100 100">
+        <svg className="w-full h-full -rotate-90 relative z-10" viewBox="0 0 100 100"><defs><linearGradient id="logan-ring-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#FF2E92" /><stop offset="50%" stopColor="#A22BE8" /><stop offset="100%" stopColor="#2BD4D9" /></linearGradient></defs>
           {/* Trimester track segments */}
           <circle
             cx="50" cy="50" r={radius}
@@ -436,8 +431,7 @@ function PregnancyCircle({ size, dueDate, pregnancyLmp }: { size: "sm" | "md"; d
       <div className="relative w-56 h-56 flex-shrink-0">
         {/* Soft glow */}
         <div className="absolute inset-0 rounded-full bg-emerald-300/5 blur-xl" />
-        <div className="absolute inset-[6px] rounded-full bg-[hsl(220,10%,8%)] shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)]" />
-        <svg className="w-full h-full -rotate-90 relative z-10" viewBox="0 0 100 100">
+        <svg className="w-full h-full -rotate-90 relative z-10" viewBox="0 0 100 100"><defs><linearGradient id="logan-ring-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#FF2E92" /><stop offset="50%" stopColor="#A22BE8" /><stop offset="100%" stopColor="#2BD4D9" /></linearGradient></defs>
           {/* Trimester segments */}
           <circle
             cx="50" cy="50" r={radius}
@@ -548,17 +542,16 @@ export function ChatCycleCircle({ cycleDay, phase, cycleLengthDays, size = "md",
 
     return (
       <div className="relative w-10 h-10 flex-shrink-0 group cursor-pointer transition-colors duration-200">
-        <div className="absolute inset-[3px] rounded-full bg-[hsl(220,10%,8%)]" />
-        <svg className="w-full h-full -rotate-90 relative z-10" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="5" stroke="hsl(220 10% 16%)" />
+        <svg className="w-full h-full -rotate-90 relative z-10" viewBox="0 0 100 100"><defs><linearGradient id="logan-ring-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#FF2E92" /><stop offset="50%" stopColor="#A22BE8" /><stop offset="100%" stopColor="#2BD4D9" /></linearGradient></defs>
+          <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="5" stroke="#EEE9DF" />
           <circle
             cx="50" cy="50" r={radius} fill="none" strokeWidth="5" strokeLinecap="round"
             strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
-            stroke={styles.hex}
+            stroke="url(#logan-ring-grad)"
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-          <span className={`text-xs font-bold ${styles.color}`}>{cycleDay}</span>
+          <span className={`text-xs font-semibold text-[#23201C] font-display`}>{cycleDay}</span>
         </div>
         {showPpBadge && <PpBadgeInside postpartumStartDate={postpartumStartDate} size="sm" />}
       </div>
