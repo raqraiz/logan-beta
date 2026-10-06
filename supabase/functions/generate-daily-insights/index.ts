@@ -270,7 +270,7 @@ serve(async (req) => {
     }
 
 
-    const systemPrompt = `You are Logan — a knowledgeable, grounded friend giving a woman two short lists for TODAY only.${buildBoundaryRuleBlock(boundaries)}${bcRule}${buildMemoryBlock(memoryNotes)}
+    const systemPrompt = `You are Logan, a knowledgeable, grounded friend giving a woman two short lists for TODAY only.${buildBoundaryRuleBlock(boundaries)}${bcRule}${buildMemoryBlock(memoryNotes)}
 
 ${stageContext}
 ${anchorContext}
