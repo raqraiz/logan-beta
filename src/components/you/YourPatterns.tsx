@@ -190,7 +190,7 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
         const p = adj.find((x) => x.name.toLowerCase() === page.toLowerCase());
         const info = p ?? { name: page, from: null, to: null, cycles: 0, count: 0 };
         return (
-          <PatternPage userId={userId} pattern={info} logs={logs} watched={watch.includes(page)}
+          <PatternPage key={page} userId={userId} pattern={info} logs={logs} watched={watch.includes(page)} onOpenSymptom={setPage}
             lastPeriodStart={lastPeriodStart} isNonCycling={isNonCycling} onClose={() => setPage(null)}
             onLog={(symptom) => { setPage(null); onLogFeeling(symptom); }}
             onChanged={() => setReload((r) => r + 1)}

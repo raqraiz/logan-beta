@@ -29,3 +29,7 @@ Auth (sign-in, callbacks, roles, has_role), DB (migrations, RLS, grants, trigger
 - Symptom names: aliases live in symptom_aliases (alias -> main_name; old logs are never rewritten). Any code that counts, groups or matches symptoms must go through canonicalSymptom()/sameSymptom() in src/lib/symptomCatalog.ts client-side and together_canonical() server-side. Why: duplicates split Together totals and patterns.
 - "Your words" rename/remove live in user_word_prefs (own-row RLS; legacy localStorage copies are moved in and cleared on load), affect future logs only, and are deleted by "Delete all memory" and account deletion. Why: follows her across devices; old logs stay untouched.
 - Together is the only symptom library and logging screen (Everyone / Mine lenses plus log mode in TogetherTab, opened app-wide via openTogether() in src/lib/togetherOpen.ts); the in-chat LogOfferCard is the only other way to log. Viewing Together needs no consent; together_consent only decides whether her logs count. Why: one place, so totals and her symptoms never drift apart.
+
+<!-- LOVABLE:BEGIN -->
+- Symptom pairs use the locked together_daily_pairs cache, refreshed atomically by a statement trigger on the daily aggregate refresh and read only through get_together_pairs(); own fallback uses real cycle starts. Why: shared pairs never expose individuals and own pairings require recurrence across real cycles.
+<!-- LOVABLE:END -->
