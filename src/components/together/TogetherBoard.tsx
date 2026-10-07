@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { packSiblings } from "d3-hierarchy";
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
 import { knownSymptomDefinition, isSafetySymptom } from "@/lib/symptomPage";
 import { SafetyCallout } from "@/components/SafetyCallout";
 import { AggRow, CATEGORY_PILLS, TogetherCategory, countLabel, display, isExact, key } from "@/lib/togetherData";
@@ -12,7 +11,7 @@ function Pill({ active, onClick, children }: { active: boolean; onClick: () => v
     <button type="button" onClick={onClick} aria-pressed={active}
       className={cn("relative flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-3.5 text-[13px] shadow-none after:absolute after:inset-x-0 after:-inset-y-1 after:content-['']",
         active ? "border-[#23201C] bg-[#23201C] font-semibold text-background dark:border-foreground dark:bg-foreground" : "border-[#DDD7CC] bg-card font-medium text-foreground dark:border-border")}>
-      {active && <Check className="h-3.5 w-3.5" aria-hidden="true" />}{children}
+      {children}
     </button>
   );
 }
