@@ -4,7 +4,7 @@ export const SYMPTOM_GROUPS: SymptomGroup[] = ["Body", "Mood & mind", "Sleep & e
 
 export const GROUPED: Record<SymptomGroup, string[]> = {
   Body: ["Acne", "Back pain", "Belly pressure", "Blebs", "Bloating", "Blood clots", "Body aches", "Body odor changes", "Breast tenderness", "Burning sensation", "Cervical position", "Chills", "Chin hairs", "Congestion", "Constipation", "Cough", "Cramps", "Cystic acne", "Diarrhea", "Discharge", "Dry skin", "Ear fullness", "Ear itchiness", "Eating habits", "Feeling faint", "Feverish", "Frequent urination", "Gas", "Gum sensitivity", "Hair shedding", "Hand pain (CTS)", "Headache", "Hearing loss", "Heartburn", "Heavy legs", "High fever", "Hot ear", "Hot flashes", "Hunger", "Inflammation", "Itchy eyes", "Itchy scalp", "Itchy skin", "Joint pain", "Libido", "Mastitis", "Muffled hearing", "Muscle tension", "Musky", "Nausea", "Ovulation", "Ovulation discharge", "Ovulation pain", "Pelvic floor heaviness", "Period flu", "Phantom bites", "Prickly throat", "Reaction to mosquito bites", "Redness", "Sensitive to smells", "Shaking", "Shortness of breath", "Skin flare", "Sneezing", "Sore throat", "Spotting", "Stabbing pain", "Stomach pain", "Swollen glands", "Thirst", "Tingly hands", "Tooth sensitivity", "Vaginal dryness", "Vaginal itching", "Vertigo", "Vulvar itchiness"],
-  "Mood & mind": ["Anhedonia", "Anxiety", "Brain fog", "Confident", "Cravings", "Dissociative", "Emotional intensity", "Feeling alone", "Feeling fat", "Feeling hurt", "Feeling in body", "Feeling incompetent", "Feeling stuck", "Feeling surge", "Feeling thoughtful", "Feeling underwhelmed", "Guilt", "Irritability", "Low mood", "Low motivation", "Memory loss", "Mood swings", "Overwhelm", "Poor focus", "Positive shift", "Restlessness", "Shame", "Sharp focus", "Stress", "Sudden rage"],
+  "Mood & mind": ["Anhedonia", "Anxiety", "Brain fog", "Confident", "Cravings", "Dissociative", "Emotional intensity", "Feeling alone", "Feeling fat", "Feeling hurt", "Feeling in body", "Feeling incompetent", "Feeling stuck", "Feeling surge", "Feeling thoughtful", "Feeling underwhelmed", "Guilt", "Irritability", "Low mood", "Low motivation", "Memory loss", "Mood swings", "Overstimulated", "Overwhelm", "Poor focus", "Positive shift", "Restlessness", "Shame", "Sharp focus", "Stress", "Sudden rage"],
   "Sleep & energy": ["Dreams and nightmares", "Fatigue", "High energy", "Night sweats", "Rested", "Sleepy", "Trouble sleeping"],
 };
 
@@ -16,7 +16,7 @@ export const MERGES: Record<string, string[]> = {
   "Sudden rage": ["Shaking from anger", "Rage", "Yelling"],
   "Low mood": ["Sadness", "Bad mood", "Depressed", "Feeling crappy", "Feeling awful", "Dislike self", "Melancholy days"],
   "Low motivation": ["Lack of motivation", "Unmotivated"],
-  Overwhelm: ["Feeling of overload", "Overstimulated"],
+  Overwhelm: ["Feeling of overload"],
   Restlessness: ["Jittery", "Wired"],
   "Stomach pain": ["Abdominal pain", "Stomach cramps"],
   Acne: ["Breakouts", "Back breakout", "Shoulder breakout"],
@@ -25,7 +25,7 @@ export const MERGES: Record<string, string[]> = {
   "Breast tenderness": ["Nipples hurting", "Sensitive nipples", "Swollen breasts", "Nipple tenderness while nursing", "Painful breast"],
   Spotting: ["Spotty bleeding", "Breakthrough bleeding", "Bleeding"],
   Feverish: ["Low grade fever"],
-  "Hot flashes": ["Hot", "Overheating"],
+  "Hot flashes": ["Overheating"],
   Hunger: ["Starving"],
   Diarrhea: ["Soft stools", "Loose stool"],
   "Ovulation discharge": ["Egg white", "Slippery cervical fluid", "Ewcm"],
