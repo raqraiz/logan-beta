@@ -3,6 +3,8 @@ import { getAnalyticsConsent } from "@/lib/thirdPartyAnalytics";
 
 export const TOGETHER_CONSENT_VERSION = "together-v1";
 export const TOGETHER_CHANGED = "logan:together-consent";
+export const TOGETHER_BODY =
+  "Together shows what women like you are feeling, so you can see you're not the only one. If you join, the symptoms you log are added to anonymous totals. No one sees your name, your logs or your messages. Numbers only show when at least 10 women share something. You can leave anytime in Settings, and your logs stop counting from that day.";
 
 export type TogetherEvent =
   | "together_consent_shown"
