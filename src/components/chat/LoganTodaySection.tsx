@@ -30,6 +30,7 @@ interface Props {
   userId: string;
   cycle: LoganTodayCycle | null;
   onOpenYou: () => void;
+  onLogFeeling: () => void;
 }
 
 const PHASE_LABEL: Record<string, string> = {
@@ -69,11 +70,11 @@ function TodayRing({ cycle, onOpen }: { cycle: LoganTodayCycle; onOpen: () => vo
           {tracking ? (
             <>
               <span className="text-xs font-medium text-muted-foreground">Day</span>
-              <span className="font-heading text-[60px] font-semibold leading-none text-foreground [font-variant-numeric:lining-nums]">{cycle.cycleDay}</span>
+              <span className="font-display text-[60px] font-semibold leading-none text-foreground [font-variant-numeric:lining-nums]">{cycle.cycleDay}</span>
               <span className="mt-1 text-sm font-medium text-muted-foreground">{PHASE_LABEL[cycle.phase] ?? cycle.phase}</span>
             </>
           ) : (
-            <span className="font-heading text-3xl font-semibold text-foreground">Today</span>
+            <span className="font-display text-3xl font-semibold text-foreground">Today</span>
           )}
         </div>
       </div>
@@ -129,7 +130,7 @@ function PartnerToday({ userId, help, skip }: { userId: string; help: string[]; 
 }
 
 /** Logan home: today's ring, Today card and partner card at the start of today's messages. */
-export const LoganTodaySection = forwardRef<HTMLDivElement, Props>(function LoganTodaySection({ userId, cycle, onOpenYou }, ref) {
+export const LoganTodaySection = forwardRef<HTMLDivElement, Props>(function LoganTodaySection({ userId, cycle, onOpenYou, onLogFeeling }, ref) {
   const [shown, setShown] = useState(false);
   const [explainOpen, setExplainOpen] = useState(false);
   useEffect(() => { const t = requestAnimationFrame(() => setShown(true)); return () => cancelAnimationFrame(t); }, []);
@@ -161,7 +162,7 @@ export const LoganTodaySection = forwardRef<HTMLDivElement, Props>(function Loga
       {cycle && <TodayRing cycle={cycle} onOpen={onOpenYou} />}
 
       <div className="rounded-[28px] border border-border bg-card p-6">
-        <h2 className="font-heading text-[32px] font-semibold leading-tight text-foreground">Today</h2>
+        <h2 className="font-display text-[32px] font-semibold leading-tight text-foreground">Today</h2>
         <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
 
         {insights ? (
@@ -201,7 +202,7 @@ export const LoganTodaySection = forwardRef<HTMLDivElement, Props>(function Loga
 
         <div className="mt-6 flex items-center gap-3">
           <button type="button"
-            onClick={() => window.dispatchEvent(new CustomEvent("logan:open-symptom-log"))}
+            onClick={onLogFeeling}
             className="min-h-[44px] rounded-full bg-foreground px-5 text-sm font-semibold text-background">
             How I feel
           </button>
