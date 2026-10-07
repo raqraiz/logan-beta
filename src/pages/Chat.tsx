@@ -2626,12 +2626,12 @@ const Chat = () => {
                 )}
               </Button>
             </div>
-            <p className="mt-2 truncate text-center text-[12px] text-[#6E675F]">
+            <p className="mt-2 text-center font-['Quicksand'] text-[12px] text-[#6E675F] text-balance">
               {isOnboarding
                 ? "Answer Logan's questions to personalize your experience"
                 : (
                   <>
-                    Logan isn't a doctor.{" "}
+                    Not medical advice. Check with your doctor.{" · "}
                     <button type="button" onClick={() => setFeedbackOpen(true)} className="underline underline-offset-2">
                       Send feedback
                     </button>
