@@ -49,6 +49,25 @@ export function symptomDefinition(name: string): { text: string; safety: string 
 
 export type SymptomPageLog = LogRow & { notes?: string | null };
 
+/** Display complete short sentences only; never truncate medical advice or a biological claim. */
+export function symptomCardInsights(texts: (string | null)[]) {
+  const insights: string[] = [];
+  let doctorAdvice: string | null = null;
+  for (const text of texts) {
+    for (const sentence of text?.match(/[^.!?]+[.!?]*/g) ?? []) {
+      const clean = sentence.trim();
+      if (!clean) continue;
+      const short = !clean.includes(";") && clean.split(/\s+/).length <= 15;
+      if (/\b(doctor|urgent care|medical care|emergency)\b/i.test(clean)) {
+        doctorAdvice = short ? clean : /\b(sudden|today|urgent|emergency)\b/i.test(clean)
+          ? "Seek medical care today if symptoms are sudden, severe or getting worse."
+          : "See a doctor if symptoms are new, severe or lasting.";
+      } else if (short && !insights.includes(clean)) insights.push(clean);
+    }
+  }
+  return { insights: insights.slice(0, 3), doctorAdvice };
+}
+
 /** Read-only presentation: count all positive logs, but derive cycles with the same grouping as Your patterns. */
 export function symptomPageData(logs: SymptomPageLog[], name: string, lastPeriodStart?: string, now = Date.now()) {
   const lower = name.trim().toLowerCase();

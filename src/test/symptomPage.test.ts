@@ -1,8 +1,16 @@
 import { describe, it, expect } from "vitest";
-import { symptomDefinition, symptomPageData, type SymptomPageLog } from "@/lib/symptomPage";
+import { symptomCardInsights, symptomDefinition, symptomPageData, type SymptomPageLog } from "@/lib/symptomPage";
 
 const row = (date: string, day: number | null, notes: string | null = null): SymptomPageLog => ({ logged_at: `${date}T12:00:00Z`, cycle_day: day, symptoms: [{ name: "Cramps", severity: 3 }], notes });
 describe("Symptom page presentation data", () => {
+  it("keeps insights complete, short and separate from doctor advice", () => {
+    const result = symptomCardInsights(["Hormone shifts can affect fluid retention. This can ease later. See a doctor if symptoms persist.", "Sleep matters; stress matters too.", "One two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen."]);
+    expect(result.insights).toEqual(["Hormone shifts can affect fluid retention.", "This can ease later."]);
+    expect(result.doctorAdvice).toBe("See a doctor if symptoms persist.");
+  });
+  it("retains urgency when long doctor advice needs a shorter line", () => {
+    expect(symptomCardInsights(["See a doctor today if these symptoms have appeared suddenly and are severe or becoming worse over time."]).doctorAdvice).toBe("Seek medical care today if symptoms are sudden, severe or getting worse.");
+  });
   it("counts positive logs and shared cycle groups", () => {
     expect(symptomPageData([row("2026-08-19", 19), row("2026-08-20", 20), row("2026-09-19", 19)], "Cramps")).toMatchObject({ count: 3, cycles: 2, trend: null });
   });
