@@ -962,6 +962,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
         {/* Your patterns */}
         {userId && (
           <YourPatterns
+            headsupVisible={headsupVisible}
             userId={userId}
             lastPeriodStart={cycleData.lastPeriodStart}
             cycleLengthDays={cycleData.cycleLengthDays}

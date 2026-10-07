@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SymptomHistory } from "@/components/home/SymptomHistory";
+import { PatternPage } from "@/components/you/PatternPage";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 
 type Status = "Confirmed" | "Emerging" | "Watching";
-interface Pattern { name: string; from: number | null; to: number | null; cycles: number; status: Status }
+interface Pattern { name: string; from: number | null; to: number | null; cycles: number; count: number; status: Status }
 
 const DAY = 86400000;
 
@@ -51,7 +52,7 @@ export function computePatterns(rows: { logged_at: string; cycle_day: number | n
     else if (best) status = "Emerging";
     else if (cycles >= 2 || now - v.last < 45 * DAY) status = "Watching";
     if (!status) continue;
-    out.push({ name: key.charAt(0).toUpperCase() + key.slice(1), from: best?.from ?? null, to: best?.to ?? null, cycles, status });
+    out.push({ name: key.charAt(0).toUpperCase() + key.slice(1), from: best?.from ?? null, to: best?.to ?? null, cycles, count: pts.length, status });
   }
   const rank: Record<Status, number> = { Confirmed: 0, Emerging: 1, Watching: 2 };
   return out.sort((a, b) => rank[a.status] - rank[b.status] || b.cycles - a.cycles);
@@ -70,9 +71,10 @@ interface Props {
   isNonCycling: boolean;
   lifeStage?: string;
   onLogFeeling: () => void;
+  headsupVisible?: boolean;
 }
 
-export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCycling, lifeStage, onLogFeeling }: Props) {
+export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCycling, lifeStage, onLogFeeling, headsupVisible }: Props) {
   const [patterns, setPatterns] = useState<Pattern[] | null>(null);
   const [open, setOpen] = useState(false);
   const [logged, setLogged] = useState<string[]>([]);
@@ -83,6 +85,10 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
   const [adding, setAdding] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  const [page, setPage] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const [timing, setTiming] = useState<Record<string, [number, number]>>({});
 
   useEffect(() => {
     const since = new Date(Date.now() - 200 * DAY).toISOString();
@@ -100,7 +106,18 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
         const w = (data?.watch_symptoms ?? []) as string[];
         setWatch(w.length ? w : data?.anchor_symptom ? [cap(data.anchor_symptom)] : []);
       });
-  }, [userId]);
+    // Her own corrections: hidden patterns and corrected timings.
+    supabase.from("user_memory_notes").select("note, source").eq("user_id", userId).eq("active", true)
+      .in("source", ["pattern_hidden", "insight_correction"]).order("created_at", { ascending: true })
+      .then(({ data }) => {
+        const h = new Set<string>(); const t: Record<string, [number, number]> = {};
+        for (const n of data ?? []) {
+          if (n.source === "pattern_hidden") { const m = n.note.match(/^(.+?) isn't a pattern for you/); if (m) h.add(m[1].toLowerCase()); }
+          else { const m = n.note.match(/^Your (.+) usually comes around days (\d+) to (\d+)\.$/); if (m) t[m[1].toLowerCase()] = [+m[2], +m[3]]; }
+        }
+        setHidden(h); setTiming(t);
+      });
+  }, [userId, reload]);
 
   const openChooser = () => { setDraft(watch); setCustom(""); setAdding(false); setSaveError(false); setChooser(true); };
   const toggle = (n: string) => setDraft((d) => d.includes(n) ? d.filter((x) => x !== n) : d.length >= 3 ? d : [...d, n]);
@@ -113,14 +130,18 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
 
   const options = [...new Set([...watch, ...draft, ...logged, ...GOOD_DAYS])];
   type Row = { key: string; name: string; label: string; status: Status | null };
+  const adj = (patterns ?? []).filter((p) => !hidden.has(p.name.toLowerCase())).map((p) => {
+    const t = timing[p.name.toLowerCase()];
+    return t ? { ...p, from: t[0], to: t[1], status: p.status === "Watching" ? "Emerging" as Status : p.status } : p;
+  });
   const rows: Row[] = [];
   for (const w of watch) {
-    const p = patterns?.find((x) => x.name.toLowerCase() === w.toLowerCase());
+    const p = adj.find((x) => x.name.toLowerCase() === w.toLowerCase());
     rows.push(p && p.from !== null
       ? { key: w, name: w, label: p.from === p.to ? `day ${p.from}` : `days ${p.from} to ${p.to}`, status: p.status }
       : { key: w, name: w, label: "Watching. Keep logging and I'll spot the timing.", status: null });
   }
-  for (const p of patterns ?? []) if (!watch.some((w) => w.toLowerCase() === p.name.toLowerCase()))
+  for (const p of adj) if (!watch.some((w) => w.toLowerCase() === p.name.toLowerCase()))
     rows.push({ key: p.name, name: p.name, label: p.from === null ? "no clear timing yet" : p.from === p.to ? `day ${p.from}` : `days ${p.from} to ${p.to}`, status: p.status });
   const visible = showAll ? rows : rows.slice(0, 3);
 
@@ -144,7 +165,7 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
               const st = p.status ? STYLE[p.status] : null;
               const watched = watch.includes(p.key);
               return (
-                <button key={p.key} type="button" onClick={() => setOpen(true)}
+                <button key={p.key} type="button" onClick={() => setPage(p.key)}
                   className={`flex w-full items-center gap-3 px-5 py-4 text-left ${i > 0 ? "border-t border-border" : ""}`}>
                   <span className={`h-2.5 w-2.5 shrink-0 rounded-full border-2 ${st ? st.dot : STYLE.Watching.dot}`} aria-hidden />
                   <span className="min-w-0 flex-1 text-[15px] text-foreground">
@@ -156,9 +177,9 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
               );
             })}
             {rows.length > 3 && (
-              <button type="button" onClick={() => setShowAll((v) => !v)}
+              <button type="button" onClick={() => setOpen(true)}
                 className="w-full border-t border-border px-5 py-3 text-left text-[13px] font-semibold text-[#0B7479] dark:text-[#2BD4D9]">
-                {showAll ? "Show less" : "See all"}
+                See all
               </button>
             )}
           </>
@@ -166,6 +187,20 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
       </div>
       <SymptomHistory open={open} onOpenChange={setOpen} userId={userId} lastPeriodStart={lastPeriodStart}
         cycleLengthDays={cycleLengthDays} isNonCycling={isNonCycling} lifeStage={lifeStage} />
+      {page && (() => {
+        const p = adj.find((x) => x.name.toLowerCase() === page.toLowerCase());
+        const info = p ?? { name: page, from: null, to: null, cycles: 0, count: 0 };
+        return (
+          <PatternPage userId={userId} pattern={info} watched={watch.includes(page)} headsupVisible={headsupVisible}
+            lastPeriodStart={lastPeriodStart} cycleLengthDays={cycleLengthDays} onClose={() => setPage(null)}
+            onChanged={() => setReload((r) => r + 1)}
+            onUnstar={async () => {
+              const next = watch.filter((w) => w !== page);
+              const { error } = await supabase.from("participants").update({ watch_symptoms: next }).eq("user_id", userId);
+              if (!error) setWatch(next);
+            }} />
+        );
+      })()}
       <Drawer open={chooser} onOpenChange={setChooser}>
         <DrawerContent>
           <DrawerHeader><DrawerTitle className="font-display text-2xl">What should I watch for you?</DrawerTitle></DrawerHeader>
