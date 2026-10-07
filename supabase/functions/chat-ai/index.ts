@@ -5227,7 +5227,7 @@ serve(async (req) => {
         if (/\b(all week|this week|for a week|past week|7 days|seven days)\b/.test(t)) days = [{ label: "This past week", days: 7 }, { label: "Just today", days: 1 }];
         else if (/\b(few days|couple of days|couple days|3 days|three days|since (monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b/.test(t)) days = [{ label: "Last 3 days", days: 3 }, { label: "Just today", days: 1 }];
         else if (/\b(yesterday|last night|two days|2 days|since yesterday)\b/.test(t)) days = [{ label: "Today and yesterday", days: 2 }, { label: "Just today", days: 1 }];
-        baseMeta.log_offer = { symptoms: offer.slice(0, 4), options: days };
+        baseMeta.log_offer = { symptoms: offer.slice(0, 4), options: days, cycle_day: symptomCycleInfo?.cycleDay ?? null, cycle_phase: symptomCycleInfo?.phase ?? null };
       }
     }
 
