@@ -103,9 +103,9 @@ export function NutritionTodayWidget({ userId }: Props) {
                   : totals.count > 0 ? `${totals.count} meal${totals.count > 1 ? "s" : ""} logged` : "Tap to set a target & log meals"}
               </p>
               <div className="space-y-1">
-                <MiniBar label="Protein" value={totals.p} target={target.p} color="bg-rose-500" />
-                <MiniBar label="Carbs" value={totals.c} target={target.c} color="bg-amber-500" />
-                <MiniBar label="Fat" value={totals.f} target={target.f} color="bg-sky-500" />
+                <MiniBar label="Protein" value={totals.p} target={target.p} color="bg-[#0E8A8F]" />
+                <MiniBar label="Carbs" value={totals.c} target={target.c} color="bg-[#0E8A8F]" />
+                <MiniBar label="Fat" value={totals.f} target={target.f} color="bg-[#0E8A8F]" />
               </div>
             </div>
           </div>
