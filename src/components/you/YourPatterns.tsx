@@ -13,28 +13,12 @@ const DAY = 86400000;
 const GOOD_DAYS = ["Lots of energy", "Feeling confident", "Clear head", "Sleeping well"];
 const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
 
-export function computePatterns(rows: { logged_at: string; cycle_day: number | null; symptoms: unknown }[], now = Date.now()): Pattern[] {
-  const by: Record<string, { pts: { day: number; start: number }[]; last: number }> = {};
-  for (const r of rows) {
-    if (!r.cycle_day || r.cycle_day < 1) continue;
-    const t = new Date(r.logged_at).getTime();
-    const start = t - (r.cycle_day - 1) * DAY;
-    for (const s of (Array.isArray(r.symptoms) ? r.symptoms : []) as { name?: string; severity?: number }[]) {
-      const raw = typeof s === "string" ? s : s?.name;
-      if (!raw || !String(raw).trim()) continue;
-      if (typeof s !== "string" && typeof s?.severity === "number" && s.severity <= 0) continue;
-      const key = String(raw).trim().toLowerCase();
-      by[key] ??= { pts: [], last: 0 };
-      by[key].pts.push({ day: r.cycle_day, start });
-      by[key].last = Math.max(by[key].last, t);
-    }
-  }
+export function computePatterns(rows: LogRow[], now = Date.now()): Pattern[] {
+  const by = symptomPoints(rows);
   const out: Pattern[] = [];
-  for (const [key, v] of Object.entries(by)) {
-    // Group estimated cycle starts that land within ~10 days of each other as one cycle.
-    const pts = [...v.pts].sort((a, b) => a.start - b.start);
-    const groups: number[][] = []; let anchor = -Infinity;
-    for (const p of pts) { if (p.start - anchor > 10 * DAY) { groups.push([]); anchor = p.start; } groups[groups.length - 1].push(p.day); }
+  for (const [key, pts] of Object.entries(by)) {
+    const v = { last: Math.max(...pts.map((p) => p.t)) };
+    const groups = groupCycles(pts).map((g) => g.days);
     const cycles = groups.length;
     // Timing only when 2+ cycles have most of their logs inside the same window of 7 days or less.
     let best: { from: number; to: number; n: number } | null = null;
