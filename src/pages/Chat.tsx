@@ -702,29 +702,8 @@ const Chat = () => {
     }
   }, [user, isOnboarding, messages, lifeStage, postpartumStartDate, postpartumActive, lossDate, dueDate, pregnancyLmp, onHormonalBc, bcMethod, participantCycle]);
 
-  // Scroll to bottom on initial load
   const hasScrolledToBottom = useRef(false);
-  useEffect(() => {
-    if (isOnboarding) return; // Disable auto-scroll during onboarding, let users read at their own pace
-    if (messages.length > 0 && !hasScrolledToBottom.current) {
-      hasScrolledToBottom.current = true;
-      // Use setTimeout to ensure DOM is rendered
-      setTimeout(() => {
-        if (todaySectionRef.current) todaySectionRef.current.scrollIntoView({ behavior: "instant" as ScrollBehavior, block: "start" });
-        else scrollRef.current?.scrollIntoView({ behavior: "instant" });
-      }, 50);
-      // Cards above Today can grow as they render; keep Today pinned for the
-      // first moments unless she starts scrolling herself.
-      let touched = false;
-      const stop = () => { touched = true; };
-      window.addEventListener("wheel", stop, { once: true, passive: true });
-      window.addEventListener("touchstart", stop, { once: true, passive: true });
-      [400, 1000, 2000, 3500].forEach((ms) => setTimeout(() => {
-        if (!touched) todaySectionRef.current?.scrollIntoView({ behavior: "instant" as ScrollBehavior, block: "start" });
-      }, ms));
-      setTimeout(() => { window.removeEventListener("wheel", stop); window.removeEventListener("touchstart", stop); }, 4000);
-    }
-  }, [messages, isOnboarding]);
+  const stickToBottomRef = useRef(true);
 
   // Auto-scroll on new messages
   const lastAutoScrolledIdRef = useRef<string | null>(null);
@@ -747,14 +726,16 @@ const Chat = () => {
     }
     if (lastMsg.role === "assistant") {
       // Scroll to the START of the new assistant message so the user reads from the top
+      stickToBottomRef.current = false;
       requestAnimationFrame(() => {
         lastMessageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       });
       return;
     }
 
-    // For user messages, only auto-scroll to bottom if already near bottom
-    if (lastMsg.role === "user" && isNearBottomRef.current) {
+    // When she sends a message, always bring her to the bottom
+    if (lastMsg.role === "user") {
+      stickToBottomRef.current = true;
       scrollRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, isOnboarding]);
@@ -1548,21 +1529,73 @@ const Chat = () => {
 
   // When switching tabs, position the scroll appropriately
   useEffect(() => {
-    if (effectiveTab === "ask") {
-      // On Logan, land on the Today section (else the start of the latest message)
-      requestAnimationFrame(() => {
-        if (todaySectionRef.current) { todaySectionRef.current.scrollIntoView({ behavior: "instant" as ScrollBehavior, block: "start" }); return; }
-        lastMessageRef.current?.scrollIntoView({ behavior: "instant" as ScrollBehavior, block: "start" });
-      });
-    } else {
-      // On Home / Plan / any other tab, start at the top of the view
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-      });
-    }
+    if (effectiveTab === "ask") return; // Logan lands on the newest message (see the pinning effect below)
+    // On Home / Plan / any other tab, start at the top of the view
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    });
   }, [effectiveTab]);
+
+  // Stay pinned to the newest message when Logan opens (or first loads) and
+  // while late content (ring widgets, cards, images) finishes sizing. Pinning
+  // ends as soon as she scrolls up herself, and resumes if she scrolls back down.
+  const getViewport = () =>
+    scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
+  const pinToBottom = () => {
+    const viewport = getViewport();
+    if (viewport) viewport.scrollTop = viewport.scrollHeight;
+    else scrollRef.current?.scrollIntoView({ behavior: "instant" });
+  };
+  const hasMessages = messages.length > 0;
+  useEffect(() => {
+    if (isOnboarding || effectiveTab !== "ask" || !hasMessages) return;
+    const viewport = getViewport();
+    if (!viewport) return;
+    hasScrolledToBottom.current = true;
+    stickToBottomRef.current = true;
+    pinToBottom();
+    requestAnimationFrame(pinToBottom);
+
+    let userDriven = false;
+    let userTimer: ReturnType<typeof setTimeout> | undefined;
+    const markUser = () => {
+      userDriven = true;
+      clearTimeout(userTimer);
+      userTimer = setTimeout(() => { userDriven = false; }, 800);
+    };
+    const onScroll = () => {
+      if (!userDriven) return;
+      const distance = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      stickToBottomRef.current = distance < SCROLL_NEAR_BOTTOM_PX;
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (["ArrowUp", "PageUp", "Home", "ArrowDown", "PageDown", "End", " "].includes(e.key)) markUser();
+    };
+    const resizeObserver = new ResizeObserver(() => {
+      if (stickToBottomRef.current) pinToBottom();
+    });
+    resizeObserver.observe(viewport);
+    if (viewport.firstElementChild) resizeObserver.observe(viewport.firstElementChild);
+
+    viewport.addEventListener("wheel", markUser, { passive: true });
+    viewport.addEventListener("touchstart", markUser, { passive: true });
+    viewport.addEventListener("touchmove", markUser, { passive: true });
+    viewport.addEventListener("pointerdown", markUser, { passive: true });
+    window.addEventListener("keydown", onKey);
+    viewport.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      clearTimeout(userTimer);
+      resizeObserver.disconnect();
+      viewport.removeEventListener("wheel", markUser);
+      viewport.removeEventListener("touchstart", markUser);
+      viewport.removeEventListener("touchmove", markUser);
+      viewport.removeEventListener("pointerdown", markUser);
+      window.removeEventListener("keydown", onKey);
+      viewport.removeEventListener("scroll", onScroll);
+    };
+  }, [effectiveTab, hasMessages, isOnboarding]);
 
   // Show loading only while checking auth status
   if (authLoading) {
