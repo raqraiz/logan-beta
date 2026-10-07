@@ -39,7 +39,7 @@ export const MERGES: Record<string, string[]> = {
   Anxiety: ["Feeling scared", "Dread"],
   Stress: ["Feeling stressed"],
   Headache: ["Pain above eye", "Head hurts"],
-  Cravings: ["Sugar craving", "Carb craving", "Salt craving"],
+  Cravings: ["Sugar craving", "Carb craving", "Salt craving", "Feeling snacky"],
   "Joint pain": ["Knee pain"],
   Heartburn: ["Indigestion"],
   Thirst: ["Dehydrated"],
