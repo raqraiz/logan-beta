@@ -124,7 +124,7 @@ export function stageInsight(c: Community, mine: Window | null): string | null {
   return `Starts ${n} days ${d > 0 ? "later" : "earlier"} than most women in your stage.`;
 }
 
-export function WhenWomenFeelCard({ c, mine, hasCycle }: { c: Community; mine: Window | null; hasCycle: boolean }) {
+export function WhenWomenFeelCard({ c, mine, loggedDays, hasCycle }: { c: Community; mine: Window | null; loggedDays: number[]; hasCycle: boolean }) {
   const [tab, setTab] = useState<"stage" | "everyone">("stage");
   if (!hasCycle || !c.loaded) return null;
   if (!c.joined) {
