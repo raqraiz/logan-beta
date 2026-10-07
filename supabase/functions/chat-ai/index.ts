@@ -2840,6 +2840,7 @@ serve(async (req) => {
     // e.g. "log insomnia for April 15 and April 22", "add insomnia on Apr 15, Apr 22",
     // "go ahead and add insomnia to April 15 and 22", "yes please add those".
     let backfillConfirmation = "";
+    let backfillAsk = "";
     {
       const backfillIntent = /\b(add|log|save|record|put|backfill|move|file|enter|insert|create)\b/i.test(userMessage)
         || /\b(go ahead|yes please|please do|do it|please add|do that)\b/i.test(userMessage);
@@ -2918,7 +2919,7 @@ serve(async (req) => {
         if (symptoms.length === 0 && uniq.size > 0 && explicitLog && datesInMessage) {
           const firstDate = Array.from(uniq.values()).sort((a, b) => a.getTime() - b.getTime())[0];
           const lbl = `${MONTH_NAMES[firstDate.getUTCMonth()]} ${firstDate.getUTCDate()}`;
-          backfillConfirmation = `Internal note (do NOT quote or mention this note): Nothing was saved. Reply with exactly this one question and nothing else: "Which symptom should I log for ${lbl}?"`;
+          backfillAsk = `Internal note (do NOT quote or mention this note): Nothing was saved. Reply with exactly this one question and nothing else: "Which symptom should I log for ${lbl}?"`;
         }
         if (symptoms.length > 0 && uniq.size > 0) {
           const rows = Array.from(uniq.values()).map(d => ({
@@ -4615,7 +4616,7 @@ serve(async (req) => {
     }
     const memoryNotes = await fetchMemoryNotes(supabase, user.id);
 
-    const backfillBlock = backfillConfirmation ? `\n\n${backfillConfirmation}\n` : "";
+    const backfillBlock = backfillConfirmation ? `\n\n${backfillConfirmation}\n` : backfillAsk ? `\n\n${backfillAsk}\n` : "";
     const libraryBlock = libraryConfirmation ? `\n\n${libraryConfirmation}\n` : "";
 
     // Sample of the shared symptom library for the model to compare against
