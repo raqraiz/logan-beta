@@ -29,14 +29,26 @@ Deno.serve(async (req) => {
 
     const prompt = `You are Logan, a knowledgeable, grounded friend. In at most 2 short sentences (max 30 words total), explain in plain words why "${symptom}" often shows up around cycle days ${from} to ${to}, and when it usually eases. Use general biology (hormone shifts), "often"/"can", never certainty.
 NO DIAGNOSIS: never name or imply a condition. Never name medication or dosage. No emojis, no lists.${safety ? " This symptom can need prompt care: do NOT say it is caused only by her cycle; say hormones can play a part, nothing more." : ""}${CALM_VOICE_RULE}`;
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
       method: "POST",
-      headers: { Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: [{ role: "user", content: prompt }] }),
+      headers: { "Lovable-API-Key": Deno.env.get("LOVABLE_API_KEY") ?? "", "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
+      body: JSON.stringify({ model: "openai/gpt-6-astra", input: prompt, stream: true, store: false, reasoning: { effort: "low" } }),
     });
-    if (!r.ok) return json({ safety, text: null }, r.status === 429 || r.status === 402 ? r.status : 200);
-    const d = await r.json();
-    const text = dashes(String(d?.choices?.[0]?.message?.content ?? "").trim()) || null;
+    if (!r.ok || !r.body) return json({ safety, text: null }, r.status === 429 || r.status === 402 ? r.status : 200);
+    // Consume the SSE stream and keep only the output text.
+    let out = ""; let buf = "";
+    const reader = r.body.pipeThrough(new TextDecoderStream()).getReader();
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += value;
+      const lines = buf.split("\n"); buf = lines.pop() ?? "";
+      for (const l of lines) {
+        if (!l.startsWith("data:")) continue;
+        try { const ev = JSON.parse(l.slice(5).trim()); if (ev.type === "response.output_text.delta") out += ev.delta ?? ""; } catch { /* ignore */ }
+      }
+    }
+    const text = dashes(out.trim()) || null;
     return json({ safety, text });
   } catch (e) {
     console.error("[pattern-explain]", (e as Error).message);
