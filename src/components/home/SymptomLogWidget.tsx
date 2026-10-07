@@ -87,6 +87,7 @@ interface SymptomLogWidgetProps {
   lastPeriodStart?: string;
   cycleLengthDays?: number;
   isNonCycling?: boolean;
+  initialSymptom?: string;
   onLogged?: (entry: { symptoms: { name: string; severity: number }[]; notes: string; isToday: boolean }) => void;
 }
 
@@ -100,9 +101,9 @@ interface CommunitySymptom {
   aliases?: string[] | null;
 }
 
-export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cycleLengthDays, isNonCycling, onLogged }: SymptomLogWidgetProps) {
+export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cycleLengthDays, isNonCycling, initialSymptom, onLogged }: SymptomLogWidgetProps) {
   const [expanded, setExpanded] = useState(true);
-  const [selected, setSelected] = useState<SymptomEntry[]>([]);
+  const [selected, setSelected] = useState<SymptomEntry[]>(() => initialSymptom ? [{ name: initialSymptom, severity: 0 }] : []);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [todayCount, setTodayCount] = useState(0);

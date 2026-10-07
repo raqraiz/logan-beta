@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SymptomHistory } from "@/components/home/SymptomHistory";
 import { PatternPage } from "@/components/you/PatternPage";
+import type { SymptomPageLog } from "@/lib/symptomPage";
 import { symptomPoints, groupCycles, PATTERNS_CHANGED, PATTERN_WINDOW_DAYS, type LogRow } from "@/lib/patternCycles";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 
@@ -55,12 +56,13 @@ interface Props {
   cycleLengthDays: number;
   isNonCycling: boolean;
   lifeStage?: string;
-  onLogFeeling: () => void;
+  onLogFeeling: (symptom?: string) => void;
   headsupVisible?: boolean;
 }
 
 export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCycling, lifeStage, onLogFeeling, headsupVisible }: Props) {
   const [patterns, setPatterns] = useState<Pattern[] | null>(null);
+  const [logs, setLogs] = useState<SymptomPageLog[]>([]);
   const [open, setOpen] = useState(false);
   const [logged, setLogged] = useState<string[]>([]);
   const [watch, setWatch] = useState<string[]>([]);
@@ -77,8 +79,9 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
 
   useEffect(() => {
     const since = new Date(Date.now() - PATTERN_WINDOW_DAYS * DAY).toISOString();
-    supabase.from("symptom_logs").select("logged_at, cycle_day, symptoms").eq("user_id", userId).gte("logged_at", since)
+    supabase.from("symptom_logs").select("logged_at, cycle_day, symptoms, notes").eq("user_id", userId).gte("logged_at", since).order("logged_at", { ascending: false })
       .then(({ data }) => {
+        setLogs(data ?? []);
         setPatterns(computePatterns(data ?? []));
         const names = new Set<string>();
         for (const r of data ?? []) for (const x of (Array.isArray(r.symptoms) ? r.symptoms : []) as any[]) {
@@ -126,6 +129,7 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
   });
   const rows: Row[] = [];
   for (const w of watch) {
+    if (hidden.has(w.toLowerCase())) continue;
     const p = adj.find((x) => x.name.toLowerCase() === w.toLowerCase());
     rows.push(p && p.from !== null
       ? { key: w, name: w, label: p.from === p.to ? `day ${p.from}` : `days ${p.from} to ${p.to}`, status: p.status }
@@ -147,7 +151,7 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
         ) : rows.length === 0 ? (
           <p className="p-5 text-sm text-muted-foreground">
             Log how you feel for a couple of cycles and your patterns will show up here.{" "}
-            <button type="button" onClick={onLogFeeling} className="font-semibold text-[#0B7479] dark:text-[#2BD4D9] underline underline-offset-2">How I feel</button>
+            <button type="button" onClick={() => onLogFeeling()} className="font-semibold text-[#0B7479] dark:text-[#2BD4D9] underline underline-offset-2">How I feel</button>
           </p>
         ) : (
           <>
@@ -181,13 +185,15 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
         const p = adj.find((x) => x.name.toLowerCase() === page.toLowerCase());
         const info = p ?? { name: page, from: null, to: null, cycles: 0, count: 0 };
         return (
-          <PatternPage userId={userId} pattern={info} watched={watch.includes(page)} headsupVisible={headsupVisible}
-            lastPeriodStart={lastPeriodStart} cycleLengthDays={cycleLengthDays} onClose={() => setPage(null)}
+          <PatternPage userId={userId} pattern={info} logs={logs} watched={watch.includes(page)}
+            lastPeriodStart={lastPeriodStart} isNonCycling={isNonCycling} onClose={() => setPage(null)}
+            onLog={(symptom) => { setPage(null); onLogFeeling(symptom); }}
             onChanged={() => setReload((r) => r + 1)}
             onUnstar={async () => {
               const next = watch.filter((w) => w !== page);
               const { error } = await supabase.from("participants").update({ watch_symptoms: next }).eq("user_id", userId);
-              if (!error) setWatch(next);
+              if (error) throw error;
+              setWatch(next);
             }} />
         );
       })()}
