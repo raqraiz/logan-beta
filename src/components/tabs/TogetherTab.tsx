@@ -55,11 +55,13 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
   useEffect(() => {
     supabase.from("user_roles").select("role").eq("user_id", userId).in("role", ["admin", "super_admin"])
       .then(({ data }) => setIsAdmin((data?.length ?? 0) > 0));
-    // Her own logs only (own-row access), for "you too" and the symptom page.
-    const since = new Date(Date.now() - 90 * 86400000).toISOString();
-    supabase.from("symptom_logs").select("logged_at, cycle_day, symptoms, notes").eq("user_id", userId)
-      .gte("logged_at", since).order("logged_at", { ascending: false })
-      .then(({ data }) => setLogs((data ?? []) as SymptomPageLog[]));
+    // Her own logs only (own-row access), last 12 months, for "you too" and the symptom page. Together totals keep 90 days server-side.
+    const since = new Date(Date.now() - OWN_LOG_WINDOW_DAYS * 86400000).toISOString();
+    Promise.all([
+      supabase.from("symptom_logs").select("logged_at, cycle_day, symptoms, notes").eq("user_id", userId)
+        .gte("logged_at", since).order("logged_at", { ascending: false }),
+      loadCycleStarts(userId),
+    ]).then(([{ data }, starts]) => setLogs(withRealCycleDays((data ?? []) as SymptomPageLog[], starts)));
     supabase.from("participants").select("watch_symptoms").eq("user_id", userId).maybeSingle()
       .then(({ data }) => setWatch((data?.watch_symptoms ?? []) as string[]));
   }, [userId]);

@@ -4,6 +4,7 @@ import { SymptomHistory } from "@/components/home/SymptomHistory";
 import { PatternPage } from "@/components/you/PatternPage";
 import type { SymptomPageLog } from "@/lib/symptomPage";
 import { symptomPoints, groupCycles, PATTERNS_CHANGED, PATTERN_WINDOW_DAYS, type LogRow } from "@/lib/patternCycles";
+import { loadCycleStarts, withRealCycleDays } from "@/lib/realCycleDays";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 
 type Status = "Confirmed" | "Emerging" | "Watching";
@@ -80,10 +81,13 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
 
   useEffect(() => {
     const since = new Date(Date.now() - PATTERN_WINDOW_DAYS * DAY).toISOString();
-    supabase.from("symptom_logs").select("logged_at, cycle_day, symptoms, notes").eq("user_id", userId).gte("logged_at", since).order("logged_at", { ascending: false })
-      .then(({ data }) => {
-        setLogs(data ?? []);
-        setPatterns(computePatterns(data ?? []));
+    Promise.all([
+      supabase.from("symptom_logs").select("logged_at, cycle_day, symptoms, notes").eq("user_id", userId).gte("logged_at", since).order("logged_at", { ascending: false }),
+      loadCycleStarts(userId),
+    ]).then(([{ data: raw }, starts]) => {
+        const data = withRealCycleDays(raw ?? [], starts);
+        setLogs(data);
+        setPatterns(computePatterns(data));
         const names = new Set<string>();
         for (const r of data ?? []) for (const x of (Array.isArray(r.symptoms) ? r.symptoms : []) as any[]) {
           const n = typeof x === "string" ? x : x?.name; if (n && String(n).trim()) names.add(cap(String(n).trim().toLowerCase()));
