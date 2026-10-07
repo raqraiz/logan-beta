@@ -8,7 +8,7 @@ import { AggRow, CATEGORY_PILLS, TogetherCategory, countLabel, display, isExact,
 
 function Pill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button type="button" onClick={onClick} aria-pressed={active} className="flex h-11 shrink-0 items-center">
+    <button type="button" onClick={onClick} aria-pressed={active} className="flex h-11 shrink-0 appearance-none items-center border-0 bg-transparent p-0 outline-none">
       <span className={cn("flex h-9 items-center gap-1 whitespace-nowrap rounded-full border px-3.5 text-[13px]",
         active ? "border-foreground bg-foreground font-semibold text-background" : "border-border bg-card font-medium text-foreground")}>
         {children}
