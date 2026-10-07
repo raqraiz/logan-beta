@@ -99,11 +99,11 @@ export function WhatHelpedPage({ symptom, joined, onJoin, onBack, onShare }: Pag
                 </DropdownMenuContent>
               </DropdownMenu>}
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">{t.mine ? "You shared this" : t.label}</p>
-            <Button variant="outline" disabled={t.mine} aria-pressed={t.helped_by_me} onClick={() => void vote(t)}
+            <p className="mt-2 text-xs text-muted-foreground">{t.label}</p>
+            {!t.mine && <Button variant="outline" aria-pressed={t.helped_by_me} onClick={() => void vote(t)}
               className={cn("mt-3 h-11 rounded-full px-4 text-sm font-semibold shadow-none", t.helped_by_me ? "border-foreground bg-foreground text-background hover:bg-foreground hover:text-background" : "text-foreground")}>
               <Heart className={cn("h-4 w-4", t.helped_by_me && "fill-current")} aria-hidden="true" /> Helped me too · {t.helped}
-            </Button>
+            </Button>}
           </article>
           {(i + 1) % 3 === 0 && notes[Math.floor(i / 3)] && <aside className="rounded-[22px] bg-muted p-5">
             <p className="text-[11px] font-semibold tracking-wider text-muted-foreground">LOGAN'S NOTE</p>
@@ -133,14 +133,15 @@ export function ShareTipPage({ symptom, label, onBack, onDone }: ShareProps) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [rejected, setRejected] = useState<{ id?: string; reason: string } | null>(null);
-  const [sent, setSent] = useState<"approved" | "pending" | null>(null);
+  const [sent, setSent] = useState<"approved" | "pending" | "rejected" | null>(null);
 
   const send = async () => {
     if (!text.trim() || busy) return;
     setBusy(true);
     try {
       const r = await submitTip(symptom, text.trim(), rejected?.id);
-      if (r.status === "rejected") { setRejected({ id: r.id, reason: r.reason ?? "This one can't be shared as it is." }); return; }
+      if (r.status === "rejected") { setRejected({ id: r.id ?? rejected?.id, reason: r.reason ?? "This one can't be shared as it is." }); setSent("rejected"); return; }
+      setRejected(null);
       trackTogether("tip_shared");
       globalThis.dispatchEvent(new Event(TIPS_CHANGED));
       setSent(r.status);
@@ -148,9 +149,16 @@ export function ShareTipPage({ symptom, label, onBack, onDone }: ShareProps) {
     finally { setBusy(false); }
   };
 
-  if (sent) return <Shell label="Tip sent" onBack={onDone}>
+  if (sent === "rejected" && rejected) return <Shell label="Tip not shared" onBack={() => setSent(null)}>
+    <h1 className="mt-6 font-display text-[36px] font-semibold leading-[1.1] text-foreground">Almost there</h1>
+    <p className="mt-3 text-base text-foreground">{rejected.reason}</p>
+    <Button onClick={() => setSent(null)} className="mt-8 h-12 w-full rounded-full bg-foreground text-base font-semibold text-background hover:bg-foreground/90">Edit and resend</Button>
+    <Button variant="link" onClick={onDone} className="mt-2 w-full text-sm text-muted-foreground underline">Cancel</Button>
+  </Shell>;
+
+  if (sent === "approved" || sent === "pending") return <Shell label="Tip sent" onBack={onDone}>
     <h1 className="mt-6 font-display text-[36px] font-semibold leading-[1.1] text-foreground">Thank you</h1>
-    <p className="mt-3 text-base text-foreground">Thanks. It will appear once Logan has checked it.</p>
+    <p className="mt-3 text-base text-foreground">{sent === "approved" ? "It's live. Thank you for helping." : "I'll check it first, then share it with other women."}</p>
     <Button onClick={onDone} className="mt-8 h-12 w-full rounded-full bg-foreground text-base font-semibold text-background hover:bg-foreground/90">Done</Button>
   </Shell>;
 
@@ -163,11 +171,11 @@ export function ShareTipPage({ symptom, label, onBack, onDone }: ShareProps) {
         aria-label="What helped you" placeholder="What helped, in your own words" className="resize-none border-0 bg-transparent p-0 text-base shadow-none focus-visible:ring-0" />
       <p className="mt-2 text-right text-xs text-muted-foreground" aria-live="polite">{text.length}/{TIP_MAX}</p>
     </div>
-    {rejected && <div role="alert" className="safety-callout mt-3 rounded-2xl p-[14px] text-sm">{rejected.reason} You can change it and send again.</div>}
+    {rejected && <div role="alert" className="safety-callout mt-3 rounded-2xl p-[14px] text-sm">{rejected.reason}</div>}
     <p className="mt-4 text-xs leading-relaxed text-muted-foreground">Shared with no name, photo or age. Others see only “{label}”.</p>
     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Logan checks every tip first and removes names, links and medicine doses.</p>
     <Button disabled={!text.trim() || busy} onClick={() => void send()} className="mt-6 h-12 w-full rounded-full bg-foreground text-base font-semibold text-background hover:bg-foreground/90">
-      {busy ? "Checking…" : rejected ? "Send again" : "Share anonymously"}
+      {busy ? "Checking…" : rejected ? "Edit and resend" : "Share anonymously"}
     </Button>
     <Button variant="link" onClick={onBack} className="mt-2 w-full text-sm text-muted-foreground underline">Cancel</Button>
   </Shell>;

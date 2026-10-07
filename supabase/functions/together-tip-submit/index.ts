@@ -29,21 +29,31 @@ function labelFor(p: Record<string, any> | null): string {
   return "Someone in her luteal week";
 }
 
+const BROKEN_REASON = "Some details had to come out, and now it doesn't quite read right. Want to rewrite it?";
+const INSTRUCTION_REASON = "Tips share what helped you, not what others should take. Want to rewrite it as what you tried?";
+// Imperative advice about medicine, supplements or doses, e.g. "Take X", "Stop the pill".
+const INSTRUCTION_RE = /^\s*(you should\s+|try\s+|just\s+)?(take|stop|start|quit|increase|decrease|double|skip|switch|change|come off|get off|use)\b/i;
+const tooBroken = (s: string) => s.replace(/[^a-zA-Z\s]/g, " ").trim().split(/\s+/).filter((w) => w.length > 1).length < 4;
+
 const SCHEMA = {
-  type: "object", additionalProperties: false, required: ["decision", "cleaned_text", "reason"],
+  type: "object", additionalProperties: false, required: ["decision", "kind", "cleaned_text", "reason"],
   properties: {
     decision: { type: "string", enum: ["approve", "review", "reject"] },
+    kind: { type: "string", enum: ["ok", "broken_after_cleaning", "instruction", "other"] },
     cleaned_text: { type: "string" },
     reason: { type: ["string", "null"] },
   },
 };
 
-async function moderate(symptom: string, text: string): Promise<{ decision: string; cleaned_text: string; reason: string | null } | null> {
+async function moderate(symptom: string, text: string): Promise<{ decision: string; kind: string; cleaned_text: string; reason: string | null } | null> {
   const instructions = `You check short tips women share about what helped with a symptom ("${symptom}") in a women's health app. Return JSON.
 Clean the tip: remove people's names, links, emails, phone numbers, social handles and any medicine dose (numbers with mg, ml, units, "x a day" for medicines). Keep her words otherwise; do not rewrite her voice. No em dashes.
-decision "reject" when: harmful or dangerous advice, telling others to stop or change prescribed treatment, diagnosing a condition, advertising or promoting a brand, shop or service, sexual or hateful content, or not about what helped with this symptom. Give a short kind reason in plain words addressed to her (one sentence, no blame).
-decision "review" when unsure, or the tip names a specific prescription medicine.
-decision "approve" otherwise. reason null when approved.`;
+Personal experience is allowed, including naming a supplement she tried ("Magnesium in the evening helped me").
+decision "reject" with kind "instruction" when the tip tells others to take, stop, start or change any medicine, supplement or dose ("Take magnesium", "Stop the pill").
+decision "reject" with kind "broken_after_cleaning" when, after cleaning, the tip is broken, unclear, a fragment or very short.
+decision "reject" with kind "other" when: harmful or dangerous advice, diagnosing a condition, advertising a brand, shop or service, sexual or hateful content, or not about what helped with this symptom. Give a short kind reason addressed to her (one sentence, no blame).
+decision "review" (kind "other") when unsure, or the tip names a specific prescription medicine.
+decision "approve" with kind "ok" otherwise. reason null when approved.`;
   const r = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
     method: "POST",
     headers: { "Lovable-API-Key": Deno.env.get("LOVABLE_API_KEY") ?? "", "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
@@ -91,10 +101,16 @@ Deno.serve(async (req) => {
     const { data: stageKey } = p ? await service.rpc("together_stage", { _life_stage: p.life_stage, _due: p.due_date, _lmp: p.pregnancy_lmp, _pp: p.postpartum_start_date }) : { data: null };
 
     const check = await moderate(symptom, text);
-    const decision = check?.decision ?? "review";
     const cleaned = dashes((check?.cleaned_text || text).trim()).slice(0, 160);
+    let decision = check?.decision ?? "review";
+    let kind = check?.kind ?? "other";
+    if (INSTRUCTION_RE.test(text)) { decision = "reject"; kind = "instruction"; }
+    else if (decision !== "reject" && check && tooBroken(cleaned)) { decision = "reject"; kind = "broken_after_cleaning"; }
     const status = decision === "approve" ? "approved" : decision === "reject" ? "rejected" : "pending";
-    const reason = status === "rejected" ? dashes(check?.reason || "This one can't be shared as it is. Try saying just what helped you.") : null;
+    const reason = status !== "rejected" ? null
+      : kind === "instruction" ? INSTRUCTION_REASON
+      : kind === "broken_after_cleaning" ? BROKEN_REASON
+      : dashes(check?.reason || "This one can't be shared as it is. Try saying just what helped you.");
     const row = { author_id: user.id, symptom, text: status === "rejected" ? text : cleaned, original_text: text, label: labelFor(p), stage_key: stageKey ?? null, status, reject_reason: reason, report_count: 0, needs_review: false, created_at: new Date().toISOString() };
 
     let saved;
