@@ -46,10 +46,9 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymp
     .filter((r) => cat === "all" || cats.get(key(r.symptom)) === cat)
     .sort((a, b) => (b.women_count ?? 0) - (a.women_count ?? 0)), [everyone, cat, cats]);
   const shown = useMemo(() => {
-    const top = field.slice(0, 20);
-    const extra = field.filter((r) => !top.includes(r) && mine.has(key(r.symptom)));
-    return extra.length ? [...top.filter((r) => !mine.has(key(r.symptom))).slice(0, 20 - extra.length - top.filter((r) => mine.has(key(r.symptom))).length), ...top.filter((r) => mine.has(key(r.symptom))), ...extra]
-      .sort((a, b) => (b.women_count ?? 0) - (a.women_count ?? 0)) : top;
+    const hers = field.filter((r) => mine.has(key(r.symptom))).slice(0, 20);
+    const others = field.filter((r) => !mine.has(key(r.symptom))).slice(0, 20 - hers.length);
+    return [...hers, ...others].sort((x, y) => (y.women_count ?? 0) - (x.women_count ?? 0));
   }, [field, mine]);
   const max = Math.max(10, ...field.map((r) => r.women_count ?? 0));
   const size = (r: AggRow) => (isExact(r) ? Math.round(64 + 48 * Math.sqrt((r.women_count! - 10) / Math.max(1, max - 10))) : 56);
