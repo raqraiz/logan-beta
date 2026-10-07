@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/
 import { key, sampleSymptomDetail } from "@/lib/togetherData";
 import { loadTogether, setTogetherConsent, trackTogether, TOGETHER_BODY, TOGETHER_CHANGED } from "@/lib/together";
 
-interface Row { filter: string; symptom: string; women_band: string; women_count: number | null; day_shares: Record<string, number> | null }
+interface Row { filter: string; symptom: string; women_band: string; women_count: number | null; day_shares: Record<string, number> | null; cohort_women?: number | null }
 export interface Window { from: number; to: number }
 
 export interface Community {
@@ -143,7 +143,7 @@ export function WhenWomenFeelCard({ c, mine, hasCycle }: { c: Community; mine: W
   const v = dayValues(row, len);
   const max = Math.max(...v, 0.0001);
   const busy = busiestWindow(row, len);
-  let caption: string | null = null;
+  let caption: string | null = busy ? `Most women feel it on days ${busy.from} to ${busy.to}.` : null;
   if (mine && busy) {
     const mid = (mine.from + mine.to) / 2;
     const tail = mid >= busy.from && mid <= busy.to ? "Right in the middle of everyone." : mid > busy.to ? "A little later than most women." : "Earlier than most women.";
@@ -176,9 +176,9 @@ export function WhenWomenFeelCard({ c, mine, hasCycle }: { c: Community; mine: W
           aria-label={busy ? `Logged most on days ${busy.from} to ${busy.to} of the cycle.` : "When women log it across the cycle."}>
           {v.map((val, i) => {
             const d = i + 1;
-            const h = Math.max(3, (val / max) * H);
-            const hot = busy && d >= busy.from && d <= busy.to;
-            return <rect key={d} x={x(d)} y={TOP + H - h} width={COL} height={h} rx={3} fill={hot ? "#0E8A8F" : "#BDEBED"} />;
+            const h = val > 0 ? Math.max(4, (val / max) * H) : 4;
+            const hot = val > 0 && busy && d >= busy.from && d <= busy.to;
+            return <rect key={d} x={x(d)} y={TOP + H - h} width={COL} height={h} rx={val > 0 ? 3 : 2} fill={hot ? "#0E8A8F" : "#BDEBED"} />;
           })}
           {usual && <circle cx={x(usual) + COL / 2} cy={4 + 4} r={4} fill="#FF2E92" />}
         </svg>
@@ -190,5 +190,33 @@ export function WhenWomenFeelCard({ c, mine, hasCycle }: { c: Community; mine: W
       </div>
       {caption && <p className="font-sans text-[13px] leading-relaxed text-[#6E675F] dark:text-muted-foreground">{caption}</p>}
     </section>
+  );
+}
+
+/** How common the symptom is: 20 dots, filled by share of her cohort. Only for joined women with a count. */
+export function CommonRing({ c, sheLogged }: { c: Community; sheLogged: boolean }) {
+  if (!c.joined) return null;
+  const pick = [c.stage, c.everyone].find((r) => r && (r.women_band === "few" || ((r.women_count ?? 0) >= 10 && (r.cohort_women ?? 0) >= 10)));
+  if (!pick) return null;
+  const few = pick.women_band === "few";
+  const share = few ? 0 : Math.min(1, pick.women_count! / pick.cohort_women!);
+  let filled = few ? 1 + Number(sheLogged) : Math.max(1, Math.round(share * 20));
+  if (!few && sheLogged && filled < 2) filled = 2;
+  const group = pick === c.stage ? "women like you" : "women";
+  const inN = share > 0 ? Math.max(1, Math.round(1 / share)) : 0;
+  const label = few ? `A few ${group} feel this` : inN <= 1 ? `Most ${group} feel this` : `About 1 in ${inN} ${group} feel this`;
+  return (
+    <svg width={76} height={76} viewBox="0 0 76 76" role="img" aria-label={label} className="shrink-0">
+      <circle cx={38} cy={38} r={30} fill="none" stroke="#DDD7CC" strokeWidth={1} />
+      {Array.from({ length: 20 }, (_, i) => {
+        const a = (i / 20) * 2 * Math.PI - Math.PI / 2;
+        const cx = 38 + 30 * Math.cos(a), cy = 38 + 30 * Math.sin(a);
+        const isHers = sheLogged && i === filled - 1;
+        if (isHers) return <circle key={i} cx={cx} cy={cy} r={5.5} fill="#FF2E92" stroke="hsl(var(--background))" strokeWidth={2} />;
+        return i < filled
+          ? <circle key={i} cx={cx} cy={cy} r={3.4} fill="#22C3CE" />
+          : <circle key={i} cx={cx} cy={cy} r={3.4} fill="hsl(var(--background))" stroke="#DDD7CC" strokeWidth={1} />;
+      })}
+    </svg>
   );
 }

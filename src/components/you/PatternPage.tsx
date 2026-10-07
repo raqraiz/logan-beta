@@ -7,7 +7,7 @@ import { ArrowLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { sampleSymptomDetail } from "@/lib/togetherData";
-import { useSymptomCommunity, communityLine, stageInsight, WhenWomenFeelCard } from "@/components/together/SymptomCommunity";
+import { useSymptomCommunity, CommonRing, communityLine, stageInsight, WhenWomenFeelCard } from "@/components/together/SymptomCommunity";
 import { PREFILL_CHAT_EVENT } from "@/lib/partnerHeadsupClient";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 
@@ -41,7 +41,7 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
   const data = symptomPageData(demo ? demo.logs : logs, name, isNonCycling ? undefined : lastPeriodStart);
   const timing = !isNonCycling && from !== null && to !== null;
   const community = useSymptomCommunity(userId, name, sample);
-  const myWindow = demo && !isNonCycling ? demo.window : timing ? { from: from as number, to: to as number } : null;
+  const myWindow = data.count < 2 || isNonCycling ? null : demo ? demo.window : timing ? { from: from as number, to: to as number } : null;
   const askLogan = () => { onClose(); setTimeout(() => globalThis.dispatchEvent(new CustomEvent(PREFILL_CHAT_EVENT, { detail: `Why does my ${lower} happen?` })), 0); };
 
   useEffect(() => {
@@ -106,8 +106,13 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
     <div className="symptom-page fixed inset-0 z-50 overflow-y-auto bg-background" role="dialog" aria-modal="true" aria-label={name} data-private>
       <div className="mx-auto max-w-lg px-5 pt-5 pb-[calc(120px+env(safe-area-inset-bottom))]">
         <Button variant="outline" size="icon" onClick={onClose} aria-label="Go back" className="h-11 w-11 rounded-full text-foreground shadow-none"><ArrowLeft /></Button>
-        <h1 className="mt-6 break-words font-display text-[40px] font-semibold leading-[1.1] tracking-normal text-foreground">{name}</h1>
-        <p className="mt-2 text-base font-light text-muted-foreground">{sub}</p>
+        <div className="mt-6 flex items-center gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="break-words font-display text-[44px] font-semibold leading-[44px] tracking-normal text-foreground">{name}</h1>
+            <p className="mt-2 font-sans text-sm text-[#6E675F] dark:text-muted-foreground">{sub}</p>
+          </div>
+          <CommonRing c={community} sheLogged={data.count > 0} />
+        </div>
         {watched && <p className="symptom-watch mt-2 text-sm font-semibold">★ You're watching this</p>}
 
         <section className="mt-7 rounded-[22px] bg-card p-5" aria-labelledby="symptom-definition-label">
