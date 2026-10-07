@@ -351,6 +351,9 @@ html:not(.dark) .headsup-primary, .theme-light .headsup-primary { background: hs
 
 /* Symptom detail: scoped roles preserve the existing app theme. */
 :root {
+  --symptom-chart-busy: #0E8A8F;
+  --symptom-chart-pale: #BDEBED;
+  --symptom-chart-mine: #FF2E92;
   --symptom-stat-surface: #F4F1EA;
   --symptom-watch-ink: #0B7479;
   --symptom-insight-dot: #0E8A8F;
