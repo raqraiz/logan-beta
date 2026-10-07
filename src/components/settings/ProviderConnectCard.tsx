@@ -59,27 +59,6 @@ export function ProviderConnectCard({ provider, userId }: Props) {
     }
   };
 
-  const sync = async () => {
-    if (!userId) return;
-    setBusy("sync");
-    try {
-      const { error } = await supabase.functions.invoke(`sync-${provider}`, {
-        body: { user_id: userId, backfill_days: 14 },
-      });
-      if (error) throw error;
-      toast({ title: "Sync started", description: `${meta.name} is pulling fresh data now.` });
-      setTimeout(refresh, 1500);
-    } catch (e) {
-      toast({
-        title: "Sync failed",
-        description: e instanceof Error ? e.message : "Try again later.",
-        variant: "destructive",
-      });
-    } finally {
-      setBusy(null);
-    }
-  };
-
   const disconnect = async () => {
     if (!userId) return;
     if (!confirm(`Disconnect ${meta.name}? Synced data stays on your account.`)) return;
@@ -134,9 +113,9 @@ export function ProviderConnectCard({ provider, userId }: Props) {
         </Button>
       ) : (
         <div className="grid grid-cols-2 gap-2">
-          <Button size="sm" variant="outline" onClick={sync} disabled={busy === "sync"}>
-            {busy === "sync" ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            Sync now
+          <Button size="sm" variant="outline" disabled title="Manual sync is coming soon. Your data still syncs automatically.">
+            <RefreshCw className="w-4 h-4" />
+            Sync now · Coming soon
           </Button>
           <Button size="sm" variant="outline" onClick={disconnect} disabled={busy === "disconnect"}>
             {busy === "disconnect" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlink className="w-4 h-4" />}
