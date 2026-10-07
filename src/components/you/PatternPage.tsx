@@ -70,7 +70,7 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
     return () => { alive = false; globalThis.removeEventListener(TIPS_CHANGED, load); };
   }, [name, userId, safetySymptom, sample]);
   const openTips = () => {
-    if (tipSummary?.count) { setTipView("list"); return; }
+    if (tipSummary?.count || !canContribute) { setTipView("list"); return; }
     if (!community.joined) { community.openConsent(); return; }
     setTipView("share");
   };
@@ -251,8 +251,8 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
         </DrawerContent>
       </Drawer>
       {community.consentSheet}
-      {tipView === "list" && <WhatHelpedPage symptom={name} joined={community.joined} onJoin={community.openConsent} onBack={() => setTipView("none")} onShare={() => setTipView("share")} />}
-      {tipView === "share" && !safetySymptom && <ShareTipPage symptom={name} label={tipLabel} onBack={() => setTipView(tipSummary?.count ? "list" : "none")} onDone={() => setTipView(tipSummary?.count ? "list" : "none")} />}
+      {tipView === "list" && <WhatHelpedPage symptom={name} checkFirst={checkFirst} canContribute={canContribute} joined={community.joined} onJoin={community.openConsent} onBack={() => setTipView("none")} onShare={() => setTipView("share")} />}
+      {tipView === "share" && !safetySymptom && canContribute && <ShareTipPage symptom={name} label={tipLabel} onBack={() => setTipView(tipSummary?.count ? "list" : "none")} onDone={() => setTipView(tipSummary?.count ? "list" : "none")} />}
       <AlertDialog open={confirmForget} onOpenChange={(v) => !busy && setConfirmForget(v)}>
         <AlertDialogContent className="w-[calc(100%-40px)] rounded-[22px]">
           <AlertDialogHeader>
