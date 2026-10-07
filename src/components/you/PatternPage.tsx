@@ -93,11 +93,12 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
     } } });
   };
   const sub = communityLine(community, data.count > 0) ?? (data.count === 0 ? "Not logged yet" : `You logged it ${data.count} time${data.count === 1 ? "" : "s"}${!isNonCycling && data.cycles ? ` in ${data.cycles} cycle${data.cycles === 1 ? "" : "s"}` : ""}`);
+  const compare = isNonCycling ? null : stageInsight(community, myWindow);
   const { insights, doctorAdvice } = symptomCardInsights([
     timing && explain ? explain : null,
-    !timing && data.count > 0 ? "There isn't a clear timing pattern in your logs yet." : null,
+    !myWindow && !compare && data.count > 0 ? "There isn't a clear timing pattern in your logs yet." : null,
     data.trend ? `At this cycle day, you've logged it ${data.trend === "Same" ? "as often as" : `${data.trend.toLowerCase()} often than`} last cycle.` : null,
-    isNonCycling ? null : stageInsight(community, myWindow),
+    compare,
   ]);
   const tileColumns = 1 + Number(timing) + Number(Boolean(data.trend));
 

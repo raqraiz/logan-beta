@@ -145,7 +145,7 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
             <Switch checked={sample} onCheckedChange={setSample} />
           </label>
         )}
-        {demo && <div className="w-full rounded-2xl bg-foreground px-4 py-2 text-sm font-semibold text-background">Sample data.</div>}
+        {demo && <div className="flex h-7 items-center self-start rounded-full bg-[#EEE9DF] px-3 text-xs font-semibold text-[#6E675F]">Sample data</div>}
         <div className="flex w-full items-center justify-between gap-3">
           <h1 className="font-heading text-[40px] font-semibold leading-tight text-foreground text-left">Together</h1>
           <div className="flex shrink-0 items-center gap-2">

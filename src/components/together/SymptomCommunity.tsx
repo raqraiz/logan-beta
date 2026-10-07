@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -150,37 +149,46 @@ export function WhenWomenFeelCard({ c, mine, hasCycle }: { c: Community; mine: W
     const tail = mid >= busy.from && mid <= busy.to ? "Right in the middle of everyone." : mid > busy.to ? "A little later than most women." : "Earlier than most women.";
     caption = `The pink dot is when you usually feel it. ${tail}`;
   }
-  const pct = (d: number) => ((d - 0.5) / len) * 100;
+  const COL = 9, GAP = 2, H = 89, TOP = 14;
+  const W = len * COL + (len - 1) * GAP;
+  const x = (d: number) => (d - 1) * (COL + GAP);
+  const usual = mine ? Math.min(len, Math.round((mine.from + mine.to) / 2)) : null;
+  const pctX = (d: number) => ((x(d) + COL / 2) / W) * 100;
   return (
-    <section className="mt-4 rounded-[22px] bg-card p-5" aria-labelledby="when-women-label">
-      <h2 id="when-women-label" className="font-sans text-[13px] font-semibold tracking-normal text-muted-foreground">When women feel it</h2>
-      <div className="mt-4 flex gap-2" role="tablist">
-        {([["everyone", "Everyone"], ["stage", "Like you"]] as const).map(([id, label]) => {
-          const on = active === id;
-          return (
-            <button key={id} type="button" role="tab" aria-selected={on} disabled={!avail[id]} onClick={() => setTab(id)}
-              className={`relative inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] before:absolute before:inset-x-0 before:-inset-y-1 before:content-[''] disabled:opacity-40 ${on ? "bg-foreground font-semibold text-background" : "border border-border bg-card font-medium text-foreground"}`}>
-              {on && <Check className="h-3.5 w-3.5" aria-hidden="true" />}{label}
-            </button>
-          );
-        })}
-      </div>
-      {!avail.stage && <p className="mt-2 text-xs text-muted-foreground">Not enough women in your stage yet.</p>}
-      <div className="relative mt-5">
-        <div className="flex h-5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-          {v.map((x, i) => (
-            <span key={i} className="h-full flex-1" style={{ background: `color-mix(in srgb, var(--symptom-watch-ink) ${Math.round(8 + (x / max) * 62)}%, transparent)` }} />
-          ))}
+    <section className="mt-4 flex flex-col gap-2.5 rounded-[24px] bg-card px-4 pt-[18px] pb-3" aria-labelledby="when-women-label">
+      <div className="flex items-center justify-between gap-2">
+        <h2 id="when-women-label" className="font-sans text-[15px] font-semibold tracking-normal text-foreground">When women feel it</h2>
+        <div className="flex gap-1 rounded-full bg-[#F4F1EA] p-[3px] dark:bg-muted" role="tablist">
+          {([["everyone", "Everyone"], ["stage", "Like you"]] as const).map(([id, label]) => {
+            const on = active === id;
+            return (
+              <button key={id} type="button" role="tab" aria-selected={on} disabled={!avail[id]} onClick={() => setTab(id)}
+                className={`h-[30px] rounded-full px-2.5 text-xs disabled:opacity-40 ${on ? "bg-[#23201C] font-bold text-[#F4F1EA] dark:bg-foreground dark:text-background" : "bg-transparent font-medium text-foreground"}`}>
+                {on ? `✓ ${label}` : label}
+              </button>
+            );
+          })}
         </div>
-        {mine && <span className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card bg-[#C4247A]"
-          style={{ left: `${pct(Math.min(len, (mine.from + mine.to) / 2))}%` }} aria-label={`Your usual days, ${mine.from} to ${mine.to}`} />}
       </div>
-      <div className="relative mt-1.5 h-4 text-[11px] text-muted-foreground">
-        <span className="absolute left-0">Day 1</span>
-        {busy && <span className="absolute -translate-x-1/2 font-semibold text-foreground" style={{ left: `${Math.min(82, Math.max(18, pct((busy.from + busy.to) / 2)))}%` }}>{busy.from} to {busy.to}</span>}
-        <span className="absolute right-0">Day {len}</span>
+      {!avail.stage && <p className="text-xs text-muted-foreground">Not enough women in your stage yet.</p>}
+      <div>
+        <svg viewBox={`0 0 ${W} ${H + TOP}`} className="block w-full" role="img"
+          aria-label={busy ? `Logged most on days ${busy.from} to ${busy.to} of the cycle.` : "When women log it across the cycle."}>
+          {v.map((val, i) => {
+            const d = i + 1;
+            const h = Math.max(3, (val / max) * H);
+            const hot = busy && d >= busy.from && d <= busy.to;
+            return <rect key={d} x={x(d)} y={TOP + H - h} width={COL} height={h} rx={3} fill={hot ? "#0E8A8F" : "#BDEBED"} />;
+          })}
+          {usual && <circle cx={x(usual) + COL / 2} cy={4 + 4} r={4} fill="#FF2E92" />}
+        </svg>
+        <div className="relative mt-1 h-4 font-sans text-[11px] text-[#6E675F] dark:text-muted-foreground">
+          <span className="absolute left-0">Day 1</span>
+          {busy && <span className="absolute -translate-x-1/2 font-bold text-[#0E8A8F]" style={{ left: `${Math.min(82, Math.max(18, pctX((busy.from + busy.to) / 2)))}%` }}>{busy.from} to {busy.to}</span>}
+          <span className="absolute right-0">{len}</span>
+        </div>
       </div>
-      {caption && <p className="mt-4 text-[15px] font-light leading-relaxed text-foreground">{caption}</p>}
+      {caption && <p className="font-sans text-[13px] leading-relaxed text-[#6E675F] dark:text-muted-foreground">{caption}</p>}
     </section>
   );
 }
