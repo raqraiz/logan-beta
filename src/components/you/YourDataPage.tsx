@@ -82,6 +82,10 @@ export function YourDataPage({ userId, cycle, isNonCycling, onClose, onLog, onSe
       for (const table of ["user_memory_notes", "user_word_prefs", "headsup_people", "partner_headsup_settings", "partner_headsup_style_examples"] as const) {
         const result = await supabase.from(table).delete().eq("user_id", userId); if (result.error) throw result.error;
       }
+      const tips = await supabase.rpc("delete_my_tips"); if (tips.error) throw tips.error;
+      for (const [table, col] of [["together_tips", "author_id"], ["together_tip_votes", "user_id"]] as const) {
+        const check = await supabase.from(table).select("created_at").eq(col, userId).limit(1); if (check.error || check.data?.length) throw new Error("Unverified");
+      }
       const participant = await supabase.from("participants").select(`${fields}, watch_symptoms`).eq("user_id", userId).maybeSingle();
       if (participant.error) throw participant.error;
       if (participant.data && Object.entries(clearFacts).some(([key, value]) => JSON.stringify((participant.data as unknown as Record<string, unknown>)[key]) !== JSON.stringify(value))) throw new Error("Unverified");

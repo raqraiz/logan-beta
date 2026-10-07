@@ -91,10 +91,10 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
   }, [name, lower, from, to, timing, data.count]);
 
   useEffect(() => {
-    const handle = (event: KeyboardEvent) => { if (event.key === "Escape" && !fix) onClose(); };
+    const handle = (event: KeyboardEvent) => { if (event.key === "Escape" && !fix && tipView === "none") onClose(); };
     globalThis.addEventListener("keydown", handle);
     return () => globalThis.removeEventListener("keydown", handle);
-  }, [onClose, fix]);
+  }, [onClose, fix, tipView]);
 
   const saveNote = async (note: string, source: string) => {
     setBusy(true);
