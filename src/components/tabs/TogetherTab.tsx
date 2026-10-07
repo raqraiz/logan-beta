@@ -177,7 +177,7 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, c
   ) : null;
   const board = (r: AggRow[], m: Set<string>, c: Map<string, TogetherCategory>) => (
     <div className="w-full text-left">
-      <TogetherBoard rows={r} mine={m} cats={c} cycleDay={cycleDay} hasCycle={!isNonCycling} onOpenSymptom={openSymptom} notCounted={notCounted} />
+      <TogetherBoard rows={r} mine={m} cats={c} cycleDay={cycleDay} cycleLength={cycleLengthDays} hasCycle={!isNonCycling} onOpenSymptom={openSymptom} notCounted={notCounted} />
     </div>
   );
 
