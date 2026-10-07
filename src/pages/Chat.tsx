@@ -1592,6 +1592,7 @@ const Chat = () => {
         <HomeTab
           cycleData={cycleData}
           userId={user?.id}
+          onLogFeeling={() => setFeelSheetOpen(true)}
           onPeriodUpdate={async (date: Date) => {
             if (!user?.id) return;
             const iso = format(date, "yyyy-MM-dd");
