@@ -144,13 +144,14 @@ export function WhenWomenFeelCard({ c, mine, loggedDays, hasCycle }: { c: Commun
   const max = Math.max(...v, 0.0001);
   const busy = busiestWindow(row, len);
   let caption: string | null = busy ? `Most women feel it on days ${busy.from} to ${busy.to}.` : null;
-  if (!mine && loggedDays.length > 0) caption = "Pink dots are the days you logged it. A few more cycles and I'll know your usual days.";
+  if (!mine && loggedDays.length > 0) caption = "Pink dots below are the days you logged it. A few more cycles and I'll know your usual days.";
   if (mine && busy) {
     const mid = (mine.from + mine.to) / 2;
     const tail = mid >= busy.from && mid <= busy.to ? "Right in the middle of everyone." : mid > busy.to ? "A little later than most women." : "Earlier than most women.";
-    caption = `The pink dot is when you usually feel it. ${tail}`;
+    caption = `The pink dot below is when you usually feel it. ${tail}`;
   }
-  const COL = 9, GAP = 2, H = 89, TOP = 14;
+  const COL = 9, GAP = 2, H = 89, TOP = 2;
+  const DOT_Y = TOP + H + 8;
   const W = len * COL + (len - 1) * GAP;
   const x = (d: number) => (d - 1) * (COL + GAP);
   const usual = mine ? Math.min(len, Math.round((mine.from + mine.to) / 2)) : null;
@@ -173,7 +174,7 @@ export function WhenWomenFeelCard({ c, mine, loggedDays, hasCycle }: { c: Commun
       </div>
       {!avail.stage && <p className="text-xs text-muted-foreground">Not enough women in your stage yet.</p>}
       <div>
-        <svg viewBox={`0 0 ${W} ${H + TOP}`} className="block w-full" role="img"
+        <svg viewBox={`0 0 ${W} ${DOT_Y + 6}`} className="block w-full" role="img"
           aria-label={busy ? `Logged most on days ${busy.from} to ${busy.to} of the cycle.` : "When women log it across the cycle."}>
           {v.map((val, i) => {
             const d = i + 1;
@@ -182,12 +183,12 @@ export function WhenWomenFeelCard({ c, mine, loggedDays, hasCycle }: { c: Commun
             return <rect key={d} x={x(d)} y={TOP + H - h} width={COL} height={h} rx={3} fill={hot ? "#0E8A8F" : "#BDEBED"} />;
           })}
           {usual
-            ? <circle cx={x(usual) + COL / 2} cy={8} r={4} fill="#FF2E92" />
+            ? <circle cx={x(usual) + COL / 2} cy={DOT_Y} r={4} fill="#FF2E92" />
             : loggedDays.filter((d) => d >= 1 && d <= len).map((d) => (
-              <circle key={d} cx={x(d) + COL / 2} cy={8} r={3.5} fill="none" stroke="#FF2E92" strokeWidth={1.5} />
+              <circle key={d} cx={x(d) + COL / 2} cy={DOT_Y} r={3.5} fill="none" stroke="#FF2E92" strokeWidth={1.5} />
             ))}
         </svg>
-        <div className="relative mt-1 h-4 font-sans text-[11px] text-[#6E675F] dark:text-muted-foreground">
+        <div className="relative mt-2 h-4 font-sans text-[11px] text-[#6E675F] dark:text-muted-foreground">
           <span className="absolute left-0">Day 1</span>
           {busy && <span className="absolute -translate-x-1/2 font-bold text-[#0E8A8F]" style={{ left: `${Math.min(82, Math.max(18, pctX((busy.from + busy.to) / 2)))}%` }}>{busy.from} to {busy.to}</span>}
           <span className="absolute right-0">{len}</span>
