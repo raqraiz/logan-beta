@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { fetchSymptomActivity } from "@/lib/symptomActivity";
 
 /**
  * Shared active-user definition used by both the admin Overview tab and the
@@ -124,12 +125,7 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
       "created_at",
       since,
     ),
-    fetchAll<{ user_id: string; logged_at: string }>(
-      "symptom_logs",
-      "user_id, logged_at",
-      "logged_at",
-      since,
-    ),
+    fetchSymptomActivity(since),
     fetchAll<{ created_at: string }>("profiles", "created_at", "created_at", since),
     fetchAll<{ user_id: string; event_type: string; created_at: string }>(
       "user_activity_events",

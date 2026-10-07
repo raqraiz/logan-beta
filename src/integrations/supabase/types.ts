@@ -1456,6 +1456,9 @@ export type Database = {
           referral_code: string | null
           referred_by: string | null
           referrer: string | null
+          together_consent: boolean
+          together_consent_at: string | null
+          together_consent_version: string | null
           updated_at: string
           utm_campaign: string | null
           utm_content: string | null
@@ -1478,6 +1481,9 @@ export type Database = {
           referral_code?: string | null
           referred_by?: string | null
           referrer?: string | null
+          together_consent?: boolean
+          together_consent_at?: string | null
+          together_consent_version?: string | null
           updated_at?: string
           utm_campaign?: string | null
           utm_content?: string | null
@@ -1500,6 +1506,9 @@ export type Database = {
           referral_code?: string | null
           referred_by?: string | null
           referrer?: string | null
+          together_consent?: boolean
+          together_consent_at?: string | null
+          together_consent_version?: string | null
           updated_at?: string
           utm_campaign?: string | null
           utm_content?: string | null
@@ -1741,6 +1750,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      together_daily_aggregates: {
+        Row: {
+          cohort_key: string
+          cohort_kind: string
+          cohort_women: number
+          computed_on: string
+          created_at: string
+          day_shares: Json | null
+          id: number
+          symptom: string
+          women_band: string
+          women_count: number | null
+        }
+        Insert: {
+          cohort_key: string
+          cohort_kind: string
+          cohort_women: number
+          computed_on: string
+          created_at?: string
+          day_shares?: Json | null
+          id?: number
+          symptom: string
+          women_band: string
+          women_count?: number | null
+        }
+        Update: {
+          cohort_key?: string
+          cohort_kind?: string
+          cohort_women?: number
+          computed_on?: string
+          created_at?: string
+          day_shares?: Json | null
+          id?: number
+          symptom?: string
+          women_band?: string
+          women_count?: number | null
+        }
+        Relationships: []
       }
       tracker_logs: {
         Row: {
@@ -2278,6 +2326,26 @@ export type Database = {
         Args: { _internal: boolean; _user_id: string }
         Returns: undefined
       }
+      admin_symptom_log_activity: {
+        Args: { _from?: string; _to?: string }
+        Returns: {
+          logged_at: string
+          user_id: string
+        }[]
+      }
+      admin_together_totals: {
+        Args: never
+        Returns: {
+          cohort_key: string
+          cohort_kind: string
+          cohort_women: number
+          computed_on: string
+          consenting_women: number
+          symptom: string
+          women_band: string
+          women_count: number
+        }[]
+      }
       count_onboarded_users: { Args: never; Returns: number }
       evaluate_postpartum_regularity: {
         Args: { _participant_id: string }
@@ -2288,6 +2356,18 @@ export type Database = {
       get_referral_count:
         | { Args: never; Returns: number }
         | { Args: { _user_id: string }; Returns: number }
+      get_together_aggregates: {
+        Args: never
+        Returns: {
+          cohort_key: string
+          computed_on: string
+          day_shares: Json
+          filter: string
+          symptom: string
+          women_band: string
+          women_count: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2299,7 +2379,13 @@ export type Database = {
         Args: { _participant_id: string }
         Returns: undefined
       }
+      refresh_together_aggregates: { Args: never; Returns: undefined }
       resolve_referral_code: { Args: { _code: string }; Returns: string }
+      together_norm: { Args: { _name: string }; Returns: string }
+      together_stage: {
+        Args: { _due: string; _life_stage: string; _lmp: string; _pp: string }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "super_admin"

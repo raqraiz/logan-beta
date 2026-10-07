@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { fetchSymptomActivity } from "@/lib/symptomActivity";
 import { fetchEligibleUserIds } from "@/lib/metrics/definitions";
 import { SESSION_GAP_MS, isUserInitiatedEvent, utcKey, toUTCDate } from "@/lib/activeUsers";
 
@@ -205,10 +206,7 @@ export const fetchLifeStageEngagement = async (): Promise<LifeStageEngagement> =
       supabase.from("user_activity_events").select("user_id, event_type, created_at")
         .gte("created_at", sinceIso)
         .order("created_at", { ascending: true }).range(from, to)),
-    fetchAllRows<{ user_id: string; created_at: string }>((from, to) =>
-      supabase.from("symptom_logs").select("user_id, created_at:logged_at")
-        .gte("logged_at", sinceIso)
-        .order("logged_at", { ascending: true }).range(from, to)),
+    fetchSymptomActivity(sinceIso),
   ]);
 
   const activeDays = new Map<string, Set<string>>();   // user -> UTC day keys

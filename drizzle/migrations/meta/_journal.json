@@ -155,6 +155,13 @@
       "when": 1791359918027,
       "tag": "0021_participants_watch_symptoms",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791366474491,
+      "tag": "0022_migration",
+      "breakpoints": true
     }
   ]
 }
