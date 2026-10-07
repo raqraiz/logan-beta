@@ -3,7 +3,6 @@ import { ArrowLeft, Check, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import { CycleAnalytics } from "@/components/chat/CycleAnalytics";
-import { YourPatterns } from "@/components/you/YourPatterns";
 import { MemorySection } from "@/components/settings/MemorySection";
 import { EditMemoryPage, usedForFact } from "@/components/you/EditMemoryPage";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +20,7 @@ const fields = "age, anchor_symptom, goals, typical_symptoms, additional_notes, 
 const clearFacts = { age: null, anchor_symptom: null, goals: [], typical_symptoms: [], additional_notes: null, birth_control_method: null, on_hormonal_bc: null, watch_symptoms: [] };
 
 export function YourDataPage({ userId, cycle, isNonCycling, onClose, onLog, onSettings, onPeople, widgets, onTrackers, onWeight }: Props) {
-  const [tab, setTab] = useState<"Cycles" | "Patterns" | "Facts">("Cycles");
+  const [tab, setTab] = useState<"Cycles" | "Facts">("Cycles");
   const [facts, setFacts] = useState<Fact[]>([]);
   const [refresh, setRefresh] = useState(0);
   const [error, setError] = useState(false);
@@ -99,12 +98,11 @@ export function YourDataPage({ userId, cycle, isNonCycling, onClose, onLog, onSe
       <Button variant="outline" size="icon" className="h-11 w-11 rounded-full shadow-none" aria-label="Back to You" onClick={onClose}><ArrowLeft /></Button>
       <h1 className="mt-6 font-display text-[40px] font-semibold leading-[1.1] text-foreground">Your data</h1>
       <p className="mt-2 text-base font-light text-muted-foreground">What Logan remembers about you. You decide what stays.</p>
-      <div className="my-6 grid grid-cols-3 gap-1" role="tablist" aria-label="Your data views">
-        {(["Cycles", "Patterns", "Facts"] as const).map((name) => <Button key={name} variant="ghost" role="tab" id={`data-tab-${name}`} aria-controls={`data-panel-${name}`} aria-selected={name === tab} className={`rounded-full px-2 font-semibold ${name === tab ? "bg-foreground text-background hover:bg-foreground hover:text-background" : "text-foreground"}`} onClick={() => setTab(name)}>{name === tab && <Check className="h-3 w-3" />}{name}</Button>)}
+      <div className="my-6 grid grid-cols-2 gap-1" role="tablist" aria-label="Your data views">
+        {(["Cycles", "Facts"] as const).map((name) => <Button key={name} variant="ghost" role="tab" id={`data-tab-${name}`} aria-controls={`data-panel-${name}`} aria-selected={name === tab} className={`rounded-full px-2 font-semibold ${name === tab ? "bg-foreground text-background hover:bg-foreground hover:text-background" : "text-foreground"}`} onClick={() => setTab(name)}>{name === tab && <Check className="h-3 w-3" />}{name}</Button>)}
       </div>
       <div role="tabpanel" id={`data-panel-${tab}`} aria-labelledby={`data-tab-${tab}`} className="space-y-5">
         {tab === "Cycles" && <CycleAnalytics embedded open onOpenChange={() => {}} userId={userId} currentCycleLength={cycle.cycleLengthDays} currentCycleDay={cycle.cycleDay} currentPhase={cycle.phase} lifeStage={cycle.lifeStage} dueDate={cycle.dueDate} pregnancyLmp={cycle.pregnancyLmp} />}
-        {tab === "Patterns" && <><YourPatterns fullList userId={userId} lastPeriodStart={cycle.lastPeriodStart} cycleLengthDays={cycle.cycleLengthDays} isNonCycling={isNonCycling} lifeStage={cycle.lifeStage} onLogFeeling={onLog} /><MemorySection userId={userId} view="hidden" refresh={refresh} /></>}
         {tab === "Facts" && <>
           {error && <p className="text-sm text-muted-foreground">I couldn't load your profile facts. <Button variant="link" onClick={load}>Try again</Button></p>}
           <MemorySection userId={userId} view="facts" refresh={refresh} hideEmpty={facts.length > 0} />
@@ -112,7 +110,8 @@ export function YourDataPage({ userId, cycle, isNonCycling, onClose, onLog, onSe
           <div className="overflow-hidden rounded-[22px] bg-card">{[{ id: "weight_trend", label: "Weight tracking" }, { id: "nutrition_today", label: "Nutrition tracking" }, { id: "discharge_tracker", label: "Fluid tracking" }].map((tracker) => <Button key={tracker.id} variant="ghost" className="h-auto w-full justify-between rounded-none border-b border-border px-5 py-4 last:border-0" onClick={tracker.id === "weight_trend" && onWeight ? onWeight : onTrackers}><span>{tracker.label} · {widgets.find((w) => w.id === tracker.id)?.visible ? "On" : "Off"}</span><ChevronRight /></Button>)}</div>
         </>}
       </div>
-      <Button variant="link" className="mt-8 h-auto px-0 text-foreground underline" onClick={() => setConfirm(true)}>Delete all memory</Button>
+      <p className="mt-6 text-sm text-muted-foreground">Your symptoms live in Together. Tap any of them there to correct or forget it.</p>
+      <Button variant="link" className="mt-6 h-auto px-0 text-foreground underline" onClick={() => setConfirm(true)}>Delete all memory</Button>
     </div>
     {edit && <EditMemoryPage value={edit.value ?? edit.text} source={edit.source} usedFor={usedForFact(edit.key)} onClose={() => setEdit(null)} onSave={(t) => save(t)} onForget={() => forgetField(edit)} />}
     <AlertDialog open={confirm} onOpenChange={(v) => !busy && setConfirm(v)}><AlertDialogContent className="w-[calc(100%-40px)] rounded-[22px]"><AlertDialogHeader><AlertDialogTitle className="font-display text-3xl">Delete all memory?</AlertDialogTitle><AlertDialogDescription>This deletes everything Logan remembers about you. It can't be undone.</AlertDialogDescription></AlertDialogHeader><p className="text-xs text-muted-foreground">Saved chat facts, profile facts and people will be cleared. Your chat history, period history, health context and tracker records stay.</p><AlertDialogFooter><Button variant="outline" disabled={busy} onClick={() => setConfirm(false)}>Keep it</Button><Button variant="destructive" disabled={busy} onClick={deleteMemory}>{busy ? "Deleting…" : "Delete everything"}</Button></AlertDialogFooter></AlertDialogContent></AlertDialog>

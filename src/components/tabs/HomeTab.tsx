@@ -11,7 +11,6 @@ import { WidgetEditMode } from "@/components/home/WidgetEditMode";
 import { WeightSettingsPage } from "@/components/you/WeightSettingsPage";
 import { AddCustomWidgetDialog } from "@/components/home/AddCustomWidgetDialog";
 import { CustomAIWidget } from "@/components/home/CustomAIWidget";
-import { SymptomHistoryWidget } from "@/components/home/SymptomHistoryWidget";
 import { DischargeTrackerWidget } from "@/components/home/DischargeTrackerWidget";
 import { CycleCorrelationsWidget } from "@/components/home/CycleCorrelationsWidget";
 import { LabResultsWidget } from "@/components/home/LabResultsWidget";
@@ -19,7 +18,6 @@ import { NutritionTodayWidget } from "@/components/home/NutritionTodayWidget";
 import { WeightTrendWidget } from "@/components/home/WeightTrendWidget";
 import { MiniPhaseArc, getWidgetGraphic } from "@/components/home/WidgetGraphics";
 import { TodayRing } from "@/components/chat/LoganTodaySection";
-import { YourSymptomsCard } from "@/components/you/YourSymptomsCard";
 import { YourDataPage } from "@/components/you/YourDataPage";
 import { PartnerHeadsupManage } from "@/components/partner/PartnerHeadsupManage";
 import { usePartnerHeadsupFlag } from "@/hooks/usePartnerHeadsupFlag";
@@ -757,17 +755,8 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
         // Logging lives in Together only.
         return null;
       case "symptom_history":
-        return userId ? (
-          <div className="w-full" key={id}>
-            <SymptomHistoryWidget
-              userId={userId}
-              lastPeriodStart={cycleData.lastPeriodStart}
-              cycleLengthDays={cycleData.cycleLengthDays}
-              isNonCycling={!!isNonCycling}
-              lifeStage={cycleData.lifeStage}
-            />
-          </div>
-        ) : null;
+        // Symptom lists live in Together only.
+        return null;
       case "discharge_tracker": {
         return userId ? (
           <div className="w-full flex flex-col gap-2" key={id}>
@@ -946,8 +935,6 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
           )}
         </div>
 
-        {/* Your symptoms: opens Together on Mine */}
-        {userId && <YourSymptomsCard userId={userId} onOpen={() => onOpenSymptoms?.()} />}
 
         {/* Tiles */}
         {userId && (
