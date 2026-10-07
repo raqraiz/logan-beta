@@ -8,10 +8,29 @@ import { AggRow, CATEGORY_PILLS, TogetherCategory, countLabel, display, isExact,
 function Pill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button type="button" onClick={onClick} aria-pressed={active}
-      className={cn("flex items-center gap-1 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold",
-        active ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground")}>
+      className={cn("flex h-9 items-center gap-1 whitespace-nowrap rounded-full border px-3.5 text-[13px]",
+        active ? "border-foreground bg-foreground font-semibold text-background" : "border-border bg-card font-medium text-foreground")}>
       {children}
     </button>
+  );
+}
+
+const FADE_MASK = "linear-gradient(to right, black calc(100% - 28px), transparent)";
+
+/** Horizontal pill row that fades its right edge only while more pills are off-screen. */
+function PillRow({ className, children }: { className?: string; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [fade, setFade] = useState(false);
+  const update = () => {
+    const el = ref.current; if (!el) return;
+    setFade(el.scrollWidth > el.clientWidth + 4 && el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  };
+  useEffect(() => { update(); }, [children]);
+  return (
+    <div ref={ref} onScroll={update} className={cn("flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]", className)}
+      style={fade ? { maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK } : undefined}>
+      {children}
+    </div>
   );
 }
 
@@ -92,10 +111,10 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymp
     return (
       <div className="flex flex-col gap-4">
         <button type="button" onClick={() => setView("field")} className="self-start text-sm font-semibold text-foreground underline">‹ Back to bubbles</button>
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <PillRow>
           {showWeek && <Pill active={listPill === "week"} onClick={() => setListPill("week")}>Common in your week</Pill>}
           <Pill active={listPill === "stage"} onClick={() => setListPill("stage")}>Women in your stage</Pill>
-        </div>
+        </PillRow>
         {listPill === "week" && <p className="text-sm text-muted-foreground">What women log most around day {lo} to {hi}</p>}
         {common.length > 0 && <ul className="rounded-[22px] border border-border bg-card px-4">{common.map((r) => <Row key={r.symptom} r={r} />)}</ul>}
         {rare.length > 0 && (
@@ -120,10 +139,10 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymp
           </svg>
         </button>, headSlot)}
       <p className="text-center text-base text-muted-foreground">{everyone.length} feelings, named by women like you.</p>
-      <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
+      <PillRow className="-mx-5 px-5">
         {CATEGORY_PILLS.map((p) => <Pill key={p.id} active={cat === p.id} onClick={() => setCat(p.id)}>{p.label}</Pill>)}
         <span aria-hidden className="w-3 shrink-0" />
-      </div>
+      </PillRow>
       <BubbleCluster rows={shown} max={max} mine={mine} cats={cats} onOpen={onOpenSymptom} />
       {field.length < 3 && <p className="text-center text-sm text-muted-foreground">{MORE}</p>}
       <p className="text-center text-sm text-muted-foreground">
