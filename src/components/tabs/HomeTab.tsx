@@ -929,13 +929,13 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
                 cycle={ringCycle}
                 size={200}
                 onOpen={() => setShowAnalytics(true)}
-                statusClassName="text-sm font-light text-[#6E675F]"
+                statusClassName="text-sm font-light text-muted-foreground"
               />
               {!isNonCycling && (
                 <button
                   type="button"
                   onClick={() => { setEditedLength(cycleData.cycleLengthDays); setEditedPhase("auto"); setShowDatePicker(true); }}
-                  className="mt-2 text-sm font-medium text-[#0B7479]"
+                  className="mt-2 text-sm font-medium text-[#0B7479] dark:text-[#2BD4D9]"
                 >
                   Edit cycle
                 </button>
@@ -947,7 +947,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
                 <button
                   type="button"
                   onClick={() => { setMarkerDate(new Date()); setShowMarker(true); }}
-                  className="mt-2 text-sm font-medium text-[#0B7479]"
+                  className="mt-2 text-sm font-medium text-[#0B7479] dark:text-[#2BD4D9]"
                 >
                   New cycle started
                 </button>
@@ -976,12 +976,12 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
           <div className={`grid gap-[14px] ${headsupVisible ? "grid-cols-2" : "grid-cols-1"}`}>
             <button type="button" onClick={() => setShowMemory(true)}
               className="flex flex-col items-center gap-2 rounded-[22px] border border-border bg-card px-3 py-5 text-sm font-semibold text-foreground">
-              <Database className="h-5 w-5 text-[#0B7479]" aria-hidden /> Your data
+              <Database className="h-5 w-5 text-[#0B7479] dark:text-[#2BD4D9]" aria-hidden /> Your data
             </button>
             {headsupVisible && (
               <button type="button" onClick={() => setShowPeople(true)}
                 className="flex flex-col items-center gap-2 rounded-[22px] border border-border bg-card px-3 py-5 text-sm font-semibold text-foreground">
-                <Users className="h-5 w-5 text-[#0B7479]" aria-hidden /> Your People
+                <Users className="h-5 w-5 text-[#0B7479] dark:text-[#2BD4D9]" aria-hidden /> Your People
               </button>
             )}
           </div>
@@ -989,7 +989,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
 
         {/* Your trackers */}
         <section className="pt-4">
-          <p className="mb-2 text-[13px] font-semibold text-[#6E675F]">Your trackers</p>
+          <p className="mb-2 text-[13px] font-semibold text-muted-foreground">Your trackers</p>
           {editMode ? (
             <>
               <WidgetEditMode
@@ -1012,7 +1012,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
               {trackerWidgets.map(w => (
                 <div className="w-full" key={w.id}>{renderWidget(w)}</div>
               ))}
-              <button type="button" onClick={() => setEditMode(true)} className="self-center pt-2 text-sm font-medium text-[#0B7479]">
+              <button type="button" onClick={() => setEditMode(true)} className="self-center pt-2 text-sm font-medium text-[#0B7479] dark:text-[#2BD4D9]">
                 Choose trackers
               </button>
             </div>

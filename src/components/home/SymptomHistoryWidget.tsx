@@ -37,11 +37,11 @@ interface Props {
 
 const SEVERITY_COLORS = [
   "bg-muted-foreground/30",
-  "bg-green-400/70",
-  "bg-lime-400/70",
-  "bg-yellow-400/70",
-  "bg-orange-400/70",
-  "bg-red-400/70",
+  "bg-[#0E8A8F]/20",
+  "bg-[#0E8A8F]/40",
+  "bg-[#0E8A8F]/60",
+  "bg-[#0E8A8F]/80",
+  "bg-[#0E8A8F]",
 ];
 
 export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays, isNonCycling, lifeStage }: Props) {
