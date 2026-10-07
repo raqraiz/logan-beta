@@ -80,13 +80,13 @@ export function YourDataPage({ userId, cycle, isNonCycling, onClose, onLog, onSe
     try {
       const updated = await supabase.from("participants").update(clearFacts).eq("user_id", userId).select("id");
       if (updated.error) throw updated.error;
-      for (const table of ["user_memory_notes", "headsup_people", "partner_headsup_settings", "partner_headsup_style_examples"] as const) {
+      for (const table of ["user_memory_notes", "user_word_prefs", "headsup_people", "partner_headsup_settings", "partner_headsup_style_examples"] as const) {
         const result = await supabase.from(table).delete().eq("user_id", userId); if (result.error) throw result.error;
       }
       const participant = await supabase.from("participants").select(`${fields}, watch_symptoms`).eq("user_id", userId).maybeSingle();
       if (participant.error) throw participant.error;
       if (participant.data && Object.entries(clearFacts).some(([key, value]) => JSON.stringify((participant.data as unknown as Record<string, unknown>)[key]) !== JSON.stringify(value))) throw new Error("Unverified");
-      for (const table of ["user_memory_notes", "headsup_people", "partner_headsup_settings", "partner_headsup_style_examples"] as const) {
+      for (const table of ["user_memory_notes", "user_word_prefs", "headsup_people", "partner_headsup_settings", "partner_headsup_style_examples"] as const) {
         const check = await supabase.from(table).select("id").eq("user_id", userId).limit(1); if (check.error || check.data?.length) throw new Error("Unverified");
       }
       globalThis.dispatchEvent(new Event(PATTERNS_CHANGED));

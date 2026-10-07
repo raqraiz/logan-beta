@@ -106,6 +106,9 @@ Deno.serve(async (req) => {
       console.error("Error deleting notification preferences:", notifError);
     }
 
+    const { error: wordsError } = await supabaseAdmin.from("user_word_prefs").delete().eq("user_id", userId);
+    if (wordsError) console.error("Error deleting word prefs:", wordsError);
+
     // Delete linked participant and related data (matched by email)
     if (userEmail) {
       const { data: participant } = await supabaseAdmin

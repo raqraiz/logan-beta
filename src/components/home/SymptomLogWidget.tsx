@@ -460,14 +460,37 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
 
   useEffect(() => { loadAliases().then(() => setSelected(prev => prev.map(s => ({ ...s, name: canonicalSymptom(s.name) })))); }, []);
 
-  // Her own words: rename/remove are display prefs for future logs only (old logs untouched).
-  const wordPrefsKey = `logan:your-words:${userId}`;
-  const [wordPrefs, setWordPrefs] = useState<Record<string, string | null>>(() => {
-    try { return JSON.parse(localStorage.getItem(`logan:your-words:${userId}`) || "{}"); } catch { return {}; }
-  });
-  const saveWordPrefs = (next: Record<string, string | null>) => {
+  // Her own words: rename/remove live in user_word_prefs (her account), future logs only (old logs untouched).
+  const [wordPrefs, setWordPrefs] = useState<Record<string, string | null>>({});
+  useEffect(() => {
+    if (!userId) return;
+    const legacyKey = `logan:your-words:${userId}`;
+    (async () => {
+      let legacy: Record<string, string | null> = {};
+      try { legacy = JSON.parse(localStorage.getItem(legacyKey) || "{}"); } catch { /* ignore */ }
+      const entries = Object.entries(legacy);
+      if (entries.length) {
+        const { error } = await supabase.from("user_word_prefs").upsert(
+          entries.map(([original_word, v]) => ({ user_id: userId, original_word, new_name: v, removed: v === null })),
+          { onConflict: "user_id,original_word" });
+        if (!error) { try { localStorage.removeItem(legacyKey); } catch { /* ignore */ } }
+      } else { try { localStorage.removeItem(legacyKey); } catch { /* ignore */ } }
+      const { data } = await supabase.from("user_word_prefs").select("original_word, new_name, removed").eq("user_id", userId);
+      const m: Record<string, string | null> = {};
+      for (const r of data ?? []) m[r.original_word] = r.removed ? null : (r.new_name ?? sentenceCase(r.original_word));
+      setWordPrefs(m);
+    })();
+  }, [userId]);
+  const saveWordPrefs = async (next: Record<string, string | null>) => {
+    const prev = wordPrefs;
     setWordPrefs(next);
-    try { localStorage.setItem(wordPrefsKey, JSON.stringify(next)); } catch { /* ignore */ }
+    const changed = Object.entries(next).filter(([k, v]) => !(k in prev) || prev[k] !== v);
+    const gone = Object.keys(prev).filter((k) => !(k in next));
+    const up = changed.length ? await supabase.from("user_word_prefs").upsert(
+      changed.map(([original_word, v]) => ({ user_id: userId, original_word, new_name: v, removed: v === null })),
+      { onConflict: "user_id,original_word" }) : { error: null };
+    const del = gone.length ? await supabase.from("user_word_prefs").delete().eq("user_id", userId).in("original_word", gone) : { error: null };
+    if (up.error || del.error) { setWordPrefs(prev); toast({ title: "That didn't save. Try again." }); }
   };
   const [editingWords, setEditingWords] = useState(false);
   const [renaming, setRenaming] = useState<string | null>(null);
