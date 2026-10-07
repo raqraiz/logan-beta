@@ -176,9 +176,9 @@ export function WhenWomenFeelCard({ c, mine, hasCycle }: { c: Community; mine: W
           aria-label={busy ? `Logged most on days ${busy.from} to ${busy.to} of the cycle.` : "When women log it across the cycle."}>
           {v.map((val, i) => {
             const d = i + 1;
-            const h = val > 0 ? Math.max(4, (val / max) * H) : 4;
+            const h = Math.max(8, (val / max) * H);
             const hot = val > 0 && busy && d >= busy.from && d <= busy.to;
-            return <rect key={d} x={x(d)} y={TOP + H - h} width={COL} height={h} rx={val > 0 ? 3 : 2} fill={hot ? "#0E8A8F" : "#BDEBED"} />;
+            return <rect key={d} x={x(d)} y={TOP + H - h} width={COL} height={h} rx={3} fill={hot ? "#0E8A8F" : "#BDEBED"} />;
           })}
           {usual && <circle cx={x(usual) + COL / 2} cy={4 + 4} r={4} fill="#FF2E92" />}
         </svg>
