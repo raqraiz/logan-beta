@@ -1172,6 +1172,7 @@ export type Database = {
           typical_symptoms: string[] | null
           updated_at: string
           user_id: string | null
+          watch_symptoms: string[]
           whatsapp_number: string
         }
         Insert: {
@@ -1220,6 +1221,7 @@ export type Database = {
           typical_symptoms?: string[] | null
           updated_at?: string
           user_id?: string | null
+          watch_symptoms?: string[]
           whatsapp_number: string
         }
         Update: {
@@ -1268,6 +1270,7 @@ export type Database = {
           typical_symptoms?: string[] | null
           updated_at?: string
           user_id?: string | null
+          watch_symptoms?: string[]
           whatsapp_number?: string
         }
         Relationships: []
