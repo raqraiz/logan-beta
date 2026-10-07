@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SymptomHistory } from "@/components/home/SymptomHistory";
 import { PatternPage } from "@/components/you/PatternPage";
+import { symptomPoints, groupCycles, PATTERNS_CHANGED, PATTERN_WINDOW_DAYS, type LogRow } from "@/lib/patternCycles";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 
 type Status = "Confirmed" | "Emerging" | "Watching";
@@ -75,7 +76,7 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
   const [timing, setTiming] = useState<Record<string, [number, number]>>({});
 
   useEffect(() => {
-    const since = new Date(Date.now() - 200 * DAY).toISOString();
+    const since = new Date(Date.now() - PATTERN_WINDOW_DAYS * DAY).toISOString();
     supabase.from("symptom_logs").select("logged_at, cycle_day, symptoms").eq("user_id", userId).gte("logged_at", since)
       .then(({ data }) => {
         setPatterns(computePatterns(data ?? []));
@@ -102,6 +103,11 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
         setHidden(h); setTiming(t);
       });
   }, [userId, reload]);
+  useEffect(() => {
+    const h = () => setReload((r) => r + 1);
+    globalThis.addEventListener(PATTERNS_CHANGED, h);
+    return () => globalThis.removeEventListener(PATTERNS_CHANGED, h);
+  }, []);
 
   const openChooser = () => { setDraft(watch); setCustom(""); setAdding(false); setSaveError(false); setChooser(true); };
   const toggle = (n: string) => setDraft((d) => d.includes(n) ? d.filter((x) => x !== n) : d.length >= 3 ? d : [...d, n]);
