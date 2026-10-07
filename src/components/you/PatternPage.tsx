@@ -139,7 +139,12 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
           <div className="space-y-2 px-5 pb-6">
             {mode === "helped" ? <p className="text-sm text-foreground">{data.helped}</p> : mode === "menu" ? <>
               {!isNonCycling && <Button variant="outline" onClick={() => setMode("timing")} className="w-full rounded-full">The timing is off</Button>}
-              {watched && <Button variant="outline" disabled={busy} onClick={async () => { setBusy(true); await onUnstar(); setBusy(false); setFix(false); }} className="w-full rounded-full">Stop watching this</Button>}
+              {watched && <Button variant="outline" disabled={busy} onClick={async () => {
+                setBusy(true);
+                try { await onUnstar(); setFix(false); }
+                catch { setMsg("That didn't save. Try again."); }
+                finally { setBusy(false); }
+              }} className="w-full rounded-full">Stop watching this</Button>}
               <Button variant="outline" disabled={busy} onClick={() => void remove()} className="w-full rounded-full">This isn't a pattern for me</Button>
             </> : <div className="space-y-3">
               <p className="text-sm text-muted-foreground">When does {lower} usually come?</p>

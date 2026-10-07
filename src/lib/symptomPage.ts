@@ -36,6 +36,7 @@ const DEFINITIONS: Record<string, string> = {
   "dry skin": "Dry skin can feel tight, rough, flaky or itchy. Moisture loss and changes in skin oil can play a part.",
   "dehydrated skin": "Dehydrated skin is skin that feels short of moisture, often tight or less supple than usual.",
   "hearing loss": "Hearing loss is a change in how clearly you hear sounds or speech. It may affect one ear or both.",
+  "muffled hearing": "Muffled hearing is when sounds seem quieter or less clear than usual. It may affect one ear or both.",
   tinnitus: "Tinnitus is hearing a sound, such as ringing or buzzing, when there is no outside source for it.",
 };
 
