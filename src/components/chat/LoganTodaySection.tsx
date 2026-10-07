@@ -69,7 +69,6 @@ function TodayRing({ cycle, onOpen }: { cycle: LoganTodayCycle; onOpen: () => vo
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           {tracking ? (
             <>
-              <span className="text-xs font-medium text-muted-foreground">Day</span>
               <span className="font-display text-[60px] font-semibold leading-none text-foreground [font-variant-numeric:lining-nums]">{cycle.cycleDay}</span>
               <span className="mt-1 text-sm font-medium text-muted-foreground">{PHASE_LABEL[cycle.phase] ?? cycle.phase}</span>
             </>
@@ -154,7 +153,8 @@ export const LoganTodaySection = forwardRef<HTMLDivElement, Props>(function Loga
   const succeed = insights?.succeed.slice(0, 3) ?? [];
   const avoid = insights?.dontMessUp.slice(0, 3) ?? [];
   const tracking = cycle?.lifeStage === "cycling" && !!cycle.cycleDay && cycle.phase !== "Unknown";
-  const subtitle = tracking ? `Day ${cycle!.cycleDay}, ${(PHASE_LABEL[cycle!.phase] ?? cycle!.phase).toLowerCase()} phase` : "Here's what I'd keep in mind";
+  const headline = insights?.headline || (tracking ? `Your day ${cycle!.cycleDay}` : "Your day");
+  const subtitle = insights?.headline ? insights.subline : null;
 
   return (
     <div ref={ref} data-logan-today
@@ -162,8 +162,8 @@ export const LoganTodaySection = forwardRef<HTMLDivElement, Props>(function Loga
       {cycle && <TodayRing cycle={cycle} onOpen={onOpenYou} />}
 
       <div className="rounded-[28px] border border-border bg-card p-6">
-        <h2 className="font-display text-[32px] font-semibold leading-tight text-foreground">Today</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
+        <h2 className="font-display text-[32px] font-semibold leading-tight text-foreground">{headline}</h2>
+        {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
 
         {insights ? (
           <div className="mt-5 space-y-5">

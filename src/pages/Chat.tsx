@@ -28,6 +28,8 @@ import { DatePickerInput } from "@/components/chat/DatePickerInput";
 import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 import { ChatCycleCircle, calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
 import { LoganTodaySection } from "@/components/chat/LoganTodaySection";
+import { SymptomLogWidget } from "@/components/home/SymptomLogWidget";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { refreshStageBoundary } from "@/hooks/useStageBoundary";
 import { inferCycleLengthForDeclaredPhase, autoCycleLengthFromHistory } from "@/lib/cyclePhase";
 import { updateParticipant } from "@/lib/participantWrite";
@@ -253,6 +255,7 @@ const Chat = () => {
   const [showForecast, setShowForecast] = useState(false);
   
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [feelSheetOpen, setFeelSheetOpen] = useState(false);
   const [creditBalance, setCreditBalance] = useState<{ free: number; paid: number; total: number; hoursUntilReset?: number } | null>(null);
   const [outOfCredits, setOutOfCredits] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -1492,11 +1495,7 @@ const Chat = () => {
       userId={user.id}
       cycle={cycleData}
       onOpenYou={() => { setActiveTab("home"); trackTabSwitch("home"); }}
-      onLogFeeling={() => {
-        setActiveTab("home");
-        trackTabSwitch("home");
-        setTimeout(() => window.dispatchEvent(new CustomEvent("logan:open-symptom-log")), 50);
-      }}
+      onLogFeeling={() => setFeelSheetOpen(true)}
     />
   ) : null;
 
@@ -2517,37 +2516,30 @@ const Chat = () => {
       </ScrollArea>
 
       {/* Scroll to bottom button */}
-      {showScrollButton && !settingsOpen && (
-        <div className={`fixed right-4 md:right-8 ${shouldShowInteractivePicker() ? "bottom-20" : isOnboarding ? "bottom-28" : "bottom-40"} z-[60]`}>
-          <Button
-            type="button"
-            size="icon"
-            onClick={() => {
-              const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
-              const hasViewportScroll = !!viewport && viewport.scrollHeight > viewport.clientHeight + 1;
-
-              if (hasViewportScroll && viewport) {
-                viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
-              } else {
-                window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
-              }
-
-              isNearBottomRef.current = true;
-              setShowScrollButton(false);
-            }}
-            aria-label="Jump to latest message"
-            className="h-12 w-12 rounded-full shadow-card animate-in fade-in slide-in-from-bottom-2 duration-200"
-          >
-            <ArrowDown className="w-5 h-5" />
-          </Button>
-        </div>
-      )}
-
       {/* Out of credits gate — disabled during alpha */}
 
       {/* Input - hide when showing interactive pickers or out of credits */}
       {!shouldShowInteractivePicker() && (
-        <div className={`border-t border-border/50 bg-card shrink-0 ${!isOnboarding ? "pb-14" : ""}`}>
+        <div className={`relative border-t border-border/50 bg-card shrink-0 ${!isOnboarding ? "pb-14" : ""}`}>
+          {showScrollButton && !settingsOpen && (
+            <button
+              type="button"
+              onClick={() => {
+                const viewport = scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
+                if (viewport && viewport.scrollHeight > viewport.clientHeight + 1) {
+                  viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+                } else {
+                  window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
+                }
+                isNearBottomRef.current = true;
+                setShowScrollButton(false);
+              }}
+              aria-label="Jump to latest message"
+              className="absolute right-4 bottom-[calc(100%+12px)] z-[60] flex h-10 w-10 items-center justify-center rounded-full border border-[#DDD7CC] bg-white text-[#1F1B16] animate-in fade-in duration-200"
+            >
+              <ArrowDown className="h-4 w-4" />
+            </button>
+          )}
           <div className="max-w-3xl mx-auto px-4 pt-4">
             {showTopicPrompt && !isOnboarding && (
               <div className="mb-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2">
@@ -2621,23 +2613,17 @@ const Chat = () => {
                 )}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground/60 text-center mt-2">
-              {isOnboarding 
+            <p className="mt-2 truncate text-center text-[12px] text-[#6E675F]">
+              {isOnboarding
                 ? "Answer Logan's questions to personalize your experience"
                 : (
                   <>
-                    Logan is not a medical professional. Always consult your doctor for medical advice.
-                    <span className="mx-1 text-muted-foreground/40">·</span>
-                    <button
-                      type="button"
-                      onClick={() => setFeedbackOpen(true)}
-                      className="text-primary/80 hover:text-primary underline underline-offset-2"
-                    >
+                    Logan isn't a doctor.{" "}
+                    <button type="button" onClick={() => setFeedbackOpen(true)} className="underline underline-offset-2">
                       Send feedback
                     </button>
                   </>
-                )
-              }
+                )}
             </p>
           </form>
 
@@ -2685,6 +2671,31 @@ const Chat = () => {
       onDismiss={() => setTourOpen(false)}
     />
     <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
+    {user && (
+      <Drawer open={feelSheetOpen} onOpenChange={setFeelSheetOpen}>
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerTitle className="sr-only">How I feel</DrawerTitle>
+          <div className="overflow-y-auto px-2 pb-6">
+            <SymptomLogWidget
+              userId={user.id}
+              cycleDay={cycleData?.lifeStage === "cycling" ? cycleData?.cycleDay : undefined}
+              phase={cycleData?.phase}
+              lastPeriodStart={cycleData?.lastPeriodStart}
+              cycleLengthDays={cycleData?.cycleLengthDays}
+              isNonCycling={cycleData?.lifeStage !== "cycling"}
+              onLogged={(entry) => {
+                setFeelSheetOpen(false);
+                const parts = entry.symptoms.map(s => s.severity ? `${s.name.toLowerCase()} (${s.severity}/5)` : s.name.toLowerCase());
+                const what = parts.length ? parts.join(", ") : "a note";
+                const when = entry.isToday ? "today" : "for an earlier day";
+                const note = entry.notes ? ` Note: ${entry.notes}` : "";
+                setTimeout(() => void sendAIMessage(`I just logged how I feel ${when}: ${what}.${note}`), 300);
+              }}
+            />
+          </div>
+        </DrawerContent>
+      </Drawer>
+    )}
     <SettingsDialog
       open={settingsOpen}
       onOpenChange={setSettingsOpen}

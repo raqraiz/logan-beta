@@ -153,7 +153,7 @@ serve(async (req) => {
     // Serve the cache when nothing about her situation changed today.
     const { data: cached } = await service
       .from("daily_home_insights")
-      .select("succeed_text, dont_mess_up_text, succeed_partner_text, dont_mess_up_partner_text, context_key")
+      .select("succeed_text, dont_mess_up_text, succeed_partner_text, dont_mess_up_partner_text, headline_text, subline_text, context_key")
       .eq("user_id", userId)
       .eq("local_date", localDate)
       .maybeSingle();
@@ -164,6 +164,8 @@ serve(async (req) => {
         dontMessUp: String(cached.dont_mess_up_text).split("\n").filter(Boolean),
         succeedPartner: String(cached.succeed_partner_text ?? "").split("\n").filter(Boolean),
         dontMessUpPartner: String(cached.dont_mess_up_partner_text ?? "").split("\n").filter(Boolean),
+        headline: cached.headline_text ?? null,
+        subline: cached.subline_text ?? null,
         cached: true,
       });
     }
@@ -278,17 +280,19 @@ ${symptomContext}
 ${chatFactContext}
 
 
-Write four lists, two addressed to her and two addressed to her partner:
+First write a "headline": a short headline for her day, 6 words or fewer, plain and warm, grounded in her state, phase and logs (example: "Energy dips this week"). No period at the end. Then a "subline": one quiet, reassuring sentence of 10 words or fewer (example: "Normal for now. Here's what helps.").
+
+Then write four lists, two addressed to her and two addressed to her partner:
 - "succeed": 3 things that will make today go well for her, given her exact state.
-- "dontMessUp": 3 specific traps to avoid today, given her exact state.
+- "dontMessUp": 3 gentle suggestions for what to ease off on today, given her exact state. Phrase them as kind suggestions from a friend, not orders. Never start with "Do not", "Don't" or "Avoid". Example: "Skip crowds and loud plans if you can."
 - "succeedPartner": exactly 3 things her partner can do today to support her.
 - "dontMessUpPartner": exactly 3 things her partner should avoid today.
 
 The partner lists speak directly TO the partner as "you" (example: "Take dinner off the plate tonight."). Never assume the partner's gender. No gendered gifts or stereotypes (no cologne, flowers, "date night", "man up" and similar). They draw on the same state, symptoms and recent-message context as her lists.
 
-Rules for every item: ONE sentence, 8 words or fewer, concrete and actionable, plain everyday words. Never start with "Prioritize" or "Refrain from". Never use the words "ensure", "nurture" or "self-care". Never use em dashes or en dashes. Grace over guilt, never shaming. No emojis, no markdown, no numbering, no headers. Vary the wording day to day.
+Her lists sound warm and practical, like a friend. Rules for every item: ONE sentence, 8 words or fewer, concrete and actionable, plain everyday words. Never start with "Prioritize" or "Refrain from". Never use the words "ensure", "nurture" or "self-care". Never use em dashes or en dashes. Grace over guilt, never shaming. No emojis, no markdown, no numbering, no headers. Vary the wording day to day.
 
-Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."],"succeedPartner":["...","...","..."],"dontMessUpPartner":["...","...","..."]}`;
+Return ONLY JSON: {"headline":"...","subline":"...","succeed":["...","...","..."],"dontMessUp":["...","...","..."],"succeedPartner":["...","...","..."],"dontMessUpPartner":["...","...","..."]}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -320,6 +324,8 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
     let dontMessUp: string[] = [];
     let succeedPartner: string[] = [];
     let dontMessUpPartner: string[] = [];
+    let headline: string | null = null;
+    let subline: string | null = null;
     const asList = (v: unknown) => (Array.isArray(v) ? v.map(String).filter(Boolean) : []);
     try {
       const parsed = JSON.parse(cleaned);
@@ -327,6 +333,10 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
       dontMessUp = asList(parsed.dontMessUp);
       succeedPartner = asList(parsed.succeedPartner);
       dontMessUpPartner = asList(parsed.dontMessUpPartner);
+      const h = typeof parsed.headline === "string" ? parsed.headline.replace(/[—–]/g, ",").replace(/\.$/, "").trim() : "";
+      const sl = typeof parsed.subline === "string" ? parsed.subline.replace(/[—–]/g, ",").trim() : "";
+      headline = h && h.split(/\s+/).length <= 6 ? h : null;
+      subline = sl && sl.split(/\s+/).length <= 14 ? sl : null;
     } catch (_e) {
       console.error("Failed to parse AI output:", cleaned.slice(0, 300));
     }
@@ -375,9 +385,9 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
         "Pick one small task and let finishing it be enough.",
       ];
       const NEUTRAL_DONTMESS = [
-        "Don't skip lunch because the day got busy.",
-        "Don't scroll in bed past your usual lights-out.",
-        "Don't pack your evening so full you can't rest.",
+        "Try not to skip lunch on a busy day.",
+        "Put the phone down at lights-out if you can.",
+        "Leave some room in your evening to rest.",
       ];
       const NEUTRAL_SUCCEED_HIM = [
         "Handle dinner tonight without being asked.",
@@ -417,6 +427,8 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
           dont_mess_up_text: dontMessUp.join("\n"),
           succeed_partner_text: succeedPartner.length ? succeedPartner.join("\n") : null,
           dont_mess_up_partner_text: dontMessUpPartner.length ? dontMessUpPartner.join("\n") : null,
+          headline_text: headline,
+          subline_text: subline,
           context_key: contextKey,
           generated_at: new Date().toISOString(),
         },
@@ -424,7 +436,7 @@ Return ONLY JSON: {"succeed":["...","...","..."],"dontMessUp":["...","...","..."
       );
     if (upsertErr) console.error("daily_home_insights upsert failed:", upsertErr.message);
 
-    return json({ succeed, dontMessUp, succeedPartner, dontMessUpPartner, cached: false });
+    return json({ succeed, dontMessUp, succeedPartner, dontMessUpPartner, headline, subline, cached: false });
   } catch (e) {
     console.error("generate-daily-insights error:", e);
     return json({ error: "An internal error occurred" }, 500);

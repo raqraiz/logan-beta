@@ -350,9 +350,11 @@ export type Database = {
           dont_mess_up_partner_text: string | null
           dont_mess_up_text: string
           generated_at: string
+          headline_text: string | null
           help_me_text: string | null
           id: string
           local_date: string
+          subline_text: string | null
           succeed_him_text: string | null
           succeed_partner_text: string | null
           succeed_text: string
@@ -366,9 +368,11 @@ export type Database = {
           dont_mess_up_partner_text?: string | null
           dont_mess_up_text: string
           generated_at?: string
+          headline_text?: string | null
           help_me_text?: string | null
           id?: string
           local_date: string
+          subline_text?: string | null
           succeed_him_text?: string | null
           succeed_partner_text?: string | null
           succeed_text: string
@@ -382,9 +386,11 @@ export type Database = {
           dont_mess_up_partner_text?: string | null
           dont_mess_up_text?: string
           generated_at?: string
+          headline_text?: string | null
           help_me_text?: string | null
           id?: string
           local_date?: string
+          subline_text?: string | null
           succeed_him_text?: string | null
           succeed_partner_text?: string | null
           succeed_text?: string
