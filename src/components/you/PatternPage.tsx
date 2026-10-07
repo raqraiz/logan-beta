@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { SafetyCallout } from "@/components/SafetyCallout";
 import { toast } from "sonner";
 import { PATTERNS_CHANGED, windowDays } from "@/lib/patternCycles";
-import { isSafetySymptom, ownSymptomPairs, symptomCardInsights, symptomDefinition, symptomPageData, type SymptomPageLog } from "@/lib/symptomPage";
+import { isCheckFirstSymptom, isUrgentSymptom, ownSymptomPairs, symptomCardInsights, symptomDefinition, symptomPageData, type SymptomPageLog } from "@/lib/symptomPage";
 import { loadCycleStarts } from "@/lib/realCycleDays";
 import { togetherDisplay, isKnownSymptom } from "@/lib/symptomCatalog";
 import { ArrowLeft, ChevronRight } from "lucide-react";
@@ -54,7 +54,10 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
   const timing = !isNonCycling && from !== null && to !== null;
   const community = useSymptomCommunity(userId, name, sample);
   const myWindow = data.count < 2 || isNonCycling ? null : demo ? demo.window : timing ? { from: from as number, to: to as number } : null;
-  const safetySymptom = isSafetySymptom(name);
+  const safetySymptom = isUrgentSymptom(name);
+  const checkFirst = isCheckFirstSymptom(name);
+  // Check-first symptoms: only women with logs in 2+ real cycles may share or vote.
+  const canContribute = !checkFirst || realData.cycles >= 2;
   const [tipView, setTipView] = useState<"none" | "list" | "share">("none");
   const [tipSummary, setTipSummary] = useState<{ count: number; top: number } | null>(null);
   const [tipLabel, setTipLabel] = useState("Someone in Together");
@@ -67,7 +70,7 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
     return () => { alive = false; globalThis.removeEventListener(TIPS_CHANGED, load); };
   }, [name, userId, safetySymptom, sample]);
   const openTips = () => {
-    if (tipSummary?.count) { setTipView("list"); return; }
+    if (tipSummary?.count || !canContribute) { setTipView("list"); return; }
     if (!community.joined) { community.openConsent(); return; }
     setTipView("share");
   };
@@ -248,8 +251,8 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
         </DrawerContent>
       </Drawer>
       {community.consentSheet}
-      {tipView === "list" && <WhatHelpedPage symptom={name} joined={community.joined} onJoin={community.openConsent} onBack={() => setTipView("none")} onShare={() => setTipView("share")} />}
-      {tipView === "share" && !safetySymptom && <ShareTipPage symptom={name} label={tipLabel} onBack={() => setTipView(tipSummary?.count ? "list" : "none")} onDone={() => setTipView(tipSummary?.count ? "list" : "none")} />}
+      {tipView === "list" && <WhatHelpedPage symptom={name} checkFirst={checkFirst} canContribute={canContribute} joined={community.joined} onJoin={community.openConsent} onBack={() => setTipView("none")} onShare={() => setTipView("share")} />}
+      {tipView === "share" && !safetySymptom && canContribute && <ShareTipPage symptom={name} label={tipLabel} onBack={() => setTipView(tipSummary?.count ? "list" : "none")} onDone={() => setTipView(tipSummary?.count ? "list" : "none")} />}
       <AlertDialog open={confirmForget} onOpenChange={(v) => !busy && setConfirmForget(v)}>
         <AlertDialogContent className="w-[calc(100%-40px)] rounded-[22px]">
           <AlertDialogHeader>
