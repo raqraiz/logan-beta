@@ -140,7 +140,7 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymp
             <path d="M9 6h11M9 12h11M9 18h11" /><circle cx="4.5" cy="6" r="1" /><circle cx="4.5" cy="12" r="1" /><circle cx="4.5" cy="18" r="1" />
           </svg>
         </button>, headSlot)}
-      <p className="text-center text-base text-muted-foreground">{everyone.length} feelings, named by women like you.</p>
+      <p className="text-left text-base text-muted-foreground">{everyone.length} feelings, named by women like you.</p>
       <PillRow className="-mx-5 px-5">
         {CATEGORY_PILLS.map((p) => <Pill key={p.id} active={cat === p.id} onClick={() => setCat(p.id)}>{p.label}</Pill>)}
         <span aria-hidden className="w-3 shrink-0" />
