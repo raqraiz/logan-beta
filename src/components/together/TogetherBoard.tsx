@@ -8,10 +8,29 @@ import { AggRow, CATEGORY_PILLS, TogetherCategory, countLabel, display, isExact,
 function Pill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button type="button" onClick={onClick} aria-pressed={active}
-      className={cn("flex items-center gap-1 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold",
-        active ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground")}>
+      className={cn("flex h-9 items-center gap-1 whitespace-nowrap rounded-full border px-3.5 text-[13px]",
+        active ? "border-foreground bg-foreground font-semibold text-background" : "border-border bg-card font-medium text-foreground")}>
       {children}
     </button>
+  );
+}
+
+const FADE_MASK = "linear-gradient(to right, black calc(100% - 28px), transparent)";
+
+/** Horizontal pill row that fades its right edge only while more pills are off-screen. */
+function PillRow({ className, children }: { className?: string; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [fade, setFade] = useState(false);
+  const update = () => {
+    const el = ref.current; if (!el) return;
+    setFade(el.scrollWidth > el.clientWidth + 4 && el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  };
+  useEffect(() => { update(); }, [children]);
+  return (
+    <div ref={ref} onScroll={update} className={cn("flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]", className)}
+      style={fade ? { maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK } : undefined}>
+      {children}
+    </div>
   );
 }
 
