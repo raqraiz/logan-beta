@@ -8,11 +8,11 @@ type Rect = { top: number; left: number; width: number; height: number };
 const STEPS = [
   {
     target: "home",
-    text: "Quick tour, tap through.\n\nHome is your daily check-in, log symptoms, meals, and weight, and see what to expect today.",
+    text: "Quick tour, tap through.\n\nThe You tab is your daily check-in, log symptoms, meals, and weight, and see what to expect today.",
   },
   {
     target: "ask",
-    text: "Ask is right here, anytime something feels off, ask me. No 3am googling.",
+    text: "Logan is right here, anytime something feels off, ask me. No 3am googling.",
   },
   {
     target: "together",
@@ -76,7 +76,7 @@ export function CoachMarkTour({ open, anchorSymptom, onLogNow, onGoHome, onDismi
           </DialogHeader>
           <div className="flex flex-col gap-2 pt-2">
             <Button onClick={onLogNow}>Log it now</Button>
-            <Button variant="secondary" onClick={onGoHome}>Take me to Home</Button>
+            <Button variant="secondary" onClick={onGoHome}>Take me to You</Button>
             <Button variant="ghost" onClick={onDismiss}>Later</Button>
           </div>
         </DialogContent>
