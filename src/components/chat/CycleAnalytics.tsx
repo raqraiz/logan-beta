@@ -24,6 +24,7 @@ import {
   ReferenceArea,
   ReferenceLine,
   CartesianGrid,
+  LabelList,
 } from "recharts";
 
 interface CycleAnalyticsProps {
@@ -36,6 +37,7 @@ interface CycleAnalyticsProps {
   lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant";
   dueDate?: string;
   pregnancyLmp?: string;
+  embedded?: boolean;
 }
 
 interface CycleHistoryRow {
@@ -66,6 +68,7 @@ export function CycleAnalytics({
   lifeStage,
   dueDate,
   pregnancyLmp,
+  embedded = false,
 }: CycleAnalyticsProps) {
   const { stageKey: boundaryStageKey } = useStageBoundary();
   const stageHidden = isStageHidden(boundaryStageKey, lifeStage);
@@ -371,6 +374,35 @@ export function CycleAnalytics({
   ];
 
   const isPregnant = lifeStage === "pregnant";
+
+  if (embedded) {
+    const recent = [...history].filter((h) => h.cycle_length_days >= 15 && h.cycle_length_days <= 45).slice(0, 6).reverse();
+    const chart = recent.map((h) => ({ length: h.cycle_length_days, label: format(new Date(h.cycle_start_date + "T12:00:00Z"), "MMM d") }));
+    const bleeding = currentMenstruationDays ?? history.find((h) => h.menstruation_days !== null)?.menstruation_days ?? null;
+    if (loading) return <p className="py-8 text-sm text-muted-foreground" role="status">Gathering your cycle story.</p>;
+    if (recent.length < 2) return <p className="rounded-[22px] bg-card p-5 text-sm text-muted-foreground">Log a couple of periods and your cycle story starts here.</p>;
+    return <div className="space-y-4" data-private>
+      <div className="rounded-[22px] bg-card p-5">
+        <h2 className="text-[13px] font-semibold text-muted-foreground">Cycle length</h2>
+        <p className="mt-2 text-sm text-foreground">{regularityLabel === "Very regular" ? "Your cycle lengths are staying fairly steady." : "Your cycle lengths vary. Each period adds to your story."}</p>
+        <div className="mt-5 h-48 w-full" role="img" aria-label={`Cycle lengths: ${chart.map((p) => `${p.label}, ${p.length} days`).join("; ")}. Average ${avgLength} days.`}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chart} margin={{ top: 25, right: 25, left: 10, bottom: 5 }}>
+              <XAxis dataKey="label" axisLine={false} tickLine={false} interval={0} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+              <YAxis hide domain={[Math.min(...chart.map((p) => p.length)) - 4, Math.max(...chart.map((p) => p.length)) + 4]} />
+              {avgLength !== null && <ReferenceLine y={avgLength} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" label={{ value: "avg", position: "insideRight", fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />}
+              <Line type="linear" dataKey="length" stroke="hsl(var(--foreground))" strokeWidth={2} isAnimationActive={false} dot={(props: { cx?: number; cy?: number; index?: number }) => <circle key={props.index} cx={props.cx} cy={props.cy} r={4} fill={props.index === chart.length - 1 ? "var(--symptom-insight-dot)" : "hsl(var(--foreground))"} />}>
+                <LabelList dataKey="length" position="top" fill="hsl(var(--foreground))" fontSize={12} />
+              </Line>
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {[{ value: avgLength, label: "avg days" }, { value: bleeding, label: "days bleeding" }, { value: variance === null ? null : `±${variance}`, label: "variation" }].map((stat) => <div key={stat.label} className="min-w-0 rounded-[22px] bg-card px-2 py-4 text-center"><p className="text-[20px] font-bold text-foreground">{stat.value ?? "Not yet"}</p><p className="mt-1 text-xs text-muted-foreground">{stat.label}</p></div>)}
+      </div>
+    </div>;
+  }
 
   // Pregnancy variant: gestational week + trimester, LMP + Due Date. Hide cycle-specific stats.
   // Stage boundary active: no pregnancy note, weeks or dates.
