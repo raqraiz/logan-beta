@@ -8,16 +8,12 @@ interface Props {
   onSave: (text: string) => Promise<boolean>; onForget: () => Promise<boolean>; onClose: () => void;
 }
 
-/** Where Logan uses a fact, in plain words. Keyed by profile field, else guessed from the note text. */
-export function usedForFact(key: string, text: string): string[] {
-  const t = text.toLowerCase();
-  const base = ["Your chats with Logan"];
-  if (key === "age") return ["Cycle estimates", "Your doctor summary", ...base];
-  if (key === "anchor_symptom" || key === "typical_symptoms") return ["Your patterns", "Daily tips", "Your doctor summary"];
-  if (key === "goals") return ["Daily tips", ...base];
-  if (/bleed|period|iud|cycle/.test(t)) return ["Why you rarely bleed", "Cycle estimates", "Your doctor summary"].filter((x, i) => i > 0 || /rarely|iud|light/.test(t));
-  if (/usually comes|days|pattern/.test(t)) return ["Your patterns", "Daily tips"];
-  return [...base, "Daily tips"];
+/** Only uses that are true in code. Every fact feeds chat replies. Cycle estimates read life_stage only
+ *  (see isPhaseTrackingOn); add a key here only when prediction code actually reads it.
+ *  Add "Your doctor summary" only once that feature exists. */
+const CYCLE_ESTIMATE_KEYS = new Set(["life_stage"]);
+export function usedForFact(key: string): string[] {
+  return CYCLE_ESTIMATE_KEYS.has(key) ? ["Our conversations", "Cycle estimates"] : ["Our conversations"];
 }
 
 export function EditMemoryPage({ value, source, usedFor, onSave, onForget, onClose }: Props) {

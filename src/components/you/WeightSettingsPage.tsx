@@ -45,7 +45,7 @@ export function WeightSettingsPage({ userId, widgets, onSave, onClose }: Props) 
         <div className="grid grid-cols-2 gap-1" role="radiogroup" aria-label="Show me">
           {([[false, "The trend only"], [true, "Exact numbers"]] as const).map(([v, label]) => <Button key={label} variant="ghost" role="radio" aria-checked={exact === v} className={`rounded-full font-semibold ${exact === v ? "bg-foreground text-background hover:bg-foreground hover:text-background" : "text-foreground"}`} onClick={() => setExact(v)}>{label}</Button>)}
         </div>
-        <div className="mt-6 overflow-hidden rounded-[22px] bg-card">{row("Include in doctor summary", doctor, setDoctor)}{row("Remind me to weigh in", remind, setRemind)}</div>
+        {/* "Include in doctor summary" and "Remind me to weigh in" stay hidden until those features exist. */}
       </>}
       <Button className="mt-8 h-12 w-full rounded-full bg-foreground text-background hover:bg-foreground/90" disabled={busy} onClick={done}>Done</Button>
     </div>

@@ -114,7 +114,7 @@ export function YourDataPage({ userId, cycle, isNonCycling, onClose, onLog, onSe
       </div>
       <Button variant="link" className="mt-8 h-auto px-0 text-foreground underline" onClick={() => setConfirm(true)}>Delete all memory</Button>
     </div>
-    {edit && <EditMemoryPage value={edit.value ?? edit.text} source={edit.source} usedFor={usedForFact(edit.key, edit.text)} onClose={() => setEdit(null)} onSave={(t) => save(t)} onForget={() => forgetField(edit)} />}
+    {edit && <EditMemoryPage value={edit.value ?? edit.text} source={edit.source} usedFor={usedForFact(edit.key)} onClose={() => setEdit(null)} onSave={(t) => save(t)} onForget={() => forgetField(edit)} />}
     <AlertDialog open={confirm} onOpenChange={(v) => !busy && setConfirm(v)}><AlertDialogContent className="w-[calc(100%-40px)] rounded-[22px]"><AlertDialogHeader><AlertDialogTitle className="font-display text-3xl">Delete all memory?</AlertDialogTitle><AlertDialogDescription>This deletes everything Logan remembers about you. It can't be undone.</AlertDialogDescription></AlertDialogHeader><p className="text-xs text-muted-foreground">Saved chat facts, profile facts and people will be cleared. Your chat history, period history, health context and tracker records stay.</p><AlertDialogFooter><Button variant="outline" disabled={busy} onClick={() => setConfirm(false)}>Keep it</Button><Button variant="destructive" disabled={busy} onClick={deleteMemory}>{busy ? "Deleting…" : "Delete everything"}</Button></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </div>;
 }

@@ -65,6 +65,6 @@ export function MemorySection({ userId, view = "all", refresh = 0, hideEmpty = f
         {hidden.length === 0 ? <p className="p-5 text-sm text-muted-foreground">Nothing hidden. You're in charge of what stays.</p> : hidden.map((n) => <div key={n.id} className="flex items-center justify-between gap-3 border-b border-border px-5 py-3 last:border-0"><span className="text-sm">{n.note.match(/^(.+?) isn't a pattern for you/)?.[1] ?? n.note}</span><Button variant="link" className="symptom-watch shrink-0 px-0 underline" onClick={() => remove(n.id, true)}>Bring back</Button></div>)}
       </div></section>}
     </>}
-    {edit && <EditMemoryPage value={edit.note} source={source(edit)} usedFor={usedForFact("", edit.note)} onClose={() => setEdit(null)} onSave={async (t) => { setDraft(t); return save(t); }} onForget={() => forget(edit)} />}
+    {edit && <EditMemoryPage value={edit.note} source={source(edit)} usedFor={usedForFact("")} onClose={() => setEdit(null)} onSave={async (t) => { setDraft(t); return save(t); }} onForget={() => forget(edit)} />}
   </div>;
 }
