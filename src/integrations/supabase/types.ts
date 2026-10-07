@@ -1653,6 +1653,27 @@ export type Database = {
         }
         Relationships: []
       }
+      symptom_aliases: {
+        Row: {
+          alias: string
+          created_at: string
+          id: string
+          main_name: string
+        }
+        Insert: {
+          alias: string
+          created_at?: string
+          id?: string
+          main_name: string
+        }
+        Update: {
+          alias?: string
+          created_at?: string
+          id?: string
+          main_name?: string
+        }
+        Relationships: []
+      }
       symptom_candidate_rejections: {
         Row: {
           candidate_name: string
@@ -2384,6 +2405,7 @@ export type Database = {
       }
       refresh_together_aggregates: { Args: never; Returns: undefined }
       resolve_referral_code: { Args: { _code: string }; Returns: string }
+      together_canonical: { Args: { _name: string }; Returns: string }
       together_norm: { Args: { _name: string }; Returns: string }
       together_stage: {
         Args: { _due: string; _life_stage: string; _lmp: string; _pp: string }

@@ -162,6 +162,13 @@
       "when": 1791366474491,
       "tag": "0022_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791368034123,
+      "tag": "0023_symptom_aliases",
+      "breakpoints": true
     }
   ]
 }
