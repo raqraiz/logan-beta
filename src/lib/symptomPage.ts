@@ -110,6 +110,6 @@ export function symptomPageData(logs: SymptomPageLog[], name: string, lastPeriod
   }
   // Never infer that a generic note was helpful; require her explicit wording.
   const helped = matching.map((r) => r.notes?.match(/(?:^|[.!?]\s+)(?:what helped(?: me)?|helped by|what helped you):\s*([^.!?\n]+)/i)?.[1]?.trim()).find(Boolean) ?? null;
-  const loggedDays = [...new Set(points.map((p) => p.day))].sort((a, b) => a - b);
+  const loggedDays = [...new Set(points.map((p) => p.day))].filter((d) => Number.isFinite(d)).sort((a, b) => a - b);
   return { count: matching.length, cycles: groups.length, trend, helped, loggedDays };
 }

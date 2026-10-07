@@ -143,8 +143,9 @@ export function WhenWomenFeelCard({ c, mine, loggedDays, hasCycle }: { c: Commun
   const v = dayValues(row, len);
   const max = Math.max(...v, 0.0001);
   const busy = busiestWindow(row, len);
+  const shownDays = loggedDays.filter((d) => Number.isFinite(d) && d >= 1 && d <= len);
   let caption: string | null = busy ? `Most women feel it on days ${busy.from} to ${busy.to}.` : null;
-  if (!mine && loggedDays.length > 0) caption = "Pink dots below are the days you logged it. A few more cycles and I'll know your usual days.";
+  if (!mine && shownDays.length > 0) caption = "Pink dots below are the days you logged it. A few more cycles and I'll know your usual days.";
   if (mine && busy) {
     const mid = (mine.from + mine.to) / 2;
     const tail = mid >= busy.from && mid <= busy.to ? "Right in the middle of everyone." : mid > busy.to ? "A little later than most women." : "Earlier than most women.";
@@ -182,7 +183,7 @@ export function WhenWomenFeelCard({ c, mine, loggedDays, hasCycle }: { c: Commun
             const hot = val > 0 && busy && d >= busy.from && d <= busy.to;
             return <rect key={d} x={x(d)} y={TOP + H - h} width={COL} height={h} rx={3} fill={hot ? "#0E8A8F" : "#BDEBED"} />;
           })}
-          {(usual ? [usual] : loggedDays.filter((d) => d >= 1 && d <= len)).map((d) => (
+          {(usual ? [usual] : shownDays).map((d) => (
             <circle key={d} cx={x(d) + COL / 2} cy={DOT_Y} r={4} fill="#FF2E92" />
           ))}
         </svg>
