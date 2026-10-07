@@ -57,7 +57,7 @@ export function LogOfferCard({ userId, messageId, offer }: { userId: string; mes
   };
 
   const undo = async () => {
-    if (!state || state === "dismissed") return;
+    if (!state) return;
     setBusy(true);
     const { error } = await supabase.from("symptom_logs").delete().in("id", state.ids).eq("user_id", userId);
     setBusy(false);
