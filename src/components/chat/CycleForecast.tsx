@@ -4,6 +4,7 @@ import { useTrackFeature } from "@/hooks/useTrackFeature";
 import { supabase } from "@/integrations/supabase/client";
 import { Zap, Shield, Users, Moon, TrendingUp, TrendingDown, AlertTriangle, Heart, ChevronLeft, ChevronRight, ChevronDown, X, Calendar, Pencil } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, differenceInCalendarDays, parseISO, isValid, addDays } from "date-fns";
+import { getNextPeriodStart } from "@/lib/nextPeriod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -225,12 +226,7 @@ export function CycleForecast({ cycleDay, phase, cycleLengthDays, lastPeriodStar
   // overdue cycle to Day 1 until the next period is actually logged. Predict the
   // next period from today (one day from now if already overdue, otherwise
   // periodStart + cycleLength) and only wrap dates on/after that.
-  const todayDiff = differenceInCalendarDays(today, periodStart);
-  const currentCycleDayUnwrapped = todayDiff + 1;
-  const nextPeriodStart =
-    currentCycleDayUnwrapped > cycleLengthDays
-      ? addDays(today, 1)
-      : addDays(periodStart, cycleLengthDays);
+  const nextPeriodStart = getNextPeriodStart(periodStart, cycleLengthDays, today);
 
   function getCycleDayForDate(date: Date): number {
     const diffFromNext = differenceInCalendarDays(date, nextPeriodStart);
