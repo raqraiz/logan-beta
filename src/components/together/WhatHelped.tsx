@@ -38,9 +38,9 @@ function Shell({ label, onBack, children }: { label: string; onBack: () => void;
   </div>;
 }
 
-interface PageProps { symptom: string; joined: boolean; onJoin: () => void; onBack: () => void; onShare: () => void }
+interface PageProps { symptom: string; checkFirst?: boolean; canContribute?: boolean; joined: boolean; onJoin: () => void; onBack: () => void; onShare: () => void }
 
-export function WhatHelpedPage({ symptom, joined, onJoin, onBack, onShare }: PageProps) {
+export function WhatHelpedPage({ symptom, checkFirst = false, canContribute = true, joined, onJoin, onBack, onShare }: PageProps) {
   const [tips, setTips] = useState<Tip[] | null>(null);
   const [error, setError] = useState(false);
   const [sort, setSort] = useState<TipSort>("helpful");
@@ -82,6 +82,9 @@ export function WhatHelpedPage({ symptom, joined, onJoin, onBack, onShare }: Pag
       })}
     </div>
     {sort === "like_me" && likeMeEmpty && <p className="mt-2 text-xs text-muted-foreground">No tips from women in your stage yet.</p>}
+    {checkFirst && <div role="note" className="safety-callout mt-5 flex gap-2 rounded-2xl p-[14px] text-sm font-medium text-foreground">
+      <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /><span>{CHECK_FIRST_TIPS_NOTE}</span>
+    </div>}
 
     <div className="mt-5 space-y-3">
       {error ? <div className="rounded-[22px] bg-card p-5 text-sm text-muted-foreground">Tips couldn't load. <Button variant="link" className="h-auto p-0 text-foreground underline" onClick={load}>Try again</Button></div>
@@ -100,7 +103,7 @@ export function WhatHelpedPage({ symptom, joined, onJoin, onBack, onShare }: Pag
               </DropdownMenu>}
             </div>
             <p className="mt-2 text-xs text-muted-foreground">{t.label}</p>
-            {!t.mine && <Button variant="outline" aria-pressed={t.helped_by_me} onClick={() => void vote(t)}
+            {!t.mine && canContribute && <Button variant="outline" aria-pressed={t.helped_by_me} onClick={() => void vote(t)}
               className={cn("mt-3 h-11 rounded-full px-4 text-sm font-semibold shadow-none", t.helped_by_me ? "border-foreground bg-foreground text-background hover:bg-foreground hover:text-background" : "text-foreground")}>
               <Heart className={cn("h-4 w-4", t.helped_by_me && "fill-current")} aria-hidden="true" /> Helped me too · {t.helped}
             </Button>}
@@ -112,9 +115,9 @@ export function WhatHelpedPage({ symptom, joined, onJoin, onBack, onShare }: Pag
         </Fragment>)}
     </div>
 
-    <Button onClick={joined ? onShare : onJoin} className="mt-6 h-12 w-full rounded-full bg-foreground text-base font-semibold text-background hover:bg-foreground/90">
+    {!canContribute ? <p className="mt-6 text-sm leading-relaxed text-muted-foreground">Sharing and voting open once you've logged {symptom.toLowerCase()} in two different cycles.</p> : <Button onClick={joined ? onShare : onJoin} className="mt-6 h-12 w-full rounded-full bg-foreground text-base font-semibold text-background hover:bg-foreground/90">
       {joined ? "Share what helped you" : "Count me in to share"}
-    </Button>
+    </Button>}
 
     <Drawer open={!!reporting} onOpenChange={(v) => !v && setReporting(null)}>
       <DrawerContent>
