@@ -1814,6 +1814,27 @@ export type Database = {
         }
         Relationships: []
       }
+      together_daily_pairs: {
+        Row: {
+          computed_on: string
+          symptom_a: string
+          symptom_b: string
+          women_count: number
+        }
+        Insert: {
+          computed_on?: string
+          symptom_a: string
+          symptom_b: string
+          women_count: number
+        }
+        Update: {
+          computed_on?: string
+          symptom_a?: string
+          symptom_b?: string
+          women_count?: number
+        }
+        Relationships: []
+      }
       tracker_logs: {
         Row: {
           created_at: string
@@ -2420,6 +2441,14 @@ export type Database = {
           filter: string
           symptom: string
           women_band: string
+          women_count: number
+        }[]
+      }
+      get_together_pairs: {
+        Args: never
+        Returns: {
+          symptom_a: string
+          symptom_b: string
           women_count: number
         }[]
       }
