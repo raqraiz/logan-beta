@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { SafetyCallout } from "@/components/SafetyCallout";
 import { toast } from "sonner";
-import { PATTERNS_CHANGED } from "@/lib/patternCycles";
+import { PATTERNS_CHANGED, windowDays } from "@/lib/patternCycles";
 import { ownSymptomPairs, symptomCardInsights, symptomDefinition, symptomPageData, type SymptomPageLog } from "@/lib/symptomPage";
 import { loadCycleStarts } from "@/lib/realCycleDays";
-import { togetherDisplay } from "@/lib/symptomCatalog";
+import { togetherDisplay, isKnownSymptom } from "@/lib/symptomCatalog";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -88,7 +88,7 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
   };
   const saveTiming = async () => {
     const a = parseInt(fromIn, 10), b = parseInt(toIn || fromIn, 10);
-    if (!(a >= 1 && b >= a && b - a <= 7 && b <= 60)) { setMsg("Pick days up to a week apart."); return; }
+    if (!windowDays({ from: a, to: b }, community.cycleLength).length || windowDays({ from: a, to: b }, community.cycleLength).length > 7) { setMsg("Pick days up to a week apart."); return; }
     if (await saveNote(`Your ${lower} usually comes around days ${a} to ${b}.`, "insight_correction")) { setFix(false); onChanged(); }
   };
   const remove = async () => {
@@ -112,7 +112,8 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
     globalThis.dispatchEvent(new Event(PATTERNS_CHANGED));
     toast(`Forgot ${lower}.`);
   };
-  const sub = communityLine(community, data.count > 0) ?? "Only you so far";
+  const sharedLine = communityLine(community, data.count > 0);
+  const sub = sharedLine ?? (isKnownSymptom(name) ? "Women's numbers show once more of us share." : "Only your words so far.");
   const ownPairs = isNonCycling ? [] : ownSymptomPairs(logs, name, cycleStarts);
   const pairs = community.pairs.length ? community.pairs : ownPairs;
   const compare = isNonCycling ? null : stageInsight(community, myWindow);
@@ -122,7 +123,7 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
       ? "All in one cycle so far. After your next cycle I can tell you when it usually shows up."
       : "There isn't a clear timing pattern in your logs yet."
     : null;
-  const { insights, doctorAdvice } = symptomCardInsights([
+  const { insights } = symptomCardInsights([
     timing && explain ? explain : null,
     timingNote ? { text: timingNote, keepTogether: true } : null,
     data.trend ? `At this cycle day, you've logged it ${data.trend === "Same" ? "as often as" : `${data.trend.toLowerCase()} often than`} last cycle.` : null,
@@ -138,7 +139,8 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
           <CommonRing c={community} sheLogged={data.count > 0} />
           <div className="min-w-0 flex-1">
             <h1 className={`break-words font-display ${name.length > 12 ? "text-[36px] leading-[38px]" : "text-[44px] leading-[44px]"} font-semibold tracking-normal text-foreground`}>{name}</h1>
-            <p className="mt-2 font-sans text-sm text-[#6E675F] dark:text-muted-foreground">{sub}</p>
+            <p className="mt-2 font-sans text-sm text-muted-foreground">{sub}</p>
+            {!sharedLine && !community.joined && <Button variant="link" onClick={community.openConsent} className="h-auto px-0 py-1 text-xs text-muted-foreground underline">Count me in</Button>}
           </div>
         </div>
         {watched && <p className="symptom-watch mt-2 text-sm font-semibold">★ You're watching this</p>}
@@ -163,8 +165,8 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
                 <p className="mt-1 text-xs leading-snug text-muted-foreground">{!isNonCycling && data.cycles ? `in ${data.cycles} cycle${data.cycles === 1 ? "" : "s"}` : "logged"}</p>
               </div>
               {timing && <div className="symptom-stat min-w-0 rounded-[14px] px-2 py-3 text-center">
-                <p className="whitespace-nowrap font-sans text-[20px] font-bold leading-snug text-foreground">{from === to ? from : `${from} to ${to}`}</p>
-                <p className="mt-1 text-xs leading-snug text-muted-foreground">your usual days</p>
+                <p className="whitespace-nowrap font-sans text-[20px] font-bold leading-snug text-foreground">Days {from === to ? from : `${from} to ${to}`}</p>
+                <p className="mt-1 text-xs leading-snug text-muted-foreground">{myWindow && windowDays(myWindow, community.cycleLength).includes(1) ? "around your period" : "your usual days"}</p>
               </div>}
               {data.trend && <div className="symptom-stat min-w-0 rounded-[14px] px-2 py-3 text-center">
                 <p className="whitespace-nowrap font-sans text-[20px] font-bold leading-snug text-foreground">{data.trend}</p>
@@ -176,7 +178,6 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
             </ul>}
             {data.helped && <Button variant="ghost" onClick={() => { setMode("helped"); setFix(true); }} className="mt-4 h-auto w-full justify-between whitespace-normal px-0 text-left text-sm text-foreground">What helped you: {data.helped}<ChevronRight /></Button>}
           </>}
-          {doctorAdvice && <p className="mt-4 text-sm font-light leading-relaxed text-muted-foreground">{doctorAdvice}</p>}
         </section>
 
         <WhenWomenFeelCard c={community} mine={myWindow} loggedDays={realData.loggedDays} hasCycle={!isNonCycling && (!!lastPeriodStart || sample)} />

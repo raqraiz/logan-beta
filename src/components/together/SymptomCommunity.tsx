@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { key, sampleSymptomDetail } from "@/lib/togetherData";
 import { loadTogether, setTogetherConsent, trackTogether, TOGETHER_BODY, TOGETHER_CHANGED } from "@/lib/together";
+import { cycleDistance, windowDays, windowMiddle } from "@/lib/patternCycles";
 
 interface Row { filter: string; symptom: string; women_band: string; women_count: number | null; day_shares: Record<string, number> | null; cohort_women?: number | null }
 interface PairRow { symptom_a: string; symptom_b: string; women_count: number }
@@ -120,11 +121,11 @@ export function busiestWindow(r: Row | null, len: number): Window | null {
   if (!v.some((x) => x > 0)) return null;
   const w = Math.min(4, len);
   let best = 0, at = 0;
-  for (let i = 0; i + w <= len; i++) {
-    const s = v.slice(i, i + w).reduce((a, b) => a + b, 0);
+  for (let i = 0; i < len; i++) {
+    const s = Array.from({ length: w }, (_, j) => v[(i + j) % len]).reduce((a, b) => a + b, 0);
     if (s > best) { best = s; at = i; }
   }
-  return { from: at + 1, to: at + w };
+  return { from: at + 1, to: (at + w - 1) % len + 1 };
 }
 
 /** One insight comparing her start with the busiest stretch for women in her stage. */
@@ -132,7 +133,7 @@ export function stageInsight(c: Community, mine: Window | null): string | null {
   if (!mine) return null;
   const busy = busiestWindow(c.stage, c.cycleLength);
   if (!busy) return null;
-  const d = mine.from - busy.from;
+  const d = cycleDistance(busy.from, mine.from, c.cycleLength);
   if (d === 0) return "About the same time as most women in your stage.";
   if (Math.abs(d) <= 1) return null;
   const n = Math.abs(d);
@@ -148,7 +149,7 @@ export function WhenWomenFeelCard({ c, mine, loggedDays, hasCycle }: { c: Commun
   const v = row ? dayValues(row, len) : Array.from({ length: len }, () => 0);
   const max = Math.max(...v, 0.0001);
   const busy = busiestWindow(row, len);
-  const shownDays = (hasCycle ? loggedDays : []).filter((d) => Number.isFinite(d) && d >= 1 && d <= len);
+  const shownDays = hasCycle ? [...new Set(mine ? windowDays(mine, len) : loggedDays.filter((d) => Number.isFinite(d) && d >= 1 && d <= len))] : [];
   let caption: string | null = busy ? `Most women feel it on days ${busy.from} to ${busy.to}.` : null;
   if (busy && !mine && shownDays.length > 0) {
     caption = shownDays.length === 1
@@ -156,9 +157,10 @@ export function WhenWomenFeelCard({ c, mine, loggedDays, hasCycle }: { c: Commun
       : "Pink dots are the days you logged it. A few more cycles and I'll know your usual days.";
   }
   if (mine && busy) {
-    const mid = (mine.from + mine.to) / 2;
-    const tail = mid >= busy.from && mid <= busy.to ? "Right in the middle of everyone." : mid > busy.to ? "A little later than most women." : "Earlier than most women.";
-    caption = `The pink dot is when you usually feel it. ${tail}`;
+    const mid = windowMiddle(mine, len);
+    const distance = cycleDistance(windowMiddle(busy, len), mid, len);
+    const tail = windowDays(busy, len).includes(mid) ? "Right in the middle of everyone." : distance > 0 ? "A little later than most women." : "Earlier than most women.";
+    caption = `${shownDays.length === 1 ? "The pink dot is when" : "Pink dots are when"} you usually feel it. ${tail}`;
   }
   if (!busy) caption = !hasCycle
     ? "Cycle-day timing isn't available without a cycle."
@@ -168,7 +170,6 @@ export function WhenWomenFeelCard({ c, mine, loggedDays, hasCycle }: { c: Commun
   const DOT_Y = TOP + H + 8;
   const W = len * COL + (len - 1) * GAP;
   const x = (d: number) => (d - 1) * (COL + GAP);
-  const usual = busy && mine ? Math.min(len, Math.round((mine.from + mine.to) / 2)) : null;
   const pctX = (d: number) => ((x(d) + COL / 2) / W) * 100;
   return (
     <section className="mt-4 flex flex-col gap-2.5 rounded-[24px] bg-card px-4 pt-[18px] pb-3" aria-labelledby="when-women-label">
@@ -193,16 +194,16 @@ export function WhenWomenFeelCard({ c, mine, loggedDays, hasCycle }: { c: Commun
           {v.map((val, i) => {
             const d = i + 1;
             const h = Math.max(8, (val / max) * H);
-            const hot = val > 0 && busy && d >= busy.from && d <= busy.to;
+            const hot = val > 0 && busy && windowDays(busy, len).includes(d);
             return <rect key={d} x={x(d)} y={TOP + H - h} width={COL} height={h} rx={3} fill={hot ? "var(--symptom-chart-busy)" : "var(--symptom-chart-pale)"} />;
           })}
-          {(usual ? [usual] : shownDays).map((d) => (
+          {shownDays.map((d) => (
             <circle key={d} cx={x(d) + COL / 2} cy={DOT_Y} r={4} fill="var(--symptom-chart-mine)" />
           ))}
         </svg>
         <div className="relative mt-[6px] h-4 font-sans text-[11px] text-muted-foreground">
           <span className="absolute left-0">Day 1</span>
-          {busy && <span className="absolute -translate-x-1/2 font-bold symptom-watch" style={{ left: `${Math.min(82, Math.max(18, pctX((busy.from + busy.to) / 2)))}%` }}>{busy.from} to {busy.to}</span>}
+          {busy && <span className="absolute -translate-x-1/2 font-bold symptom-watch" style={{ left: `${Math.min(82, Math.max(18, pctX(windowMiddle(busy, len))))}%` }}>{busy.from} to {busy.to}</span>}
           <span className="absolute right-0">{len}</span>
         </div>
       </div>
@@ -228,7 +229,7 @@ export function CommonRing({ c, sheLogged }: { c: Community; sheLogged: boolean 
       {Array.from({ length: 20 }, (_, i) => {
         const a = (i / 20) * 2 * Math.PI - Math.PI / 2;
         const cx = 38 + 30 * Math.cos(a), cy = 38 + 30 * Math.sin(a);
-        const isHers = sheLogged && i === filled - 1;
+        const isHers = sheLogged && i === (pick ? filled - 1 : 0);
         if (isHers) return <circle key={i} cx={cx} cy={cy} r={5.5} fill="var(--symptom-chart-mine)" stroke="hsl(var(--background))" strokeWidth={2} />;
         return i < filled
           ? <circle key={i} cx={cx} cy={cy} r={3.4} fill="var(--symptom-chart-busy)" />

@@ -155,7 +155,7 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, c
   if (page) {
     const forgotten = forgot.has(normSymptom(page));
     const pageLogs = forgotten ? [] : logs;
-    const found = forgotten ? undefined : computePatterns(logs).find((p) => key(p.name) === key(page));
+    const found = forgotten ? undefined : computePatterns(logs, Date.now(), cycleLengthDays ?? 28).find((p) => key(p.name) === key(page));
     const fixed = timingFix[normSymptom(page)];
     const info = found ? { ...found, name: page, ...(fixed ? { from: fixed[0], to: fixed[1] } : {}) } : { name: page, from: null, to: null, cycles: 0, count: 0 };
     return (

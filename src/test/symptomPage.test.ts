@@ -1,8 +1,22 @@
 import { describe, it, expect } from "vitest";
 import { ownSymptomPairs, symptomCardInsights, symptomDefinition, symptomPageData, type SymptomPageLog } from "@/lib/symptomPage";
+import { usualWindow, windowDays, cycleDistance, windowMiddle } from "@/lib/patternCycles";
 
 const row = (date: string, day: number | null, notes: string | null = null): SymptomPageLog => ({ logged_at: `${date}T12:00:00Z`, cycle_day: day, symptoms: [{ name: "Cramps", severity: 3 }], notes });
 describe("Symptom page presentation data", () => {
+  it("finds usual days across the period boundary rather than splitting them", () => {
+    const window = usualWindow([[26, 27, 28, 1, 2, 3], [27, 28, 1, 2], [26, 1, 3]], 28);
+    expect(window).toEqual({ from: 26, to: 3, n: 3 });
+    expect(windowDays({ from: 26, to: 3 }, 28)).toEqual([26, 27, 28, 1, 2, 3]);
+    expect(windowMiddle({ from: 26, to: 3 }, 28)).toBe(28);
+    expect(cycleDistance(27, 2, 28)).toBe(3);
+    expect(cycleDistance(2, 27, 28)).toBe(-3);
+  });
+  it("requires most logs in two cycles and respects her cycle length", () => {
+    expect(usualWindow([[30, 1, 2], [30, 1, 3]], 30)).toEqual({ from: 30, to: 3, n: 2 });
+    expect(usualWindow([[26, 1, 3]], 28)).toBeNull();
+    expect(windowDays({ from: 26, to: 3 }, 24)).toEqual([]);
+  });
   it("requires three own logs and pairings in two real cycles, canonicalizing aliases", () => {
     const logs = [row("2026-08-19", 19), row("2026-08-20", 20), row("2026-09-19", 19),
       { ...row("2026-08-20", 20), symptoms: [{ name: "Tiredness", severity: 0 }] },
