@@ -814,7 +814,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
       case "weight_trend":
         return userId ? (
           <div className="w-full" key={id}>
-            <WeightTrendWidget userId={userId} trendOnly={!w.showExact} />
+            <WeightTrendWidget userId={userId} trendOnly={!widget.showExact} />
           </div>
         ) : null;
       case "cycle_correlations":
