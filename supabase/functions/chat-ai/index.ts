@@ -17,6 +17,7 @@ import {
 } from "../_shared/topicBoundaries.ts";
 import { fetchMemoryNotes, buildMemoryBlock, extractCorrection, supersedeSameTopic, CORRECTION_PREFIX_RE } from "../_shared/memoryNotes.ts";
 import { trackMessageFailures } from "../_shared/messageFailures.ts";
+import { loadCatalog, matchSymptoms } from "../_shared/symptomMatch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -2804,6 +2805,10 @@ serve(async (req) => {
       const isHistoricalLookupQuestion = /\b(check|look\s*(?:up|at|back)|anything|any|did i|do i have|was there|were there|show|see|find)\b/i.test(userMessage)
         && /\b(history|historical|log|logs|logged|march|april|may|june|july|august|september|october|november|december|january|february|last\s+(?:month|cycle|time)|same\s+time)\b/i.test(userMessage);
 
+      // Past general history ("it usually happens", "I used to get") is not a log moment.
+      const isGeneralHistory = /\b(usually|always|every month|once a month|each month|used to|in the past|normally|tends? to|typically)\b/i.test(trimmed)
+        && !/\b(today|tonight|this morning|right now|now|yesterday|last night|since)\b/i.test(trimmed);
+
       if (reportingIntent && !isHistoricalLookupQuestion && !isAboutSomeoneElse) {
         // Same gate as the keyword path — the extractor only ever sees messages
         // that already passed the question / third-party / negation vetoes.
@@ -2811,9 +2816,15 @@ serve(async (req) => {
           symptomExtractionPromise = extractSymptomsViaLLM(userMessage, lovableApiKey);
         }
 
-        const detected = detectSymptomMentions(userMessage);
+        // Same canonical list + aliases as everywhere else (canonicalSymptom()).
+        const catalog = await loadCatalog(supabase);
+        const matched = matchSymptoms(userMessage, catalog);
+        const sev = detectSymptomMentions(userMessage)[0]?.severity ?? 3;
+        const detected = matched.length > 0
+          ? matched.map(name => ({ name, severity: sev }))
+          : detectSymptomMentions(userMessage);
 
-        if (detected.length > 0) {
+        if (detected.length > 0 && !isGeneralHistory) {
           const liveCycle = symptomCycleInfo;
 
           void liveCycle;
@@ -2851,14 +2862,11 @@ serve(async (req) => {
           searchText = userMessage + "\n" + recentMsgs.map(m => String(m.content || "")).join("\n");
         } catch (_) {}
 
-        // Pull symptoms from this message, or fall back to the recent chat thread
-        let symptoms = detectSymptomMentions(userMessage);
-        if (symptoms.length === 0) {
-          for (const m of recentMsgs) {
-            const found = detectSymptomMentions(String(m.content || ""));
-            if (found.length) { symptoms = found; break; }
-          }
-        }
+        // Symptoms only from THIS message, matched against the full symptom list
+        // + symptom_aliases. Never borrowed from older messages.
+        const bfCatalog = await loadCatalog(supabase);
+        const symptoms = matchSymptoms(userMessage, bfCatalog).map(name => ({ name, severity: 3 }));
+        void recentMsgs;
 
         // Extract explicit dates from current message; if none, scan recent chat
         const dates: Date[] = [];
@@ -2893,6 +2901,7 @@ serve(async (req) => {
           }
         };
         scanForDates(userMessage);
+        const datesInMessage = dates.length > 0;
         if (dates.length === 0) scanForDates(searchText);
 
 
@@ -2905,6 +2914,12 @@ serve(async (req) => {
           uniq.set(d.toISOString().slice(0, 10), d);
         }
 
+        const explicitLog = /\b(log|add|save|record|backfill)\b/i.test(userMessage);
+        if (symptoms.length === 0 && uniq.size > 0 && explicitLog && datesInMessage) {
+          const firstDate = Array.from(uniq.values()).sort((a, b) => a.getTime() - b.getTime())[0];
+          const lbl = `${MONTH_NAMES[firstDate.getUTCMonth()]} ${firstDate.getUTCDate()}`;
+          backfillConfirmation = `Internal note (do NOT quote or mention this note): Nothing was saved. Reply with exactly this one question and nothing else: "Which symptom should I log for ${lbl}?"`;
+        }
         if (symptoms.length > 0 && uniq.size > 0) {
           const rows = Array.from(uniq.values()).map(d => ({
             user_id: user.id,
