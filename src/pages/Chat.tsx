@@ -1708,7 +1708,11 @@ const Chat = () => {
         />
       )}
 
-      {effectiveTab === "together" && user && <TogetherTab userId={user.id} />}
+      {effectiveTab === "together" && user && <TogetherTab userId={user.id}
+        cycleDay={cycleData?.cycleDay}
+        lastPeriodStart={cycleData?.lastPeriodStart}
+        isNonCycling={!!cycleData?.lifeStage && !["cycling", "irregular"].includes(cycleData.lifeStage)}
+        onLogFeeling={(symptom) => { setFeelSymptom(symptom); setFeelSheetOpen(true); }} />}
 
       {effectiveTab === "plan" && user && (
         <div className="flex-1 flex flex-col min-h-0">
