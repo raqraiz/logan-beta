@@ -82,11 +82,12 @@ export function sampleSymptomDetail(name: string, cycleLength = 28) {
   const rows = (found.length ? found : [
     { filter: "everyone", symptom: k, women_band: "exact" as const, women_count: 24 },
     { filter: "stage", symptom: k, women_band: "exact" as const, women_count: 15 },
-  ]).map((r) => ({ ...r, day_shares: r.filter === "stage" ? (noStage ? null : shares(peak + 1)) : shares(peak) }));
+  ]).map((r) => ({ ...r, cohort_women: r.filter === "stage" ? 70 : 120, day_shares: r.filter === "stage" ? (noStage ? null : shares(peak + 1)) : shares(peak) }));
   const from = Math.min(cycleLength - 2, peak + 3);
-  const window = { from, to: from + 2 };
+  const hers = [...base.mine].some((m) => key(m) === k);
+  const window = hers ? { from, to: from + 2 } : null;
   const now = Date.now();
-  const logs = [0, 1, 2].map((c) => ({
+  const logs = (hers ? [0, 1, 2] : []).map((c) => ({
     logged_at: new Date(now - (c * cycleLength + 2) * 86400000).toISOString(),
     cycle_day: from + (c % 2), symptoms: [{ name: k, severity: 3 }], notes: null,
   }));
