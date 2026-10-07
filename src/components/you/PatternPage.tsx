@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PATTERNS_CHANGED } from "@/lib/patternCycles";
-import { symptomDefinition, symptomPageData, type SymptomPageLog } from "@/lib/symptomPage";
+import { symptomCardInsights, symptomDefinition, symptomPageData, type SymptomPageLog } from "@/lib/symptomPage";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -84,11 +84,12 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
     } } });
   };
   const sub = data.count === 0 ? "Not logged yet" : `You logged it ${data.count} time${data.count === 1 ? "" : "s"}${!isNonCycling && data.cycles ? ` in ${data.cycles} cycle${data.cycles === 1 ? "" : "s"}` : ""}`;
-  const insights = [
+  const { insights, doctorAdvice } = symptomCardInsights([
     timing && explain ? explain : null,
     !timing && data.count > 0 ? "There isn't a clear timing pattern in your logs yet." : null,
-    data.trend ? `You've logged it ${data.trend === "Same" ? "as often as" : `${data.trend.toLowerCase()} often than`} last cycle at this point. This compares the same number of cycle days.` : null,
-  ].filter((text): text is string => Boolean(text)).slice(0, 3);
+    data.trend ? `At this cycle day, you've logged it ${data.trend === "Same" ? "as often as" : `${data.trend.toLowerCase()} often than`} last cycle.` : null,
+  ]);
+  const tileColumns = 1 + Number(timing) + Number(Boolean(data.trend));
 
   return (
     <div className="symptom-page fixed inset-0 z-50 overflow-y-auto bg-background" role="dialog" aria-modal="true" aria-label={name} data-private>
@@ -110,17 +111,17 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
             <p className="mt-4 text-[15px] font-light leading-relaxed text-foreground">Log it when it happens and I'll start spotting your pattern.</p>
             <Button variant="ghost" onClick={() => onLog(name)} className="mt-5 rounded-full bg-foreground px-6 font-semibold text-background hover:bg-foreground hover:text-background">Log it now</Button>
           </> : <>
-            <div className="mt-4 grid grid-cols-3 gap-2">
+            <div className={`mt-4 grid gap-2 ${tileColumns === 3 ? "grid-cols-3" : tileColumns === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
               <div className="symptom-stat min-w-0 rounded-[14px] px-2 py-3 text-center">
-                <p className="text-[17px] font-bold leading-snug text-foreground">{data.count} {data.count === 1 ? "time" : "times"}</p>
+                <p className="whitespace-nowrap font-sans text-[20px] font-bold leading-snug text-foreground">{data.count} {data.count === 1 ? "time" : "times"}</p>
                 <p className="mt-1 text-xs leading-snug text-muted-foreground">{!isNonCycling && data.cycles ? `in ${data.cycles} cycle${data.cycles === 1 ? "" : "s"}` : "logged"}</p>
               </div>
               {timing && <div className="symptom-stat min-w-0 rounded-[14px] px-2 py-3 text-center">
-                <p className="text-[17px] font-bold leading-snug text-foreground">{from === to ? `Day ${from}` : `Days ${from} to ${to}`}</p>
+                <p className="whitespace-nowrap font-sans text-[20px] font-bold leading-snug text-foreground">{from === to ? from : `${from} to ${to}`}</p>
                 <p className="mt-1 text-xs leading-snug text-muted-foreground">your usual days</p>
               </div>}
               {data.trend && <div className="symptom-stat min-w-0 rounded-[14px] px-2 py-3 text-center">
-                <p className="text-[17px] font-bold leading-snug text-foreground">{data.trend}</p>
+                <p className="whitespace-nowrap font-sans text-[20px] font-bold leading-snug text-foreground">{data.trend}</p>
                 <p className="mt-1 text-xs leading-snug text-muted-foreground">{data.trend === "Same" ? "as last cycle" : "than last cycle"}</p>
               </div>}
             </div>
@@ -129,6 +130,7 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
             </ul>}
             {data.helped && <Button variant="ghost" onClick={() => { setMode("helped"); setFix(true); }} className="mt-4 h-auto w-full justify-between whitespace-normal px-0 text-left text-sm text-foreground">What helped you: {data.helped}<ChevronRight /></Button>}
           </>}
+          {doctorAdvice && <p className="mt-4 text-sm font-light leading-relaxed text-muted-foreground">{doctorAdvice}</p>}
         </section>
 
         <Button variant="link" onClick={() => { setMode("menu"); setMsg(null); setFix(true); }} className="mt-8 px-0 text-sm font-normal text-muted-foreground underline underline-offset-2">Not right?</Button>
