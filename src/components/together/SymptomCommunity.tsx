@@ -214,8 +214,8 @@ export function CommonRing({ c, sheLogged }: { c: Community; sheLogged: boolean 
         const isHers = sheLogged && i === filled - 1;
         if (isHers) return <circle key={i} cx={cx} cy={cy} r={5.5} fill="#FF2E92" stroke="hsl(var(--background))" strokeWidth={2} />;
         return i < filled
-          ? <circle key={i} cx={cx} cy={cy} r={3.4} fill="#22C3CE" />
-          : <circle key={i} cx={cx} cy={cy} r={3.4} fill="hsl(var(--background))" stroke="#DDD7CC" strokeWidth={1} />;
+          ? <circle key={i} cx={cx} cy={cy} r={3.4} fill="#0E8A8F" />
+          : <circle key={i} cx={cx} cy={cy} r={3.4} fill="#DDD7CC" />;
       })}
     </svg>
   );
