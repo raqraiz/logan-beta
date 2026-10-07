@@ -204,6 +204,13 @@
       "when": 1791377368702,
       "tag": "0028_together_tips",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1791380250288,
+      "tag": "0029_tip_vote_check_first_rule",
+      "breakpoints": true
     }
   ]
 }

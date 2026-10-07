@@ -2641,6 +2641,10 @@ export type Database = {
         Returns: undefined
       }
       resolve_referral_code: { Args: { _code: string }; Returns: string }
+      tip_own_cycles: {
+        Args: { _symptom: string; _user_id: string }
+        Returns: number
+      }
       together_canonical: { Args: { _name: string }; Returns: string }
       together_norm: { Args: { _name: string }; Returns: string }
       together_stage: {
