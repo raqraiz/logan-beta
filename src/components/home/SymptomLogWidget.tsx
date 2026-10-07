@@ -460,6 +460,33 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
 
   useEffect(() => { loadAliases().then(() => setSelected(prev => prev.map(s => ({ ...s, name: canonicalSymptom(s.name) })))); }, []);
 
+  // Her own words: rename/remove are display prefs for future logs only (old logs untouched).
+  const wordPrefsKey = `logan:your-words:${userId}`;
+  const [wordPrefs, setWordPrefs] = useState<Record<string, string | null>>(() => {
+    try { return JSON.parse(localStorage.getItem(`logan:your-words:${userId}`) || "{}"); } catch { return {}; }
+  });
+  const saveWordPrefs = (next: Record<string, string | null>) => {
+    setWordPrefs(next);
+    try { localStorage.setItem(wordPrefsKey, JSON.stringify(next)); } catch { /* ignore */ }
+  };
+  const [editingWords, setEditingWords] = useState(false);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const allWords = (() => {
+    const seen = new Set<string>();
+    const out: { key: string; name: string }[] = [];
+    for (const raw of previouslyLoggedNames) {
+      if (isKnownSymptom(raw)) continue;
+      const key = normSymptom(raw);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const pref = wordPrefs[key];
+      if (pref === null) continue;
+      out.push({ key, name: pref ?? sentenceCase(raw) });
+    }
+    return out.sort((a, b) => a.name.localeCompare(b.name));
+  })();
+
   const addOwn = () => {
     const check = validateSymptomName(search);
     if (!check.ok) { setAddError(check.message ?? "That entry isn't allowed."); return; }
@@ -612,13 +639,14 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                 if (used.has(k) || !matches(n)) return false;
                 used.add(k); return true;
               });
-              const frequent = take(frequentNames.slice(0, 6));
+              const isRemoved = (n: string) => wordPrefs[normSymptom(n)] === null;
+              const frequent = take(frequentNames.filter(n => !isRemoved(n)).map(n => wordPrefs[normSymptom(n)] ?? n).slice(0, 6));
               const groups = SYMPTOM_GROUPS.map(g => {
                 const shared = communitySymptoms.filter(c => groupOf(c.name) === null && c.category === g).map(c => sentenceCase(cleanSymptomLabel(c.name)));
                 return { label: g as string, names: take([...GROUPED[g], ...shared].sort((a, b) => a.localeCompare(b))) };
               });
-              const words = take([...previouslyLoggedNames].filter(n => !isKnownSymptom(n)).map(n => sentenceCase(n)).sort((a, b) => a.localeCompare(b)));
-              if (words.length) groups.push({ label: "Your words", names: words });
+              const words = take(allWords.map(w => w.name));
+              if (words.length || (editingWords && allWords.length)) groups.push({ label: "Your words", names: words });
               const exact = q && ([...used].includes(q) || isKnownSymptom(q));
               const anyHit = used.size > 0;
 
@@ -662,12 +690,47 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
                     const open = q ? true : (g.label in collapsedCats ? !collapsedCats[g.label] : i === 0);
                     return (
                       <div key={g.label}>
-                        <button type="button" onClick={() => setCollapsedCats(prev => ({ ...prev, [g.label]: open }))}
-                          className="mb-1.5 flex w-full items-center justify-between text-xs font-semibold text-muted-foreground" aria-expanded={open}>
-                          <span>{g.label}</span>
-                          {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                        </button>
-                        {open && <div className="flex flex-wrap gap-1.5">{g.names.map(chip)}</div>}
+                        <div className="mb-1.5 flex items-center gap-3">
+                          <button type="button" onClick={() => setCollapsedCats(prev => ({ ...prev, [g.label]: open }))}
+                            className="flex flex-1 items-center justify-between text-xs font-semibold text-muted-foreground" aria-expanded={open}>
+                            <span>{g.label}</span>
+                            {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                          </button>
+                          {g.label === "Your words" && (
+                            <button type="button" onClick={() => setEditingWords(v => !v)} className="text-xs font-semibold text-foreground underline underline-offset-2">
+                              {editingWords ? "Done" : "Edit"}
+                            </button>
+                          )}
+                        </div>
+                        {g.label === "Your words" && editingWords ? (
+                          <ul className="divide-y divide-border rounded-2xl border border-border bg-card">
+                            {allWords.map(w => (
+                              <li key={w.key} className="flex items-center gap-2 px-3 py-2 text-sm">
+                                {renaming === w.key ? (
+                                  <>
+                                    <Input value={renameValue} onChange={e => setRenameValue(e.target.value)} className="h-8 flex-1 text-sm" aria-label={`New name for ${w.name}`} autoFocus />
+                                    <button type="button" className="text-xs font-semibold text-foreground" onClick={() => {
+                                      const check = validateSymptomName(renameValue);
+                                      if (!check.ok) { setAddError(check.message ?? "That name isn't allowed."); return; }
+                                      saveWordPrefs({ ...wordPrefs, [w.key]: sentenceCase(check.value) }); setRenaming(null); setAddError(null);
+                                    }}>Save</button>
+                                    <button type="button" className="text-xs text-muted-foreground" onClick={() => setRenaming(null)}>Cancel</button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="flex-1">{w.name}</span>
+                                    <button type="button" className="text-xs font-semibold text-foreground underline underline-offset-2" onClick={() => { setRenaming(w.key); setRenameValue(w.name); }}>Rename</button>
+                                    <button type="button" className="text-xs text-muted-foreground underline underline-offset-2" onClick={() => {
+                                      saveWordPrefs({ ...wordPrefs, [w.key]: null });
+                                      setSelected(prev => prev.filter(s => !sameSymptom(s.name, w.name)));
+                                    }}>Remove</button>
+                                  </>
+                                )}
+                              </li>
+                            ))}
+                            {addError && <li className="px-3 py-2 text-xs text-destructive">{addError}</li>}
+                          </ul>
+                        ) : open && <div className="flex flex-wrap gap-1.5">{g.names.map(chip)}</div>}
                       </div>
                     );
                   })}
