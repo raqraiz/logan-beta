@@ -11,7 +11,6 @@ import { WidgetEditMode } from "@/components/home/WidgetEditMode";
 import { WeightSettingsPage } from "@/components/you/WeightSettingsPage";
 import { AddCustomWidgetDialog } from "@/components/home/AddCustomWidgetDialog";
 import { CustomAIWidget } from "@/components/home/CustomAIWidget";
-import { SymptomLogWidget } from "@/components/home/SymptomLogWidget";
 import { SymptomHistoryWidget } from "@/components/home/SymptomHistoryWidget";
 import { DischargeTrackerWidget } from "@/components/home/DischargeTrackerWidget";
 import { CycleCorrelationsWidget } from "@/components/home/CycleCorrelationsWidget";
@@ -20,7 +19,7 @@ import { NutritionTodayWidget } from "@/components/home/NutritionTodayWidget";
 import { WeightTrendWidget } from "@/components/home/WeightTrendWidget";
 import { MiniPhaseArc, getWidgetGraphic } from "@/components/home/WidgetGraphics";
 import { TodayRing } from "@/components/chat/LoganTodaySection";
-import { YourPatterns } from "@/components/you/YourPatterns";
+import { YourSymptomsCard } from "@/components/you/YourSymptomsCard";
 import { YourDataPage } from "@/components/you/YourDataPage";
 import { PartnerHeadsupManage } from "@/components/partner/PartnerHeadsupManage";
 import { usePartnerHeadsupFlag } from "@/hooks/usePartnerHeadsupFlag";
@@ -488,13 +487,14 @@ interface HomeTabProps {
   onStillCyclingDeclare?: () => void;
   userId?: string;
   onLogFeeling?: (symptom?: string) => void;
+  onOpenSymptoms?: () => void;
   onOpenSettings?: () => void;
   onOpenWeek?: () => void;
 }
 
 // ── HomeTab ───────────────────────────────────────────────
 
-export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarkerStart, onCycleLengthUpdate, onPhaseOverride, onPostpartumDeclare, onStillCyclingDeclare, userId, onLogFeeling, onOpenSettings, onOpenWeek }: HomeTabProps) {
+export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarkerStart, onCycleLengthUpdate, onPhaseOverride, onPostpartumDeclare, onStillCyclingDeclare, userId, onLogFeeling, onOpenSymptoms, onOpenSettings, onOpenWeek }: HomeTabProps) {
   useTrackFeature("home_tab");
   const headsupVisible = usePartnerHeadsupFlag(userId);
   const [showMemory, setShowMemory] = useState(false);
@@ -753,26 +753,9 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
         // The ring itself renders at the top of the You tab.
         return null;
       }
-      case "symptom_tracker": {
-        return userId ? (
-          <div className="w-full flex flex-col gap-2" key={id}>
-            <div
-              className="w-full rounded-[22px] border border-border bg-card overflow-hidden relative"
-            >
-              <div className="relative">
-                <SymptomLogWidget
-                  userId={userId}
-                  cycleDay={isNonCycling ? undefined : cycleData.cycleDay}
-                  phase={isNonCycling ? stagePhase : cycleData.phase}
-                  lastPeriodStart={cycleData.lastPeriodStart}
-                  cycleLengthDays={cycleData.cycleLengthDays}
-                  isNonCycling={!!isNonCycling}
-                />
-              </div>
-            </div>
-          </div>
-        ) : null;
-      }
+      case "symptom_tracker":
+        // Logging lives in Together only.
+        return null;
       case "symptom_history":
         return userId ? (
           <div className="w-full" key={id}>
@@ -963,18 +946,8 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
           )}
         </div>
 
-        {/* Your patterns */}
-        {userId && (
-          <YourPatterns
-            headsupVisible={headsupVisible}
-            userId={userId}
-            lastPeriodStart={cycleData.lastPeriodStart}
-            cycleLengthDays={cycleData.cycleLengthDays}
-            isNonCycling={!!isNonCycling}
-            lifeStage={cycleData.lifeStage}
-            onLogFeeling={(symptom) => onLogFeeling?.(symptom)}
-          />
-        )}
+        {/* Your symptoms: opens Together on Mine */}
+        {userId && <YourSymptomsCard userId={userId} onOpen={() => onOpenSymptoms?.()} />}
 
         {/* Tiles */}
         {userId && (

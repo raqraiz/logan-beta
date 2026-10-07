@@ -10,7 +10,13 @@ import { PatternPage } from "@/components/you/PatternPage";
 import type { SymptomPageLog } from "@/lib/symptomPage";
 import { loadCycleStarts, withRealCycleDays, OWN_LOG_WINDOW_DAYS } from "@/lib/realCycleDays";
 import { computePatterns } from "@/components/you/YourPatterns";
-import { togetherDisplay, loadAliases } from "@/lib/symptomCatalog";
+import { togetherDisplay, loadAliases, groupOf, normSymptom } from "@/lib/symptomCatalog";
+import { TogetherLogMode, herCounts, type LoggedEntry } from "@/components/together/TogetherLogMode";
+import { BubbleField, categoryFill } from "@/components/together/TogetherBoard";
+import { WatchChooser } from "@/components/together/WatchChooser";
+import { useWordPrefs } from "@/hooks/useWordPrefs";
+import { mapCategory } from "@/lib/togetherData";
+import type { TogetherLens } from "@/lib/togetherOpen";
 import { AggRow, TogetherCategory, key, loadAggregates, loadCategories, sampleAggregates } from "@/lib/togetherData";
 import { loadTogether, markTogetherShown, setTogetherConsent, trackTogether, TOGETHER_BODY, TOGETHER_CHANGED } from "@/lib/together";
 
@@ -29,7 +35,10 @@ interface TabProps {
   cycleDay?: number;
   lastPeriodStart?: string;
   isNonCycling: boolean;
-  onLogFeeling: (symptom: string) => void;
+  cycleLengthDays?: number;
+  /** Lens or log mode requested from elsewhere (n changes on every request). */
+  request?: { lens: TogetherLens; symptom?: string; n: number };
+  onLogged: (entry: LoggedEntry) => void;
 }
 
 function symptomNames(logs: SymptomPageLog[]): Set<string> {
@@ -41,7 +50,17 @@ function symptomNames(logs: SymptomPageLog[]): Set<string> {
   return out;
 }
 
-export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, onLogFeeling }: TabProps) {
+export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, cycleLengthDays, request, onLogged }: TabProps) {
+  const [lens, setLens] = useState<"everyone" | "mine">(request?.lens === "mine" ? "mine" : "everyone");
+  const [logging, setLogging] = useState<{ symptom?: string } | null>(request?.lens === "log" ? { symptom: request.symptom } : null);
+  const [reloadLogs, setReloadLogs] = useState(0);
+  const [chooser, setChooser] = useState(false);
+  const { prefs } = useWordPrefs(userId);
+  useEffect(() => {
+    if (!request) return;
+    if (request.lens === "log") { setPage(null); setLogging({ symptom: request.symptom }); }
+    else { setLogging(null); setLens(request.lens); }
+  }, [request?.n]); // eslint-disable-line react-hooks/exhaustive-deps
   const [loaded, setLoaded] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [sample, setSample] = useState(false); // in memory only; resets when she leaves the tab
@@ -66,7 +85,7 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
     ]).then(([{ data }, starts]) => setLogs(withRealCycleDays((data ?? []) as SymptomPageLog[], starts)));
     supabase.from("participants").select("watch_symptoms").eq("user_id", userId).maybeSingle()
       .then(({ data }) => setWatch((data?.watch_symptoms ?? []) as string[]));
-  }, [userId]);
+  }, [userId, reloadLogs]);
   const [joined, setJoined] = useState(false);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -75,17 +94,13 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
 
   useEffect(() => {
     let alive = true;
-    const load = (auto: boolean) => loadTogether(userId).then((s) => {
+    const load = () => loadTogether(userId).then((s) => {
       if (!alive) return;
       setJoined(s.consent);
       setLoaded(true);
-      if (auto && !s.consent && !s.shownAt) {
-        openSheet();
-        markTogetherShown(userId);
-      }
     });
-    load(true);
-    const sync = () => load(false);
+    load();
+    const sync = () => load();
     globalThis.addEventListener(TOGETHER_CHANGED, sync);
     return () => { alive = false; globalThis.removeEventListener(TOGETHER_CHANGED, sync); };
   }, [userId]);
@@ -96,21 +111,22 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
     setSaving(false);
     if (!ok) { toast.error("That didn't save. Try again?"); return; }
     trackTogether("together_consent_yes");
+    void markTogetherShown(userId);
     setJoined(true);
     setOpen(false);
   };
 
-  const notNow = () => { trackTogether("together_consent_not_now"); setOpen(false); };
+  const notNow = () => { trackTogether("together_consent_not_now"); void markTogetherShown(userId); setOpen(false); };
 
+  // Everyone can see Together; consent only decides whether her logs count.
   useEffect(() => {
-    if (!joined) return;
     let alive = true;
     setRows(null); setAggError(false);
     Promise.all([loadAggregates(), loadAliases().then(loadCategories)])
       .then(([r, c]) => { if (alive) { setRows(r); setCats(c); } })
       .catch(() => { if (alive) setAggError(true); });
     return () => { alive = false; };
-  }, [joined, retry]);
+  }, [retry]);
 
   if (!loaded) return <div className="flex-1" />;
 
@@ -123,7 +139,7 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
     return (
       <PatternPage userId={userId} pattern={computePatterns(logs).find((p) => key(p.name) === key(page)) ? { ...computePatterns(logs).find((p) => key(p.name) === key(page))!, name: page } : { name: page, from: null, to: null, cycles: 0, count: 0 }} logs={logs}
         watched={watch.some((w) => key(w) === key(page))} lastPeriodStart={lastPeriodStart} isNonCycling={isNonCycling}
-        onClose={() => setPage(null)} onLog={(s) => { setPage(null); onLogFeeling(s); }} onChanged={() => {}} sample={sample}
+        onClose={() => setPage(null)} onLog={(s) => { setPage(null); setLogging({ symptom: s }); }} onChanged={() => {}} sample={sample}
         onUnstar={async () => {
           const next = watch.filter((w) => key(w) !== key(page));
           const { error } = await supabase.from("participants").update({ watch_symptoms: next }).eq("user_id", userId);
@@ -134,54 +150,101 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
   }
 
   const openSymptom = (n: string) => setPage(togetherDisplay(n));
+  const notCounted = !joined && !demo ? (
+    <p className="text-center text-sm text-muted-foreground">Your logs aren't counted yet. <button type="button" onClick={openSheet} className="font-semibold text-foreground underline underline-offset-2">Count me in</button></p>
+  ) : null;
   const board = (r: AggRow[], m: Set<string>, c: Map<string, TogetherCategory>) => (
     <div className="w-full text-left">
-      <TogetherBoard rows={r} mine={m} cats={c} cycleDay={cycleDay} hasCycle={!isNonCycling} onOpenSymptom={openSymptom} />
+      <TogetherBoard rows={r} mine={m} cats={c} cycleDay={cycleDay} hasCycle={!isNonCycling} onOpenSymptom={openSymptom} notCounted={notCounted} />
+    </div>
+  );
+
+  if (logging) {
+    return (
+      <div className="flex-1 overflow-y-auto px-5 pt-8 pb-28">
+        <div className="mx-auto max-w-md">
+          <TogetherLogMode key={logging.symptom ?? "log"} userId={userId} logs={logs} aggRows={rows} cycleDay={cycleDay} lastPeriodStart={lastPeriodStart}
+            cycleLengthDays={cycleLengthDays} isNonCycling={isNonCycling} preselect={logging.symptom}
+            onCancel={() => setLogging(null)}
+            onLogged={(e) => { setLogging(null); setReloadLogs((n) => n + 1); onLogged(e); }} />
+        </div>
+      </div>
+    );
+  }
+
+  const counts = herCounts(logs, prefs);
+  const isWatched = (n: string) => watch.some((w) => normSymptom(w) === normSymptom(n));
+  const topCount = counts[0]?.n ?? 1;
+  const mineItems = counts.slice(0, 20).map((c, i) => {
+    const t = Math.sqrt(c.n / topCount);
+    return { id: c.name, label: c.name, t, star: isWatched(c.name), fill: categoryFill(mapCategory(groupOf(c.name)) ?? undefined, t, i) };
+  });
+
+  const Lens = (
+    <div className="flex rounded-full border border-border bg-card p-[3px]" role="tablist" aria-label="Whose symptoms">
+      {(["everyone", "mine"] as const).map((id) => {
+        const on = lens === id;
+        return (
+          <button key={id} type="button" role="tab" aria-selected={on} onClick={() => setLens(id)}
+            className={`relative h-[34px] rounded-full px-3 text-[13px] after:absolute after:inset-x-0 after:-inset-y-1 after:content-[''] ${on ? "bg-[#23201C] font-bold text-[#F4F1EA] dark:bg-foreground dark:text-background" : "font-medium text-foreground"}`}>
+            {on ? `✓ ${id === "everyone" ? "Everyone" : "Mine"}` : id === "everyone" ? "Everyone" : "Mine"}
+          </button>
+        );
+      })}
     </div>
   );
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-8 pb-28">
+    <div className="relative flex-1 overflow-y-auto px-5 pt-8 pb-48">
       <div className="max-w-md mx-auto text-center flex flex-col items-center gap-4">
-        {isAdmin && (
+        {isAdmin && lens === "everyone" && (
           <label className="flex w-full items-center justify-between gap-3 rounded-2xl border border-dashed border-border px-4 py-2 text-sm text-muted-foreground">
             Preview with sample data
             <Switch checked={sample} onCheckedChange={setSample} />
           </label>
         )}
-        {demo && <div className="flex h-7 items-center self-start rounded-full bg-[#EEE9DF] px-3 text-xs font-semibold text-[#6E675F]">Sample data</div>}
-        <div className="flex w-full items-center justify-between gap-3">
-          <h1 className="font-heading text-[40px] font-semibold leading-tight text-foreground text-left">Together</h1>
+        {demo && lens === "everyone" && <div className="flex h-7 items-center self-start rounded-full bg-[#EEE9DF] px-3 text-xs font-semibold text-[#6E675F]">Sample data</div>}
+        <div className="flex w-full items-center justify-between gap-2">
+          <h1 className="font-heading text-[36px] font-semibold leading-tight text-foreground text-left">Together</h1>
           <div className="flex shrink-0 items-center gap-2">
             <button type="button" onClick={() => setInvite(true)} aria-label="Invite a friend"
               className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-foreground">
               <UserPlus className="h-5 w-5" aria-hidden="true" />
             </button>
-            <div id="together-head-slot" />
+            {lens === "everyone" && <div id="together-head-slot" />}
           </div>
         </div>
-        {demo ? board(demo.rows, new Set([...demo.mine, ...mine]), demo.cats) : joined && aggError ? (
+        <div className="self-start">{Lens}</div>
+        {lens === "mine" ? (
+          <div className="flex w-full flex-col gap-4">
+            <p className="text-left text-base text-muted-foreground">{counts.length} thing{counts.length === 1 ? "" : "s"} you've told me about.</p>
+            {counts.length ? <BubbleField items={mineItems} onTap={openSymptom} /> : (
+              <div className="rounded-[22px] border border-border bg-card px-5 py-6 text-sm text-muted-foreground">Nothing logged yet. Tell me how you feel and it will show up here.</div>
+            )}
+            <p className="text-center text-sm text-muted-foreground">Bigger bubbles are what you feel most. ★ You're watching these. Tap one to see your pattern.</p>
+            <button type="button" onClick={() => setChooser(true)} className="self-center text-sm font-semibold text-foreground underline underline-offset-2">Choose what to watch</button>
+          </div>
+        ) : demo ? board(demo.rows, new Set([...demo.mine, ...mine]), demo.cats) : aggError ? (
           <div className="flex flex-col items-center gap-3">
             <p className="text-base text-muted-foreground">Couldn't load Together right now. Try again?</p>
             <button type="button" onClick={() => setRetry((n) => n + 1)} className="rounded-full bg-foreground px-6 py-3 text-sm font-semibold text-background">Try again</button>
           </div>
-        ) : joined && rows === null ? <BubbleSkeleton /> : joined && rows!.some((r) => r.filter === "everyone") ? board(rows!, mine, cats) : joined ? (
+        ) : rows === null ? <BubbleSkeleton /> : rows.some((r) => r.filter === "everyone") ? board(rows, mine, cats) : (
           <>
-            <p className="text-base text-foreground">Thanks for being here.</p>
             <div className="w-full rounded-[22px] border border-border bg-card px-5 py-6 text-sm text-muted-foreground">
               We're just getting started. As more women join, you'll see what others feel here.
             </div>
-          </>
-        ) : (
-          <>
-            <p className="text-base text-muted-foreground">See what women like you are feeling, without sharing who you are.</p>
-            <button type="button" onClick={openSheet}
-              className="mt-2 rounded-full bg-foreground px-6 py-3 text-sm font-semibold text-background">
-              Count me in
-            </button>
+            {notCounted}
           </>
         )}
       </div>
+
+      <button type="button" onClick={() => setLogging({})}
+        className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] right-5 z-30 h-12 rounded-full bg-foreground px-5 text-[15px] font-semibold text-background shadow-lg">
+        + Log how I feel
+      </button>
+
+      <WatchChooser userId={userId} open={chooser} onOpenChange={setChooser} watch={watch} logged={counts.map((c) => c.name)} onSaved={setWatch} />
 
       <Sheet open={open} onOpenChange={(o) => { if (!o) notNow(); }}>
         <SheetContent side="bottom" className="rounded-t-[28px] px-6 pb-10 pt-8">

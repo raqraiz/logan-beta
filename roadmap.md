@@ -23,3 +23,9 @@
 - [x] Replace the old pattern layout with definition and personal symptom cards.
 - [x] Connect preselected logging and retain correction/hide controls.
 - [x] Verify populated and zero states, mobile spacing, and dark mode (read-only browser checks; hide/undo writes not exercised).
+
+## One place for symptoms (Together)
+- [x] Remove old Log symptoms sheet; all openers go to Together log mode (chat "Log X?" card stays inline)
+- [x] You tab "Your symptoms" row opens Together on Mine (12 months)
+- [x] Everyone / Mine switch, log mode, floating "+ Log how I feel" with room below the field
+- [x] No consent gate on viewing; signup checkbox; one-time chat ask

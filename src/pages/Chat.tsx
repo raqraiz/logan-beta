@@ -28,7 +28,9 @@ import { DatePickerInput } from "@/components/chat/DatePickerInput";
 import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 import { ChatCycleCircle, calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
 import { LoganTodaySection } from "@/components/chat/LoganTodaySection";
-import { SymptomLogWidget } from "@/components/home/SymptomLogWidget";
+import { OPEN_TOGETHER, type OpenTogetherDetail, type TogetherLens } from "@/lib/togetherOpen";
+import { TogetherAskCard } from "@/components/together/TogetherAskCard";
+import { loadTogether, markTogetherShown, setTogetherConsent } from "@/lib/together";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { refreshStageBoundary } from "@/hooks/useStageBoundary";
 import { inferCycleLengthForDeclaredPhase, autoCycleLengthFromHistory } from "@/lib/cyclePhase";
@@ -259,8 +261,7 @@ const Chat = () => {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [pillHasNew, setPillHasNew] = useState(false);
   const userScrolledRef = useRef(false);
-  const [feelSheetOpen, setFeelSheetOpen] = useState(false);
-  const [feelSymptom, setFeelSymptom] = useState<string | undefined>();
+  const [togetherRequest, setTogetherRequest] = useState<{ lens: TogetherLens; symptom?: string; n: number } | undefined>();
   const [creditBalance, setCreditBalance] = useState<{ free: number; paid: number; total: number; hoursUntilReset?: number } | null>(null);
   const [outOfCredits, setOutOfCredits] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -1501,6 +1502,36 @@ const Chat = () => {
     // Stay on the same page, UI will update to show auth form
   };
 
+  // Every "log how I feel" entry point opens Together (log mode or a lens).
+  const openTogetherAt = useCallback((lens: TogetherLens, symptom?: string) => {
+    setTogetherRequest({ lens, symptom, n: Date.now() });
+    setActiveTab("together"); trackTabSwitch("together");
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const h = (e: Event) => { const d = (e as CustomEvent<OpenTogetherDetail>).detail; openTogetherAt(d.lens, d.symptom); };
+    globalThis.addEventListener(OPEN_TOGETHER, h);
+    return () => globalThis.removeEventListener(OPEN_TOGETHER, h);
+  }, [openTogetherAt]);
+  // Together answer given at signup: apply once, so Logan never asks again in chat.
+  useEffect(() => {
+    const meta = user?.user_metadata as Record<string, unknown> | undefined;
+    if (!user?.id || meta?.together_answered !== true) return;
+    loadTogether(user.id).then(async (s) => {
+      if (s.shownAt) return;
+      if (meta.together_consent === true && !(await setTogetherConsent(user.id, true))) return;
+      await markTogetherShown(user.id);
+    });
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const postLogged = useCallback(() => {
+    if (!user) return;
+    const content = "Logged. Thanks for telling me.";
+    void supabase.from("chat_messages").insert({ user_id: user.id, role: "assistant", content, message_type: "text" })
+      .select("id, created_at").maybeSingle().then(({ data }) => {
+        if (!data) return;
+        setMessages(prev => [...prev, { id: data.id, role: "assistant", content, message_type: "text", created_at: data.created_at, user_id: user.id } as ChatMessage]);
+      });
+  }, [user]);
+
   const showTodaySection = !isOnboarding && !!user;
   const renderTodaySection = () => user ? (
     <LoganTodaySection
@@ -1508,7 +1539,7 @@ const Chat = () => {
       userId={user.id}
       cycle={cycleData}
       onOpenYou={() => { setActiveTab("home"); trackTabSwitch("home"); }}
-      onLogFeeling={() => { setFeelSymptom(undefined); setFeelSheetOpen(true); }}
+      onLogFeeling={() => openTogetherAt("log")}
     />
   ) : null;
 
@@ -1597,7 +1628,8 @@ const Chat = () => {
           userId={user?.id}
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenWeek={() => { setActiveTab("plan"); trackTabSwitch("plan"); }}
-          onLogFeeling={(symptom) => { setFeelSymptom(symptom); setFeelSheetOpen(true); }}
+          onLogFeeling={(symptom) => openTogetherAt("log", symptom)}
+          onOpenSymptoms={() => openTogetherAt("mine")}
           onPeriodUpdate={async (date: Date) => {
             if (!user?.id) return;
             const iso = format(date, "yyyy-MM-dd");
@@ -1712,7 +1744,9 @@ const Chat = () => {
         cycleDay={cycleData?.cycleDay}
         lastPeriodStart={cycleData?.lastPeriodStart ?? undefined}
         isNonCycling={!!cycleData?.lifeStage && !["cycling", "irregular"].includes(cycleData.lifeStage)}
-        onLogFeeling={(symptom) => { setFeelSymptom(symptom); setFeelSheetOpen(true); }} />}
+        cycleLengthDays={cycleData?.cycleLengthDays}
+        request={togetherRequest}
+        onLogged={postLogged} />}
 
       {effectiveTab === "plan" && user && (
         <div className="flex-1 flex flex-col min-h-0">
@@ -2547,6 +2581,7 @@ const Chat = () => {
             })
           )}
           {showTodaySection && messages.length > 0 && !messages.some(m => m.message_type !== "reaction" && m.message_type !== "checkin" && isMessageFromToday(m.created_at)) && renderTodaySection()}
+          {user && !isOnboarding && messages.length > 0 && <TogetherAskCard userId={user.id} />}
           <div ref={scrollRef} />
         </div>
       </ScrollArea>
@@ -2691,13 +2726,7 @@ const Chat = () => {
       anchorSymptom={tourAnchorSymptom}
       onLogNow={() => {
         setTourOpen(false);
-        setActiveTab("home");
-        trackTabSwitch("home");
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent("logan:open-symptom-log", {
-            detail: { symptom: tourAnchorSymptom },
-          }));
-        }, 50);
+        openTogetherAt("log", tourAnchorSymptom || undefined);
       }}
       onGoHome={() => {
         setTourOpen(false);
@@ -2707,35 +2736,6 @@ const Chat = () => {
       onDismiss={() => setTourOpen(false)}
     />
     <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
-    {user && (
-      <Drawer open={feelSheetOpen} onOpenChange={setFeelSheetOpen}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerTitle className="sr-only">How I feel</DrawerTitle>
-          <div className="overflow-y-auto px-2 pb-6">
-            <SymptomLogWidget
-              key={feelSymptom ?? "all-symptoms"}
-              initialSymptom={feelSymptom}
-              userId={user.id}
-              cycleDay={cycleData?.lifeStage === "cycling" ? cycleData?.cycleDay : undefined}
-              phase={cycleData?.phase}
-              lastPeriodStart={cycleData?.lastPeriodStart}
-              cycleLengthDays={cycleData?.cycleLengthDays}
-              isNonCycling={cycleData?.lifeStage !== "cycling"}
-              onLogged={(entry) => {
-                setFeelSheetOpen(false);
-                // Confirmation only after the log was saved and re-read by the sheet.
-                const content = "Logged. Thanks for telling me.";
-                void supabase.from("chat_messages").insert({ user_id: user.id, role: "assistant", content, message_type: "text" })
-                  .select("id, created_at").maybeSingle().then(({ data }) => {
-                    if (!data) return;
-                    setMessages(prev => [...prev, { id: data.id, role: "assistant", content, message_type: "text", created_at: data.created_at, user_id: user.id } as ChatMessage]);
-                  });
-              }}
-            />
-          </div>
-        </DrawerContent>
-      </Drawer>
-    )}
     <SettingsDialog
       open={settingsOpen}
       onOpenChange={setSettingsOpen}

@@ -1,3 +1,4 @@
+import { TOGETHER_CONSENT_VERSION } from "@/lib/together";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +36,7 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
+  const [togetherConsent, setTogetherConsentBox] = useState(false);
   const [showReferralField, setShowReferralField] = useState(false);
   const [referralCode, setReferralCode] = useState("");
   
@@ -102,6 +104,9 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
               full_name: fullName.trim(),
               consent_given: true,
               consent_given_at: new Date().toISOString(),
+              together_answered: true,
+              together_consent: togetherConsent,
+              together_consent_version: TOGETHER_CONSENT_VERSION,
               timezone: detectedTimezone,
               ...(referralCode.trim()
                 ? { manual_referral_code: referralCode.trim().toUpperCase() }
@@ -320,6 +325,14 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
                   terms & privacy policy
                 </Link>
                 , including consent to store and use my wellness data to personalize my experience.
+              </Label>
+            </div>
+          )}
+          {isSignUp && !isForgotPassword && (
+            <div className="flex items-start gap-3 py-2">
+              <Checkbox id="together-consent" checked={togetherConsent} onCheckedChange={(c) => setTogetherConsentBox(c === true)} className="mt-0.5" />
+              <Label htmlFor="together-consent" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
+                Add my logs, without my name, to what women see in Together.
               </Label>
             </div>
           )}
