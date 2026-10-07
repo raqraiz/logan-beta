@@ -1710,7 +1710,7 @@ const Chat = () => {
 
       {effectiveTab === "together" && user && <TogetherTab userId={user.id}
         cycleDay={cycleData?.cycleDay}
-        lastPeriodStart={cycleData?.lastPeriodStart}
+        lastPeriodStart={cycleData?.lastPeriodStart ?? undefined}
         isNonCycling={!!cycleData?.lifeStage && !["cycling", "irregular"].includes(cycleData.lifeStage)}
         onLogFeeling={(symptom) => { setFeelSymptom(symptom); setFeelSheetOpen(true); }} />}
 
