@@ -397,6 +397,6 @@ html:not(.dark) .headsup-primary, .theme-light .headsup-primary { background: hs
   --bubble-selected-text: #23201C;
   --bubble-ring: #FF7AB8;
 }
-.together-bubble { color: var(--bubble-text); }
-.together-bubble[data-selected="true"] { color: var(--bubble-selected-text); }
+.together-bubble, .together-bubble:hover { color: var(--bubble-text) !important; }
+.together-bubble[data-selected="true"], .together-bubble[data-selected="true"]:hover { color: var(--bubble-selected-text) !important; }
 .together-bubble[data-ring="true"]:not([data-selected="true"]) { box-shadow: inset 0 0 0 2.5px var(--bubble-ring); }
