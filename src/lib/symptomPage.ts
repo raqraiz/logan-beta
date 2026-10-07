@@ -45,6 +45,11 @@ export const SAFETY_NOTE = "If this is new or came on suddenly, check with a doc
 const SAFETY_RE = /\b(hearing|muffled|tinnitus|deaf|ear ringing|ringing in (my |the )?ears?|vision|sight|blurr|seeing spots|double vision|chest|severe headache|worst headache|migraine|faint|dizzy spells|pass(ed)? out|heavy bleeding|soak|hemorrhag|clots?\b|self.?harm|suicid|hurt myself|pregnan|swelling (in|of) (face|hands)|reduced (baby )?movement)/i;
 /** Symptoms that always carry the doctor note (hearing or vision changes, chest pain, severe headache, heavy bleeding, fainting, pregnancy warning signs). */
 export function isSafetySymptom(name: string): boolean { return SAFETY_RE.test(name.trim()); }
+// What helped tiers: "check first" safety symptoms allow tips from women with a recurring pattern; every other safety symptom never collects tips.
+const CHECK_FIRST_RE = /\b(muffled hearing|hearing loss|tinnitus|ringing in (my |the )?ears?|ear ringing)\b/i;
+export function isCheckFirstSymptom(name: string): boolean { return CHECK_FIRST_RE.test(name.trim()); }
+export function isUrgentSymptom(name: string): boolean { return isSafetySymptom(name) && !isCheckFirstSymptom(name); }
+export const CHECK_FIRST_TIPS_NOTE = "If this is new or came on suddenly, see a doctor first. These are things women with a recurring pattern tried.";
 
 /** Only the written symptom page description, or null when there is none. */
 export function knownSymptomDefinition(name: string): string | null {
