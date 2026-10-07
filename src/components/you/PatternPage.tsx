@@ -6,6 +6,8 @@ import { symptomCardInsights, symptomDefinition, symptomPageData, type SymptomPa
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { useSymptomCommunity, communityLine, stageInsight, WhenWomenFeelCard } from "@/components/together/SymptomCommunity";
+import { PREFILL_CHAT_EVENT } from "@/lib/partnerHeadsupClient";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 
 export interface PatternInfo { name: string; from: number | null; to: number | null; cycles: number; count: number }
@@ -35,6 +37,9 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
   const definition = symptomDefinition(name);
   const data = symptomPageData(logs, name, isNonCycling ? undefined : lastPeriodStart);
   const timing = !isNonCycling && from !== null && to !== null;
+  const community = useSymptomCommunity(userId, name);
+  const myWindow = timing ? { from: from as number, to: to as number } : null;
+  const askLogan = () => { onClose(); setTimeout(() => globalThis.dispatchEvent(new CustomEvent(PREFILL_CHAT_EVENT, { detail: `Why does my ${lower} happen?` })), 0); };
 
   useEffect(() => {
     if (!timing || !data.count) return;
@@ -84,11 +89,12 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
       globalThis.dispatchEvent(new Event(PATTERNS_CHANGED));
     } } });
   };
-  const sub = data.count === 0 ? "Not logged yet" : `You logged it ${data.count} time${data.count === 1 ? "" : "s"}${!isNonCycling && data.cycles ? ` in ${data.cycles} cycle${data.cycles === 1 ? "" : "s"}` : ""}`;
+  const sub = communityLine(community, data.count > 0) ?? (data.count === 0 ? "Not logged yet" : `You logged it ${data.count} time${data.count === 1 ? "" : "s"}${!isNonCycling && data.cycles ? ` in ${data.cycles} cycle${data.cycles === 1 ? "" : "s"}` : ""}`);
   const { insights, doctorAdvice } = symptomCardInsights([
     timing && explain ? explain : null,
     !timing && data.count > 0 ? "There isn't a clear timing pattern in your logs yet." : null,
     data.trend ? `At this cycle day, you've logged it ${data.trend === "Same" ? "as often as" : `${data.trend.toLowerCase()} often than`} last cycle.` : null,
+    isNonCycling ? null : stageInsight(community, myWindow),
   ]);
   const tileColumns = 1 + Number(timing) + Number(Boolean(data.trend));
 
@@ -136,6 +142,13 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
           {doctorAdvice && <p className="mt-4 text-sm font-light leading-relaxed text-muted-foreground">{doctorAdvice}</p>}
         </section>
 
+        <WhenWomenFeelCard c={community} mine={myWindow} hasCycle={!isNonCycling && !!lastPeriodStart} />
+
+        <section className="mt-4 flex items-center justify-between gap-3 rounded-[22px] bg-card p-5">
+          <h2 className="font-sans text-[13px] font-semibold tracking-normal text-muted-foreground">Why it happens</h2>
+          <Button variant="outline" onClick={askLogan} className="h-11 rounded-full px-5 text-sm font-semibold text-foreground shadow-none">Ask Logan</Button>
+        </section>
+
         <Button variant="link" onClick={() => { setMode("menu"); setMsg(null); setFix(true); }} className="mt-8 px-0 text-sm font-normal text-muted-foreground underline underline-offset-2">Not right?</Button>
       </div>
       <Drawer open={fix} onOpenChange={setFix}>
@@ -163,6 +176,7 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
           </div>
         </DrawerContent>
       </Drawer>
+      {community.consentSheet}
     </div>
   );
 }

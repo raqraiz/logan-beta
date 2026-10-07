@@ -174,7 +174,7 @@ export function WhenWomenFeelCard({ c, mine, hasCycle }: { c: Community; mine: W
       </div>
       <div className="relative mt-1.5 h-4 text-[11px] text-muted-foreground">
         <span className="absolute left-0">Day 1</span>
-        {busy && <span className="absolute -translate-x-1/2 font-semibold text-foreground" style={{ left: `${pct((busy.from + busy.to) / 2)}%` }}>{busy.from} to {busy.to}</span>}
+        {busy && <span className="absolute -translate-x-1/2 font-semibold text-foreground" style={{ left: `${Math.min(82, Math.max(18, pct((busy.from + busy.to) / 2)))}%` }}>{busy.from} to {busy.to}</span>}
         <span className="absolute right-0">Day {len}</span>
       </div>
       {caption && <p className="mt-4 text-[15px] font-light leading-relaxed text-foreground">{caption}</p>}

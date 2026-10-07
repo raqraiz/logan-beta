@@ -10,7 +10,7 @@ import { PatternPage } from "@/components/you/PatternPage";
 import type { SymptomPageLog } from "@/lib/symptomPage";
 import { togetherDisplay, loadAliases } from "@/lib/symptomCatalog";
 import { AggRow, TogetherCategory, key, loadAggregates, loadCategories, sampleAggregates } from "@/lib/togetherData";
-import { loadTogether, markTogetherShown, setTogetherConsent, trackTogether, TOGETHER_CHANGED } from "@/lib/together";
+import { loadTogether, markTogetherShown, setTogetherConsent, trackTogether, TOGETHER_BODY, TOGETHER_CHANGED } from "@/lib/together";
 
 export function TogetherCirclesIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
   return (
@@ -21,8 +21,6 @@ export function TogetherCirclesIcon({ className, style }: { className?: string; 
   );
 }
 
-const BODY =
-  "Together shows what women like you are feeling, so you can see you're not the only one. If you join, the symptoms you log are added to anonymous totals. No one sees your name, your logs or your messages. Numbers only show when at least 10 women share something. You can leave anytime in Settings, and your logs stop counting from that day.";
 
 interface TabProps {
   userId: string;
@@ -185,7 +183,7 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
         <SheetContent side="bottom" className="rounded-t-[28px] px-6 pb-10 pt-8">
           <div className="max-w-md mx-auto flex flex-col gap-4">
             <SheetTitle className="font-heading text-[34px] font-semibold text-foreground">Count me in</SheetTitle>
-            <SheetDescription className="text-[15px] font-normal leading-relaxed text-foreground">{BODY}</SheetDescription>
+            <SheetDescription className="text-[15px] font-normal leading-relaxed text-foreground">{TOGETHER_BODY}</SheetDescription>
             <button type="button" disabled={saving} onClick={join}
               className="mt-2 w-full rounded-full bg-foreground py-3 text-sm font-semibold text-background disabled:opacity-60">
               Count me in
