@@ -48,7 +48,7 @@ export function YourDataPage({ userId, cycle, isNonCycling, onClose, onLog, onSe
     // Structured fields do not retain origin metadata: never invent chat dates or onboarding sources.
     const source = "From your profile";
     if (p?.age) list.push({ key: "age", text: `${p.age} years old`, value: String(p.age), source, kind: "field" });
-    if (p?.birth_control_method) list.push({ key: "birth_control_method", text: p.birth_control_method === "hormonal_iud" ? "Hormonal IUD" : p.birth_control_method.replaceAll("_", " "), source, kind: "settings" });
+    if (p?.birth_control_method) list.push({ key: "birth_control_method", text: p.birth_control_method === "hormonal_iud" ? "Hormonal IUD" : p.birth_control_method.replace(/_/g, " "), source, kind: "settings" });
     if (p?.anchor_symptom) list.push({ key: "anchor_symptom", text: `${p.anchor_symptom} bothers you most`, value: p.anchor_symptom, source, kind: "field" });
     for (const key of ["goals", "typical_symptoms"] as const) if (p?.[key]?.length) list.push({ key, text: `${key === "goals" ? "Your goals" : "Symptoms you notice"}: ${p[key].join(", ")}`, value: p[key].join(", "), source, kind: "field" });
     if (p?.additional_notes) list.push({ key: "additional_notes", text: p.additional_notes, value: p.additional_notes, source, kind: "field" });
@@ -99,7 +99,7 @@ export function YourDataPage({ userId, cycle, isNonCycling, onClose, onLog, onSe
         {tab === "Patterns" && <><YourPatterns fullList userId={userId} lastPeriodStart={cycle.lastPeriodStart} cycleLengthDays={cycle.cycleLengthDays} isNonCycling={isNonCycling} lifeStage={cycle.lifeStage} onLogFeeling={onLog} /><MemorySection userId={userId} view="hidden" refresh={refresh} /></>}
         {tab === "Facts" && <>
           {error && <p className="text-sm text-muted-foreground">I couldn't load your profile facts. <Button variant="link" onClick={load}>Try again</Button></p>}
-          <MemorySection userId={userId} view="facts" refresh={refresh} />
+          <MemorySection userId={userId} view="facts" refresh={refresh} hideEmpty={facts.length > 0} />
           {facts.length > 0 && <div className="overflow-hidden rounded-[22px] bg-card">{facts.map((fact) => <Button key={fact.key} variant="ghost" className="h-auto w-full justify-between whitespace-normal rounded-none border-b border-border px-5 py-4 text-left last:border-0" onClick={() => fact.kind === "settings" ? onSettings() : fact.kind === "people" ? onPeople() : (setEdit(fact), setDraft(fact.value ?? ""))}><span className="min-w-0 text-sm">{fact.text}<span className="mt-1 block text-xs font-normal text-muted-foreground">{fact.source}</span></span><ChevronRight /></Button>)}</div>}
           <div className="overflow-hidden rounded-[22px] bg-card">{[{ id: "weight_trend", label: "Weight tracking" }, { id: "nutrition_today", label: "Nutrition tracking" }, { id: "discharge_tracker", label: "Fluid tracking" }].map((tracker) => <Button key={tracker.id} variant="ghost" className="h-auto w-full justify-between rounded-none border-b border-border px-5 py-4 last:border-0" onClick={onTrackers}><span>{tracker.label} · {widgets.find((w) => w.id === tracker.id)?.visible ? "On" : "Off"}</span><ChevronRight /></Button>)}</div>
         </>}

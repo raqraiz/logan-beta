@@ -8,7 +8,7 @@ import { PATTERNS_CHANGED } from "@/lib/patternCycles";
 import { toast } from "sonner";
 
 interface Note { id: string; note: string; source: string; created_at: string }
-export function MemorySection({ userId, view = "all", refresh = 0 }: { userId?: string; view?: "all" | "facts" | "hidden"; refresh?: number }) {
+export function MemorySection({ userId, view = "all", refresh = 0, hideEmpty = false }: { userId?: string; view?: "all" | "facts" | "hidden"; refresh?: number; hideEmpty?: boolean }) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -45,7 +45,7 @@ export function MemorySection({ userId, view = "all", refresh = 0 }: { userId?: 
       {view !== "hidden" && <section>
         <h2 className="mb-3 text-[13px] font-semibold text-muted-foreground">{view === "facts" ? "Facts you told me" : "What Logan remembers"}</h2>
         <div className="overflow-hidden rounded-[22px] bg-card">
-          {rest.length === 0 ? <p className="p-5 text-sm text-muted-foreground">Nothing yet. As we talk, what I learn about you shows up here.</p> : rest.map((n) => <div key={n.id} className="flex items-center border-b border-border last:border-0">
+          {rest.length === 0 ? !hideEmpty && <p className="p-5 text-sm text-muted-foreground">Nothing yet. As we talk, what I learn about you shows up here.</p> : rest.map((n) => <div key={n.id} className="flex items-center border-b border-border last:border-0">
             <Button variant="ghost" className="h-auto flex-1 justify-between whitespace-normal rounded-none px-5 py-4 text-left" onClick={() => { setEdit(n); setDraft(n.note); }}><span className="min-w-0 text-sm text-foreground">{n.note}<span className="mt-1 block text-xs font-normal text-muted-foreground">{source(n)}</span></span><ChevronRight /></Button>
             {view === "all" && <Button variant="ghost" size="icon" aria-label="Delete this note" onClick={() => remove(n.id)}><X /></Button>}
           </div>)}
