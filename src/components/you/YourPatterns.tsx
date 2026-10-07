@@ -58,9 +58,10 @@ interface Props {
   lifeStage?: string;
   onLogFeeling: (symptom?: string) => void;
   headsupVisible?: boolean;
+  fullList?: boolean;
 }
 
-export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCycling, lifeStage, onLogFeeling, headsupVisible }: Props) {
+export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCycling, lifeStage, onLogFeeling, headsupVisible, fullList = false }: Props) {
   const [patterns, setPatterns] = useState<Pattern[] | null>(null);
   const [logs, setLogs] = useState<SymptomPageLog[]>([]);
   const [open, setOpen] = useState(false);
@@ -137,7 +138,7 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
   }
   for (const p of adj) if (!watch.some((w) => w.toLowerCase() === p.name.toLowerCase()))
     rows.push({ key: p.name, name: p.name, label: p.from === null ? "no clear timing yet" : p.from === p.to ? `day ${p.from}` : `days ${p.from} to ${p.to}`, status: p.status });
-  const visible = showAll ? rows : rows.slice(0, 3);
+  const visible = fullList || showAll ? rows : rows.slice(0, 3);
 
   return (
     <section>
@@ -170,7 +171,7 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
                 </button>
               );
             })}
-            {rows.length > 3 && (
+            {!fullList && rows.length > 3 && (
               <button type="button" onClick={() => setOpen(true)}
                 className="w-full border-t border-border px-5 py-3 text-left text-[13px] font-semibold text-[#0B7479] dark:text-[#2BD4D9]">
                 See all
