@@ -54,9 +54,12 @@ async function moderate(symptom: string, text: string): Promise<{ decision: stri
   const instructions = `You check short tips women share about what helped with a symptom ("${symptom}") in a women's health app. Return JSON.
 Clean the tip: remove people's names, links, emails, phone numbers, social handles and any medicine dose (numbers with mg, ml, units, "x a day" for medicines). Keep her words otherwise; do not rewrite her voice. No em dashes.
 Personal experience is allowed, including naming a supplement she tried ("Magnesium in the evening helped me").
+decision "reject" with kind "selling" when the tip contains a link, a brand or shop being promoted, discount codes or anything for sale.
 decision "reject" with kind "instruction" when the tip tells others to take, stop, start or change any medicine, supplement or dose ("Take magnesium", "Stop the pill").
 decision "reject" with kind "broken_after_cleaning" when, after cleaning, the tip is broken, unclear, a fragment or very short.
-decision "reject" with kind "other" when: harmful or dangerous advice, diagnosing a condition, advertising a brand, shop or service, sexual or hateful content, or not about what helped with this symptom. Give a short kind reason addressed to her (one sentence, no blame).
+decision "reject" with kind "unsafe" when the tip is harmful or dangerous advice, diagnoses a condition, or contains sexual or hateful content.
+decision "reject" with kind "off_topic" when the tip is not about what helped with this symptom.
+decision "reject" with kind "other" only when none of the above fit. Give a short kind reason addressed to her (one sentence, no blame).
 decision "review" (kind "other") when unsure, or the tip names a specific prescription medicine.
 decision "approve" with kind "ok" otherwise. reason null when approved.`;
   const r = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
