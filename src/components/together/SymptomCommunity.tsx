@@ -3,7 +3,7 @@ import { Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { key } from "@/lib/togetherData";
+import { key, sampleSymptomDetail } from "@/lib/togetherData";
 import { loadTogether, setTogetherConsent, trackTogether, TOGETHER_BODY, TOGETHER_CHANGED } from "@/lib/together";
 
 interface Row { filter: string; symptom: string; women_band: string; women_count: number | null; day_shares: Record<string, number> | null }
@@ -20,7 +20,7 @@ export interface Community {
 }
 
 /** Totals for one symptom from the shared daily aggregates only. Never reads other women's logs. */
-export function useSymptomCommunity(userId: string, name: string): Community {
+export function useSymptomCommunity(userId: string, name: string, sample = false): Community {
   const [loaded, setLoaded] = useState(false);
   const [joined, setJoined] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
@@ -71,10 +71,12 @@ export function useSymptomCommunity(userId: string, name: string): Community {
     </Sheet>
   );
 
+  const demo = sample ? sampleSymptomDetail(name, cycleLength) : null;
+  const all = (demo ? demo.rows : rows) as Row[];
   return {
-    loaded, joined, cycleLength, openConsent, consentSheet,
-    everyone: rows.find((r) => r.filter === "everyone") ?? null,
-    stage: rows.find((r) => r.filter === "stage") ?? null,
+    loaded: loaded || !!demo, joined: joined || !!demo, cycleLength, openConsent, consentSheet,
+    everyone: all.find((r) => r.filter === "everyone") ?? null,
+    stage: all.find((r) => r.filter === "stage") ?? null,
   };
 }
 
@@ -163,6 +165,7 @@ export function WhenWomenFeelCard({ c, mine, hasCycle }: { c: Community; mine: W
           );
         })}
       </div>
+      {!avail.stage && <p className="mt-2 text-xs text-muted-foreground">Not enough women in your stage yet.</p>}
       <div className="relative mt-5">
         <div className="flex h-5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
           {v.map((x, i) => (

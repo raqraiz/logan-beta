@@ -6,6 +6,7 @@ import { symptomCardInsights, symptomDefinition, symptomPageData, type SymptomPa
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { sampleSymptomDetail } from "@/lib/togetherData";
 import { useSymptomCommunity, communityLine, stageInsight, WhenWomenFeelCard } from "@/components/together/SymptomCommunity";
 import { PREFILL_CHAT_EVENT } from "@/lib/partnerHeadsupClient";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -22,9 +23,10 @@ interface Props {
   onLog: (symptom: string) => void;
   onUnstar: () => Promise<void>;
   onChanged: () => void;
+  sample?: boolean;
 }
 
-export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, isNonCycling, onClose, onLog, onUnstar, onChanged }: Props) {
+export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, isNonCycling, onClose, onLog, onUnstar, onChanged, sample = false }: Props) {
   const [explain, setExplain] = useState<string | null>(null);
   const [fix, setFix] = useState(false);
   const [mode, setMode] = useState<"menu" | "timing" | "helped">("menu");
@@ -35,10 +37,11 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
   const { name, from, to } = pattern;
   const lower = name.toLowerCase();
   const definition = symptomDefinition(name);
-  const data = symptomPageData(logs, name, isNonCycling ? undefined : lastPeriodStart);
+  const demo = sample ? sampleSymptomDetail(name) : null;
+  const data = symptomPageData(demo ? demo.logs : logs, name, isNonCycling ? undefined : lastPeriodStart);
   const timing = !isNonCycling && from !== null && to !== null;
-  const community = useSymptomCommunity(userId, name);
-  const myWindow = timing ? { from: from as number, to: to as number } : null;
+  const community = useSymptomCommunity(userId, name, sample);
+  const myWindow = demo && !isNonCycling ? demo.window : timing ? { from: from as number, to: to as number } : null;
   const askLogan = () => { onClose(); setTimeout(() => globalThis.dispatchEvent(new CustomEvent(PREFILL_CHAT_EVENT, { detail: `Why does my ${lower} happen?` })), 0); };
 
   useEffect(() => {
@@ -142,7 +145,7 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
           {doctorAdvice && <p className="mt-4 text-sm font-light leading-relaxed text-muted-foreground">{doctorAdvice}</p>}
         </section>
 
-        <WhenWomenFeelCard c={community} mine={myWindow} hasCycle={!isNonCycling && !!lastPeriodStart} />
+        <WhenWomenFeelCard c={community} mine={myWindow} hasCycle={!isNonCycling && (!!lastPeriodStart || sample)} />
 
         <section className="mt-4 flex items-center justify-between gap-3 rounded-[22px] bg-card p-5">
           <h2 className="font-sans text-[13px] font-semibold tracking-normal text-muted-foreground">Why it happens</h2>

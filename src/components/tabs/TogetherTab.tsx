@@ -119,7 +119,7 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
     return (
       <PatternPage userId={userId} pattern={{ name: page, from: null, to: null, cycles: 0, count: 0 }} logs={logs}
         watched={watch.some((w) => key(w) === key(page))} lastPeriodStart={lastPeriodStart} isNonCycling={isNonCycling}
-        onClose={() => setPage(null)} onLog={(s) => { setPage(null); onLogFeeling(s); }} onChanged={() => {}}
+        onClose={() => setPage(null)} onLog={(s) => { setPage(null); onLogFeeling(s); }} onChanged={() => {}} sample={sample}
         onUnstar={async () => {
           const next = watch.filter((w) => key(w) !== key(page));
           const { error } = await supabase.from("participants").update({ watch_symptoms: next }).eq("user_id", userId);
@@ -146,9 +146,9 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
           </label>
         )}
         {demo && <div className="w-full rounded-2xl bg-foreground px-4 py-2 text-sm font-semibold text-background">Sample data.</div>}
-        <div className="relative w-full">
-          <h1 className="font-heading text-[40px] font-semibold leading-tight text-foreground">Together</h1>
-          <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center gap-2">
+        <div className="flex w-full items-center justify-between gap-3">
+          <h1 className="font-heading text-[40px] font-semibold leading-tight text-foreground text-left">Together</h1>
+          <div className="flex shrink-0 items-center gap-2">
             <button type="button" onClick={() => setInvite(true)} aria-label="Invite a friend"
               className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-foreground">
               <UserPlus className="h-5 w-5" aria-hidden="true" />
