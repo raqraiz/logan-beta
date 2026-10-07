@@ -12,7 +12,7 @@ const cat = buildCatalog([
 
 Deno.test("matches main names and aliases", () => {
   assertEquals(matchSymptoms("log hearing loss for april 15", cat), ["Hearing loss"]);
-  assertEquals(matchSymptoms("my head hurts and I had insomnia", cat), ["Trouble sleeping", "Headache"]);
+  assertEquals(matchSymptoms("my head hurts and I had insomnia", cat), ["Headache", "Trouble sleeping"]);
 });
 Deno.test("hearing loss stays separate from muffled hearing", () => {
   assertEquals(matchSymptoms("my muffled hearing is back", cat), ["Muffled hearing"]);
