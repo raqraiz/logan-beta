@@ -93,7 +93,7 @@ export function symptomPageData(logs: SymptomPageLog[], name: string, lastPeriod
   const matching = logs.filter((r) => Array.isArray(r.symptoms) && r.symptoms.some((s: unknown) => {
     if (typeof s === "string") return sameSymptom(s, lower);
     if (!s || typeof s !== "object" || !("name" in s)) return false;
-    return sameSymptom(String(s.name), lower) && (!("severity" in s) || typeof s.severity !== "number" || s.severity > 0);
+    return sameSymptom(String(s.name), lower) && (!("severity" in s) || typeof s.severity !== "number" || s.severity >= 0);
   }));
   const points = symptomPoints(matching)[lower] ?? [];
   const groups = groupCycles(points);

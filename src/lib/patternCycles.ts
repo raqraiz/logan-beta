@@ -7,7 +7,7 @@ export const PATTERNS_CHANGED = "logan:patterns-changed";
 export type LogRow = { logged_at: string; cycle_day: number | null; symptoms: unknown };
 export type Pt = { day: number; start: number; t: number };
 
-/** Points per symptom (lowercased): cycle day + estimated cycle start. Skips severity 0 entries. */
+/** Points per symptom (lowercased): cycle day + estimated cycle start. Severity 0 (old sheet default) counts as Mild. */
 export function symptomPoints(rows: LogRow[]): Record<string, Pt[]> {
   const by: Record<string, Pt[]> = {};
   for (const r of rows) {
@@ -17,7 +17,7 @@ export function symptomPoints(rows: LogRow[]): Record<string, Pt[]> {
     for (const s of (Array.isArray(r.symptoms) ? r.symptoms : []) as { name?: string; severity?: number }[]) {
       const raw = typeof s === "string" ? s : s?.name;
       if (!raw || !String(raw).trim()) continue;
-      if (typeof s !== "string" && typeof s?.severity === "number" && s.severity <= 0) continue;
+      if (typeof s !== "string" && typeof s?.severity === "number" && s.severity < 0) continue;
       const key = canonicalSymptom(String(raw)).toLowerCase();
       (by[key] ??= []).push({ day: r.cycle_day, start, t });
     }

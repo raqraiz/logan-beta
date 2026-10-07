@@ -239,7 +239,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
 
   const selectExisting = (name: string) => {
     setSelected(prev =>
-      prev.some(s => s.name.toLowerCase() === name.toLowerCase()) ? prev : [...prev, { name, severity: 0 }]
+      prev.some(s => s.name.toLowerCase() === name.toLowerCase()) ? prev : [...prev, { name, severity: 1 }]
     );
     setNewSymptom("");
     setAddError(null);
@@ -338,7 +338,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
       );
     } else if (data) {
       setCommunitySymptoms(prev => [data as CommunitySymptom, ...prev]);
-      setSelected(prev => [...prev, { name: data.name, severity: 0 }]);
+      setSelected(prev => [...prev, { name: data.name, severity: 1 }]);
       toast({
         title: "Added to the shared list",
         description: "It's live for everyone right away.",

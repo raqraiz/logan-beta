@@ -24,8 +24,9 @@ describe("Symptom page presentation data", () => {
   it("counts logs without cycle days without inventing cycles", () => {
     expect(symptomPageData([row("2026-09-19", null)], "Cramps")).toMatchObject({ count: 1, cycles: 0 });
   });
-  it("returns a true zero state and skips severity zero", () => {
-    expect(symptomPageData([{ ...row("2026-09-19", 19), symptoms: [{ name: "Cramps", severity: 0 }] }], "Cramps").count).toBe(0);
+  it("counts severity zero (old sheet default) as Mild, and has a true zero state", () => {
+    expect(symptomPageData([{ ...row("2026-09-19", 19), symptoms: [{ name: "Cramps", severity: 0 }] }], "Cramps").count).toBe(1);
+    expect(symptomPageData([], "Cramps").count).toBe(0);
   });
   it("compares equal elapsed cycle days, not a partial cycle to a whole one", () => {
     const logs = [row("2026-08-19", 19), row("2026-08-20", 20), row("2026-08-25", 25), row("2026-09-19", 19)];
