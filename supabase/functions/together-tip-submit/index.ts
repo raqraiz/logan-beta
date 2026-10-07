@@ -29,17 +29,22 @@ function labelFor(p: Record<string, any> | null): string {
   return "Someone in her luteal week";
 }
 
-const BROKEN_REASON = "Some details had to come out, and now it doesn't quite read right. Want to rewrite it?";
+// Rejection reasons, first match wins: selling, instruction, broken, unsafe, off topic.
+const SELLING_REASON = "Tips can't include links or anything for sale. Want to share what helped you instead?";
 const INSTRUCTION_REASON = "Tips share what helped you, not what others should take. Want to rewrite it as what you tried?";
+const BROKEN_REASON = "Some details had to come out, and now it doesn't quite read right. Want to rewrite it?";
+const UNSAFE_REASON = "This one is better talked through with a doctor. Want to share something else that helped?";
+const offTopicReason = (symptom: string) => `This doesn't seem to be about ${symptom}. Want to try again?`;
 // Imperative advice about medicine, supplements or doses, e.g. "Take X", "Stop the pill".
 const INSTRUCTION_RE = /^\s*(you should\s+|try\s+|just\s+)?(take|stop|start|quit|increase|decrease|double|skip|switch|change|come off|get off|use)\b/i;
+const SELLING_RE = /(https?:\/\/|www\.|\.com\b|\.net\b|\.shop\b|\.co\b|\b(buy|shop|order|discount|promo code|coupon|use my code|for sale|dm me|link in bio)\b)/i;
 const tooBroken = (s: string) => s.replace(/[^a-zA-Z\s]/g, " ").trim().split(/\s+/).filter((w) => w.length > 1).length < 4;
 
 const SCHEMA = {
   type: "object", additionalProperties: false, required: ["decision", "kind", "cleaned_text", "reason"],
   properties: {
     decision: { type: "string", enum: ["approve", "review", "reject"] },
-    kind: { type: "string", enum: ["ok", "broken_after_cleaning", "instruction", "other"] },
+    kind: { type: "string", enum: ["ok", "selling", "instruction", "broken_after_cleaning", "unsafe", "off_topic", "other"] },
     cleaned_text: { type: "string" },
     reason: { type: ["string", "null"] },
   },
