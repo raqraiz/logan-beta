@@ -87,7 +87,7 @@ interface SymptomLogWidgetProps {
   lastPeriodStart?: string;
   cycleLengthDays?: number;
   isNonCycling?: boolean;
-  onLogged?: () => void;
+  onLogged?: (entry: { symptoms: { name: string; severity: number }[]; notes: string; isToday: boolean }) => void;
 }
 
 interface CommunitySymptom {
@@ -503,6 +503,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
         title: isToday ? "Symptoms logged" : `Logged for ${format(logDate, "MMM d")}`,
         description: `${selected.length} symptom${selected.length !== 1 ? "s" : ""} recorded`,
       });
+      const savedEntry = { symptoms: selected.map(s => ({ name: s.name, severity: s.severity })), notes: notes.trim(), isToday };
       setSelected([]);
       setNotes("");
       if (isToday) {
@@ -510,7 +511,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
         setLastLogTime(new Date().toISOString());
       }
       setLogDate(new Date());
-      onLogged?.();
+      onLogged?.(savedEntry);
     }
     setSaving(false);
   };
