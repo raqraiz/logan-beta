@@ -2414,6 +2414,7 @@ export type Database = {
         Args: never
         Returns: {
           cohort_key: string
+          cohort_women: number
           computed_on: string
           day_shares: Json
           filter: string
