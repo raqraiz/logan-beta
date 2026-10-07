@@ -1,5 +1,10 @@
 # Roadmap
 
+## Real-data symptom page fixes
+- [ ] Always show the prevalence ring and honest empty-data copy.
+- [ ] Use circular usual windows consistently for timing, comparisons and chart dots.
+- [ ] Remove duplicate doctor advice and verify with real logs, without writes.
+
 ## Consistent symptom pages
 - [x] Keep all symptom page sections visible, including honest chart and ring empty states.
 - [x] Add daily privacy-safe community pairs and own-log fallback across two real cycles.

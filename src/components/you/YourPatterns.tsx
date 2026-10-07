@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SymptomHistory } from "@/components/home/SymptomHistory";
 import { PatternPage } from "@/components/you/PatternPage";
 import type { SymptomPageLog } from "@/lib/symptomPage";
-import { symptomPoints, groupCycles, PATTERNS_CHANGED, PATTERN_WINDOW_DAYS, type LogRow } from "@/lib/patternCycles";
+import { symptomPoints, groupCycles, usualWindow, PATTERNS_CHANGED, PATTERN_WINDOW_DAYS, type LogRow } from "@/lib/patternCycles";
 import { loadCycleStarts, withRealCycleDays } from "@/lib/realCycleDays";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 
@@ -16,7 +16,7 @@ const DAY = 86400000;
 const GOOD_DAYS = ["Lots of energy", "Feeling confident", "Clear head", "Sleeping well"];
 const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
 
-export function computePatterns(rows: LogRow[], now = Date.now()): Pattern[] {
+export function computePatterns(rows: LogRow[], now = Date.now(), cycleLength = 28): Pattern[] {
   const by = symptomPoints(rows);
   const out: Pattern[] = [];
   for (const [key, pts] of Object.entries(by)) {
@@ -24,16 +24,7 @@ export function computePatterns(rows: LogRow[], now = Date.now()): Pattern[] {
     const groups = groupCycles(pts).map((g) => g.days);
     const cycles = groups.length;
     // Timing only when 2+ cycles have most of their logs inside the same window of 7 days or less.
-    let best: { from: number; to: number; n: number } | null = null;
-    const allDays = [...new Set(pts.map((p) => p.day))].sort((a, b) => a - b);
-    for (const w of allDays) {
-      const inWin: number[] = []; let n = 0;
-      for (const g of groups) {
-        const hits = g.filter((d) => d >= w && d <= w + 6);
-        if (hits.length * 2 > g.length) { n++; inWin.push(...hits); }
-      }
-      if (n >= 2 && (!best || n > best.n)) best = { from: Math.min(...inWin), to: Math.max(...inWin), n };
-    }
+    const best = usualWindow(groups, cycleLength);
     let status: Status | null = null;
     if (best && best.n >= 3) status = "Confirmed";
     else if (best) status = "Emerging";
@@ -87,7 +78,7 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
     ]).then(([{ data: raw }, starts]) => {
         const data = withRealCycleDays(raw ?? [], starts);
         setLogs(data);
-        setPatterns(computePatterns(data));
+        setPatterns(computePatterns(data, Date.now(), cycleLengthDays));
         const names = new Set<string>();
         for (const r of data ?? []) for (const x of (Array.isArray(r.symptoms) ? r.symptoms : []) as any[]) {
           const n = typeof x === "string" ? x : x?.name; if (n && String(n).trim()) names.add(cap(String(n).trim().toLowerCase()));
@@ -110,7 +101,7 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
         }
         setHidden(h); setTiming(t);
       });
-  }, [userId, reload]);
+  }, [userId, reload, cycleLengthDays]);
   useEffect(() => {
     const h = () => setReload((r) => r + 1);
     globalThis.addEventListener(PATTERNS_CHANGED, h);
