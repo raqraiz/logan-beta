@@ -181,7 +181,7 @@ export function TogetherLogMode({ userId, logs, aggRows, cycleDay, lastPeriodSta
                 {SEVERITIES.map((s) => {
                   const on = p.severity === s.value;
                   return (
-                    <button key={s.label} type="button" aria-pressed={on} onClick={() => setPicked((all) => all.map((x) => x.name === p.name ? { ...x, severity: s.value } : x))}
+                    <button key={s.label} type="button" role="radio" aria-checked={on} onClick={() => setPicked((all) => all.map((x) => x.name === p.name ? { ...x, severity: s.value } : x))}
                       className={`h-8 rounded-full border px-3 text-xs ${on ? "border-[#23201C] bg-[#23201C] font-bold text-[#F4F1EA] dark:border-foreground dark:bg-foreground dark:text-background" : "border-[#DDD7CC] bg-card font-medium text-foreground dark:border-border"}`}>
                       {on ? `✓ ${s.label}` : s.label}
                     </button>
@@ -193,7 +193,7 @@ export function TogetherLogMode({ userId, logs, aggRows, cycleDay, lastPeriodSta
         </ul>
       )}
       {saveError && <p className="text-sm text-destructive">That didn't save. Try again.</p>}
-      <div className="sticky bottom-[calc(80px+env(safe-area-inset-bottom))] z-10 pt-2">
+      <div className="pt-1">
         <button type="button" disabled={!picked.length || saving} onClick={submit}
           className={`h-12 w-full rounded-full text-[15px] font-semibold ${picked.length ? "bg-foreground text-background" : "bg-[#EEE9DF] text-[#6E675F] dark:bg-muted dark:text-muted-foreground"}`}>
           {picked.length ? `Log ${picked.length}` : "Pick what you feel"}

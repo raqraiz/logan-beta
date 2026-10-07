@@ -255,7 +255,7 @@ export function BubbleField({ items, onTap }: { items: Bubble[]; onTap: (id: str
         const text = `${b.selected ? "✓ " : ""}${b.star ? "★ " : ""}${b.label}`;
         const label = fitLabel(text, d / 2, 12 + 5 * b.t);
         return (
-          <button key={b.id} type="button" onClick={() => onTap(b.id)} aria-label={b.label} aria-pressed={b.selected}
+          <button key={b.id} type="button" onClick={() => onTap(b.id)} aria-label={b.selected ? `${b.label}, picked` : b.label}
             className="absolute left-0 top-0 flex items-center justify-center rounded-full text-center font-semibold transition-[transform,opacity,background-color] duration-[400ms] ease-out motion-reduce:transition-none"
             style={{
               width: d, height: d, color: b.selected ? "#F4F1EA" : "#23201C", fontSize: label.fs, lineHeight: 1.15,
