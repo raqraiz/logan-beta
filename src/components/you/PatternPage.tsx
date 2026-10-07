@@ -10,6 +10,7 @@ import { sampleSymptomDetail } from "@/lib/togetherData";
 import { useSymptomCommunity, CommonRing, communityLine, stageInsight, WhenWomenFeelCard } from "@/components/together/SymptomCommunity";
 import { PREFILL_CHAT_EVENT } from "@/lib/partnerHeadsupClient";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from "@/components/ui/alert-dialog";
 
 export interface PatternInfo { name: string; from: number | null; to: number | null; cycles: number; count: number }
 interface Props {
@@ -34,6 +35,7 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
   const [toIn, setToIn] = useState(String(pattern.to ?? ""));
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmForget, setConfirmForget] = useState(false);
   const { name, from, to } = pattern;
   const lower = name.toLowerCase();
   const definition = symptomDefinition(name);
@@ -85,17 +87,27 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
     if (await saveNote(`Your ${lower} usually comes around days ${a} to ${b}.`, "insight_correction")) { setFix(false); onChanged(); }
   };
   const remove = async () => {
-    const id = await saveNote(`${name} isn't a pattern for you. Don't show it.`, "pattern_hidden");
+    const id = await saveNote(`${name}: don't have this anymore. Hide it from Mine.`, "pattern_hidden");
     if (!id) return;
     setFix(false); onChanged(); onClose();
     globalThis.dispatchEvent(new Event(PATTERNS_CHANGED));
-    toast("Hidden.", { duration: 6000, action: { label: "Undo", onClick: async () => {
+    toast("Hidden from Mine.", { duration: 6000, action: { label: "Undo", onClick: async () => {
       const { error } = await supabase.from("user_memory_notes").delete().eq("id", id).eq("user_id", userId);
-      if (error) { toast.error("That didn't undo. Try Bring back in Your data."); return; }
+      if (error) { toast.error("That didn't undo. Try again."); return; }
       globalThis.dispatchEvent(new Event(PATTERNS_CHANGED));
+      onChanged();
     } } });
   };
-  const sub = communityLine(community, data.count > 0) ?? (data.count === 0 ? "Not logged yet" : `You logged it ${data.count} time${data.count === 1 ? "" : "s"}${!isNonCycling && data.cycles ? ` in ${data.cycles} cycle${data.cycles === 1 ? "" : "s"}` : ""}`);
+  const forgetAll = async () => {
+    const id = await saveNote(`${name}: forgotten. Don't use her logs for patterns.`, "symptom_forgotten");
+    if (!id) return;
+    await supabase.from("user_memory_notes").delete().eq("user_id", userId).eq("source", "insight_correction").ilike("note", `Your ${lower} usually comes%`);
+    if (watched) { try { await onUnstar(); } catch { /* watch list stays; forget still saved */ } }
+    setConfirmForget(false); setFix(false); onChanged(); onClose();
+    globalThis.dispatchEvent(new Event(PATTERNS_CHANGED));
+    toast(`Forgot ${lower}.`);
+  };
+  const sub = communityLine(community, data.count > 0) ?? (data.count === 0 ? "Not logged yet" : "Only you so far");
   const compare = isNonCycling ? null : stageInsight(community, myWindow);
   const oneCycleOnly = !isNonCycling && data.count >= 2 && data.cycles === 1;
   const timingNote = !myWindow && !compare && data.count > 0
@@ -174,14 +186,9 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
           <DrawerHeader><DrawerTitle className="font-display text-2xl">{mode === "helped" ? "What helped you" : "What's not right?"}</DrawerTitle></DrawerHeader>
           <div className="space-y-2 px-5 pb-6">
             {mode === "helped" ? <p className="text-sm text-foreground">{data.helped}</p> : mode === "menu" ? <>
-              {!isNonCycling && <Button variant="outline" onClick={() => setMode("timing")} className="w-full rounded-full">The timing is off</Button>}
-              {watched && <Button variant="outline" disabled={busy} onClick={async () => {
-                setBusy(true);
-                try { await onUnstar(); setFix(false); }
-                catch { setMsg("That didn't save. Try again."); }
-                finally { setBusy(false); }
-              }} className="w-full rounded-full">Stop watching this</Button>}
-              <Button variant="outline" disabled={busy} onClick={() => void remove()} className="w-full rounded-full">This isn't a pattern for me</Button>
+              {!isNonCycling && <Button variant="outline" onClick={() => setMode("timing")} className="w-full rounded-full">This timing is wrong</Button>}
+              <Button variant="outline" disabled={busy} onClick={() => void remove()} className="w-full rounded-full">I don't have this anymore</Button>
+              <Button variant="outline" disabled={busy} onClick={() => setConfirmForget(true)} className="w-full whitespace-normal rounded-full">Forget everything about {lower}</Button>
             </> : <div className="space-y-3">
               <p className="text-sm text-muted-foreground">When does {lower} usually come?</p>
               <div className="flex items-center gap-2 text-sm text-foreground">
@@ -195,6 +202,18 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
         </DrawerContent>
       </Drawer>
       {community.consentSheet}
+      <AlertDialog open={confirmForget} onOpenChange={(v) => !busy && setConfirmForget(v)}>
+        <AlertDialogContent className="w-[calc(100%-40px)] rounded-[22px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-3xl">Forget {lower}?</AlertDialogTitle>
+            <AlertDialogDescription>Your logs stay, but I'll stop using them for patterns.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" disabled={busy} onClick={() => setConfirmForget(false)}>Keep</Button>
+            <Button variant="destructive" disabled={busy} onClick={() => void forgetAll()}>Forget</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
