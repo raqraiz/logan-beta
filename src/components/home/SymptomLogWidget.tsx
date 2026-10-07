@@ -619,7 +619,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
               });
               const words = take([...previouslyLoggedNames].filter(n => !isKnownSymptom(n)).map(n => sentenceCase(n)).sort((a, b) => a.localeCompare(b)));
               if (words.length) groups.push({ label: "Your words", names: words });
-              const exact = q && [...used].includes(q);
+              const exact = q && ([...used].includes(q) || isKnownSymptom(q));
               const anyHit = used.size > 0;
 
               const chip = (name: string) => {
