@@ -1,11 +1,12 @@
 import { Fragment, useEffect, useState } from "react";
-import { ArrowLeft, Check, Heart, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, Check, Heart, Info, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
+import { CHECK_FIRST_TIPS_NOTE } from "@/lib/symptomPage";
 import { trackTogether } from "@/lib/together";
 import {
   TIP_MAX, TIPS_CHANGED, hideTipAuthor, loadTips, logansNotes, reportTip, sortTips, submitTip, toggleVote,

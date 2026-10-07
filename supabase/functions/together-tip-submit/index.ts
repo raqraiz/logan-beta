@@ -7,6 +7,7 @@ const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 const Body = z.object({ symptom: z.string().trim().min(1).max(60), text: z.string().trim().min(3).max(160), tipId: z.string().uuid().optional() });
 
+const CHECK_FIRST_RE = /\b(muffled hearing|hearing loss|tinnitus|ringing in (my |the )?ears?|ear ringing)\b/i;
 const SAFETY_RE = /\b(hearing|ear|tinnitus|deaf|vision|sight|blurr|eye|chest pain|chest|severe headache|worst headache|faint|pass(ed)? out|heavy bleeding|soak|hemorrhag|clot|self.?harm|suicid|hurt myself|pregnan)/i;
 const SAFETY_REASON = "For this one, a doctor is the best first step, so I don't share tips about it.";
 const dashes = (s: string) => s.replace(/\s*[—–]\s*/g, ", ");
@@ -50,7 +51,30 @@ const SCHEMA = {
   },
 };
 
-async function moderate(symptom: string, text: string): Promise<{ decision: string; kind: string; cleaned_text: string; reason: string | null } | null> {
+// Distinct real cycles (period starts) with a log of this symptom in the last 12 months.
+async function ownCycles(service: any, userId: string, symptom: string): Promise<number> {
+  const since = new Date(Date.now() - 365 * 86400000).toISOString();
+  const { data: logs } = await service.from("symptom_logs").select("symptoms, logged_at").eq("user_id", userId).gte("logged_at", since);
+  const { data: part } = await service.from("participants").select("id, last_period_start").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (!part) return 0;
+  const { data: hist } = await service.from("cycle_history").select("cycle_start_date").eq("participant_id", part.id);
+  const anchors = [...(hist ?? []).map((h: any) => h.cycle_start_date), part.last_period_start].filter(Boolean).map((d: string) => Date.parse(`${d}T12:00:00Z`)).sort((a, b) => a - b);
+  const { data: canon } = await service.rpc("together_canonical", { _name: symptom });
+  const target = String(canon ?? symptom).toLowerCase();
+  const seen = new Set<number>();
+  for (const l of logs ?? []) {
+    const arr = Array.isArray(l.symptoms) ? l.symptoms : [];
+    let hit = false;
+    for (const s of arr) { if (!s?.name) continue; const { data: c } = await service.rpc("together_canonical", { _name: s.name }); if (String(c ?? s.name).toLowerCase() === target) { hit = true; break; } }
+    if (!hit) continue;
+    const t = Date.parse(l.logged_at); let a = -1;
+    for (const x of anchors) if (x <= t + 86400000) a = x;
+    if (a >= 0) seen.add(a);
+  }
+  return seen.size;
+}
+
+async function moderate(symptom: string, text: string, checkFirst = false): Promise<{ decision: string; kind: string; cleaned_text: string; reason: string | null } | null> {
   const instructions = `You check short tips women share about what helped with a symptom ("${symptom}") in a women's health app. Return JSON.
 Clean the tip: remove people's names, links, emails, phone numbers, social handles and any medicine dose (numbers with mg, ml, units, "x a day" for medicines). Keep her words otherwise; do not rewrite her voice. No em dashes.
 Personal experience is allowed, including naming a supplement she tried ("Magnesium in the evening helped me").
@@ -61,7 +85,7 @@ decision "reject" with kind "unsafe" when the tip is harmful or dangerous advice
 decision "reject" with kind "off_topic" when the tip is not about what helped with this symptom.
 decision "reject" with kind "other" only when none of the above fit. Give a short kind reason addressed to her (one sentence, no blame).
 decision "review" (kind "other") when unsure, or the tip names a specific prescription medicine.
-decision "approve" with kind "ok" otherwise. reason null when approved.`;
+${checkFirst ? `This symptom needs a doctor when new or sudden. Food, habits and comfort tips are fine. decision "reject" with kind "unsafe" when the tip promises to fix or cure it, or suggests she doesn't need a doctor.\n` : ""}decision "approve" with kind "ok" otherwise. reason null when approved.`;
   const r = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
     method: "POST",
     headers: { "Lovable-API-Key": Deno.env.get("LOVABLE_API_KEY") ?? "", "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
@@ -103,12 +127,14 @@ Deno.serve(async (req) => {
 
     const { data: prof } = await service.from("profiles").select("together_consent").eq("id", user.id).maybeSingle();
     if (!prof?.together_consent) return json({ error: "not_joined" }, 403);
-    if (SAFETY_RE.test(symptom)) return json({ status: "rejected", reason: SAFETY_REASON });
+    const checkFirst = CHECK_FIRST_RE.test(symptom);
+    if (!checkFirst && SAFETY_RE.test(symptom)) return json({ status: "rejected", reason: SAFETY_REASON });
+    if (checkFirst && (await ownCycles(service, user.id, symptom)) < 2) return json({ error: "needs_pattern" }, 403);
 
     const { data: p } = await service.from("participants").select("life_stage, last_period_start, cycle_length_days, due_date, pregnancy_lmp, postpartum_start_date").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
     const { data: stageKey } = p ? await service.rpc("together_stage", { _life_stage: p.life_stage, _due: p.due_date, _lmp: p.pregnancy_lmp, _pp: p.postpartum_start_date }) : { data: null };
 
-    const check = await moderate(symptom, text);
+    const check = await moderate(symptom, text, checkFirst);
     const cleaned = dashes((check?.cleaned_text || text).trim()).slice(0, 160);
     let decision = check?.decision ?? "review";
     let kind = check?.kind ?? "other";
