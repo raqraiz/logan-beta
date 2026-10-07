@@ -84,7 +84,7 @@ export function YourDataPage({ userId, cycle, isNonCycling, onClose, onLog, onSe
       }
       const tips = await supabase.rpc("delete_my_tips"); if (tips.error) throw tips.error;
       for (const [table, col] of [["together_tips", "author_id"], ["together_tip_votes", "user_id"]] as const) {
-        const check = await supabase.from(table).select("created_at").eq(col, userId).limit(1); if (check.error || check.data?.length) throw new Error("Unverified");
+        const check = await (supabase.from(table) as any).select("created_at").eq(col, userId).limit(1); if (check.error || check.data?.length) throw new Error("Unverified");
       }
       const participant = await supabase.from("participants").select(`${fields}, watch_symptoms`).eq("user_id", userId).maybeSingle();
       if (participant.error) throw participant.error;
