@@ -369,3 +369,34 @@ html:not(.dark) .headsup-primary, .theme-light .headsup-primary { background: hs
 
 .safety-callout { background: #EEE9DF; color: #23201C; }
 .dark .safety-callout { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+
+/* Shared Together fields: category fills and accessible text in both themes. */
+:root {
+  --bubble-body: 182 70% 51%;
+  --bubble-sleep-0: #DEE8F9;
+  --bubble-sleep-1: #DFE7F9;
+  --bubble-sleep-2: #DAEFF8;
+  --bubble-mood-0: #E9D9FA;
+  --bubble-mood-1: #E6DDFA;
+  --bubble-mood-2: #E2E4F9;
+  --bubble-text: #23201C;
+  --bubble-selected-fill: #23201C;
+  --bubble-selected-text: #F4F1EA;
+  --bubble-ring: #C4247A;
+}
+.dark {
+  --bubble-body-dark: rgba(43,212,217,0.24);
+  --bubble-sleep-0: rgba(110,150,235,0.26);
+  --bubble-sleep-1: var(--bubble-sleep-0);
+  --bubble-sleep-2: var(--bubble-sleep-0);
+  --bubble-mood-0: rgba(162,43,232,0.28);
+  --bubble-mood-1: var(--bubble-mood-0);
+  --bubble-mood-2: var(--bubble-mood-0);
+  --bubble-text: #F4F1EA;
+  --bubble-selected-fill: #F4F1EA;
+  --bubble-selected-text: #23201C;
+  --bubble-ring: #FF7AB8;
+}
+.together-bubble, .together-bubble:hover { color: var(--bubble-text) !important; }
+.together-bubble[data-selected="true"], .together-bubble[data-selected="true"]:hover { color: var(--bubble-selected-text) !important; }
+.together-bubble[data-ring="true"]:not([data-selected="true"]) { box-shadow: inset 0 0 0 2.5px var(--bubble-ring); }

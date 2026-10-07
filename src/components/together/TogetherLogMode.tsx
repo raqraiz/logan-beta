@@ -68,19 +68,22 @@ export function TogetherLogMode({ userId, logs, aggRows, cycleDay, lastPeriodSta
   const often = new Set(counts.slice(0, 6).map((c) => normSymptom(c.name)));
   const isPicked = (n: string) => picked.some((p) => sameSymptom(p.name, n));
 
-  // Field: the preselected one first (biggest, so it packs into the center), then hers by count, then common around her cycle day.
+  // Same size curve as Mine: her most logged first, then cycle-day suggestions at minimum size.
   const items: Bubble[] = useMemo(() => {
     const out: { name: string; t: number }[] = [];
     const seen = new Set<string>();
     const add = (name: string, t: number) => { const k = normSymptom(canonicalSymptom(name)); if (seen.has(k) || out.length >= MAX_BUBBLES) return; seen.add(k); out.push({ name, t }); };
-    if (preselect) add(canonicalSymptom(preselect), 1);
     const top = counts[0]?.n ?? 1;
-    for (const c of counts) add(c.name, 0.35 + 0.6 * Math.sqrt(c.n / top));
+    for (const c of counts) add(c.name, Math.sqrt(c.n / top));
     const around = (aggRows ?? []).filter((r) => r.filter === (cycleDay && !isNonCycling ? "cycle_day" : "everyone"))
       .sort((a, b) => (b.women_count ?? 0) - (a.women_count ?? 0));
-    for (const r of around) add(canonicalSymptom(r.symptom), 0.1);
+    for (const r of around) add(canonicalSymptom(r.symptom), 0);
     for (const n of ["Cramps", "Bloating", "Headache", "Fatigue", "Irritability", "Anxiety", "Trouble sleeping", "Breast tenderness", "Low mood", "Brain fog", "Acne", "Cravings", "High energy", "Rested"]) add(n, 0);
-    for (const p of picked) add(p.name, 0.2);
+    if (preselect && !seen.has(normSymptom(canonicalSymptom(preselect)))) {
+      if (out.length >= MAX_BUBBLES) out.pop();
+      add(canonicalSymptom(preselect), 0);
+    }
+    for (const p of picked) add(p.name, 0);
     return out.map((o, i) => ({ id: o.name, label: o.name, t: o.t, selected: isPicked(o.name), fill: categoryFill(mapCategory(groupOf(o.name)) ?? undefined, o.t, i) }));
   }, [counts, aggRows, cycleDay, isNonCycling, preselect, picked]); // eslint-disable-line react-hooks/exhaustive-deps
 
