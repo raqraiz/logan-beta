@@ -1,5 +1,10 @@
 # Roadmap
 
+## Consistent symptom pages
+- [ ] Keep all symptom page sections visible, including honest chart and ring empty states.
+- [ ] Add daily privacy-safe community pairs and own-log fallback across two real cycles.
+- [ ] Add the noninteractive sharing placeholder and verify populated/empty pages.
+
 ## Your data page
 - [x] Replace the You tile dialog with the full Your data page and three views.
 - [x] Reuse cycle analytics, pattern rows, memory controls, and existing fact/tracker settings.
