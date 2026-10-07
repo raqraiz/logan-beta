@@ -37,32 +37,32 @@ export function PatternPage({ userId, pattern, watched, lastPeriodStart, cycleLe
   const { name, from, to } = pattern;
   const lower = name.toLowerCase();
 
-  // Grid: last 3 archived cycles + current, one cell per cycle day.
+  // Grid: the same log data and cycle grouping as the pattern line (one row per cycle she logged it in, plus Now).
   useEffect(() => {
     (async () => {
-      const { data: p } = await supabase.from("participants").select("id").eq("user_id", userId).maybeSingle();
-      const { data: hist } = p ? await supabase.from("cycle_history").select("cycle_start_date, cycle_length_days")
-        .eq("participant_id", p.id).order("cycle_start_date", { ascending: false }).limit(3) : { data: [] };
-      const cycles = [...(hist ?? [])].reverse().map((h) => ({ start: parse(h.cycle_start_date), len: h.cycle_length_days, now: false }));
-      if (lastPeriodStart) cycles.push({ start: parse(lastPeriodStart), len: cycleLengthDays || 28, now: true });
-      if (!cycles.length) { setRows([]); return; }
-      const since = new Date(cycles[0].start.getTime() - DAY).toISOString();
-      const { data: logs } = await supabase.from("symptom_logs").select("logged_at, symptoms").eq("user_id", userId).gte("logged_at", since);
-      const days = new Set<string>();
-      for (const l of logs ?? []) for (const s of (Array.isArray(l.symptoms) ? l.symptoms : []) as any[]) {
-        const n = typeof s === "string" ? s : s?.name;
-        if (n && String(n).trim().toLowerCase() === lower) days.add(ymd(new Date(l.logged_at)));
-      }
-      const today = ymd(new Date());
-      setRows(cycles.map((c) => {
-        const todayIdx = c.now ? Math.floor((parse(today).getTime() - c.start.getTime()) / DAY) + 1 : 0;
-        const len = c.now ? Math.max(c.len, todayIdx) : c.len;
+      const since = new Date(Date.now() - PATTERN_WINDOW_DAYS * DAY).toISOString();
+      const { data: logs } = await supabase.from("symptom_logs").select("logged_at, cycle_day, symptoms").eq("user_id", userId).gte("logged_at", since);
+      const groups = groupCycles(symptomPoints(logs ?? [])[lower] ?? []);
+      const nowStart = lastPeriodStart ? parse(lastPeriodStart).getTime() : null;
+      const today = parse(ymd(new Date())).getTime();
+      const todayIdx = nowStart !== null ? Math.floor((today - nowStart) / DAY) + 1 : 0;
+      const list = groups.map((g) => ({ start: g.start, days: new Set(g.days), now: nowStart !== null && Math.abs(g.start - nowStart) <= 10 * DAY }));
+      if (nowStart !== null && !list.some((c) => c.now)) list.push({ start: nowStart, days: new Set<number>(), now: true });
+      list.sort((a, b) => a.start - b.start);
+      if (!list.length) { setRows([]); return; }
+      const monthKey = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-${d.getMonth()}`; };
+      const counts: Record<string, number> = {};
+      for (const c of list) if (!c.now) counts[monthKey(c.start)] = (counts[monthKey(c.start)] ?? 0) + 1;
+      setRows(list.map((c) => {
+        const d0 = new Date(c.start);
+        const maxLogged = Math.max(0, ...c.days);
+        const len = Math.max(cycleLengthDays || 28, maxLogged, c.now ? todayIdx : 0);
         return {
-          label: c.now ? "Now" : MON[c.start.getMonth()],
+          label: c.now ? "Now" : counts[monthKey(c.start)] > 1 ? `${MON[d0.getMonth()]} ${d0.getDate()}` : MON[d0.getMonth()],
           cells: Array.from({ length: Math.min(len, 45) }, (_, i) => {
-            const d = i + 1; const key = ymd(new Date(c.start.getTime() + i * DAY));
-            if (c.now && d === todayIdx) return days.has(key) ? "logged" : "today";
-            if (days.has(key)) return "logged";
+            const d = i + 1;
+            if (c.now && d === todayIdx) return c.days.has(d) ? "logged" : "today";
+            if (c.days.has(d)) return "logged";
             if (c.now && d > todayIdx) return from !== null && to !== null && d >= from && d <= to ? "expected" : "future";
             return "none";
           }),
