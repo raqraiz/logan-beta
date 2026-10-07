@@ -704,6 +704,7 @@ const Chat = () => {
 
   const hasScrolledToBottom = useRef(false);
   const stickToBottomRef = useRef(true);
+  const anchorIdRef = useRef<string | null>(null);
 
   // Auto-scroll on new messages
   const lastAutoScrolledIdRef = useRef<string | null>(null);
@@ -735,6 +736,7 @@ const Chat = () => {
 
     // When she sends a message, always bring her to the bottom
     if (lastMsg.role === "user") {
+      anchorIdRef.current = null;
       stickToBottomRef.current = true;
       scrollRef.current?.scrollIntoView({ behavior: "smooth" });
     }
@@ -1538,25 +1540,60 @@ const Chat = () => {
     });
   }, [effectiveTab]);
 
-  // Stay pinned to the newest message when Logan opens (or first loads) and
-  // while late content (ring widgets, cards, images) finishes sizing. Pinning
-  // ends as soon as she scrolls up herself, and resumes if she scrolls back down.
+  // When Logan opens, put the last message she saw at the top of the screen
+  // (the newest message if there's nothing newer, or on a first visit), and keep
+  // it there while late content (ring widgets, cards, images) finishes sizing.
+  // Pinning ends as soon as she scrolls herself; sending a message goes to the bottom.
+  // "Last seen" is remembered on this device only.
+  const lastReadKey = user ? `logan:lastRead:${user.id}` : null;
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
   const getViewport = () =>
     scrollContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
-  const pinToBottom = () => {
+  const alignView = () => {
     const viewport = getViewport();
-    if (viewport) viewport.scrollTop = viewport.scrollHeight;
-    else scrollRef.current?.scrollIntoView({ behavior: "instant" });
+    if (!viewport) return;
+    const anchorEl = anchorIdRef.current ? messageRefs.current[anchorIdRef.current] : null;
+    if (anchorEl && anchorEl.isConnected) {
+      const delta = anchorEl.getBoundingClientRect().top - viewport.getBoundingClientRect().top;
+      viewport.scrollTop += delta;
+    } else {
+      viewport.scrollTop = viewport.scrollHeight;
+    }
   };
   const hasMessages = messages.length > 0;
   useEffect(() => {
-    if (isOnboarding || effectiveTab !== "ask" || !hasMessages) return;
+    if (isOnboarding || effectiveTab !== "ask" || !hasMessages || !lastReadKey) return;
     const viewport = getViewport();
     if (!viewport) return;
+    let storedId: string | null = null;
+    try { storedId = localStorage.getItem(lastReadKey); } catch { /* storage unavailable */ }
+    anchorIdRef.current = storedId && messagesRef.current.some((m) => m.id === storedId) ? storedId : null;
     hasScrolledToBottom.current = true;
     stickToBottomRef.current = true;
-    pinToBottom();
-    requestAnimationFrame(pinToBottom);
+    alignView();
+    requestAnimationFrame(alignView);
+
+    // Remember the newest message whose top is on screen
+    const saveLastSeen = () => {
+      const viewTop = viewport.getBoundingClientRect().top;
+      const viewBottom = viewTop + viewport.clientHeight;
+      const list = messagesRef.current;
+      for (let i = list.length - 1; i >= 0; i--) {
+        const el = messageRefs.current[list[i].id];
+        if (!el || !el.isConnected) continue;
+        const r = el.getBoundingClientRect();
+        if (r.top < viewBottom - 24 && r.bottom > viewTop) {
+          try { localStorage.setItem(lastReadKey, list[i].id); } catch { /* storage unavailable */ }
+          return;
+        }
+      }
+    };
+    let saveFrame = 0;
+    const scheduleSave = () => {
+      cancelAnimationFrame(saveFrame);
+      saveFrame = requestAnimationFrame(saveLastSeen);
+    };
 
     let userDriven = false;
     let userTimer: ReturnType<typeof setTimeout> | undefined;
@@ -1566,15 +1603,17 @@ const Chat = () => {
       userTimer = setTimeout(() => { userDriven = false; }, 800);
     };
     const onScroll = () => {
+      scheduleSave();
       if (!userDriven) return;
       const distance = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      if (distance < SCROLL_NEAR_BOTTOM_PX) anchorIdRef.current = null;
       stickToBottomRef.current = distance < SCROLL_NEAR_BOTTOM_PX;
     };
     const onKey = (e: KeyboardEvent) => {
       if (["ArrowUp", "PageUp", "Home", "ArrowDown", "PageDown", "End", " "].includes(e.key)) markUser();
     };
     const resizeObserver = new ResizeObserver(() => {
-      if (stickToBottomRef.current) pinToBottom();
+      if (stickToBottomRef.current) alignView();
     });
     resizeObserver.observe(viewport);
     if (viewport.firstElementChild) resizeObserver.observe(viewport.firstElementChild);
@@ -1587,6 +1626,7 @@ const Chat = () => {
     viewport.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       clearTimeout(userTimer);
+      cancelAnimationFrame(saveFrame);
       resizeObserver.disconnect();
       viewport.removeEventListener("wheel", markUser);
       viewport.removeEventListener("touchstart", markUser);
@@ -1595,7 +1635,7 @@ const Chat = () => {
       window.removeEventListener("keydown", onKey);
       viewport.removeEventListener("scroll", onScroll);
     };
-  }, [effectiveTab, hasMessages, isOnboarding]);
+  }, [effectiveTab, hasMessages, isOnboarding, lastReadKey]);
 
   // Show loading only while checking auth status
   if (authLoading) {
