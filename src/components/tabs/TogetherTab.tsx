@@ -143,7 +143,10 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
           </label>
         )}
         {demo && <div className="w-full rounded-2xl bg-foreground px-4 py-2 text-sm font-semibold text-background">Sample data.</div>}
-        <h1 className="font-heading text-[40px] font-semibold leading-tight text-foreground">Together</h1>
+        <div className="relative w-full">
+          <h1 className="font-heading text-[40px] font-semibold leading-tight text-foreground">Together</h1>
+          <div id="together-head-slot" className="absolute right-0 top-1/2 -translate-y-1/2" />
+        </div>
         {demo ? board(demo.rows, demo.mine, demo.cats) : joined && aggError ? (
           <div className="flex flex-col items-center gap-3">
             <p className="text-base text-muted-foreground">Couldn't load Together right now. Try again?</p>

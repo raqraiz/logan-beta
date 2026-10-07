@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { packSiblings } from "d3-hierarchy";
 import { cn } from "@/lib/utils";
 import { knownSymptomDefinition, isSafetySymptom, SAFETY_NOTE } from "@/lib/symptomPage";
 import { AggRow, CATEGORY_PILLS, TogetherCategory, countLabel, display, isExact, key } from "@/lib/togetherData";
@@ -35,6 +37,8 @@ interface Props {
 
 export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymptom }: Props) {
   const [view, setView] = useState<"field" | "list">("field");
+  const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => { setHeadSlot(document.getElementById("together-head-slot")); }, []);
   const [cat, setCat] = useState<"all" | TogetherCategory>("all");
   const weekRows = rows.filter((r) => r.filter === "cycle_day");
   const showWeek = hasCycle && !!cycleDay;
@@ -108,17 +112,17 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymp
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-center text-base text-muted-foreground">{everyone.length} feelings, named by women like you.</p>
-      <div className="flex items-center gap-2">
-        <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1">
-          {CATEGORY_PILLS.map((p) => <Pill key={p.id} active={cat === p.id} onClick={() => setCat(p.id)}>{p.label}</Pill>)}
-        </div>
+      {headSlot && createPortal(
         <button type="button" aria-label="See all as a list" onClick={() => setView("list")}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground">
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-foreground">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
             <path d="M9 6h11M9 12h11M9 18h11" /><circle cx="4.5" cy="6" r="1" /><circle cx="4.5" cy="12" r="1" /><circle cx="4.5" cy="18" r="1" />
           </svg>
-        </button>
+        </button>, headSlot)}
+      <p className="text-center text-base text-muted-foreground">{everyone.length} feelings, named by women like you.</p>
+      <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
+        {CATEGORY_PILLS.map((p) => <Pill key={p.id} active={cat === p.id} onClick={() => setCat(p.id)}>{p.label}</Pill>)}
+        <span aria-hidden className="w-3 shrink-0" />
       </div>
       <BubbleCluster rows={shown} max={max} mine={mine} cats={cats} onOpen={onOpenSymptom} />
       {field.length < 3 && <p className="text-center text-sm text-muted-foreground">{MORE}</p>}
@@ -144,18 +148,39 @@ function fillFor(c: TogetherCategory | undefined, t: number, i: number) {
   return "rgba(43,212,217,0.18)";
 }
 
-/** Biggest in the center, others placed outward on a spiral, touching-close, never overlapping. */
-function packSpiral(radii: number[]) {
-  const pts: { x: number; y: number; r: number }[] = [];
-  for (const r of radii) {
-    if (!pts.length) { pts.push({ x: 0, y: 0, r }); continue; }
-    for (let s = 0; ; s += 1) {
-      const a = s * 0.25, d = 2 * s;
-      const x = Math.cos(a) * d, y = Math.sin(a) * d;
-      if (pts.every((p) => Math.hypot(p.x - x, p.y - y) >= p.r + r + GAP)) { pts.push({ x, y, r }); break; }
+/** d3 packSiblings, largest first, GAP/2 padding on each radius so neighbours sit GAP apart. */
+function packCluster(radii: number[]) {
+  const circles = radii.map((r, i) => ({ r: r + GAP / 2, i, x: 0, y: 0 }));
+  packSiblings([...circles].sort((a, b) => b.r - a.r));
+  return circles.map((c) => ({ x: c.x, y: c.y, r: c.r - GAP / 2 }));
+}
+
+let ctx: CanvasRenderingContext2D | null = null;
+function measure(text: string, fs: number) {
+  if (!ctx) ctx = document.createElement("canvas").getContext("2d");
+  if (!ctx) return text.length * fs * 0.55;
+  ctx.font = `600 ${fs}px Quicksand, sans-serif`;
+  return ctx.measureText(text).width;
+}
+
+/** Up to two lines broken between words, largest font (min 11px) that fits inside the circle. */
+function fitLabel(text: string, r: number, start: number) {
+  const words = text.split(/\s+/).filter(Boolean);
+  const inner = Math.max(4, r - 5);
+  const options: string[][] = [[words.join(" ")]];
+  for (let k = 1; k < words.length; k++) options.push([words.slice(0, k).join(" "), words.slice(k).join(" ")]);
+  for (let fs = Math.round(start); fs >= 11; fs -= 0.5) {
+    const lh = fs * 1.15;
+    for (const lines of options) {
+      const edge = (lines.length * lh) / 2; // farthest line edge from center
+      if (edge >= inner) continue;
+      const avail = 2 * Math.sqrt(inner * inner - edge * edge);
+      if (lines.every((l) => measure(l, fs) <= avail)) return { fs, lines };
     }
   }
-  return pts;
+  // Fallback at 11px: best two-line split by width, still no ellipsis.
+  const best = options.reduce((a, b) => (Math.max(...b.map((l) => measure(l, 11))) < Math.max(...a.map((l) => measure(l, 11))) ? b : a));
+  return { fs: 11, lines: best };
 }
 
 function BubbleCluster({ rows, max, mine, cats, onOpen }: {
@@ -172,16 +197,17 @@ function BubbleCluster({ rows, max, mine, cats, onOpen }: {
   }, []);
   const layout = useMemo(() => {
     const ts = rows.map((r) => (isExact(r) ? Math.sqrt((r.women_count! - 10) / Math.max(1, max - 10)) : 0));
-    const pts = packSpiral(ts.map((t) => R_MIN + (R_MAX - R_MIN) * t));
-    const minX = Math.min(0, ...pts.map((p) => p.x - p.r)), maxX = Math.max(0, ...pts.map((p) => p.x + p.r));
-    const minY = Math.min(0, ...pts.map((p) => p.y - p.r)), maxY = Math.max(0, ...pts.map((p) => p.y + p.r));
+    const pts = packCluster(ts.map((t) => R_MIN + (R_MAX - R_MIN) * t));
+    if (!pts.length) return { ts, pts, cx: 0, cy: 0, bw: 0, bh: 0 };
+    const minX = Math.min(...pts.map((p) => p.x - p.r)), maxX = Math.max(...pts.map((p) => p.x + p.r));
+    const minY = Math.min(...pts.map((p) => p.y - p.r)), maxY = Math.max(...pts.map((p) => p.y + p.r));
     return { ts, pts, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, bw: maxX - minX, bh: maxY - minY };
   }, [rows, max]);
-  // Re-trigger the ease-in whenever the set changes.
   const sig = rows.map((r) => r.symptom).join("|");
   useEffect(() => { setReady(false); const id = requestAnimationFrame(() => requestAnimationFrame(() => setReady(true))); return () => cancelAnimationFrame(id); }, [sig]);
 
-  const scale = Math.min(w / BASE_W, layout.bw > 0 ? w / layout.bw : 1, 1.2);
+  const fieldW = Math.min(w, BASE_W);
+  const scale = layout.bw > 0 ? fieldW / layout.bw : 1;
   const h = Math.max(0, layout.bh * scale);
   return (
     <div ref={wrap} className="relative w-full" style={{ height: h + 8 }}>
@@ -192,18 +218,20 @@ function BubbleCluster({ rows, max, mine, cats, onOpen }: {
         const x = w / 2 + (p.x - layout.cx) * scale - d / 2;
         const y = 4 + h / 2 + (p.y - layout.cy) * scale - d / 2;
         const her = mine.has(key(r.symptom));
+        const label = fitLabel(display(r.symptom), d / 2, 12 + 5 * t);
         return (
-          <button key={r.symptom} type="button" onClick={() => onOpen(r.symptom)}
-            className="absolute left-0 top-0 flex items-center justify-center rounded-full p-1.5 text-center font-semibold leading-tight transition-[transform,opacity] duration-[400ms] ease-out motion-reduce:transition-none"
+          <button key={r.symptom} type="button" onClick={() => onOpen(r.symptom)} aria-label={display(r.symptom)}
+            className="absolute left-0 top-0 flex items-center justify-center rounded-full text-center font-semibold transition-[transform,opacity] duration-[400ms] ease-out motion-reduce:transition-none"
             style={{
-              width: d, height: d, color: "#23201C",
-              fontSize: (12 + 5 * t) * Math.min(1, scale),
+              width: d, height: d, color: "#23201C", fontSize: label.fs, lineHeight: 1.15,
               background: fillFor(cats.get(key(r.symptom)), t, i),
               boxShadow: her ? "inset 0 0 0 2.5px #C4247A" : "none",
               transform: ready ? `translate(${x}px, ${y}px) scale(1)` : `translate(${w / 2 - d / 2}px, ${4 + h / 2 - d / 2}px) scale(0.6)`,
               opacity: ready ? 1 : 0,
             }}>
-            <span className="line-clamp-2 break-words">{display(r.symptom)}</span>
+            <span aria-hidden className="whitespace-nowrap">
+              {label.lines.map((l, j) => <span key={j} className="block">{l}</span>)}
+            </span>
           </button>
         );
       })}
