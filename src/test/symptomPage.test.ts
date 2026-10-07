@@ -14,6 +14,13 @@ describe("Symptom page presentation data", () => {
   it("counts positive logs and shared cycle groups", () => {
     expect(symptomPageData([row("2026-08-19", 19), row("2026-08-20", 20), row("2026-09-19", 19)], "Cramps")).toMatchObject({ count: 3, cycles: 2, trend: null });
   });
+  it("tells one cycle's logs from logs spanning two cycles", () => {
+    expect(symptomPageData([row("2026-09-19", 19), row("2026-09-20", 20)], "Cramps")).toMatchObject({ count: 2, cycles: 1 });
+  });
+  it("keeps a written line whole as one insight", () => {
+    const line = "All in one cycle so far. After your next cycle I can tell you when it usually shows up.";
+    expect(symptomCardInsights([{ text: line, keepTogether: true }]).insights).toEqual([line]);
+  });
   it("counts logs without cycle days without inventing cycles", () => {
     expect(symptomPageData([row("2026-09-19", null)], "Cramps")).toMatchObject({ count: 1, cycles: 0 });
   });

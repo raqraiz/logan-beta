@@ -59,14 +59,21 @@ export function symptomDefinition(name: string): { text: string; safety: string 
 
 export type SymptomPageLog = LogRow & { notes?: string | null };
 
+/** A written line that must stay one insight instead of being split into sentences. */
+export type InsightSource = string | null | { text: string; keepTogether?: boolean };
+
 /** Display complete short sentences only; never truncate medical advice or a biological claim. */
-export function symptomCardInsights(texts: (string | null)[]) {
+export function symptomCardInsights(texts: InsightSource[]) {
   const insights: string[] = [];
   let doctorAdvice: string | null = null;
-  for (const text of texts) {
-    for (const sentence of text?.match(/[^.!?]+[.!?]*/g) ?? []) {
+  for (const source of texts) {
+    const keep = typeof source === "object" && source !== null && source.keepTogether === true;
+    const text = typeof source === "object" && source !== null ? source.text : source;
+    const sentences = keep ? [text ?? ""] : text?.match(/[^.!?]+[.!?]*/g) ?? [];
+    for (const sentence of sentences) {
       const clean = sentence.trim();
       if (!clean) continue;
+      if (keep) { if (!insights.includes(clean)) insights.push(clean); continue; }
       const short = !clean.includes(";") && clean.split(/\s+/).length <= 15;
       if (/\b(doctor|urgent care|medical care|emergency)\b/i.test(clean)) {
         doctorAdvice = short ? clean : /\b(sudden|today|urgent|emergency)\b/i.test(clean)

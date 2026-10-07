@@ -97,9 +97,15 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
   };
   const sub = communityLine(community, data.count > 0) ?? (data.count === 0 ? "Not logged yet" : `You logged it ${data.count} time${data.count === 1 ? "" : "s"}${!isNonCycling && data.cycles ? ` in ${data.cycles} cycle${data.cycles === 1 ? "" : "s"}` : ""}`);
   const compare = isNonCycling ? null : stageInsight(community, myWindow);
+  const oneCycleOnly = !isNonCycling && data.count >= 2 && data.cycles === 1;
+  const timingNote = !myWindow && !compare && data.count > 0
+    ? oneCycleOnly
+      ? "All in one cycle so far. After your next cycle I can tell you when it usually shows up."
+      : "There isn't a clear timing pattern in your logs yet."
+    : null;
   const { insights, doctorAdvice } = symptomCardInsights([
     timing && explain ? explain : null,
-    !myWindow && !compare && data.count > 0 ? "There isn't a clear timing pattern in your logs yet." : null,
+    timingNote ? { text: timingNote, keepTogether: true } : null,
     data.trend ? `At this cycle day, you've logged it ${data.trend === "Same" ? "as often as" : `${data.trend.toLowerCase()} often than`} last cycle.` : null,
     compare,
   ]);
