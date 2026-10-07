@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { SafetyCallout } from "@/components/SafetyCallout";
 import { toast } from "sonner";
 import { PATTERNS_CHANGED } from "@/lib/patternCycles";
-import { symptomCardInsights, symptomDefinition, symptomPageData, type SymptomPageLog } from "@/lib/symptomPage";
+import { ownSymptomPairs, symptomCardInsights, symptomDefinition, symptomPageData, type SymptomPageLog } from "@/lib/symptomPage";
+import { loadCycleStarts } from "@/lib/realCycleDays";
+import { togetherDisplay } from "@/lib/symptomCatalog";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -25,9 +27,12 @@ interface Props {
   onUnstar: () => Promise<void>;
   onChanged: () => void;
   sample?: boolean;
+  onOpenSymptom?: (symptom: string) => void;
 }
 
-export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, isNonCycling, onClose, onLog, onUnstar, onChanged, sample = false }: Props) {
+export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, isNonCycling, onClose, onLog, onUnstar, onChanged, sample = false, onOpenSymptom }: Props) {
+  const [cycleStarts, setCycleStarts] = useState<string[]>([]);
+  useEffect(() => { let alive = true; void loadCycleStarts(userId).then((s) => { if (alive) setCycleStarts(s); }); return () => { alive = false; }; }, [userId]);
   const [explain, setExplain] = useState<string | null>(null);
   const [fix, setFix] = useState(false);
   const [mode, setMode] = useState<"menu" | "timing" | "helped">("menu");
@@ -107,7 +112,9 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
     globalThis.dispatchEvent(new Event(PATTERNS_CHANGED));
     toast(`Forgot ${lower}.`);
   };
-  const sub = communityLine(community, data.count > 0) ?? (data.count === 0 ? "Not logged yet" : "Only you so far");
+  const sub = communityLine(community, data.count > 0) ?? "Only you so far";
+  const ownPairs = isNonCycling ? [] : ownSymptomPairs(logs, name, cycleStarts);
+  const pairs = community.pairs.length ? community.pairs : ownPairs;
   const compare = isNonCycling ? null : stageInsight(community, myWindow);
   const oneCycleOnly = !isNonCycling && data.count >= 2 && data.cycles === 1;
   const timingNote = !myWindow && !compare && data.count > 0
@@ -173,6 +180,18 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
         </section>
 
         <WhenWomenFeelCard c={community} mine={myWindow} loggedDays={realData.loggedDays} hasCycle={!isNonCycling && (!!lastPeriodStart || sample)} />
+
+        <section className="mt-4 rounded-[22px] bg-card p-5" aria-labelledby="symptom-pairs-label">
+          <h2 id="symptom-pairs-label" className="font-sans text-[15px] font-semibold text-foreground">{!community.pairs.length && ownPairs.length ? "For you, often with" : "Often felt together"}</h2>
+          {pairs.length ? <div className="mt-3 flex flex-wrap gap-2">
+            {pairs.map((n) => <Button key={n} variant="outline" onClick={() => onOpenSymptom?.(togetherDisplay(n))} className="h-11 max-w-full whitespace-normal rounded-full border-border text-foreground shadow-none">{togetherDisplay(n)}</Button>)}
+          </div> : <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{community.error ? "Shared pairings couldn't load. Try again later." : "Once more women share, you'll see what often comes with it."}</p>}
+        </section>
+
+        <section className="mt-4 rounded-[22px] bg-foreground p-5 text-background" aria-labelledby="symptom-shared-help-label">
+          <h2 id="symptom-shared-help-label" className="font-sans text-[15px] font-semibold">What helped other women</h2>
+          <p className="mt-3 text-sm leading-relaxed">Coming soon. Women will share what helped, without their names.</p>
+        </section>
 
         <section className="mt-4 flex items-center justify-between gap-3 rounded-[22px] bg-card p-5">
           <h2 className="font-sans text-[13px] font-semibold tracking-normal text-muted-foreground">Why it happens</h2>

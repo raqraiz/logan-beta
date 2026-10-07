@@ -1,9 +1,9 @@
 # Roadmap
 
 ## Consistent symptom pages
-- [ ] Keep all symptom page sections visible, including honest chart and ring empty states.
-- [ ] Add daily privacy-safe community pairs and own-log fallback across two real cycles.
-- [ ] Add the noninteractive sharing placeholder and verify populated/empty pages.
+- [x] Keep all symptom page sections visible, including honest chart and ring empty states.
+- [x] Add daily privacy-safe community pairs and own-log fallback across two real cycles.
+- [x] Add the noninteractive sharing placeholder and verify populated/empty pages (phone/desktop, light/dark, related-symptom navigation; 36 unit tests and 9 boundary tests pass).
 
 ## Your data page
 - [x] Replace the You tile dialog with the full Your data page and three views.
