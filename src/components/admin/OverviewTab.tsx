@@ -1,4 +1,5 @@
 import { MessageFailuresCard, ScheduledHeadsupRequestsCard } from "@/components/admin/MessageFailuresCard";
+import { fetchSymptomActivity } from "@/lib/symptomActivity";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { onboardedProfiles, countOnboardedUsers } from "@/lib/onboardedUsers";
@@ -367,15 +368,7 @@ export const OverviewTab = () => {
           () => supabase.from("user_activity_events").select("*", { count: "exact", head: true })
             .gte("created_at", fromIso),
         ),
-        fetchAllRows<{ user_id: string; created_at: string }>(
-          (from, to) => supabase.from("symptom_logs")
-            .select("user_id, created_at:logged_at")
-            .gte("logged_at", fromIso)
-            .order("logged_at", { ascending: true })
-            .range(from, to),
-          () => supabase.from("symptom_logs").select("*", { count: "exact", head: true })
-            .gte("logged_at", fromIso),
-        ),
+        fetchSymptomActivity(fromIso),
       ]);
       // Same population as every other active/session metric.
       const eligible = await fetchEligibleUserIds();
@@ -662,16 +655,7 @@ export const OverviewTab = () => {
           () => supabase.from("user_activity_events").select("*", { count: "exact", head: true })
             .gte("created_at", fromIso).lte("created_at", toIso),
         ),
-        fetchAllRows<{ user_id: string; created_at: string }>(
-          (from, to) => supabase.from("symptom_logs")
-            .select("user_id, created_at:logged_at")
-            .gte("logged_at", fromIso)
-            .lte("logged_at", toIso)
-            .order("logged_at", { ascending: true })
-            .range(from, to),
-          () => supabase.from("symptom_logs").select("*", { count: "exact", head: true })
-            .gte("logged_at", fromIso).lte("logged_at", toIso),
-        ),
+        fetchSymptomActivity(fromIso, toIso),
       ]);
       const profileMap = new Map(profiles.map((p: any) => [p.id, p]));
 

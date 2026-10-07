@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { fetchSymptomActivity } from "@/lib/symptomActivity";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -77,7 +78,7 @@ export const ReferralLeaderboardTab = () => {
         const [profiles, chats, symptoms] = await Promise.all([
           fetchAll<ProfileRow>("profiles", "id, full_name, email, created_at, referred_by"),
           fetchAll<{ user_id: string; created_at: string }>("chat_messages", "user_id, created_at"),
-          fetchAll<{ user_id: string; created_at: string }>("symptom_logs", "user_id, created_at"),
+          fetchSymptomActivity(),
         ]);
 
         const chatCount = new Map<string, number>();
