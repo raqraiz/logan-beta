@@ -1458,6 +1458,7 @@ export type Database = {
           referrer: string | null
           together_consent: boolean
           together_consent_at: string | null
+          together_consent_shown_at: string | null
           together_consent_version: string | null
           updated_at: string
           utm_campaign: string | null
@@ -1483,6 +1484,7 @@ export type Database = {
           referrer?: string | null
           together_consent?: boolean
           together_consent_at?: string | null
+          together_consent_shown_at?: string | null
           together_consent_version?: string | null
           updated_at?: string
           utm_campaign?: string | null
@@ -1508,6 +1510,7 @@ export type Database = {
           referrer?: string | null
           together_consent?: boolean
           together_consent_at?: string | null
+          together_consent_shown_at?: string | null
           together_consent_version?: string | null
           updated_at?: string
           utm_campaign?: string | null
