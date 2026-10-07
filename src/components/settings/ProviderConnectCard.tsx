@@ -107,9 +107,9 @@ export function ProviderConnectCard({ provider, userId }: Props) {
           <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
         </div>
       ) : !integration ? (
-        <Button size="sm" className="w-full" onClick={connect} disabled={busy === "connect"}>
-          {busy === "connect" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plug className="w-4 h-4" />}
-          Connect {meta.name}
+        <Button size="sm" className="w-full" disabled title={`${meta.name} connection is coming soon.`}>
+          <Plug className="w-4 h-4" />
+          Connect {meta.name} · Coming soon
         </Button>
       ) : (
         <div className="grid grid-cols-2 gap-2">
