@@ -1,4 +1,6 @@
 // Shared cycle grouping for Your patterns and the One pattern page, so the pattern line and grid always agree.
+import { canonicalSymptom } from "@/lib/symptomCatalog";
+
 export const DAY = 86400000;
 export const PATTERNS_CHANGED = "logan:patterns-changed";
 
@@ -16,7 +18,7 @@ export function symptomPoints(rows: LogRow[]): Record<string, Pt[]> {
       const raw = typeof s === "string" ? s : s?.name;
       if (!raw || !String(raw).trim()) continue;
       if (typeof s !== "string" && typeof s?.severity === "number" && s.severity <= 0) continue;
-      const key = String(raw).trim().toLowerCase();
+      const key = canonicalSymptom(String(raw)).toLowerCase();
       (by[key] ??= []).push({ day: r.cycle_day, start, t });
     }
   }

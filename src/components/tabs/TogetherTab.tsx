@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { TogetherBoard, BubbleSkeleton } from "@/components/together/TogetherBoard";
 import { PatternPage } from "@/components/you/PatternPage";
 import type { SymptomPageLog } from "@/lib/symptomPage";
+import { togetherDisplay, loadAliases } from "@/lib/symptomCatalog";
 import { AggRow, TogetherCategory, key, loadAggregates, loadCategories, sampleAggregates } from "@/lib/togetherData";
 import { loadTogether, markTogetherShown, setTogetherConsent, trackTogether, TOGETHER_CHANGED } from "@/lib/together";
 
@@ -100,7 +101,7 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
     if (!joined) return;
     let alive = true;
     setRows(null); setAggError(false);
-    Promise.all([loadAggregates(), loadCategories()])
+    Promise.all([loadAggregates(), loadAliases().then(loadCategories)])
       .then(([r, c]) => { if (alive) { setRows(r); setCats(c); } })
       .catch(() => { if (alive) setAggError(true); });
     return () => { alive = false; };
@@ -125,7 +126,7 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
     );
   }
 
-  const openSymptom = (n: string) => setPage(n.charAt(0).toUpperCase() + n.slice(1));
+  const openSymptom = (n: string) => setPage(togetherDisplay(n));
   const board = (r: AggRow[], m: Set<string>, c: Map<string, TogetherCategory>) => (
     <div className="w-full text-left">
       <TogetherBoard rows={r} mine={m} cats={c} cycleDay={cycleDay} hasCycle={!isNonCycling} onOpenSymptom={openSymptom} />

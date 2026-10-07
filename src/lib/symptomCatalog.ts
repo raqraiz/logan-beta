@@ -81,6 +81,20 @@ export function aliasesOf(main: string): string[] {
   return out;
 }
 
+/** Same rule as the server's together_norm (lowercase, spaces, simple plural merge). */
+export function togetherNorm(s: string): string {
+  const n = normSymptom(s);
+  if (n.length > 4 && n.endsWith("ies")) return n.slice(0, -3) + "y";
+  if (n.length > 3 && n.endsWith("s") && !/(ss|us|is)$/.test(n)) return n.slice(0, -1);
+  return n;
+}
+/** Display name for a Together total: the catalog main name when known. */
+export function togetherDisplay(agg: string): string {
+  const k = togetherNorm(agg);
+  for (const g of SYMPTOM_GROUPS) for (const n of GROUPED[g]) if (togetherNorm(n) === k) return n;
+  return canonicalSymptom(agg);
+}
+
 let loaded: Promise<void> | null = null;
 export function loadAliases(): Promise<void> {
   if (!loaded) loaded = import("@/integrations/supabase/client").then(async ({ supabase }) => {

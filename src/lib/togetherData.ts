@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { canonicalSymptom, groupOf, togetherDisplay, togetherNorm } from "@/lib/symptomCatalog";
 
 export type TogetherCategory = "mood" | "body" | "sleep";
 export interface AggRow { filter: string; symptom: string; women_band: "exact" | "few"; women_count: number | null }
@@ -12,14 +13,16 @@ export const CATEGORY_PILLS: { id: "all" | TogetherCategory; label: string }[] =
 
 export function mapCategory(c: string | null | undefined): TogetherCategory | null {
   if (!c) return null;
-  if (c === "Mood & Cognitive") return "mood";
-  if (c === "Sleep & Energy") return "sleep";
+  if (c === "Mood & Cognitive" || c === "Mood & mind") return "mood";
+  if (c === "Sleep & Energy" || c === "Sleep & energy") return "sleep";
+  if (c === "Body") return "body";
   if (["Skin & Body", "Pain", "Digestive", "Reproductive & Discharge", "Ear/Nose/Throat"].includes(c)) return "body";
   return null;
 }
 
-export const key = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
-export const display = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+/** Comparison key matching the server totals, with aliases folded into their main name. */
+export const key = (s: string) => togetherNorm(canonicalSymptom(togetherDisplay(s)));
+export const display = (s: string) => togetherDisplay(s);
 /** Exact counts below 10 are never shown, as an extra guard on top of the server. */
 export const countLabel = (r: AggRow) =>
   r.women_band === "exact" && (r.women_count ?? 0) >= 10 ? String(r.women_count) : "A few women";
@@ -37,7 +40,7 @@ export async function loadCategories(): Promise<Map<string, TogetherCategory>> {
   for (const r of (data ?? []) as any[]) {
     const c = mapCategory(r.category);
     if (!c) continue;
-    m.set(key(r.name), c);
+    m.set(key(r.name), mapCategory(groupOf(r.name)) ?? c);
     for (const a of r.aliases ?? []) m.set(key(a), c);
   }
   return m;

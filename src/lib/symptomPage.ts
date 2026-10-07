@@ -1,3 +1,4 @@
+import { sameSymptom } from "@/lib/symptomCatalog";
 import { DAY, groupCycles, symptomPoints, type LogRow } from "@/lib/patternCycles";
 
 const DEFINITIONS: Record<string, string> = {
@@ -81,9 +82,9 @@ export function symptomCardInsights(texts: (string | null)[]) {
 export function symptomPageData(logs: SymptomPageLog[], name: string, lastPeriodStart?: string, now = Date.now()) {
   const lower = name.trim().toLowerCase();
   const matching = logs.filter((r) => Array.isArray(r.symptoms) && r.symptoms.some((s: unknown) => {
-    if (typeof s === "string") return s.trim().toLowerCase() === lower;
+    if (typeof s === "string") return sameSymptom(s, lower);
     if (!s || typeof s !== "object" || !("name" in s)) return false;
-    return String(s.name).trim().toLowerCase() === lower && (!("severity" in s) || typeof s.severity !== "number" || s.severity > 0);
+    return sameSymptom(String(s.name), lower) && (!("severity" in s) || typeof s.severity !== "number" || s.severity > 0);
   }));
   const points = symptomPoints(matching)[lower] ?? [];
   const groups = groupCycles(points);
