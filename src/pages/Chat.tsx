@@ -1594,6 +1594,7 @@ const Chat = () => {
         <HomeTab
           cycleData={cycleData}
           userId={user?.id}
+          onOpenSettings={() => setSettingsOpen(true)}
           onLogFeeling={(symptom) => { setFeelSymptom(symptom); setFeelSheetOpen(true); }}
           onPeriodUpdate={async (date: Date) => {
             if (!user?.id) return;

@@ -20,7 +20,7 @@ import { WeightTrendWidget } from "@/components/home/WeightTrendWidget";
 import { MiniPhaseArc, getWidgetGraphic } from "@/components/home/WidgetGraphics";
 import { TodayRing } from "@/components/chat/LoganTodaySection";
 import { YourPatterns } from "@/components/you/YourPatterns";
-import { MemorySection } from "@/components/settings/MemorySection";
+import { YourDataPage } from "@/components/you/YourDataPage";
 import { PartnerHeadsupManage } from "@/components/partner/PartnerHeadsupManage";
 import { usePartnerHeadsupFlag } from "@/hooks/usePartnerHeadsupFlag";
 import { PeriodEndedChip } from "@/components/home/PeriodEndedChip";
@@ -487,11 +487,12 @@ interface HomeTabProps {
   onStillCyclingDeclare?: () => void;
   userId?: string;
   onLogFeeling?: (symptom?: string) => void;
+  onOpenSettings?: () => void;
 }
 
 // ── HomeTab ───────────────────────────────────────────────
 
-export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarkerStart, onCycleLengthUpdate, onPhaseOverride, onPostpartumDeclare, onStillCyclingDeclare, userId, onLogFeeling }: HomeTabProps) {
+export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarkerStart, onCycleLengthUpdate, onPhaseOverride, onPostpartumDeclare, onStillCyclingDeclare, userId, onLogFeeling, onOpenSettings }: HomeTabProps) {
   useTrackFeature("home_tab");
   const headsupVisible = usePartnerHeadsupFlag(userId);
   const [showMemory, setShowMemory] = useState(false);
@@ -1021,12 +1022,11 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
         </section>
       </div>
 
-      <Dialog open={showMemory} onOpenChange={setShowMemory}>
-        <DialogContent className="max-w-md rounded-[22px] max-h-[85vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Your data</DialogTitle></DialogHeader>
-          <MemorySection userId={userId} />
-        </DialogContent>
-      </Dialog>
+      {showMemory && userId && <YourDataPage userId={userId} cycle={cycleData} isNonCycling={isNonCycling}
+        onClose={() => setShowMemory(false)} onLog={(symptom) => { setShowMemory(false); onLogFeeling?.(symptom); }}
+        onSettings={() => { setShowMemory(false); onOpenSettings?.(); }}
+        onPeople={() => { setShowMemory(false); setShowPeople(true); }} widgets={widgets}
+        onTrackers={() => { setShowMemory(false); setEditMode(true); }} />}
       {userId && headsupVisible && <PartnerHeadsupManage userId={userId} open={showPeople} onOpenChange={setShowPeople} />}
 
       {/* New cycle marker dialog */}
