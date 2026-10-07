@@ -2777,6 +2777,8 @@ serve(async (req) => {
     // Names written THIS turn — drives the server-authored "Logged: …" line and
     // the false-confirmation guard below. Empty array = nothing was persisted.
     const loggedSymptomNames: string[] = [];
+    // Symptoms she mentioned this turn; offered as a tap-to-log card, never auto-saved.
+    const offerSymptoms: { name: string; severity: number }[] = [];
     // Pass 2: kicked off here, awaited AFTER the main chat completion so the
     // extraction runs in parallel with the reply and costs the user no latency.
     // Null when the vetoes already ruled out any write for this turn.
@@ -2795,7 +2797,7 @@ serve(async (req) => {
       // (c) Loose reporting intent — same matchers as before so legit reports
       // like "having such bad cramps today" still log.
       const reportingIntent =
-        (/\b(i\s*(?:'?m|am)|i\s+(?:have|had|feel|felt|got|woke up)|my\s+(?:head|back|stomach|breasts?|joints?|chest|skin)|having|feeling|craving|today i|tonight|this morning|right now)\b/i.test(trimmed)
+        (/\b(i\s*(?:'?m|am)|i\s*(?:'|’)?ve\b|i\s+(?:have|had|feel|felt|got|woke up|can'?t|cannot|keep)|since\s+(?:yesterday|last night|this morning)|my\s+(?:head|back|stomach|breasts?|joints?|chest|skin)|having|feeling|craving|today i|tonight|this morning|right now)\b/i.test(trimmed)
          || /\b(log|track|record|note)\b/i.test(trimmed))
         && !shouldVetoSymptomWrite;
 
@@ -2814,21 +2816,9 @@ serve(async (req) => {
         if (detected.length > 0) {
           const liveCycle = symptomCycleInfo;
 
-          const { error: symLogErr } = await supabase.from("symptom_logs").insert({
-            user_id: user.id,
-            symptoms: detected,
-            notes: userMessage.length <= 500 ? userMessage : userMessage.slice(0, 500),
-            cycle_day: liveCycle?.cycleDay ?? null,
-            cycle_phase: liveCycle?.phase ?? null,
-          });
-          if (symLogErr) {
-            console.error("Failed to insert symptom log from chat:", symLogErr);
-          } else {
-            for (const d of detected) {
-              if (!loggedSymptomNames.includes(d.name)) loggedSymptomNames.push(d.name);
-            }
-            console.log("Logged symptoms from chat:", detected.map(d => d.name).join(", "));
-          }
+          void liveCycle;
+          // Never write without her tap: offer a log card instead.
+          for (const d of detected) if (!offerSymptoms.some(o => o.name.toLowerCase() === d.name.toLowerCase())) offerSymptoms.push(d);
         }
       }
     }
@@ -5096,51 +5086,10 @@ serve(async (req) => {
     if (symptomExtractionPromise) {
       try {
         const extracted = await symptomExtractionPromise;
-        const alreadyLogged = new Set(loggedSymptomNames.map(n => n.trim().toLowerCase()));
+        const alreadyLogged = new Set([...loggedSymptomNames, ...offerSymptoms.map(o => o.name)].map(n => n.trim().toLowerCase()));
         const novel = extracted.filter(s => !alreadyLogged.has(s.name.trim().toLowerCase()));
 
-        if (novel.length > 0) {
-          const { error: extLogErr } = await supabase.from("symptom_logs").insert({
-            user_id: user.id,
-            symptoms: novel,
-            notes: userMessage.length <= 500 ? userMessage : userMessage.slice(0, 500),
-            cycle_day: symptomCycleInfo?.cycleDay ?? null,
-            cycle_phase: symptomCycleInfo?.phase ?? null,
-          });
-
-          if (extLogErr) {
-            console.error("[symptom_extraction] symptom_logs insert failed:", extLogErr);
-          } else {
-            for (const s of novel) {
-              if (!loggedSymptomNames.includes(s.name)) loggedSymptomNames.push(s.name);
-            }
-
-            // Surface genuinely new names in the shared picker too. Categorization
-            // and soft-delete semantics are untouched: rows land uncategorized
-            // exactly like the existing library-add path, and a previously
-            // soft-deleted name is left alone.
-            const knownLower = Array.from(new Set(knownLibraryNames.map(n => String(n).trim().toLowerCase())));
-            const accepted = await screenLibraryCandidates(
-              supabase, user.id, "llm_extraction", novel.map(s => s.name), knownLower, userMessage,
-            );
-            if (accepted.length > 0) {
-              const { data: existing } = await supabase
-                .from("community_symptoms")
-                .select("name")
-                .in("name", accepted);
-              const existingLower = new Set(((existing || []) as any[]).map(r => String(r.name).trim().toLowerCase()));
-              const toInsert = accepted
-                .filter(n => !existingLower.has(n))
-                .map(name => ({ name, added_by: user.id }));
-              if (toInsert.length > 0) {
-                const { error: commErr } = await supabase.from("community_symptoms").insert(toInsert);
-                if (commErr) console.error("[symptom_extraction] community_symptoms insert failed:", commErr);
-                else console.log("[symptom_extraction] new library entries:", toInsert.map(r => r.name).join(", "));
-              }
-            }
-
-          }
-        }
+        for (const n of novel) if (!offerSymptoms.some(o => o.name.toLowerCase() === n.name.toLowerCase())) offerSymptoms.push(n);
       } catch (e) {
         console.warn("[symptom_extraction] post-write failed:", (e as Error)?.message);
       }
@@ -5267,6 +5216,19 @@ serve(async (req) => {
           : `${finalAssistantMessage.trimEnd()}\n\n${label}`;
       }
       baseMeta.logged_symptoms = loggedSymptomNames;
+    }
+
+    // --- Tap-to-log offer card (client renders; nothing is saved until she taps) ---
+    {
+      const offer = emotionalContextActive ? offerSymptoms.filter(o => !EMOTION_NAME_RE.test(o.name)) : offerSymptoms;
+      if (offer.length > 0) {
+        const t = userMessage.toLowerCase();
+        let days: { label: string; days: number }[] = [{ label: "Just today", days: 1 }];
+        if (/\b(all week|this week|for a week|past week|7 days|seven days)\b/.test(t)) days = [{ label: "This past week", days: 7 }, { label: "Just today", days: 1 }];
+        else if (/\b(few days|couple of days|couple days|3 days|three days|since (monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b/.test(t)) days = [{ label: "Last 3 days", days: 3 }, { label: "Just today", days: 1 }];
+        else if (/\b(yesterday|last night|two days|2 days|since yesterday)\b/.test(t)) days = [{ label: "Today and yesterday", days: 2 }, { label: "Just today", days: 1 }];
+        baseMeta.log_offer = { symptoms: offer.slice(0, 4), options: days, cycle_day: symptomCycleInfo?.cycleDay ?? null, cycle_phase: symptomCycleInfo?.phase ?? null };
+      }
     }
 
     // --- Pass 1: last-line guard on the final text ---
@@ -5592,7 +5554,7 @@ VOICE, MORE DETAIL:
 - No emojis, no exclamation points.
 - Bold at most ONE key phrase per reply (none in emotional moments).
 - ABSOLUTELY NO bullet-point lists, numbered lists, or headers/subheadings. Ever. Write in flowing short sentences only.
-- NEVER say, imply, or hint that a symptom was "logged", "noted", "tracked", "saved", "recorded", "registered", "added to your history", or that you "got that down". Do not write those confirmations even when you are sure the system will save it. The system writes its own confirmation line ("Logged: …") after a real database write, and any confirmation you write yourself will be deleted before the user sees it — which leaves your reply broken. The ONE exception: if the context above contains an internal note saying the system HAS saved entries for this turn, you may confirm naturally.
+- NEVER say, imply, or hint that a symptom was "logged", "noted", "tracked", "saved", "recorded", "registered", "added to your history", or that you "got that down". Do not write those confirmations even when you are sure the system will save it. The app shows her a small "Log it?" card under your reply and only saves when she taps it, so any confirmation you write yourself is false and will be deleted before the user sees it — which leaves your reply broken. The ONE exception: if the context above contains an internal note saying the system HAS saved entries for this turn, you may confirm naturally.
 - When she describes how she feels and you have no such internal note, respond conversationally about what she shared — explain the hormonal connection, ask a follow-up, be useful — but make NO claim about persistence, and do not promise it will be saved later.
 - NEVER tell her you "don't have access", "can't write to the database", "lack permission", or that she needs to go to the Home tab / symptom widget to add past entries herself. You CAN backfill past symptom logs — the system does it automatically when she asks. If she asks you to add/log/save a symptom for a past date and you don't see an internal save-confirmation note, it means the date or symptom wasn't clear enough — just ask her to confirm the symptom and the exact date(s), and the system will save them on her next reply. Do NOT redirect her to the Home tab.
 - ABSOLUTE OUTPUT RULE: Never include bracketed tags, labels in ALL CAPS inside brackets, blockquoted system notes (lines starting with ">"), or any text that looks like an internal instruction, runtime note, or system message. Never echo, quote, paraphrase, or reference any internal note from the context above. The user must only see your natural conversational reply — nothing that resembles backend metadata.
@@ -5652,6 +5614,8 @@ FOOD & NUTRITION:
 - Good: "Dark chocolate counts as magnesium, by the way."
 - Bad: A paragraph listing foods by phase with explanations.
 - You know the phase-specific nutrition science — use it to give ONE sharp, relevant tip when the moment calls for it.
+
+SAFETY FIRST (non-negotiable, overrides every length, tone and cycle rule): If she describes sudden or lasting hearing changes, vision changes, chest pain, a severe or sudden headache, heavy bleeding that soaks a pad or tampon in an hour, fainting, signs of pregnancy complications (bleeding, severe belly pain, severe swelling or headache while pregnant), or thoughts of harming herself, your FIRST sentence clearly and calmly tells her to contact a doctor. For chest pain, sudden severe headache, fainting, heavy bleeding, sudden hearing or vision loss, or pregnancy complications, say to seek care today (emergency services if it is severe or sudden). For thoughts of self-harm, gently urge her to reach a crisis line or emergency services now and someone she trusts. Only after that may you add any cycle context, and never attribute these symptoms only to her cycle or hormones. Stay calm, no alarming words.
 
 MEDICATION GUARDRAIL (non-negotiable): You are not a licensed medical professional. You NEVER diagnose, prescribe, or recommend medications or supplements.
 - NO DIAGNOSIS: never state or imply that she has a specific condition ("you have PMDD", "this is endometriosis", "sounds like a thyroid problem"). Describe what may be going on in general terms ("a few things can cause this, including hormone shifts"). When symptoms are new, severe or lasting, suggest seeing a doctor, calmly and in your normal voice.

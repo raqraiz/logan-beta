@@ -59,6 +59,7 @@ import { useActivityTracker } from "@/hooks/useActivityTracker";
 import { bcMethodOptionsFor } from "@/lib/bcMethod";
 import { usePartnerHeadsupFlag } from "@/hooks/usePartnerHeadsupFlag";
 import { PartnerHeadsupDraftCard } from "@/components/partner/PartnerHeadsupDraftCard";
+import { LogOfferCard, type LogOffer } from "@/components/chat/LogOfferCard";
 import { PartnerHeadsupCheckinCard, PartnerHeadsupOfferChips, PartnerHeadsupWriteNowChip } from "@/components/partner/PartnerHeadsupMiniCards";
 import { OPEN_CHAT_EVENT, PREFILL_CHAT_EVENT } from "@/lib/partnerHeadsupClient";
 import { InsightConfirm } from "@/components/chat/InsightConfirm";
@@ -2139,6 +2140,9 @@ const Chat = () => {
                         );
                       })()}
 
+                      {message.role === "assistant" && user && (message.metadata as Record<string, unknown> | null)?.log_offer && (
+                        <LogOfferCard userId={user.id} messageId={message.id} offer={(message.metadata as Record<string, unknown>).log_offer as LogOffer} />
+                      )}
                       {/* Resource offer card (Logan suggesting a downloadable) */}
                       {headsupVisible && message.message_type === "partner_headsup_checkin" && typeof message.metadata?.event_id === "string" && user && (
                         <PartnerHeadsupCheckinCard userId={user.id} eventId={message.metadata.event_id as string} />
