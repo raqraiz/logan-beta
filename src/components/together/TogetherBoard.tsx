@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { packSiblings } from "d3-hierarchy";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { knownSymptomDefinition, isSafetySymptom } from "@/lib/symptomPage";
 import { SafetyCallout } from "@/components/SafetyCallout";
 import { AggRow, CATEGORY_PILLS, TogetherCategory, countLabel, display, isExact, key } from "@/lib/togetherData";
@@ -185,14 +186,10 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, cycleLength, hasCycl
 }
 
 const GAP = 4, R_MIN = 32, R_MAX = 51, BASE_W = 342;
-const SLEEP = ["#DEE8F9", "#DFE7F9", "#DAEFF8"];
-const MOOD = ["#E9D9FA", "#E6DDFA", "#E2E4F9"];
-
 function fillFor(c: TogetherCategory | undefined, t: number, i: number) {
-  if (c === "body") return `rgba(43,212,217,${(0.14 + 0.2 * t).toFixed(2)})`;
-  if (c === "sleep") return SLEEP[i % 3];
-  if (c === "mood") return MOOD[i % 3];
-  return "rgba(43,212,217,0.18)";
+  if (c === "sleep" || c === "mood") return `var(--bubble-${c}-${i % 3})`;
+  const alpha = c === "body" ? (0.14 + 0.2 * t).toFixed(2) : "0.18";
+  return `var(--bubble-body-dark, hsl(var(--bubble-body) / ${alpha}))`;
 }
 
 /** d3 packSiblings, largest first, GAP/2 padding on each radius so neighbours sit GAP apart. */
@@ -279,19 +276,19 @@ export function BubbleField({ items, onTap }: { items: Bubble[]; onTap: (id: str
         const text = `${b.selected ? "✓ " : ""}${b.star ? "★ " : ""}${b.label}`;
         const label = fitLabel(text, d / 2, 12 + 5 * b.t);
         return (
-          <button key={b.id} type="button" onClick={() => onTap(b.id)} aria-label={b.selected ? `${b.label}, picked` : b.label}
-            className="absolute left-0 top-0 flex items-center justify-center rounded-full text-center font-semibold transition-[transform,opacity,background-color] duration-[400ms] ease-out motion-reduce:transition-none"
+           <Button key={b.id} variant="ghost" type="button" onClick={() => onTap(b.id)} aria-label={b.selected ? `${b.label}, picked` : b.label}
+             data-selected={b.selected ? "true" : "false"} data-ring={b.ring ? "true" : "false"}
+             className="together-bubble absolute left-0 top-0 flex items-center justify-center rounded-full p-0 text-center font-semibold transition-[transform,opacity,background-color] duration-[400ms] ease-out motion-reduce:transition-none"
             style={{
-              width: d, height: d, color: b.selected ? "#F4F1EA" : "#23201C", fontSize: label.fs, lineHeight: 1.15,
-              background: b.selected ? "#23201C" : b.fill,
-              boxShadow: b.ring && !b.selected ? "inset 0 0 0 2.5px #C4247A" : "none",
+               width: d, height: d, fontSize: label.fs, lineHeight: 1.15,
+               background: b.selected ? "var(--bubble-selected-fill)" : b.fill,
               transform: ready ? `translate(${x}px, ${y}px) scale(1)` : `translate(${w / 2 - d / 2}px, ${4 + h / 2 - d / 2}px) scale(0.6)`,
               opacity: ready ? 1 : 0,
             }}>
             <span aria-hidden className="whitespace-nowrap">
               {label.lines.map((l, j) => <span key={j} className="block">{l}</span>)}
             </span>
-          </button>
+           </Button>
         );
       })}
     </div>

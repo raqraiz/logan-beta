@@ -1,5 +1,10 @@
 # Roadmap
 
+## Log mode bubbles
+- [x] Share Together packing, category colors and Mine size rules; rank her 12-month counts before minimum-size suggestions, max 14.
+- [x] Add exact dark category, selected and ring colors to the shared field.
+- [ ] Verify ranking, selection, packing and 4.5:1 text contrast in both themes.
+
 ## Real-data symptom page fixes
 - [x] Always show the prevalence ring and honest empty-data copy.
 - [x] Use circular usual windows consistently for timing, comparisons and chart dots.
