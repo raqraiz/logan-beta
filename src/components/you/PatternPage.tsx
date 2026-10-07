@@ -87,7 +87,7 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
   const { insights, doctorAdvice } = symptomCardInsights([
     timing && explain ? explain : null,
     !timing && data.count > 0 ? "There isn't a clear timing pattern in your logs yet." : null,
-    data.trend ? `At this cycle day, you've logged it ${data.trend === "Same" ? "equally" : data.trend.toLowerCase()} often than last cycle.` : null,
+    data.trend ? `At this cycle day, you've logged it ${data.trend === "Same" ? "as often as" : `${data.trend.toLowerCase()} often than`} last cycle.` : null,
   ]);
   const tileColumns = 1 + Number(timing) + Number(Boolean(data.trend));
 
