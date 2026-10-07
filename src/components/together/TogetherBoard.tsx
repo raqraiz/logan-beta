@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { packSiblings } from "d3-hierarchy";
 import { cn } from "@/lib/utils";
+import { Check } from "lucide-react";
 import { knownSymptomDefinition, isSafetySymptom } from "@/lib/symptomPage";
 import { SafetyCallout } from "@/components/SafetyCallout";
 import { AggRow, CATEGORY_PILLS, TogetherCategory, countLabel, display, isExact, key } from "@/lib/togetherData";
