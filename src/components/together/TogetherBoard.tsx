@@ -111,10 +111,10 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymp
     return (
       <div className="flex flex-col gap-4">
         <button type="button" onClick={() => setView("field")} className="self-start text-sm font-semibold text-foreground underline">‹ Back to bubbles</button>
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <PillRow>
           {showWeek && <Pill active={listPill === "week"} onClick={() => setListPill("week")}>Common in your week</Pill>}
           <Pill active={listPill === "stage"} onClick={() => setListPill("stage")}>Women in your stage</Pill>
-        </div>
+        </PillRow>
         {listPill === "week" && <p className="text-sm text-muted-foreground">What women log most around day {lo} to {hi}</p>}
         {common.length > 0 && <ul className="rounded-[22px] border border-border bg-card px-4">{common.map((r) => <Row key={r.symptom} r={r} />)}</ul>}
         {rare.length > 0 && (
@@ -139,10 +139,10 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymp
           </svg>
         </button>, headSlot)}
       <p className="text-center text-base text-muted-foreground">{everyone.length} feelings, named by women like you.</p>
-      <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
+      <PillRow className="-mx-5 px-5">
         {CATEGORY_PILLS.map((p) => <Pill key={p.id} active={cat === p.id} onClick={() => setCat(p.id)}>{p.label}</Pill>)}
         <span aria-hidden className="w-3 shrink-0" />
-      </div>
+      </PillRow>
       <BubbleCluster rows={shown} max={max} mine={mine} cats={cats} onOpen={onOpenSymptom} />
       {field.length < 3 && <p className="text-center text-sm text-muted-foreground">{MORE}</p>}
       <p className="text-center text-sm text-muted-foreground">
