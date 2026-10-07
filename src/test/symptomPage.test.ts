@@ -1,9 +1,30 @@
 import { describe, it, expect } from "vitest";
 import { ownSymptomPairs, symptomCardInsights, symptomDefinition, symptomPageData, type SymptomPageLog } from "@/lib/symptomPage";
 import { usualWindow, windowDays, cycleDistance, windowMiddle } from "@/lib/patternCycles";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { CommonRing, WhenWomenFeelCard, busiestWindow, stageInsight, type Community } from "@/components/together/SymptomCommunity";
 
 const row = (date: string, day: number | null, notes: string | null = null): SymptomPageLog => ({ logged_at: `${date}T12:00:00Z`, cycle_day: day, symptoms: [{ name: "Cramps", severity: 3 }], notes });
 describe("Symptom page presentation data", () => {
+  const emptyCommunity: Community = { loaded: true, joined: false, everyone: null, stage: null, cycleLength: 28, pairs: [], error: false, openConsent: () => {}, consentSheet: createElement("div") };
+  it("keeps the ring with her top dot even when no community data exists", () => {
+    const html = renderToStaticMarkup(createElement(CommonRing, { c: emptyCommunity, sheLogged: true }));
+    expect(html.match(/<circle/g)).toHaveLength(21);
+    expect(html).toContain('cx="38" cy="8" r="5.5"');
+    expect(html.match(/fill="hsl\(var\(--border\)\)"/g)).toHaveLength(19);
+  });
+  it("replaces logged-day dots with all usual days even without shared timing", () => {
+    const html = renderToStaticMarkup(createElement(WhenWomenFeelCard, { c: emptyCommunity, mine: { from: 26, to: 3 }, loggedDays: [10, 15], hasCycle: true }));
+    expect(html.match(/<circle/g)).toHaveLength(6);
+    expect(html.match(/<rect/g)).toHaveLength(28);
+    expect(html).not.toContain('cx="103.5"');
+  });
+  it("wraps community busy days and compares using shortest circular distance", () => {
+    const stage = { filter: "stage", symptom: "cramps", women_band: "exact", women_count: 12, cohort_women: 30, day_shares: { "27": 0.3, "28": 0.3, "1": 0.3, "2": 0.1 } };
+    expect(busiestWindow(stage, 28)).toEqual({ from: 27, to: 2 });
+    expect(stageInsight({ ...emptyCommunity, stage }, { from: 2, to: 4 })).toBe("Starts 3 days later than most women in your stage.");
+  });
   it("finds usual days across the period boundary rather than splitting them", () => {
     const window = usualWindow([[26, 27, 28, 1, 2, 3], [27, 28, 1, 2], [26, 1, 3]], 28);
     expect(window).toEqual({ from: 26, to: 3, n: 3 });

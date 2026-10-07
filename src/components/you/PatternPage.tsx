@@ -165,7 +165,7 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
                 <p className="mt-1 text-xs leading-snug text-muted-foreground">{!isNonCycling && data.cycles ? `in ${data.cycles} cycle${data.cycles === 1 ? "" : "s"}` : "logged"}</p>
               </div>
               {timing && <div className="symptom-stat min-w-0 rounded-[14px] px-2 py-3 text-center">
-                <p className="whitespace-nowrap font-sans text-[20px] font-bold leading-snug text-foreground">Days {from === to ? from : `${from} to ${to}`}</p>
+                <p className={`whitespace-nowrap font-sans ${tileColumns === 3 && from !== to ? "text-[14px]" : "text-[20px]"} font-bold leading-snug text-foreground`}>Days {from === to ? from : `${from} to ${to}`}</p>
                 <p className="mt-1 text-xs leading-snug text-muted-foreground">{myWindow && windowDays(myWindow, community.cycleLength).includes(1) ? "around your period" : "your usual days"}</p>
               </div>}
               {data.trend && <div className="symptom-stat min-w-0 rounded-[14px] px-2 py-3 text-center">
