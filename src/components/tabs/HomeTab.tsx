@@ -489,11 +489,12 @@ interface HomeTabProps {
   userId?: string;
   onLogFeeling?: (symptom?: string) => void;
   onOpenSettings?: () => void;
+  onOpenWeek?: () => void;
 }
 
 // ── HomeTab ───────────────────────────────────────────────
 
-export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarkerStart, onCycleLengthUpdate, onPhaseOverride, onPostpartumDeclare, onStillCyclingDeclare, userId, onLogFeeling, onOpenSettings }: HomeTabProps) {
+export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarkerStart, onCycleLengthUpdate, onPhaseOverride, onPostpartumDeclare, onStillCyclingDeclare, userId, onLogFeeling, onOpenSettings, onOpenWeek }: HomeTabProps) {
   useTrackFeature("home_tab");
   const headsupVisible = usePartnerHeadsupFlag(userId);
   const [showMemory, setShowMemory] = useState(false);
@@ -977,7 +978,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
 
         {/* Tiles */}
         {userId && (
-          <div className={`grid gap-[14px] ${headsupVisible ? "grid-cols-2" : "grid-cols-1"}`}>
+          <div className={`grid gap-[14px] ${headsupVisible ? "grid-cols-3" : "grid-cols-2"}`}>
             <button type="button" onClick={() => setShowMemory(true)}
               className="flex flex-col items-center gap-2 rounded-[22px] border border-border bg-card px-3 py-5 text-sm font-semibold text-foreground">
               <Database className="h-5 w-5 text-[#0B7479] dark:text-[#2BD4D9]" aria-hidden /> Your data
@@ -988,6 +989,10 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
                 <Users className="h-5 w-5 text-[#0B7479] dark:text-[#2BD4D9]" aria-hidden /> Your People
               </button>
             )}
+            <button type="button" onClick={() => onOpenWeek?.()}
+              className="flex flex-col items-center gap-2 rounded-[22px] border border-border bg-card px-3 py-5 text-sm font-semibold text-foreground">
+              <CalendarDays className="h-5 w-5 text-[#0B7479] dark:text-[#2BD4D9]" aria-hidden /> Your week
+            </button>
           </div>
         )}
 

@@ -54,6 +54,7 @@ import { InstallPWABanner } from "@/components/chat/InstallPWABanner";
 import { BottomTabBar, type TabId } from "@/components/tabs/BottomTabBar";
 import { HomeTab } from "@/components/tabs/HomeTab";
 import { PlanTab } from "@/components/tabs/PlanTab";
+import { TogetherTab } from "@/components/tabs/TogetherTab";
 import { usePresence } from "@/hooks/usePresence";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
 import { bcMethodOptionsFor } from "@/lib/bcMethod";
@@ -1706,7 +1707,16 @@ const Chat = () => {
         />
       )}
 
+      {effectiveTab === "together" && user && <TogetherTab userId={user.id} />}
+
       {effectiveTab === "plan" && user && (
+        <div className="flex-1 flex flex-col min-h-0">
+        <div className="px-4 pt-4">
+          <button type="button" aria-label="Back" onClick={() => { setActiveTab("home"); trackTabSwitch("home"); }}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-foreground">
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+        </div>
         <PlanTab
           userId={user.id}
           cycleData={cycleData}

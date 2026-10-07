@@ -12,7 +12,6 @@ import { format, addDays } from "date-fns";
 import { CycleForecast } from "@/components/chat/CycleForecast";
 import { calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
 import { NutritionMenuActions } from "@/components/chat/NutritionMenuActions";
-import { ReferralCard } from "@/components/settings/ReferralCard";
 import {
   getPostpartumPhase,
   PP_META,
@@ -612,9 +611,6 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             ))}
           </div>
         </div>
-        <div className="max-w-lg">
-          <ReferralCard userId={userId} />
-        </div>
       </div>
     );
   }
@@ -921,11 +917,6 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
             </button>
           </div>
         </div>
-
-        {/* ── Referrals ── */}
-        <div className="max-w-lg">
-          <ReferralCard userId={userId} />
-        </div>
       </div>
     );
   }
@@ -1189,15 +1180,6 @@ export function PlanTab({ userId, cycleData, onPeriodUpdate }: PlanTabProps) {
               <p className="text-xs text-muted-foreground leading-relaxed">{anchorInsight}</p>
             </div>
           )}
-        </div>
-
-
-
-
-
-        {/* ── Referrals ── */}
-        <div className="max-w-lg">
-          <ReferralCard userId={userId} />
         </div>
 
       </div>
