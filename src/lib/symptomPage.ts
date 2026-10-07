@@ -66,9 +66,11 @@ export type InsightSource = string | null | { text: string; keepTogether?: boole
 export function symptomCardInsights(texts: InsightSource[]) {
   const insights: string[] = [];
   let doctorAdvice: string | null = null;
+  const isWritten = (item: InsightSource): item is { text: string; keepTogether?: boolean } =>
+    typeof item === "object" && item !== null;
   for (const source of texts) {
-    const keep = typeof source === "object" && source !== null && source.keepTogether === true;
-    const text = typeof source === "object" && source !== null ? source.text : source;
+    const keep = isWritten(source) && source.keepTogether === true;
+    const text = isWritten(source) ? source.text : source;
     const sentences = keep ? [text ?? ""] : text?.match(/[^.!?]+[.!?]*/g) ?? [];
     for (const sentence of sentences) {
       const clean = sentence.trim();
