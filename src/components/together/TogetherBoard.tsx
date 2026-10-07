@@ -53,9 +53,11 @@ interface Props {
   cycleDay?: number;
   hasCycle: boolean;
   onOpenSymptom: (name: string) => void;
+  /** Shown under the caption when her logs aren't counted yet. */
+  notCounted?: React.ReactNode;
 }
 
-export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymptom }: Props) {
+export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymptom, notCounted }: Props) {
   const [view, setView] = useState<"field" | "list">("field");
   const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
   useEffect(() => { setHeadSlot(document.getElementById("together-head-slot")); }, []);
@@ -152,6 +154,7 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymp
           <span aria-hidden className="inline-block h-3 w-3 rounded-full border-2 border-[#C4247A]" />Circled ones, you feel too.
         </span>
       </p>
+      {notCounted}
       <button type="button" onClick={() => setView("list")} className="self-center text-sm font-semibold text-foreground underline">{field.length > shown.length ? `See all ${field.length} as a list ›` : "See all as a list ›"}</button>
     </div>
   );
@@ -203,9 +206,23 @@ function fitLabel(text: string, r: number, start: number) {
   return { fs: 11, lines: best };
 }
 
+export interface Bubble { id: string; label: string; t: number; fill: string; ring?: boolean; star?: boolean; selected?: boolean }
+
+/** Everyone lens: size by women, magenta ring for hers. */
 function BubbleCluster({ rows, max, mine, cats, onOpen }: {
   rows: AggRow[]; max: number; mine: Set<string>; cats: Map<string, TogetherCategory>; onOpen: (s: string) => void;
 }) {
+  const items: Bubble[] = rows.map((r, i) => {
+    const t = isExact(r) ? Math.sqrt((r.women_count! - 10) / Math.max(1, max - 10)) : 0;
+    return { id: r.symptom, label: display(r.symptom), t, fill: fillFor(cats.get(key(r.symptom)), t, i), ring: mine.has(key(r.symptom)) };
+  });
+  return <BubbleField items={items} onTap={onOpen} />;
+}
+
+export function categoryFill(c: TogetherCategory | undefined, t: number, i: number) { return fillFor(c, t, i); }
+
+/** Packed bubble field shared by Everyone, Mine and log mode. */
+export function BubbleField({ items, onTap }: { items: Bubble[]; onTap: (id: string) => void }) {
   const wrap = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(BASE_W);
   const [ready, setReady] = useState(false);
@@ -216,36 +233,34 @@ function BubbleCluster({ rows, max, mine, cats, onOpen }: {
     return () => ro.disconnect();
   }, []);
   const layout = useMemo(() => {
-    const ts = rows.map((r) => (isExact(r) ? Math.sqrt((r.women_count! - 10) / Math.max(1, max - 10)) : 0));
-    const pts = packCluster(ts.map((t) => R_MIN + (R_MAX - R_MIN) * t));
-    if (!pts.length) return { ts, pts, cx: 0, cy: 0, bw: 0, bh: 0 };
+    const pts = packCluster(items.map((b) => R_MIN + (R_MAX - R_MIN) * b.t));
+    if (!pts.length) return { pts, cx: 0, cy: 0, bw: 0, bh: 0 };
     const minX = Math.min(...pts.map((p) => p.x - p.r)), maxX = Math.max(...pts.map((p) => p.x + p.r));
     const minY = Math.min(...pts.map((p) => p.y - p.r)), maxY = Math.max(...pts.map((p) => p.y + p.r));
-    return { ts, pts, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, bw: maxX - minX, bh: maxY - minY };
-  }, [rows, max]);
-  const sig = rows.map((r) => r.symptom).join("|");
+    return { pts, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, bw: maxX - minX, bh: maxY - minY };
+  }, [items.map((b) => `${b.id}:${b.t.toFixed(3)}`).join("|")]); // eslint-disable-line react-hooks/exhaustive-deps
+  const sig = items.map((b) => b.id).join("|");
   useEffect(() => { setReady(false); const id = requestAnimationFrame(() => requestAnimationFrame(() => setReady(true))); return () => cancelAnimationFrame(id); }, [sig]);
 
   const fieldW = Math.min(w, BASE_W);
-  const scale = layout.bw > 0 ? fieldW / layout.bw : 1;
+  const scale = layout.bw > 0 ? Math.min(fieldW / layout.bw, 1.6) : 1;
   const h = Math.max(0, layout.bh * scale);
   return (
     <div ref={wrap} className="relative w-full" style={{ height: h + 8 }}>
-      {rows.map((r, i) => {
+      {items.map((b, i) => {
         const p = layout.pts[i]; if (!p) return null;
-        const t = layout.ts[i];
         const d = p.r * 2 * scale;
         const x = w / 2 + (p.x - layout.cx) * scale - d / 2;
         const y = 4 + h / 2 + (p.y - layout.cy) * scale - d / 2;
-        const her = mine.has(key(r.symptom));
-        const label = fitLabel(display(r.symptom), d / 2, 12 + 5 * t);
+        const text = `${b.selected ? "✓ " : ""}${b.star ? "★ " : ""}${b.label}`;
+        const label = fitLabel(text, d / 2, 12 + 5 * b.t);
         return (
-          <button key={r.symptom} type="button" onClick={() => onOpen(r.symptom)} aria-label={display(r.symptom)}
-            className="absolute left-0 top-0 flex items-center justify-center rounded-full text-center font-semibold transition-[transform,opacity] duration-[400ms] ease-out motion-reduce:transition-none"
+          <button key={b.id} type="button" onClick={() => onTap(b.id)} aria-label={b.label} aria-pressed={b.selected}
+            className="absolute left-0 top-0 flex items-center justify-center rounded-full text-center font-semibold transition-[transform,opacity,background-color] duration-[400ms] ease-out motion-reduce:transition-none"
             style={{
-              width: d, height: d, color: "#23201C", fontSize: label.fs, lineHeight: 1.15,
-              background: fillFor(cats.get(key(r.symptom)), t, i),
-              boxShadow: her ? "inset 0 0 0 2.5px #C4247A" : "none",
+              width: d, height: d, color: b.selected ? "#F4F1EA" : "#23201C", fontSize: label.fs, lineHeight: 1.15,
+              background: b.selected ? "#23201C" : b.fill,
+              boxShadow: b.ring && !b.selected ? "inset 0 0 0 2.5px #C4247A" : "none",
               transform: ready ? `translate(${x}px, ${y}px) scale(1)` : `translate(${w / 2 - d / 2}px, ${4 + h / 2 - d / 2}px) scale(0.6)`,
               opacity: ready ? 1 : 0,
             }}>
