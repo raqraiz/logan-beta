@@ -981,7 +981,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
             {headsupVisible && (
               <button type="button" onClick={() => setShowPeople(true)}
                 className="flex flex-col items-center gap-2 rounded-[22px] border border-border bg-card px-3 py-5 text-sm font-semibold text-foreground">
-                <Users className="h-5 w-5 text-[#0B7479]" aria-hidden /> People
+                <Users className="h-5 w-5 text-[#0B7479]" aria-hidden /> Your People
               </button>
             )}
           </div>
