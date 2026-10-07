@@ -72,3 +72,23 @@ export async function submitTip(symptom: string, text: string, tipId?: string): 
   if (error || !data?.status) throw error ?? new Error(data?.error ?? "failed");
   return data as SubmitResult;
 }
+
+/** Same wording the server stores with her tip (together-tip-submit labelFor). */
+export async function myTipLabel(userId: string): Promise<string> {
+  const { data: p } = await supabase.from("participants").select("life_stage, last_period_start, cycle_length_days").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (!p) return "Someone in Together";
+  const stage = p.life_stage;
+  if (stage === "pregnant") return "Someone who's pregnant";
+  if (stage === "postpartum") return "Someone postpartum";
+  if (stage === "perimenopause") return "Someone in perimenopause";
+  if (stage === "menopause") return "Someone in menopause";
+  if (!p.last_period_start) return "Someone in Together";
+  const len = Math.min(60, Math.max(20, p.cycle_length_days || 28));
+  const start = Date.parse(`${p.last_period_start}T12:00:00Z`);
+  const day = ((Math.floor((Date.now() - start) / 86400000) % len) + len) % len + 1;
+  const ov = len - 14;
+  if (day <= 5) return "Someone on her period";
+  if (day < ov - 1) return "Someone in her follicular week";
+  if (day <= ov + 1) return "Someone in her ovulation week";
+  return "Someone in her luteal week";
+}
