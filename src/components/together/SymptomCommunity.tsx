@@ -145,11 +145,15 @@ export function WhenWomenFeelCard({ c, mine, loggedDays, hasCycle }: { c: Commun
   const busy = busiestWindow(row, len);
   const shownDays = loggedDays.filter((d) => Number.isFinite(d) && d >= 1 && d <= len);
   let caption: string | null = busy ? `Most women feel it on days ${busy.from} to ${busy.to}.` : null;
-  if (!mine && shownDays.length > 0) caption = "Pink dots below are the days you logged it. A few more cycles and I'll know your usual days.";
+  if (!mine && shownDays.length > 0) {
+    caption = shownDays.length === 1
+      ? "The pink dot is the day you logged it. A few more cycles and I'll know your usual days."
+      : "Pink dots are the days you logged it. A few more cycles and I'll know your usual days.";
+  }
   if (mine && busy) {
     const mid = (mine.from + mine.to) / 2;
     const tail = mid >= busy.from && mid <= busy.to ? "Right in the middle of everyone." : mid > busy.to ? "A little later than most women." : "Earlier than most women.";
-    caption = `The pink dot below is when you usually feel it. ${tail}`;
+    caption = `The pink dot is when you usually feel it. ${tail}`;
   }
   const COL = 9, GAP = 2, H = 89, TOP = 2;
   const DOT_Y = TOP + H + 8;
