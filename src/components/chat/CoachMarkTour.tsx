@@ -15,8 +15,8 @@ const STEPS = [
     text: "Ask is right here, anytime something feels off, ask me. No 3am googling.",
   },
   {
-    target: "plan",
-    text: "Plan lays out your whole week, mood, workouts, and nutrition, built for exactly where you are.",
+    target: "together",
+    text: "Together shows what women like you are feeling, without sharing who you are.",
   },
 ] as const;
 

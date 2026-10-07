@@ -1,8 +1,9 @@
 import type React from "react";
-import { User, Target } from "lucide-react";
+import { User } from "lucide-react";
+import { TogetherCirclesIcon } from "./TogetherTab";
 import { cn } from "@/lib/utils";
 
-export type TabId = "home" | "ask" | "plan";
+export type TabId = "home" | "ask" | "together" | "plan";
 
 interface BottomTabBarProps {
   activeTab: TabId;
@@ -25,7 +26,7 @@ function RingIcon({ className, style }: { className?: string; style?: React.CSSP
 const TABS: { id: TabId; label: string; tour: string; Icon: any }[] = [
   { id: "home", label: "You", tour: "home", Icon: User },
   { id: "ask", label: "Logan", tour: "ask", Icon: RingIcon },
-  { id: "plan", label: "Plan", tour: "plan", Icon: Target },
+  { id: "together", label: "Together", tour: "together", Icon: TogetherCirclesIcon },
 ];
 
 export function BottomTabBar({ activeTab, onTabChange }: BottomTabBarProps) {
