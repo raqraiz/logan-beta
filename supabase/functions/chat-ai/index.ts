@@ -2777,6 +2777,8 @@ serve(async (req) => {
     // Names written THIS turn — drives the server-authored "Logged: …" line and
     // the false-confirmation guard below. Empty array = nothing was persisted.
     const loggedSymptomNames: string[] = [];
+    // Symptoms she mentioned this turn; offered as a tap-to-log card, never auto-saved.
+    const offerSymptoms: { name: string; severity: number }[] = [];
     // Pass 2: kicked off here, awaited AFTER the main chat completion so the
     // extraction runs in parallel with the reply and costs the user no latency.
     // Null when the vetoes already ruled out any write for this turn.
@@ -2814,21 +2816,9 @@ serve(async (req) => {
         if (detected.length > 0) {
           const liveCycle = symptomCycleInfo;
 
-          const { error: symLogErr } = await supabase.from("symptom_logs").insert({
-            user_id: user.id,
-            symptoms: detected,
-            notes: userMessage.length <= 500 ? userMessage : userMessage.slice(0, 500),
-            cycle_day: liveCycle?.cycleDay ?? null,
-            cycle_phase: liveCycle?.phase ?? null,
-          });
-          if (symLogErr) {
-            console.error("Failed to insert symptom log from chat:", symLogErr);
-          } else {
-            for (const d of detected) {
-              if (!loggedSymptomNames.includes(d.name)) loggedSymptomNames.push(d.name);
-            }
-            console.log("Logged symptoms from chat:", detected.map(d => d.name).join(", "));
-          }
+          void liveCycle;
+          // Never write without her tap: offer a log card instead.
+          for (const d of detected) if (!offerSymptoms.some(o => o.name.toLowerCase() === d.name.toLowerCase())) offerSymptoms.push(d);
         }
       }
     }
@@ -5096,51 +5086,10 @@ serve(async (req) => {
     if (symptomExtractionPromise) {
       try {
         const extracted = await symptomExtractionPromise;
-        const alreadyLogged = new Set(loggedSymptomNames.map(n => n.trim().toLowerCase()));
+        const alreadyLogged = new Set([...loggedSymptomNames, ...offerSymptoms.map(o => o.name)].map(n => n.trim().toLowerCase()));
         const novel = extracted.filter(s => !alreadyLogged.has(s.name.trim().toLowerCase()));
 
-        if (novel.length > 0) {
-          const { error: extLogErr } = await supabase.from("symptom_logs").insert({
-            user_id: user.id,
-            symptoms: novel,
-            notes: userMessage.length <= 500 ? userMessage : userMessage.slice(0, 500),
-            cycle_day: symptomCycleInfo?.cycleDay ?? null,
-            cycle_phase: symptomCycleInfo?.phase ?? null,
-          });
-
-          if (extLogErr) {
-            console.error("[symptom_extraction] symptom_logs insert failed:", extLogErr);
-          } else {
-            for (const s of novel) {
-              if (!loggedSymptomNames.includes(s.name)) loggedSymptomNames.push(s.name);
-            }
-
-            // Surface genuinely new names in the shared picker too. Categorization
-            // and soft-delete semantics are untouched: rows land uncategorized
-            // exactly like the existing library-add path, and a previously
-            // soft-deleted name is left alone.
-            const knownLower = Array.from(new Set(knownLibraryNames.map(n => String(n).trim().toLowerCase())));
-            const accepted = await screenLibraryCandidates(
-              supabase, user.id, "llm_extraction", novel.map(s => s.name), knownLower, userMessage,
-            );
-            if (accepted.length > 0) {
-              const { data: existing } = await supabase
-                .from("community_symptoms")
-                .select("name")
-                .in("name", accepted);
-              const existingLower = new Set(((existing || []) as any[]).map(r => String(r.name).trim().toLowerCase()));
-              const toInsert = accepted
-                .filter(n => !existingLower.has(n))
-                .map(name => ({ name, added_by: user.id }));
-              if (toInsert.length > 0) {
-                const { error: commErr } = await supabase.from("community_symptoms").insert(toInsert);
-                if (commErr) console.error("[symptom_extraction] community_symptoms insert failed:", commErr);
-                else console.log("[symptom_extraction] new library entries:", toInsert.map(r => r.name).join(", "));
-              }
-            }
-
-          }
-        }
+        for (const n of novel) if (!offerSymptoms.some(o => o.name.toLowerCase() === n.name.toLowerCase())) offerSymptoms.push(n);
       } catch (e) {
         console.warn("[symptom_extraction] post-write failed:", (e as Error)?.message);
       }
@@ -5267,6 +5216,19 @@ serve(async (req) => {
           : `${finalAssistantMessage.trimEnd()}\n\n${label}`;
       }
       baseMeta.logged_symptoms = loggedSymptomNames;
+    }
+
+    // --- Tap-to-log offer card (client renders; nothing is saved until she taps) ---
+    {
+      const offer = emotionalContextActive ? offerSymptoms.filter(o => !EMOTION_NAME_RE.test(o.name)) : offerSymptoms;
+      if (offer.length > 0) {
+        const t = userMessage.toLowerCase();
+        let days: { label: string; days: number }[] = [{ label: "Just today", days: 1 }];
+        if (/\b(all week|this week|for a week|past week|7 days|seven days)\b/.test(t)) days = [{ label: "This past week", days: 7 }, { label: "Just today", days: 1 }];
+        else if (/\b(few days|couple of days|couple days|3 days|three days|since (monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b/.test(t)) days = [{ label: "Last 3 days", days: 3 }, { label: "Just today", days: 1 }];
+        else if (/\b(yesterday|last night|two days|2 days|since yesterday)\b/.test(t)) days = [{ label: "Today and yesterday", days: 2 }, { label: "Just today", days: 1 }];
+        baseMeta.log_offer = { symptoms: offer.slice(0, 4), options: days };
+      }
     }
 
     // --- Pass 1: last-line guard on the final text ---
