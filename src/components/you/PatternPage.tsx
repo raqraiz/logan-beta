@@ -44,7 +44,7 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
   const data = demo ? symptomPageData(demo.logs, name, isNonCycling ? undefined : lastPeriodStart) : realData;
   const timing = !isNonCycling && from !== null && to !== null;
   const community = useSymptomCommunity(userId, name, sample);
-  const myWindow = data.count < 2 || isNonCycling ? null : demo ? demo.window : timing ? { from: from as number, to: to as number } : null;
+  const myWindow = null as null | { from: number; to: number }; // TEMP-VERIFY
   const askLogan = () => { onClose(); setTimeout(() => globalThis.dispatchEvent(new CustomEvent(PREFILL_CHAT_EVENT, { detail: `Why does my ${lower} happen?` })), 0); };
 
   useEffect(() => {
@@ -97,7 +97,7 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
   };
   const sub = communityLine(community, data.count > 0) ?? (data.count === 0 ? "Not logged yet" : `You logged it ${data.count} time${data.count === 1 ? "" : "s"}${!isNonCycling && data.cycles ? ` in ${data.cycles} cycle${data.cycles === 1 ? "" : "s"}` : ""}`);
   const compare = isNonCycling ? null : stageInsight(community, myWindow);
-  const oneCycleOnly = !isNonCycling && data.count >= 2 && data.cycles === 1;
+  const oneCycleOnly = true; // TEMP-VERIFY
   const timingNote = !myWindow && !compare && data.count > 0
     ? oneCycleOnly
       ? "All in one cycle so far. After your next cycle I can tell you when it usually shows up."
