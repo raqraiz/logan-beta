@@ -46,7 +46,7 @@ function statusLine(c: LoganTodayCycle): string | null {
   return `${noun} in about ${n} days`;
 }
 
-function TodayRing({ cycle, onOpen }: { cycle: LoganTodayCycle; onOpen: () => void }) {
+export function TodayRing({ cycle, onOpen, size = 190, statusClassName = "text-sm font-medium text-muted-foreground" }: { cycle: LoganTodayCycle; onOpen: () => void; size?: number; statusClassName?: string }) {
   const tracking = (cycle.lifeStage === "cycling") && cycle.cycleDay > 0 && cycle.phase !== "Unknown";
   const len = cycle.cycleLengthDays || 28;
   const pct = tracking ? Math.min(1, cycle.cycleDay / len) : 1;
@@ -55,7 +55,7 @@ function TodayRing({ cycle, onOpen }: { cycle: LoganTodayCycle; onOpen: () => vo
   const status = statusLine(cycle);
   return (
     <button type="button" onClick={onOpen} aria-label="Open your cycle details" className="mx-auto flex flex-col items-center gap-3">
-      <div className="relative h-[190px] w-[190px]">
+      <div className="relative" style={{ width: size, height: size }}>
         <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100" aria-hidden>
           <defs>
             <linearGradient id="logan-today-ring-grad" x1="0" y1="0" x2="1" y2="1">
@@ -77,7 +77,7 @@ function TodayRing({ cycle, onOpen }: { cycle: LoganTodayCycle; onOpen: () => vo
           )}
         </div>
       </div>
-      {status && <p className="text-sm font-medium text-muted-foreground">{status}</p>}
+      {status && <p className={statusClassName}>{status}</p>}
     </button>
   );
 }
