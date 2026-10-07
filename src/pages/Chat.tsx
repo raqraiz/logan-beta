@@ -27,6 +27,7 @@ import { AnchorPicker } from "@/components/chat/AnchorPicker";
 import { DatePickerInput } from "@/components/chat/DatePickerInput";
 import { OnboardingProgress } from "@/components/chat/OnboardingProgress";
 import { ChatCycleCircle, calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
+import { LoganTodaySection } from "@/components/chat/LoganTodaySection";
 import { refreshStageBoundary } from "@/hooks/useStageBoundary";
 import { inferCycleLengthForDeclaredPhase, autoCycleLengthFromHistory } from "@/lib/cyclePhase";
 import { updateParticipant } from "@/lib/participantWrite";
@@ -319,6 +320,7 @@ const Chat = () => {
   },[user?.id]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
+  const todaySectionRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -699,7 +701,8 @@ const Chat = () => {
       hasScrolledToBottom.current = true;
       // Use setTimeout to ensure DOM is rendered
       setTimeout(() => {
-        scrollRef.current?.scrollIntoView({ behavior: "instant" });
+        if (todaySectionRef.current) todaySectionRef.current.scrollIntoView({ behavior: "instant" as ScrollBehavior, block: "start" });
+        else scrollRef.current?.scrollIntoView({ behavior: "instant" });
       }, 50);
     }
   }, [messages, isOnboarding]);
@@ -711,6 +714,7 @@ const Chat = () => {
     if (!hasScrolledToBottom.current) return; // skip until initial scroll done
     const lastMsg = messages[messages.length - 1];
 
+    if (lastMsg.role === "assistant" && lastMsg.metadata?.insight_type === "proactive" && todaySectionRef.current) return;
     if (lastMsg.role === "assistant") {
       // Scroll to the START of the new assistant message so the user reads from the top
       requestAnimationFrame(() => {
@@ -1466,14 +1470,30 @@ const Chat = () => {
     // Stay on the same page, UI will update to show auth form
   };
 
+  const showTodaySection = !isOnboarding && !!user;
+  const renderTodaySection = () => user ? (
+    <LoganTodaySection
+      ref={todaySectionRef}
+      userId={user.id}
+      cycle={cycleData}
+      onOpenYou={() => { setActiveTab("home"); trackTabSwitch("home"); }}
+      onLogFeeling={() => {
+        setActiveTab("home");
+        trackTabSwitch("home");
+        setTimeout(() => window.dispatchEvent(new CustomEvent("logan:open-symptom-log")), 50);
+      }}
+    />
+  ) : null;
+
   // During onboarding, force the Ask tab
   const effectiveTab = isOnboarding ? "ask" : activeTab;
 
   // When switching tabs, position the scroll appropriately
   useEffect(() => {
     if (effectiveTab === "ask") {
-      // On Ask, jump to the start of the most recent message
+      // On Logan, land on the Today section (else the start of the latest message)
       requestAnimationFrame(() => {
+        if (todaySectionRef.current) { todaySectionRef.current.scrollIntoView({ behavior: "instant" as ScrollBehavior, block: "start" }); return; }
         lastMessageRef.current?.scrollIntoView({ behavior: "instant" as ScrollBehavior, block: "start" });
       });
     } else {
@@ -1912,6 +1932,8 @@ const Chat = () => {
               const nextMsg = filteredMessages[index + 1];
               const attachedOffer = message.role === "assistant" && message.message_type !== "partner_headsup_hardday" && nextMsg?.message_type === "partner_headsup_hardday" ? nextMsg : null;
               if (message.message_type === "partner_headsup_hardday" && prevMessage?.role === "assistant") return null;
+              const isTodayMsg = isMessageFromToday(message.created_at);
+              const startsToday = showTodaySection && isTodayMsg && !(prevMessage && isMessageFromToday(prevMessage.created_at));
 
               return (
                 <div
@@ -1930,6 +1952,7 @@ const Chat = () => {
                       </span>
                     </div>
                   )}
+                  {startsToday && <div className="mb-6">{renderTodaySection()}</div>}
                   {(() => {
                     const q = debouncedQuery.toLowerCase();
                     const isMatch =
@@ -1951,7 +1974,7 @@ const Chat = () => {
                       {/* Cycle visual first for insight messages — recomputed live
                           from participant data; stored metadata is the fallback while
                           participant data loads (prevents flicker on initial open). */}
-                      {message.metadata?.has_cycle_visual && message.metadata?.cycle_day && message.metadata?.cycle_phase && (() => {
+                      {message.metadata?.has_cycle_visual && message.metadata?.cycle_day && message.metadata?.cycle_phase && !(showTodaySection && isTodayMsg && message.metadata.visual_type === "cycle_circle") && (() => {
                         // Only today's messages may show live values; older messages
                         // keep the snapshot captured when they were generated.
                         const live = isMessageFromToday(message.created_at) ? liveCycle : null;
@@ -2031,7 +2054,7 @@ const Chat = () => {
                       )}
 
                       {/* Phase cheat sheet for proactive insights — between intro and question */}
-                      {message.role === "assistant" && message.metadata?.insight_type === "proactive" && message.metadata?.cycle_day && message.metadata?.cycle_phase && (() => {
+                      {message.role === "assistant" && message.metadata?.insight_type === "proactive" && message.metadata?.cycle_day && message.metadata?.cycle_phase && !(showTodaySection && isTodayMsg) && (() => {
                         const live = isMessageFromToday(message.created_at) ? liveCycle : null;
                         return (
                         <div className="mt-3">
@@ -2473,6 +2496,7 @@ const Chat = () => {
               );
             })
           )}
+          {showTodaySection && messages.length > 0 && !messages.some(m => m.message_type !== "reaction" && m.message_type !== "checkin" && isMessageFromToday(m.created_at)) && renderTodaySection()}
           <div ref={scrollRef} />
         </div>
       </ScrollArea>
@@ -2560,7 +2584,7 @@ const Chat = () => {
                   }, 300);
                 }}
                 rows={1}
-                placeholder={isOnboarding ? "Type your answer..." : "Ask me anything..."}
+                placeholder={isOnboarding ? "Type your answer..." : "Talk to Logan"}
                 className="flex-1 min-h-[44px] max-h-[200px] resize-none py-2.5"
                 disabled={isSending}
               />
