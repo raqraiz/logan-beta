@@ -1835,6 +1835,130 @@ export type Database = {
         }
         Relationships: []
       }
+      together_tip_hidden_authors: {
+        Row: {
+          author_id: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          author_id: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          author_id?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      together_tip_reports: {
+        Row: {
+          created_at: string
+          id: string
+          reason: string
+          reporter_id: string
+          tip_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reason: string
+          reporter_id: string
+          tip_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reason?: string
+          reporter_id?: string
+          tip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "together_tip_reports_tip_id_fkey"
+            columns: ["tip_id"]
+            isOneToOne: false
+            referencedRelation: "together_tips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      together_tip_votes: {
+        Row: {
+          created_at: string
+          tip_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          tip_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          tip_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "together_tip_votes_tip_id_fkey"
+            columns: ["tip_id"]
+            isOneToOne: false
+            referencedRelation: "together_tips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      together_tips: {
+        Row: {
+          author_id: string
+          created_at: string
+          id: string
+          label: string
+          needs_review: boolean
+          original_text: string | null
+          reject_reason: string | null
+          report_count: number
+          reviewed_at: string | null
+          stage_key: string | null
+          status: string
+          symptom: string
+          text: string
+        }
+        Insert: {
+          author_id: string
+          created_at?: string
+          id?: string
+          label?: string
+          needs_review?: boolean
+          original_text?: string | null
+          reject_reason?: string | null
+          report_count?: number
+          reviewed_at?: string | null
+          stage_key?: string | null
+          status?: string
+          symptom: string
+          text: string
+        }
+        Update: {
+          author_id?: string
+          created_at?: string
+          id?: string
+          label?: string
+          needs_review?: boolean
+          original_text?: string | null
+          reject_reason?: string | null
+          report_count?: number
+          reviewed_at?: string | null
+          stage_key?: string | null
+          status?: string
+          symptom?: string
+          text?: string
+        }
+        Relationships: []
+      }
       tracker_logs: {
         Row: {
           created_at: string
@@ -2397,6 +2521,10 @@ export type Database = {
           week: string
         }[]
       }
+      admin_review_tip: {
+        Args: { _action: string; _tip_id: string }
+        Returns: number
+      }
       admin_set_user_internal: {
         Args: { _internal: boolean; _user_id: string }
         Returns: undefined
@@ -2406,6 +2534,27 @@ export type Database = {
         Returns: {
           logged_at: string
           user_id: string
+        }[]
+      }
+      admin_tip_queue: {
+        Args: never
+        Returns: {
+          author_tip_count: number
+          created_at: string
+          id: string
+          label: string
+          reasons: string[]
+          report_count: number
+          status: string
+          symptom: string
+          text: string
+        }[]
+      }
+      admin_tip_totals: {
+        Args: never
+        Returns: {
+          status: string
+          total: number
         }[]
       }
       admin_together_totals: {
@@ -2421,7 +2570,9 @@ export type Database = {
           women_count: number
         }[]
       }
+      count_hidden_tip_authors: { Args: never; Returns: number }
       count_onboarded_users: { Args: never; Returns: number }
+      delete_my_tips: { Args: never; Returns: undefined }
       evaluate_postpartum_regularity: {
         Args: { _participant_id: string }
         Returns: boolean
@@ -2431,6 +2582,13 @@ export type Database = {
       get_referral_count:
         | { Args: never; Returns: number }
         | { Args: { _user_id: string }; Returns: number }
+      get_tip_summary: {
+        Args: { _symptom: string }
+        Returns: {
+          tip_count: number
+          top_helped: number
+        }[]
+      }
       get_together_aggregates: {
         Args: never
         Returns: {
@@ -2452,6 +2610,19 @@ export type Database = {
           women_count: number
         }[]
       }
+      get_together_tips: {
+        Args: { _symptom: string }
+        Returns: {
+          created_at: string
+          helped: number
+          helped_by_me: boolean
+          id: string
+          label: string
+          mine: boolean
+          same_stage: boolean
+          text: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2459,11 +2630,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      hide_tip_author: { Args: { _tip_id: string }; Returns: undefined }
       refresh_postpartum_state: {
         Args: { _participant_id: string }
         Returns: undefined
       }
       refresh_together_aggregates: { Args: never; Returns: undefined }
+      report_tip: {
+        Args: { _reason: string; _tip_id: string }
+        Returns: undefined
+      }
       resolve_referral_code: { Args: { _code: string }; Returns: string }
       together_canonical: { Args: { _name: string }; Returns: string }
       together_norm: { Args: { _name: string }; Returns: string }
@@ -2471,6 +2647,7 @@ export type Database = {
         Args: { _due: string; _life_stage: string; _lmp: string; _pp: string }
         Returns: string
       }
+      toggle_tip_vote: { Args: { _tip_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user" | "super_admin"

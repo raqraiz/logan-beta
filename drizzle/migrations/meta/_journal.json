@@ -197,6 +197,13 @@
       "when": 1791376410905,
       "tag": "0027_lock_together_pair_cache_access",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1791377368702,
+      "tag": "0028_together_tips",
+      "breakpoints": true
     }
   ]
 }
