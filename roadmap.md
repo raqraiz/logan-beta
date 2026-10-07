@@ -39,3 +39,11 @@
 - [x] You tab "Your symptoms" row opens Together on Mine (12 months)
 - [x] Everyone / Mine switch, log mode, floating "+ Log how I feel" with room below the field
 - [x] No consent gate on viewing; signup checkbox; one-time chat ask
+
+## Together step 4: What helped
+- [x] Tips, votes, reports, hidden-authors tables and secure functions
+- [x] Moderation function, What helped page, share screen, Logan's notes
+- [x] Safety symptoms: doctor line + Ask Logan, no share
+- [x] Report for all signed-in women; hide author with Settings undo
+- [x] Admin Tips queue incl. remove all from author
+- [x] Delete all memory and account deletion cover tips

@@ -108,6 +108,10 @@ Deno.serve(async (req) => {
 
     const { error: wordsError } = await supabaseAdmin.from("user_word_prefs").delete().eq("user_id", userId);
     if (wordsError) console.error("Error deleting word prefs:", wordsError);
+    for (const [table, col] of [["together_tip_votes", "user_id"], ["together_tip_hidden_authors", "user_id"], ["together_tip_reports", "reporter_id"], ["together_tips", "author_id"]]) {
+      const { error } = await supabaseAdmin.from(table).delete().eq(col, userId);
+      if (error) console.error(`Error deleting ${table}:`, error);
+    }
 
     // Delete linked participant and related data (matched by email)
     if (userEmail) {

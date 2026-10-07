@@ -5,7 +5,7 @@ import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { LogOut, RefreshCw, Shield, User, BarChart3, Megaphone, TrendingUp, Mail, LineChart, Trophy } from "lucide-react";
+import { LogOut, RefreshCw, Shield, User, BarChart3, Megaphone, TrendingUp, Mail, LineChart, Trophy, Heart } from "lucide-react";
 import { AdminManagement } from "@/components/admin/AdminManagement";
 import { ProfilesTab } from "@/components/admin/ProfilesTab";
 import { OverviewTab } from "@/components/admin/OverviewTab";
@@ -15,6 +15,7 @@ import { EmailsTab } from "@/components/admin/EmailsTab";
 import { GrowthTrackerTab } from "@/components/admin/GrowthTrackerTab";
 import { ReferralLeaderboardTab } from "@/components/admin/ReferralLeaderboardTab";
 import { UsersLeaderboard } from "@/components/admin/UsersLeaderboard";
+import { TipsQueueTab } from "@/components/admin/TipsQueueTab";
 import { LifeStageTab } from "@/components/admin/LifeStageTab";
 import { LoganFullLogo } from "@/components/LoganFullLogo";
 
@@ -129,7 +130,7 @@ const Admin = () => {
 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList
-            className={`grid w-full max-w-3xl ${isSuperAdmin ? "grid-cols-8" : "grid-cols-6"} bg-muted border border-border`}
+            className={`grid w-full max-w-3xl ${isSuperAdmin ? "grid-cols-9" : "grid-cols-7"} bg-muted border border-border`}
           >
             <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BarChart3 className="w-4 h-4" />
@@ -154,6 +155,10 @@ const Admin = () => {
             <TabsTrigger value="notifications" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Megaphone className="w-4 h-4" />
               <span className="hidden sm:inline">Notify</span>
+            </TabsTrigger>
+            <TabsTrigger value="tips" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Heart className="w-4 h-4" />
+              <span className="hidden sm:inline">Tips</span>
             </TabsTrigger>
             {isSuperAdmin && (
               <>
@@ -191,6 +196,10 @@ const Admin = () => {
 
           <TabsContent value="notifications">
             <NotificationsTab />
+          </TabsContent>
+
+          <TabsContent value="tips">
+            <TipsQueueTab />
           </TabsContent>
 
 

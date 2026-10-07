@@ -115,12 +115,16 @@ Deno.serve(async (req) => {
       "insight_feedback_events",
       "user_memory_notes",
       "user_word_prefs",
+      "together_tip_votes",
+      "together_tip_hidden_authors",
       "weight_logs",
       "user_feedback",
       "history_imports",
       "email_opens",
       "attribution_events",
     ];
+    await supabaseAdmin.from("together_tip_reports").delete().eq("reporter_id", userId);
+    await supabaseAdmin.from("together_tips").delete().eq("author_id", userId);
     await Promise.all(
       tablesByUserId.map((t) =>
         supabaseAdmin.from(t as any).delete().eq("user_id", userId).then(

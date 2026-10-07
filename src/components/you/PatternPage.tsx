@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { SafetyCallout } from "@/components/SafetyCallout";
 import { toast } from "sonner";
 import { PATTERNS_CHANGED, windowDays } from "@/lib/patternCycles";
-import { ownSymptomPairs, symptomCardInsights, symptomDefinition, symptomPageData, type SymptomPageLog } from "@/lib/symptomPage";
+import { isSafetySymptom, ownSymptomPairs, symptomCardInsights, symptomDefinition, symptomPageData, type SymptomPageLog } from "@/lib/symptomPage";
 import { loadCycleStarts } from "@/lib/realCycleDays";
 import { togetherDisplay, isKnownSymptom } from "@/lib/symptomCatalog";
 import { ArrowLeft, ChevronRight } from "lucide-react";
@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { sampleSymptomDetail } from "@/lib/togetherData";
 import { useSymptomCommunity, CommonRing, communityLine, stageInsight, WhenWomenFeelCard } from "@/components/together/SymptomCommunity";
+import { WhatHelpedPage, ShareTipPage } from "@/components/together/WhatHelped";
+import { loadTipSummary, myTipLabel, TIPS_CHANGED } from "@/lib/tips";
 import { PREFILL_CHAT_EVENT } from "@/lib/partnerHeadsupClient";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from "@/components/ui/alert-dialog";
@@ -52,6 +54,23 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
   const timing = !isNonCycling && from !== null && to !== null;
   const community = useSymptomCommunity(userId, name, sample);
   const myWindow = data.count < 2 || isNonCycling ? null : demo ? demo.window : timing ? { from: from as number, to: to as number } : null;
+  const safetySymptom = isSafetySymptom(name);
+  const [tipView, setTipView] = useState<"none" | "list" | "share">("none");
+  const [tipSummary, setTipSummary] = useState<{ count: number; top: number } | null>(null);
+  const [tipLabel, setTipLabel] = useState("Someone in Together");
+  useEffect(() => {
+    if (safetySymptom || sample) return;
+    let alive = true;
+    const load = () => loadTipSummary(name).then((s) => { if (alive) setTipSummary(s); }).catch(() => {});
+    load(); void myTipLabel(userId).then((l) => { if (alive) setTipLabel(l); });
+    globalThis.addEventListener(TIPS_CHANGED, load);
+    return () => { alive = false; globalThis.removeEventListener(TIPS_CHANGED, load); };
+  }, [name, userId, safetySymptom, sample]);
+  const openTips = () => {
+    if (tipSummary?.count) { setTipView("list"); return; }
+    if (!community.joined) { community.openConsent(); return; }
+    setTipView("share");
+  };
   const askLogan = () => { onClose(); setTimeout(() => globalThis.dispatchEvent(new CustomEvent(PREFILL_CHAT_EVENT, { detail: `Why does my ${lower} happen?` })), 0); };
 
   useEffect(() => {
@@ -72,10 +91,10 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
   }, [name, lower, from, to, timing, data.count]);
 
   useEffect(() => {
-    const handle = (event: KeyboardEvent) => { if (event.key === "Escape" && !fix) onClose(); };
+    const handle = (event: KeyboardEvent) => { if (event.key === "Escape" && !fix && tipView === "none") onClose(); };
     globalThis.addEventListener("keydown", handle);
     return () => globalThis.removeEventListener("keydown", handle);
-  }, [onClose, fix]);
+  }, [onClose, fix, tipView]);
 
   const saveNote = async (note: string, source: string) => {
     setBusy(true);
@@ -189,10 +208,17 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
           </div> : <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{community.error ? "Shared pairings couldn't load. Try again later." : "Once more women share, you'll see what often comes with it."}</p>}
         </section>
 
-        <section className="mt-4 rounded-[22px] bg-foreground p-5 text-background" aria-labelledby="symptom-shared-help-label">
+        {safetySymptom ? <section className="mt-4 rounded-[22px] bg-foreground p-5 text-background" aria-labelledby="symptom-shared-help-label">
           <h2 id="symptom-shared-help-label" className="font-sans text-[15px] font-semibold">What helped other women</h2>
-          <p className="mt-3 text-sm leading-relaxed">Coming soon. Women will share what helped, without their names.</p>
-        </section>
+          <p className="mt-3 text-sm leading-relaxed">For this one, a doctor is the best first step.</p>
+          <Button variant="link" onClick={askLogan} className="mt-1 h-11 px-0 text-sm font-semibold text-background underline underline-offset-2">Ask Logan</Button>
+        </section> : <button type="button" onClick={openTips} disabled={sample} className="mt-4 flex w-full items-center justify-between gap-3 rounded-[22px] bg-foreground p-5 text-left text-background" aria-labelledby="symptom-shared-help-label">
+          <span>
+            <span id="symptom-shared-help-label" className="block font-sans text-[15px] font-semibold">What helped other women</span>
+            <span className="mt-3 block text-sm leading-relaxed">{tipSummary?.count ? `${tipSummary.count} ${tipSummary.count === 1 ? "tip" : "tips"} · top one helped ${tipSummary.top} ${tipSummary.top === 1 ? "woman" : "women"}` : "No tips yet. Be the first to share what helped you."}</span>
+          </span>
+          <ChevronRight className="shrink-0" aria-hidden="true" />
+        </button>}
 
         <section className="mt-4 flex items-center justify-between gap-3 rounded-[22px] bg-card p-5">
           <h2 className="font-sans text-[13px] font-semibold tracking-normal text-muted-foreground">Why it happens</h2>
@@ -222,6 +248,8 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
         </DrawerContent>
       </Drawer>
       {community.consentSheet}
+      {tipView === "list" && <WhatHelpedPage symptom={name} joined={community.joined} onJoin={community.openConsent} onBack={() => setTipView("none")} onShare={() => setTipView("share")} />}
+      {tipView === "share" && !safetySymptom && <ShareTipPage symptom={name} label={tipLabel} onBack={() => setTipView(tipSummary?.count ? "list" : "none")} onDone={() => setTipView(tipSummary?.count ? "list" : "none")} />}
       <AlertDialog open={confirmForget} onOpenChange={(v) => !busy && setConfirmForget(v)}>
         <AlertDialogContent className="w-[calc(100%-40px)] rounded-[22px]">
           <AlertDialogHeader>
