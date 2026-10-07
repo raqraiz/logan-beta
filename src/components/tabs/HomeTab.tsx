@@ -1024,8 +1024,8 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
 
       {showMemory && userId && <YourDataPage userId={userId} cycle={cycleData} isNonCycling={isNonCycling}
         onClose={() => setShowMemory(false)} onLog={(symptom) => { setShowMemory(false); onLogFeeling?.(symptom); }}
-        onSettings={() => { setShowMemory(false); onOpenSettings?.(); }}
-        onPeople={() => { setShowMemory(false); setShowPeople(true); }} widgets={widgets}
+        onSettings={() => onOpenSettings?.()}
+        onPeople={() => setShowPeople(true)} widgets={widgets}
         onTrackers={() => { setShowMemory(false); setEditMode(true); }} />}
       {userId && headsupVisible && <PartnerHeadsupManage userId={userId} open={showPeople} onOpenChange={setShowPeople} />}
 
