@@ -1,9 +1,9 @@
 # Roadmap
 
 ## Real-data symptom page fixes
-- [ ] Always show the prevalence ring and honest empty-data copy.
-- [ ] Use circular usual windows consistently for timing, comparisons and chart dots.
-- [ ] Remove duplicate doctor advice and verify with real logs, without writes.
+- [x] Always show the prevalence ring and honest empty-data copy.
+- [x] Use circular usual windows consistently for timing, comparisons and chart dots.
+- [x] Remove duplicate doctor advice and verify with real logs, without writes (41 unit tests, 9 boundary tests; real Muffled hearing: 13 logs, 7 cycles, Days 25 to 3).
 
 ## Consistent symptom pages
 - [x] Keep all symptom page sections visible, including honest chart and ring empty states.
