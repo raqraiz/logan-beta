@@ -141,6 +141,7 @@ Deno.serve(async (req) => {
     // First applicable rejection wins: selling, instruction, broken, unsafe, off topic.
     if (SELLING_RE.test(text)) { decision = "reject"; kind = "selling"; }
     else if (INSTRUCTION_RE.test(text)) { decision = "reject"; kind = "instruction"; }
+    else if (checkFirst && /\b(cure[sd]?|fix(es|ed)?|gets? rid of|no need (for|to see) a doctor|don'?t need a doctor|skip the doctor|instead of (a |the )?doctor|went away for good)\b/i.test(text)) { decision = "reject"; kind = "unsafe"; }
     else if (decision !== "reject" && check && tooBroken(cleaned)) { decision = "reject"; kind = "broken_after_cleaning"; }
     const status = decision === "approve" ? "approved" : decision === "reject" ? "rejected" : "pending";
     const reason = status !== "rejected" ? null
