@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { SafetyCallout } from "@/components/SafetyCallout";
 import { toast } from "sonner";
 import { PATTERNS_CHANGED } from "@/lib/patternCycles";
 import { symptomCardInsights, symptomDefinition, symptomPageData, type SymptomPageLog } from "@/lib/symptomPage";
@@ -101,8 +102,8 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
 
         <section className="mt-7 rounded-[22px] bg-card p-5" aria-labelledby="symptom-definition-label">
           <h2 id="symptom-definition-label" className="font-sans text-[13px] font-semibold tracking-normal text-muted-foreground">What it is</h2>
-          {definition.safety && <p className="mt-3 text-[15px] font-semibold leading-relaxed text-foreground">{definition.safety}</p>}
           <p className="mt-3 text-[15px] font-light leading-relaxed text-foreground">{definition.text}</p>
+          {definition.safety && <SafetyCallout className="mt-4" />}
         </section>
 
         <section className="mt-4 rounded-[22px] bg-card p-5" aria-labelledby="symptom-personal-label">
@@ -110,7 +111,9 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
           {data.count === 0 ? <>
             <p className="mt-4 text-[15px] font-light leading-relaxed text-foreground">Log it when it happens and I'll start spotting your pattern.</p>
             <Button variant="ghost" onClick={() => onLog(name)} className="mt-5 rounded-full bg-foreground px-6 font-semibold text-background hover:bg-foreground hover:text-background">Log it now</Button>
-          </> : <>
+          </> : data.count === 1 ? (
+            <p className="mt-4 text-[15px] font-light leading-relaxed text-foreground">One log so far. Log it again when it happens and I'll look for a pattern.</p>
+          ) : <>
             <div className={`mt-4 grid gap-2 ${tileColumns === 3 ? "grid-cols-3" : tileColumns === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
               <div className="symptom-stat min-w-0 rounded-[14px] px-2 py-3 text-center">
                 <p className="whitespace-nowrap font-sans text-[20px] font-bold leading-snug text-foreground">{data.count} {data.count === 1 ? "time" : "times"}</p>

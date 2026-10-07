@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { UserPlus } from "lucide-react";
+import { InvitePage } from "@/components/together/InvitePage";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,6 +51,7 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
   const [logs, setLogs] = useState<SymptomPageLog[]>([]);
   const [watch, setWatch] = useState<string[]>([]);
   const [page, setPage] = useState<string | null>(null);
+  const [invite, setInvite] = useState(false);
   const [retry, setRetry] = useState(0);
 
   useEffect(() => {
@@ -112,6 +115,8 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
   const mine = symptomNames(logs);
   const demo = sample ? sampleAggregates() : null;
 
+  if (invite) return <InvitePage userId={userId} onBack={() => setInvite(false)} />;
+
   if (page) {
     return (
       <PatternPage userId={userId} pattern={{ name: page, from: null, to: null, cycles: 0, count: 0 }} logs={logs}
@@ -145,7 +150,13 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
         {demo && <div className="w-full rounded-2xl bg-foreground px-4 py-2 text-sm font-semibold text-background">Sample data.</div>}
         <div className="relative w-full">
           <h1 className="font-heading text-[40px] font-semibold leading-tight text-foreground">Together</h1>
-          <div id="together-head-slot" className="absolute right-0 top-1/2 -translate-y-1/2" />
+          <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center gap-2">
+            <button type="button" onClick={() => setInvite(true)} aria-label="Invite a friend"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-foreground">
+              <UserPlus className="h-5 w-5" aria-hidden="true" />
+            </button>
+            <div id="together-head-slot" />
+          </div>
         </div>
         {demo ? board(demo.rows, demo.mine, demo.cats) : joined && aggError ? (
           <div className="flex flex-col items-center gap-3">

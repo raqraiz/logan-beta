@@ -12,7 +12,6 @@ import { updateParticipant } from "@/lib/participantWrite";
 import { Loader2, Upload, Trash2, FileText, Megaphone, LogOut } from "lucide-react";
 import { HistoryImportDialog } from "./HistoryImportDialog";
 import { ProviderConnectCard } from "@/components/settings/ProviderConnectCard";
-import { ReferralCard } from "@/components/settings/ReferralCard";
 import { SharingSection } from "@/components/settings/SharingSection";
 import { PrivacySection } from "@/components/settings/PrivacySection";
 import { MemorySection } from "@/components/settings/MemorySection";
@@ -587,8 +586,6 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
         <MemorySection userId={userId} />
 
         <PrivacySection />
-
-        <ReferralCard userId={userId} />
 
         <div>
           <Label className="text-sm font-medium mb-2 block">About Logan</Label>
