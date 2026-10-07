@@ -733,6 +733,11 @@ const Chat = () => {
     lastAutoScrolledIdRef.current = lastMsg.id;
 
     if (lastMsg.role === "assistant" && lastMsg.metadata?.insight_type === "proactive" && todaySectionRef.current) return;
+    if (lastMsg.role !== "user" && !isNearBottomRef.current) {
+      // She is reading further up: don't yank her down, offer the pill instead.
+      setShowScrollButton(true);
+      return;
+    }
     if (lastMsg.role === "assistant") {
       // Scroll to the START of the new assistant message so the user reads from the top
       requestAnimationFrame(() => {
@@ -759,7 +764,7 @@ const Chat = () => {
         : document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
 
       isNearBottomRef.current = distanceFromBottom < SCROLL_NEAR_BOTTOM_PX;
-      setShowScrollButton(distanceFromBottom > SCROLL_BUTTON_SHOW_PX);
+      if (isNearBottomRef.current) setShowScrollButton(false);
     };
 
     updateScrollState();
@@ -1864,11 +1869,11 @@ const Chat = () => {
             const { scrollTop, scrollHeight, clientHeight } = el;
             const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
             isNearBottomRef.current = distanceFromBottom < SCROLL_NEAR_BOTTOM_PX;
-            setShowScrollButton(distanceFromBottom > SCROLL_BUTTON_SHOW_PX);
+            if (isNearBottomRef.current) setShowScrollButton(false);
           }
         }}
       >
-        <div className="max-w-3xl mx-auto py-6 space-y-4">
+        <div className="max-w-3xl mx-auto pt-6 pb-24 space-y-4">
           {/* Load older messages button */}
           {hasOlderMessages && (
             <div className="flex justify-center py-2">
@@ -2534,10 +2539,9 @@ const Chat = () => {
                 isNearBottomRef.current = true;
                 setShowScrollButton(false);
               }}
-              aria-label="Jump to latest message"
-              className="absolute right-4 bottom-[calc(100%+12px)] z-[60] flex h-10 w-10 items-center justify-center rounded-full border border-[#DDD7CC] bg-white text-[#1F1B16] animate-in fade-in duration-200"
+              className="absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+12px)] z-[60] rounded-full border border-[#DDD7CC] bg-white px-4 py-1.5 font-['Quicksand'] text-[13px] font-semibold text-[#1F1B16] animate-in fade-in duration-200"
             >
-              <ArrowDown className="h-4 w-4" />
+              New messages ↓
             </button>
           )}
           <div className="max-w-3xl mx-auto px-4 pt-4">
