@@ -5,11 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trackTogether } from "@/lib/together";
 
+const BRAND_GRADIENT = "linear-gradient(90deg, #FF2E92 0%, #A22BE8 50%, #2BD4D9 100%)";
+
 export function InvitePage({ userId, onBack }: { userId?: string; onBack: () => void }) {
   const [code, setCode] = useState<string | null>(null);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
   useEffect(() => { trackTogether("invite_opened"); }, []);
 
@@ -32,24 +35,34 @@ export function InvitePage({ userId, onBack }: { userId?: string; onBack: () => 
   }, [userId]);
 
   const link = code ? `https://asklogan.ai/?ref=${code}` : "";
+  const shareText = `I've been using Logan to understand my body. Try it: ${link}`;
 
   const copy = async () => {
-    if (!link) return;
+    if (!link) return false;
     try {
       await navigator.clipboard.writeText(link);
       setCopied(true);
       trackTogether("invite_copied");
       setTimeout(() => setCopied(false), 2000);
-    } catch { /* clipboard blocked */ }
+      return true;
+    } catch { return false; }
   };
 
   const share = async () => {
     if (!link) return;
-    const text = `I've been using Logan to understand my body. Try it: ${link}`;
     if (navigator.share) {
-      try { await navigator.share({ text }); trackTogether("invite_shared"); } catch { /* cancelled */ }
-    } else {
-      await copy();
+      try {
+        await navigator.share({ text: shareText });
+        trackTogether("invite_shared");
+        return;
+      } catch (err) {
+        if ((err as Error)?.name === "AbortError") return; // she cancelled
+      }
+    }
+    const ok = await copy();
+    if (ok) {
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
     }
   };
 
@@ -58,13 +71,34 @@ export function InvitePage({ userId, onBack }: { userId?: string; onBack: () => 
       <div className="mx-auto max-w-md text-left">
         <Button variant="outline" size="icon" onClick={onBack} aria-label="Back to Together" className="h-11 w-11 rounded-full text-foreground shadow-none"><ArrowLeft /></Button>
         <h1 className="mt-6 font-heading text-[40px] font-semibold leading-tight text-foreground">
-          Grow the <span className="landing-brand-text">circle</span>
+          Grow the circle
         </h1>
         <p className="mt-3 text-base leading-relaxed text-foreground">
-          Every woman who joins makes "Is this just me?" a little clearer for all of us.
+          Every woman who joins makes “Is this just me?” a little clearer for all of us.
         </p>
 
         <section className="mt-6 rounded-[22px] bg-card p-5">
+          {loading ? <Skeleton className="h-[72px] w-full" /> : count > 0 ? (
+            <div className="flex items-center gap-4">
+              <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full p-[3px]" style={{ background: BRAND_GRADIENT }} aria-hidden="true">
+                <div className="flex h-full w-full items-center justify-center rounded-full bg-card">
+                  <span className="text-[32px] font-bold text-foreground">{count}</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-[15px] font-medium text-foreground">{count === 1 ? "friend" : "friends"} joined with your link</p>
+                <p className="mt-1 text-sm text-[#6E675F] dark:text-muted-foreground">Thank you for growing the circle.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-4">
+              <div className="h-[72px] w-[72px] shrink-0 rounded-full border border-border" aria-hidden="true" />
+              <p className="text-[15px] font-medium text-foreground">Your first friend will show up here.</p>
+            </div>
+          )}
+        </section>
+
+        <section className="mt-4 rounded-[22px] bg-card p-5">
           <p className="text-[13px] font-semibold text-muted-foreground">Your link</p>
           {loading ? <Skeleton className="mt-3 h-10 w-full" /> : !code ? (
             <p className="mt-3 text-sm text-muted-foreground">Your link isn't ready yet. Try again in a moment.</p>
@@ -86,10 +120,13 @@ export function InvitePage({ userId, onBack }: { userId?: string; onBack: () => 
           Only your link is shared. Nothing about your health, your cycle or what you've told me.
         </p>
 
-        {count > 0 && <p className="mt-4 text-[15px] font-semibold text-foreground">{count} {count === 1 ? "friend" : "friends"} joined with your link</p>}
-
-        <Button onClick={share} disabled={!code} className="mt-6 h-12 w-full rounded-full bg-foreground text-base font-semibold text-background hover:bg-foreground/90">
-          Share your link
+        <Button onClick={share} disabled={!code} className="mt-6 h-12 w-full rounded-full bg-foreground text-base font-semibold text-background hover:bg-foreground/90" aria-live="polite">
+          {shareCopied ? "✓ Link copied" : "Share your link"}
+        </Button>
+        <Button asChild variant="outline" disabled={!code} className="mt-3 h-12 w-full rounded-full text-base font-semibold">
+          <a href={code ? `https://wa.me/?text=${encodeURIComponent(shareText)}` : undefined} target="_blank" rel="noopener noreferrer">
+            Send on WhatsApp
+          </a>
         </Button>
       </div>
     </div>
