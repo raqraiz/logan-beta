@@ -255,6 +255,8 @@ const Chat = () => {
   const [showForecast, setShowForecast] = useState(false);
   
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [pillHasNew, setPillHasNew] = useState(false);
+  const userScrolledRef = useRef(false);
   const [feelSheetOpen, setFeelSheetOpen] = useState(false);
   const [creditBalance, setCreditBalance] = useState<{ free: number; paid: number; total: number; hoursUntilReset?: number } | null>(null);
   const [outOfCredits, setOutOfCredits] = useState(false);
@@ -735,6 +737,7 @@ const Chat = () => {
     if (lastMsg.role === "assistant" && lastMsg.metadata?.insight_type === "proactive" && todaySectionRef.current) return;
     if (lastMsg.role !== "user" && !isNearBottomRef.current) {
       // She is reading further up: don't yank her down, offer the pill instead.
+      setPillHasNew(true);
       setShowScrollButton(true);
       return;
     }
@@ -764,7 +767,9 @@ const Chat = () => {
         : document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
 
       isNearBottomRef.current = distanceFromBottom < SCROLL_NEAR_BOTTOM_PX;
-      if (isNearBottomRef.current) setShowScrollButton(false);
+      const screen = hasViewportScroll ? viewport!.clientHeight : window.innerHeight;
+      if (distanceFromBottom <= screen) { setShowScrollButton(false); setPillHasNew(false); }
+      else if (userScrolledRef.current) setShowScrollButton(true);
     };
 
     updateScrollState();
@@ -1869,9 +1874,12 @@ const Chat = () => {
             const { scrollTop, scrollHeight, clientHeight } = el;
             const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
             isNearBottomRef.current = distanceFromBottom < SCROLL_NEAR_BOTTOM_PX;
-            if (isNearBottomRef.current) setShowScrollButton(false);
+            if (distanceFromBottom <= clientHeight) { setShowScrollButton(false); setPillHasNew(false); }
+            else if (userScrolledRef.current) setShowScrollButton(true);
           }
         }}
+        onWheelCapture={() => { userScrolledRef.current = true; }}
+        onTouchMoveCapture={() => { userScrolledRef.current = true; }}
       >
         <div className="max-w-3xl mx-auto pt-6 pb-24 space-y-4">
           {/* Load older messages button */}
@@ -2538,10 +2546,11 @@ const Chat = () => {
                 }
                 isNearBottomRef.current = true;
                 setShowScrollButton(false);
+                setPillHasNew(false);
               }}
               className="absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+12px)] z-[60] rounded-full border border-[#DDD7CC] bg-white px-4 py-1.5 font-['Quicksand'] text-[13px] font-semibold text-[#1F1B16] animate-in fade-in duration-200"
             >
-              New messages ↓
+              {pillHasNew ? "New messages ↓" : "Latest ↓"}
             </button>
           )}
           <div className="max-w-3xl mx-auto px-4 pt-4">
