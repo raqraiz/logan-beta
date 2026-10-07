@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { knownSymptomDefinition } from "@/lib/symptomPage";
 import { AggRow, CATEGORY_PILLS, TogetherCategory, countLabel, display, isExact, key } from "@/lib/togetherData";
@@ -9,7 +8,7 @@ function Pill({ active, onClick, children }: { active: boolean; onClick: () => v
     <button type="button" onClick={onClick} aria-pressed={active}
       className={cn("flex items-center gap-1 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold",
         active ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground")}>
-      {active && <Check className="h-4 w-4" aria-hidden />}{children}
+      {children}
     </button>
   );
 }
@@ -47,7 +46,7 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymp
     .filter((r) => cat === "all" || cats.get(key(r.symptom)) === cat)
     .sort((a, b) => (b.women_count ?? 0) - (a.women_count ?? 0)), [everyone, cat, cats]);
   const max = Math.max(10, ...field.map((r) => r.women_count ?? 0));
-  const size = (r: AggRow) => (isExact(r) ? Math.round(72 + 64 * Math.sqrt((r.women_count! - 10) / Math.max(1, max - 10))) : 64);
+  const size = (r: AggRow) => (isExact(r) ? Math.round(64 + 48 * Math.sqrt((r.women_count! - 10) / Math.max(1, max - 10))) : 56);
 
   const listSource = listPill === "week" ? weekRows : rows.filter((r) => r.filter === "stage");
   const common = listSource.filter(isExact).sort((a, b) => b.women_count! - a.women_count!);
