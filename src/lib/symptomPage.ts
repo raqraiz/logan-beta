@@ -40,6 +40,11 @@ const DEFINITIONS: Record<string, string> = {
   tinnitus: "Tinnitus is hearing a sound, such as ringing or buzzing, when there is no outside source for it.",
 };
 
+export const SAFETY_NOTE = "If this is new or came on suddenly, check with a doctor soon.";
+const SAFETY_RE = /\b(hearing|muffled|tinnitus|deaf|ear ringing|ringing in (my |the )?ears?|vision|sight|blurr|seeing spots|double vision|chest|severe headache|worst headache|migraine|faint|dizzy spells|pass(ed)? out|heavy bleeding|soak|hemorrhag|clots?\b|self.?harm|suicid|hurt myself|pregnan|swelling (in|of) (face|hands)|reduced (baby )?movement)/i;
+/** Symptoms that always carry the doctor note (hearing or vision changes, chest pain, severe headache, heavy bleeding, fainting, pregnancy warning signs). */
+export function isSafetySymptom(name: string): boolean { return SAFETY_RE.test(name.trim()); }
+
 /** Only the written symptom page description, or null when there is none. */
 export function knownSymptomDefinition(name: string): string | null {
   return DEFINITIONS[name.trim().toLowerCase()] ?? null;
@@ -47,8 +52,7 @@ export function knownSymptomDefinition(name: string): string | null {
 
 export function symptomDefinition(name: string): { text: string; safety: string | null } {
   const key = name.trim().toLowerCase();
-  const safety = /\b(hearing|ear|tinnitus|deaf|vision|sight|blurr|eye|chest|severe headache|migraine|worst headache|faint|pass(ed)? out|heavy bleeding|soak|hemorrhag|clot|self.?harm|suicid|hurt myself|pregnan)/i.test(key)
-    ? "This is worth checking with a doctor, today if it's sudden, severe or getting worse." : null;
+  const safety = isSafetySymptom(name) ? SAFETY_NOTE : null;
   return { safety, text: DEFINITIONS[key] ?? `“${name}” is the name you're using for this experience. What it feels like can vary from person to person.` };
 }
 

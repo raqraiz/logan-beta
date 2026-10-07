@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import { knownSymptomDefinition } from "@/lib/symptomPage";
+import { knownSymptomDefinition, isSafetySymptom, SAFETY_NOTE } from "@/lib/symptomPage";
 import { AggRow, CATEGORY_PILLS, TogetherCategory, countLabel, display, isExact, key } from "@/lib/togetherData";
 
 function Pill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
@@ -45,6 +45,12 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymp
   const field = useMemo(() => everyone
     .filter((r) => cat === "all" || cats.get(key(r.symptom)) === cat)
     .sort((a, b) => (b.women_count ?? 0) - (a.women_count ?? 0)), [everyone, cat, cats]);
+  const shown = useMemo(() => {
+    const top = field.slice(0, 20);
+    const extra = field.filter((r) => !top.includes(r) && mine.has(key(r.symptom)));
+    return extra.length ? [...top.filter((r) => !mine.has(key(r.symptom))).slice(0, 20 - extra.length - top.filter((r) => mine.has(key(r.symptom))).length), ...top.filter((r) => mine.has(key(r.symptom))), ...extra]
+      .sort((a, b) => (b.women_count ?? 0) - (a.women_count ?? 0)) : top;
+  }, [field, mine]);
   const max = Math.max(10, ...field.map((r) => r.women_count ?? 0));
   const size = (r: AggRow) => (isExact(r) ? Math.round(64 + 48 * Math.sqrt((r.women_count! - 10) / Math.max(1, max - 10))) : 56);
 
@@ -53,7 +59,9 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymp
   const rare = listSource.filter((r) => !isExact(r)).sort((a, b) => a.symptom.localeCompare(b.symptom));
 
   const Row = ({ r, rareRow }: { r: AggRow; rareRow?: boolean }) => {
-    const def = rareRow ? knownSymptomDefinition(r.symptom) : null;
+    const safety = isSafetySymptom(r.symptom);
+    const def = rareRow || safety ? knownSymptomDefinition(r.symptom) : null;
+    const expandable = !!def || safety;
     const k = `${listPill}:${r.symptom}`;
     return (
       <li className="border-b border-border py-3 last:border-0">
@@ -64,9 +72,10 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymp
           </button>
           <span className="shrink-0 text-sm text-muted-foreground">{countLabel(r)}</span>
         </div>
-        {def && (open === k ? (
+        {expandable && (open === k ? (
           <div className="mt-1 text-sm text-muted-foreground">
-            <p>{def}</p>
+            {def && <p>{def}</p>}
+            {safety && <p className="font-semibold text-foreground">{SAFETY_NOTE}</p>}
             <button type="button" onClick={() => setOpen(null)} className="mt-1 text-xs font-semibold text-foreground">Less ⌃</button>
           </div>
         ) : (
@@ -106,7 +115,7 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymp
         {CATEGORY_PILLS.map((p) => <Pill key={p.id} active={cat === p.id} onClick={() => setCat(p.id)}>{p.label}</Pill>)}
       </div>
       <div className="flex flex-wrap items-center justify-center gap-3 py-4">
-        {field.map((r) => {
+        {shown.map((r) => {
           const s = size(r);
           return (
             <button key={r.symptom} type="button" onClick={() => onOpenSymptom(r.symptom)}
@@ -120,7 +129,7 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymp
       </div>
       {field.length < 3 && <p className="text-center text-sm text-muted-foreground">{MORE}</p>}
       <p className="text-center text-sm text-muted-foreground">Bigger bubbles are felt by more women. Circled ones, you feel too.</p>
-      <button type="button" onClick={() => setView("list")} className="self-center text-sm font-semibold text-foreground underline">See all as a list ›</button>
+      <button type="button" onClick={() => setView("list")} className="self-center text-sm font-semibold text-foreground underline">{field.length > shown.length ? `See all ${field.length} as a list ›` : "See all as a list ›"}</button>
     </div>
   );
 }

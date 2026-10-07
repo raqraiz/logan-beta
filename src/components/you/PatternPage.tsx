@@ -101,7 +101,7 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
 
         <section className="mt-7 rounded-[22px] bg-card p-5" aria-labelledby="symptom-definition-label">
           <h2 id="symptom-definition-label" className="font-sans text-[13px] font-semibold tracking-normal text-muted-foreground">What it is</h2>
-          {definition.safety && <p className="mt-3 text-[15px] leading-relaxed text-foreground">{definition.safety}</p>}
+          {definition.safety && <p className="mt-3 text-[15px] font-semibold leading-relaxed text-foreground">{definition.safety}</p>}
           <p className="mt-3 text-[15px] font-light leading-relaxed text-foreground">{definition.text}</p>
         </section>
 
