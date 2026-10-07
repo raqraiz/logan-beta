@@ -8,7 +8,10 @@ export type TogetherEvent =
   | "together_consent_shown"
   | "together_consent_yes"
   | "together_consent_not_now"
-  | "together_consent_left";
+  | "together_consent_left"
+  | "invite_opened"
+  | "invite_copied"
+  | "invite_shared";
 
 /** Event name only, no content. Respects analytics consent. */
 export async function trackTogether(event: TogetherEvent) {

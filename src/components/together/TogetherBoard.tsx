@@ -2,15 +2,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { packSiblings } from "d3-hierarchy";
 import { cn } from "@/lib/utils";
-import { knownSymptomDefinition, isSafetySymptom, SAFETY_NOTE } from "@/lib/symptomPage";
+import { knownSymptomDefinition, isSafetySymptom } from "@/lib/symptomPage";
+import { SafetyCallout } from "@/components/SafetyCallout";
 import { AggRow, CATEGORY_PILLS, TogetherCategory, countLabel, display, isExact, key } from "@/lib/togetherData";
 
 function Pill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button type="button" onClick={onClick} aria-pressed={active}
-      className={cn("flex h-9 items-center gap-1 whitespace-nowrap rounded-full border px-3.5 text-[13px]",
+    <button type="button" onClick={onClick} aria-pressed={active} className="flex h-11 shrink-0 items-center">
+      <span className={cn("flex h-9 items-center gap-1 whitespace-nowrap rounded-full border px-3.5 text-[13px]",
         active ? "border-foreground bg-foreground font-semibold text-background" : "border-border bg-card font-medium text-foreground")}>
-      {children}
+        {children}
+      </span>
     </button>
   );
 }
@@ -27,7 +29,7 @@ function PillRow({ className, children }: { className?: string; children: React.
   };
   useEffect(() => { update(); }, [children]);
   return (
-    <div ref={ref} onScroll={update} className={cn("flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]", className)}
+    <div ref={ref} onScroll={update} className={cn("flex gap-1.5 overflow-x-auto [scrollbar-width:none]", className)}
       style={fade ? { maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK } : undefined}>
       {children}
     </div>
@@ -96,7 +98,7 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymp
         {expandable && (open === k ? (
           <div className="mt-1 text-sm text-muted-foreground">
             {def && <p>{def}</p>}
-            {safety && <p className="font-semibold text-foreground">{SAFETY_NOTE}</p>}
+            {safety && <SafetyCallout className="mt-2" />}
             <button type="button" onClick={() => setOpen(null)} className="mt-1 text-xs font-semibold text-foreground">Less ⌃</button>
           </div>
         ) : (

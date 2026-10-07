@@ -353,13 +353,16 @@ html:not(.dark) .headsup-primary, .theme-light .headsup-primary { background: hs
 :root {
   --symptom-stat-surface: #F4F1EA;
   --symptom-watch-ink: #0B7479;
-  --symptom-insight-dot: #C4247A;
+  --symptom-insight-dot: #0E8A8F;
 }
 .dark {
   --symptom-stat-surface: hsl(var(--background));
   --symptom-watch-ink: #5FE0E4;
-  --symptom-insight-dot: #FF7AB8;
+  --symptom-insight-dot: #2BB8BD;
 }
 .symptom-stat { background: var(--symptom-stat-surface); }
 .symptom-watch { color: var(--symptom-watch-ink); }
 .symptom-insight-dot { background: var(--symptom-insight-dot); }
+
+.safety-callout { background: #EEE9DF; color: #23201C; }
+.dark .safety-callout { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
