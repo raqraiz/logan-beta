@@ -8,6 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { TogetherBoard, BubbleSkeleton } from "@/components/together/TogetherBoard";
 import { PatternPage } from "@/components/you/PatternPage";
 import type { SymptomPageLog } from "@/lib/symptomPage";
+import { loadCycleStarts, withRealCycleDays, OWN_LOG_WINDOW_DAYS } from "@/lib/realCycleDays";
+import { computePatterns } from "@/components/you/YourPatterns";
 import { togetherDisplay, loadAliases } from "@/lib/symptomCatalog";
 import { AggRow, TogetherCategory, key, loadAggregates, loadCategories, sampleAggregates } from "@/lib/togetherData";
 import { loadTogether, markTogetherShown, setTogetherConsent, trackTogether, TOGETHER_BODY, TOGETHER_CHANGED } from "@/lib/together";
@@ -55,11 +57,13 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
   useEffect(() => {
     supabase.from("user_roles").select("role").eq("user_id", userId).in("role", ["admin", "super_admin"])
       .then(({ data }) => setIsAdmin((data?.length ?? 0) > 0));
-    // Her own logs only (own-row access), for "you too" and the symptom page.
-    const since = new Date(Date.now() - 90 * 86400000).toISOString();
-    supabase.from("symptom_logs").select("logged_at, cycle_day, symptoms, notes").eq("user_id", userId)
-      .gte("logged_at", since).order("logged_at", { ascending: false })
-      .then(({ data }) => setLogs((data ?? []) as SymptomPageLog[]));
+    // Her own logs only (own-row access), last 12 months, for "you too" and the symptom page. Together totals keep 90 days server-side.
+    const since = new Date(Date.now() - OWN_LOG_WINDOW_DAYS * 86400000).toISOString();
+    Promise.all([
+      supabase.from("symptom_logs").select("logged_at, cycle_day, symptoms, notes").eq("user_id", userId)
+        .gte("logged_at", since).order("logged_at", { ascending: false }),
+      loadCycleStarts(userId),
+    ]).then(([{ data }, starts]) => setLogs(withRealCycleDays((data ?? []) as SymptomPageLog[], starts)));
     supabase.from("participants").select("watch_symptoms").eq("user_id", userId).maybeSingle()
       .then(({ data }) => setWatch((data?.watch_symptoms ?? []) as string[]));
   }, [userId]);
@@ -117,7 +121,7 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
 
   if (page) {
     return (
-      <PatternPage userId={userId} pattern={{ name: page, from: null, to: null, cycles: 0, count: 0 }} logs={logs}
+      <PatternPage userId={userId} pattern={computePatterns(logs).find((p) => key(p.name) === key(page)) ? { ...computePatterns(logs).find((p) => key(p.name) === key(page))!, name: page } : { name: page, from: null, to: null, cycles: 0, count: 0 }} logs={logs}
         watched={watch.some((w) => key(w) === key(page))} lastPeriodStart={lastPeriodStart} isNonCycling={isNonCycling}
         onClose={() => setPage(null)} onLog={(s) => { setPage(null); onLogFeeling(s); }} onChanged={() => {}} sample={sample}
         onUnstar={async () => {

@@ -36,4 +36,5 @@ export function groupCycles(points: Pt[]): { start: number; days: number[] }[] {
   return groups;
 }
 
-export const PATTERN_WINDOW_DAYS = 200;
+/** Her own logs: last 12 months. */
+export const PATTERN_WINDOW_DAYS = 365;
