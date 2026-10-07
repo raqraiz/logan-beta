@@ -33,10 +33,9 @@ export function useSymptomCommunity(userId: string, name: string, sample = false
       const s = await loadTogether(userId);
       if (!alive) return;
       setJoined(s.consent);
-      if (s.consent) {
-        const { data } = await supabase.rpc("get_together_aggregates" as any);
-        if (alive) setRows(((data ?? []) as Row[]).filter((r) => key(r.symptom) === key(name)));
-      }
+      // Totals are shown to everyone; consent only decides whether her logs count.
+      const { data } = await supabase.rpc("get_together_aggregates" as any);
+      if (alive) setRows(((data ?? []) as Row[]).filter((r) => key(r.symptom) === key(name)));
       if (alive) setLoaded(true);
     };
     void load();
@@ -84,7 +83,7 @@ const hasShares = (r: Row | null) => !!r?.day_shares && Object.keys(r.day_shares
 /** Community line under the name, or null to keep the current line. Never a number under 10. */
 export function communityLine(c: Community, sheLogged: boolean): string | null {
   const r = c.everyone;
-  if (!c.joined || !r) return null;
+  if (!r) return null;
   if (r.women_band === "exact" && (r.women_count ?? 0) >= 10) {
     const n = r.women_count!;
     if (!sheLogged) return `${n} women feel this`;
@@ -204,7 +203,6 @@ export function WhenWomenFeelCard({ c, mine, loggedDays, hasCycle }: { c: Commun
 
 /** How common the symptom is: 20 dots, filled by share of her cohort. Only for joined women with a count. */
 export function CommonRing({ c, sheLogged }: { c: Community; sheLogged: boolean }) {
-  if (!c.joined) return null;
   const pick = [c.stage, c.everyone].find((r) => r && (r.women_band === "few" || ((r.women_count ?? 0) >= 10 && (r.cohort_women ?? 0) >= 10)));
   if (!pick) return null;
   const few = pick.women_band === "few";
