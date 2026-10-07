@@ -746,63 +746,8 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
             </div>
           );
         }
-        return (
-          <div className="w-full flex flex-col items-center" key={id}>
-            <DailyBriefingHero
-              cycleDay={cycleData.cycleDay}
-              phase={stagePhase}
-              cycleLengthDays={cycleData.cycleLengthDays}
-              lifeStage={cycleData.lifeStage}
-              onHormonalBc={cycleData.onHormonalBc}
-              cycleAnchorType={cycleData.cycleAnchorType}
-              bcMethod={cycleData.bcMethod}
-              postpartumStartDate={cycleData.postpartumStartDate}
-              postpartumActive={cycleData.postpartumActive}
-              lossDate={cycleData.lossDate}
-              dueDate={cycleData.dueDate}
-              pregnancyLmp={cycleData.pregnancyLmp}
-              onCircleClick={isNonCycling ? undefined : () => setShowAnalytics(true)}
-            />
-
-
-            {!isNonCycling && userId && (
-              <PeriodEndedChip
-                userId={userId}
-                cycleDay={cycleData.cycleDay}
-                lastPeriodStart={cycleData.lastPeriodStart}
-              />
-            )}
-
-            {!isNonCycling && (
-              <button
-                onClick={() => {
-                  setEditedLength(cycleData.cycleLengthDays);
-                  setEditedPhase("auto");
-                  setShowDatePicker(true);
-                }}
-                aria-label="Edit cycle"
-                className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-full px-2.5 py-1 border border-border/40 bg-background/60 backdrop-blur"
-              >
-                <Pencil className="w-3 h-3" />
-                Edit cycle
-              </button>
-            )}
-
-            {/* Non-bleed anchor: cycling + hormonal BC only. Regular editing stays above. */}
-            {cycleData.lifeStage === "cycling" && cycleData.onHormonalBc === true && onCycleMarkerStart && (
-              <button
-                onClick={() => { setMarkerDate(new Date()); setShowMarker(true); }}
-                className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-full px-2.5 py-1 border border-border/40 bg-background/60 backdrop-blur"
-              >
-                <Sparkles className="w-3 h-3" />
-                New cycle started
-              </button>
-            )}
-            {cycleData.cycleAnchorType === "marker" && (
-              <p className="mt-1 text-[11px] text-muted-foreground">Counting from the cycle start you marked</p>
-            )}
-          </div>
-        );
+        // The ring itself renders at the top of the You tab.
+        return null;
       }
       case "symptom_tracker": {
         return userId ? (
