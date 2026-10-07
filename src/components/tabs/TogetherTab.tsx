@@ -142,7 +142,7 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
             <Switch checked={sample} onCheckedChange={setSample} />
           </label>
         )}
-        {demo && <div className="w-full rounded-2xl bg-foreground px-4 py-2 text-sm font-semibold text-background">Sample data. Only admins see this.</div>}
+        {demo && <div className="w-full rounded-2xl bg-foreground px-4 py-2 text-sm font-semibold text-background">Sample data.</div>}
         <h1 className="font-heading text-[40px] font-semibold leading-tight text-foreground">Together</h1>
         {demo ? board(demo.rows, demo.mine, demo.cats) : joined && aggError ? (
           <div className="flex flex-col items-center gap-3">
