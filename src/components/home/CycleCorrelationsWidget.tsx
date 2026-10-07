@@ -105,18 +105,17 @@ export function CycleCorrelationsWidget({
 
   return (
     <div
-      className="w-full rounded-2xl border border-border/40 border-l-[3px] border-l-teal-500
+      className="w-full rounded-[22px] border border-border
         bg-card overflow-hidden relative"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 via-teal-500/5 to-transparent pointer-events-none" />
 
       <div className="relative px-5 py-4">
         <div className="flex items-center gap-2.5 mb-3">
-          <div className="w-7 h-7 rounded-lg bg-teal-500/15 flex items-center justify-center">
-            <TrendingUp className="w-4 h-4 text-teal-400" />
+          <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center">
+            <TrendingUp className="w-4 h-4 text-[#0B7479]" />
           </div>
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-teal-400/80">
-            Cycle Correlations
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-foreground">
+            Cycle correlations
           </span>
         </div>
 

@@ -116,10 +116,9 @@ export function CustomAIWidget({
 
   return (
     <div
-      className={`w-full text-left rounded-2xl border border-border/30 border-l-2 ${styles.border}
-        bg-card overflow-hidden transition-colors duration-200 ${styles.glow} relative`}
+      className={`w-full text-left rounded-[22px] border border-border
+        bg-card overflow-hidden transition-colors duration-200 relative`}
     >
-      <div className={`absolute inset-0 bg-gradient-to-br ${styles.bg} pointer-events-none`} />
 
       <div className="relative px-5 py-4">
         <div className="flex items-center justify-between mb-3">

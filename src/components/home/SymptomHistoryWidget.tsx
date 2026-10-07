@@ -8,11 +8,11 @@ import { aggregateSymptomPatterns, countNotesOnlyLogs } from "@/lib/symptomAggre
 import { useCanonicalSymptoms } from "@/hooks/useCanonicalSymptoms";
 
 const COLORS = {
-  border: "border-l-amber-500",
-  bgGradient: "from-amber-500/10 via-amber-500/5 to-transparent",
-  iconBg: "bg-amber-500/15",
-  iconColor: "text-amber-400",
-  labelColor: "text-amber-400/80",
+  border: "",
+  bgGradient: "",
+  iconBg: "bg-secondary",
+  iconColor: "text-[#0B7479]",
+  labelColor: "text-foreground",
 };
 
 interface SymptomEntry {
@@ -84,9 +84,8 @@ export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays,
     <>
       <button
         onClick={() => setOpen(true)}
-        className={`w-full text-left rounded-2xl border border-border/40 ${COLORS.border} border-l-[3px] bg-card overflow-hidden relative transition-opacity active:opacity-90`}
+        className={`w-full text-left rounded-[22px] border border-border bg-card overflow-hidden relative transition-opacity active:opacity-90`}
       >
-        <div className={`absolute inset-0 bg-gradient-to-br ${COLORS.bgGradient} pointer-events-none`} />
         <div className="relative px-5 py-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2.5">
@@ -94,7 +93,7 @@ export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays,
                 <BarChart3 className={`w-4 h-4 ${COLORS.iconColor}`} />
               </div>
               <span className={`text-[10px] font-semibold uppercase tracking-widest ${COLORS.labelColor}`}>
-                Symptom Patterns
+                Symptom patterns
               </span>
             </div>
             <ChevronRight className="w-4 h-4 text-muted-foreground/60" />
@@ -122,7 +121,7 @@ export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays,
                     <span className="text-[10px] text-muted-foreground tabular-nums">{s.count}×</span>
                     <div className="w-12 h-1 rounded-full bg-muted overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-amber-400/70"
+                        className="h-full rounded-full bg-[#0E8A8F]"
                         style={{ width: `${(s.avgSeverity / 5) * 100}%` }}
                       />
                     </div>
@@ -144,7 +143,7 @@ export function SymptomHistoryWidget({ userId, lastPeriodStart, cycleLengthDays,
 
               {/* Summary */}
               <div className="flex items-center gap-1.5 pt-1">
-                <Sparkles className="w-3 h-3 text-amber-400/70" />
+                <Sparkles className="w-3 h-3 text-[#0B7479]" />
                 <span className="text-[10px] text-muted-foreground">
                   {totalLogs} log{totalLogs !== 1 ? "s" : ""} in the last 90 days
                   {latestLog && ` · last ${format(new Date(latestLog.logged_at), "MMM d")}`}

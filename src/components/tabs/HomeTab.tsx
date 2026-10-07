@@ -18,7 +18,11 @@ import { LabResultsWidget } from "@/components/home/LabResultsWidget";
 import { NutritionTodayWidget } from "@/components/home/NutritionTodayWidget";
 import { WeightTrendWidget } from "@/components/home/WeightTrendWidget";
 import { MiniPhaseArc, getWidgetGraphic } from "@/components/home/WidgetGraphics";
-import { DailyBriefingHero } from "@/components/home/DailyBriefingHero";
+import { TodayRing } from "@/components/chat/LoganTodaySection";
+import { YourPatterns } from "@/components/you/YourPatterns";
+import { MemorySection } from "@/components/settings/MemorySection";
+import { PartnerHeadsupManage } from "@/components/partner/PartnerHeadsupManage";
+import { usePartnerHeadsupFlag } from "@/hooks/usePartnerHeadsupFlag";
 import { PeriodEndedChip } from "@/components/home/PeriodEndedChip";
 import { useWidgetPreferences, getWidgetLabel, type WidgetConfig } from "@/hooks/useWidgetPreferences";
 import {
@@ -37,7 +41,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useTrackFeature } from "@/hooks/useTrackFeature";
-import { X, Pencil, Check, Shield, Users, Sparkles, Heart } from "lucide-react";
+import { Check, Shield, Users, Sparkles, Heart, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
@@ -482,12 +486,16 @@ interface HomeTabProps {
   onPostpartumDeclare?: () => void;
   onStillCyclingDeclare?: () => void;
   userId?: string;
+  onLogFeeling?: () => void;
 }
 
 // ── HomeTab ───────────────────────────────────────────────
 
-export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarkerStart, onCycleLengthUpdate, onPhaseOverride, onPostpartumDeclare, onStillCyclingDeclare, userId }: HomeTabProps) {
+export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarkerStart, onCycleLengthUpdate, onPhaseOverride, onPostpartumDeclare, onStillCyclingDeclare, userId, onLogFeeling }: HomeTabProps) {
   useTrackFeature("home_tab");
+  const headsupVisible = usePartnerHeadsupFlag(userId);
+  const [showMemory, setShowMemory] = useState(false);
+  const [showPeople, setShowPeople] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showMarker, setShowMarker] = useState(false);
@@ -738,72 +746,15 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
             </div>
           );
         }
-        return (
-          <div className="w-full flex flex-col items-center" key={id}>
-            <DailyBriefingHero
-              cycleDay={cycleData.cycleDay}
-              phase={stagePhase}
-              cycleLengthDays={cycleData.cycleLengthDays}
-              lifeStage={cycleData.lifeStage}
-              onHormonalBc={cycleData.onHormonalBc}
-              cycleAnchorType={cycleData.cycleAnchorType}
-              bcMethod={cycleData.bcMethod}
-              postpartumStartDate={cycleData.postpartumStartDate}
-              postpartumActive={cycleData.postpartumActive}
-              lossDate={cycleData.lossDate}
-              dueDate={cycleData.dueDate}
-              pregnancyLmp={cycleData.pregnancyLmp}
-              onCircleClick={isNonCycling ? undefined : () => setShowAnalytics(true)}
-            />
-
-
-            {!isNonCycling && userId && (
-              <PeriodEndedChip
-                userId={userId}
-                cycleDay={cycleData.cycleDay}
-                lastPeriodStart={cycleData.lastPeriodStart}
-              />
-            )}
-
-            {!isNonCycling && (
-              <button
-                onClick={() => {
-                  setEditedLength(cycleData.cycleLengthDays);
-                  setEditedPhase("auto");
-                  setShowDatePicker(true);
-                }}
-                aria-label="Edit cycle"
-                className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-full px-2.5 py-1 border border-border/40 bg-background/60 backdrop-blur"
-              >
-                <Pencil className="w-3 h-3" />
-                Edit cycle
-              </button>
-            )}
-
-            {/* Non-bleed anchor: cycling + hormonal BC only. Regular editing stays above. */}
-            {cycleData.lifeStage === "cycling" && cycleData.onHormonalBc === true && onCycleMarkerStart && (
-              <button
-                onClick={() => { setMarkerDate(new Date()); setShowMarker(true); }}
-                className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-full px-2.5 py-1 border border-border/40 bg-background/60 backdrop-blur"
-              >
-                <Sparkles className="w-3 h-3" />
-                New cycle started
-              </button>
-            )}
-            {cycleData.cycleAnchorType === "marker" && (
-              <p className="mt-1 text-[11px] text-muted-foreground">Counting from the cycle start you marked</p>
-            )}
-          </div>
-        );
+        // The ring itself renders at the top of the You tab.
+        return null;
       }
       case "symptom_tracker": {
-        const colors = WIDGET_COLORS.symptom_tracker;
         return userId ? (
           <div className="w-full flex flex-col gap-2" key={id}>
             <div
-              className={`w-full rounded-2xl border border-border/40 ${colors.border} border-l-[3px] bg-card overflow-hidden relative`}
+              className="w-full rounded-[22px] border border-border bg-card overflow-hidden relative"
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${colors.bgGradient} pointer-events-none`} />
               <div className="relative">
                 <SymptomLogWidget
                   userId={userId}
@@ -831,13 +782,11 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
           </div>
         ) : null;
       case "discharge_tracker": {
-        const colors = WIDGET_COLORS.discharge_tracker;
         return userId ? (
           <div className="w-full flex flex-col gap-2" key={id}>
             <div
-              className={`w-full rounded-2xl border border-border/40 ${colors.border} border-l-[3px] bg-card overflow-hidden relative`}
+              className="w-full rounded-[22px] border border-border bg-card overflow-hidden relative"
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${colors.bgGradient} pointer-events-none`} />
               <div className="relative">
                 <DischargeTrackerWidget
                   userId={userId}
@@ -961,58 +910,123 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
     );
   }
 
+  const GUIDANCE_IDS = new Set(["cycle_circle", "succeed_you", "succeed_him", "dontmessup_you", "dontmessup_him"]);
+  const trackerWidgets = visibleWidgets.filter(w => !GUIDANCE_IDS.has(w.id));
+  const ringCycle = { ...cycleData, phase: stagePhase };
+
   return (
-    <div className="flex-1 flex flex-col items-center pb-16">
-      {/* Edit mode toggle */}
-      <div className="w-full max-w-xs flex justify-end px-2 pt-2 mb-2">
-        <Button
-          variant={editMode ? "default" : "ghost"}
-          size="sm"
-          className="gap-1.5 text-xs h-8"
-          onClick={async () => {
-            if (editMode) {
-              await save(widgets);
-            }
-            setEditMode(!editMode);
-          }}
-        >
-          {editMode ? (
-            <>
-              <Check className="w-3.5 h-3.5" />
-              Done
-            </>
+    <div className="flex-1 w-full pb-16">
+      <div className="mx-auto w-full max-w-3xl px-5 pt-4 flex flex-col gap-[14px]">
+        <h1 className="font-display text-[44px] font-semibold leading-none text-foreground">You</h1>
+
+        {/* Cycle ring */}
+        <div className="flex flex-col items-center pt-2 pb-4">
+          {cycleData.needsPeriodStart ? (
+            <div className="w-full">{renderWidget({ id: "cycle_circle", visible: true } as WidgetConfig)}</div>
           ) : (
             <>
-              <Pencil className="w-3.5 h-3.5" />
-              Customize
+              <TodayRing
+                cycle={ringCycle}
+                size={200}
+                onOpen={() => setShowAnalytics(true)}
+                statusClassName="text-sm font-light text-[#6E675F]"
+              />
+              {!isNonCycling && (
+                <button
+                  type="button"
+                  onClick={() => { setEditedLength(cycleData.cycleLengthDays); setEditedPhase("auto"); setShowDatePicker(true); }}
+                  className="mt-2 text-sm font-medium text-[#0B7479]"
+                >
+                  Edit cycle
+                </button>
+              )}
+              {!isNonCycling && userId && (
+                <PeriodEndedChip userId={userId} cycleDay={cycleData.cycleDay} lastPeriodStart={cycleData.lastPeriodStart} />
+              )}
+              {cycleData.lifeStage === "cycling" && cycleData.onHormonalBc === true && onCycleMarkerStart && (
+                <button
+                  type="button"
+                  onClick={() => { setMarkerDate(new Date()); setShowMarker(true); }}
+                  className="mt-2 text-sm font-medium text-[#0B7479]"
+                >
+                  New cycle started
+                </button>
+              )}
+              {cycleData.cycleAnchorType === "marker" && (
+                <p className="mt-1 text-[11px] text-muted-foreground">Counting from the cycle start you marked</p>
+              )}
             </>
           )}
-        </Button>
+        </div>
+
+        {/* Your patterns */}
+        {userId && (
+          <YourPatterns
+            userId={userId}
+            lastPeriodStart={cycleData.lastPeriodStart}
+            cycleLengthDays={cycleData.cycleLengthDays}
+            isNonCycling={!!isNonCycling}
+            lifeStage={cycleData.lifeStage}
+            onLogFeeling={() => onLogFeeling?.()}
+          />
+        )}
+
+        {/* Tiles */}
+        {userId && (
+          <div className={`grid gap-[14px] ${headsupVisible ? "grid-cols-2" : "grid-cols-1"}`}>
+            <button type="button" onClick={() => setShowMemory(true)}
+              className="flex flex-col items-center gap-2 rounded-[22px] border border-border bg-card px-3 py-5 text-sm font-semibold text-foreground">
+              <Database className="h-5 w-5 text-[#0B7479]" aria-hidden /> Your data
+            </button>
+            {headsupVisible && (
+              <button type="button" onClick={() => setShowPeople(true)}
+                className="flex flex-col items-center gap-2 rounded-[22px] border border-border bg-card px-3 py-5 text-sm font-semibold text-foreground">
+                <Users className="h-5 w-5 text-[#0B7479]" aria-hidden /> People
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Your trackers */}
+        <section className="pt-4">
+          <p className="mb-2 text-[13px] font-semibold text-[#6E675F]">Your trackers</p>
+          {editMode ? (
+            <>
+              <WidgetEditMode
+                widgets={widgets.filter(w => !GUIDANCE_IDS.has(w.id))}
+                onToggle={toggleWidget}
+                onRename={renameWidget}
+                onReorder={(next) => setWidgets([...widgets.filter(w => GUIDANCE_IDS.has(w.id)), ...next])}
+                onRemove={removeWidget}
+                onAddCustom={() => setShowAddWidget(true)}
+                onEditCustom={(w) => setEditingCustomWidget(w)}
+              />
+              <div className="mt-3 flex justify-center">
+                <Button size="sm" className="gap-1.5" onClick={async () => { await save(widgets); setEditMode(false); }}>
+                  <Check className="w-3.5 h-3.5" /> Done
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col gap-[14px]">
+              {trackerWidgets.map(w => (
+                <div className="w-full" key={w.id}>{renderWidget(w)}</div>
+              ))}
+              <button type="button" onClick={() => setEditMode(true)} className="self-center pt-2 text-sm font-medium text-[#0B7479]">
+                Choose trackers
+              </button>
+            </div>
+          )}
+        </section>
       </div>
 
-      {editMode ? (
-        <WidgetEditMode
-          widgets={widgets}
-          onToggle={toggleWidget}
-          onRename={renameWidget}
-          onReorder={setWidgets}
-          onRemove={removeWidget}
-          onAddCustom={() => setShowAddWidget(true)}
-          onEditCustom={(w) => setEditingCustomWidget(w)}
-        />
-      ) : (
-        <div className="flex flex-col items-center gap-7 px-4 sm:px-6 lg:px-8 w-full pt-1">
-          <div className="w-full max-w-3xl xl:max-w-5xl 2xl:max-w-6xl">
-            <div className="flex flex-col gap-5">
-              {visibleWidgets.map(w => (
-                <div className="w-full" key={w.id}>
-                  {renderWidget(w)}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      <Dialog open={showMemory} onOpenChange={setShowMemory}>
+        <DialogContent className="max-w-md rounded-[22px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Your data</DialogTitle></DialogHeader>
+          <MemorySection userId={userId} />
+        </DialogContent>
+      </Dialog>
+      {userId && headsupVisible && <PartnerHeadsupManage userId={userId} open={showPeople} onOpenChange={setShowPeople} />}
 
       {/* New cycle marker dialog */}
       <Dialog open={showMarker} onOpenChange={setShowMarker}>

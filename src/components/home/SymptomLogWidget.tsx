@@ -528,7 +528,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
         <div className="flex items-center gap-2.5">
           <Activity className="w-4 h-4 text-primary/70" />
           <div>
-            <span className="text-sm font-medium text-foreground/90">Log Symptoms</span>
+            <span className="text-sm font-medium text-foreground/90">Log symptoms</span>
             {todayCount > 0 && (
               <span className="ml-2 text-[10px] text-muted-foreground">
                 {todayCount} today{lastLogTime ? ` · last ${formatTime(lastLogTime)}` : ""}

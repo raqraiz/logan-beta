@@ -590,6 +590,13 @@ export function SettingsDialog({ open, onOpenChange, userEmail, userId, currentL
 
         <ReferralCard userId={userId} />
 
+        <div>
+          <Label className="text-sm font-medium mb-2 block">About Logan</Label>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Logan shares general information to help you understand your body. It isn't medical advice, and it can't diagnose or treat any condition. Check with your doctor before making health decisions. If something feels seriously wrong, get urgent care.
+          </p>
+        </div>
+
         {(onOpenFeedback || onSignOut) && (
           <div className="flex flex-col gap-2">
             {onOpenFeedback && (

@@ -33,13 +33,13 @@ const DEFAULT_WIDGETS: WidgetConfig[] = [
 
 export const DEFAULT_WIDGET_LABELS: Record<string, string> = {
   cycle_circle: "Cycle Circle",
-  nutrition_today: "Nutrition Today",
-  weight_trend: "Weight Trend",
+  nutrition_today: "Nutrition today",
+  weight_trend: "Weight trend",
   symptom_tracker: "Symptom Tracker",
   discharge_tracker: "Cervical Fluid Tracker",
-  symptom_history: "Symptom Patterns",
+  symptom_history: "Symptom patterns",
   cycle_correlations: "Cycle Correlations",
-  lab_results: "Lab Results",
+  lab_results: "Lab results",
   succeed_you: "Succeed Today — For You",
   succeed_him: "Succeed Today — For Him",
   dontmessup_you: "Don't Mess Up — For You",

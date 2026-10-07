@@ -7,11 +7,11 @@ import { NutritionHistoryDialog } from "./NutritionHistoryDialog";
 
 
 const COLORS = {
-  border: "border-l-orange-500",
-  bgGradient: "from-orange-500/10 via-orange-500/5 to-transparent",
-  iconBg: "bg-orange-500/15",
-  iconColor: "text-orange-400",
-  labelColor: "text-orange-400/80",
+  border: "",
+  bgGradient: "",
+  iconBg: "bg-secondary",
+  iconColor: "text-[#0B7479]",
+  labelColor: "text-foreground",
 };
 
 interface Props { userId: string }
@@ -61,9 +61,8 @@ export function NutritionTodayWidget({ userId }: Props) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className={`w-full text-left rounded-2xl border border-border/40 ${COLORS.border} border-l-[3px] bg-card overflow-hidden relative transition-opacity active:opacity-90`}
+        className={`w-full text-left rounded-[22px] border border-border bg-card overflow-hidden relative transition-opacity active:opacity-90`}
       >
-        <div className={`absolute inset-0 bg-gradient-to-br ${COLORS.bgGradient} pointer-events-none`} />
         <div className="relative px-5 py-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2.5">
@@ -71,7 +70,7 @@ export function NutritionTodayWidget({ userId }: Props) {
                 <Apple className={`w-4 h-4 ${COLORS.iconColor}`} />
               </div>
               <span className={`text-[10px] font-semibold uppercase tracking-widest ${COLORS.labelColor}`}>
-                Nutrition Today
+                Nutrition today
               </span>
             </div>
             <ChevronRight className="w-4 h-4 text-muted-foreground/60" />
@@ -104,9 +103,9 @@ export function NutritionTodayWidget({ userId }: Props) {
                   : totals.count > 0 ? `${totals.count} meal${totals.count > 1 ? "s" : ""} logged` : "Tap to set a target & log meals"}
               </p>
               <div className="space-y-1">
-                <MiniBar label="Protein" value={totals.p} target={target.p} color="bg-rose-500" />
-                <MiniBar label="Carbs" value={totals.c} target={target.c} color="bg-amber-500" />
-                <MiniBar label="Fat" value={totals.f} target={target.f} color="bg-sky-500" />
+                <MiniBar label="Protein" value={totals.p} target={target.p} color="bg-[#0E8A8F]" />
+                <MiniBar label="Carbs" value={totals.c} target={target.c} color="bg-[#0E8A8F]" />
+                <MiniBar label="Fat" value={totals.f} target={target.f} color="bg-[#0E8A8F]" />
               </div>
             </div>
           </div>

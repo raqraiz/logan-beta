@@ -25,11 +25,11 @@ interface Marker {
 }
 
 const COLORS = {
-  border: "border-l-teal-500",
-  bgGradient: "from-teal-500/10 via-teal-500/5 to-transparent",
-  iconBg: "bg-teal-500/15",
-  iconColor: "text-teal-400",
-  labelColor: "text-teal-400/80",
+  border: "",
+  bgGradient: "",
+  iconBg: "bg-secondary",
+  iconColor: "text-[#0B7479]",
+  labelColor: "text-foreground",
 };
 
 export function LabResultsWidget({ userId }: LabResultsWidgetProps) {
@@ -77,9 +77,8 @@ export function LabResultsWidget({ userId }: LabResultsWidgetProps) {
     <>
       <button
         onClick={() => setShowHistory(true)}
-        className={`w-full text-left rounded-2xl border border-border/40 ${COLORS.border} border-l-[3px] bg-card overflow-hidden relative transition-opacity active:opacity-90`}
+        className={`w-full text-left rounded-[22px] border border-border bg-card overflow-hidden relative transition-opacity active:opacity-90`}
       >
-        <div className={`absolute inset-0 bg-gradient-to-br ${COLORS.bgGradient} pointer-events-none`} />
         <div className="relative px-5 py-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2.5">
@@ -87,7 +86,7 @@ export function LabResultsWidget({ userId }: LabResultsWidgetProps) {
                 <FlaskConical className={`w-4 h-4 ${COLORS.iconColor}`} />
               </div>
               <span className={`text-[10px] font-semibold uppercase tracking-widest ${COLORS.labelColor}`}>
-                Lab Results
+                Lab results
               </span>
             </div>
             <ChevronRight className="w-4 h-4 text-muted-foreground/60" />

@@ -7,11 +7,11 @@ import { kgToLbs } from "@/lib/nutrition";
 import { WeightDetailDialog } from "./WeightDetailDialog";
 
 const COLORS = {
-  border: "border-l-indigo-500",
-  bgGradient: "from-indigo-500/10 via-indigo-500/5 to-transparent",
-  iconBg: "bg-indigo-500/15",
-  iconColor: "text-indigo-400",
-  labelColor: "text-indigo-400/80",
+  border: "",
+  bgGradient: "",
+  iconBg: "bg-secondary",
+  iconColor: "text-[#0B7479]",
+  labelColor: "text-foreground",
 };
 
 interface Log { id: string; weight_kg: number; logged_on: string }
@@ -56,9 +56,8 @@ export function WeightTrendWidget({ userId }: Props) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className={`w-full text-left rounded-2xl border border-border/40 ${COLORS.border} border-l-[3px] bg-card overflow-hidden relative transition-opacity active:opacity-90`}
+        className={`w-full text-left rounded-[22px] border border-border bg-card overflow-hidden relative transition-opacity active:opacity-90`}
       >
-        <div className={`absolute inset-0 bg-gradient-to-br ${COLORS.bgGradient} pointer-events-none`} />
         <div className="relative px-5 py-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2.5">
@@ -66,7 +65,7 @@ export function WeightTrendWidget({ userId }: Props) {
                 <Scale className={`w-4 h-4 ${COLORS.iconColor}`} />
               </div>
               <span className={`text-[10px] font-semibold uppercase tracking-widest ${COLORS.labelColor}`}>
-                Weight Trend
+                Weight trend
               </span>
             </div>
             <div className="flex items-center gap-2">

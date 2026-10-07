@@ -82,7 +82,7 @@ export function SymptomPieChart({ logs, compact = false }: SymptomPieChartProps)
           className="text-[11px] font-semibold uppercase tracking-widest text-foreground/70"
           style={{ fontFamily: "'Quicksand', sans-serif" }}
         >
-          Symptom Breakdown
+          Symptom breakdown
         </h4>
         <span className="text-[10px] text-muted-foreground">
           {sortedLength} symptom{sortedLength === 1 ? "" : "s"} · {totalEntries} log{totalEntries === 1 ? "" : "s"}
