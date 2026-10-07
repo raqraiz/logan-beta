@@ -144,13 +144,14 @@ export function WhenWomenFeelCard({ c, mine, loggedDays, hasCycle }: { c: Commun
   const max = Math.max(...v, 0.0001);
   const busy = busiestWindow(row, len);
   let caption: string | null = busy ? `Most women feel it on days ${busy.from} to ${busy.to}.` : null;
-  if (!mine && loggedDays.length > 0) caption = "Pink dots are the days you logged it. A few more cycles and I'll know your usual days.";
+  if (!mine && loggedDays.length > 0) caption = "Pink dots below are the days you logged it. A few more cycles and I'll know your usual days.";
   if (mine && busy) {
     const mid = (mine.from + mine.to) / 2;
     const tail = mid >= busy.from && mid <= busy.to ? "Right in the middle of everyone." : mid > busy.to ? "A little later than most women." : "Earlier than most women.";
-    caption = `The pink dot is when you usually feel it. ${tail}`;
+    caption = `The pink dot below is when you usually feel it. ${tail}`;
   }
   const COL = 9, GAP = 2, H = 89, TOP = 14;
+  const DOT_Y = TOP + H + 8;
   const W = len * COL + (len - 1) * GAP;
   const x = (d: number) => (d - 1) * (COL + GAP);
   const usual = mine ? Math.min(len, Math.round((mine.from + mine.to) / 2)) : null;
