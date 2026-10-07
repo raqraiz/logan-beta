@@ -51,13 +51,14 @@ interface Props {
   mine: Set<string>;
   cats: Map<string, TogetherCategory>;
   cycleDay?: number;
+  cycleLength?: number;
   hasCycle: boolean;
   onOpenSymptom: (name: string) => void;
   /** Shown under the caption when her logs aren't counted yet. */
   notCounted?: React.ReactNode;
 }
 
-export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymptom, notCounted }: Props) {
+export function TogetherBoard({ rows, mine, cats, cycleDay, cycleLength, hasCycle, onOpenSymptom, notCounted }: Props) {
   const [view, setView] = useState<"field" | "list">("field");
   const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
   useEffect(() => { setHeadSlot(document.getElementById("together-head-slot")); }, []);
@@ -78,53 +79,75 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymp
   }, [field, mine]);
   const max = Math.max(10, ...field.map((r) => r.women_count ?? 0));
 
-  const listSource = listPill === "week" ? weekRows : rows.filter((r) => r.filter === "stage");
-  const common = listSource.filter(isExact).sort((a, b) => b.women_count! - a.women_count!);
+  const len = cycleLength && cycleLength >= 20 && cycleLength <= 60 ? cycleLength : 28;
+  const wrap = (d: number) => ((((d - 1) % len) + len) % len) + 1;
+  const lo = wrap((cycleDay ?? 1) - 3), hi = wrap((cycleDay ?? 1) + 3);
+  const stageRows = rows.filter((r) => r.filter === "stage");
+  const topExact = (src: AggRow[]) => src.filter(isExact).sort((a, b) => b.women_count! - a.women_count!);
+  const listSource = listPill === "week" ? weekRows : stageRows;
+  const common = topExact(listSource);
   const rare = listSource.filter((r) => !isExact(r)).sort((a, b) => a.symptom.localeCompare(b.symptom));
+  const cardTop = topExact(showWeek ? weekRows : stageRows).slice(0, 3);
 
-  const Row = ({ r, rareRow }: { r: AggRow; rareRow?: boolean }) => {
+  const Row = ({ r, top, rareRow }: { r: AggRow; top: number; rareRow?: boolean }) => {
     const safety = isSafetySymptom(r.symptom);
     const def = rareRow || safety ? knownSymptomDefinition(r.symptom) : null;
     const expandable = !!def || safety;
     const k = `${listPill}:${r.symptom}`;
+    const exact = isExact(r);
     return (
-      <li className="border-b border-border py-3 last:border-0">
-        <div className="flex items-center justify-between gap-3">
-          <button type="button" onClick={() => onOpenSymptom(r.symptom)} className="flex items-baseline gap-2 text-left text-[15px] font-semibold text-foreground">
-            {display(r.symptom)}
-            {mine.has(key(r.symptom)) && <span className="text-xs font-semibold text-[#C4247A]">You too</span>}
+      <li className="border-b border-[#EEE9DF] py-3 last:border-0 dark:border-border">
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={() => onOpenSymptom(r.symptom)} className="min-w-0 flex-1 text-left">
+            <span className="flex flex-wrap items-center gap-2 text-base font-semibold text-foreground">
+              {display(r.symptom)}
+              {mine.has(key(r.symptom)) && <span className="rounded-full bg-[rgba(196,36,122,0.10)] px-2 py-0.5 text-[11px] font-semibold text-[#C4247A]">You too</span>}
+            </span>
+            {exact && <span aria-hidden className="mt-1.5 block h-1 rounded-sm bg-[#EEE9DF] dark:bg-muted">
+              <span className="block h-1 rounded-sm bg-[#0E8A8F]" style={{ width: `${Math.max(4, Math.round(((r.women_count ?? 0) / Math.max(1, top)) * 100))}%` }} />
+            </span>}
           </button>
-          <span className="shrink-0 text-sm text-muted-foreground">{countLabel(r)}</span>
+          <span className="min-w-[34px] shrink-0 whitespace-nowrap text-right text-[13px] font-semibold text-[#6E675F] dark:text-muted-foreground">{countLabel(r)}</span>
         </div>
         {expandable && (open === k ? (
           <div className="mt-1 text-sm text-muted-foreground">
             {def && <p>{def}</p>}
             {safety && <SafetyCallout className="mt-2" />}
-            <button type="button" onClick={() => setOpen(null)} className="mt-1 text-xs font-semibold text-foreground">Less ⌃</button>
+            <button type="button" onClick={() => setOpen(null)} className="mt-1 text-[13px] font-semibold text-foreground">Less ⌃</button>
           </div>
         ) : (
-          <button type="button" onClick={() => setOpen(k)} className="mt-1 text-xs font-semibold text-foreground">What's this? ⌄</button>
+          <button type="button" onClick={() => setOpen(k)} className="mt-1 text-[13px] font-semibold text-foreground">What's this? ⌄</button>
         ))}
       </li>
     );
   };
 
+  const CARD = "rounded-[24px] bg-card px-[18px] py-1";
+  const toggle = headSlot && createPortal(
+    <button type="button" aria-label={view === "field" ? "See all as a list" : "Back to bubbles"} onClick={() => setView(view === "field" ? "list" : "field")}
+      className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-foreground">
+      {view === "field" ? <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+        <path d="M9 6h11M9 12h11M9 18h11" /><circle cx="4.5" cy="6" r="1" /><circle cx="4.5" cy="12" r="1" /><circle cx="4.5" cy="18" r="1" />
+      </svg> : <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth={2}>
+        <circle cx="8" cy="9" r="4.5" /><circle cx="16.5" cy="8" r="3" /><circle cx="14" cy="17" r="3.5" />
+      </svg>}
+    </button>, headSlot);
+
   if (view === "list") {
-    const lo = Math.max(1, (cycleDay ?? 1) - 3), hi = (cycleDay ?? 1) + 3;
     return (
       <div className="flex flex-col gap-4">
-        <button type="button" onClick={() => setView("field")} className="self-start text-sm font-semibold text-foreground underline">‹ Back to bubbles</button>
+        {toggle}
         <PillRow>
           {showWeek && <Pill active={listPill === "week"} onClick={() => setListPill("week")}>Common in your week</Pill>}
           <Pill active={listPill === "stage"} onClick={() => setListPill("stage")}>Women in your stage</Pill>
         </PillRow>
-        {listPill === "week" && <p className="text-sm text-muted-foreground">What women log most around day {lo} to {hi}</p>}
-        {common.length > 0 && <ul className="rounded-[22px] border border-border bg-card px-4">{common.map((r) => <Row key={r.symptom} r={r} />)}</ul>}
+        {listPill === "week" && <p className="text-[13px] text-[#6E675F] dark:text-muted-foreground">What women log most around day {lo} to {hi}</p>}
+        {common.length > 0 && <ul className={CARD}>{common.map((r) => <Row key={r.symptom} r={r} top={common[0].women_count ?? 1} />)}</ul>}
         {rare.length > 0 && (
           <section className="flex flex-col gap-2">
-            <h2 className="font-heading text-2xl font-semibold text-foreground">Is this just me?</h2>
-            <p className="text-sm text-muted-foreground">No. Rarer, and just as real.</p>
-            <ul className="rounded-[22px] border border-border bg-card px-4">{rare.map((r) => <Row key={r.symptom} r={r} rareRow />)}</ul>
+            <h2 className="font-sans text-[15px] font-bold text-foreground">Is this just me?</h2>
+            <p className="text-[13px] text-[#6E675F] dark:text-muted-foreground">No. Rarer, and just as real.</p>
+            <ul className={CARD}>{rare.map((r) => <Row key={r.symptom} r={r} top={1} rareRow />)}</ul>
           </section>
         )}
         {common.length + rare.length < 3 && <p className="text-sm text-muted-foreground">{MORE}</p>}
@@ -134,13 +157,7 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymp
 
   return (
     <div className="flex flex-col gap-4">
-      {headSlot && createPortal(
-        <button type="button" aria-label="See all as a list" onClick={() => setView("list")}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-foreground">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
-            <path d="M9 6h11M9 12h11M9 18h11" /><circle cx="4.5" cy="6" r="1" /><circle cx="4.5" cy="12" r="1" /><circle cx="4.5" cy="18" r="1" />
-          </svg>
-        </button>, headSlot)}
+      {toggle}
       <p className="text-left text-base text-muted-foreground">{everyone.length} feelings, named by women like you.</p>
       <PillRow className="-mx-5 px-5">
         {CATEGORY_PILLS.map((p) => <Pill key={p.id} active={cat === p.id} onClick={() => setCat(p.id)}>{p.label}</Pill>)}
@@ -155,6 +172,13 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymp
         </span>
       </p>
       {notCounted}
+      <section className={CARD} aria-labelledby="together-around-days">
+        <h2 id="together-around-days" className="pb-1 pt-3 font-sans text-[15px] font-bold text-foreground">{showWeek ? `What women log around day ${lo} to ${hi}` : "What women in your stage log most"}</h2>
+        {cardTop.length ? <ul>
+          {cardTop.map((r) => <Row key={r.symptom} r={r} top={cardTop[0].women_count ?? 1} />)}
+          <li><button type="button" onClick={() => { setListPill(showWeek ? "week" : "stage"); setView("list"); }} className="w-full py-3 text-left text-[13px] font-semibold text-foreground">See all ›</button></li>
+        </ul> : <p className="pb-3 text-[13px] text-[#6E675F] dark:text-muted-foreground">Once more women share, you'll see what's common around your days.</p>}
+      </section>
       <button type="button" onClick={() => setView("list")} className="self-center text-sm font-semibold text-foreground underline">{field.length > shown.length ? `See all ${field.length} as a list ›` : "See all as a list ›"}</button>
     </div>
   );
