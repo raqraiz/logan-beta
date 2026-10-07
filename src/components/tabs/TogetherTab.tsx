@@ -8,6 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { TogetherBoard, BubbleSkeleton } from "@/components/together/TogetherBoard";
 import { PatternPage } from "@/components/you/PatternPage";
 import type { SymptomPageLog } from "@/lib/symptomPage";
+import { loadCycleStarts, withRealCycleDays, OWN_LOG_WINDOW_DAYS } from "@/lib/realCycleDays";
+import { computePatterns } from "@/components/you/YourPatterns";
 import { togetherDisplay, loadAliases } from "@/lib/symptomCatalog";
 import { AggRow, TogetherCategory, key, loadAggregates, loadCategories, sampleAggregates } from "@/lib/togetherData";
 import { loadTogether, markTogetherShown, setTogetherConsent, trackTogether, TOGETHER_BODY, TOGETHER_CHANGED } from "@/lib/together";
