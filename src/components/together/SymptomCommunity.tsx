@@ -144,6 +144,7 @@ export function WhenWomenFeelCard({ c, mine, loggedDays, hasCycle }: { c: Commun
   const max = Math.max(...v, 0.0001);
   const busy = busiestWindow(row, len);
   let caption: string | null = busy ? `Most women feel it on days ${busy.from} to ${busy.to}.` : null;
+  if (!mine && loggedDays.length > 0) caption = "Pink dots are the days you logged it. A few more cycles and I'll know your usual days.";
   if (mine && busy) {
     const mid = (mine.from + mine.to) / 2;
     const tail = mid >= busy.from && mid <= busy.to ? "Right in the middle of everyone." : mid > busy.to ? "A little later than most women." : "Earlier than most women.";
@@ -180,7 +181,11 @@ export function WhenWomenFeelCard({ c, mine, loggedDays, hasCycle }: { c: Commun
             const hot = val > 0 && busy && d >= busy.from && d <= busy.to;
             return <rect key={d} x={x(d)} y={TOP + H - h} width={COL} height={h} rx={3} fill={hot ? "#0E8A8F" : "#BDEBED"} />;
           })}
-          {usual && <circle cx={x(usual) + COL / 2} cy={4 + 4} r={4} fill="#FF2E92" />}
+          {usual
+            ? <circle cx={x(usual) + COL / 2} cy={8} r={4} fill="#FF2E92" />
+            : loggedDays.filter((d) => d >= 1 && d <= len).map((d) => (
+              <circle key={d} cx={x(d) + COL / 2} cy={8} r={3.5} fill="none" stroke="#FF2E92" strokeWidth={1.5} />
+            ))}
         </svg>
         <div className="relative mt-1 h-4 font-sans text-[11px] text-[#6E675F] dark:text-muted-foreground">
           <span className="absolute left-0">Day 1</span>

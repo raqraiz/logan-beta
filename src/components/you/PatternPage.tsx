@@ -160,7 +160,7 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
           {doctorAdvice && <p className="mt-4 text-sm font-light leading-relaxed text-muted-foreground">{doctorAdvice}</p>}
         </section>
 
-        <WhenWomenFeelCard c={community} mine={myWindow} hasCycle={!isNonCycling && (!!lastPeriodStart || sample)} />
+        <WhenWomenFeelCard c={community} mine={myWindow} loggedDays={realData.loggedDays} hasCycle={!isNonCycling && (!!lastPeriodStart || sample)} />
 
         <section className="mt-4 flex items-center justify-between gap-3 rounded-[22px] bg-card p-5">
           <h2 className="font-sans text-[13px] font-semibold tracking-normal text-muted-foreground">Why it happens</h2>
