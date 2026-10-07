@@ -101,10 +101,16 @@ Deno.serve(async (req) => {
     const { data: stageKey } = p ? await service.rpc("together_stage", { _life_stage: p.life_stage, _due: p.due_date, _lmp: p.pregnancy_lmp, _pp: p.postpartum_start_date }) : { data: null };
 
     const check = await moderate(symptom, text);
-    const decision = check?.decision ?? "review";
     const cleaned = dashes((check?.cleaned_text || text).trim()).slice(0, 160);
+    let decision = check?.decision ?? "review";
+    let kind = check?.kind ?? "other";
+    if (INSTRUCTION_RE.test(text)) { decision = "reject"; kind = "instruction"; }
+    else if (decision !== "reject" && check && tooBroken(cleaned)) { decision = "reject"; kind = "broken_after_cleaning"; }
     const status = decision === "approve" ? "approved" : decision === "reject" ? "rejected" : "pending";
-    const reason = status === "rejected" ? dashes(check?.reason || "This one can't be shared as it is. Try saying just what helped you.") : null;
+    const reason = status !== "rejected" ? null
+      : kind === "instruction" ? INSTRUCTION_REASON
+      : kind === "broken_after_cleaning" ? BROKEN_REASON
+      : dashes(check?.reason || "This one can't be shared as it is. Try saying just what helped you.");
     const row = { author_id: user.id, symptom, text: status === "rejected" ? text : cleaned, original_text: text, label: labelFor(p), stage_key: stageKey ?? null, status, reject_reason: reason, report_count: 0, needs_review: false, created_at: new Date().toISOString() };
 
     let saved;
