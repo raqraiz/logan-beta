@@ -150,7 +150,7 @@ export function WhenWomenFeelCard({ c, mine, loggedDays, hasCycle }: { c: Commun
     const tail = mid >= busy.from && mid <= busy.to ? "Right in the middle of everyone." : mid > busy.to ? "A little later than most women." : "Earlier than most women.";
     caption = `The pink dot below is when you usually feel it. ${tail}`;
   }
-  const COL = 9, GAP = 2, H = 89, TOP = 14;
+  const COL = 9, GAP = 2, H = 89, TOP = 2;
   const DOT_Y = TOP + H + 8;
   const W = len * COL + (len - 1) * GAP;
   const x = (d: number) => (d - 1) * (COL + GAP);
