@@ -8,11 +8,10 @@ import { AggRow, CATEGORY_PILLS, TogetherCategory, countLabel, display, isExact,
 
 function Pill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button type="button" onClick={onClick} aria-pressed={active} className="flex h-11 shrink-0 appearance-none items-center border-0 bg-transparent p-0 outline-none">
-      <span className={cn("flex h-9 items-center gap-1 whitespace-nowrap rounded-full border px-3.5 text-[13px]",
-        active ? "border-foreground bg-foreground font-semibold text-background" : "border-border bg-card font-medium text-foreground")}>
-        {children}
-      </span>
+    <button type="button" onClick={onClick} aria-pressed={active}
+      className={cn("relative flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-3.5 text-[13px] shadow-none after:absolute after:inset-x-0 after:-inset-y-1 after:content-['']",
+        active ? "border-[#23201C] bg-[#23201C] font-semibold text-background dark:border-foreground dark:bg-foreground" : "border-[#DDD7CC] bg-card font-medium text-foreground dark:border-border")}>
+      {active && <Check className="h-3.5 w-3.5" aria-hidden="true" />}{children}
     </button>
   );
 }
@@ -29,7 +28,7 @@ function PillRow({ className, children }: { className?: string; children: React.
   };
   useEffect(() => { update(); }, [children]);
   return (
-    <div ref={ref} onScroll={update} className={cn("flex gap-1.5 overflow-x-auto [scrollbar-width:none]", className)}
+    <div ref={ref} onScroll={update} className={cn("flex gap-1.5 overflow-x-auto py-1 [scrollbar-width:none]", className)}
       style={fade ? { maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK } : undefined}>
       {children}
     </div>
