@@ -1,40 +1,48 @@
-# One place for symptoms: Together
+# Together step 4: What helped other women
 
-Together becomes her only symptom library, logging screen and dashboard. The symptom page, list view, aliases and totals stay as they are.
+## What she sees
 
-## What gets removed
-- The Log symptoms sheet, everywhere it opens: Logan home "How I feel", symptom page "Log it now", You tab, and chat entry points. All of them now open Together in log mode.
-- "Your patterns" on the You tab. In its place goes one row card, "Your symptoms", listing her top 3 and "and N more". Tapping it opens Together on Mine.
-- The consent gate on viewing Together. Everyone can see it. Consent only decides whether her logs count in the totals.
+**Symptom page card** (ink, now tappable)
+- With tips: "What helped other women" + "[N] tips · top one helped [M] women". Opens the What helped page.
+- No tips: "No tips yet. Be the first to share what helped you." Opens the share screen.
 
-## Together field
-- A segmented switch next to the title: "Everyone" | "Mine". White track; the selected side is ink with ✓.
-- **Everyone:** works as it does now. If she hasn't joined, one quiet line under the caption: "Your logs aren't counted yet." with a "Count me in" link that opens the consent sheet.
-- **Mine:** only her symptoms. Bubble size is how often she logged each one in the last 90 days. No rings, and ★ before the ones she's watching. Subtitle "[N] things you've told me about." Caption: "Bigger bubbles are what you feel most. ★ You're watching these. Tap one to see your pattern." plus a "Choose what to watch" link that reuses the current chooser. Works whether she joined or not.
-- Tapping a bubble in either view opens the symptom page.
-- A floating ink pill, "+ Log how I feel", sits bottom right above the tab bar.
+**What helped page** (round back to the symptom page)
+- Cormorant title "What helped with [symptom]".
+- Pills: Most helpful (default), Women like me (same stage), Newest. Selected = ink with ✓. "Women like me" is dimmed when no tips from her stage exist.
+- White tip cards (radius 22): tip in curly quotes (Quicksand 16), then the author label, never a name. "♡ Helped me too · [N]" toggles to filled ♥ and back. "⋯" opens Report.
+- After every 3rd tip, a "LOGAN'S NOTE" card only when tips share a theme (see safety note below).
+- Ink button at the bottom: "Share what helped you".
 
-## Log mode (same screen)
-- Title "What are you feeling?" (Cormorant 28), "Logging for Today ⌄" under it (date picker: today and the past 7 days), "Cancel" top right.
-- Search field "Search or add your own", matching names and aliases. Each result has a hint: "Closest match", "You log this often", or the alias it matched. The last row is "+ Add "[text]" as your own". Under the field: "Your own words stay private. If 10 women use the same word, it joins Together." Below that, a small "Edit your words" link opens the existing rename and remove controls.
-- The bubble field shows her most logged symptoms first (bigger), then ones common around her cycle day (smaller), 14 at most.
-- Tapping a bubble fills it ink with paper text and ✓. A white card under the field lists her picks, each with "Mild · Moderate · Strong" (Mild preselected).
-- The bottom button reads "Pick what you feel" (sand, disabled) until something is picked, then "Log [N]" in ink. After saving, the screen goes back to the field and Logan posts "Logged. Thanks for telling me." in the chat.
-- "Log it now" on a symptom page opens log mode with that symptom already picked and placed in the center.
+**Share screen**
+- "What helped you?", "Your words could be what another woman needs tonight.", tag "For [symptom]", text box max 160 with counter.
+- Privacy lines as written, "Share anonymously" ink button, "Cancel" link.
+- After sending: "Thanks. It will appear once Logan has checked it."
+- Women who haven't joined Together see "Count me in" (consent sheet) instead of the share and vote actions. Reading is open to everyone.
 
-## Consent
-- **Onboarding:** a separate, unticked checkbox: "Add my logs, without my name, to what women see in Together." It saves to together_consent with a version and timestamp.
-- **Existing users:** Logan asks once in chat: "Want your logs to count in Together, without your name? It helps women see they're not alone." with "Count me in" and "Not now". It never asks again after either answer. This uses the existing "consent shown" timestamp, so nothing new is stored.
+**Report**: "Why are you reporting this?" with the four reasons. Hidden for her at once; 3 reports hide it for everyone until an admin reviews.
 
-## Approvals needed (protected areas)
-1. **Database and privacy:** the shared totals function currently returns data only to women who joined. Viewing without joining means letting every signed-in woman read the totals. They are already thresholded, with no names and nothing under 3 women. I'll change only that check. Whether her logs count still follows her consent.
-2. **Consent:** adding the onboarding checkbox changes the consent screen.
-3. **Time window:** Mine sizes bubbles by her last 90 days, as you wrote. Her symptom page stats stay on the 12 months you approved earlier. Say if you want Mine on 12 months too.
+**Admin**: new "Tips" queue in the back office with Approve / Remove, totals only, no author names.
+
+## Moderation
+Every tip goes through an AI check before it can show: strips names, links, contact details and medicine doses; rejects harmful, diagnostic, promotional or unsafe tips. Tips about a safety-list symptom are rejected with a kind note to see a doctor. Result: approved (live), pending (admin queue) or rejected (she sees a gentle reason).
+
+## Data (needs your approval: database change)
+- `together_tips`: symptom (canonical name), text, author id (never returned to others), author label, status, report count, created at.
+- `together_tip_votes`: one per woman per tip.
+- `together_tip_reports`: reason, reporter.
+- Row security: she creates and deletes her own tips, votes once per tip. Others read approved tips only through a secure function that returns text, label, vote count and "voted by me", never author or voter ids. Only Together-joined women can share or vote (checked on the server).
+- "Delete all memory" and account deletion remove her tips, votes and reports.
+- Analytics: tip_shared, tip_helped, tip_reported, respecting analytics consent; no tip text in events.
+
+## Decisions to confirm
+1. **Author labels**: only stage labels exist today ("Someone in her luteal week", "Someone in perimenopause", "Someone postpartum"). "Someone with PMOS" needs a new "show this on my tips" choice that doesn't exist yet. Plan: stage labels now, condition labels later.
+2. **Logan's note wording**: project rules say never name medication or dosage. Your magnesium example names a supplement. Plan: notes are fixed, reviewed lines per theme (for example "Several tips mention supplements. Check with your doctor first if you take other medication."), never naming a specific product, and never AI-written live.
+3. **Rejected tips**: she sees a short kind reason and can edit and resend. Rejected text is deleted after 30 days.
 
 ## Technical details
-- New `TogetherMode` state in TogetherTab: `everyone | mine | log`, opened from a `logan:open-together-log` event that carries an optional preselected symptom. It replaces every `SymptomLogWidget` sheet opener (Chat.tsx, HomeTab, PatternPage onLog).
-- Mine bubbles reuse BubbleCluster with rows built client-side from her own logs (canonicalSymptom grouping) and the magenta rings turned off.
-- Log mode reuses the search, alias and "Your words" logic pulled out of SymptomLogWidget into a hook. The insert keeps the current severity scale (Mild 1, Moderate 3, Strong 5), then reads back the saved row and posts the chat message.
-- Migration: relax the consent check in `get_together_aggregates()` to authenticated users. Aggregation still counts only consenting women.
-- AGENTS.md gets one rule: Together is the only symptom logging surface.
-- Checks: tsgo, vitest, and Playwright at 390px for both views, log mode and the consent prompt.
+- Edge function `together-tip-submit`: validates, checks consent, runs moderation through Lovable AI (default chat model, strict JSON schema output, streamed), writes the row with the resulting status. Safety list reused from the existing safety matcher.
+- Edge function or RPC for report (increments count, auto-hides at 3) and admin approve/remove (has_role admin/super_admin).
+- RPC `get_together_tips(symptom, sort, stage)` security definer; symptom matched through together_canonical().
+- New components: WhatHelpedPage, ShareTipPage, TipReportSheet, admin TipsQueue; PatternPage card wired to them.
+- AGENTS.md: one rule for the tips tables and the read-only-through-RPC pattern (inside the LOVABLE marker block).
+- Tests: moderation schema parse, vote toggle, label helper, deletion coverage; Playwright check at 390px.
