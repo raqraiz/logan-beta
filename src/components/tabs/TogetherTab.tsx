@@ -121,7 +121,7 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
 
   if (page) {
     return (
-      <PatternPage userId={userId} pattern={{ name: page, from: null, to: null, cycles: 0, count: 0 }} logs={logs}
+      <PatternPage userId={userId} pattern={computePatterns(logs).find((p) => key(p.name) === key(page)) ? { ...computePatterns(logs).find((p) => key(p.name) === key(page))!, name: page } : { name: page, from: null, to: null, cycles: 0, count: 0 }} logs={logs}
         watched={watch.some((w) => key(w) === key(page))} lastPeriodStart={lastPeriodStart} isNonCycling={isNonCycling}
         onClose={() => setPage(null)} onLog={(s) => { setPage(null); onLogFeeling(s); }} onChanged={() => {}} sample={sample}
         onUnstar={async () => {
