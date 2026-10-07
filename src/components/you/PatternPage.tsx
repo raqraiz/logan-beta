@@ -37,8 +37,11 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
   const { name, from, to } = pattern;
   const lower = name.toLowerCase();
   const definition = symptomDefinition(name);
-  const demo = sample ? sampleSymptomDetail(name) : null;
-  const data = symptomPageData(demo ? demo.logs : logs, name, isNonCycling ? undefined : lastPeriodStart);
+  const demoRaw = sample ? sampleSymptomDetail(name) : null;
+  const realData = symptomPageData(logs, name, isNonCycling ? undefined : lastPeriodStart);
+  // Sample preview never replaces her real logs: sample logs only for symptoms she has none of.
+  const demo = demoRaw && realData.count === 0 ? demoRaw : null;
+  const data = demo ? symptomPageData(demo.logs, name, isNonCycling ? undefined : lastPeriodStart) : realData;
   const timing = !isNonCycling && from !== null && to !== null;
   const community = useSymptomCommunity(userId, name, sample);
   const myWindow = data.count < 2 || isNonCycling ? null : demo ? demo.window : timing ? { from: from as number, to: to as number } : null;
@@ -107,11 +110,11 @@ export function PatternPage({ userId, pattern, logs, watched, lastPeriodStart, i
       <div className="mx-auto max-w-lg px-5 pt-5 pb-[calc(120px+env(safe-area-inset-bottom))]">
         <Button variant="outline" size="icon" onClick={onClose} aria-label="Go back" className="h-11 w-11 rounded-full text-foreground shadow-none"><ArrowLeft /></Button>
         <div className="mt-6 flex items-center gap-4">
+          <CommonRing c={community} sheLogged={data.count > 0} />
           <div className="min-w-0 flex-1">
-            <h1 className="break-words font-display text-[44px] font-semibold leading-[44px] tracking-normal text-foreground">{name}</h1>
+            <h1 className={`break-words font-display ${name.length > 12 ? "text-[36px] leading-[38px]" : "text-[44px] leading-[44px]"} font-semibold tracking-normal text-foreground`}>{name}</h1>
             <p className="mt-2 font-sans text-sm text-[#6E675F] dark:text-muted-foreground">{sub}</p>
           </div>
-          <CommonRing c={community} sheLogged={data.count > 0} />
         </div>
         {watched && <p className="symptom-watch mt-2 text-sm font-semibold">★ You're watching this</p>}
 

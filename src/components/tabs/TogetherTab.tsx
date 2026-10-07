@@ -156,7 +156,7 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, o
             <div id="together-head-slot" />
           </div>
         </div>
-        {demo ? board(demo.rows, demo.mine, demo.cats) : joined && aggError ? (
+        {demo ? board(demo.rows, new Set([...demo.mine, ...mine]), demo.cats) : joined && aggError ? (
           <div className="flex flex-col items-center gap-3">
             <p className="text-base text-muted-foreground">Couldn't load Together right now. Try again?</p>
             <button type="button" onClick={() => setRetry((n) => n + 1)} className="rounded-full bg-foreground px-6 py-3 text-sm font-semibold text-background">Try again</button>
