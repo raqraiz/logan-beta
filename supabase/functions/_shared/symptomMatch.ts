@@ -19,7 +19,12 @@ export function buildCatalog(aliases: AliasRow[], mainNames: string[] = []): Map
   return m;
 }
 
-const NEG_BEFORE = /\b(no|not|never|without|nor|zero|free of|isn'?t|wasn'?t|don'?t have|didn'?t have|no more)\b[^.!?,;]{0,25}$/i;
+const NEG_BEFORE = /\b(no|not|never|without|nor|zero|free of|isn'?t|wasn'?t|don'?t have|didn'?t have|no more)\b[^.!?;]*$/i;
+const CONTRAST = /^.*\b(but|though|however|yet|still|except)\b/i;
+function negated(before: string): boolean {
+  const tail = before.replace(CONTRAST, "");
+  return NEG_BEFORE.test(tail);
+}
 
 /** Symptoms named in the text, canonical main names, longest phrase first, negated mentions skipped. */
 export function matchSymptoms(text: string, catalog: Map<string, string>): string[] {
@@ -35,7 +40,7 @@ export function matchSymptoms(text: string, catalog: Map<string, string>): strin
       const end = start + mm[2].length;
       if (taken.some(([a, b]) => start < b && end > a)) continue;
       taken.push([start, end]);
-      if (NEG_BEFORE.test(low.slice(Math.max(0, start - 40), start))) continue;
+      if (negated(low.slice(Math.max(0, start - 50), start))) continue;
       const main = catalog.get(k)!;
       if (!out.includes(main)) out.push(main);
     }
