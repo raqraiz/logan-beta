@@ -1,9 +1,9 @@
 # Roadmap
 
 ## Your data page
-- [ ] Replace the You tile dialog with the full Your data page and three views.
-- [ ] Reuse cycle analytics, pattern rows, memory controls, and existing fact/tracker settings.
-- [ ] Verify navigation, empty states, light/dark themes, and memory confirmation without deleting real data.
+- [x] Replace the You tile dialog with the full Your data page and three views.
+- [x] Reuse cycle analytics, pattern rows, memory controls, and existing fact/tracker settings.
+- [x] Verify navigation, empty states, light/dark themes, and memory confirmation without deleting real data.
 
 - [x] Inline severity sliders under selected symptom chips
   - [x] Remove standalone Severity section
