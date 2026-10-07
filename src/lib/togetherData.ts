@@ -65,3 +65,30 @@ export function sampleAggregates(): { rows: AggRow[]; mine: Set<string>; cats: M
   list.forEach(([s, , c]) => c && cats.set(s, c));
   return { rows, mine: new Set(["bloating", "brain fog"]), cats };
 }
+
+/** Admin preview only: sample day shares and her sample usual days for one symptom. Never real data. */
+export function sampleSymptomDetail(name: string, cycleLength = 28) {
+  const base = sampleAggregates();
+  const k = key(name);
+  const idx = Math.max(0, base.rows.findIndex((r) => r.filter === "everyone" && key(r.symptom) === k));
+  const peak = 3 + ((idx * 5) % (cycleLength - 6));
+  const shares = (p: number) => {
+    const out: Record<string, number> = {};
+    for (let d = 1; d <= cycleLength; d++) out[String(d)] = Math.round(1000 * Math.exp(-((d - p) ** 2) / 8)) / 1000;
+    return out;
+  };
+  const noStage = idx % 4 === 3; // some symptoms show "Not enough women in your stage yet."
+  const found = base.rows.filter((r) => key(r.symptom) === k && r.filter !== "cycle_day");
+  const rows = (found.length ? found : [
+    { filter: "everyone", symptom: k, women_band: "exact" as const, women_count: 24 },
+    { filter: "stage", symptom: k, women_band: "exact" as const, women_count: 15 },
+  ]).map((r) => ({ ...r, day_shares: r.filter === "stage" ? (noStage ? null : shares(peak + 1)) : shares(peak) }));
+  const from = Math.min(cycleLength - 2, peak + 3);
+  const window = { from, to: from + 2 };
+  const now = Date.now();
+  const logs = [0, 1, 2].map((c) => ({
+    logged_at: new Date(now - (c * cycleLength + 2) * 86400000).toISOString(),
+    cycle_day: from + (c % 2), symptoms: [{ name: k, severity: 3 }], notes: null,
+  }));
+  return { rows, window, logs };
+}
