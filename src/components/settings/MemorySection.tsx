@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { PATTERNS_CHANGED } from "@/lib/patternCycles";
+import { EditMemoryPage, usedForFact } from "@/components/you/EditMemoryPage";
 import { toast } from "sonner";
 
 interface Note { id: string; note: string; source: string; created_at: string }
@@ -28,18 +27,29 @@ export function MemorySection({ userId, view = "all", refresh = 0, hideEmpty = f
     if (error || readError || remaining?.length) { toast.error("That didn't save. Try again."); return; }
     setNotes((n) => n.filter((x) => x.id !== id)); if (pattern) globalThis.dispatchEvent(new Event(PATTERNS_CHANGED));
   };
-  const save = async () => {
-    if (!edit || !userId || !draft.trim()) return;
+  const save = async (text?: string) => {
+    const value = (text ?? draft).trim();
+    if (!edit || !userId || !value) return false;
     setBusy(true);
-    const { error } = await supabase.from("user_memory_notes").update({ note: draft.trim() }).eq("id", edit.id).eq("user_id", userId);
+    const { error } = await supabase.from("user_memory_notes").update({ note: value }).eq("id", edit.id).eq("user_id", userId);
     const { data, error: readError } = await supabase.from("user_memory_notes").select("note").eq("id", edit.id).eq("user_id", userId).maybeSingle();
     setBusy(false);
-    if (error || readError || data?.note !== draft.trim()) { toast.error("That didn't save. Try again."); return; }
-    setEdit(null); await load(); globalThis.dispatchEvent(new Event(PATTERNS_CHANGED));
+    if (error || readError || data?.note !== value) { toast.error("That didn't save. Try again."); return false; }
+    setEdit(null); await load(); globalThis.dispatchEvent(new Event(PATTERNS_CHANGED)); return true;
+  };
+  // Forget = delete + an inactive "forgotten" tombstone (never read by AI prompts) so the fact is not re-learned.
+  const forget = async (n: Note) => {
+    if (!userId) return false;
+    const tomb = await supabase.from("user_memory_notes").insert({ user_id: userId, note: n.note, source: "forgotten", active: false });
+    if (tomb.error) { toast.error("That didn't save. Try again."); return false; }
+    const before = notes.length; await remove(n.id, true);
+    const { data } = await supabase.from("user_memory_notes").select("id").eq("id", n.id);
+    if (data?.length) return false;
+    void before; setEdit(null); toast("Forgotten."); return true;
   };
   const hidden = notes.filter((n) => n.source === "pattern_hidden");
   const rest = notes.filter((n) => n.source !== "pattern_hidden");
-  const source = (n: Note) => n.source === "onboarding" ? "From onboarding" : `From chat, ${new Date(n.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`;
+  const source = (n: Note) => n.source === "onboarding" ? "You told me when we met" : `You told me in chat on ${new Date(n.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`;
   return <div className="space-y-5" data-private>
     {loading ? <p className="text-sm text-muted-foreground" role="status">Gathering what you've shared.</p> : error ? <p className="text-sm text-muted-foreground">I couldn't load your memories. <Button variant="link" onClick={load}>Try again</Button></p> : <>
       {view !== "hidden" && <section>
@@ -55,6 +65,6 @@ export function MemorySection({ userId, view = "all", refresh = 0, hideEmpty = f
         {hidden.length === 0 ? <p className="p-5 text-sm text-muted-foreground">Nothing hidden. You're in charge of what stays.</p> : hidden.map((n) => <div key={n.id} className="flex items-center justify-between gap-3 border-b border-border px-5 py-3 last:border-0"><span className="text-sm">{n.note.match(/^(.+?) isn't a pattern for you/)?.[1] ?? n.note}</span><Button variant="link" className="symptom-watch shrink-0 px-0 underline" onClick={() => remove(n.id, true)}>Bring back</Button></div>)}
       </div></section>}
     </>}
-    <Dialog open={!!edit} onOpenChange={(open) => !open && setEdit(null)}><DialogContent className="rounded-[22px]"><DialogHeader><DialogTitle className="font-display text-3xl">Edit this fact</DialogTitle></DialogHeader><Input aria-label="Remembered fact" value={draft} onChange={(e) => setDraft(e.target.value)} /><div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setEdit(null)}>Cancel</Button><Button variant="outline" disabled={busy || !draft.trim()} onClick={save}>Save</Button></div></DialogContent></Dialog>
+    {edit && <EditMemoryPage value={edit.note} source={source(edit)} usedFor={usedForFact("", edit.note)} onClose={() => setEdit(null)} onSave={async (t) => { setDraft(t); return save(t); }} onForget={() => forget(edit)} />}
   </div>;
 }
