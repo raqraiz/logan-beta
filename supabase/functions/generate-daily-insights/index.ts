@@ -172,10 +172,12 @@ serve(async (req) => {
 
     const { data: bcRow } = await service
       .from("participants")
-      .select("birth_control_method, on_hormonal_bc, birth_control_status, cycle_anchor_type")
+      .select("birth_control_method, on_hormonal_bc, birth_control_status, cycle_anchor_type, watch_symptoms")
       .eq("user_id", userId)
       .maybeSingle();
-    const bcRule = buildBcMethodRule(bcRow as any) + anchorPromptRule(currentCycleAnchorType(bcRow)) + CALM_VOICE_RULE;
+    const watch = ((bcRow as any)?.watch_symptoms ?? []) as string[];
+    const bcRule = buildBcMethodRule(bcRow as any) + anchorPromptRule(currentCycleAnchorType(bcRow)) + CALM_VOICE_RULE
+      + (watch.length ? `\n\nSHE CHOSE TO WATCH: ${watch.join(", ")}. When today's tips can relate to these, prioritise them.\n` : "");
 
     // Recent symptoms (last 21 days) with freshness so the model can hedge.
     const since = new Date(Date.now() - 21 * 86400000).toISOString();

@@ -5897,7 +5897,7 @@ ${phaseAuthorityBlock}
 GENERIC DAY RANGES ARE ALLOWED: Educational statements about general biological patterns may use their own day numbers and ranges (e.g. "milk supply usually peaks between Day 2 and Day 4 postpartum", "this typically settles by Day 3 or 4"). These describe what is typical for people in general, not a claim about where she is — keep them clearly generic ("usually", "typically", "for most people") and never let them restate or override her authoritative day. Never collapse a range into two identical numbers: if both endpoints would come out the same, drop the range framing entirely and describe the timing in words without day numbers.
 
 - Age: ${age || "unknown"}
-- Anchor symptom (most disruptive): ${participant.anchor_symptom || "not specified"}
+- Anchor symptom (most disruptive): ${participant.anchor_symptom || "not specified"}${(participant.watch_symptoms?.length ? `\n- She chose to watch: ${participant.watch_symptoms.join(", ")}. Prioritise these in tips and check-in questions when relevant to today.` : "")}
 - Typical symptoms: ${participant.typical_symptoms?.join(", ") || "not specified"}
 ${topics ? `- Focus areas: ${topics}. Weave relevant tips from these areas into responses when naturally fitting.` : ""}${cycleHistoryContext}${symptomContext}${lengthGuidance}${dualStateContext}
 

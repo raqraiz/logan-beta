@@ -23,3 +23,4 @@ Auth (sign-in, callbacks, roles, has_role), DB (migrations, RLS, grants, trigger
 - Partner daily tips live in daily_home_insights.succeed_partner_text / dont_mess_up_partner_text (*_him_text deprecated, never write); Home picks relationship 'partner' first.
 - Every write to participants.last_period_start sets cycle_anchor_type explicitly (bleed/marker/current for date edits); archived cycle_history rows take the prior type. Why: anchor type drives copy and must never be inherited by accident.
 - You-tab pattern status (Confirmed/Emerging/Watching) is computed client-side from symptom_logs.cycle_day in src/components/you/YourPatterns.tsx; no stored pattern table. Why: read-only, no schema change.
+- Her chosen watch list (max 3) lives in participants.watch_symptoms, falling back to anchor_symptom; injected into chat-ai, generate-insight and generate-daily-insights prompts. Why: one source for You tab and AI priorities.

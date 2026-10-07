@@ -148,6 +148,13 @@
       "when": 1791358159192,
       "tag": "0020_daily_headline",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791359918027,
+      "tag": "0021_participants_watch_symptoms",
+      "breakpoints": true
     }
   ]
 }

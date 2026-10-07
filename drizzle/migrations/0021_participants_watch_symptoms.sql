@@ -1,0 +1,2 @@
+ALTER TABLE public.participants ADD COLUMN IF NOT EXISTS watch_symptoms text[] NOT NULL DEFAULT '{}';
+COMMENT ON COLUMN public.participants.watch_symptoms IS 'Up to 3 symptoms or good-day states she chose to watch on the You tab; prioritised in daily tips and check-ins.';

@@ -565,7 +565,7 @@ CONTEXT:
 - Today is Day ${cycleInfo.cycleDay} of your cycle · **${cycleInfo.phase}**
 - ${cycleInfo.daysUntilNextPhase} days until next phase
 - Age: ${age || "unknown"}
-- Anchor symptom: ${anchorSymptom || "not set"}
+- Anchor symptom: ${anchorSymptom || "not set"}${(participant.watch_symptoms?.length ? `\n- She chose to watch: ${participant.watch_symptoms.join(", ")}. Prioritise these in tips and check-in questions when relevant to today.` : "")}
 - Other symptoms: ${symptoms.join(", ") || "none"}
 - PHASE STRENGTHS: ${strengthContext}${perimenopauseContext}${noUterusNote}
 ${anchorContext ? `- ${anchorContext}` : ""}
@@ -743,7 +743,7 @@ CONTEXT:
 ${timelineContext ? `- Timeline: ${timelineContext}` : ""}
 - ${stageContext}${noUterusNote}
 - Age: ${age || "unknown"}
-- Anchor symptom: ${anchorSymptom || "not set"}
+- Anchor symptom: ${anchorSymptom || "not set"}${(participant.watch_symptoms?.length ? `\n- She chose to watch: ${participant.watch_symptoms.join(", ")}. Prioritise these in tips and check-in questions when relevant to today.` : "")}
 - Other symptoms: ${symptoms.join(", ") || "none"}
 ${topics.length > 0 ? `- Interest areas: ${topics.join(", ")}` : ""}
 
