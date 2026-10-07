@@ -12,12 +12,13 @@ export interface WidgetConfig {
   prompt?: string; // AI prompt for custom widgets
   format?: WidgetFormat; // visual layout for custom widgets
   accent?: WidgetAccent; // accent color for custom widgets
+  showExact?: boolean; inDoctorSummary?: boolean; remind?: boolean; // weight tracker settings
 }
 
 const DEFAULT_WIDGETS: WidgetConfig[] = [
   { id: "cycle_circle", visible: true, type: "built-in" },
   { id: "nutrition_today", visible: true, type: "built-in" },
-  { id: "weight_trend", visible: true, type: "built-in" },
+  { id: "weight_trend", visible: false, type: "built-in" },
   { id: "symptom_tracker", visible: true, type: "built-in" },
   { id: "discharge_tracker", visible: true, type: "built-in" },
   { id: "symptom_history", visible: true, type: "built-in" },

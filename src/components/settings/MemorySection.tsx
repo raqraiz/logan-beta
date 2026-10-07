@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { PATTERNS_CHANGED } from "@/lib/patternCycles";
 import { EditMemoryPage, usedForFact } from "@/components/you/EditMemoryPage";

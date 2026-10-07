@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Check, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import { CycleAnalytics } from "@/components/chat/CycleAnalytics";
 import { YourPatterns } from "@/components/you/YourPatterns";
 import { MemorySection } from "@/components/settings/MemorySection";
+import { EditMemoryPage, usedForFact } from "@/components/you/EditMemoryPage";
 import { supabase } from "@/integrations/supabase/client";
 import { PATTERNS_CHANGED } from "@/lib/patternCycles";
 import type { WidgetConfig } from "@/hooks/useWidgetPreferences";
@@ -15,19 +14,19 @@ import { toast } from "sonner";
 interface Props {
   userId: string; cycle: { cycleLengthDays: number; cycleDay: number; phase: string; lastPeriodStart?: string; lifeStage?: "cycling" | "irregular" | "postpartum" | "menopause" | "perimenopause" | "pregnancy_loss" | "pregnant"; dueDate?: string; pregnancyLmp?: string };
   isNonCycling: boolean; onClose: () => void; onLog: (symptom?: string) => void;
-  onSettings: () => void; onPeople: () => void; widgets: WidgetConfig[]; onTrackers: () => void;
+  onSettings: () => void; onPeople: () => void; widgets: WidgetConfig[]; onTrackers: () => void; onWeight?: () => void;
 }
 interface Fact { key: string; text: string; source: string; value?: string; kind: "field" | "settings" | "people" }
 const fields = "age, anchor_symptom, goals, typical_symptoms, additional_notes, birth_control_method, on_hormonal_bc";
 const clearFacts = { age: null, anchor_symptom: null, goals: [], typical_symptoms: [], additional_notes: null, birth_control_method: null, on_hormonal_bc: null, watch_symptoms: [] };
 
-export function YourDataPage({ userId, cycle, isNonCycling, onClose, onLog, onSettings, onPeople, widgets, onTrackers }: Props) {
+export function YourDataPage({ userId, cycle, isNonCycling, onClose, onLog, onSettings, onPeople, widgets, onTrackers, onWeight }: Props) {
   const [tab, setTab] = useState<"Cycles" | "Patterns" | "Facts">("Cycles");
   const [facts, setFacts] = useState<Fact[]>([]);
   const [refresh, setRefresh] = useState(0);
   const [error, setError] = useState(false);
   const [edit, setEdit] = useState<Fact | null>(null);
-  const [draft, setDraft] = useState("");
+  const [draftText, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const closeRef = useRef(onClose); closeRef.current = onClose;
@@ -56,16 +55,25 @@ export function YourDataPage({ userId, cycle, isNonCycling, onClose, onLog, onSe
     setFacts(list);
   }, [userId]);
   useEffect(() => { void load(); }, [load, refresh]);
-  const save = async () => {
-    if (!edit || !draft.trim()) return;
+  const forgetField = async (f: Fact) => {
+    const empty = ["goals", "typical_symptoms"].includes(f.key) ? [] : null;
+    const tomb = await supabase.from("user_memory_notes").insert({ user_id: userId, note: f.text, source: "forgotten", active: false });
+    const { error } = await supabase.from("participants").update({ [f.key]: empty }).eq("user_id", userId);
+    const { data } = await supabase.from("participants").select(fields).eq("user_id", userId).maybeSingle();
+    if (tomb.error || error || JSON.stringify((data as unknown as Record<string, unknown> | null)?.[f.key] ?? null) !== JSON.stringify(empty)) { toast.error("That didn't save. Try again."); return false; }
+    setEdit(null); toast("Forgotten."); await load(); return true;
+  };
+  const save = async (text?: string) => {
+    const draft = text ?? draftText;
+    if (!edit || !draft.trim()) return false;
     const value = edit.key === "age" ? Number(draft) : ["goals", "typical_symptoms"].includes(edit.key) ? draft.split(",").map((s) => s.trim()).filter(Boolean) : draft.trim();
-    if (edit.key === "age" && (!Number.isInteger(value) || Number(value) < 18 || Number(value) > 120)) { toast.error("Please enter an age from 18 to 120."); return; }
+    if (edit.key === "age" && (!Number.isInteger(value) || Number(value) < 18 || Number(value) > 120)) { toast.error("Please enter an age from 18 to 120."); return false; }
     setBusy(true);
     const { error } = await supabase.from("participants").update({ [edit.key]: value }).eq("user_id", userId);
     const { data, error: readError } = await supabase.from("participants").select(fields).eq("user_id", userId).maybeSingle();
     setBusy(false);
-    if (error || readError || !data || JSON.stringify((data as unknown as Record<string, unknown>)[edit.key]) !== JSON.stringify(value)) { toast.error("That didn't save. Try again."); return; }
-    setEdit(null); await load();
+    if (error || readError || !data || JSON.stringify((data as unknown as Record<string, unknown>)[edit.key]) !== JSON.stringify(value)) { toast.error("That didn't save. Try again."); return false; }
+    setEdit(null); await load(); return true;
   };
   const deleteMemory = async () => {
     setBusy(true);
@@ -101,12 +109,12 @@ export function YourDataPage({ userId, cycle, isNonCycling, onClose, onLog, onSe
           {error && <p className="text-sm text-muted-foreground">I couldn't load your profile facts. <Button variant="link" onClick={load}>Try again</Button></p>}
           <MemorySection userId={userId} view="facts" refresh={refresh} hideEmpty={facts.length > 0} />
           {facts.length > 0 && <div className="overflow-hidden rounded-[22px] bg-card">{facts.map((fact) => <Button key={fact.key} variant="ghost" className="h-auto w-full justify-between whitespace-normal rounded-none border-b border-border px-5 py-4 text-left last:border-0" onClick={() => fact.kind === "settings" ? onSettings() : fact.kind === "people" ? onPeople() : (setEdit(fact), setDraft(fact.value ?? ""))}><span className="min-w-0 text-sm">{fact.text}<span className="mt-1 block text-xs font-normal text-muted-foreground">{fact.source}</span></span><ChevronRight /></Button>)}</div>}
-          <div className="overflow-hidden rounded-[22px] bg-card">{[{ id: "weight_trend", label: "Weight tracking" }, { id: "nutrition_today", label: "Nutrition tracking" }, { id: "discharge_tracker", label: "Fluid tracking" }].map((tracker) => <Button key={tracker.id} variant="ghost" className="h-auto w-full justify-between rounded-none border-b border-border px-5 py-4 last:border-0" onClick={onTrackers}><span>{tracker.label} · {widgets.find((w) => w.id === tracker.id)?.visible ? "On" : "Off"}</span><ChevronRight /></Button>)}</div>
+          <div className="overflow-hidden rounded-[22px] bg-card">{[{ id: "weight_trend", label: "Weight tracking" }, { id: "nutrition_today", label: "Nutrition tracking" }, { id: "discharge_tracker", label: "Fluid tracking" }].map((tracker) => <Button key={tracker.id} variant="ghost" className="h-auto w-full justify-between rounded-none border-b border-border px-5 py-4 last:border-0" onClick={tracker.id === "weight_trend" && onWeight ? onWeight : onTrackers}><span>{tracker.label} · {widgets.find((w) => w.id === tracker.id)?.visible ? "On" : "Off"}</span><ChevronRight /></Button>)}</div>
         </>}
       </div>
       <Button variant="link" className="mt-8 h-auto px-0 text-foreground underline" onClick={() => setConfirm(true)}>Delete all memory</Button>
     </div>
-    <Dialog open={!!edit} onOpenChange={(open) => !open && setEdit(null)}><DialogContent className="rounded-[22px]"><DialogHeader><DialogTitle className="font-display text-3xl">Edit this fact</DialogTitle></DialogHeader><Input aria-label="Your fact" value={draft} onChange={(e) => setDraft(e.target.value)} /><div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setEdit(null)}>Cancel</Button><Button variant="outline" onClick={save} disabled={busy || !draft.trim()}>Save</Button></div></DialogContent></Dialog>
+    {edit && <EditMemoryPage value={edit.value ?? edit.text} source={edit.source} usedFor={usedForFact(edit.key, edit.text)} onClose={() => setEdit(null)} onSave={(t) => save(t)} onForget={() => forgetField(edit)} />}
     <AlertDialog open={confirm} onOpenChange={(v) => !busy && setConfirm(v)}><AlertDialogContent className="w-[calc(100%-40px)] rounded-[22px]"><AlertDialogHeader><AlertDialogTitle className="font-display text-3xl">Delete all memory?</AlertDialogTitle><AlertDialogDescription>This deletes everything Logan remembers about you. It can't be undone.</AlertDialogDescription></AlertDialogHeader><p className="text-xs text-muted-foreground">Saved chat facts, profile facts and people will be cleared. Your chat history, period history, health context and tracker records stay.</p><AlertDialogFooter><Button variant="outline" disabled={busy} onClick={() => setConfirm(false)}>Keep it</Button><Button variant="destructive" disabled={busy} onClick={deleteMemory}>{busy ? "Deleting…" : "Delete everything"}</Button></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </div>;
 }

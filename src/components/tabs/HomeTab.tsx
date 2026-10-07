@@ -8,6 +8,7 @@ import { HormoneChart } from "@/components/chat/HormoneChart";
 import { SymptomMap } from "@/components/chat/SymptomMap";
 import { LoganLogo } from "@/components/LoganLogo";
 import { WidgetEditMode } from "@/components/home/WidgetEditMode";
+import { WeightSettingsPage } from "@/components/you/WeightSettingsPage";
 import { AddCustomWidgetDialog } from "@/components/home/AddCustomWidgetDialog";
 import { CustomAIWidget } from "@/components/home/CustomAIWidget";
 import { SymptomLogWidget } from "@/components/home/SymptomLogWidget";
@@ -512,6 +513,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
   const [showAddWidget, setShowAddWidget] = useState(false);
   const [editingCustomWidget, setEditingCustomWidget] = useState<WidgetConfig | null>(null);
 
+  const [showWeight, setShowWeight] = useState(false);
   const { widgets, loading, save, toggleWidget, renameWidget, setWidgets, addCustomWidget, updateCustomWidget, removeWidget } = useWidgetPreferences(userId);
 
   // Daily AI copy for the HER-facing "succeed"/"don't mess up" cards.
@@ -812,7 +814,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
       case "weight_trend":
         return userId ? (
           <div className="w-full" key={id}>
-            <WeightTrendWidget userId={userId} />
+            <WeightTrendWidget userId={userId} trendOnly={!w.showExact} />
           </div>
         ) : null;
       case "cycle_correlations":
@@ -996,7 +998,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
             <>
               <WidgetEditMode
                 widgets={widgets.filter(w => !GUIDANCE_IDS.has(w.id))}
-                onToggle={toggleWidget}
+                onToggle={(id) => id === "weight_trend" ? setShowWeight(true) : toggleWidget(id)}
                 onRename={renameWidget}
                 onReorder={(next) => setWidgets([...widgets.filter(w => GUIDANCE_IDS.has(w.id)), ...next])}
                 onRemove={removeWidget}
@@ -1026,7 +1028,8 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
         onClose={() => setShowMemory(false)} onLog={(symptom) => { setShowMemory(false); onLogFeeling?.(symptom); }}
         onSettings={() => onOpenSettings?.()}
         onPeople={() => setShowPeople(true)} widgets={widgets}
-        onTrackers={() => { setShowMemory(false); setEditMode(true); }} />}
+        onTrackers={() => { setShowMemory(false); setEditMode(true); }} onWeight={() => setShowWeight(true)} />}
+      {showWeight && userId && <WeightSettingsPage userId={userId} widgets={widgets} onSave={save} onClose={() => setShowWeight(false)} />}
       {userId && headsupVisible && <PartnerHeadsupManage userId={userId} open={showPeople} onOpenChange={setShowPeople} />}
 
       {/* New cycle marker dialog */}

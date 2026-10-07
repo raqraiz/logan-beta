@@ -5,6 +5,7 @@ import { LineChart, Line, ResponsiveContainer, YAxis } from "recharts";
 import { format, parseISO } from "date-fns";
 import { kgToLbs } from "@/lib/nutrition";
 import { WeightDetailDialog } from "./WeightDetailDialog";
+import { weightTrendLine } from "@/lib/weightPrefs";
 
 const COLORS = {
   border: "",
@@ -15,11 +16,11 @@ const COLORS = {
 };
 
 interface Log { id: string; weight_kg: number; logged_on: string }
-interface Props { userId: string }
+interface Props { userId: string; trendOnly?: boolean }
 
 const UNIT_KEY = "logan_weight_unit";
 
-export function WeightTrendWidget({ userId }: Props) {
+export function WeightTrendWidget({ userId, trendOnly = false }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<Log[]>([]);
@@ -101,7 +102,7 @@ export function WeightTrendWidget({ userId }: Props) {
             </div>
           ) : (
             <div className="flex items-center gap-4">
-              <div className="shrink-0">
+              {trendOnly ? <p className="max-w-[45%] text-[13px] text-foreground/80">{weightTrendLine([...logs].reverse().map(l => Number(l.weight_kg)))}</p> : <div className="shrink-0">
                 <p className="text-2xl font-bold tabular-nums leading-none">
                   {display(Number(latest.weight_kg)).toFixed(1)}
                   <span className="text-xs font-normal text-muted-foreground ml-1">{unit}</span>
@@ -117,7 +118,7 @@ export function WeightTrendWidget({ userId }: Props) {
                     <span className="tabular-nums">{trendDelta > 0 ? "+" : ""}{display(trendDelta).toFixed(1)}</span>
                   </div>
                 )}
-              </div>
+              </div>}
 
               {chart.length >= 2 && (
                 <div className="flex-1 h-12">
@@ -130,7 +131,7 @@ export function WeightTrendWidget({ userId }: Props) {
                 </div>
               )}
 
-              {goalKg && goalDelta != null && (
+              {!trendOnly && goalKg && goalDelta != null && (
                 <div className="shrink-0 text-right">
                   <p className="text-[10px] text-muted-foreground">to goal</p>
                   <p className="text-sm font-semibold tabular-nums">
