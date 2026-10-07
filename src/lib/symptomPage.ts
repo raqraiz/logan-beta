@@ -40,6 +40,11 @@ const DEFINITIONS: Record<string, string> = {
   tinnitus: "Tinnitus is hearing a sound, such as ringing or buzzing, when there is no outside source for it.",
 };
 
+/** Only the written symptom page description, or null when there is none. */
+export function knownSymptomDefinition(name: string): string | null {
+  return DEFINITIONS[name.trim().toLowerCase()] ?? null;
+}
+
 export function symptomDefinition(name: string): { text: string; safety: string | null } {
   const key = name.trim().toLowerCase();
   const safety = /\b(hearing|ear|tinnitus|deaf|vision|sight|blurr|eye|chest|severe headache|migraine|worst headache|faint|pass(ed)? out|heavy bleeding|soak|hemorrhag|clot|self.?harm|suicid|hurt myself|pregnan)/i.test(key)
