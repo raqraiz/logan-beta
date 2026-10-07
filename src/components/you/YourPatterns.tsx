@@ -175,7 +175,7 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
               {options.map((n) => {
                 const on = draft.includes(n);
                 return (
-                  <button key={n} type="button" onClick={() => toggle(n)} aria-pressed={on}
+                  <button key={n} type="button" onClick={() => toggle(n)} aria-checked={on} role="checkbox"
                     disabled={!on && draft.length >= 3}
                     className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-40 ${on ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground"}`}>
                     {on ? "★ " : ""}{n}
