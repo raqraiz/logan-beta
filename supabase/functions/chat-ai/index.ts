@@ -2797,7 +2797,7 @@ serve(async (req) => {
       // (c) Loose reporting intent — same matchers as before so legit reports
       // like "having such bad cramps today" still log.
       const reportingIntent =
-        (/\b(i\s*(?:'?m|am)|i\s+(?:have|had|feel|felt|got|woke up)|my\s+(?:head|back|stomach|breasts?|joints?|chest|skin)|having|feeling|craving|today i|tonight|this morning|right now)\b/i.test(trimmed)
+        (/\b(i\s*(?:'?m|am)|i\s*(?:'|’)?ve\b|i\s+(?:have|had|feel|felt|got|woke up|can'?t|cannot|keep)|since\s+(?:yesterday|last night|this morning)|my\s+(?:head|back|stomach|breasts?|joints?|chest|skin)|having|feeling|craving|today i|tonight|this morning|right now)\b/i.test(trimmed)
          || /\b(log|track|record|note)\b/i.test(trimmed))
         && !shouldVetoSymptomWrite;
 
