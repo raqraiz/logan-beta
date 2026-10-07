@@ -153,7 +153,7 @@ export function ReferralCard({ userId }: ReferralCardProps) {
                 {count} friend{count === 1 ? "" : "s"} joined so far
               </p>
               <p className="text-[11px] text-muted-foreground">
-                {count === 1 ? "Your first invite landed, nice." : "Thanks for spreading the word."}
+                {count === 1 ? "Your first invite landed. Thank you." : "Thanks for spreading the word."}
               </p>
             </>
           )}

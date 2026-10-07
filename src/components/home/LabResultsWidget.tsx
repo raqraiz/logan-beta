@@ -111,12 +111,12 @@ export function LabResultsWidget({ userId }: LabResultsWidgetProps) {
 
               <div className="flex items-center gap-2 mb-3">
                 {flagged.length > 0 ? (
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 text-[11px] font-medium">
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#C4247A]/10 text-[#C4247A] text-[11px] font-medium">
                     <AlertTriangle className="w-3 h-3" />
                     {flagged.length} flagged
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[11px] font-medium">
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-muted text-[#6E675F] dark:text-muted-foreground text-[11px] font-medium">
                     <CheckCircle2 className="w-3 h-3" />
                     All in range
                   </span>
@@ -132,13 +132,11 @@ export function LabResultsWidget({ userId }: LabResultsWidgetProps) {
                     <li key={m.id} className="flex items-center justify-between text-[13px]">
                       <span className="text-foreground/85 truncate pr-2">{m.name}</span>
                       <span className={`font-medium tabular-nums whitespace-nowrap ${
-                        m.flag === "critical" ? "text-rose-400"
-                        : m.flag === "high" ? "text-amber-400"
-                        : "text-sky-400"
+                        "text-[#C4247A]"
                       }`}>
                         {m.value_numeric ?? m.value_text}
                         {m.unit ? ` ${m.unit}` : ""}
-                        <span className="ml-1.5 text-[10px] uppercase opacity-70">{m.flag}</span>
+                        <span className="ml-1.5 text-[11px]">{m.flag === "high" ? "Above range" : m.flag === "low" ? "Below range" : "Out of range"}</span>
                       </span>
                     </li>
                   ))}

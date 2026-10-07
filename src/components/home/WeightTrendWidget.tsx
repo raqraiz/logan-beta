@@ -111,7 +111,7 @@ export function WeightTrendWidget({ userId }: Props) {
                 </p>
                 {logs.length > 1 && (
                   <div className={`flex items-center gap-0.5 text-[11px] mt-1 ${
-                    trend === "down" ? "text-emerald-500" : trend === "up" ? "text-amber-500" : "text-muted-foreground"
+                    trend === "flat" ? "text-muted-foreground" : "text-foreground"
                   }`}>
                     {trend === "down" ? <TrendingDown className="w-3 h-3" /> : trend === "up" ? <TrendingUp className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
                     <span className="tabular-nums">{trendDelta > 0 ? "+" : ""}{display(trendDelta).toFixed(1)}</span>
