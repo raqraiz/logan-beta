@@ -51,7 +51,6 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, hasCycle, onOpenSymp
     return [...hers, ...others].sort((x, y) => (y.women_count ?? 0) - (x.women_count ?? 0));
   }, [field, mine]);
   const max = Math.max(10, ...field.map((r) => r.women_count ?? 0));
-  const size = (r: AggRow) => (isExact(r) ? Math.round(64 + 48 * Math.sqrt((r.women_count! - 10) / Math.max(1, max - 10))) : 56);
 
   const listSource = listPill === "week" ? weekRows : rows.filter((r) => r.filter === "stage");
   const common = listSource.filter(isExact).sort((a, b) => b.women_count! - a.women_count!);
