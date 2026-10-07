@@ -704,6 +704,16 @@ const Chat = () => {
         if (todaySectionRef.current) todaySectionRef.current.scrollIntoView({ behavior: "instant" as ScrollBehavior, block: "start" });
         else scrollRef.current?.scrollIntoView({ behavior: "instant" });
       }, 50);
+      // Cards above Today can grow as they render; keep Today pinned for the
+      // first moments unless she starts scrolling herself.
+      let touched = false;
+      const stop = () => { touched = true; };
+      window.addEventListener("wheel", stop, { once: true, passive: true });
+      window.addEventListener("touchstart", stop, { once: true, passive: true });
+      [400, 1000, 2000, 3500].forEach((ms) => setTimeout(() => {
+        if (!touched) todaySectionRef.current?.scrollIntoView({ behavior: "instant" as ScrollBehavior, block: "start" });
+      }, ms));
+      setTimeout(() => { window.removeEventListener("wheel", stop); window.removeEventListener("touchstart", stop); }, 4000);
     }
   }, [messages, isOnboarding]);
 
