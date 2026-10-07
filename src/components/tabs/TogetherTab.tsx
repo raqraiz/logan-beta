@@ -85,7 +85,24 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, c
     ]).then(([{ data }, starts]) => setLogs(withRealCycleDays((data ?? []) as SymptomPageLog[], starts)));
     supabase.from("participants").select("watch_symptoms").eq("user_id", userId).maybeSingle()
       .then(({ data }) => setWatch((data?.watch_symptoms ?? []) as string[]));
+    supabase.from("user_memory_notes").select("note, source").eq("user_id", userId).eq("active", true)
+      .in("source", ["pattern_hidden", "symptom_forgotten", "insight_correction"]).order("created_at", { ascending: true })
+      .then(({ data }) => {
+        const h = new Set<string>(), f = new Set<string>(), t: Record<string, [number, number]> = {};
+        for (const n of data ?? []) {
+          if (n.source === "insight_correction") { const m = n.note.match(/^Your (.+?) usually comes around days (\d+) to (\d+)\./); if (m) t[normSymptom(m[1])] = [Number(m[2]), Number(m[3])]; continue; }
+          const m = n.note.match(/^(.+?) (isn't a pattern for you|: forgotten)/) ?? n.note.match(/^(.+?):/);
+          if (!m) continue;
+          h.add(normSymptom(m[1]));
+          if (n.source === "symptom_forgotten") f.add(normSymptom(m[1]));
+        }
+        setHiddenMine(h); setForgot(f); setTimingFix(t);
+      });
   }, [userId, reloadLogs]);
+  const [hiddenMine, setHiddenMine] = useState<Set<string>>(new Set());
+  const [forgot, setForgot] = useState<Set<string>>(new Set());
+  const [timingFix, setTimingFix] = useState<Record<string, [number, number]>>({});
+  const [mineList, setMineList] = useState(false);
   const [joined, setJoined] = useState(false);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -136,10 +153,15 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, c
   if (invite) return <InvitePage userId={userId} onBack={() => setInvite(false)} />;
 
   if (page) {
+    const forgotten = forgot.has(normSymptom(page));
+    const pageLogs = forgotten ? [] : logs;
+    const found = forgotten ? undefined : computePatterns(logs).find((p) => key(p.name) === key(page));
+    const fixed = timingFix[normSymptom(page)];
+    const info = found ? { ...found, name: page, ...(fixed ? { from: fixed[0], to: fixed[1] } : {}) } : { name: page, from: null, to: null, cycles: 0, count: 0 };
     return (
-      <PatternPage userId={userId} pattern={computePatterns(logs).find((p) => key(p.name) === key(page)) ? { ...computePatterns(logs).find((p) => key(p.name) === key(page))!, name: page } : { name: page, from: null, to: null, cycles: 0, count: 0 }} logs={logs}
+      <PatternPage userId={userId} pattern={info} logs={pageLogs}
         watched={watch.some((w) => key(w) === key(page))} lastPeriodStart={lastPeriodStart} isNonCycling={isNonCycling}
-        onClose={() => setPage(null)} onLog={(s) => { setPage(null); setLogging({ symptom: s }); }} onChanged={() => {}} sample={sample}
+        onClose={() => setPage(null)} onLog={(s) => { setPage(null); setLogging({ symptom: s }); }} onChanged={() => setReloadLogs((n) => n + 1)} sample={sample}
         onUnstar={async () => {
           const next = watch.filter((w) => key(w) !== key(page));
           const { error } = await supabase.from("participants").update({ watch_symptoms: next }).eq("user_id", userId);
@@ -172,10 +194,14 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, c
     );
   }
 
-  const counts = herCounts(logs, prefs);
+  const counts = herCounts(logs, prefs).filter((c) => !hiddenMine.has(normSymptom(c.name)));
   const isWatched = (n: string) => watch.some((w) => normSymptom(w) === normSymptom(n));
   const topCount = counts[0]?.n ?? 1;
-  const mineItems = counts.slice(0, 20).map((c, i) => {
+  // At most 20 bubbles: watched ones always included, then her most logged.
+  const watchedCounts = counts.filter((c) => isWatched(c.name));
+  const shownCounts = [...watchedCounts, ...counts.filter((c) => !isWatched(c.name))].slice(0, Math.max(20, watchedCounts.length))
+    .sort((a, b) => b.n - a.n);
+  const mineItems = shownCounts.map((c, i) => {
     const t = Math.sqrt(c.n / topCount);
     return { id: c.name, label: c.name, t, star: isWatched(c.name), fill: categoryFill(mapCategory(groupOf(c.name)) ?? undefined, t, i) };
   });
@@ -215,7 +241,20 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, c
           </div>
         </div>
         <div className="self-start">{Lens}</div>
-        {lens === "mine" ? (
+        {lens === "mine" && mineList ? (
+          <div className="flex w-full flex-col gap-3 text-left">
+            <button type="button" onClick={() => setMineList(false)} className="self-start text-sm font-semibold text-foreground underline underline-offset-2">‹ Back to bubbles</button>
+            <div className="overflow-hidden rounded-[22px] bg-card">
+              {counts.map((c) => (
+                <button key={c.name} type="button" onClick={() => openSymptom(c.name)}
+                  className="flex w-full items-center justify-between border-b border-border px-5 py-4 text-left text-[15px] text-foreground last:border-0">
+                  <span>{isWatched(c.name) ? "★ " : ""}{c.name}</span>
+                  <span className="text-sm text-muted-foreground">{c.n} {c.n === 1 ? "time" : "times"} ›</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : lens === "mine" ? (
           <div className="flex w-full flex-col gap-4">
             <p className="text-left text-base text-muted-foreground">{counts.length} thing{counts.length === 1 ? "" : "s"} you've told me about.</p>
             {counts.length ? <BubbleField items={mineItems} onTap={openSymptom} /> : (
@@ -223,6 +262,7 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, c
             )}
             <p className="text-center text-sm text-muted-foreground">Bigger bubbles are what you feel most. ★ You're watching these. Tap one to see your pattern.</p>
             <button type="button" onClick={() => setChooser(true)} className="self-center text-sm font-semibold text-foreground underline underline-offset-2">Choose what to watch</button>
+            {counts.length > 0 && <button type="button" onClick={() => setMineList(true)} className="self-center text-sm font-semibold text-foreground underline">{counts.length > shownCounts.length ? `See all ${counts.length} as a list ›` : "See all as a list ›"}</button>}
           </div>
         ) : demo ? board(demo.rows, new Set([...demo.mine, ...mine]), demo.cats) : aggError ? (
           <div className="flex flex-col items-center gap-3">
