@@ -119,7 +119,7 @@ export function ReferralCard({ userId }: ReferralCardProps) {
         Share your link and help Logan grow
       </p>
 
-      <div className="mb-3 rounded-xl border border-primary/25 bg-primary/10 backdrop-blur-sm px-4 py-3 flex items-center gap-3 shadow-sm">
+      <div className="mb-3 rounded-[22px] border border-border bg-card px-4 py-3 flex items-center gap-3">
         <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
           <Sparkles className="w-5 h-5 text-primary" />
         </div>
