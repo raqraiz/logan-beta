@@ -13,7 +13,7 @@ import { toast } from "@/hooks/use-toast";
 import { LoganLogo } from "@/components/LoganLogo";
 import { LoganFullLogo } from "@/components/LoganFullLogo";
 
-import { Send, Loader2, LogOut, ChevronLeft, ChevronRight, ArrowDown, MessageSquarePlus, MessageCircle, Settings as SettingsIcon, Paperclip, Search, X, ChevronUp, ChevronDown, Megaphone } from "lucide-react";
+import { Send, Loader2, LogOut, ChevronLeft, ChevronRight, ArrowDown, MessageSquarePlus, MessageCircle, Settings as SettingsIcon, Paperclip, Search, X, ChevronUp, ChevronDown, Megaphone, ArrowLeft } from "lucide-react";
 import { FeedbackModal } from "@/components/chat/FeedbackModal";
 import { FeedbackPromptCard } from "@/components/chat/FeedbackPromptCard";
 import { useFeedbackPrompt } from "@/hooks/useFeedbackPrompt";
@@ -1596,6 +1596,7 @@ const Chat = () => {
           cycleData={cycleData}
           userId={user?.id}
           onOpenSettings={() => setSettingsOpen(true)}
+          onOpenWeek={() => { setActiveTab("plan"); trackTabSwitch("plan"); }}
           onLogFeeling={(symptom) => { setFeelSymptom(symptom); setFeelSheetOpen(true); }}
           onPeriodUpdate={async (date: Date) => {
             if (!user?.id) return;
@@ -1732,6 +1733,7 @@ const Chat = () => {
             } as any);
           }}
         />
+        </div>
       )}
 
       {effectiveTab === "ask" && (<>
