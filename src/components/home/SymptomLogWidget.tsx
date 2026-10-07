@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { Check, ChevronDown, ChevronUp, Activity, Plus, Sparkles, Pencil, Trash2, X, CalendarIcon, EyeOff, Eye, Star, Flag } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -14,6 +13,7 @@ import { format } from "date-fns";
 import { cleanSymptomLabel, truncateAtWord } from "@/lib/symptomLabel";
 import { findNearDuplicate } from "@/lib/symptomDedupe";
 import { ReportSymptomDialog } from "@/components/home/ReportSymptomDialog";
+import { GROUPED, SYMPTOM_GROUPS, aliasesOf, canonicalSymptom, groupOf, isKnownSymptom, loadAliases, normSymptom, sameSymptom, sentenceCase } from "@/lib/symptomCatalog";
 import { validateSymptomName, suggestExistingSymptoms, MAX_PENDING_PER_DAY, MAX_SYMPTOM_LENGTH } from "@/lib/symptomModeration";
 
 
@@ -72,6 +72,7 @@ const UNIFIED_CATEGORIES = [
   "Other",
 ] as const;
 
+const SEVERITIES = [{ label: "Mild", value: 1 }, { label: "Moderate", value: 3 }, { label: "Strong", value: 5 }] as const;
 const SYMPTOM_OPTIONS = SYMPTOM_CATEGORIES.flatMap(c => c.symptoms);
 const BUILT_IN_SET = new Set(SYMPTOM_OPTIONS.map(s => s.toLowerCase()));
 
@@ -103,7 +104,7 @@ interface CommunitySymptom {
 
 export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cycleLengthDays, isNonCycling, initialSymptom, onLogged }: SymptomLogWidgetProps) {
   const [expanded, setExpanded] = useState(true);
-  const [selected, setSelected] = useState<SymptomEntry[]>(() => initialSymptom ? [{ name: initialSymptom, severity: 0 }] : []);
+  const [selected, setSelected] = useState<SymptomEntry[]>(() => initialSymptom ? [{ name: canonicalSymptom(initialSymptom), severity: 1 }] : []);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [todayCount, setTodayCount] = useState(0);
@@ -168,7 +169,7 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
           arr.forEach((s: any) => {
             const n = typeof s === "string" ? s : s?.name;
             if (!n) return;
-            const key = String(n);
+            const key = canonicalSymptom(String(n));
             names.add(key.toLowerCase());
             if (withinWindow) counts.set(key, (counts.get(key) || 0) + 1);
           });
@@ -431,9 +432,9 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
 
   const toggleSymptom = useCallback((name: string) => {
     setSelected(prev => {
-      const existing = prev.find(s => s.name === name);
-      if (existing) return prev.filter(s => s.name !== name);
-      return [...prev, { name, severity: 0 }];
+      const existing = prev.find(s => sameSymptom(s.name, name));
+      if (existing) return prev.filter(s => s !== existing);
+      return [...prev, { name: canonicalSymptom(name), severity: 1 }];
     });
   }, []);
 
@@ -446,11 +447,9 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
       setExpanded(true);
       setLogDate(new Date());
       if (symptom) {
-        const name = String(symptom);
+        const name = canonicalSymptom(String(symptom));
         setSelected(prev =>
-          prev.some(s => s.name.toLowerCase() === name.toLowerCase())
-            ? prev
-            : [...prev, { name, severity: 0 }]
+          prev.some(s => sameSymptom(s.name, name)) ? prev : [...prev, { name, severity: 1 }]
         );
       }
       setTimeout(() => rootRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
@@ -458,6 +457,16 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
     window.addEventListener("logan:open-symptom-log", handler);
     return () => window.removeEventListener("logan:open-symptom-log", handler);
   }, []);
+
+  useEffect(() => { loadAliases().then(() => setSelected(prev => prev.map(s => ({ ...s, name: canonicalSymptom(s.name) })))); }, []);
+
+  const addOwn = () => {
+    const check = validateSymptomName(search);
+    if (!check.ok) { setAddError(check.message ?? "That entry isn't allowed."); return; }
+    const name = canonicalSymptom(check.value);
+    setSelected(prev => prev.some(s => sameSymptom(s.name, name)) ? prev : [...prev, { name, severity: 1 }]);
+    setSearch(""); setAddError(null);
+  };
 
   const setSeverity = useCallback((name: string, severity: number) => {
     setSelected(prev => prev.map(s => s.name === name ? { ...s, severity } : s));
@@ -488,17 +497,17 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
       ? new Date().toISOString()
       : new Date(Date.UTC(logDate.getFullYear(), logDate.getMonth(), logDate.getDate(), 12, 0, 0)).toISOString();
 
-    const { error } = await supabase.from("symptom_logs").insert({
+    const { data: savedRow, error } = await supabase.from("symptom_logs").insert({
       user_id: userId,
       symptoms: selected as any,
       notes: notes.trim() || null,
       cycle_day: effectiveCycleInfo.cycleDay,
       cycle_phase: effectiveCycleInfo.phase,
       logged_at: loggedAt,
-    });
+    }).select("id").maybeSingle();
 
-    if (error) {
-      toast({ title: "Failed to save", description: error.message, variant: "destructive" });
+    if (error || !savedRow) {
+      toast({ title: "Failed to save", description: error?.message ?? "Try again.", variant: "destructive" });
     } else {
       toast({
         title: isToday ? "Symptoms logged" : `Logged for ${format(logDate, "MMM d")}`,
@@ -586,467 +595,96 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
           </div>
 
           {/* Symptom chips */}
-          <div>
-            <div className="flex items-center justify-between mb-2 gap-2">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50">
-                How are you feeling?
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setManageMode(m => !m)}
-                  className={cn(
-                    "text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border transition-colors",
-                    manageMode
-                      ? "border-primary/60 text-primary bg-primary/10"
-                      : "border-border/40 text-muted-foreground/70 hover:text-foreground hover:border-border"
-                  )}
-                >
-                  {manageMode ? "Done" : "Manage"}
-                </button>
-                <Input
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Search symptoms…"
-                  className="h-7 text-xs max-w-[180px]"
-                />
-              </div>
-            </div>
-
-            {/* Selected pinned chips */}
-            {selected.length > 0 && (
-              <div className="mb-3 pb-2 border-b border-border/20">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground/40 mb-1.5">
-                  Selected · {selected.length}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {selected.map(s => (
-                    <button
-                      key={s.name}
-                      onClick={() => toggleSymptom(s.name)}
-                      className="px-2.5 py-1 text-xs rounded-full border bg-primary text-primary-foreground border-primary inline-flex items-center gap-1"
-                    >
-                      {s.name}
-                      <X className="w-3 h-3 opacity-70" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Categorized built-in symptoms (alphabetical within group) */}
+          <div className="space-y-3">
+            <Input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search or add your own"
+              className="h-11 w-full rounded-full text-sm"
+              aria-label="Search or add your own"
+            />
             {(() => {
-              const q = search.trim().toLowerCase();
-              const renderBuiltInChip = (name: string) => {
-                const isSelected = selected.some(s => s.name === name);
-                const entry = selected.find(s => s.name === name);
+              const q = normSymptom(search);
+              const matches = (name: string) => !q || normSymptom(name).includes(q) || aliasesOf(name).some(a => a.includes(q));
+              const used = new Set<string>();
+              const take = (names: string[]) => names.filter(n => {
+                const k = normSymptom(n);
+                if (used.has(k) || !matches(n)) return false;
+                used.add(k); return true;
+              });
+              const frequent = take(frequentNames.slice(0, 6));
+              const groups = SYMPTOM_GROUPS.map(g => {
+                const shared = communitySymptoms.filter(c => groupOf(c.name) === null && c.category === g).map(c => sentenceCase(cleanSymptomLabel(c.name)));
+                return { label: g as string, names: take([...GROUPED[g], ...shared].sort((a, b) => a.localeCompare(b))) };
+              });
+              const words = take([...previouslyLoggedNames].filter(n => !isKnownSymptom(n)).map(n => sentenceCase(n)).sort((a, b) => a.localeCompare(b)));
+              if (words.length) groups.push({ label: "Your words", names: words });
+              const exact = q && ([...used].includes(q) || isKnownSymptom(q));
+              const anyHit = used.size > 0;
+
+              const chip = (name: string) => {
+                const entry = selected.find(s => sameSymptom(s.name, name));
                 return (
-                  <div key={name} className={cn("flex flex-col", isSelected ? "w-full items-start" : "inline-flex")}>
-                    <button
-                      onClick={() => toggleSymptom(name)}
-                      className={cn(
-                        "px-2.5 py-1 text-xs rounded-full border transition-all",
-                        isSelected
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-card/60 border-border/40 hover:border-primary/40 text-foreground/70"
-                      )}
-                    >
+                  <div key={name} className={cn("flex flex-col gap-1.5", entry ? "w-full items-start" : "inline-flex")}>
+                    <button type="button" onClick={() => toggleSymptom(name)} aria-pressed={!!entry}
+                      className={cn("rounded-full border px-3 py-1.5 text-sm transition-colors",
+                        entry ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground")}>
                       {name}
                     </button>
-                    {isSelected && entry && (
-                      <div className="w-full pl-3 border-l border-primary/30 mt-1.5 mb-1 space-y-1">
-                        <div className="flex items-center gap-3">
-                          <Slider
-                            min={0}
-                            max={5}
-                            step={1}
-                            value={[entry.severity]}
-                            onValueChange={([v]) => setSeverity(entry.name, v)}
-                            className="flex-1"
-                          />
-                          <span className="text-xs font-medium text-muted-foreground w-4 text-right">
-                            {entry.severity}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-[9px] uppercase tracking-wider text-muted-foreground/50">
-                          <span>Not feeling it</span>
-                          <span>Severe</span>
-                        </div>
+                    {entry && (
+                      <div className="flex gap-1.5 pl-1" role="radiogroup" aria-label={`How strong is ${name}?`}>
+                        {SEVERITIES.map(sv => {
+                          const on = entry.severity === sv.value;
+                          return (
+                            <button key={sv.label} type="button" role="radio" aria-checked={on} onClick={() => setSeverity(entry.name, sv.value)}
+                              className={cn("inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold",
+                                on ? "border-foreground bg-foreground text-background" : "border-border bg-card text-muted-foreground")}>
+                              {on && <Check className="h-3 w-3" aria-hidden />}{sv.label}
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
                 );
               };
 
-              // Filter out hidden names from the pinned "Frequently logged" row
-              const hiddenNameSet = new Set(
-                communitySymptoms.filter(c => hiddenIds.has(c.id)).map(c => c.name.toLowerCase())
-              );
-              const visibleFrequent = frequentNames.filter(n => !hiddenNameSet.has(n.toLowerCase()));
-              const filteredFrequent = q ? visibleFrequent.filter(n => n.toLowerCase().includes(q)) : visibleFrequent;
-
               return (
-                <div className="space-y-2.5">
-                  {/* Frequently logged — pinned above all groups */}
-                  {filteredFrequent.length > 0 && (
+                <div className="space-y-3">
+                  {frequent.length > 0 && (
                     <div>
-                      <p className="mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/60 inline-flex items-center gap-1">
-                        <Star className="w-3 h-3 text-primary/70" />
-                        Frequently logged
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {filteredFrequent.map(name => {
-                          const isSelected = selected.some(s => s.name === name);
-                          return (
-                            <button
-                              key={`freq_${name}`}
-                              onClick={() => toggleSymptom(name)}
-                              className={cn(
-                                "px-2.5 py-1 text-xs rounded-full border transition-all",
-                                isSelected
-                                  ? "bg-primary text-primary-foreground border-primary"
-                                  : "bg-primary/5 border-primary/30 hover:border-primary/60 text-foreground/80"
-                              )}
-                            >
-                              {name}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Frequently logged</p>
+                      <div className="flex flex-wrap gap-1.5">{frequent.map(chip)}</div>
                     </div>
                   )}
-
-                  {/* Unified category sections — built-in + community together */}
-                  {(() => {
-                    const sortedCs = [...communitySymptoms].sort((a, b) => a.name.localeCompare(b.name));
-                    const searchMatched = q ? sortedCs.filter(c => cleanSymptomLabel(c.name).toLowerCase().includes(q)) : sortedCs;
-                    // Split visible vs hidden for this user
-                    const visibleCs = searchMatched.filter(c => !hiddenIds.has(c.id));
-                    const hiddenCs = searchMatched.filter(c => hiddenIds.has(c.id));
-
-                    const mapSharedCat = (cs: CommunitySymptom): string =>
-                      (SHARED_CATEGORIES as readonly string[]).includes(cs.category ?? "")
-                        ? (cs.category as string)
-                        : "Other";
-
-                    // Group community entries by category (fallback to "Other")
-                    const groupedShared: Record<string, CommunitySymptom[]> = {};
-                    const catsWithAnyContent: Record<string, boolean> = {};
-                    UNIFIED_CATEGORIES.forEach(c => { groupedShared[c] = []; catsWithAnyContent[c] = false; });
-                    visibleCs.forEach(cs => { groupedShared[mapSharedCat(cs)].push(cs); });
-                    // Track which categories had entries before hiding, so we can show
-                    // "All hidden — manage" instead of vanishing the group.
-                    searchMatched.forEach(cs => { catsWithAnyContent[mapSharedCat(cs)] = true; });
-
-                    const renderSharedChip = (cs: CommunitySymptom, opts?: { isHiddenRow?: boolean }) => {
-                      const isSelected = selected.some(s => s.name === cs.name);
-                      const entry = selected.find(s => s.name === cs.name);
-                      const isMine = cs.added_by === userId;
-                      const isRecent = Date.now() - new Date(cs.created_at).getTime() < 1000 * 60 * 60 * 24 * 14;
-                      const isEditing = editingId === cs.id;
-                      const inHiddenRow = !!opts?.isHiddenRow;
-
-                      if (isEditing) {
-                        return (
-                          <div key={cs.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-primary/50 bg-card">
-                            <Input
-                              autoFocus
-                              value={editValue}
-                              onChange={e => setEditValue(e.target.value)}
-                              onKeyDown={e => {
-                                if (e.key === "Enter") handleSaveEdit(cs);
-                                if (e.key === "Escape") cancelEdit();
-                              }}
-                              maxLength={50}
-                              className="h-6 text-xs w-32 px-2"
-                            />
-                            <button onClick={() => handleSaveEdit(cs)} className="p-1 rounded-full text-primary hover:bg-primary/10" title="Save">
-                              <Check className="w-3 h-3" />
-                            </button>
-                            <button onClick={cancelEdit} className="p-1 rounded-full text-muted-foreground hover:bg-muted" title="Cancel">
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div key={cs.id} className={cn("flex flex-col", isSelected && !inHiddenRow ? "w-full items-start" : "inline-flex")}>
-                          <div
-                            className={cn(
-                              "inline-flex items-center rounded-full border transition-all overflow-hidden",
-                              inHiddenRow
-                                ? "bg-muted/30 border-border/30 text-muted-foreground opacity-70"
-                                : isSelected
-                                  ? "bg-primary text-primary-foreground border-primary"
-                                  : "bg-card/60 border-border/40 hover:border-primary/40 text-foreground/70"
-                            )}
-                            title={
-                              cleanSymptomLabel(cs.name) !== truncateAtWord(cleanSymptomLabel(cs.name))
-                                ? cleanSymptomLabel(cs.name)
-                                : isMine ? "You added this" : "Added by another user"
-                            }
-                          >
-                            <button
-                              onClick={() => !inHiddenRow && toggleSymptom(cs.name)}
-                              className="px-2.5 py-1 text-xs inline-flex items-center gap-1.5"
-                              disabled={inHiddenRow}
-                            >
-                              <span className="max-w-[14rem] truncate">
-                                {truncateAtWord(cleanSymptomLabel(cs.name))}
-                              </span>
-                              {isRecent && !inHiddenRow ? (
-                                <span className={cn(
-                                  "inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider px-1 py-0.5 rounded-full",
-                                  isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-accent/40 text-accent-foreground/80"
-                                )}>
-                                  <Sparkles className="w-2 h-2" />
-                                  new
-                                </span>
-                              ) : null}
-                            </button>
-                            {inHiddenRow ? (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleUnhideSymptom(cs); }}
-                                className="px-1.5 py-1 text-muted-foreground hover:text-foreground hover:bg-black/10"
-                                title="Unhide"
-                              >
-                                <Eye className="w-3 h-3" />
-                              </button>
-                            ) : manageMode ? (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleHideSymptom(cs); }}
-                                className={cn("px-1.5 py-1 hover:bg-black/10", isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-foreground")}
-                                title="Hide from my view"
-                              >
-                                <EyeOff className="w-3 h-3" />
-                              </button>
-                            ) : null}
-                            {!isMine && !inHiddenRow && manageMode && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setReportTarget({ id: cs.id, name: cs.name }); }}
-                                className={cn("px-1.5 py-1 hover:bg-black/10", isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-destructive")}
-                                title="Report this symptom"
-                              >
-                                <Flag className="w-3 h-3" />
-                              </button>
-                            )}
-                            {isMine && !inHiddenRow && (
-                              <>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); startEdit(cs); }}
-                                  className={cn("px-1.5 py-1 hover:bg-black/10", isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-foreground")}
-                                  title="Edit"
-                                >
-                                  <Pencil className="w-3 h-3" />
-                                </button>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteSymptom(cs); }}
-                                  className={cn("px-1.5 py-1 hover:bg-destructive/20", isSelected ? "text-primary-foreground/80" : "text-muted-foreground hover:text-destructive")}
-                                  title="Delete"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                          {isSelected && !inHiddenRow && entry && (
-                            <div className="w-full pl-3 border-l border-primary/30 mt-1.5 mb-1 space-y-1">
-                              <div className="flex items-center gap-3">
-                                <Slider
-                                  min={0}
-                                  max={5}
-                                  step={1}
-                                  value={[entry.severity]}
-                                  onValueChange={([v]) => setSeverity(entry.name, v)}
-                                  className="flex-1"
-                                />
-                                <span className="text-xs font-medium text-muted-foreground w-4 text-right">
-                                  {entry.severity}
-                                </span>
-                              </div>
-                              <div className="flex justify-between text-[9px] uppercase tracking-wider text-muted-foreground/50">
-                                <span>Not feeling it</span>
-                                <span>Severe</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    };
-
+                  {groups.map((g, i) => {
+                    if (g.names.length === 0) return null;
+                    const open = q ? true : (g.label in collapsedCats ? !collapsedCats[g.label] : i === 0);
                     return (
-                      <>
-                        {UNIFIED_CATEGORIES.map(label => {
-                          const builtIn = SYMPTOM_CATEGORIES.find(c => c.label === label)?.symptoms ?? [];
-                          const sortedBuiltIn = [...builtIn].sort((a, b) => a.localeCompare(b));
-                          const filteredBuiltIn = q ? sortedBuiltIn.filter(n => n.toLowerCase().includes(q)) : sortedBuiltIn;
-                          const sharedChips = groupedShared[label] ?? [];
-                          if (filteredBuiltIn.length === 0 && !catsWithAnyContent[label]) return null;
-                          const total = filteredBuiltIn.length + sharedChips.length;
-                          const hasPrior =
-                            filteredBuiltIn.some(n => previouslyLoggedNames.has(n.toLowerCase())) ||
-                            sharedChips.some(c => previouslyLoggedNames.has(c.name.toLowerCase()));
-                          const userToggled = label in collapsedCats;
-                          const isCollapsed = q ? false : (userToggled ? collapsedCats[label] : !hasPrior);
-
-                          if (total === 0) {
-                            // Category exists but every chip is hidden
-                            return (
-                              <div key={label}>
-                                <div className="flex items-center justify-between mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/40">
-                                  <span>{label} · 0</span>
-                                  <button
-                                    onClick={() => setShowHidden(true)}
-                                    className="normal-case tracking-normal text-[10px] text-muted-foreground/60 hover:text-foreground underline underline-offset-2"
-                                  >
-                                    All hidden, manage
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          }
-
-                          return (
-                            <div key={label}>
-                              <button
-                                onClick={() => setCollapsedCats(prev => ({ ...prev, [label]: !isCollapsed }))}
-                                className="w-full flex items-center justify-between mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/60 hover:text-foreground/80"
-                              >
-                                <span>{label} · {total}</span>
-                                {isCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
-                              </button>
-                              {!isCollapsed && (
-                                <div className="flex flex-wrap gap-1.5">
-                                  {filteredBuiltIn.map(renderBuiltInChip)}
-                                  {sharedChips.map(cs => renderSharedChip(cs))}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-
-                        {/* Hidden (n) — collapsible */}
-                        {hiddenCs.length > 0 && (
-                          <div className="mt-3 pt-2 border-t border-border/20">
-                            <button
-                              onClick={() => setShowHidden(v => !v)}
-                              className="w-full flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground/60 hover:text-foreground/80"
-                            >
-                              <span className="inline-flex items-center gap-1">
-                                <EyeOff className="w-3 h-3" />
-                                Hidden · {hiddenCs.length}
-                              </span>
-                              {showHidden ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                            </button>
-                            {showHidden && (
-                              <div className="mt-2 flex flex-wrap gap-1.5">
-                                {hiddenCs.map(cs => renderSharedChip(cs, { isHiddenRow: true }))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {!showAddForm && !q && (
-                          <button
-                            onClick={() => setShowAddForm(true)}
-                            className="mt-2 px-2.5 py-1 text-xs rounded-full border border-dashed border-primary/40 text-primary/80 hover:bg-primary/5 transition-all inline-flex items-center gap-1"
-                          >
-                            <Plus className="w-3 h-3" />
-                            Add yours
-                          </button>
-                        )}
-                      </>
+                      <div key={g.label}>
+                        <button type="button" onClick={() => setCollapsedCats(prev => ({ ...prev, [g.label]: open }))}
+                          className="mb-1.5 flex w-full items-center justify-between text-xs font-semibold text-muted-foreground" aria-expanded={open}>
+                          <span>{g.label}</span>
+                          {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                        </button>
+                        {open && <div className="flex flex-wrap gap-1.5">{g.names.map(chip)}</div>}
+                      </div>
                     );
-                  })()}
-
-
-
-                  {/* Empty search state */}
-                  {q && SYMPTOM_CATEGORIES.every(c => !c.symptoms.some(n => n.toLowerCase().includes(q)))
-                    && !communitySymptoms.some(c => c.name.toLowerCase().includes(q)) && (
-                    <div className="py-3 text-center">
-                      <p className="text-xs text-muted-foreground mb-2">No symptoms found, try a different term</p>
-                      <button
-                        onClick={() => { setNewSymptom(search); setShowAddForm(true); setSearch(""); }}
-                        className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                      >
-                        <Plus className="w-3 h-3" />
-                        Add "{search}" as a new symptom
+                  })}
+                  {q && !exact && (
+                    <div className="space-y-1.5">
+                      {!anyHit && <p className="text-xs text-muted-foreground">Not on the list yet.</p>}
+                      <button type="button" onClick={addOwn}
+                        className="inline-flex items-center gap-1 rounded-full border border-dashed border-foreground/40 px-3 py-1.5 text-sm text-foreground">
+                        <Plus className="h-3.5 w-3.5" /> Add "{sentenceCase(search)}" as your own
                       </button>
+                      {addError && <p className="text-xs text-destructive">{addError}</p>}
                     </div>
                   )}
                 </div>
               );
             })()}
-            {showAddForm && (
-              <div className="mt-2 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Input
-                    autoFocus
-                    value={newSymptom}
-                    onChange={e => { setNewSymptom(e.target.value); setAddError(null); setSuggestions([]); }}
-                    onKeyDown={e => {
-                      if (e.key === "Enter") handleCheckNewSymptom();
-                      if (e.key === "Escape") { setShowAddForm(false); setNewSymptom(""); setAddError(null); setSuggestions([]); }
-                    }}
-                    placeholder="e.g. Tingly hands, vivid dreams..."
-                    maxLength={MAX_SYMPTOM_LENGTH}
-                    className="h-8 text-xs"
-                  />
-                  <Button
-                    size="sm"
-                    onClick={handleCheckNewSymptom}
-                    disabled={addingSymptom || !newSymptom.trim()}
-                    className="h-8 text-xs"
-                  >
-                    Add
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => { setShowAddForm(false); setNewSymptom(""); setAddError(null); setSuggestions([]); }}
-                    className="h-8 text-xs"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-
-                {addError && (
-                  <p className="text-[11px] text-destructive">{addError}</p>
-                )}
-
-                {suggestions.length > 0 && (
-                  <div className="rounded-lg border border-border/40 bg-card/60 p-2.5 space-y-2">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60">
-                      Already tracked, pick one?
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {suggestions.map(name => (
-                        <button
-                          key={name}
-                          onClick={() => selectExisting(name)}
-                          className="px-2.5 py-1 text-xs rounded-full border border-primary/40 text-primary/90 hover:bg-primary/5"
-                        >
-                          {name}
-                        </button>
-                      ))}
-                    </div>
-                    <button
-                      onClick={handleAddCommunitySymptom}
-                      disabled={addingSymptom}
-                      className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
-                    >
-                      None of these, add "{newSymptom.trim()}" as new
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-            <p className="text-[10px] text-muted-foreground/60 mt-2">
-              New symptoms are reviewed before joining the shared list. You can log yours right away.
-            </p>
           </div>
-
 
           {/* Notes */}
           <div className="space-y-1">
@@ -1066,21 +704,10 @@ export function SymptomLogWidget({ userId, cycleDay, phase, lastPeriodStart, cyc
           </div>
 
           {/* Submit */}
-          <div className="flex justify-end">
-            <Button
-              size="sm"
-              onClick={handleSubmit}
-              disabled={saving || (selected.length === 0 && !notes.trim())}
-              className="gap-1.5 text-xs"
-            >
-              {saving ? "Saving..." : (
-                <>
-                  <Check className="w-3 h-3" />
-                  Log {selected.length > 0 ? `${selected.length} symptom${selected.length !== 1 ? "s" : ""}` : "note"}
-                </>
-              )}
-            </Button>
-          </div>
+          <Button onClick={handleSubmit} disabled={saving || (selected.length === 0 && !notes.trim())}
+            className="h-12 w-full rounded-full bg-foreground text-base font-semibold text-background hover:bg-foreground/90">
+            {saving ? "Saving..." : selected.length > 0 ? `Log ${selected.length}` : "Log note"}
+          </Button>
         </div>
         <ReportSymptomDialog
           symptom={reportTarget}

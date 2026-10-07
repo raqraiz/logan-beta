@@ -2723,11 +2723,13 @@ const Chat = () => {
               isNonCycling={cycleData?.lifeStage !== "cycling"}
               onLogged={(entry) => {
                 setFeelSheetOpen(false);
-                const parts = entry.symptoms.map(s => s.severity ? `${s.name.toLowerCase()} (${s.severity}/5)` : s.name.toLowerCase());
-                const what = parts.length ? parts.join(", ") : "a note";
-                const when = entry.isToday ? "today" : "for an earlier day";
-                const note = entry.notes ? ` Note: ${entry.notes}` : "";
-                setTimeout(() => void sendAIMessage(`I just logged how I feel ${when}: ${what}.${note}`), 300);
+                // Confirmation only after the log was saved and re-read by the sheet.
+                const content = "Logged. Thanks for telling me.";
+                void supabase.from("chat_messages").insert({ user_id: user.id, role: "assistant", content, message_type: "text" })
+                  .select("id, created_at").maybeSingle().then(({ data }) => {
+                    if (!data) return;
+                    setMessages(prev => [...prev, { id: data.id, role: "assistant", content, message_type: "text", created_at: data.created_at, user_id: user.id } as ChatMessage]);
+                  });
               }}
             />
           </div>
