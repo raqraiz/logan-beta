@@ -47,3 +47,4 @@
 - [x] Report for all signed-in women; hide author with Settings undo
 - [x] Admin Tips queue incl. remove all from author
 - [x] Delete all memory and account deletion cover tips
+- [x] Tip rules recorded in the project notes
