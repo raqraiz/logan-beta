@@ -1,4 +1,4 @@
-import { sameSymptom } from "@/lib/symptomCatalog";
+import { canonicalSymptom, sameSymptom } from "@/lib/symptomCatalog";
 import { DAY, groupCycles, symptomPoints, type LogRow } from "@/lib/patternCycles";
 
 const DEFINITIONS: Record<string, string> = {
@@ -58,6 +58,42 @@ export function symptomDefinition(name: string): { text: string; safety: string 
 }
 
 export type SymptomPageLog = LogRow & { notes?: string | null };
+
+/** Own-log fallback only: two distinct real cycles, +/- one calendar day, last 12 months. */
+export function ownSymptomPairs(logs: SymptomPageLog[], name: string, starts: string[], now = Date.now()): string[] {
+  const cutoff = now - 365 * DAY;
+  const days = logs.filter((r) => {
+    const t = Date.parse(r.logged_at);
+    return t >= cutoff && t <= now;
+  }).map((r) => ({
+    day: Date.parse(`${r.logged_at.slice(0, 10)}T12:00:00Z`),
+    names: [...new Set((Array.isArray(r.symptoms) ? r.symptoms : []).flatMap((s: unknown) => {
+      if (typeof s === "string") return [canonicalSymptom(s)];
+      if (!s || typeof s !== "object" || !("name" in s) || typeof s.name !== "string") return [];
+      if ("severity" in s && typeof s.severity === "number" && s.severity < 0) return [];
+      return [canonicalSymptom(s.name)];
+    }))],
+  }));
+  const target = days.filter((r) => r.names.some((n) => sameSymptom(n, name)));
+  if (target.length < 3) return [];
+  const anchors = [...new Set(starts)].sort().map((s) => Date.parse(`${s}T12:00:00Z`));
+  const matches = new Map<string, Set<number>>();
+  for (const t of target) {
+    const anchor = anchors.filter((s) => s <= t.day).at(-1);
+    if (anchor === undefined || t.day - anchor >= 60 * DAY) continue;
+    for (const r of days) {
+      if (Math.abs(r.day - t.day) > DAY) continue;
+      for (const n of r.names) {
+        if (sameSymptom(n, name)) continue;
+        const cycles = matches.get(n) ?? new Set<number>();
+        cycles.add(anchor); matches.set(n, cycles);
+      }
+    }
+  }
+  return [...matches].filter(([, cycles]) => cycles.size >= 2)
+    .sort((a, b) => b[1].size - a[1].size || a[0].localeCompare(b[0]))
+    .slice(0, 3).map(([n]) => n);
+}
 
 /** A written line that must stay one insight instead of being split into sentences. */
 export type InsightSource = string | null | { text: string; keepTogether?: boolean };

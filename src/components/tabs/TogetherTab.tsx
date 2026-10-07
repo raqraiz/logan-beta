@@ -159,7 +159,7 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, c
     const fixed = timingFix[normSymptom(page)];
     const info = found ? { ...found, name: page, ...(fixed ? { from: fixed[0], to: fixed[1] } : {}) } : { name: page, from: null, to: null, cycles: 0, count: 0 };
     return (
-      <PatternPage userId={userId} pattern={info} logs={pageLogs}
+      <PatternPage key={page} userId={userId} pattern={info} logs={pageLogs} onOpenSymptom={(n) => setPage(n)}
         watched={watch.some((w) => key(w) === key(page))} lastPeriodStart={lastPeriodStart} isNonCycling={isNonCycling}
         onClose={() => setPage(null)} onLog={(s) => { setPage(null); setLogging({ symptom: s }); }} onChanged={() => setReloadLogs((n) => n + 1)} sample={sample}
         onUnstar={async () => {
