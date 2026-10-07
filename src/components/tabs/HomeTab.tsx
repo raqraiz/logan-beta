@@ -486,7 +486,7 @@ interface HomeTabProps {
   onPostpartumDeclare?: () => void;
   onStillCyclingDeclare?: () => void;
   userId?: string;
-  onLogFeeling?: () => void;
+  onLogFeeling?: (symptom?: string) => void;
 }
 
 // ── HomeTab ───────────────────────────────────────────────
@@ -968,7 +968,7 @@ export function HomeTab({ cycleData, anchorSymptom, onPeriodUpdate, onCycleMarke
             cycleLengthDays={cycleData.cycleLengthDays}
             isNonCycling={!!isNonCycling}
             lifeStage={cycleData.lifeStage}
-            onLogFeeling={() => onLogFeeling?.()}
+            onLogFeeling={(symptom) => onLogFeeling?.(symptom)}
           />
         )}
 

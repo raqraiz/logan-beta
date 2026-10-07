@@ -12,3 +12,8 @@
 ## You tab redesign
 - [x] Pill ink color, disclaimer, About Logan, no-diagnosis rule
 - [x] You tab: title, ring, patterns, tiles, trackers (Doctor tile hidden: no doctor summary feature exists)
+
+## Symptom page replacement
+- [x] Replace the old pattern layout with definition and personal symptom cards.
+- [x] Connect preselected logging and retain correction/hide controls.
+- [x] Verify populated and zero states, mobile spacing, and dark mode (read-only browser checks; hide/undo writes not exercised).

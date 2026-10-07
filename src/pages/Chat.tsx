@@ -259,6 +259,7 @@ const Chat = () => {
   const [pillHasNew, setPillHasNew] = useState(false);
   const userScrolledRef = useRef(false);
   const [feelSheetOpen, setFeelSheetOpen] = useState(false);
+  const [feelSymptom, setFeelSymptom] = useState<string | undefined>();
   const [creditBalance, setCreditBalance] = useState<{ free: number; paid: number; total: number; hoursUntilReset?: number } | null>(null);
   const [outOfCredits, setOutOfCredits] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -1506,7 +1507,7 @@ const Chat = () => {
       userId={user.id}
       cycle={cycleData}
       onOpenYou={() => { setActiveTab("home"); trackTabSwitch("home"); }}
-      onLogFeeling={() => setFeelSheetOpen(true)}
+      onLogFeeling={() => { setFeelSymptom(undefined); setFeelSheetOpen(true); }}
     />
   ) : null;
 
@@ -1593,7 +1594,7 @@ const Chat = () => {
         <HomeTab
           cycleData={cycleData}
           userId={user?.id}
-          onLogFeeling={() => setFeelSheetOpen(true)}
+          onLogFeeling={(symptom) => { setFeelSymptom(symptom); setFeelSheetOpen(true); }}
           onPeriodUpdate={async (date: Date) => {
             if (!user?.id) return;
             const iso = format(date, "yyyy-MM-dd");
@@ -2695,6 +2696,8 @@ const Chat = () => {
           <DrawerTitle className="sr-only">How I feel</DrawerTitle>
           <div className="overflow-y-auto px-2 pb-6">
             <SymptomLogWidget
+              key={feelSymptom ?? "all-symptoms"}
+              initialSymptom={feelSymptom}
               userId={user.id}
               cycleDay={cycleData?.lifeStage === "cycling" ? cycleData?.cycleDay : undefined}
               phase={cycleData?.phase}

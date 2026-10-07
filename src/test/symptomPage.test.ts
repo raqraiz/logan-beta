@@ -1,0 +1,29 @@
+import { describe, it, expect } from "vitest";
+import { symptomDefinition, symptomPageData, type SymptomPageLog } from "@/lib/symptomPage";
+
+const row = (date: string, day: number | null, notes: string | null = null): SymptomPageLog => ({ logged_at: `${date}T12:00:00Z`, cycle_day: day, symptoms: [{ name: "Cramps", severity: 3 }], notes });
+describe("Symptom page presentation data", () => {
+  it("counts positive logs and shared cycle groups", () => {
+    expect(symptomPageData([row("2026-08-19", 19), row("2026-08-20", 20), row("2026-09-19", 19)], "Cramps")).toMatchObject({ count: 3, cycles: 2, trend: null });
+  });
+  it("counts logs without cycle days without inventing cycles", () => {
+    expect(symptomPageData([row("2026-09-19", null)], "Cramps")).toMatchObject({ count: 1, cycles: 0 });
+  });
+  it("returns a true zero state and skips severity zero", () => {
+    expect(symptomPageData([{ ...row("2026-09-19", 19), symptoms: [{ name: "Cramps", severity: 0 }] }], "Cramps").count).toBe(0);
+  });
+  it("compares equal elapsed cycle days, not a partial cycle to a whole one", () => {
+    const logs = [row("2026-08-19", 19), row("2026-08-20", 20), row("2026-08-25", 25), row("2026-09-19", 19)];
+    expect(symptomPageData(logs, "Cramps", "2026-09-01", Date.parse("2026-09-20T12:00:00Z")).trend).toBe("Less");
+    expect(symptomPageData(logs, "Cramps", "2026-10-01").trend).toBeNull();
+  });
+  it("does not claim arbitrary notes helped", () => {
+    expect(symptomPageData([row("2026-09-19", 19, "Went for a walk")], "Cramps").helped).toBeNull();
+    expect(symptomPageData([row("2026-09-19", 19, "What helped me: a warm bath.")], "Cramps").helped).toBe("a warm bath");
+  });
+  it("puts safety ahead of calm definitions without inventing custom definitions", () => {
+    expect(symptomDefinition("Hearing loss").safety).toContain("doctor");
+    expect(symptomDefinition("Cramps").text).toContain("squeezing");
+    expect(symptomDefinition("My custom feeling").text).toContain("name you're using");
+  });
+});

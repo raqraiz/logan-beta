@@ -348,3 +348,18 @@ html:not(.dark) .headsup-primary, .theme-light .headsup-primary { background: hs
   }
 }
 @layer utilities { .tracking-wide, .tracking-wider, .tracking-widest { letter-spacing: normal !important; } }
+
+/* Symptom detail: scoped roles preserve the existing app theme. */
+:root {
+  --symptom-stat-surface: #F4F1EA;
+  --symptom-watch-ink: #0B7479;
+  --symptom-insight-dot: #C4247A;
+}
+.dark {
+  --symptom-stat-surface: hsl(var(--background));
+  --symptom-watch-ink: #5FE0E4;
+  --symptom-insight-dot: #FF7AB8;
+}
+.symptom-stat { background: var(--symptom-stat-surface); }
+.symptom-watch { color: var(--symptom-watch-ink); }
+.symptom-insight-dot { background: var(--symptom-insight-dot); }
