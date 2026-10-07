@@ -708,11 +708,16 @@ const Chat = () => {
   }, [messages, isOnboarding]);
 
   // Auto-scroll on new messages
+  const lastAutoScrolledIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (isOnboarding) return; // Disable auto-scroll during onboarding, let users read at their own pace
     if (messages.length === 0) return;
     if (!hasScrolledToBottom.current) return; // skip until initial scroll done
     const lastMsg = messages[messages.length - 1];
+    // Only react to a genuinely new last message, not refetches of the same list
+    if (lastAutoScrolledIdRef.current === null) { lastAutoScrolledIdRef.current = lastMsg.id; return; }
+    if (lastAutoScrolledIdRef.current === lastMsg.id) return;
+    lastAutoScrolledIdRef.current = lastMsg.id;
 
     if (lastMsg.role === "assistant" && lastMsg.metadata?.insight_type === "proactive" && todaySectionRef.current) return;
     if (lastMsg.role === "assistant") {
