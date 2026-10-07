@@ -2548,7 +2548,7 @@ const Chat = () => {
                 setShowScrollButton(false);
                 setPillHasNew(false);
               }}
-              className="absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+12px)] z-[60] rounded-full border border-[#DDD7CC] bg-white px-4 py-1.5 font-['Quicksand'] text-[13px] font-semibold text-[#1F1B16] animate-in fade-in duration-200"
+              className="absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+12px)] z-[60] rounded-full border border-[#DDD7CC] bg-white px-4 py-1.5 font-['Quicksand'] text-[13px] font-semibold text-[#23201C] animate-in fade-in duration-200"
             >
               {pillHasNew ? "New messages ↓" : "Latest ↓"}
             </button>
