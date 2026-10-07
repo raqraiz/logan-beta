@@ -116,8 +116,8 @@ function PartnerToday({ userId, help, skip }: { userId: string; help: string[]; 
   return (
     <div className="flex items-center gap-3 rounded-[28px] border border-border bg-card p-5">
       <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-2 text-sm font-bold text-primary">
-          <span className="h-2 w-2 rounded-full bg-primary" aria-hidden /> For {person.name} today
+        <p className="flex items-center gap-2 text-sm font-bold text-[hsl(var(--logan-cyan))]">
+          <span className="h-2 w-2 rounded-full bg-[hsl(var(--logan-cyan))]" aria-hidden /> For {person.name} today
         </p>
         <p className="mt-1 text-sm text-foreground">{help[0]}</p>
       </div>
@@ -173,7 +173,7 @@ export const LoganTodaySection = forwardRef<HTMLDivElement, Props>(function Loga
                 <ul className="space-y-2">
                   {succeed.map((t, i) => (
                     <li key={i} className="flex items-start gap-3 text-sm text-foreground">
-                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden />{t}
+                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[hsl(var(--logan-cyan))]" aria-hidden />{t}
                     </li>
                   ))}
                 </ul>
@@ -185,7 +185,7 @@ export const LoganTodaySection = forwardRef<HTMLDivElement, Props>(function Loga
                 <ul className="space-y-2">
                   {avoid.map((t, i) => (
                     <li key={i} className="flex items-start gap-3 text-sm text-foreground">
-                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full border-[1.5px] border-primary" aria-hidden />{t}
+                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full border-[1.5px] border-[hsl(var(--logan-cyan))]" aria-hidden />{t}
                     </li>
                   ))}
                 </ul>
