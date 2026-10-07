@@ -34,7 +34,7 @@ function symptomNames(logs: SymptomPageLog[]): Set<string> {
   const out = new Set<string>();
   for (const l of logs) for (const s of (Array.isArray(l.symptoms) ? l.symptoms : []) as any[]) {
     const n = typeof s === "string" ? s : s?.name;
-    if (n && (typeof s === "string" || typeof s.severity !== "number" || s.severity > 0)) out.add(key(String(n)));
+    if (n && (typeof s === "string" || typeof s.severity !== "number" || s.severity >= 0)) out.add(key(String(n)));
   }
   return out;
 }
