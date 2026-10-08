@@ -20,7 +20,7 @@ import { trackMessageFailures } from "../_shared/messageFailures.ts";
 import { loadCatalog, matchSymptoms } from "../_shared/symptomMatch.ts";
 import {
   CHIP_TALK, DISTRESS_CHIPS, SELF_HARM_SESSION_MS, distressPromptBlock, planDistressTurn, redFlagLine, regionForTimezone,
-  acuteFromSymptomNames, acuteReply, applyDistressMeta, finalizeDistressReply, hasRecentDistress, isFactualCycleQuestion,
+  ACUTE_EXIT_OPENER, acuteFromSymptomNames, acuteReply, applyDistressMeta, ensureSubstance, finalizeDistressReply, hasRecentDistress, isFactualCycleQuestion,
   isRedFlagChipText, mentionsRedFlagSymptom, selfHarmSafeReply, stripDeepDive, type DistressAiMode,
 } from "../_shared/distress.ts";
 
@@ -1398,6 +1398,7 @@ serve(async (req) => {
     let distressAiMode: Exclude<DistressAiMode, "self_harm"> | null = null;
     let distressAiMeta: Record<string, unknown> | null = null;
     let acuteEpisodeAt: string | null = null;
+    let acuteExit = false; // a factual question during acute mode: acute mode ends, the question gets the full normal answer
     {
       // Self-harm mode lasts the whole session: until 6 hours pass with no self-harm-mode message.
       // It softens to "post-crisis" only after she has confirmed she is safe AND calmer.
@@ -1487,7 +1488,8 @@ serve(async (req) => {
         });
         return new Response(JSON.stringify({ success: true, message: reply }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      if (plan && plan.type === "ai" && plan.mode !== "self_harm") { distressAiMode = plan.mode; distressAiMeta = plan.metadata ?? null; }
+      if (plan && plan.type === "ai" && plan.mode === "acute_exit") acuteExit = true;
+      else if (plan && plan.type === "ai" && plan.mode !== "self_harm") { distressAiMode = plan.mode; distressAiMeta = plan.metadata ?? null; }
       // The post-distress rewrite is only for "why did this happen?" questions, never for a factual cycle question.
       if (distressAiMode === "post" && isFactualCycleQuestion(userMessage)) distressAiMode = null;
     }
@@ -5495,8 +5497,11 @@ serve(async (req) => {
         // The normal pipeline wrote this reply, so replace it with the fixed acute reply.
         finalAssistantMessage = acuteReply(dRegion, userMessage, false);
       } else {
-        finalAssistantMessage = finalizeDistressReply(finalAssistantMessage, distressAiMode, userMessage);
-        if (distressAiMode === "acute") {
+        const rawAnswer = finalAssistantMessage;
+        const safe = ensureSubstance(finalizeDistressReply(rawAnswer, distressAiMode, userMessage), rawAnswer, userMessage, dRegion, distressAiMode);
+        finalAssistantMessage = safe.text;
+        if (safe.kind !== "filtered") console.log("[distress] filters left no content; sent", safe.kind);
+        if (distressAiMode === "acute" && safe.kind === "filtered") {
           const rf = redFlagLine(dRegion);
           // If she typed a red-flag symptom herself, the emergency line comes first.
           finalAssistantMessage = mentionsRedFlagSymptom(userMessage) ? `${rf}\n\n${finalAssistantMessage}` : `${finalAssistantMessage}\n\n${rf}`;
@@ -5505,6 +5510,8 @@ serve(async (req) => {
       applyDistressMeta(baseMeta, distressAiMode);
       if (distressAiMode === "post_crisis") Object.assign(baseMeta, distressAiMeta ?? {});
     }
+    // Acute mode ended by a factual question: the normal answer, opened by one short line, no red-flag line, no acute chips.
+    if (acuteExit) finalAssistantMessage = `${ACUTE_EXIT_OPENER}\n\n${finalAssistantMessage}`;
     finalAssistantMessage = stripDashes(finalAssistantMessage);
     // No chip, from any source, may state a medical red-flag symptom ("It's hard to breathe", chest pain, fainting).
     if (Array.isArray(baseMeta.conversation_starters)) {

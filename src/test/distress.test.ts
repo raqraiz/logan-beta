@@ -6,6 +6,7 @@ import {
   detectSafeConfirmation, detectCalmSignal, finalizeDistressReply, postCrisisMetadata, postCrisisSupportLine,
   isFactualCycleQuestion, hasRecentDistress, asksWhyItHappened,
   acuteFromSymptomNames, applyDistressMeta, isRedFlagChipText, mentionsRedFlagSymptom, DISTRESS_CHIPS, redFlagLine, POST_CHIPS,
+  ACUTE_EXIT_OPENER, ensureSubstance, isOnlyFixedLines,
 } from "../../supabase/functions/_shared/distress.ts";
 
 const ACUTE_YES = [
@@ -418,7 +419,7 @@ describe("soft exit: post-crisis mode", () => {
       expect(meta.log_offer).toBeUndefined();
       expect(meta.conversation_starters).toEqual(["Tell me more"]);
       const src = readFileSync("supabase/functions/chat-ai/index.ts", "utf8");
-      expect(src).toContain("finalizeDistressReply(finalAssistantMessage, distressAiMode, userMessage)");
+      expect(src).toContain("finalizeDistressReply(rawAnswer, distressAiMode, userMessage)");
       // the strict "emotional moment" rules (60 words, no physiology) are not forced on by post-crisis mode
       expect(src).toContain('distressAiMode !== "post_crisis"');
     });
@@ -478,7 +479,7 @@ describe("factual cycle question right after acute distress (live bug)", () => {
     expect(src).toContain("const factualAfterDistress = isFactualCycleQuestion(userMessage) && (hasRecentDistress(lastAssistantMsg as any) || !!acuteEpisodeAt);");
     expect(src).toContain("const emotionalFollowUp = !factualAfterDistress && isEmotionalFollowUp(");
     expect(src).toContain('if (distressAiMode === "post" && isFactualCycleQuestion(userMessage)) distressAiMode = null;');
-    expect(src).toContain("finalizeDistressReply(finalAssistantMessage, distressAiMode, userMessage)");
+    expect(src).toContain("finalizeDistressReply(rawAnswer, distressAiMode, userMessage)");
   });
 
   it.each([
@@ -701,5 +702,83 @@ describe("post-distress 'why' stays hedged for the whole 6-hour window (live bug
     expect(src).toContain("metadata->>distress_post.eq.true,metadata->>distress_mode.eq.acute");
     expect(src).toMatch(/acuteEpisodeAt,\n/);
     expect(src).toContain("hasRecentDistress(lastAssistantMsg as any) || !!acuteEpisodeAt");
+  });
+});
+
+describe("factual question during acute mode (live bug: only the red-flag line came back)", () => {
+  const T = "Asia/Hebron";
+  const QUESTION = "what happens in the luteal phase?";
+  // A realistic luteal answer is almost entirely hormone sentences, which is why the acute filter removed all of it.
+  const RAW = "The luteal phase is the second half of your cycle, after ovulation. Progesterone rises and then falls if there is no pregnancy. Estrogen also dips, which is why your period starts.";
+
+  it("the exact sequence: the typo panic message, then the luteal question with no calm signal in between", () => {
+    const now = new Date("2026-10-08T12:42:00Z");
+    const first = planDistressTurn("im having a panic attach", T, null, now);
+    if (first?.type !== "reply") throw new Error("expected the fixed acute reply");
+    expect(first.metadata.distress_mode).toBe("acute");
+    const last = { metadata: first.metadata, created_at: now.toISOString() };
+    // the factual question is an implicit calm signal: acute mode ends
+    expect(planDistressTurn(QUESTION, T, last, new Date(now.getTime() + 45_000))).toEqual({ type: "ai", mode: "acute_exit" });
+  });
+
+  it("what the old path did: the acute filter strips the whole answer, and only the red-flag line would have been sent", () => {
+    const filtered = finalizeDistressReply(RAW, "acute", QUESTION);
+    expect(isOnlyFixedLines(filtered) || filtered.length < 80).toBe(true);
+    expect(isOnlyFixedLines(`${filtered}\n\n${redFlagLine("IL")}`)).toBe(isOnlyFixedLines(filtered));
+  });
+
+  it("safety net: a reply left with nothing but the red-flag line is never sent", () => {
+    const empty = ensureSubstance("", RAW, QUESTION, "IL", "acute");
+    expect(empty).toEqual({ text: RAW, kind: "raw" }); // factual question: the full unfiltered answer, no red-flag line
+    expect(empty.text).not.toContain("101");
+    const onlyLine = ensureSubstance(redFlagLine("IL"), RAW, QUESTION, "IL", "acute");
+    expect(onlyLine.kind).toBe("raw");
+    const distressMsg = ensureSubstance("", "Progesterone is low.", "I can't stop shaking", "IL", "acute");
+    expect(distressMsg.kind).toBe("fixed");
+    expect(distressMsg.text).toContain("Panic attacks can feel really scary");
+    expect(distressMsg.text.match(/Magen David Adom on 101/g)).toHaveLength(1);
+    expect(ensureSubstance("", "x", "I'm worried about my friend", "IL", "checkin_no")).toEqual({ text: "I'm here with you. What's on your mind?", kind: "fixed" });
+    // a reply with real content is left alone
+    expect(ensureSubstance("Let's slow your breathing together.", RAW, "I can't stop shaking", "IL", "acute")).toEqual({ text: "Let's slow your breathing together.", kind: "filtered" });
+  });
+
+  it("isOnlyFixedLines sees through every region's red-flag line", () => {
+    for (const r of ["IL", "US", "UK", null] as const) expect(isOnlyFixedLines(`\n\n${redFlagLine(r)}`)).toBe(true);
+    expect(isOnlyFixedLines("")).toBe(true);
+    expect(isOnlyFixedLines(`The luteal phase is the second half of your cycle.\n\n${redFlagLine("IL")}`)).toBe(false);
+  });
+
+  it("the opener is one short line and mentions no emergency number", () => {
+    expect(ACUTE_EXIT_OPENER).toBe("Glad you're up for a question.");
+    expect(ACUTE_EXIT_OPENER).not.toMatch(/101|call|emergency/i);
+  });
+
+  it.each(["what phase am I in?", "what happens in the luteal phase?", "how long is the luteal phase?", "when is my next period?", "what is the follicular phase?"])(
+    "factual question counts as an implicit calm signal: %s", (m) => {
+      const last = { metadata: { distress_mode: "acute" }, created_at: "2026-10-08T12:42:10Z" };
+      expect(planDistressTurn(m, T, last, new Date("2026-10-08T12:43:00Z"))).toEqual({ type: "ai", mode: "acute_exit" });
+    });
+
+  it.each([
+    "why do I feel like this?", "why is this happening to me?", "is it my hormones?", "what is happening to me?",
+    "I'm still panicking, what happens in the luteal phase?", "what phase am I in? I can't breathe", "my chest hurts, what is a panic attack?",
+  ])("not an implicit calm signal, acute mode continues: %s", (m) => {
+    const last = { metadata: { distress_mode: "acute" }, created_at: "2026-10-08T12:42:10Z" };
+    const p = planDistressTurn(m, T, last, new Date("2026-10-08T12:43:00Z"));
+    expect(p === null || (p.type === "ai" && p.mode === "acute") || p.type === "reply").toBe(true);
+    expect(p).not.toEqual({ type: "ai", mode: "acute_exit" });
+  });
+
+  it("outside acute mode nothing changes: a factual question is plain chat", () => {
+    expect(planDistressTurn(QUESTION, T, null, new Date("2026-10-08T12:43:00Z"))).toBeNull();
+    expect(planDistressTurn(QUESTION, T, { metadata: { distress_mode: "acute" }, created_at: "2026-10-08T05:00:00Z" }, new Date("2026-10-08T12:43:00Z"))).toBeNull();
+  });
+
+  it("chat-ai opens the answer with the one-line opener, skips the red-flag line, and runs the safety net", () => {
+    const src = readFileSync("supabase/functions/chat-ai/index.ts", "utf8");
+    expect(src).toContain('plan.mode === "acute_exit") acuteExit = true;');
+    expect(src).toContain("if (acuteExit) finalAssistantMessage = `${ACUTE_EXIT_OPENER}");
+    expect(src).toContain("ensureSubstance(finalizeDistressReply(rawAnswer, distressAiMode, userMessage), rawAnswer, userMessage");
+    expect(src).toContain('if (distressAiMode === "acute" && safe.kind === "filtered")');
   });
 });
