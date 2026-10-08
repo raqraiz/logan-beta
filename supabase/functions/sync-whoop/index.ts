@@ -315,7 +315,7 @@ Deno.serve(async (req) => {
     const results = [];
     for (const integ of integs ?? []) {
       try {
-        results.push(await syncOne(admin, integ as any, backfillDays));
+        results.push(await syncOne(admin as any, integ as any, backfillDays));
       } catch (e) {
         console.error("Sync failed for", integ.user_id, e);
         results.push({ user_id: integ.user_id, error: e instanceof Error ? e.message : "unknown" });

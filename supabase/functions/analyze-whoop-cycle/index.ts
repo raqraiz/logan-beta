@@ -205,7 +205,7 @@ Deno.serve(async (req) => {
     if (!userId) return new Response(JSON.stringify({ error: "user_id required" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-    const result = await analyzeUser(admin, String(userId));
+    const result = await analyzeUser(admin as any, String(userId));
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
