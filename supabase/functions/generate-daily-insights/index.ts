@@ -2,7 +2,7 @@ import { CALM_VOICE_RULE } from "../_shared/voiceRule.ts";
 import { anchorPromptRule, currentCycleAnchorType } from "../_shared/cycleAnchor.ts";
 import { buildBcMethodRule,  } from "../_shared/bcMethod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import {
   fetchActiveBoundaries,
   buildBoundaryRuleBlock,
