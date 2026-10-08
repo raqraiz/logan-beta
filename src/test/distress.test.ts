@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  EMERGENCY_NUMBERS, acuteReply, breatheReply, detectAcuteDistress, detectCalm, detectSelfHarm,
+  CHECKIN_REPLY, EMERGENCY_NUMBERS, acuteReply, breatheReply, detectAcuteDistress, detectCalm, detectSelfHarm, detectSelfHarmAmbiguous,
   distressPromptBlock, planDistressTurn, regionForTimezone, selfHarmReply, stripDeepDive,
 } from "../../supabase/functions/_shared/distress.ts";
 
@@ -15,18 +15,20 @@ const ACUTE_NO = [
   "my cramps are bad today", "I can't sleep", "היה לי התקף חרדה אתמול", "I'm tired and bloated",
 ];
 const SELF_YES = [
-  "I want to die", "i wanna die", "I don't want to be here anymore", "I want to end it all", "ending it", "I'm going to hurt myself",
+  "I want to die", "i wanna die", "I want to end it all", "I want to end my life", "I'm going to hurt myself",
   "thinking about killing myself", "kms", "I'm suicidal", "sucide", "I wish I was dead", "everyone would be better off without me",
-  "I don't want to live", "I can't do this anymore", "I'm going to take all my pills", "self-harm", "I want to cut myself",
+  "I don't want to live", "I'm going to take all my pills", "self-harm", "I want to cut myself",
   "אני רוצה למות", "מחשבות אובדניות", "לא רוצה לחיות", "אני רוצה לפגוע בעצמי",
 ];
-const SELF_NO = ["I'm so tired", "my period is killing me", "I feel like I'm going to die, panic attack", "what's for dinner"];
+const AMBIG_YES = ["I can't do this anymore", "I want to end it", "i don't want to be here anymore", "ending it", "I wish I could disappear", "אני לא רוצה להיות פה"];
+const SELF_NO = ["I can't do this anymore", "I don't want to be here anymore", "I'm so tired", "my period is killing me", "I feel like I'm going to die, panic attack", "what's for dinner"];
 
 describe("distress detection", () => {
   it.each(ACUTE_YES)("acute: %s", (m) => expect(detectAcuteDistress(m)).toBe(true));
   it.each(ACUTE_NO)("not acute: %s", (m) => expect(detectAcuteDistress(m)).toBe(false));
   it.each(SELF_YES)("self-harm: %s", (m) => expect(detectSelfHarm(m)).toBe(true));
   it.each(SELF_NO)("not self-harm: %s", (m) => expect(detectSelfHarm(m)).toBe(false));
+  it.each(AMBIG_YES)("ambiguous tier: %s", (m) => { expect(detectSelfHarmAmbiguous(m)).toBe(true); expect(detectSelfHarm(m)).toBe(false); });
   it("self-harm is never treated as acute", () => expect(detectAcuteDistress("I want to die, I'm panicking")).toBe(false));
   it.each(["I'm ok now", "I'm feeling calmer", "feeling better", "it passed", "אני בסדר"])("calm: %s", (m) => expect(detectCalm(m)).toBe(true));
   it.each(["I'm not ok", "still panicking", "I'm not feeling better", "it's not helping"])("not calm: %s", (m) => expect(detectCalm(m)).toBe(false));
@@ -46,6 +48,8 @@ describe("region and numbers", () => {
   it("acute reply shows only the emergency number, no hotline list", () => {
     const il = acuteReply("IL", "I'm having a panic attack", false);
     expect(il).toContain("101");
+    expect(il).toContain("Panic attacks can feel really scary, and they do pass.");
+    expect(il).not.toMatch(/frightening/);
     for (const x of ["1201", "sahar", "118", "NATAL"]) expect(il).not.toContain(x);
     expect(acuteReply(null, "panic attack", false)).toContain("your local emergency number");
     expect(acuteReply("US", "panic attack", false)).toContain("911");
@@ -138,5 +142,57 @@ describe("planDistressTurn", () => {
   });
   it("stripDeepDive removes the See more section", () => {
     expect(stripDeepDive("short\n---\nlong hormone text")).toBe("short");
+  });
+});
+
+describe("self-harm session and check-in", () => {
+  const T = "Asia/Jerusalem";
+  const now = new Date("2026-10-08T12:00:00Z");
+  const at = (m: Record<string, unknown>, min = 5) => ({ metadata: m, created_at: new Date(now.getTime() - min * 60000).toISOString() });
+  const rep = (p: ReturnType<typeof planDistressTurn>) => { if (p?.type !== "reply") throw new Error("expected reply"); return p; };
+
+  it("ambiguous phrase → gentle check-in with the approved wording, not the full reply, not counted", () => {
+    const p = rep(planDistressTurn("I can't do this anymore", T, null, now));
+    expect(p.message).toBe("That sounds like a lot to carry. When you say that, do you mean you're having thoughts of hurting yourself or not wanting to be alive? Either way, I'm here.");
+    expect(p.message).toBe(CHECKIN_REPLY);
+    expect(p.metadata.distress_checkin).toBe(true);
+    expect(p.metadata.distress_mode).toBeUndefined();
+    expect(p.enteredKind).toBeUndefined();
+  });
+  it("check-in: yes → full reply (counted); explicit phrase → full reply; no → normal chat without cycle attribution", () => {
+    const last = at({ distress_checkin: true });
+    expect(rep(planDistressTurn("yes", T, last, now)).enteredKind).toBe("self_harm");
+    expect(rep(planDistressTurn("kind of", T, last, now)).message).toContain("1201");
+    expect(rep(planDistressTurn("I want to die", T, last, now)).message).toContain("1201");
+    expect(planDistressTurn("no, just exhausted", T, last, now)).toEqual({ type: "ai", mode: "checkin_no" });
+    expect(distressPromptBlock("checkin_no", "IL")).toMatch(/Do NOT mention her cycle, phase, hormones/);
+    expect(planDistressTurn("my boss is awful", T, last, now)).toEqual({ type: "ai", mode: "checkin_open" });
+  });
+  it("after the full reply: safe → supportive + crisis line + invite; not safe → emergency number first", () => {
+    const last = at({ distress_mode: "self_harm", distress_safety_ask: true });
+    const opts = { selfHarmSessionActive: true };
+    const safe = rep(planDistressTurn("yes I'm safe", T, last, now, opts));
+    expect(safe.message).toContain("1201");
+    expect(safe.message).toMatch(/keep talking/);
+    expect(safe.message).not.toMatch(/cycle|phase|hormon/i);
+    const unsafe = rep(planDistressTurn("no, I'm not safe", T, last, now, opts));
+    expect(unsafe.message.startsWith("Please call Magen David Adom on 101 now.")).toBe(true);
+    expect(rep(planDistressTurn("I have the pills", T, last, now, opts)).message).toContain("101");
+  });
+  it("stays in self-harm mode for the whole session, even on calm-sounding messages, and has no chips except Talk it through", () => {
+    const opts = { selfHarmSessionActive: true };
+    for (const m of ["I'm ok now", "feeling better", "what should I eat today?", "why did that happen?"]) {
+      expect(planDistressTurn(m, T, at({}), now, opts)).toEqual({ type: "ai", mode: "self_harm" });
+    }
+    const again = rep(planDistressTurn("I want to die", T, at({ distress_mode: "self_harm" }), now, opts));
+    expect(again.enteredKind).toBeUndefined();
+    expect(again.metadata.conversation_starters).toEqual(["Talk it through"]);
+  });
+  it("exits only on a new session", () => {
+    expect(planDistressTurn("what should I eat today?", T, at({}, 600), now, { selfHarmSessionActive: false })).toBeNull();
+  });
+  it("self-harm mode ignores acute handling and log offers", () => {
+    const p = planDistressTurn("I'm having a panic attack", T, at({ distress_mode: "self_harm" }), now, { selfHarmSessionActive: true });
+    expect(p).toEqual({ type: "ai", mode: "self_harm" });
   });
 });

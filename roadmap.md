@@ -56,3 +56,8 @@
 
 ## Later
 - [ ] Custom community symptoms become visible to everyone once 10+ consenting women log them. Implement by reading the precomputed Together daily totals, never by scanning symptom_logs at request time.
+
+## Acute-distress mode
+- [x] Acute-distress mode: no hormonal attribution, no auto-logging, red-flag line, localized emergency info.
+- [x] Self-harm path: explicit phrases get the full reply, ambiguous phrases get a gentle check-in, and the mode lasts the whole session.
+- [ ] Follow-up (separate PR): Hebrew versions of the fixed replies, check-in and red-flag line, for Hebrew messages. Needs native review before shipping.

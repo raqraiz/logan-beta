@@ -123,8 +123,9 @@ export function detectAcuteDistress(text: string): boolean {
   return true;
 }
 
-// Err broad: a false positive is acceptable here, a miss is not.
-export const SELF_HARM_PATTERNS: RegExp[] = [
+// Err broad: a false positive is acceptable, a miss is not.
+// Tier 1, explicit: gets the full self-harm reply straight away.
+export const SELF_HARM_EXPLICIT_PATTERNS: RegExp[] = [
   /\bkill(?:ing)?\s+(?:my\s*self|myself)\b/,
   /\bkms\b/,
   /\b(?:suicid\w*|sucide|suicde|suiside|sucicide|suicidle)\b/,
@@ -133,12 +134,11 @@ export const SELF_HARM_PATTERNS: RegExp[] = [
   /\bwish\s+(?:i|that i)\s+(?:wouldn'?t|would not|didn'?t|did not)\s+wake\s+up\b/,
   /\b(?:better|rather)\s+(?:be\s+)?(?:off\s+)?dead\b/,
   /\bbetter off without me\b/,
-  /\b(?:don'?t|dont|do not|no longer)\s+want\s+to\s+(?:live|be alive|exist|be here|be around|wake up|go on|keep going)\b/,
-  /\b(?:don'?t|dont|do not)\s+wanna\s+(?:live|be alive|exist|be here|be around|wake up|go on)\b/,
-  /\bno\s+(?:reason|point)\s+(?:to|in|of)\s+(?:live|living|go on|going on|being alive|anything)\b/,
-  /\b(?:don'?t|dont)\s+see\s+(?:the|any)\s+point\s+(?:in|of)\s+(?:living|going on|anything|life)\b/,
+  /\b(?:don'?t|dont|do not|no longer)\s+want\s+to\s+(?:live|be alive|exist)\b/,
+  /\b(?:don'?t|dont|do not)\s+wanna\s+(?:live|be alive|exist)\b/,
+  /\bno\s+(?:reason|point)\s+(?:to|in|of)\s+(?:live|living|being alive)\b/,
+  /\b(?:don'?t|dont)\s+see\s+(?:the|any)\s+point\s+(?:in|of)\s+(?:living|life)\b/,
   /\bend\s+(?:it all|my life|everything|this all)\b/,
-  /\b(?:ending|end)\s+it\b/,
   /\btake\s+my\s+(?:own\s+)?life\b/,
   /\b(?:hurt|hurting|harm|harming|cut|cutting|burn|burning|punish|punishing|injure|injuring)\s+(?:my\s*self|myself)\b/,
   /\bself[\s-]?harm\w*\b/,
@@ -146,19 +146,43 @@ export const SELF_HARM_PATTERNS: RegExp[] = [
   /\b(?:take|swallow|swallowing|taking)\s+(?:all\s+)?(?:of\s+)?my\s+(?:pills|meds|medication)\b/,
   /\b(?:hang|hanging|drown|drowning|shoot|shooting|stab|stabbing)\s+(?:my\s*self|myself)\b/,
   /\bjump(?:ing)?\s+(?:off|from)\s+(?:a|the|my)\s+(?:bridge|roof|building|balcony|window|ledge)\b/,
-  /\bcan'?t\s+(?:go on|keep going|do this anymore|do this any more|take it anymore|take it any more)\b/,
-  /\b(?:wish|want)\s+(?:i|to)\s+(?:could\s+)?(?:disappear|vanish|not exist|never (?:been born|wake up))\b/,
   /\beveryone\s+(?:would be|is)\s+better\s+off\s+without\s+me\b/,
   // Hebrew
-  "להתאבד", "אובדני", "אובדנית", "אובדנות", "רוצה למות", "רוצה למות", "לא רוצה לחיות", "לא רוצה להיות פה", "לא רוצה להיות כאן",
+  "להתאבד", "אובדני", "אובדנית", "אובדנות", "רוצה למות", "לא רוצה לחיות",
   "לפגוע בעצמי", "לפגוע בעצמה", "לגמור עם הכל", "לסיים את החיים", "לסיים עם הכל", "אין טעם לחיות", "הלוואי שהייתי מתה", "הלוואי שהייתי מת",
-  "רוצה להיעלם", "להרוג את עצמי", "אני אהרוג את עצמי", "לחתוך את עצמי",
+  "להרוג את עצמי", "אני אהרוג את עצמי", "לחתוך את עצמי",
 ].map((p) => (typeof p === "string" ? new RegExp(p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) : p));
 
+// Tier 2, ambiguous: could be exhaustion or a breakup. Gets a gentle check-in, not the full reply.
+export const SELF_HARM_AMBIGUOUS_PATTERNS: RegExp[] = [
+  /\b(?:ending|end)\s+it\b/,
+  /\bcan'?t\s+(?:go on|keep going|do this anymore|do this any more|take it anymore|take it any more)\b/,
+  /\b(?:don'?t|dont|do not|no longer)\s+want\s+to\s+(?:be here|be around|wake up|go on|keep going)\b/,
+  /\b(?:don'?t|dont|do not)\s+wanna\s+(?:be here|be around|wake up|go on)\b/,
+  /\bno\s+(?:reason|point)\s+(?:to|in|of)\s+(?:go on|going on|anything)\b/,
+  /\b(?:don'?t|dont)\s+see\s+(?:the|any)\s+point\s+(?:in|of)\s+(?:going on|anything)\b/,
+  /\b(?:wish|want)\s+(?:i|to)\s+(?:could\s+)?(?:disappear|vanish|not exist|never (?:been born|wake up))\b/,
+  // Hebrew
+  "לא רוצה להיות פה", "לא רוצה להיות כאן", "רוצה להיעלם",
+].map((p) => (typeof p === "string" ? new RegExp(p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) : p));
+
+/** Tier 1: explicit self-harm language. */
 export function detectSelfHarm(text: string): boolean {
   const t = norm(text);
-  return !!t && SELF_HARM_PATTERNS.some((p) => p.test(t));
+  return !!t && SELF_HARM_EXPLICIT_PATTERNS.some((p) => p.test(t));
 }
+
+/** Tier 2: ambiguous language (only meaningful when detectSelfHarm is false). */
+export function detectSelfHarmAmbiguous(text: string): boolean {
+  const t = norm(text);
+  return !!t && SELF_HARM_AMBIGUOUS_PATTERNS.some((p) => p.test(t));
+}
+
+/** Immediate-danger language, only used while already in self-harm mode. */
+const IMMINENT_RE = /\b(?:not safe|unsafe|i'?m not (?:ok|okay|safe)|no,? i'?m not|i have (?:the |a |my )?(?:pills|knife|gun|rope|blade)|(?:about to|going to|gonna|plan(?:ning)? to)\s+(?:do it|hurt|kill|end|take|jump|cut)|already (?:took|did|cut|swallowed)|took (?:the |all |some |a lot of )?(?:pills|meds)|overdosed|bleeding)\b|לא בטוחה|לא בטוח|עומדת לעשות|עומד לעשות/;
+const SAFE_RE = /^(?:yes|yeah|yep|yup|i'?m safe|i am safe|safe|i'?m (?:ok|okay|fine)|for now|כן|אני בטוחה|אני בטוח)\b/;
+const CHECKIN_YES_RE = /^(?:yes|yeah|yep|yup|kind of|kinda|sort of|sometimes|a (?:little|bit)|i think so|maybe|i guess|both|כן)\b/;
+const CHECKIN_NO_RE = /^(?:no|nope|nah|not really|not like that|nothing like that|just (?:tired|stressed|venting|frustrated|overwhelmed|exhausted)|i (?:don'?t|do not) mean that|i'?m not|לא)\b/;
 
 /** She signals she is calmer. Any negation or "still" cancels it. */
 const CALM_RE = /\b(?:i'?m|im|i am|i feel|feeling|feel|it'?s|its|that'?s|thats|that|this|i'?m feeling|im feeling)\s+(?:\w+\s+)?(?:ok(?:ay)?|fine|better|calmer|calm|alright|all right|safe|breathing (?:again|normally)|passing|passed|easing|eased|over)\b|\b(?:it|that|this)\s+(?:passed|helped|worked)\b|\bbetter now\b|\bcalm(?:er)? now\b|\bthank(?:s| you)?,?\s+(?:i'?m\s+)?(?:better|ok|okay)\b|אני בסדר|יותר טוב|נרגעתי|עברה לי|עבר לי|רגועה|רגוע|מרגישה יותר טוב|מרגיש יותר טוב/;
@@ -210,7 +234,7 @@ function extraSupportLines(region: RegionCode | null, text: string): string {
   return out.join("\n\n");
 }
 
-const ACUTE_FIRST = `I'm right here with you. This is frightening, and these waves usually ease.
+const ACUTE_FIRST = `I'm right here with you. Panic attacks can feel really scary, and they do pass.
 
 Let's slow your breathing together. Breathe in through your nose for 4, then let it out slowly through your mouth for 6, like blowing on hot tea. Do that a few times.
 
@@ -275,15 +299,33 @@ export function selfHarmReply(region: RegionCode | null, userText: string, repea
   return parts.filter(Boolean).join("\n\n");
 }
 
-export function selfHarmCalmReply(region: RegionCode | null): string {
+export const CHECKIN_REPLY = "That sounds like a lot to carry. When you say that, do you mean you're having thoughts of hurting yourself or not wanting to be alive? Either way, I'm here.";
+
+/** She said she is not safe, or something suggesting immediate danger: emergency number first, brief and warm. */
+export function selfHarmDangerReply(region: RegionCode | null): string {
   const crisis = entries(region, "self_harm").filter((e) => e.role === "crisis");
-  const line = crisis.length ? crisis.map((e) => `${e.label}: ${e.contact}`).join("; ") : "your local crisis line or emergency number";
-  return `I'm glad you're feeling a little steadier. I'm still here. If those thoughts come back, ${line} is there any time, and so am I.`;
+  const line = crisis.length ? `${crisis.map((e) => `${e.label}: ${e.contact}`).join("; ")} is there too.` : "";
+  return [
+    `Please call ${emergencyPhrase(region, "self_harm")} now. I'm staying right here with you.`,
+    "If you can, tell someone near you and ask them to stay with you.",
+    line,
+  ].filter(Boolean).join("\n\n");
+}
+
+/** She said she is safe: stay supportive, crisis line visible once more, invite her to keep talking. */
+export function selfHarmSafeReply(region: RegionCode | null): string {
+  const crisis = entries(region, "self_harm").filter((e) => e.role === "crisis");
+  const line = crisis.length
+    ? `If you'd like a person to talk to, ${crisis.map((e) => `${e.label}: ${e.contact}`).join("; ")} is there any time.`
+    : "If you'd like a person to talk to, a crisis line in your area is there any time.";
+  return `I'm glad you're safe right now, and I'm still here.\n\n${line}\n\nYou're welcome to keep talking with me. What's on your mind?`;
 }
 
 // ───────────────────────── Turn planning ─────────────────────────
 
 export type DistressKind = "acute" | "self_harm";
+/** AI-answered turns: still in a mode, just after distress, or after a check-in. */
+export type DistressAiMode = DistressKind | "post" | "checkin_no" | "checkin_open";
 
 export interface LastAssistant {
   metadata?: Record<string, unknown> | null;
@@ -298,36 +340,74 @@ export type DistressPlan =
       /** Set when this turn newly enters a distress mode (for the count-only analytics). */
       enteredKind?: DistressKind;
     }
-  | { type: "ai"; mode: DistressKind | "post"; enteredKind?: DistressKind }
+  | { type: "ai"; mode: DistressAiMode }
   | null;
 
 const MODE_WINDOW_MS = 6 * 3600_000;
 const POST_WINDOW_MS = 3 * 3600_000;
+/** A "session" for self-harm mode: it lasts until 6 hours pass with no self-harm-mode message. */
+export const SELF_HARM_SESSION_MS = MODE_WINDOW_MS;
+
+export interface PlanOptions {
+  /** True when a self-harm-mode assistant message exists within SELF_HARM_SESSION_MS (looked up by the caller). */
+  selfHarmSessionActive?: boolean;
+}
 
 export function planDistressTurn(
   userText: string,
   timezone: string | null | undefined,
   last: LastAssistant | null,
   now: Date = new Date(),
+  opts: PlanOptions = {},
 ): DistressPlan {
   const region = regionForTimezone(timezone);
   const md = (last?.metadata ?? {}) as Record<string, unknown>;
   const age = last?.created_at ? now.getTime() - new Date(last.created_at).getTime() : Infinity;
-  const mode: DistressKind | null =
+  const lastMode: DistressKind | null =
     age <= MODE_WINDOW_MS && (md.distress_mode === "acute" || md.distress_mode === "self_harm") ? (md.distress_mode as DistressKind) : null;
+  const inSelfHarm = opts.selfHarmSessionActive === true || lastMode === "self_harm";
+  const mode: DistressKind | null = inSelfHarm ? "self_harm" : lastMode;
   const t = norm(userText);
 
-  // 1. Self-harm language always wins, in any mode.
+  // 1. Explicit self-harm language always wins, in any mode.
   if (detectSelfHarm(userText)) {
     return {
       type: "reply",
-      message: selfHarmReply(region, userText, mode === "self_harm"),
-      metadata: { distress_mode: "self_harm", conversation_starters: [CHIP_TALK] },
-      enteredKind: mode === "self_harm" ? undefined : "self_harm",
+      message: inSelfHarm && IMMINENT_RE.test(t) ? selfHarmDangerReply(region) : selfHarmReply(region, userText, inSelfHarm),
+      metadata: { distress_mode: "self_harm", distress_safety_ask: true, conversation_starters: [CHIP_TALK] },
+      enteredKind: inSelfHarm ? undefined : "self_harm",
     };
   }
 
-  // 2. She answered "Want me to log this?"
+  // 2. Already in self-harm mode: it stays on for the whole session. No cycle, hormones, logging or partner chips.
+  if (inSelfHarm) {
+    const meta = { distress_mode: "self_harm", conversation_starters: [CHIP_TALK] };
+    if (IMMINENT_RE.test(t)) return { type: "reply", message: selfHarmDangerReply(region), metadata: meta };
+    if (md.distress_safety_ask === true && SAFE_RE.test(t)) return { type: "reply", message: selfHarmSafeReply(region), metadata: meta };
+    if (detectSelfHarmAmbiguous(userText)) return { type: "reply", message: selfHarmReply(region, userText, true), metadata: { ...meta, distress_safety_ask: true } };
+    return { type: "ai", mode: "self_harm" };
+  }
+
+  // 3. Answer to the gentle check-in.
+  if (md.distress_checkin === true && age <= POST_WINDOW_MS) {
+    if (CHECKIN_YES_RE.test(t) || detectSelfHarmAmbiguous(userText)) {
+      return {
+        type: "reply",
+        message: selfHarmReply(region, userText, false),
+        metadata: { distress_mode: "self_harm", distress_safety_ask: true, conversation_starters: [CHIP_TALK] },
+        enteredKind: "self_harm",
+      };
+    }
+    if (CHECKIN_NO_RE.test(t)) return { type: "ai", mode: "checkin_no" };
+    return { type: "ai", mode: "checkin_open" };
+  }
+
+  // 4. Ambiguous phrase: gentle check-in, not the full reply.
+  if (detectSelfHarmAmbiguous(userText)) {
+    return { type: "reply", message: CHECKIN_REPLY, metadata: { distress_checkin: true } };
+  }
+
+  // 5. She answered "Want me to log this?"
   if (md.distress_log_ask === true && age <= POST_WINDOW_MS) {
     if (isYes(userText)) {
       return {
@@ -342,14 +422,12 @@ export function planDistressTurn(
     if (isNo(userText)) return { type: "reply", message: LOG_NO_REPLY, metadata: { distress_post: true } };
   }
 
-  // 3. She says she is calmer: leave distress mode.
-  if (mode && detectCalm(userText)) {
-    return mode === "acute"
-      ? { type: "reply", message: calmAckReply(), metadata: { distress_post: true, distress_log_ask: true, conversation_starters: [CHIP_LOG_YES, CHIP_LOG_NO] } }
-      : { type: "reply", message: selfHarmCalmReply(region), metadata: { distress_post: true } };
+  // 6. She says she is calmer: leave acute mode.
+  if (mode === "acute" && detectCalm(userText)) {
+    return { type: "reply", message: calmAckReply(), metadata: { distress_post: true, distress_log_ask: true, conversation_starters: [CHIP_LOG_YES, CHIP_LOG_NO] } };
   }
 
-  // 4. Chips while in acute mode.
+  // 7. Chips while in acute mode.
   if (mode === "acute") {
     if (t === CHIP_BREATHE.toLowerCase()) {
       return { type: "reply", message: breatheReply(region), metadata: { distress_mode: "acute", conversation_starters: DISTRESS_CHIPS } };
@@ -359,7 +437,7 @@ export function planDistressTurn(
     }
   }
 
-  // 5. New (or ongoing) acute distress.
+  // 8. New (or ongoing) acute distress.
   if (detectAcuteDistress(userText)) {
     return {
       type: "reply",
@@ -369,10 +447,10 @@ export function planDistressTurn(
     };
   }
 
-  // 6. Still in a mode but nothing above matched: the AI answers under strict rules.
-  if (mode) return { type: "ai", mode };
+  // 9. Still in acute mode but nothing above matched: the AI answers under strict rules.
+  if (mode === "acute") return { type: "ai", mode: "acute" };
 
-  // 7. The turn right after distress ended: normal chat, with cycle context only on request.
+  // 10. The turn right after distress ended: normal chat, with cycle context only on request.
   if (md.distress_post === true && age <= POST_WINDOW_MS) return { type: "ai", mode: "post" };
 
   return null;
@@ -380,7 +458,13 @@ export function planDistressTurn(
 
 // ───────────────────────── Prompt text for AI turns ─────────────────────────
 
-export function distressPromptBlock(mode: DistressKind | "post", region: RegionCode | null): string {
+export function distressPromptBlock(mode: DistressAiMode, region: RegionCode | null): string {
+  if (mode === "checkin_no" || mode === "checkin_open") {
+    const common = `\n\nRUNTIME CONTEXT (this turn only) — AFTER A GENTLE CHECK-IN: She said something that could mean she is struggling badly, and Logan asked whether she has thoughts of hurting herself or not wanting to be alive. Reply short, warm and plain. Do NOT mention her cycle, phase, hormones, or cycle day at all in this reply, and never attribute how she feels to them. No "---" deep dive, no logging, no partner suggestions. `;
+    return mode === "checkin_no"
+      ? common + `She said no, so go back to supportive chat about what she actually shared.`
+      : common + `Her answer did not clearly say yes or no. Respond to what she shared, then gently ask once more whether she is having thoughts of hurting herself or not wanting to be alive. Stay with her.`;
+  }
   if (mode === "post") {
     return `\n\nRUNTIME CONTEXT (this turn only) — JUST AFTER A DISTRESS MOMENT: She was in acute distress a moment ago and says she is calmer. Keep the reply short, warm, and plain. Do NOT open with her cycle day or phase. If she asks why it happened, you may say her cycle or hormones "may play a part", never that they are the cause, and also mention that stress, sleep, caffeine, and a lot of other things can set it off. Never state it as fact. No hormone lectures and no "---" deep dive. Do not offer to log anything.`;
   }

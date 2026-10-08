@@ -19,8 +19,8 @@ import { fetchMemoryNotes, buildMemoryBlock, extractCorrection, supersedeSameTop
 import { trackMessageFailures } from "../_shared/messageFailures.ts";
 import { loadCatalog, matchSymptoms } from "../_shared/symptomMatch.ts";
 import {
-  CHIP_TALK, DISTRESS_CHIPS, distressPromptBlock, planDistressTurn, redFlagLine, regionForTimezone, stripDeepDive,
-  type DistressKind,
+  CHIP_TALK, DISTRESS_CHIPS, SELF_HARM_SESSION_MS, distressPromptBlock, planDistressTurn, redFlagLine, regionForTimezone,
+  selfHarmSafeReply, stripDeepDive, type DistressAiMode,
 } from "../_shared/distress.ts";
 
 const corsHeaders = {
@@ -1394,9 +1394,15 @@ serve(async (req) => {
     // fixed, fully visible reply: no hormone talk, no logging, no partner chips. Follow-up turns
     // while she is still in distress (and the one right after) go to the AI under strict rules.
     // Count-only analytics: a daily counter, no user ID and no message text.
-    let distressAiMode: DistressKind | "post" | null = null;
+    let distressAiMode: Exclude<DistressAiMode, "self_harm"> | null = null;
     {
-      const plan = planDistressTurn(userMessage, (participant as any)?.timezone, lastAssistantMsg as any);
+      // Self-harm mode lasts the whole session: until 6 hours pass with no self-harm-mode message.
+      const { data: shSession } = await supabase.from("chat_messages").select("id").eq("user_id", user.id).eq("role", "assistant")
+        .contains("metadata", { distress_mode: "self_harm" })
+        .gte("created_at", new Date(Date.now() - SELF_HARM_SESSION_MS).toISOString()).limit(1);
+      const plan = planDistressTurn(userMessage, (participant as any)?.timezone, lastAssistantMsg as any, new Date(), {
+        selfHarmSessionActive: !!shSession?.length,
+      });
       if (plan && plan.type === "reply") {
         if (plan.enteredKind) {
           const { error: countErr } = await supabase.rpc("record_distress_event", { _kind: plan.enteredKind });
@@ -1407,7 +1413,42 @@ serve(async (req) => {
         });
         return new Response(JSON.stringify({ success: true, message: plan.message }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      if (plan && plan.type === "ai") distressAiMode = plan.mode;
+      if (plan && plan.type === "ai" && plan.mode === "self_harm") {
+        // Self-harm mode skips the normal pipeline entirely, so no cycle context, logging or partner chips can leak in.
+        const region = regionForTimezone((participant as any)?.timezone);
+        let reply = "";
+        try {
+          const { data: hist } = await supabase.from("chat_messages").select("role, content").eq("user_id", user.id)
+            .in("role", ["user", "assistant"]).order("created_at", { ascending: false }).limit(10);
+          const turns = ((hist || []) as any[]).reverse().filter((m) => typeof m.content === "string" && m.content.trim())
+            .map((m) => ({ role: m.role, content: String(m.content).slice(0, 1500) }));
+          const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-3-flash-preview",
+              messages: [
+                { role: "system", content: `You are Logan, a warm, calm health companion for women. Reply in plain text only, 2 to 4 short sentences. Not medical advice.${distressPromptBlock("self_harm", region)}` },
+                ...turns,
+                { role: "user", content: userMessage },
+              ],
+              temperature: 0.5,
+              max_tokens: 300,
+            }),
+          });
+          if (aiRes.ok) reply = String((await aiRes.json())?.choices?.[0]?.message?.content ?? "");
+        } catch (e) {
+          console.error("[distress] self-harm AI call failed");
+        }
+        reply = stripDashes(stripDeepDive(reply.trim()));
+        if (!reply) reply = selfHarmSafeReply(region);
+        await supabase.from("chat_messages").insert({
+          user_id: user.id, role: "assistant", content: reply, message_type: "text",
+          metadata: { distress_mode: "self_harm", conversation_starters: [CHIP_TALK] },
+        });
+        return new Response(JSON.stringify({ success: true, message: reply }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (plan && plan.type === "ai" && plan.mode !== "self_harm") distressAiMode = plan.mode;
     }
 
     // Recent user turns — used so a day number stated earlier in the thread
@@ -5396,9 +5437,8 @@ serve(async (req) => {
         finalAssistantMessage = `${finalAssistantMessage}\n\n${redFlagLine(regionForTimezone((participant as any)?.timezone))}`;
         baseMeta.distress_mode = "acute";
         baseMeta.conversation_starters = DISTRESS_CHIPS;
-      } else if (distressAiMode === "self_harm") {
-        baseMeta.distress_mode = "self_harm";
-        baseMeta.conversation_starters = [CHIP_TALK];
+      } else if (distressAiMode === "checkin_open") {
+        baseMeta.distress_checkin = true;
       }
     }
     finalAssistantMessage = stripDashes(finalAssistantMessage);
