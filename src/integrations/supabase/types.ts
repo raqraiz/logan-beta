@@ -18,22 +18,28 @@ export type Database = {
         Row: {
           action: string
           admin_id: string
+          audience: string | null
           created_at: string
           id: string
+          recipient_count: number | null
           target_user_id: string | null
         }
         Insert: {
           action: string
           admin_id: string
+          audience?: string | null
           created_at?: string
           id?: string
+          recipient_count?: number | null
           target_user_id?: string | null
         }
         Update: {
           action?: string
           admin_id?: string
+          audience?: string | null
           created_at?: string
           id?: string
+          recipient_count?: number | null
           target_user_id?: string | null
         }
         Relationships: []
@@ -81,12 +87,14 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          audience: Json | null
           body: string
           created_at: string
           created_by: string
           feedback_id: string | null
           id: string
           kind: string
+          recipient_count: number | null
           sent_at: string | null
           status: string
           target_filters: Json | null
@@ -96,12 +104,14 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          audience?: Json | null
           body: string
           created_at?: string
           created_by: string
           feedback_id?: string | null
           id?: string
           kind: string
+          recipient_count?: number | null
           sent_at?: string | null
           status?: string
           target_filters?: Json | null
@@ -111,12 +121,14 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          audience?: Json | null
           body?: string
           created_at?: string
           created_by?: string
           feedback_id?: string | null
           id?: string
           kind?: string
+          recipient_count?: number | null
           sent_at?: string | null
           status?: string
           target_filters?: Json | null
@@ -2932,6 +2944,19 @@ export type Database = {
         }[]
       }
       _admin_words_waiting: { Args: never; Returns: number }
+      _broadcast_audience_clean: { Args: { _aud: Json }; Returns: Json }
+      _broadcast_audience_count: { Args: { _aud: Json }; Returns: number }
+      _broadcast_audience_label: { Args: { _aud: Json }; Returns: string }
+      _broadcast_audience_users: {
+        Args: { _aud: Json }
+        Returns: {
+          user_id: string
+        }[]
+      }
+      _broadcast_deliver: {
+        Args: { _aud: Json; _body: string; _draft: string }
+        Returns: number
+      }
       _feedback_needing_clean: {
         Args: { _limit: number }
         Returns: {
@@ -2970,6 +2995,34 @@ export type Database = {
           wau: number
         }[]
       }
+      admin_broadcast_approve_send: {
+        Args: { _draft: string }
+        Returns: number
+      }
+      admin_broadcast_count: { Args: { _audience: Json }; Returns: number }
+      admin_broadcast_draft_create: {
+        Args: { _audience: Json; _body: string }
+        Returns: string
+      }
+      admin_broadcast_history: {
+        Args: never
+        Returns: {
+          audience_label: string
+          body: string
+          created_at: string
+          id: string
+          recipient_count: number
+          sent_at: string
+          sent_by: string
+          status: string
+          written_by: string
+        }[]
+      }
+      admin_broadcast_send_direct: {
+        Args: { _audience: Json; _body: string; _id: string }
+        Returns: number
+      }
+      admin_broadcast_send_test: { Args: { _body: string }; Returns: undefined }
       admin_campaign_links: {
         Args: { _from: string; _to: string }
         Returns: {
@@ -3009,6 +3062,8 @@ export type Database = {
       admin_draft_list_waiting: {
         Args: never
         Returns: {
+          audience: Json
+          audience_label: string
           body: string
           created_at: string
           feedback_id: string
@@ -3017,6 +3072,7 @@ export type Database = {
           id: string
           kind: string
           last_initial: string
+          recipient_count: number
           user_id: string
           written_by: string
         }[]
