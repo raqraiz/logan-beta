@@ -4,6 +4,7 @@ import {
   CHECKIN_REPLY, EMERGENCY_NUMBERS, sanitizeHormoneClaims, acuteReply, breatheReply, detectAcuteDistress, detectCalm, detectSelfHarm, detectSelfHarmAmbiguous,
   distressPromptBlock, planDistressTurn, regionForTimezone, selfHarmReply, stripDeepDive,
   detectSafeConfirmation, detectCalmSignal, finalizeDistressReply, postCrisisMetadata, postCrisisSupportLine,
+  isFactualCycleQuestion, hasRecentDistress, asksWhyItHappened,
 } from "../../supabase/functions/_shared/distress.ts";
 
 const ACUTE_YES = [
@@ -418,5 +419,92 @@ describe("soft exit: post-crisis mode", () => {
       // the strict "emotional moment" rules (60 words, no physiology) are not forced on by post-crisis mode
       expect(src).toContain('distressAiMode !== "post_crisis"');
     });
+  });
+});
+
+describe("factual cycle question right after acute distress (live bug)", () => {
+  const T = "Asia/Hebron";
+  // Exact sequence from the live test: panic → "I'm ok now" → "Yes, log it" → Undo → luteal-phase question.
+  const QUESTION = "what happens in the luteal phase?";
+  const BAD_REPLY = "This crash is what usually triggers those physical symptoms and mood spikes right before your period starts. It can make you feel more sensitive to stress on Day 27. Progesterone may be dropping around this point in a cycle, which can make some people more reactive.";
+  const FULL_ANSWER = "The luteal phase is the second half of your cycle, from ovulation until your next period, usually 12 to 14 days.\n\nAfter ovulation progesterone rises, and if there is no pregnancy, progesterone and estrogen both fall. That fall is what triggers your period, and it is also why many people notice PMS symptoms like bloating, tender breasts or mood changes.\n\nBody temperature stays slightly higher in this phase.\n---\n### The Science\nThe corpus luteum releases progesterone and some estrogen. When it breaks down, the lining sheds.";
+
+  function runSequence() {
+    let now = new Date("2026-10-08T10:19:18Z");
+    let last: { metadata: Record<string, unknown>; created_at: string } | null = null;
+    const log: { msg: string; plan: ReturnType<typeof planDistressTurn> }[] = [];
+    const send = (msg: string) => {
+      const plan = planDistressTurn(msg, T, last, now);
+      log.push({ msg, plan });
+      if (plan?.type === "reply") {
+        const metadata = { ...plan.metadata } as Record<string, unknown>;
+        delete metadata.conversation_starters;
+        if (plan.logSymptoms) metadata.distress_logged_ids = ["34c73b77-c8e5-4a45-af21-29141a0e2a8b"];
+        last = { metadata, created_at: now.toISOString() };
+      }
+      now = new Date(now.getTime() + 45_000);
+      return plan;
+    };
+    return { send, log, last: () => last, now: () => now };
+  }
+
+  it("the planner never sends the question to a distress rewrite, and no hedge or removal can apply", () => {
+    const run = runSequence();
+    expect(run.send("I'm having a panic attack")).toMatchObject({ type: "reply", metadata: { distress_mode: "acute" } });
+    expect(run.send("im ok now")).toMatchObject({ type: "reply", metadata: { distress_post: true, distress_log_ask: true } });
+    expect(run.send("Yes, log it")).toMatchObject({ type: "reply", message: "Logged for today." });
+    // Undo only deletes the symptom log in the app; it sends no chat message, so the last reply is still "Logged for today."
+    expect(run.last()?.metadata.distress_post).toBe(true);
+    expect(run.send(QUESTION)).toBeNull();
+  });
+
+  it("any filter that did run would leave the reply byte for byte untouched", () => {
+    for (const mode of ["post", "post_crisis"] as const) {
+      expect(finalizeDistressReply(FULL_ANSWER, mode, QUESTION)).toBe(FULL_ANSWER);
+    }
+    // even if the post-distress mode were somehow applied, the rewrite refuses to touch a non-"why" message
+    expect(finalizeDistressReply(FULL_ANSWER, "post", QUESTION)).not.toContain("may be dropping");
+    expect(finalizeDistressReply(BAD_REPLY.replace(/ Progesterone may.*$/, ""), "post", QUESTION)).toBe(BAD_REPLY.replace(/ Progesterone may.*$/, ""));
+  });
+
+  it("the question counts as factual, and the emotional follow-up rule is switched off for it", () => {
+    const last = { metadata: { distress_post: true, distress_logged_ids: ["x"] }, created_at: "2026-10-08T10:20:07Z" };
+    expect(isFactualCycleQuestion(QUESTION)).toBe(true);
+    expect(hasRecentDistress(last, new Date("2026-10-08T10:20:58Z"))).toBe(true);
+    const src = readFileSync("supabase/functions/chat-ai/index.ts", "utf8");
+    expect(src).toContain("const factualAfterDistress = isFactualCycleQuestion(userMessage) && hasRecentDistress(lastAssistantMsg as any);");
+    expect(src).toContain("const emotionalFollowUp = !factualAfterDistress && isEmotionalFollowUp(");
+    expect(src).toContain('if (distressAiMode === "post" && isFactualCycleQuestion(userMessage)) distressAiMode = null;');
+    expect(src).toContain("finalizeDistressReply(finalAssistantMessage, distressAiMode, userMessage)");
+  });
+
+  it.each([
+    "what phase am I in?", "what happens in the luteal phase?", "how long is the luteal phase?", "when is my next period?",
+    "what is the follicular phase?", "explain ovulation", "what does progesterone do?", "which day of my cycle am I on?",
+  ])("factual: %s", (m) => expect(isFactualCycleQuestion(m)).toBe(true));
+
+  it.each([
+    "why did this happen?", "why do I feel so anxious?", "is it my hormones?", "what caused that?", "I'm having a panic attack",
+    "what's making my mood so bad in this phase?", "I want to die", "I can't breathe", "thanks", "what should I eat today?",
+  ])("not factual: %s", (m) => expect(isFactualCycleQuestion(m)).toBe(false));
+
+  it("the hedged 'may play a part' answer still works for a real why-question, and only for that", () => {
+    const last = { metadata: { distress_post: true }, created_at: "2026-10-08T10:20:07Z" };
+    const now = new Date("2026-10-08T10:21:00Z");
+    for (const m of ["why did this happen?", "is it my hormones?", "what caused that?"]) {
+      expect(planDistressTurn(m, T, last, now)).toEqual({ type: "ai", mode: "post" });
+      expect(asksWhyItHappened(m)).toBe(true);
+    }
+    const raw = "Stress and poor sleep can do this. Since you are on day 27, the sharp drop in progesterone can also make your nervous system much more reactive.";
+    expect(finalizeDistressReply(raw, "post", "why did this happen?")).toContain("Progesterone may be dropping around this point in a cycle");
+    expect(finalizeDistressReply(raw, "post", "what happens in the luteal phase?")).toBe(raw);
+  });
+
+  it("hasRecentDistress ignores ordinary replies and old distress", () => {
+    const now = new Date("2026-10-08T12:00:00Z");
+    expect(hasRecentDistress({ metadata: { cycle_day: 27 }, created_at: "2026-10-08T11:59:00Z" }, now)).toBe(false);
+    expect(hasRecentDistress({ metadata: { distress_post: true }, created_at: "2026-10-08T05:00:00Z" }, now)).toBe(false);
+    expect(hasRecentDistress({ metadata: { distress_post_crisis: true }, created_at: "2026-10-08T11:00:00Z" }, now)).toBe(true);
+    expect(hasRecentDistress(null, now)).toBe(false);
   });
 });
