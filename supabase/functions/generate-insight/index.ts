@@ -873,7 +873,7 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{
     };
   }
 
-  console.error("Failed to parse AI response as JSON:", content);
+  console.error("Failed to parse AI response as JSON, length:", content.length);
   return {
     insight: "How are you feeling today?",
     question: "",

@@ -340,7 +340,7 @@ Return ONLY JSON: {"headline":"...","subline":"...","succeed":["...","...","..."
       headline = h && h.split(/\s+/).length <= 6 ? h : null;
       subline = sl && sl.split(/\s+/).length <= 14 ? sl : null;
     } catch (_e) {
-      console.error("Failed to parse AI output:", cleaned.slice(0, 300));
+      console.error("Failed to parse AI output, length:", cleaned.length);
     }
 
     if (succeed.length < 2 || dontMessUp.length < 2) {

@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
         await supabaseAdmin.from("feedback").delete().eq("participant_id", participant.id);
         await supabaseAdmin.from("insights").delete().eq("participant_id", participant.id);
         await supabaseAdmin.from("participants").delete().eq("id", participant.id);
-        console.log(`Deleted participant ${participant.id} for email ${userEmail}`);
+        console.log(`Deleted participant ${participant.id} for user ${userId}`);
       }
     }
 

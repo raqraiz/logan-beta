@@ -18,6 +18,10 @@ import {
 import { fetchMemoryNotes, buildMemoryBlock, extractCorrection, supersedeSameTopic, CORRECTION_PREFIX_RE } from "../_shared/memoryNotes.ts";
 import { trackMessageFailures } from "../_shared/messageFailures.ts";
 import { loadCatalog, matchSymptoms } from "../_shared/symptomMatch.ts";
+import {
+  CHIP_TALK, DISTRESS_CHIPS, SELF_HARM_SESSION_MS, distressPromptBlock, planDistressTurn, redFlagLine, regionForTimezone,
+  selfHarmSafeReply, stripDeepDive, type DistressAiMode,
+} from "../_shared/distress.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,6 +38,7 @@ function isEmotionalOrHeavyMessage(text: string): boolean {
   if (words > 100) return true;
   if (/\b(worried|anxious|scared|overwhelmed|exhausted|struggling|hoping|bated breath|kinda scared|kinda worried)\b/.test(t)) return true;
   if (/\b(angry|furious|so mad|mad at|pissed|rage|lonely|alone|unseen|invisible|ignored|misunderstood|resent|fight|fought|argu(e|ed|ing|ment)|yell(ed|ing)|snapp(ed|ing)|depleted|drained|burn(ed|t) out|can'?t cope|at my limit|vent|doesn'?t get it|doesn'?t help|no help|sad|so down|heartbroken|crying|cried|upset|hurt by|frustrated)\b/.test(t)) return true;
+  if (/\b(panic attacks?|panicking|panic)\b/.test(t)) return true;
   if (/\b(postpartum|post-partum|pregnancy|pregnant|miscarriage|pregnancy loss|iud|coil)\b/.test(t)) return true;
   return false;
 }
@@ -571,7 +576,7 @@ async function logSymptomRejections(
         matched_existing: r.matched ?? null,
       })),
     );
-    console.log(`[symptom_rejections] ${source}:`, rows.map(r => `${r.name} (${r.reason})`).join(", "));
+    console.log(`[symptom_rejections] ${source}: count=${rows.length}`, JSON.stringify(rows.reduce((acc: Record<string, number>, r) => { acc[r.reason] = (acc[r.reason] ?? 0) + 1; return acc; }, {})));
   } catch (e) {
     console.warn("[symptom_rejections] log failed:", (e as Error)?.message);
   }
@@ -786,7 +791,7 @@ async function extractSymptomsViaLLM(
       out.push({ name, severity: Math.min(5, Math.max(1, Math.round(sev))) });
       if (out.length >= 5) break;
     }
-    console.log(`[symptom_extraction] ${Date.now() - started}ms ->`, out.map(o => o.name).join(", ") || "(none)");
+    console.log(`[symptom_extraction] ${Date.now() - started}ms -> count=${out.length}`);
     return out;
   } catch (e) {
     console.warn("[symptom_extraction] failed:", (e as Error)?.message);
@@ -1208,7 +1213,7 @@ serve(async (req) => {
       );
     }
 
-    console.log("Chat AI request from user:", user.id, "message:", userMessage.substring(0, 50));
+    console.log("Chat AI request from user:", user.id, "message_length:", userMessage.length);
 
     // --- Credit check (DISABLED — free access during alpha) ---
     const CREDITS_ENABLED = false;
@@ -1383,6 +1388,68 @@ serve(async (req) => {
     const openMarkerCheckin = findOpenCheckin("marker_checkin");
     const wasPeridCheckin = !!openPeriodCheckin;
     const lastAssistantContent = typeof lastAssistantMsg?.content === "string" ? lastAssistantMsg.content : "";
+
+    // --- Distress mode (acute distress and self-harm) ---
+    // Runs before every cycle, symptom and partner flow. Clear present-tense distress gets a
+    // fixed, fully visible reply: no hormone talk, no logging, no partner chips. Follow-up turns
+    // while she is still in distress (and the one right after) go to the AI under strict rules.
+    // Count-only analytics: a daily counter, no user ID and no message text.
+    let distressAiMode: Exclude<DistressAiMode, "self_harm"> | null = null;
+    {
+      // Self-harm mode lasts the whole session: until 6 hours pass with no self-harm-mode message.
+      const { data: shSession } = await supabase.from("chat_messages").select("id").eq("user_id", user.id).eq("role", "assistant")
+        .contains("metadata", { distress_mode: "self_harm" })
+        .gte("created_at", new Date(Date.now() - SELF_HARM_SESSION_MS).toISOString()).limit(1);
+      const plan = planDistressTurn(userMessage, (participant as any)?.timezone, lastAssistantMsg as any, new Date(), {
+        selfHarmSessionActive: !!shSession?.length,
+      });
+      if (plan && plan.type === "reply") {
+        if (plan.enteredKind) {
+          const { error: countErr } = await supabase.rpc("record_distress_event", { _kind: plan.enteredKind });
+          if (countErr) console.error("[distress] count failed:", countErr.message);
+        }
+        await supabase.from("chat_messages").insert({
+          user_id: user.id, role: "assistant", content: plan.message, message_type: "text", metadata: plan.metadata,
+        });
+        return new Response(JSON.stringify({ success: true, message: plan.message }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (plan && plan.type === "ai" && plan.mode === "self_harm") {
+        // Self-harm mode skips the normal pipeline entirely, so no cycle context, logging or partner chips can leak in.
+        const region = regionForTimezone((participant as any)?.timezone);
+        let reply = "";
+        try {
+          const { data: hist } = await supabase.from("chat_messages").select("role, content").eq("user_id", user.id)
+            .in("role", ["user", "assistant"]).order("created_at", { ascending: false }).limit(10);
+          const turns = ((hist || []) as any[]).reverse().filter((m) => typeof m.content === "string" && m.content.trim())
+            .map((m) => ({ role: m.role, content: String(m.content).slice(0, 1500) }));
+          const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-3-flash-preview",
+              messages: [
+                { role: "system", content: `You are Logan, a warm, calm health companion for women. Reply in plain text only, 2 to 4 short sentences. Not medical advice.${distressPromptBlock("self_harm", region)}` },
+                ...turns,
+                { role: "user", content: userMessage },
+              ],
+              temperature: 0.5,
+              max_tokens: 300,
+            }),
+          });
+          if (aiRes.ok) reply = String((await aiRes.json())?.choices?.[0]?.message?.content ?? "");
+        } catch (e) {
+          console.error("[distress] self-harm AI call failed");
+        }
+        reply = stripDashes(stripDeepDive(reply.trim()));
+        if (!reply) reply = selfHarmSafeReply(region);
+        await supabase.from("chat_messages").insert({
+          user_id: user.id, role: "assistant", content: reply, message_type: "text",
+          metadata: { distress_mode: "self_harm", conversation_starters: [CHIP_TALK] },
+        });
+        return new Response(JSON.stringify({ success: true, message: reply }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (plan && plan.type === "ai" && plan.mode !== "self_harm") distressAiMode = plan.mode;
+    }
 
     // Recent user turns — used so a day number stated earlier in the thread
     // ("my bleed ended day 4") carries forward when a later message only names
@@ -1922,7 +1989,7 @@ serve(async (req) => {
             current_period_end_date: endDateStr,
             period_still_active: false,
           } as typeof participant;
-          console.log("[chat-ai] persisted current_period_end_date:", endDateStr);
+          console.log("[chat-ai] persisted current_period_end_date");
         }
       }
     }
@@ -2397,7 +2464,7 @@ serve(async (req) => {
         /^\s*(?:day\s*)?(\d{1,2})\s*[.!?]?\s*$/i
       ) : null);
 
-      console.log("[chat-ai] cycleDayCorrectionMatch:", !!cycleDayCorrectionMatch, "isCorrectionContext:", isCorrectionContext, "lastAssistantMentionedDay:", lastAssistantMentionedDay, "msg:", userMessage.substring(0, 60));
+      console.log("[chat-ai] cycleDayCorrectionMatch:", !!cycleDayCorrectionMatch, "isCorrectionContext:", isCorrectionContext, "lastAssistantMentionedDay:", lastAssistantMentionedDay, "message_length:", userMessage.length);
 
       // Skip if the user is speaking hypothetically / rhetorically / about expectations rather than asserting today's day
       // e.g. "I thought I'd be day 2 today", "would mean I'm on day 36", "how can that be?", "if I'm on day 5"
@@ -2760,7 +2827,7 @@ serve(async (req) => {
         /\b(recipes?|food)\s+(ideas?|suggestions?|for\s+(my\s+)?(phase|cycle|luteal|follicular|ovulation|menstruation|postpartum|menopause))\b/i,
         /\bhelp\s+me\s+(eat|cook|plan\s+(my\s+)?(meals?|food))\b/i,
       ];
-      shouldOfferMealPlan = mealPlanPatterns.some(p => p.test(userMessage));
+      shouldOfferMealPlan = !distressAiMode && mealPlanPatterns.some(p => p.test(userMessage));
     }
     // --- End meal plan intent ---
 
@@ -2941,7 +3008,7 @@ serve(async (req) => {
               .join(", ");
             const symptomLabels = symptoms.map(s => s.name).join(", ");
             backfillConfirmation = `Internal note (do NOT quote, paraphrase, or repeat this note, do NOT mention any tag, label, brackets, or the word "confirmed"): The system has saved ${symptomLabels} to her symptom log for: ${dateLabels}. In your reply, just say naturally: "Done — added ${symptomLabels} for ${dateLabels}." Do NOT include any bracketed tag, do NOT tell her to add it from the Home tab.`;
-            console.log("Backfilled symptom logs:", dateLabels, "->", symptomLabels);
+            console.log("Backfilled symptom logs: symptoms=", symptoms.length, "dates=", uniq.size);
           }
         }
       }
@@ -3010,7 +3077,7 @@ serve(async (req) => {
               } else {
                 const list = newOnes.join(", ");
                 libraryConfirmation = `Internal note (do NOT quote, paraphrase, or repeat this note, do NOT mention any tag, label, or brackets): The system has added these to the shared symptom library anonymously: ${list}. In your reply, say naturally: "Done — added ${list} to the shared symptom library. You'll find them in Home → Log Symptoms next time you open it." Do NOT include any bracketed tag.`;
-                console.log("Added to community_symptoms:", list);
+                console.log("Added to community_symptoms: count=", newOnes.length);
               }
             }
 
@@ -4626,7 +4693,7 @@ serve(async (req) => {
     // deep-dive/phase-tip mandates can be suspended at the source rather than
     // contradicted by a later runtime block.
     const emotionalFollowUp = isEmotionalFollowUp(userMessage, recentMessages as any);
-    const emotionalContextActive = isEmotionalOrHeavyMessage(userMessage) || emotionalFollowUp;
+    const emotionalContextActive = isEmotionalOrHeavyMessage(userMessage) || emotionalFollowUp || distressAiMode !== null;
     let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext + backfillBlock + libraryBlock + libraryGuidance, emotionalContextActive, activeBoundaries);
     systemPrompt += anchorPromptRule(currentCycleAnchorType(participant));
 
@@ -4783,6 +4850,10 @@ serve(async (req) => {
 
 
 
+
+    if (distressAiMode) {
+      systemPrompt += distressPromptBlock(distressAiMode, regionForTimezone((participant as any)?.timezone));
+    }
 
     // History window: last 50 messages only. Onboarding answers live in structured
     // profile fields injected into the system prompt, so no head pin is needed.
@@ -5013,7 +5084,7 @@ serve(async (req) => {
           canonical_phase: canonicalPhase,
           cycle_day: cycleInfo.cycleDay,
           contradicting_phases: Array.from(new Set(mismatches)),
-          user_message_preview: (userMessage || "").slice(0, 120),
+          user_message_length: (userMessage || "").length,
           rewritten: originalMessage !== assistantMessage,
         }));
       }
@@ -5022,7 +5093,7 @@ serve(async (req) => {
           user_id: user?.id,
           canonical_phase: canonicalPhase,
           preserved: Array.from(new Set(comparativeSkips)),
-          user_message_preview: (userMessage || "").slice(0, 120),
+          user_message_length: (userMessage || "").length,
         }));
       }
     }
@@ -5062,7 +5133,7 @@ serve(async (req) => {
           canonical_day: canonicalDay,
           canonical_phase: cycleInfo.phase,
           stated_days: Array.from(new Set(wrongDays)),
-          user_message_preview: (userMessage || "").slice(0, 120),
+          user_message_length: (userMessage || "").length,
         }));
       }
     }
@@ -5078,7 +5149,7 @@ serve(async (req) => {
         console.warn("[no_cycle_day_claim_stripped]", JSON.stringify({
           user_id: user?.id,
           life_stage: participant?.life_stage ?? null,
-          user_message_preview: (userMessage || "").slice(0, 120),
+          user_message_length: (userMessage || "").length,
         }));
       }
       if (!assistantMessage.trim()) {
@@ -5124,8 +5195,8 @@ serve(async (req) => {
         assistantMessage = stripUnbackedLoggingClaims(assistantMessage);
         console.warn("[false_logging_claim_stripped]", JSON.stringify({
           user_id: user?.id,
-          user_message_preview: (userMessage || "").slice(0, 120),
-          removed_preview: before.slice(0, 160),
+          user_message_length: (userMessage || "").length,
+          removed_length: before.length,
         }));
       }
     }
@@ -5202,7 +5273,7 @@ serve(async (req) => {
     // Day-1 confirmation prompt to the assistant's normal insight and flag the
     // message so the next "yes" hits the period-confirmation reset path.
     let finalAssistantMessage = assistantMessage;
-    if (bleedDay1Prompt) {
+    if (bleedDay1Prompt && !distressAiMode) {
       const deepDiveDivider = "\n---\n";
       const duplicateDay1PromptPattern = /\n*\s*Want me to log \*\*?[^\n?]+\*\*? as your new \*\*?Day 1\*\*? and reset your cycle\?\s*Just say \*\*?yes\*\*? to confirm — or tell me the actual start date if it was earlier\./gi;
       const assistantMessageWithoutDay1Prompt = assistantMessage.replace(duplicateDay1PromptPattern, "").trimEnd();
@@ -5237,7 +5308,7 @@ serve(async (req) => {
     // --- Tap-to-log offer card (client renders; nothing is saved until she taps) ---
     {
       const offer = emotionalContextActive ? offerSymptoms.filter(o => !EMOTION_NAME_RE.test(o.name)) : offerSymptoms;
-      if (offer.length > 0) {
+      if (offer.length > 0 && !distressAiMode) {
         const t = userMessage.toLowerCase();
         let days: { label: string; days: number }[] = [{ label: "Just today", days: 1 }];
         if (/\b(all week|this week|for a week|past week|7 days|seven days)\b/.test(t)) days = [{ label: "This past week", days: 7 }, { label: "Just today", days: 1 }];
@@ -5276,7 +5347,7 @@ serve(async (req) => {
       finalAssistantMessage = stripped.trim() ? `${stripped}\n\n${truth}` : truth;
       console.warn("[false_cycle_update_claim_stripped]", JSON.stringify({
         user_id: user?.id,
-        user_message_preview: (userMessage || "").slice(0, 120),
+        user_message_length: (userMessage || "").length,
       }));
     }
 
@@ -5342,7 +5413,7 @@ serve(async (req) => {
           if (addErr) {
             console.error("Post-reply library add failed:", addErr);
           } else {
-            console.log("Post-reply added to community_symptoms:", toAdd.join(", "));
+            console.log("Post-reply added to community_symptoms: count=", toAdd.length);
           }
         }
       }
@@ -5358,6 +5429,18 @@ serve(async (req) => {
         .eq("id", participant.id);
     }
 
+    if (distressAiMode) {
+      // No "See more", no cycle context, no log or day-1 prompts on distress turns.
+      finalAssistantMessage = stripDeepDive(finalAssistantMessage);
+      for (const k of ["cycle_day", "cycle_phase", "cycle_length_days", "last_period_start", "log_offer", "logged_symptoms", "period_checkin", "suggested_day1"]) delete baseMeta[k];
+      if (distressAiMode === "acute") {
+        finalAssistantMessage = `${finalAssistantMessage}\n\n${redFlagLine(regionForTimezone((participant as any)?.timezone))}`;
+        baseMeta.distress_mode = "acute";
+        baseMeta.conversation_starters = DISTRESS_CHIPS;
+      } else if (distressAiMode === "checkin_open") {
+        baseMeta.distress_checkin = true;
+      }
+    }
     finalAssistantMessage = stripDashes(finalAssistantMessage);
     if (Array.isArray(baseMeta.conversation_starters)) {
       baseMeta.conversation_starters = (baseMeta.conversation_starters as string[]).map(stripDashes);
@@ -5429,7 +5512,7 @@ serve(async (req) => {
           if (offersOn) {
             await supabase.from("chat_messages").insert({ user_id: user.id, role: "assistant", message_type: "partner_headsup_schedreq", content: "", metadata: { partner_headsup: "schedreq" } });
           }
-        } else if (offersOn && !headsupHarm && !modelHarm && (modelHeadsupOffer || safeTest(HEADSUP_ASK_RE, userMessage))) {
+        } else if (offersOn && !headsupHarm && !modelHarm && !distressAiMode && (modelHeadsupOffer || safeTest(HEADSUP_ASK_RE, userMessage))) {
           const explicitAsk = safeTest(HEADSUP_ASK_RE, userMessage);
           let limited = false;
           if (!explicitAsk) {
