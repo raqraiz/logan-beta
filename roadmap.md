@@ -107,3 +107,10 @@ Decision: investor numbers lock on first view after month end and never change. 
 - Definition: monthly active = women active in the 30 days up to month end; stickiness = active in the last 7 days divided by active in the last 30 days, at month end; average weekly active = mean of the Monday to Sunday weeks that fall entirely inside the month.
 - Not in v1: life stage breakdown, quarterly reports, PDF export.
 - [x] Goal removed from investor reports (numbers, chart and copy text). The goal still lives on Today and Growth. Months locked before this change keep their old goal fields in the snapshot, which the page ignores.
+
+## Back office phase 6: Cleanup
+Decision: admins have no direct table access. All back office data goes through role-checked admin_* functions.
+- [x] Old dashboard (/admin/classic) and everything only it used are deleted. Settings and admins now lives at /admin/settings (super admin only). The Message failures card on Today is a plain count.
+- [x] send-broadcast and draft-broadcast edge functions deleted. The admin_broadcasts table and the onboarded_profiles view are dropped.
+- [x] Every direct admin policy is dropped (chat messages, profiles, participants, activity and feature events, attribution, email logs, policy notifications, growth tracker, short links, feature flags, aliases, symptom reports, admin read of roles). Community symptoms and symptom reports keep only the woman's own-row access. Super admin role management on user_roles stays.
+- [ ] Decide whether policy update and AMA invite sending move into Send. (send-policy-update and send-ama-invite are kept but have no screen right now.)

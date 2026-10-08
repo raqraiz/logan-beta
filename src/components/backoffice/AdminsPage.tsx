@@ -16,7 +16,7 @@ interface AdminUser {
   full_name: string | null;
 }
 
-export function AdminManagement() {
+export default function AdminsPage() {
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [newAdminEmail, setNewAdminEmail] = useState("");
@@ -193,6 +193,7 @@ export function AdminManagement() {
 
   return (
     <div className="space-y-6">
+      <h1 className="font-display text-2xl font-semibold text-[#23201C]">Settings and admins</h1>
       <div className="flex items-center gap-4 flex-wrap">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-5 h-5 text-primary" />
@@ -252,7 +253,7 @@ export function AdminManagement() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Admins</CardTitle>
-          <CardDescription>Access to dashboard except Users and Admins tabs.</CardDescription>
+          <CardDescription>Everything in the back office except Users and Settings and admins.</CardDescription>
         </CardHeader>
         <CardContent>
           {regularAdmins.length === 0 ? (

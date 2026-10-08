@@ -29,7 +29,7 @@ Logan (asklogan.ai) is a chat-first health and performance companion for women. 
 - Roles: `user_roles` + `has_role()` (admin, user, super_admin). Never roles on profiles or in localStorage.
 - Private buckets: cycle-images, history-imports, meal-photos, resources, database_export_21_07_26.
 - Scheduled jobs: pg_cron in the database (not in repo).
-- Functions: chat/AI (`chat-ai`, `chat-onboarding`, `trial-chat`, `generate-insight`, `generate-daily-insights`, `generate-widget`, `confirm-insight-memory`, `partner-headsup-draft`, `draft-broadcast`); data (`import-history`, `import-blood-test`, `analyze-meal`, `generate-meal-plan`, `swap-meal`, Whoop functions); billing (`get-credits`, `create-checkout`, `stripe-webhook`); accounts/admin (`add-admin`, `manage-admins`, `delete-account`, `delete-user`, `backfill-attribution`, `send-broadcast`); email (`auth-email-hook`, `send-*`, `preview-transactional-email`, `handle-email-events`, `track-email-open`, `brevo-add-contact`).
+- Functions: chat/AI (`chat-ai`, `chat-onboarding`, `trial-chat`, `generate-insight`, `generate-daily-insights`, `generate-widget`, `confirm-insight-memory`, `partner-headsup-draft`); data (`import-history`, `import-blood-test`, `analyze-meal`, `generate-meal-plan`, `swap-meal`, Whoop functions); billing (`get-credits`, `create-checkout`, `stripe-webhook`); accounts/admin (`add-admin`, `manage-admins`, `delete-account`, `delete-user`, `backfill-attribution`); email (`auth-email-hook`, `send-*`, `preview-transactional-email`, `handle-email-events`, `track-email-open`, `brevo-add-contact`).
 
 ## 5. Authentication
 - `src/hooks/useAuth.tsx`: passwordless magic link / OTP, `/auth/callback`, password reset page.

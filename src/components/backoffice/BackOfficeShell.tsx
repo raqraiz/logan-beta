@@ -13,9 +13,7 @@ export interface BackOfficeContext { role: BackOfficeRole; range: RangeKey }
 
 export const useBackOffice = () => useOutletContext<BackOfficeContext>();
 
-/** Screens not rebuilt yet open the existing admin screens. */
-const OLD = (tab: string) => `/admin/classic?tab=${tab}`;
-interface NavItem { label: string; to: string; old?: boolean; superOnly?: boolean; prefix?: boolean }
+interface NavItem { label: string; to: string; superOnly?: boolean; prefix?: boolean }
 const NAV: NavItem[] = [
   { label: "Today", to: "/admin" },
   { label: "Users", to: "/admin/users", superOnly: true, prefix: true },
@@ -85,17 +83,13 @@ export default function BackOfficeShell() {
           </span>
         </div>
         <nav aria-label="Back office" className="mt-4 flex gap-1 overflow-x-auto lg:flex-1 lg:flex-col lg:overflow-visible">
-          {items.map((i) =>
-            i.old ? (
-              <Link key={i.label} to={i.to} className={itemClass(false) + " whitespace-nowrap"}>{i.label}</Link>
-            ) : (
-              <NavLink key={i.label} to={i.to} end={!i.prefix} className={({ isActive }) => itemClass(isActive) + " whitespace-nowrap"}>{i.label}</NavLink>
-            ),
-          )}
-          {role === "super_admin" && <Link to={OLD("admins")} className={itemClass(false) + " whitespace-nowrap lg:hidden"}>Settings and admins</Link>}
+          {items.map((i) => (
+            <NavLink key={i.label} to={i.to} end={!i.prefix} className={({ isActive }) => itemClass(isActive) + " whitespace-nowrap"}>{i.label}</NavLink>
+          ))}
+          {role === "super_admin" && <NavLink to="/admin/settings" className={({ isActive }) => itemClass(isActive) + " whitespace-nowrap lg:hidden"}>Settings and admins</NavLink>}
         </nav>
         <div className="mt-2 hidden lg:block">
-          {role === "super_admin" && <Link to={OLD("admins")} className={itemClass(false)}>Settings and admins</Link>}
+          {role === "super_admin" && <NavLink to="/admin/settings" className={({ isActive }) => itemClass(isActive)}>Settings and admins</NavLink>}
           <button type="button" onClick={signOut} className={`${itemClass(false)} flex w-full items-center gap-2 text-left`}>
             <LogOut className="h-3.5 w-3.5" /> Sign out
           </button>

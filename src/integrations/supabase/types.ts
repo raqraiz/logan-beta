@@ -44,45 +44,6 @@ export type Database = {
         }
         Relationships: []
       }
-      admin_broadcasts: {
-        Row: {
-          content: string
-          created_at: string
-          created_by: string
-          id: string
-          recipient_count: number | null
-          segment_filters: Json
-          sent_at: string | null
-          status: string
-          title: string | null
-          updated_at: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          created_by: string
-          id?: string
-          recipient_count?: number | null
-          segment_filters?: Json
-          sent_at?: string | null
-          status?: string
-          title?: string | null
-          updated_at?: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          created_by?: string
-          id?: string
-          recipient_count?: number | null
-          segment_filters?: Json
-          sent_at?: string | null
-          status?: string
-          title?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       admin_drafts: {
         Row: {
           approved_at: string | null
@@ -1671,13 +1632,6 @@ export type Database = {
             foreignKeyName: "profiles_referred_by_fkey"
             columns: ["referred_by"]
             isOneToOne: false
-            referencedRelation: "onboarded_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profiles_referred_by_fkey"
-            columns: ["referred_by"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2771,81 +2725,6 @@ export type Database = {
       }
     }
     Views: {
-      onboarded_profiles: {
-        Row: {
-          avatar_url: string | null
-          created_at: string | null
-          email: string | null
-          full_name: string | null
-          id: string | null
-          landing_at: string | null
-          landing_path: string | null
-          phone: string | null
-          referral_code: string | null
-          referred_by: string | null
-          referrer: string | null
-          updated_at: string | null
-          utm_campaign: string | null
-          utm_content: string | null
-          utm_medium: string | null
-          utm_source: string | null
-          utm_term: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string | null
-          email?: string | null
-          full_name?: string | null
-          id?: string | null
-          landing_at?: string | null
-          landing_path?: string | null
-          phone?: string | null
-          referral_code?: string | null
-          referred_by?: string | null
-          referrer?: string | null
-          updated_at?: string | null
-          utm_campaign?: string | null
-          utm_content?: string | null
-          utm_medium?: string | null
-          utm_source?: string | null
-          utm_term?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string | null
-          email?: string | null
-          full_name?: string | null
-          id?: string | null
-          landing_at?: string | null
-          landing_path?: string | null
-          phone?: string | null
-          referral_code?: string | null
-          referred_by?: string | null
-          referrer?: string | null
-          updated_at?: string | null
-          utm_campaign?: string | null
-          utm_content?: string | null
-          utm_medium?: string | null
-          utm_source?: string | null
-          utm_term?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_referred_by_fkey"
-            columns: ["referred_by"]
-            isOneToOne: false
-            referencedRelation: "onboarded_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profiles_referred_by_fkey"
-            columns: ["referred_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       short_links_public: {
         Row: {
           slug: string | null
