@@ -6,11 +6,11 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import Chat from "./pages/Chat";
 import Auth from "./pages/Auth";
-import Admin from "./pages/Admin";
 import BackOfficeShell from "./components/backoffice/BackOfficeShell";
 import TodayPage from "./components/backoffice/TodayPage";
 import GrowthPage from "./components/backoffice/GrowthPage";
 import ReferralsPage from "@/components/backoffice/ReferralsPage";
+import AdminsPage from "@/components/backoffice/AdminsPage";
 import TipsPage from "@/components/backoffice/TipsPage";
 import ReportsPage from "@/components/backoffice/ReportsPage";
 import SendPage from "@/components/backoffice/SendPage";
@@ -47,7 +47,6 @@ const App = () => (
               
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/logan-admin-access" element={<Auth />} />
-              <Route path="/admin/classic" element={<Admin />} />
               <Route path="/admin" element={<BackOfficeShell />}>
                 <Route index element={<TodayPage />} />
                 <Route path="growth" element={<GrowthPage />} />
@@ -58,6 +57,7 @@ const App = () => (
                 <Route path="send" element={<SendPage />} />
                 <Route path="users" element={<SuperOnly><UsersPage /></SuperOnly>} />
                 <Route path="users/:id" element={<SuperOnly><UserPage /></SuperOnly>} />
+                <Route path="settings" element={<SuperOnly><AdminsPage /></SuperOnly>} />
               </Route>
               <Route path="/consent" element={<Consent />} />
               <Route path="/privacy" element={<Consent />} />

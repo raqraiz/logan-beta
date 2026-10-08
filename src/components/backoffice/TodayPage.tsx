@@ -17,7 +17,6 @@ const TIPS = {
   sticky: "Women active in the last 7 days ÷ women active in the last 30 days.",
 };
 
-const OLD = (tab: string) => `/admin/classic?tab=${tab}`;
 const fmt = (v: number | null | undefined) => (v === null || v === undefined ? "—" : v.toLocaleString("en-GB"));
 
 function Tile({ label, tip, value, loading, error, retry }: {
@@ -32,22 +31,29 @@ function Tile({ label, tip, value, loading, error, retry }: {
   );
 }
 
-function NeedsRow({ title, sub, to, bubble, warn }: { title: string; sub: string; to: string; bubble: string; warn?: boolean }) {
+function NeedsRow({ title, sub, to, bubble, warn }: { title: string; sub: string; to?: string; bubble: string; warn?: boolean }) {
+  const body = (
+    <>
+      <span
+        className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-[#F4F1EA] text-[13px]"
+        style={{ fontFamily: "Quicksand, system-ui, sans-serif", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: warn ? "#C4247A" : "#23201C" }}
+      >
+        {bubble}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-bold text-[#23201C]">{title}</span>
+        <span className="block text-xs text-[#6E675F]">{sub}</span>
+      </span>
+      {to && <span aria-hidden className="text-lg text-[#6E675F]">›</span>}
+    </>
+  );
   return (
     <li>
-      <Link to={to} className="flex items-center gap-3 py-3 text-[#23201C] hover:opacity-80">
-        <span
-          className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-[#F4F1EA] text-[13px]"
-          style={{ fontFamily: "Quicksand, system-ui, sans-serif", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: warn ? "#C4247A" : "#23201C" }}
-        >
-          {bubble}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-bold text-[#23201C]">{title}</span>
-          <span className="block text-xs text-[#6E675F]">{sub}</span>
-        </span>
-        <span aria-hidden className="text-lg text-[#6E675F]">›</span>
-      </Link>
+      {to ? (
+        <Link to={to} className="flex items-center gap-3 py-3 text-[#23201C] hover:opacity-80">{body}</Link>
+      ) : (
+        <div className="flex items-center gap-3 py-3 text-[#23201C]">{body}</div>
+      )}
     </li>
   );
 }
@@ -102,11 +108,11 @@ export default function TodayPage() {
   }, [series.data, goal.data, today, range]);
 
   const stick = now.data ? stickiness(now.data.wau, now.data.mau) : null;
-  const rows: { title: string; sub: string; count: number | null; to: string }[] = needs.data ? [
+  const rows: { title: string; sub: string; count: number | null; to?: string }[] = needs.data ? [
     { title: "New feedback", sub: "Not handled yet", count: needs.data.newFeedback, to: "/admin/feedback" },
     { title: "Tips to review", sub: "Waiting for Logan's check, plus reported", count: needs.data.tipsWaiting + needs.data.tipsReported, to: "/admin/tips" },
     sup
-      ? { title: "Message failures", sub: "In the last 7 days", count: needs.data.messageFailures7d, to: OLD("overview") }
+      ? { title: "Message failures", sub: "In the last 7 days", count: needs.data.messageFailures7d }
       : { title: "New referrals this week", sub: "Referrers to thank", count: needs.data.newReferrersWeek, to: "/admin/referrals" },
   ] : [];
   // Until the first click is counted, show when counting started instead of a warning.
