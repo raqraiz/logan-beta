@@ -1,5 +1,11 @@
 # Roadmap
 
+## Duplicate chat bubbles and repeating voice text
+- [x] Root cause (voice): Android Chrome sends each final speech result as the whole sentence so far; the mic button appended each one with no space, giving "hey" + "hey today" + "hey today is...". Now merged so the latest replaces, and the box shows the live text.
+- [x] Root cause (bubbles): the database only ever held one row (checked, no real duplicate sends found). The screen showed copies because the sent message was matched to its live-feed echo by a temporary ID, and the chat's live feed was re-registered whenever the sign-in object changed (token refresh, tab refocus). Cause of 6 copies not reproduced; ruled out: mic auto-send (mic never sends), server-side double insert (chat-ai does not insert the user message).
+- [x] Fix: message ID created once when sending and used for the bubble, the database row and retries; instant in-flight guard; one live feed keyed on the user id; send disabled while the mic is live.
+- [ ] Check in preview: Android Chrome voice, fast double-tap send, tab switching then send.
+
 ## Log mode bubbles
 - [x] Share Together packing, category colors and Mine size rules; rank her 12-month counts before minimum-size suggestions, max 14.
 - [x] Add exact dark category, selected and ring colors to the shared field.

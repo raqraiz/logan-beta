@@ -1,4 +1,5 @@
-import { trackedSupabase } from "@/lib/messageFailures";
+import { trackedSupabase, logMessageFailure } from "@/lib/messageFailures";
+import { joinWithBase } from "@/lib/voiceTranscript";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -202,6 +203,14 @@ const Chat = () => {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  // Synchronous send guard: React state lags a render, so a fast double-tap (or
+  // Enter + tap) could start two sends before isSending turns true.
+  const aiSendInFlightRef = useRef(false);
+  // A send that failed at the save step keeps its ID so a retry cannot double-save.
+  const pendingSendRef = useRef<{ id: string; content: string } | null>(null);
+  // Dictation: text typed before the mic started, and whether the mic is live.
+  const [isListening, setIsListening] = useState(false);
+  const voiceBaseRef = useRef("");
   // Birth control "Which kind?" follow-up, shown inline after a yes/hormonal/non-hormonal answer.
   const [bcFollowup, setBcFollowup] = useState<{ base: string; baseLabel: string } | null>(null);
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
@@ -443,20 +452,26 @@ const Chat = () => {
   };
 
   // Fetch messages and initialize onboarding if needed
+  // Keyed on the user id, not the user object: the auth provider hands out a new
+  // object on every token refresh / tab refocus, which re-ran this effect and
+  // could leave extra chat subscriptions (and refetches) behind.
+  const userId = user?.id;
   useEffect(() => {
-    if (!user) return;
+    if (!userId || !user) return;
 
-    refreshMessages(user.id);
+    refreshMessages(userId);
 
+    // Unique topic per subscription so a late teardown of the previous channel
+    // can never collide with (or take over) the new one.
     const channel = supabase
-      .channel("chat_messages_realtime")
+      .channel(`chat_messages_realtime_${userId}_${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "chat_messages",
-          filter: `user_id=eq.${user.id}`,
+          filter: `user_id=eq.${userId}`,
         },
         (payload) => {
           if (payload.eventType === "DELETE") {
@@ -531,10 +546,15 @@ const Chat = () => {
       )
       .subscribe();
 
+    if (import.meta.env.DEV) {
+      console.debug("[chat] realtime channels active:", supabase.getChannels().length);
+    }
+
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   // Subscribe to authoritative participant cycle data so all tabs sync
   // when last_period_start / cycle_length_days change (from chat, date picker, admin, etc.)
@@ -1027,7 +1047,7 @@ const Chat = () => {
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!inputValue.trim() || !user || isSending) return;
+    if (!inputValue.trim() || !user || isSending || isListening) return;
 
     const messageContent = inputValue.trim();
     
@@ -1041,42 +1061,52 @@ const Chat = () => {
   };
 
   const sendAIMessage = async (messageContent: string) => {
-    if (!user || isSending) return;
-    
+    if (!user || isSending || aiSendInFlightRef.current) return;
+    aiSendInFlightRef.current = true;
+
     setInputValue("");
     setIsSending(true);
 
+    // The message ID is created here, once. The optimistic bubble, the database
+    // row and the realtime echo all share it, so they can only ever be one bubble,
+    // and a retry of the same text reuses it so the database rejects a second copy.
+    const pending = pendingSendRef.current;
+    const messageId =
+      pending && pending.content === messageContent ? pending.id : crypto.randomUUID();
+    pendingSendRef.current = { id: messageId, content: messageContent };
+    let saved = false;
+
     // Optimistically add the user message so it appears immediately
-    const optimisticId = `optimistic-${Date.now()}`;
     const optimisticMsg: ChatMessage = {
-      id: optimisticId,
+      id: messageId,
       role: "user",
       content: messageContent,
       message_type: "text",
       created_at: new Date().toISOString(),
       user_id: user.id,
     };
-    setMessages(prev => [...prev, optimisticMsg]);
+    setMessages(prev => (prev.some(m => m.id === messageId) ? prev : [...prev, optimisticMsg]));
 
     try {
       // Insert the user's message into the database
-      const { data: insertedRow, error: insertError } = await trackedSupabase
+      const { error: insertError } = await supabase
         .from("chat_messages")
         .insert({
+          id: messageId,
           user_id: user.id,
           role: "user",
           content: messageContent,
           message_type: "text",
-        })
-        .select("id")
-        .single();
+        });
 
-      if (insertError) throw insertError;
-
-      // Replace optimistic message with the real one (so realtime dedup works)
-      if (insertedRow) {
-        setMessages(prev => prev.map(m => m.id === optimisticId ? { ...m, id: insertedRow.id } : m));
+      // 23505 = this ID is already saved (an earlier attempt got through even
+      // though its reply was lost). Treat as saved; never insert a second row.
+      if (insertError && insertError.code !== "23505") {
+        void logMessageFailure(supabase, user.id, "text", "app", insertError);
+        throw insertError;
       }
+      saved = true;
+      pendingSendRef.current = null;
 
       // Call the AI chat function
       const { data, error } = await supabase.functions.invoke("chat-ai", {
@@ -1143,9 +1173,11 @@ const Chat = () => {
       console.error("Error sending message:", error);
       toast({ title: "Failed to send message", variant: "destructive" });
       // Remove optimistic message and restore input
-      setMessages(prev => prev.filter(m => m.id !== optimisticId));
+      setMessages(prev => prev.filter(m => m.id !== messageId));
       setInputValue(messageContent);
+      if (saved) pendingSendRef.current = null;
     } finally {
+      aiSendInFlightRef.current = false;
       setIsSending(false);
     }
   };
@@ -2760,9 +2792,15 @@ const Chat = () => {
                 placeholder={isOnboarding ? "Type your answer..." : "Talk to Logan"}
                 className="flex-1 min-h-[44px] max-h-[200px] resize-none py-2.5"
                 disabled={isSending}
+                readOnly={isListening}
               />
               <VoiceInputButton
-                onTranscript={(text) => setInputValue(prev => prev ? `${prev} ${text}` : text)}
+                onListeningChange={(listening) => {
+                  if (listening) voiceBaseRef.current = inputValue;
+                  setIsListening(listening);
+                }}
+                onPartial={(text) => setInputValue(joinWithBase(voiceBaseRef.current, text))}
+                onTranscript={(text) => setInputValue(joinWithBase(voiceBaseRef.current, text))}
                 disabled={isSending}
                 className="h-11 w-11"
               />
@@ -2770,7 +2808,7 @@ const Chat = () => {
                 type="submit" 
                 size="icon" 
                 className="h-11 w-11 bg-[var(--send-bg)] text-[var(--send-fg)] hover:bg-[var(--send-bg)] hover:opacity-90 disabled:opacity-100 disabled:bg-[var(--send-off-bg)] disabled:text-[var(--send-off-fg)]"
-                disabled={!inputValue.trim() || isSending}
+                disabled={!inputValue.trim() || isSending || isListening}
               >
                 {isSending ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
