@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useBackOffice } from "@/components/backoffice/BackOfficeShell";
 import { WaitingDrafts } from "@/components/backoffice/WaitingDrafts";
 import { Card, Failed, Figure, GhostButton, MainButton, PillToggle, useLoad } from "@/components/backoffice/parts";
-import { displayName, fetchWaitingDrafts, timeAgo, type WaitingDraft } from "@/lib/backOffice/feedback";
+import { displayName, fetchWaitingDrafts, seenText, timeAgo, type WaitingDraft } from "@/lib/backOffice/feedback";
 import {
   activePercent, fetchReferrers, fetchReferralSummary, sendThankYou, thankYouStarter, type ReferralPeriod, type ReferrerRow,
 } from "@/lib/backOffice/referrals";
@@ -49,7 +49,7 @@ function ReferrerRowView({ row, sup, onChanged }: { row: ReferrerRow; sup: boole
         <td className="py-3 pr-3 tabular-nums text-[#6E675F]">{row.activeBase > 0 ? `${row.active} of ${row.activeBase}${pct !== null ? ` (${pct}%)` : ""}` : "Too early"}</td>
         <td className="py-3 pr-3 text-[#6E675F]">{timeAgo(row.lastReferral)}</td>
         <td className="py-3">
-          {row.thankedAt ? <span className="text-[#6E675F]">Sent {shortDate(row.thankedAt)}</span>
+          {row.thankedAt ? <span className="text-[#6E675F]">Sent {shortDate(row.thankedAt)}{seenText(row.seen, row.seenAt, shortDate) ? ` · ${seenText(row.seen, row.seenAt, shortDate)}` : ""}</span>
             : note ? <span className="text-[#6E675F]">{note}</span>
             : <GhostButton onClick={() => setOpen((v) => !v)}>Draft thank-you</GhostButton>}
         </td>

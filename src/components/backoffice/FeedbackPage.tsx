@@ -5,10 +5,11 @@ import { Card, CardTitle, Failed, GhostButton, LINE, MainButton, MUTED, PillTogg
 import { WaitingDrafts } from "@/components/backoffice/WaitingDrafts";
 import {
   THEMES, backfillBatch, backfillWaiting, createReplyDraft, displayName, fetchFeedback, fetchFeedbackCounts,
-  fetchWaitingDrafts, markFeedbackHandled, REPLY_PLACEHOLDER, replyStarter, sendTeamMessage, setFeedbackTheme, stateLabel, themeLabel, timeAgo,
+  fetchWaitingDrafts, markFeedbackHandled, REPLY_PLACEHOLDER, replyStarter, seenText, sendTeamMessage, setFeedbackTheme, stateLabel, themeLabel, timeAgo,
   type FeedbackItem, type FeedbackTab, type Theme, type WaitingDraft,
 } from "@/lib/backOffice/feedback";
 
+const shortDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 const field = "w-full rounded-2xl border border-[#E6E0D5] bg-white px-4 py-3 text-sm text-[#23201C] placeholder:text-[#6E675F]";
 
 function ReplyBox({ item, sup, onDone }: { item: FeedbackItem; sup: boolean; onDone: (note: string) => void }) {
@@ -76,6 +77,7 @@ function FeedbackCard({ item, sup, onChanged }: { item: FeedbackItem; sup: boole
         {item.handled
           ? <GhostButton onClick={() => run(() => markFeedbackHandled(item.id, false))}>Mark as new</GhostButton>
           : <GhostButton onClick={() => run(() => markFeedbackHandled(item.id, true))}>Mark handled</GhostButton>}
+        {seenText(item.seen, item.seenAt, shortDate) && <span className="text-sm text-[#6E675F]">{seenText(item.seen, item.seenAt, shortDate)}</span>}
         {note && <span className="text-sm text-[#6E675F]">{note}</span>}
         {err && <span className="text-sm text-[#23201C]">That didn't save. Please try again.</span>}
       </div>

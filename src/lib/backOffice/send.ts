@@ -31,6 +31,7 @@ export const FEEDBACK_ASK_STARTER =
 export interface BroadcastRow {
   id: string; status: "waiting" | "sent"; audienceLabel: string; recipientCount: number | null;
   createdAt: string; sentAt: string | null; writtenBy: string | null; sentBy: string | null; body: string | null;
+  openedCount: number | null; deliveredCount: number | null;
 }
 
 export const fetchBroadcastCount = async (a: Audience): Promise<CountResult> =>
@@ -46,7 +47,12 @@ export const fetchBroadcastHistory = async (): Promise<BroadcastRow[]> =>
     id: String(r.id), status: r.status === "sent" ? "sent" : "waiting", audienceLabel: String(r.audience_label ?? "Everyone"),
     recipientCount: r.recipient_count == null ? null : Number(r.recipient_count), createdAt: String(r.created_at), sentAt: s(r.sent_at),
     writtenBy: s(r.written_by), sentBy: s(r.sent_by), body: s(r.body),
+    openedCount: r.opened_count == null ? null : Number(r.opened_count), deliveredCount: r.delivered_count == null ? null : Number(r.delivered_count),
   }));
+
+/** "Opened by X of Y (Z%)". Totals only. Null when the count isn't there. */
+export const openedLabel = (opened: number | null, delivered: number | null): string | null =>
+  opened == null || delivered == null || delivered <= 0 ? null : `Opened by ${opened} of ${delivered} (${Math.round((opened / delivered) * 100)}%)`;
 
 /** Plain-words versions of the database's refusals. */
 export const sendErrorText = (e: unknown): string => {

@@ -8,7 +8,7 @@ import { fetchWaitingDrafts, timeAgo, type WaitingDraft } from "@/lib/backOffice
 import { LIFE_STAGE_LABELS, type LifeStageKey } from "@/lib/metrics/lifeStage";
 import {
   EVERYONE, FEEDBACK_ASK_STARTER, MAX_BODY, SEND_STAGES, audienceKey, canSend, createBroadcastDraft, fetchBroadcastCount,
-  fetchBroadcastHistory, sendBroadcastDirect, sendBroadcastTest, sendErrorText, type Audience, type BroadcastRow,
+  fetchBroadcastHistory, openedLabel, sendBroadcastDirect, sendBroadcastTest, sendErrorText, type Audience, type BroadcastRow,
 } from "@/lib/backOffice/send";
 
 const field = "w-full rounded-2xl border border-[#E6E0D5] bg-white px-4 py-3 text-sm text-[#23201C] placeholder:text-[#6E675F]";
@@ -74,6 +74,7 @@ function History({ rows, sup }: { rows: BroadcastRow[]; sup: boolean }) {
                 <p style={{ color: MUTED }}>
                   {r.recipientCount != null ? women(r.recipientCount) : ""}{r.sentBy ? ` · sent by ${r.sentBy}` : ""}
                 </p>
+                {openedLabel(r.openedCount, r.deliveredCount) && <p style={{ color: MUTED }}>{openedLabel(r.openedCount, r.deliveredCount)}</p>}
                 {r.body && (
                   <details className="mt-1">
                     <summary className="cursor-pointer text-[#6E675F]">Show message</summary>
