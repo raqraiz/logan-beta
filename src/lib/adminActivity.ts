@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 type Rpc = (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message?: string } | null }>;
 type Row = Record<string, unknown>;
 
-const call = async <T,>(fn: string, args?: Record<string, unknown>): Promise<T> => {
+export const call = async <T,>(fn: string, args?: Record<string, unknown>): Promise<T> => {
   const { data, error } = await (supabase as unknown as { rpc: Rpc }).rpc(fn, args);
   if (error) throw new Error(error.message || "Failed to load");
   return data as T;
@@ -22,7 +22,7 @@ export interface DailyActivity { day: string; activeUsers: number; userMessages:
 export interface WeeklyActive { weekStart: string; daysInRange: number; activeUsers: number }
 export interface TimeSpent { sessions: number; minutes: number; minutesRounded: number }
 export interface LifeStageActivity {
-  grp: string; active7: number; active30: number; activeDays30: number;
+  grp: string; users: number; conflicting: number; active7: number; active30: number; activeDays30: number;
   minutes30: number; sessions30: number; retentionBase: number; retained: number;
 }
 
@@ -61,11 +61,12 @@ export const fetchTimeSpent = async (fromIso: string, toIso: string | null): Pro
   return { sessions: Number(r?.sessions) || 0, minutes: Number(r?.minutes) || 0, minutesRounded: Number(r?.minutes_rounded) || 0 };
 };
 
-/** Per-life-stage activity totals. `groups` maps stage -> user ids; only totals come back. */
-export const fetchLifeStageActivity = async (groups: Record<string, string[]>): Promise<LifeStageActivity[]> => {
-  const rows = await call<Row[]>("admin_life_stage_activity", { _groups: groups });
+/** Per-life-stage activity totals. The server groups the women by stage; nothing identifying goes up or comes back. */
+export const fetchLifeStageActivity = async (): Promise<LifeStageActivity[]> => {
+  const rows = await call<Row[]>("admin_life_stage_activity");
   return (rows ?? []).map((r: Row) => ({
-    grp: String(r.grp), active7: Number(r.active_7) || 0, active30: Number(r.active_30) || 0,
+    grp: String(r.grp), users: Number(r.users) || 0, conflicting: Number(r.conflicting) || 0,
+    active7: Number(r.active_7) || 0, active30: Number(r.active_30) || 0,
     activeDays30: Number(r.active_days_30) || 0, minutes30: Number(r.minutes_30) || 0,
     sessions30: Number(r.sessions_30) || 0, retentionBase: Number(r.retention_base) || 0, retained: Number(r.retained) || 0,
   }));

@@ -7,6 +7,9 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Chat from "./pages/Chat";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
+import BackOfficeShell from "./components/backoffice/BackOfficeShell";
+import TodayPage from "./components/backoffice/TodayPage";
+import GrowthPage from "./components/backoffice/GrowthPage";
 import Consent from "./pages/Consent";
 import AuthCallback from "./pages/AuthCallback";
 import ResetPassword from "./pages/ResetPassword";
@@ -36,7 +39,11 @@ const App = () => (
               
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/logan-admin-access" element={<Auth />} />
-              <Route path="/admin" element={<Admin />} />
+              <Route path="/admin/classic" element={<Admin />} />
+              <Route path="/admin" element={<BackOfficeShell />}>
+                <Route index element={<TodayPage />} />
+                <Route path="growth" element={<GrowthPage />} />
+              </Route>
               <Route path="/consent" element={<Consent />} />
               <Route path="/privacy" element={<Consent />} />
               <Route path="/reset-password" element={<ResetPassword />} />
