@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { loadTogether, markTogetherShown, setTogetherConsent, trackTogether } from "@/lib/together";
+import { TOGETHER_CONSENT_COPY, loadTogether, markTogetherShown, setTogetherConsent, trackTogether } from "@/lib/together";
 
 /** Asked once in chat to women who haven't answered. Never shown again after either answer. */
 export function TogetherAskCard({ userId }: { userId: string }) {
@@ -21,7 +21,7 @@ export function TogetherAskCard({ userId }: { userId: string }) {
   };
   return (
     <div className="mb-6 flex flex-col items-start gap-3">
-      <p className="text-[15px] leading-relaxed text-foreground">Want your logs to count in Together, without your name? It helps women see they're not alone.</p>
+      <p className="text-[15px] leading-relaxed text-foreground">{TOGETHER_CONSENT_COPY}</p>
       <div className="flex gap-2">
         <button type="button" disabled={busy} onClick={() => answer(true)} className="min-h-[44px] rounded-full bg-foreground px-5 text-sm font-semibold text-background disabled:opacity-60">Count me in</button>
         <button type="button" disabled={busy} onClick={() => answer(false)} className="min-h-[44px] rounded-full border border-border bg-card px-5 text-sm font-semibold text-foreground">Not now</button>

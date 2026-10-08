@@ -1,4 +1,4 @@
-import { TOGETHER_CONSENT_VERSION } from "@/lib/together";
+import { TOGETHER_CONSENT_COPY, TOGETHER_CONSENT_VERSION } from "@/lib/together";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -332,7 +332,7 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
             <div className="flex items-start gap-3 py-2">
               <Checkbox id="together-consent" checked={togetherConsent} onCheckedChange={(c) => setTogetherConsentBox(c === true)} className="mt-0.5" />
               <Label htmlFor="together-consent" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
-                Add my logs, without my name, to what women see in Together.
+                {TOGETHER_CONSENT_COPY}
               </Label>
             </div>
           )}

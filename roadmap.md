@@ -56,3 +56,11 @@
 
 ## Later
 - [ ] Custom community symptoms become visible to everyone once 10+ consenting women log them. Implement by reading the precomputed Together daily totals, never by scanning symptom_logs at request time.
+
+## Together custom words
+- [x] Custom words are shared immediately after AI moderation (library match first, then the existing tips check function in a word mode). A word that is rejected, or whose check fails or times out, stays private in "Your words".
+- [x] Counts are bucketed on the server (under 3 / 3 to 9 / 10+): "Named by a woman like you", "A few women", then the exact number. The phone never gets exact counts under 10 or any user IDs.
+- [x] Daily totals and symptom pairs now include library entries only. Custom words reach Together only through get_together_words().
+- [x] Consent version bumped to together-v2 with new copy. Existing members see one chat message ("Keep me in" / "Leave Together"). Until they answer, their logs keep counting and none of their words are shared.
+- [x] Words can be reported from a "..." menu (3 reports hide a word); reported words are reviewed in the existing Tips screen. Counts-only word events live in together_word_events.
+

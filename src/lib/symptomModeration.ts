@@ -49,11 +49,12 @@ export function validateSymptomName(raw: string): SymptomValidation {
   if (URL_PATTERN.test(value)) {
     return { ok: false, reason: "contains_link", value, message: "Links and handles aren't allowed here." };
   }
-  const letters = value.replace(/[^a-zA-Z]/g, "");
-  if (letters.length < 3) {
+  const letters = (value.match(/\p{L}/gu) ?? []).join("");
+  if (letters.length < 2) {
     return { ok: false, reason: "not_words", value, message: "Use words, not symbols or numbers." };
   }
-  if (letters.length >= 4 && letters === letters.toUpperCase()) {
+  const latin = value.replace(/[^A-Za-z]/g, "");
+  if (latin.length >= 4 && latin.length === letters.length && latin === latin.toUpperCase()) {
     return { ok: false, reason: "all_caps", value, message: "Please don't use all caps." };
   }
   const lower = ` ${value.toLowerCase()} `;

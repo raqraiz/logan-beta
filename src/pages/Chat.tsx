@@ -30,6 +30,7 @@ import { ChatCycleCircle, calculateCycleInfo } from "@/components/chat/ChatCycle
 import { LoganTodaySection } from "@/components/chat/LoganTodaySection";
 import { OPEN_TOGETHER, type OpenTogetherDetail, type TogetherLens } from "@/lib/togetherOpen";
 import { TogetherAskCard } from "@/components/together/TogetherAskCard";
+import { TogetherConsentUpdate } from "@/components/together/TogetherConsentUpdate";
 import { loadTogether, markTogetherShown, setTogetherConsent } from "@/lib/together";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { refreshStageBoundary } from "@/hooks/useStageBoundary";
@@ -2655,6 +2656,7 @@ const Chat = () => {
           )}
           {showTodaySection && messages.length > 0 && !messages.some(m => m.message_type !== "reaction" && m.message_type !== "checkin" && isMessageFromToday(m.created_at)) && renderTodaySection()}
           {user && !isOnboarding && messages.length > 0 && <TogetherAskCard userId={user.id} />}
+          {user && !isOnboarding && messages.length > 0 && <TogetherConsentUpdate userId={user.id} />}
           <div ref={scrollRef} />
         </div>
       </ScrollArea>
