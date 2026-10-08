@@ -36,6 +36,10 @@ Apply the latest database migration in supabase/migrations/[file-name].
 
 Keep the prompt short and exact so it uses as few Lovable credits as possible.
 
+### Deploy notes
+
+Lovable deploy prompts must say: "Deploy only. Do not edit, fix or refactor any code, even if the build log shows errors. Report errors instead."
+
 ## Do not touch
 
 - `.env` files and any API keys or secrets. Never commit secrets.

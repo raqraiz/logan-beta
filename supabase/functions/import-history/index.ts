@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { BlobReader, ZipReader, TextWriter } from "https://deno.land/x/zipjs@v2.7.45/index.js";
 import { parse as parseCsv } from "https://deno.land/std@0.224.0/csv/parse.ts";
 import { trackMessageFailures } from "../_shared/messageFailures.ts";
