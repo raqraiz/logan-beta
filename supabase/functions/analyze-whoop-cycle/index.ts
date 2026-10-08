@@ -51,7 +51,7 @@ async function callLovableAI(prompt: string): Promise<string | null> {
   } catch (e) { console.error("AI error", e); return null; }
 }
 
-async function analyzeUser(admin: ReturnType<typeof createClient>, userId: string) {
+async function analyzeUser(admin: ReturnType<typeof createClient<any>>, userId: string) {
   // Throttle: skip if a brief was posted in last 20h
   const since = new Date(Date.now() - 20 * 3600_000).toISOString();
   const { data: recentBrief } = await admin
@@ -74,7 +74,7 @@ async function analyzeUser(admin: ReturnType<typeof createClient>, userId: strin
   if (!participant || participant.life_stage !== "cycling") return { skipped: "not_cycling" };
 
   const { phase: expected, day } = expectedPhase(
-    participant.last_period_start, participant.cycle_length_days ?? 28,
+    (participant.last_period_start as string | null) ?? null, participant.cycle_length_days ?? 28,
   );
 
   // Pull last 35 days of Whoop trackers

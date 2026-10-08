@@ -259,7 +259,7 @@ function cycleStartsToCycles(starts: string[]): { start: string; end: string; le
 
 // ---- Screenshot vision extraction ----
 async function extractFromScreenshots(
-  admin: ReturnType<typeof createClient>,
+  admin: ReturnType<typeof createClient<any>>,
   paths: string[],
 ): Promise<{
   cycleStarts: string[];

@@ -20,7 +20,7 @@ interface Integration {
 }
 
 async function ensureFreshToken(
-  admin: ReturnType<typeof createClient>,
+  admin: ReturnType<typeof createClient<any>>,
   integ: Integration,
 ): Promise<string> {
   const expiresAt = integ.expires_at ? Date.parse(integ.expires_at) : 0;
@@ -58,7 +58,7 @@ async function ensureFreshToken(
 }
 
 async function getOrCreateTracker(
-  admin: ReturnType<typeof createClient>,
+  admin: ReturnType<typeof createClient<any>>,
   userId: string,
   name: string,
   emoji: string,
@@ -115,7 +115,7 @@ function clamp1to5(value: number, min: number, max: number): number {
 }
 
 async function syncOne(
-  admin: ReturnType<typeof createClient>,
+  admin: ReturnType<typeof createClient<any>>,
   integ: Integration & { provider_user_id: string | null },
   backfillDays: number,
 ) {
