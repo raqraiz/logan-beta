@@ -36,6 +36,10 @@ describe("investor report text", () => {
   });
   it("labels live and late months", () => {
     expect(reportToText({ ...base, status: "live" })).toContain("So far this month, not locked");
+    const live = reportToText({ ...base, status: "live", numbers: { ...base.numbers, avgWeeklyActive: null } });
+    expect(live).toContain("Still active the next month, so far this month (women who joined in August)");
+    expect(live).toContain("Average weekly active users: Fills in after the first full week");
+    expect(reportToText({ ...base, numbers: { ...base.numbers, avgWeeklyActive: null } })).toContain("Average weekly active users: n/a");
     expect(reportToText({ ...base, late: true })).toContain("Calculated after the month ended");
   });
   it("handles a first month and a small cohort without percentages", () => {
