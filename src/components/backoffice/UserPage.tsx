@@ -33,6 +33,9 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+const DIALOG = "rounded-[22px] border-[#E6E0D5] bg-white text-[#23201C] [color-scheme:light]";
+const FIELD = "w-full rounded-full border border-[#E6E0D5] bg-white px-4 py-2 text-[15px] text-[#23201C] placeholder:text-[#6E675F] [color-scheme:light]";
+
 function EditNameDialog({ user, open, onClose, onSaved }: { user: UserDetail; open: boolean; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState(user.name);
   const [busy, setBusy] = useState(false);
@@ -44,19 +47,19 @@ function EditNameDialog({ user, open, onClose, onSaved }: { user: UserDetail; op
   };
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="rounded-[22px] border-[#E6E0D5] bg-white">
+      <DialogContent className={DIALOG}>
         <DialogHeader>
           <DialogTitle className="font-display text-xl font-semibold text-[#23201C]">Edit her name</DialogTitle>
-          <DialogDescription className="text-[#6E675F]">Display name only. Her email stays with her.</DialogDescription>
+          <DialogDescription className="text-[15px] text-[#23201C]">Display name only. Her email stays with her.</DialogDescription>
         </DialogHeader>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           maxLength={80}
           aria-label="Display name"
-          className="w-full rounded-full border border-[#E6E0D5] px-4 py-2 text-[#23201C]"
+          className={FIELD}
         />
-        {err && <p className="text-sm text-[#23201C]">{err}</p>}
+        {err && <p className="text-[15px] text-[#23201C]">{err}</p>}
         <div className="flex justify-end gap-2"><GhostButton onClick={onClose}>Cancel</GhostButton><MainButton onClick={save} disabled={busy || !name.trim()}>{busy ? "Saving…" : "Save"}</MainButton></div>
       </DialogContent>
     </Dialog>
@@ -68,8 +71,9 @@ function DeleteDialog({ user, open, onClose, onDeleted }: { user: UserDetail; op
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   useEffect(() => { if (open) { setTyped(""); setErr(""); } }, [open]);
-  const matches = typed.trim().toLowerCase() === user.email.trim().toLowerCase() && user.email !== "";
+  const matches = user.email.trim() !== "" && typed.trim().toLowerCase() === user.email.trim().toLowerCase();
   const confirm = async () => {
+    if (!matches || busy) return;
     setBusy(true); setErr("");
     try {
       await logAdminAction("delete_user", user.id);  // if logging fails, nothing is deleted
@@ -86,35 +90,38 @@ function DeleteDialog({ user, open, onClose, onDeleted }: { user: UserDetail; op
       setErr(e instanceof Error && e.message ? e.message : "The delete didn't finish. Please try again.");
     } finally { setBusy(false); }
   };
+  const ready = matches && !busy;
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !busy && onClose()}>
-      <DialogContent className="rounded-[22px] border-[#E6E0D5] bg-white">
+      <DialogContent className={DIALOG}>
         <DialogHeader>
           <DialogTitle className="font-display text-xl font-semibold text-[#23201C]">Delete this account?</DialogTitle>
-          <DialogDescription className="text-[#6E675F]">
-            This permanently deletes her account and everything we hold about her. It can't be undone. To confirm, type her email: <span className="font-semibold text-[#23201C]">{user.email}</span>
+          <DialogDescription className="text-[15px] leading-relaxed text-[#23201C]">
+            This permanently deletes her account and everything we hold about her. It can't be undone. To confirm, type her email: <strong className="break-all font-bold">{user.email}</strong>
           </DialogDescription>
         </DialogHeader>
-        <input
-          value={typed}
-          onChange={(e) => setTyped(e.target.value)}
-          placeholder="Her email"
-          aria-label="Type her email to confirm"
-          autoComplete="off"
-          className="w-full rounded-full border border-[#E6E0D5] px-4 py-2 text-[#23201C]"
-        />
-        {err && <p role="alert" className="text-sm text-[#C4247A]">{err}</p>}
-        <div className="flex justify-end gap-2">
-          <GhostButton onClick={onClose} disabled={busy}>Cancel</GhostButton>
-          <button
-            type="button"
-            onClick={confirm}
-            disabled={!matches || busy}
-            className="rounded-full bg-[#C4247A] px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
-          >
-            {busy ? "Deleting…" : "Delete account"}
-          </button>
-        </div>
+        <form onSubmit={(e) => { e.preventDefault(); void confirm(); }} className="grid gap-4">
+          <input
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            placeholder="her email"
+            aria-label="Type her email to confirm"
+            autoComplete="off"
+            className={FIELD}
+          />
+          {err && <p role="alert" className="text-[15px] text-[#C4247A]">{err}</p>}
+          <div className="flex justify-end gap-2">
+            <GhostButton onClick={onClose} disabled={busy}>Cancel</GhostButton>
+            <button
+              type="submit"
+              disabled={!ready}
+              aria-disabled={!ready}
+              className={`rounded-full px-4 py-2 text-sm font-semibold ${ready ? "bg-[#C4247A] text-white" : "cursor-not-allowed bg-[#DDD7CC] text-[#6E675F]"}`}
+            >
+              {busy ? "Deleting…" : "Delete account"}
+            </button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
@@ -194,7 +201,7 @@ export default function UserPage() {
             <span className="block font-semibold text-[#23201C]">Internal account</span>
             <span className="block text-xs text-[#6E675F]">Left out of Today and Growth counts.</span>
           </label>
-          <Switch id="internal" checked={u.internal} disabled={toggleBusy} onCheckedChange={toggleInternal} />
+          <Switch id="internal" checked={u.internal} disabled={toggleBusy} onCheckedChange={toggleInternal} className="data-[state=checked]:bg-[#23201C] data-[state=unchecked]:bg-[#DDD7CC] [&>span]:bg-white" />
         </div>
         {toggleErr && <p className="pt-2 text-sm text-[#23201C]">That didn't save. Please try again.</p>}
         <div className="pt-3">
