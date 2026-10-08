@@ -75,3 +75,7 @@
 - [x] Words in other languages map to existing library entries by meaning, and only when the meaning is clear (e.g. a Hebrew "headache" counts as Headache, never Migraine). Unsure means a new word with the usual checks.
 - [x] Mappings live in a locked table, follow library merges, stop when an entry is retired, and can be switched off with one SQL line. Her logs are never rewritten.
 - [ ] Not built: a language setting and translated library names (own task).
+
+## Back office
+- [ ] Back office rebuilt from the hi-fi design in 6 phases. Rule: no health data in the back office for anyone. Super admins can see a woman's name, email, engagement counts and consent; admins see first names on feedback and referrals; everything else is totals. Send audiences need 10+ women when filtered by stage.
+  - [x] Phase 1: shell, Today, Growth.

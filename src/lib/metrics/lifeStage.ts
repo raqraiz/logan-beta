@@ -1,6 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
 import { fetchLifeStageActivity, type LifeStageActivity } from "@/lib/adminActivity";
-import { fetchEligibleUserIds } from "@/lib/metrics/definitions";
 import { toUTCDate } from "@/lib/activeUsers";
 
 /**
@@ -131,22 +129,6 @@ export interface LifeStageEngagement {
   conflictingUsers: number;
 }
 
-const PAGE = 1000;
-
-const fetchAllRows = async <T,>(
-  build: (from: number, to: number) => any,
-): Promise<T[]> => {
-  const out: T[] = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await build(from, from + PAGE - 1);
-    if (error) throw error;
-    const rows = (data ?? []) as T[];
-    out.push(...rows);
-    if (rows.length < PAGE) break;
-  }
-  return out;
-};
-
 /**
  * Loads every metric for the "Engagement by life stage" table. Uses the shared
  * eligibility definition (onboarded, non-internal); activity totals come from the
@@ -154,39 +136,10 @@ const fetchAllRows = async <T,>(
  * Throws on any failure — the caller renders the retry state.
  */
 export const fetchLifeStageEngagement = async (): Promise<LifeStageEngagement> => {
-  const eligible = await fetchEligibleUserIds();
-
-  const participants = await fetchAllRows<ParticipantStageRow>((from, to) =>
-    supabase.from("participants")
-      .select("user_id, life_stage, postpartum_start_date, postpartum_active, is_breastfeeding, feeding_status, due_date, pregnancy_lmp, on_hormonal_bc, birth_control_status, cycle_regularity, last_period_start")
-      .order("updated_at", { ascending: true })
-      .range(from, to));
-
-  const byUser = new Map<string, ParticipantStageRow>();
-  for (const p of participants) {
-    if (p.user_id && eligible.has(p.user_id)) byUser.set(p.user_id, p);
-  }
-
-  // --- stage per eligible user
-  const stageOf = new Map<string, LifeStageKey>();
-  let conflictingUsers = 0;
-  for (const userId of eligible) {
-    const res = resolveLifeStage(byUser.get(userId));
-    stageOf.set(userId, res.stage);
-    if (res.conflicting) conflictingUsers++;
-  }
-
-  // --- activity totals per stage, computed on the server from ALL user-initiated
-  // sources (chat messages she sent, symptom logs, activity events). Only the
-  // stage -> ids mapping goes up; only counts come back.
-  const idsByStage = new Map<LifeStageKey, string[]>();
-  for (const s of LIFE_STAGE_ORDER) idsByStage.set(s, []);
-  for (const [userId, stage] of stageOf) idsByStage.get(stage)!.push(userId);
-
-  const activity = await fetchLifeStageActivity(
-    Object.fromEntries(LIFE_STAGE_ORDER.map((s) => [s, idsByStage.get(s)!])),
-  );
+  // The server groups the women by life stage and returns totals only.
+  const activity = await fetchLifeStageActivity();
   const byStage = new Map(activity.map((a) => [a.grp, a]));
+  const conflictingUsers = activity.reduce((t, a) => t + a.conflicting, 0);
 
   const pct = (num: number, den: number): number | null =>
     den > 0 ? Math.round((num / den) * 1000) / 10 : null;
@@ -194,7 +147,7 @@ export const fetchLifeStageEngagement = async (): Promise<LifeStageEngagement> =
     den > 0 ? Math.round((num / den) * 10) / 10 : null;
 
   const ZERO: LifeStageActivity = {
-    grp: "", active7: 0, active30: 0, activeDays30: 0, minutes30: 0, sessions30: 0, retentionBase: 0, retained: 0,
+    grp: "", users: 0, conflicting: 0, active7: 0, active30: 0, activeDays30: 0, minutes30: 0, sessions30: 0, retentionBase: 0, retained: 0,
   };
   const buildRow = (stage: LifeStageKey | "all", users: number, a: LifeStageActivity): StageMetrics => ({
     stage,
@@ -209,18 +162,18 @@ export const fetchLifeStageEngagement = async (): Promise<LifeStageEngagement> =
     avgSessionsPerActiveUserWeek: a.active30 > 0 ? Math.round((a.sessions30 / a.active30 / (30 / 7)) * 10) / 10 : null,
   });
 
-  const rows = LIFE_STAGE_ORDER.map((s) => buildRow(s, idsByStage.get(s)!.length, byStage.get(s) ?? ZERO));
+  const rows = LIFE_STAGE_ORDER.map((s) => buildRow(s, (byStage.get(s) ?? ZERO).users, byStage.get(s) ?? ZERO));
   // Every eligible person sits in exactly one stage, so "all" is the sum of the stages.
   const total = LIFE_STAGE_ORDER.reduce<LifeStageActivity>((t, s) => {
     const a = byStage.get(s) ?? ZERO;
     return {
-      grp: "all", active7: t.active7 + a.active7, active30: t.active30 + a.active30,
+      grp: "all", users: t.users + a.users, conflicting: t.conflicting + a.conflicting, active7: t.active7 + a.active7, active30: t.active30 + a.active30,
       activeDays30: t.activeDays30 + a.activeDays30, minutes30: t.minutes30 + a.minutes30,
       sessions30: t.sessions30 + a.sessions30, retentionBase: t.retentionBase + a.retentionBase,
       retained: t.retained + a.retained,
     };
   }, ZERO);
-  rows.push(buildRow("all", eligible.size, total));
+  rows.push(buildRow("all", total.users, total));
 
   return { rows, conflictingUsers };
 };

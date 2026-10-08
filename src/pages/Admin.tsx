@@ -108,6 +108,7 @@ const Admin = () => {
               <LoganFullLogo size="sm" />
             </Link>
             <span className="text-muted-foreground text-sm">Admin Dashboard</span>
+            <Link to="/admin" className="text-sm text-primary underline underline-offset-2">Back to the new back office</Link>
           </div>
           <div className="flex items-center gap-2 md:gap-4">
             <span className="text-sm text-muted-foreground hidden md:block">{session.user.email}</span>
@@ -128,7 +129,7 @@ const Admin = () => {
           </p>
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs defaultValue={new URLSearchParams(window.location.search).get("tab") || "overview"} className="space-y-6">
           <TabsList
             className={`grid w-full max-w-3xl ${isSuperAdmin ? "grid-cols-9" : "grid-cols-7"} bg-muted border border-border`}
           >
