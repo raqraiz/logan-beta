@@ -1,7 +1,8 @@
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { mergeTranscript } from "@/lib/voiceTranscript";
 
 // Detect iOS — Web Speech API is not supported on any iOS browser
 const isIOS = () => {
@@ -11,12 +12,17 @@ const isIOS = () => {
 };
 
 interface VoiceInputButtonProps {
+  // Called once when dictation ends, with the full committed text.
   onTranscript: (text: string) => void;
+  // Called while dictating with the whole transcript so far. Replace, don't append.
+  onPartial?: (text: string) => void;
+  // Called when dictation starts (true) and ends (false).
+  onListeningChange?: (listening: boolean) => void;
   disabled?: boolean;
   className?: string;
 }
 
-export const VoiceInputButton = ({ onTranscript, disabled, className }: VoiceInputButtonProps) => {
+export const VoiceInputButton = ({ onTranscript, onPartial, onListeningChange, disabled, className }: VoiceInputButtonProps) => {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
   const deliveredRef = useRef(false);
@@ -24,8 +30,16 @@ export const VoiceInputButton = ({ onTranscript, disabled, className }: VoiceInp
   // the sole terminating action; any other onend (Android Chrome pauses,
   // no-speech timeouts) triggers an automatic restart.
   const wantListeningRef = useRef(false);
-  // Committed (final) transcript accumulated across restarts.
-  const finalTranscriptRef = useRef("");
+  // Final text from earlier recognition sessions (before an auto-restart).
+  const committedRef = useRef("");
+  // Final text of the current session and the latest interim (unfinished) text.
+  const sessionFinalRef = useRef("");
+  const interimRef = useRef("");
+  // Latest callbacks, so restarts never use stale closures.
+  const cbRef = useRef({ onTranscript, onPartial, onListeningChange });
+  useEffect(() => {
+    cbRef.current = { onTranscript, onPartial, onListeningChange };
+  });
   const isIOSDevice = useMemo(() => isIOS(), []);
 
   const startRecognition = useCallback(() => {
@@ -44,18 +58,21 @@ export const VoiceInputButton = ({ onTranscript, disabled, className }: VoiceInp
     };
 
     recognition.onresult = (event: any) => {
-      // Each restart begins a fresh result list. Only append results from
-      // resultIndex onward so already-committed finals aren't duplicated.
-      let newFinal = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      // Rebuild this session's text from the whole result list every time.
+      // Android Chrome sends cumulative finals, so merge (replace) rather than
+      // append; the interim tail is shown live but only committed if it ends up
+      // final (or when dictation stops).
+      let finals = "";
+      let interim = "";
+      for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
-        if (result.isFinal) {
-          newFinal += result[0].transcript;
-        }
+        if (result.isFinal) finals = mergeTranscript(finals, result[0].transcript);
+        else interim = mergeTranscript(interim, result[0].transcript);
       }
-      if (newFinal) {
-        finalTranscriptRef.current += newFinal;
-      }
+      sessionFinalRef.current = finals;
+      interimRef.current = interim;
+      const shown = mergeTranscript(mergeTranscript(committedRef.current, finals), interim);
+      cbRef.current.onPartial?.(shown);
     };
 
     recognition.onerror = (event: any) => {
@@ -89,6 +106,14 @@ export const VoiceInputButton = ({ onTranscript, disabled, className }: VoiceInp
     };
 
     recognition.onend = () => {
+      // Bank this session's text (including an unfinished interim tail, e.g.
+      // when the mic is stopped mid-sentence) before restarting or finishing.
+      committedRef.current = mergeTranscript(
+        mergeTranscript(committedRef.current, sessionFinalRef.current),
+        interimRef.current,
+      );
+      sessionFinalRef.current = "";
+      interimRef.current = "";
       if (wantListeningRef.current) {
         // User hasn't tapped stop — restart immediately (Android Chrome ends
         // the session after a pause even in continuous mode).
@@ -98,19 +123,25 @@ export const VoiceInputButton = ({ onTranscript, disabled, className }: VoiceInp
           console.error("Speech recognition restart failed:", e);
           wantListeningRef.current = false;
           setIsListening(false);
+          cbRef.current.onListeningChange?.(false);
+          if (committedRef.current && !deliveredRef.current) {
+            deliveredRef.current = true;
+            cbRef.current.onTranscript(committedRef.current);
+          }
         }
         return;
       }
       setIsListening(false);
-      const text = finalTranscriptRef.current.trim().replace(/\s+/g, " ");
+      cbRef.current.onListeningChange?.(false);
+      const text = committedRef.current;
       if (text && !deliveredRef.current) {
         deliveredRef.current = true;
-        onTranscript(text);
+        cbRef.current.onTranscript(text);
       }
     };
 
     recognition.start();
-  }, [onTranscript]);
+  }, []);
 
   const toggleListening = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -134,12 +165,16 @@ export const VoiceInputButton = ({ onTranscript, disabled, className }: VoiceInp
 
     wantListeningRef.current = true;
     deliveredRef.current = false;
-    finalTranscriptRef.current = "";
+    committedRef.current = "";
+    sessionFinalRef.current = "";
+    interimRef.current = "";
+    cbRef.current.onListeningChange?.(true);
     try {
       startRecognition();
     } catch (e) {
       console.error("Speech recognition start failed:", e);
       wantListeningRef.current = false;
+      cbRef.current.onListeningChange?.(false);
     }
   }, [isListening, startRecognition]);
 
