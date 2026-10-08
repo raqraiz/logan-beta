@@ -18,6 +18,10 @@ import {
 import { fetchMemoryNotes, buildMemoryBlock, extractCorrection, supersedeSameTopic, CORRECTION_PREFIX_RE } from "../_shared/memoryNotes.ts";
 import { trackMessageFailures } from "../_shared/messageFailures.ts";
 import { loadCatalog, matchSymptoms } from "../_shared/symptomMatch.ts";
+import {
+  CHIP_TALK, DISTRESS_CHIPS, distressPromptBlock, planDistressTurn, redFlagLine, regionForTimezone, stripDeepDive,
+  type DistressKind,
+} from "../_shared/distress.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,6 +38,7 @@ function isEmotionalOrHeavyMessage(text: string): boolean {
   if (words > 100) return true;
   if (/\b(worried|anxious|scared|overwhelmed|exhausted|struggling|hoping|bated breath|kinda scared|kinda worried)\b/.test(t)) return true;
   if (/\b(angry|furious|so mad|mad at|pissed|rage|lonely|alone|unseen|invisible|ignored|misunderstood|resent|fight|fought|argu(e|ed|ing|ment)|yell(ed|ing)|snapp(ed|ing)|depleted|drained|burn(ed|t) out|can'?t cope|at my limit|vent|doesn'?t get it|doesn'?t help|no help|sad|so down|heartbroken|crying|cried|upset|hurt by|frustrated)\b/.test(t)) return true;
+  if (/\b(panic attacks?|panicking|panic)\b/.test(t)) return true;
   if (/\b(postpartum|post-partum|pregnancy|pregnant|miscarriage|pregnancy loss|iud|coil)\b/.test(t)) return true;
   return false;
 }
@@ -1383,6 +1388,27 @@ serve(async (req) => {
     const openMarkerCheckin = findOpenCheckin("marker_checkin");
     const wasPeridCheckin = !!openPeriodCheckin;
     const lastAssistantContent = typeof lastAssistantMsg?.content === "string" ? lastAssistantMsg.content : "";
+
+    // --- Distress mode (acute distress and self-harm) ---
+    // Runs before every cycle, symptom and partner flow. Clear present-tense distress gets a
+    // fixed, fully visible reply: no hormone talk, no logging, no partner chips. Follow-up turns
+    // while she is still in distress (and the one right after) go to the AI under strict rules.
+    // Count-only analytics: a daily counter, no user ID and no message text.
+    let distressAiMode: DistressKind | "post" | null = null;
+    {
+      const plan = planDistressTurn(userMessage, (participant as any)?.timezone, lastAssistantMsg as any);
+      if (plan && plan.type === "reply") {
+        if (plan.enteredKind) {
+          const { error: countErr } = await supabase.rpc("record_distress_event", { _kind: plan.enteredKind });
+          if (countErr) console.error("[distress] count failed:", countErr.message);
+        }
+        await supabase.from("chat_messages").insert({
+          user_id: user.id, role: "assistant", content: plan.message, message_type: "text", metadata: plan.metadata,
+        });
+        return new Response(JSON.stringify({ success: true, message: plan.message }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (plan && plan.type === "ai") distressAiMode = plan.mode;
+    }
 
     // Recent user turns — used so a day number stated earlier in the thread
     // ("my bleed ended day 4") carries forward when a later message only names
@@ -2760,7 +2786,7 @@ serve(async (req) => {
         /\b(recipes?|food)\s+(ideas?|suggestions?|for\s+(my\s+)?(phase|cycle|luteal|follicular|ovulation|menstruation|postpartum|menopause))\b/i,
         /\bhelp\s+me\s+(eat|cook|plan\s+(my\s+)?(meals?|food))\b/i,
       ];
-      shouldOfferMealPlan = mealPlanPatterns.some(p => p.test(userMessage));
+      shouldOfferMealPlan = !distressAiMode && mealPlanPatterns.some(p => p.test(userMessage));
     }
     // --- End meal plan intent ---
 
@@ -4626,7 +4652,7 @@ serve(async (req) => {
     // deep-dive/phase-tip mandates can be suspended at the source rather than
     // contradicted by a later runtime block.
     const emotionalFollowUp = isEmotionalFollowUp(userMessage, recentMessages as any);
-    const emotionalContextActive = isEmotionalOrHeavyMessage(userMessage) || emotionalFollowUp;
+    const emotionalContextActive = isEmotionalOrHeavyMessage(userMessage) || emotionalFollowUp || distressAiMode !== null;
     let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext + backfillBlock + libraryBlock + libraryGuidance, emotionalContextActive, activeBoundaries);
     systemPrompt += anchorPromptRule(currentCycleAnchorType(participant));
 
@@ -4783,6 +4809,10 @@ serve(async (req) => {
 
 
 
+
+    if (distressAiMode) {
+      systemPrompt += distressPromptBlock(distressAiMode, regionForTimezone((participant as any)?.timezone));
+    }
 
     // History window: last 50 messages only. Onboarding answers live in structured
     // profile fields injected into the system prompt, so no head pin is needed.
@@ -5202,7 +5232,7 @@ serve(async (req) => {
     // Day-1 confirmation prompt to the assistant's normal insight and flag the
     // message so the next "yes" hits the period-confirmation reset path.
     let finalAssistantMessage = assistantMessage;
-    if (bleedDay1Prompt) {
+    if (bleedDay1Prompt && !distressAiMode) {
       const deepDiveDivider = "\n---\n";
       const duplicateDay1PromptPattern = /\n*\s*Want me to log \*\*?[^\n?]+\*\*? as your new \*\*?Day 1\*\*? and reset your cycle\?\s*Just say \*\*?yes\*\*? to confirm — or tell me the actual start date if it was earlier\./gi;
       const assistantMessageWithoutDay1Prompt = assistantMessage.replace(duplicateDay1PromptPattern, "").trimEnd();
@@ -5237,7 +5267,7 @@ serve(async (req) => {
     // --- Tap-to-log offer card (client renders; nothing is saved until she taps) ---
     {
       const offer = emotionalContextActive ? offerSymptoms.filter(o => !EMOTION_NAME_RE.test(o.name)) : offerSymptoms;
-      if (offer.length > 0) {
+      if (offer.length > 0 && !distressAiMode) {
         const t = userMessage.toLowerCase();
         let days: { label: string; days: number }[] = [{ label: "Just today", days: 1 }];
         if (/\b(all week|this week|for a week|past week|7 days|seven days)\b/.test(t)) days = [{ label: "This past week", days: 7 }, { label: "Just today", days: 1 }];
@@ -5358,6 +5388,19 @@ serve(async (req) => {
         .eq("id", participant.id);
     }
 
+    if (distressAiMode) {
+      // No "See more", no cycle context, no log or day-1 prompts on distress turns.
+      finalAssistantMessage = stripDeepDive(finalAssistantMessage);
+      for (const k of ["cycle_day", "cycle_phase", "cycle_length_days", "last_period_start", "log_offer", "logged_symptoms", "period_checkin", "suggested_day1"]) delete baseMeta[k];
+      if (distressAiMode === "acute") {
+        finalAssistantMessage = `${finalAssistantMessage}\n\n${redFlagLine(regionForTimezone((participant as any)?.timezone))}`;
+        baseMeta.distress_mode = "acute";
+        baseMeta.conversation_starters = DISTRESS_CHIPS;
+      } else if (distressAiMode === "self_harm") {
+        baseMeta.distress_mode = "self_harm";
+        baseMeta.conversation_starters = [CHIP_TALK];
+      }
+    }
     finalAssistantMessage = stripDashes(finalAssistantMessage);
     if (Array.isArray(baseMeta.conversation_starters)) {
       baseMeta.conversation_starters = (baseMeta.conversation_starters as string[]).map(stripDashes);
@@ -5429,7 +5472,7 @@ serve(async (req) => {
           if (offersOn) {
             await supabase.from("chat_messages").insert({ user_id: user.id, role: "assistant", message_type: "partner_headsup_schedreq", content: "", metadata: { partner_headsup: "schedreq" } });
           }
-        } else if (offersOn && !headsupHarm && !modelHarm && (modelHeadsupOffer || safeTest(HEADSUP_ASK_RE, userMessage))) {
+        } else if (offersOn && !headsupHarm && !modelHarm && !distressAiMode && (modelHeadsupOffer || safeTest(HEADSUP_ASK_RE, userMessage))) {
           const explicitAsk = safeTest(HEADSUP_ASK_RE, userMessage);
           let limited = false;
           if (!explicitAsk) {
