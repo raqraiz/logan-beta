@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
@@ -21,6 +22,7 @@ import { LoganFullLogo } from "@/components/LoganFullLogo";
 
 
 const Admin = () => {
+  useForceLightTheme();
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);

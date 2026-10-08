@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate, useOutletContext } fro
 import type { Session } from "@supabase/supabase-js";
 import { LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { LoganFullLogo } from "@/components/LoganFullLogo";
 import { RangeToggle } from "@/components/backoffice/parts";
 import type { RangeKey } from "@/lib/backOffice/math";
@@ -30,6 +31,7 @@ const itemClass = (active: boolean) =>
   `block rounded-full px-4 py-2 text-sm font-semibold transition-colors ${active ? "bg-[#F4F1EA] text-[#23201C]" : "text-[#6E675F] hover:text-[#23201C]"}`;
 
 export default function BackOfficeShell() {
+  useForceLightTheme();
   const navigate = useNavigate();
   const path = useLocation().pathname;
   const title = path.startsWith("/admin/growth") ? "Growth" : "Today";

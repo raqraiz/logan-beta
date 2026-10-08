@@ -80,7 +80,7 @@ export const logAdminAction = async (action: "delete_user" | "send_data_export",
   await call("admin_log_action", { _action: action, _target: id });
 };
 
-// ---- display helpers (days are UTC) ----
+// ---- display helpers (list and day counts use UTC days; "last active" on her page uses the viewer's time zone) ----
 const DAY = 86_400_000;
 const utcDay = (d: Date) => Math.floor(d.getTime() / DAY);
 
@@ -93,10 +93,12 @@ export const relativeDay = (iso: string | null, now = new Date()): string => {
 };
 export const fmtDate = (iso: string | null): string =>
   iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "—";
-export const fmtDateTime = (iso: string | null): string =>
-  iso
-    ? `${new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}, ${new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })} UTC`
-    : "—";
+/** Date and time in the viewer's own time zone (not UTC). */
+export const fmtDateTime = (iso: string | null): string => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return `${d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}, ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+};
 
 // ---- CSV ----
 export const CSV_HEADER = ["Name", "Email", "Joined", "Last active", "Msgs 30d", "Referrals", "Came from"];
