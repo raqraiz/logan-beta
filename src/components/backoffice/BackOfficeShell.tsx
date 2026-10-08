@@ -19,7 +19,7 @@ interface NavItem { label: string; to: string; old?: boolean; superOnly?: boolea
 const NAV: NavItem[] = [
   { label: "Today", to: "/admin" },
   { label: "Users", to: "/admin/users", superOnly: true, prefix: true },
-  { label: "Feedback", to: OLD("overview"), old: true },
+  { label: "Feedback", to: "/admin/feedback" },
   { label: "Referrals", to: OLD("referrals"), old: true },
   { label: "Tips", to: OLD("tips"), old: true },
   { label: "Growth", to: "/admin/growth", superOnly: true },
@@ -35,7 +35,7 @@ export default function BackOfficeShell() {
   const navigate = useNavigate();
   const path = useLocation().pathname;
   const title = path.startsWith("/admin/growth") ? "Growth" : "Today";
-  const ownHeader = path.startsWith("/admin/users"); // Users pages draw their own heading
+  const ownHeader = path.startsWith("/admin/users") || path.startsWith("/admin/feedback"); // these pages draw their own heading
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
   const [role, setRole] = useState<BackOfficeRole | null>(null);

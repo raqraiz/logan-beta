@@ -10,6 +10,7 @@ import Admin from "./pages/Admin";
 import BackOfficeShell from "./components/backoffice/BackOfficeShell";
 import TodayPage from "./components/backoffice/TodayPage";
 import GrowthPage from "./components/backoffice/GrowthPage";
+import FeedbackPage from "./components/backoffice/FeedbackPage";
 import UsersPage from "./components/backoffice/UsersPage";
 import UserPage from "./components/backoffice/UserPage";
 import SuperOnly from "./components/backoffice/SuperOnly";
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/admin" element={<BackOfficeShell />}>
                 <Route index element={<TodayPage />} />
                 <Route path="growth" element={<GrowthPage />} />
+                <Route path="feedback" element={<FeedbackPage />} />
                 <Route path="users" element={<SuperOnly><UsersPage /></SuperOnly>} />
                 <Route path="users/:id" element={<SuperOnly><UserPage /></SuperOnly>} />
               </Route>

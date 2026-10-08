@@ -82,3 +82,6 @@
   - [x] Phase 2: Users list and one woman's page (super admin only), audit log, safer account delete.
   - [ ] Data export: private bucket, signed link that expires, one export list per table, email template.
   - [ ] Health-data consent needs a stored version (consent_version), written at sign-up. Part of the Beta 2.0 onboarding.
+
+## Back office phase 3a: Feedback
+- [x] Feedback health rule: admins always see health details replaced by [health detail]; super admins see them only when she taps 'Yes, they can' (or for feedback sent before the question existed). Check failure = hidden.

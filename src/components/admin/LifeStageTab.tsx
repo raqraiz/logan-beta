@@ -103,6 +103,7 @@ export function LifeStageTab() {
       const { data: allMessages, error: messagesError } = await supabase
         .from("chat_messages")
         .select("user_id, role, created_at")
+        .neq("role", "system") // team messages are not hers
         .order("created_at", { ascending: true });
       if (messagesError) throw messagesError;
 

@@ -103,7 +103,7 @@ export default function TodayPage() {
 
   const stick = now.data ? stickiness(now.data.wau, now.data.mau) : null;
   const rows: { title: string; sub: string; count: number | null; to: string }[] = needs.data ? [
-    { title: "New feedback", sub: "From the last 7 days", count: needs.data.newFeedback, to: OLD("overview") },
+    { title: "New feedback", sub: "Not handled yet", count: needs.data.newFeedback, to: "/admin/feedback" },
     { title: "Tips to review", sub: "Waiting for Logan's check, plus reported", count: needs.data.tipsWaiting + needs.data.tipsReported, to: OLD("tips") },
     sup
       ? { title: "Message failures", sub: "In the last 7 days", count: needs.data.messageFailures7d, to: OLD("overview") }

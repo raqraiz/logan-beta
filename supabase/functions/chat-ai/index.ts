@@ -2966,6 +2966,7 @@ serve(async (req) => {
             .from("chat_messages")
             .select("content, role")
             .eq("user_id", user.id)
+            .in("role", ["user", "assistant"]) // team messages (role system) are never input
             .order("created_at", { ascending: false })
             .limit(12);
           recentMsgs = (recent || []) as any;
@@ -3089,6 +3090,7 @@ serve(async (req) => {
             .from("chat_messages")
             .select("content, role, created_at")
             .eq("user_id", user.id)
+            .in("role", ["user", "assistant"])
             .order("created_at", { ascending: false })
             .limit(6);
           const lastAssistant = ((recent2 || []) as any[]).find(m => m.role === "assistant");
@@ -4163,6 +4165,7 @@ serve(async (req) => {
       .from("chat_messages")
       .select("role, content, created_at")
       .eq("user_id", user.id)
+      .in("role", ["user", "assistant"]) // team messages (role system) are never part of the conversation
       .order("created_at", { ascending: false })
       .limit(HISTORY_FETCH_LIMIT);
     const recentMessages = (recentMessagesDesc || []).slice().reverse();
