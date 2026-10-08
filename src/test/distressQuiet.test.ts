@@ -5,6 +5,10 @@ const now = new Date("2026-10-08T12:00:00Z").getTime();
 const msg = (min: number, metadata: unknown) => ({ created_at: new Date(now - min * 60000).toISOString(), metadata });
 
 describe("isDistressQuiet", () => {
+  it("heavy mood counts as a distress message", () => {
+    expect(isDistressQuiet([msg(1, { distress_mode: "heavy_mood" })], now)).toBe(true);
+    expect(isDistressQuiet([msg(1, { distress_heavy_exit: true })], now)).toBe(true);
+  });
   it("is quiet during and for 6 hours after distress-mode messages", () => {
     expect(isDistressQuiet([msg(5, { distress_mode: "acute" })], now)).toBe(true);
     expect(isDistressQuiet([msg(300, { distress_mode: "self_harm" })], now)).toBe(true);

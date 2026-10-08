@@ -22,6 +22,7 @@ import {
   CHIP_TALK, DISTRESS_CHIPS, SELF_HARM_SESSION_MS, distressPromptBlock, planDistressTurn, redFlagLine, regionForTimezone,
   ACUTE_EXIT_OPENER, acuteFromSymptomNames, acuteReply, applyDistressMeta, ensureSubstance, finalizeDistressReply, hasRecentDistress, isFactualCycleQuestion,
   isRedFlagChipText, mentionsRedFlagSymptom, selfHarmSafeReply, stripDeepDive, type DistressAiMode,
+  assembleHeavyMoodReply, filterToneChips,
 } from "../_shared/distress.ts";
 
 const corsHeaders = {
@@ -1418,7 +1419,18 @@ serve(async (req) => {
         .gte("created_at", windowStart).or("metadata->>distress_post.eq.true,metadata->>distress_mode.eq.acute")
         .order("created_at", { ascending: false }).limit(1);
       acuteEpisodeAt = (epRows?.[0] as { created_at: string } | undefined)?.created_at ?? null;
+      // Heavy mood: her last two messages (so "I want to log" a turn ago still counts) and whether a log card was just shown.
+      // Read only to decide; the text is never logged.
+      const { data: heavyHist } = await supabase.from("chat_messages").select("role, content, metadata").eq("user_id", user.id)
+        .in("role", ["user", "assistant"]).order("created_at", { ascending: false }).limit(8);
+      const heavyRows = (heavyHist || []) as { role: string; content: string | null; metadata: Record<string, unknown> | null }[];
+      const heavyUsers = heavyRows.filter((m) => m.role === "user");
+      if (heavyUsers.length && (heavyUsers[0].content || "").trim() === userMessage.trim()) heavyUsers.shift();
+      const recentUserTexts = heavyUsers.slice(0, 2).map((m) => String(m.content || "")).reverse();
+      const logCardRecentlyShown = heavyRows.filter((m) => m.role === "assistant").slice(0, 3).some((m) => !!m.metadata?.log_offer);
       const plan = planDistressTurn(userMessage, (participant as any)?.timezone, lastAssistantMsg as any, new Date(), {
+        recentUserTexts,
+        logCardRecentlyShown,
         selfHarmSessionActive: !!shLast,
         postCrisis,
         selfHarmAt: shLast?.created_at ?? null,
@@ -1431,6 +1443,11 @@ serve(async (req) => {
           if (countErr) console.error("[distress] count failed:", countErr.message);
         }
         const metadata: Record<string, unknown> = { ...plan.metadata };
+        if (metadata.log_offer && participant?.last_period_start && participant?.cycle_length_days) {
+          // Only stamps the log row when she taps; nothing is saved here.
+          const offerCyc = calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC");
+          metadata.log_offer = { ...(metadata.log_offer as Record<string, unknown>), cycle_day: offerCyc?.cycleDay ?? null, cycle_phase: offerCyc?.phase ?? null };
+        }
         let message = plan.message;
         if (plan.logSymptoms?.length) {
           // Her explicit "yes" saves the log for today. Undo is shown under the reply.
@@ -1489,7 +1506,17 @@ serve(async (req) => {
         return new Response(JSON.stringify({ success: true, message: reply }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       if (plan && plan.type === "ai" && plan.mode === "acute_exit") acuteExit = true;
-      else if (plan && plan.type === "ai" && plan.mode !== "self_harm") { distressAiMode = plan.mode; distressAiMeta = plan.metadata ?? null; }
+      else if (plan && plan.type === "ai" && plan.mode !== "self_harm") {
+        distressAiMode = plan.mode; distressAiMeta = plan.metadata ?? null;
+        if (plan.enteredKind) {
+          const { error: countErr } = await supabase.rpc("record_distress_event", { _kind: plan.enteredKind });
+          if (countErr) console.error("[distress] count failed:", countErr.message);
+        }
+        if (distressAiMode === "heavy_mood" && distressAiMeta?.log_offer && participant?.last_period_start && participant?.cycle_length_days) {
+          const offerCyc = calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC");
+          distressAiMeta = { ...distressAiMeta, log_offer: { ...(distressAiMeta.log_offer as Record<string, unknown>), cycle_day: offerCyc?.cycleDay ?? null, cycle_phase: offerCyc?.phase ?? null } };
+        }
+      }
       // The post-distress rewrite is only for "why did this happen?" questions, never for a factual cycle question.
       if (distressAiMode === "post" && isFactualCycleQuestion(userMessage)) distressAiMode = null;
     }
@@ -5279,7 +5306,7 @@ serve(async (req) => {
 - They MUST directly respond to or extend Logan's last message — not generic prompts.
 - Mix: one that acknowledges ("Yeah that's me"), one that digs deeper ("Tell me more"), one that changes topic ("What about workouts?"). Never argumentative or contradictory — the user may be in a sensitive state.
 - NEVER criticize, blame, judge or mock her partner or anyone in her life (no "He never listens", "He's so selfish").${emotionalContextActive ? `
-- She is in an emotional moment: use only neutral, self-centered options like "Tell me more", "It's been building", "I need a break". No cycle, phase or hormone topics.` : ""}
+- She is in an emotional moment: use only neutral, self-centered options like "Tell me more", "It's been building", "I need a break". No cycle, phase or hormone topics. Never dismissive or impatient options (no "wish it would hurry up", "get it over with", "cheer up").` : ""}
 - No questions ending in "?" unless natural. No emojis. No quotes.
 - Return ONLY a JSON array of 3 strings, nothing else. Example: ["Yeah exactly","Not really though","Tell me more"]`
             },
@@ -5340,7 +5367,7 @@ serve(async (req) => {
     // detector is run over the extracted symptom names. A hit makes this an acute turn, so the log card, the chips
     // and the reply all follow the distress rules. There is no second, separate opinion.
     let promotedToAcute = false;
-    if (!distressAiMode && acuteFromSymptomNames(userMessage, [...offerSymptoms.map((o) => o.name), ...loggedSymptomNames])) {
+    if ((!distressAiMode || distressAiMode === "heavy_mood") && acuteFromSymptomNames(userMessage, [...offerSymptoms.map((o) => o.name), ...loggedSymptomNames])) {
       distressAiMode = "acute";
       promotedToAcute = true;
       console.log("[distress] promoted to acute from extracted symptom names");
@@ -5499,6 +5526,12 @@ serve(async (req) => {
       if (promotedToAcute) {
         // The normal pipeline wrote this reply, so replace it with the fixed acute reply.
         finalAssistantMessage = acuteReply(dRegion, userMessage, false);
+      } else if (distressAiMode === "heavy_mood") {
+        // Heavy mood: no cycle or hormone sentence, no "See more"; the safety question and log line are added by the server.
+        finalAssistantMessage = assembleHeavyMoodReply(finalAssistantMessage, {
+          askSafety: distressAiMeta?.distress_heavy_ask === true,
+          hasCard: !!distressAiMeta?.log_offer,
+        });
       } else {
         const rawAnswer = finalAssistantMessage;
         const safe = ensureSubstance(finalizeDistressReply(rawAnswer, distressAiMode, userMessage), rawAnswer, userMessage, dRegion, distressAiMode);
@@ -5511,7 +5544,7 @@ serve(async (req) => {
         }
       }
       applyDistressMeta(baseMeta, distressAiMode);
-      if (distressAiMode === "post_crisis") Object.assign(baseMeta, distressAiMeta ?? {});
+      if (distressAiMode === "post_crisis" || distressAiMode === "heavy_mood") Object.assign(baseMeta, distressAiMeta ?? {});
     }
     // Acute mode ended by a factual question: the normal answer, opened by one short line, no red-flag line, no acute chips.
     if (acuteExit) finalAssistantMessage = `${ACUTE_EXIT_OPENER}\n\n${finalAssistantMessage}`;
@@ -5519,6 +5552,10 @@ serve(async (req) => {
     // No chip, from any source, may state a medical red-flag symptom ("It's hard to breathe", chest pain, fainting).
     if (Array.isArray(baseMeta.conversation_starters)) {
       baseMeta.conversation_starters = (baseMeta.conversation_starters as string[]).filter((c) => !isRedFlagChipText(c));
+    }
+    // Tone: no dismissive or impatient chips ("Wish it would hurry up") on any emotional turn.
+    if (Array.isArray(baseMeta.conversation_starters) && (emotionalContextActive || distressAiMode || hasRecentDistress(lastAssistantMsg as any))) {
+      baseMeta.conversation_starters = filterToneChips(baseMeta.conversation_starters as string[]);
     }
     if (Array.isArray(baseMeta.conversation_starters)) {
       baseMeta.conversation_starters = (baseMeta.conversation_starters as string[]).map(stripDashes);

@@ -7,6 +7,8 @@ import {
   isFactualCycleQuestion, hasRecentDistress, asksWhyItHappened,
   acuteFromSymptomNames, applyDistressMeta, isRedFlagChipText, mentionsRedFlagSymptom, DISTRESS_CHIPS, redFlagLine, POST_CHIPS,
   ACUTE_EXIT_OPENER, ensureSubstance, isOnlyFixedLines,
+  detectHeavyMood, detectIntrusiveThoughts, detectLogRequest, assembleHeavyMoodReply, filterToneChips, isDismissiveChip,
+  HEAVY_CHIPS, HEAVY_SAFETY_QUESTION, HEAVY_FALLBACK, HEAVY_LOG_LINE, HEAVY_CARD_ABOVE, HEAVY_OK_REPLY, heavyLogOffer,
 } from "../../supabase/functions/_shared/distress.ts";
 
 const ACUTE_YES = [
@@ -780,5 +782,134 @@ describe("factual question during acute mode (live bug: only the red-flag line c
     expect(src).toContain("if (acuteExit) finalAssistantMessage = `${ACUTE_EXIT_OPENER}");
     expect(src).toContain("ensureSubstance(finalizeDistressReply(rawAnswer, distressAiMode, userMessage), rawAnswer, userMessage");
     expect(src).toContain('if (distressAiMode === "acute" && safe.kind === "filtered")');
+  });
+});
+
+
+// ───────────────────────── Heavy mood tier ─────────────────────────
+
+const HEAVY_YES = [
+  "Really really sad. Can't stop the bad thoughts. They keep pouring in", "I'm so sad", "feeling hopeless", "everything feels dark",
+  "I can't stop crying", "I feel empty", "I hate myself", "the thoughts keep coming", "scary thoughts", "dark thoughts all day",
+  "my mind won't stop", "I'm a failure", "אני עצובה", "מחשבות שחורות",
+];
+const HEAVY_NO = [
+  "my cramps are bad today", "What causes sadness?", "I was so sad yesterday", "really low energy", "I'm tired and bloated",
+  "what happens in the luteal phase?", "I want to log", "I'm having a panic attack", "I want to die",
+];
+describe("heavy mood detection", () => {
+  it.each(HEAVY_YES)("heavy mood: %s", (m) => expect(detectHeavyMood(m)).toBe(true));
+  it.each(HEAVY_NO)("not heavy mood: %s", (m) => expect(detectHeavyMood(m)).toBe(false));
+  it("only intrusive-thought language adds the safety question", () => {
+    expect(detectIntrusiveThoughts("Really really sad. Can't stop the bad thoughts. They keep pouring in")).toBe(true);
+    expect(detectIntrusiveThoughts("I'm so sad")).toBe(false);
+  });
+  it.each(["I want to log", "I want to log it", "Log it for me", "Just log it", "log it"])("log request: %s", (m) => expect(detectLogRequest(m)).toBe(true));
+  it.each(["did I log anything last month", "what is logging", "I'm so sad"])("not a log request: %s", (m) => expect(detectLogRequest(m)).toBe(false));
+  it("precedence: self-harm and acute outrank heavy mood", () => {
+    const sh = planDistressTurn("I'm so sad, I want to die", "Asia/Jerusalem", null);
+    expect(sh && sh.type === "reply" && sh.metadata.distress_mode).toBe("self_harm");
+    const ac = planDistressTurn("I'm so sad and I'm having a panic attack", "Asia/Jerusalem", null);
+    expect(ac && ac.type === "reply" && ac.metadata.distress_mode).toBe("acute");
+  });
+});
+
+describe("heavy mood chips and tone", () => {
+  it("blocks dismissive chips", () => {
+    for (const c of ["Wish it would hurry up", "Just get it over with", "Cheer up", "At least it's almost over", "Whatever"]) expect(isDismissiveChip(c)).toBe(true);
+    expect(filterToneChips(["Tell me more", "Wish it would hurry up", "It really is tough"])).toEqual(["Tell me more", "It really is tough"]);
+  });
+  it("the fixed set is the approved one", () => expect(HEAVY_CHIPS).toEqual(["I want to talk about it", "Just log it", "I'm okay for now"]));
+});
+
+// The Oct 8 exchange, replayed through the same pure steps chat-ai runs for each turn.
+describe("Oct 8 regression: the 4-message exchange", () => {
+  const MODEL_DRAFT = "I'm so sorry it feels this heavy. Being on day 27 means your hormone levels are at their lowest, which can make these feelings hit much harder. The luteal phase is a total lack of hormonal support.\n---\nProgesterone drops before your period.";
+  let last: { metadata: Record<string, unknown>; created_at: string } | null = null;
+  const users: string[] = [];
+  const cardShown = () => !!last?.metadata.log_offer;
+  let cardEver = false;
+  const turn = (text: string, now = new Date()) => {
+    const plan = planDistressTurn(text, "Asia/Jerusalem", last, now, { recentUserTexts: users.slice(-2), logCardRecentlyShown: cardEver });
+    users.push(text);
+    if (!plan) return { plan, message: null as string | null, meta: {} as Record<string, unknown> };
+    let message: string; let meta: Record<string, unknown>;
+    if (plan.type === "reply") { message = plan.message; meta = { ...plan.metadata }; }
+    else if (plan.mode === "heavy_mood") {
+      meta = { cycle_day: 27, cycle_phase: "luteal", conversation_starters: ["Wish it would hurry up", "Tell me more", "What about workouts?"], log_offer: { x: 1 } };
+      applyDistressMeta(meta, "heavy_mood");
+      Object.assign(meta, plan.metadata ?? {});
+      message = assembleHeavyMoodReply(MODEL_DRAFT, { askSafety: plan.metadata?.distress_heavy_ask === true, hasCard: !!plan.metadata?.log_offer });
+    } else throw new Error("unexpected plan " + plan.mode);
+    if (meta.log_offer) cardEver = true;
+    last = { metadata: meta, created_at: now.toISOString() };
+    return { plan, message, meta };
+  };
+
+  it("message 1 'I want to log' is normal chat", () => expect(turn("I want to log").plan).toBeNull());
+
+  it("message 2 triggers heavy mood with the safety question, no hormone wording, no See more, safe chips, a Low mood card", () => {
+    const r = turn("Really really sad. Can't stop the bad thoughts. They keep pouring in");
+    expect(r.plan && r.plan.type).toBe("ai");
+    expect(r.plan && r.plan.type === "ai" && r.plan.mode).toBe("heavy_mood");
+    expect(r.message).toContain(HEAVY_SAFETY_QUESTION);
+    expect(r.message).not.toMatch(/hormon|progesterone|estrogen|day 27|luteal|phase|lowest|lack of/i);
+    expect(r.message).not.toContain("---");
+    expect(r.meta.conversation_starters).toEqual(HEAVY_CHIPS);
+    expect(r.meta.cycle_day).toBeUndefined();
+    expect(r.meta.cycle_phase).toBeUndefined();
+    expect(r.meta.log_offer).toEqual(heavyLogOffer());
+    expect((r.meta.log_offer as any).symptoms).toEqual([{ name: "Low mood", severity: 3 }]);
+    expect(r.message).toContain(HEAVY_LOG_LINE);
+    expect(r.message).not.toMatch(/\blogged\b|\bsaved it\b/i);
+  });
+
+  it("message 3 'I want to log it' stays in heavy mood and points to the card, no second card, no AI", () => {
+    const r = turn("I want to log it");
+    expect(r.message).toBe(HEAVY_CARD_ABOVE);
+    expect(r.meta.distress_mode).toBe("heavy_mood");
+    expect(r.meta.log_offer).toBeUndefined();
+    expect(r.meta.conversation_starters).toEqual(HEAVY_CHIPS);
+  });
+
+  it("message 4 'Log it for me' still stays in heavy mood", () => {
+    const r = turn("Log it for me");
+    expect(r.message).toBe(HEAVY_CARD_ABOVE);
+    expect(r.meta.distress_mode).toBe("heavy_mood");
+    const next = planDistressTurn("I just feel so tired of everything", "Asia/Jerusalem", last, new Date(), {});
+    expect(next && next.type === "ai" && next.mode).toBe("heavy_mood");
+  });
+
+  it("answering yes to the safety question escalates to the existing self-harm reply", () => {
+    const md = { distress_mode: "heavy_mood", distress_heavy_ask: true, distress_heavy_asked: true };
+    const yes = planDistressTurn("yes", "Asia/Jerusalem", { metadata: md, created_at: new Date().toISOString() }, new Date(), {});
+    expect(yes && yes.type === "reply" && yes.metadata.distress_mode).toBe("self_harm");
+    expect(yes && yes.type === "reply" && yes.enteredKind).toBe("self_harm");
+    const no = planDistressTurn("no, just exhausted", "Asia/Jerusalem", { metadata: md, created_at: new Date().toISOString() }, new Date(), {});
+    expect(no && no.type === "ai" && no.mode).toBe("heavy_mood");
+    expect(no && no.type === "ai" && no.metadata?.distress_heavy_no).toBe(true);
+    const selfHarm = planDistressTurn("I want to hurt myself", "Asia/Jerusalem", { metadata: md, created_at: new Date().toISOString() }, new Date(), {});
+    expect(selfHarm && selfHarm.type === "reply" && selfHarm.metadata.distress_mode).toBe("self_harm");
+  });
+
+  it("'I'm okay for now' and a factual cycle question end heavy mood; the safety question is asked once", () => {
+    const base = { metadata: { distress_mode: "heavy_mood", distress_heavy_asked: true }, created_at: new Date().toISOString() };
+    const ok = planDistressTurn("I'm okay for now", "Asia/Jerusalem", base, new Date(), {});
+    expect(ok && ok.type === "reply" && ok.message).toBe(HEAVY_OK_REPLY);
+    const fact = planDistressTurn("what phase am I in?", "Asia/Jerusalem", base, new Date(), {});
+    expect(fact && fact.type === "ai" && fact.mode).toBe("acute_exit");
+    const again = planDistressTurn("the bad thoughts keep coming", "Asia/Jerusalem", base, new Date(), {});
+    expect(again && again.type === "ai" && again.metadata?.distress_heavy_ask).toBeUndefined();
+  });
+
+  it("the reply is never empty, and a fully filtered draft falls back to the fixed line", () => {
+    expect(assembleHeavyMoodReply("Your hormones are low.", { askSafety: false, hasCard: false })).toBe(HEAVY_FALLBACK);
+  });
+});
+
+describe("heavy mood cannot change the other modes", () => {
+  it("acute and self-harm replies are untouched", () => {
+    const ac = planDistressTurn("I'm having a panic attack", "Asia/Jerusalem", null);
+    expect(ac && ac.type === "reply" && ac.metadata.conversation_starters).toEqual(DISTRESS_CHIPS);
   });
 });
