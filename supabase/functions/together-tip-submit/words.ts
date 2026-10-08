@@ -14,11 +14,16 @@ interface LibEntry { canonical: string; retired: boolean }
 export type WordOutcome = { status: "shared" | "private" | "rejected" | "library" | "pending"; reason?: string };
 
 const SCHEMA = {
-  type: "object", additionalProperties: false, required: ["decision", "category"],
+  type: "object", additionalProperties: false, required: ["decision", "category", "library_match"],
   properties: {
     decision: { type: "string", enum: ["approve", "reject"] },
     category: { type: "string", enum: ["ok", "name", "place", "number", "link", "contact", "slur", "gibberish", "other"] },
+    library_match: { type: "string" },
   },
+};
+const MATCH_SCHEMA = {
+  type: "object", additionalProperties: false, required: ["library_match"],
+  properties: { library_match: { type: "string" } },
 };
 const INSTRUCTIONS = `You check one short word or phrase a woman typed to name a symptom or feeling in a women's health app. Return JSON.
 Never rewrite, shorten or clean it. Only decide.
@@ -26,6 +31,11 @@ decision "reject" when it contains a person's name, a place name, a number, a li
 Use category "name", "place", "number", "link", "contact", "slur", "gibberish", or "other" for any other reason.
 Words in any language and script are valid. Hebrew, Arabic, Russian, Spanish and every other language must never be called gibberish just because they are not English. Slang, misspellings and made-up but readable feelings are fine ("heavy legs", "can't sleep", "wired and tired").
 decision "approve" with category "ok" otherwise.`;
+const MATCH_RULES = `library_match: if the word clearly means exactly the same symptom as one entry in the library list below, return that entry's name exactly as written in the list. Otherwise return "".
+Map only when the meaning is clearly the same. Do not map to a broader, narrower or merely related entry: "headache" is not Migraine, Fatigue is not Low energy, Sadness is not Low mood, Hot flashes is not fever. When unsure, return "".
+Library list (one per line):`;
+
+type Verdict = { decision: string; category: string; library_match: string };
 
 // One gateway call for both jobs (checking a word, suggesting an existing one). Returns the parsed JSON or null.
 async function runAi(instructions: string, schemaName: string, schema: unknown, input: string): Promise<any | null> {
@@ -60,9 +70,39 @@ async function runAi(instructions: string, schemaName: string, schema: unknown, 
   } finally { clearTimeout(timer); }
 }
 
-async function checkWord(word: string): Promise<{ decision: string; category: string } | null> {
-  const parsed = await runAi(INSTRUCTIONS, "word_check", SCHEMA, word);
-  return parsed && (parsed.decision === "approve" || parsed.decision === "reject") ? parsed : null;
+/** Safety check plus "which library entry does this mean". Nothing from the word or the answer is logged. */
+async function checkWord(word: string, names: string[]): Promise<Verdict | null> {
+  const parsed = await runAi(`${INSTRUCTIONS}\n${MATCH_RULES}\n${names.join("\n")}`, "word_check", SCHEMA, word);
+  return parsed && (parsed.decision === "approve" || parsed.decision === "reject")
+    ? { decision: parsed.decision, category: String(parsed.category), library_match: typeof parsed.library_match === "string" ? parsed.library_match : "" }
+    : null;
+}
+
+/** For words that already passed the safety check: only the library meaning. */
+async function matchOnly(word: string, names: string[]): Promise<string | null> {
+  const parsed = await runAi(`You match one short symptom word, in any language, to the symptom library of a women's health app. Return JSON.\n${MATCH_RULES}\n${names.join("\n")}`, "word_match", MATCH_SCHEMA, word);
+  return parsed && typeof parsed.library_match === "string" ? parsed.library_match : null;
+}
+
+/** Names the AI may map to: live, non-retired canonical entries (merges already followed by the library map). */
+function libraryNames(lib: Map<string, LibEntry>): string[] {
+  return [...new Set([...lib.values()].filter((e) => !e.retired).map((e) => e.canonical))].sort();
+}
+
+/** Returns the exact library name only if it is on the list. Anything else counts as no match. */
+function validMatch(match: string, names: string[]): string | null {
+  const k = togetherNorm(match);
+  return k ? names.find((n) => togetherNorm(n) === k) ?? null : null;
+}
+
+/** Saves a mapping unless this word was switched off by hand. Returns whether the word is mapped. */
+async function saveMapping(service: Svc, wordKey: string, canonical: string): Promise<boolean> {
+  const { data: cur } = await service.from("together_word_map").select("disabled").eq("word_key", wordKey).maybeSingle();
+  if (cur?.disabled) return false;
+  if (cur) return true;
+  const { error } = await service.from("together_word_map").insert({ word_key: wordKey, canonical_name: canonical });
+  if (error && error.code !== "23505") { console.error("[word] map", error.code); return false; }
+  return true;
 }
 
 const SUGGEST_SCHEMA = {
@@ -118,7 +158,7 @@ export async function processWord(
 
   const base = { user_id: userId, source_key: sourceKey, original_word: source || word, word, word_key: wordKey, kind: input.kind, updated_at: new Date().toISOString() };
   const save = async (status: string, category: string | null, checked: boolean) => {
-    const row = { ...base, status, reject_category: category, checked_at: checked ? new Date().toISOString() : null };
+    const row = { ...base, status, reject_category: category, checked_at: checked ? new Date().toISOString() : null, ...(status === "shared" ? { map_checked_at: new Date().toISOString() } : {}) };
     const { error } = await service.from("together_words").upsert(row, { onConflict: "user_id,source_key" });
     if (error) console.error("[word] save", error.code);
   };
@@ -141,12 +181,21 @@ export async function processWord(
   }
 
   // 4. AI check. A failed or timed out check never shares the word.
-  const verdict = await checkWord(word);
+  const names = libraryNames(lib);
+  const verdict = await checkWord(word, names);
   if (!verdict) { await save("private", "check_failed", false); await event(service, "word_rejected", "check_failed"); return { status: "private", reason: "check_failed" }; }
   if (verdict.decision !== "approve") {
+    // A rejected word is never mapped, even if the AI also named a library entry.
     const cat = ["name", "place", "number", "link", "contact", "slur", "gibberish"].includes(verdict.category) ? verdict.category : "other";
     await save("rejected", cat, true); await event(service, "word_rejected", cat);
     return { status: "rejected", reason: cat };
+  }
+  // 5. Passed the safety check. If it clearly means a library entry, it counts toward that entry in Together.
+  // Only when the word is exactly what is in her logs (a renamed word has no matching log text to count).
+  const match = verdict.category === "ok" && wordKey === sourceKey ? validMatch(verdict.library_match, names) : null;
+  if (match && await saveMapping(service, wordKey, match)) {
+    await service.from("together_words").delete().eq("user_id", userId).eq("source_key", sourceKey);
+    return { status: "library" };
   }
   await save("shared", null, true);
   await event(service, "word_shared");
@@ -189,7 +238,7 @@ export async function handleSync(service: Svc, userId: string) {
 
   const [{ data: prefs }, { data: rows }] = await Promise.all([
     service.from("user_word_prefs").select("original_word, new_name, removed").eq("user_id", userId),
-    service.from("together_words").select("source_key, word_key, status, reject_category, updated_at").eq("user_id", userId),
+    service.from("together_words").select("source_key, word_key, word, status, reject_category, updated_at, map_checked_at").eq("user_id", userId),
   ]);
   const prefBy = new Map<string, { new_name: string | null; removed: boolean }>((prefs ?? []).map((p: any) => [togetherNorm(p.original_word), p]));
   const rowBy = new Map<string, any>((rows ?? []).map((r: any) => [r.source_key, r]));
@@ -217,7 +266,28 @@ export async function handleSync(service: Svc, userId: string) {
   const batch = todo.slice(0, BATCH);
   let shared = 0;
   await Promise.all(batch.map(async (w) => { const o = await processWord(service, userId, lib, w); if (o.status === "shared") shared++; }));
-  return { status: 200, body: { status: "ok", processed: batch.length, shared, remaining: Math.max(0, todo.length - batch.length) } };
+  // One-time cross-language check of words she already shared (pending ones get it when checked above).
+  const todoKeys = new Set(todo.map((t) => togetherNorm(t.source)));
+  const recheck = (rows ?? []).filter((r: any) => r.status === "shared" && !r.map_checked_at && !todoKeys.has(r.source_key));
+  const recheckBatch = recheck.slice(0, BATCH);
+  if (recheckBatch.length) {
+    const names = libraryNames(lib);
+    await Promise.all(recheckBatch.map(async (r: any) => {
+      const hit = lib.get(r.word_key);
+      if (hit && !hit.retired) { await service.from("together_words").delete().eq("user_id", userId).eq("source_key", r.source_key); return; }
+      if (r.word_key !== r.source_key) { await service.from("together_words").update({ map_checked_at: new Date().toISOString() }).eq("user_id", userId).eq("source_key", r.source_key); return; }
+      const found = await matchOnly(r.word, names);
+      if (found === null) return; // check failed: try again next time
+      const match = validMatch(found, names);
+      if (match && await saveMapping(service, r.word_key, match)) {
+        await service.from("together_words").delete().eq("user_id", userId).eq("source_key", r.source_key);
+      } else {
+        await service.from("together_words").update({ map_checked_at: new Date().toISOString() }).eq("user_id", userId).eq("source_key", r.source_key);
+      }
+    }));
+  }
+  const remaining = Math.max(0, todo.length - batch.length) + Math.max(0, recheck.length - recheckBatch.length);
+  return { status: 200, body: { status: "ok", processed: batch.length + recheckBatch.length, shared, remaining } };
 }
 
 
