@@ -101,5 +101,12 @@ export const stateLabel = (state: TextState, superAdmin: boolean): string | null
   return null;
 };
 
-export const replyStarter = (firstName: string | null): string =>
-  `${firstName ? `Hi ${firstName}, ` : "Hi, "}thank you for your feedback! `;
+/** Left in the starter for the writer to replace. Sending is blocked while it is still there. */
+export const REPLY_PLACEHOLDER = "[what it's about]";
+
+export const replyStarter = (firstName: string | null, state: TextState = "none"): string => {
+  const first = `${firstName ? `Hi ${firstName}, ` : "Hi, "}thank you for your feedback! We read your note about ${REPLY_PLACEHOLDER}.`;
+  return state === "hidden"
+    ? `${first}\n\nYou chose to keep some health details private, so we didn't see those parts. That's completely fine.`
+    : first;
+};

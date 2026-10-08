@@ -24,8 +24,13 @@ describe("feedback display", () => {
     expect(timeAgo("2026-10-09T12:00:00Z", now)).toBe("3d ago");
   });
   it("starter has no em dash and uses her first name", () => {
-    expect(replyStarter("Dana")).toBe("Hi Dana, thank you for your feedback! ");
-    expect(replyStarter(null)).toBe("Hi, thank you for your feedback! ");
+    expect(replyStarter("Dana")).toBe("Hi Dana, thank you for your feedback! We read your note about [what it's about].");
+    expect(replyStarter(null)).toMatch(/^Hi, thank you for your feedback! We read your note about \[what it's about\]\.$/);
+    expect(replyStarter("Dana", "shared")).toBe(replyStarter("Dana"));
+    expect(replyStarter("Dana", "hidden")).toBe(
+      "Hi Dana, thank you for your feedback! We read your note about [what it's about].\n\nYou chose to keep some health details private, so we didn't see those parts. That's completely fine.",
+    );
+    expect(replyStarter("Dana", "hidden")).not.toMatch(/[—–]/);
     expect(replyStarter("Dana")).not.toMatch(/[—–]/);
   });
 });
