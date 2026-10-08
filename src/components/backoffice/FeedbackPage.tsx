@@ -4,23 +4,24 @@ import { useBackOffice } from "@/components/backoffice/BackOfficeShell";
 import { Card, CardTitle, Failed, GhostButton, LINE, MainButton, MUTED, PillToggle, SELECTED, useLoad } from "@/components/backoffice/parts";
 import {
   THEMES, approveDraft, backfillBatch, backfillWaiting, createReplyDraft, displayName, editDraft, fetchFeedback, fetchFeedbackCounts,
-  fetchWaitingDrafts, markFeedbackHandled, rejectDraft, replyStarter, sendTeamMessage, setFeedbackTheme, stateLabel, themeLabel, timeAgo,
+  fetchWaitingDrafts, markFeedbackHandled, rejectDraft, REPLY_PLACEHOLDER, replyStarter, sendTeamMessage, setFeedbackTheme, stateLabel, themeLabel, timeAgo,
   type FeedbackItem, type FeedbackTab, type Theme, type WaitingDraft,
 } from "@/lib/backOffice/feedback";
 
 const field = "w-full rounded-2xl border border-[#E6E0D5] bg-white px-4 py-3 text-sm text-[#23201C] placeholder:text-[#6E675F]";
 
 function ReplyBox({ item, sup, onDone }: { item: FeedbackItem; sup: boolean; onDone: (note: string) => void }) {
-  const [body, setBody] = useState(replyStarter(item.firstName));
+  const [body, setBody] = useState(replyStarter(item.firstName, item.state));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(false);
   const box = useRef<HTMLTextAreaElement>(null);
-  // Cursor goes after the starter, ready to type.
+  // The placeholder opens selected, so typing replaces it.
   useEffect(() => {
     const el = box.current;
     if (!el) return;
     el.focus();
-    el.setSelectionRange(el.value.length, el.value.length);
+    const at = el.value.indexOf(REPLY_PLACEHOLDER);
+    if (at >= 0) el.setSelectionRange(at, at + REPLY_PLACEHOLDER.length);
   }, []);
   const submit = async () => {
     setBusy(true); setErr(false);
@@ -36,7 +37,7 @@ function ReplyBox({ item, sup, onDone }: { item: FeedbackItem; sup: boolean; onD
         {sup ? "She sees this in her chat, marked as a reply to her feedback." : "A super admin approves it before she sees it."}
       </p>
       {err && <p className="text-sm text-[#23201C]">That didn't send. Please try again.</p>}
-      <MainButton disabled={busy || !body.trim()} onClick={submit}>{busy ? "Sending…" : sup ? "Send" : "Send for approval"}</MainButton>
+      <MainButton disabled={busy || !body.trim() || body.includes(REPLY_PLACEHOLDER)} onClick={submit}>{busy ? "Sending…" : sup ? "Send" : "Send for approval"}</MainButton>
     </div>
   );
 }
