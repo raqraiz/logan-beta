@@ -1397,6 +1397,7 @@ serve(async (req) => {
     // Count-only analytics: a daily counter, no user ID and no message text.
     let distressAiMode: Exclude<DistressAiMode, "self_harm"> | null = null;
     let distressAiMeta: Record<string, unknown> | null = null;
+    let acuteEpisodeAt: string | null = null;
     {
       // Self-harm mode lasts the whole session: until 6 hours pass with no self-harm-mode message.
       // It softens to "post-crisis" only after she has confirmed she is safe AND calmer.
@@ -1410,10 +1411,17 @@ serve(async (req) => {
           .contains("metadata", { distress_post_crisis: true }).gt("created_at", shLast.created_at).limit(1);
         postCrisis = !!pcRows?.length;
       }
+      // Acute-distress episode: the latest acute reply / calm acknowledgement / log reply in the last 6 hours.
+      // The last assistant message may be an ordinary one by now, so the "why did this happen?" handling looks here.
+      const { data: epRows } = await supabase.from("chat_messages").select("created_at").eq("user_id", user.id).eq("role", "assistant")
+        .gte("created_at", windowStart).or("metadata->>distress_post.eq.true,metadata->>distress_mode.eq.acute")
+        .order("created_at", { ascending: false }).limit(1);
+      acuteEpisodeAt = (epRows?.[0] as { created_at: string } | undefined)?.created_at ?? null;
       const plan = planDistressTurn(userMessage, (participant as any)?.timezone, lastAssistantMsg as any, new Date(), {
         selfHarmSessionActive: !!shLast,
         postCrisis,
         selfHarmAt: shLast?.created_at ?? null,
+        acuteEpisodeAt,
         sessionFlags: { safe: shLast?.metadata?.distress_safe === true, calm: shLast?.metadata?.distress_calm === true },
       });
       if (plan && plan.type === "reply") {
@@ -4727,7 +4735,7 @@ serve(async (req) => {
     // contradicted by a later runtime block.
     // A plain factual cycle question right after a distress moment (for example "what happens in the luteal phase?")
     // is NOT a continuation of the emotional thread: she gets the normal, complete answer.
-    const factualAfterDistress = isFactualCycleQuestion(userMessage) && hasRecentDistress(lastAssistantMsg as any);
+    const factualAfterDistress = isFactualCycleQuestion(userMessage) && (hasRecentDistress(lastAssistantMsg as any) || !!acuteEpisodeAt);
     const emotionalFollowUp = !factualAfterDistress && isEmotionalFollowUp(userMessage, recentMessages as any);
     const emotionalContextActive = isEmotionalOrHeavyMessage(userMessage) || emotionalFollowUp || (distressAiMode !== null && distressAiMode !== "post_crisis");
     let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext + backfillBlock + libraryBlock + libraryGuidance, emotionalContextActive, activeBoundaries);

@@ -5,7 +5,7 @@ import {
   distressPromptBlock, planDistressTurn, regionForTimezone, selfHarmReply, stripDeepDive,
   detectSafeConfirmation, detectCalmSignal, finalizeDistressReply, postCrisisMetadata, postCrisisSupportLine,
   isFactualCycleQuestion, hasRecentDistress, asksWhyItHappened,
-  acuteFromSymptomNames, applyDistressMeta, isRedFlagChipText, mentionsRedFlagSymptom, DISTRESS_CHIPS, redFlagLine,
+  acuteFromSymptomNames, applyDistressMeta, isRedFlagChipText, mentionsRedFlagSymptom, DISTRESS_CHIPS, redFlagLine, POST_CHIPS,
 } from "../../supabase/functions/_shared/distress.ts";
 
 const ACUTE_YES = [
@@ -225,7 +225,7 @@ describe("hedged hormone wording after distress", () => {
     expect(out).toContain("Progesterone may be dropping around this point in a cycle, which can make some people more reactive.");
   });
   it("keeps an already hedged sentence, and drops hormone talk entirely in acute and check-in modes", () => {
-    const ok = "Progesterone may be dropping around this point, which can make some people more reactive.";
+    const ok = "Stress and poor sleep can do this. Progesterone may be dropping around this point, which can make some people more reactive.";
     expect(sanitizeHormoneClaims(ok, "post")).toBe(ok);
     expect(sanitizeHormoneClaims("Breathe slowly. Your progesterone is low.", "acute")).toBe("Breathe slowly.");
     expect(sanitizeHormoneClaims("That sounds hard. Hormones may play a part.", "checkin_no")).toBe("That sounds hard.");
@@ -475,7 +475,7 @@ describe("factual cycle question right after acute distress (live bug)", () => {
     expect(isFactualCycleQuestion(QUESTION)).toBe(true);
     expect(hasRecentDistress(last, new Date("2026-10-08T10:20:58Z"))).toBe(true);
     const src = readFileSync("supabase/functions/chat-ai/index.ts", "utf8");
-    expect(src).toContain("const factualAfterDistress = isFactualCycleQuestion(userMessage) && hasRecentDistress(lastAssistantMsg as any);");
+    expect(src).toContain("const factualAfterDistress = isFactualCycleQuestion(userMessage) && (hasRecentDistress(lastAssistantMsg as any) || !!acuteEpisodeAt);");
     expect(src).toContain("const emotionalFollowUp = !factualAfterDistress && isEmotionalFollowUp(");
     expect(src).toContain('if (distressAiMode === "post" && isFactualCycleQuestion(userMessage)) distressAiMode = null;');
     expect(src).toContain("finalizeDistressReply(finalAssistantMessage, distressAiMode, userMessage)");
@@ -611,5 +611,95 @@ describe("chat-ai imports everything it uses from distress.ts", () => {
       if (new RegExp(`\\b${name}\\(`).test(body)) expect(imported.has(name), `${name} is used but not imported`).toBe(true);
     }
     expect(imported.has("stripDeepDive")).toBe(true);
+  });
+});
+
+describe("post-distress 'why' stays hedged for the whole 6-hour window (live bug)", () => {
+  const T = "Asia/Hebron";
+  const BAD = "Panic attacks often happen when your nervous system gets overloaded by stress, lack of sleep, or even a sudden drop in hormones. On day 27, your progesterone is at its lowest, which removes your body's natural buffer against anxiety. It makes your brain much more reactive. Be gentle with yourself today.";
+
+  // Exact sequence: panic → "im ok now" → "Yes, log it" (+ Undo) → luteal question → "why did this happen?"
+  function sequence() {
+    let now = new Date("2026-10-08T10:47:51Z");
+    let last: { metadata: Record<string, unknown>; created_at: string } | null = null;
+    let episodeAt: string | null = null; // what chat-ai looks up in the history
+    const send = (msg: string, normalReply = false) => {
+      const plan = planDistressTurn(msg, T, last, now, { acuteEpisodeAt: episodeAt });
+      if (plan?.type === "reply") {
+        const metadata = { ...plan.metadata } as Record<string, unknown>;
+        delete metadata.conversation_starters;
+        if (plan.logSymptoms) metadata.distress_logged_ids = ["x"];
+        last = { metadata, created_at: now.toISOString() };
+        if (metadata.distress_mode === "acute" || metadata.distress_post === true) episodeAt = now.toISOString();
+      } else if (normalReply) {
+        // an ordinary answer from the normal pipeline: the last message now carries NO distress marker
+        last = { metadata: { cycle_day: 27, cycle_phase: "Luteal", timezone: T }, created_at: now.toISOString() };
+      }
+      now = new Date(now.getTime() + 60_000);
+      return plan;
+    };
+    return { send, advance: (min: number) => { now = new Date(now.getTime() + min * 60_000); }, last: () => last };
+  }
+
+  it("the exact sequence: the 'why' question still gets the hedged post-distress treatment", () => {
+    const run = sequence();
+    expect(run.send("im having a panic attack")).toMatchObject({ type: "reply", metadata: { distress_mode: "acute" } });
+    expect(run.send("im ok now")).toMatchObject({ type: "reply", metadata: { distress_post: true, distress_log_ask: true } });
+    run.advance(14);
+    expect(run.send("Yes, log it")).toMatchObject({ type: "reply", message: "Logged for today." });
+    expect(run.send("what happens in the luteal phase?", true)).toBeNull();
+    // the last reply is now an ordinary one without any distress marker...
+    expect(run.last()?.metadata.distress_post).toBeUndefined();
+    // ...but the episode is still open
+    expect(run.send("why did this happen?")).toEqual({ type: "ai", mode: "post" });
+  });
+
+  it("holds for the whole 6 hours, however many normal turns come in between, and ends after", () => {
+    const run = sequence();
+    run.send("im having a panic attack");
+    run.send("im ok now");
+    for (const m of ["what should I eat today?", "thanks", "what phase am I in?", "how long is the luteal phase?"]) run.send(m, true);
+    run.advance(4 * 60);
+    expect(run.send("is it my hormones?")).toEqual({ type: "ai", mode: "post" });
+    run.advance(2 * 60); // 6h+ since the calm acknowledgement
+    expect(run.send("why did this happen?")).toBeNull();
+  });
+
+  it("a why-question with no episode at all stays normal chat, and factual questions never enter the mode", () => {
+    expect(planDistressTurn("why did this happen?", T, { metadata: { cycle_day: 27 }, created_at: "2026-10-08T11:02:52Z" }, new Date("2026-10-08T11:03:04Z"), { acuteEpisodeAt: null })).toBeNull();
+    const ep = { acuteEpisodeAt: "2026-10-08T10:48:10Z" };
+    expect(planDistressTurn("what happens in the luteal phase?", T, null, new Date("2026-10-08T11:03:04Z"), ep)).toBeNull();
+  });
+
+  it("the reply: other triggers first, one hedged line, no claims about her levels, no day-27 reasoning", () => {
+    const out = finalizeDistressReply(BAD, "post", "why did this happen?");
+    expect(out).not.toMatch(/at its lowest|natural buffer|sudden drop|day 27|more reactive\.\s*Be/i);
+    expect(out).not.toContain("It makes your brain");
+    expect(out.indexOf("stress")).toBeGreaterThanOrEqual(0);
+    expect(out.endsWith("Progesterone may be dropping around this point in a cycle, which can make some people more reactive.")).toBe(true);
+    expect(out).toContain("Be gentle with yourself today.");
+    // triggers come before the hedged line
+    expect(out.search(/stress|sleep|caffeine/i)).toBeLessThan(out.indexOf("may be dropping"));
+  });
+
+  it("if the model leaves out hormones and triggers entirely, both are added in the right order", () => {
+    const out = finalizeDistressReply("That was a lot. I'm glad you're feeling better.", "post", "why did this happen?");
+    expect(out.indexOf("Common triggers")).toBeLessThan(out.indexOf("may be dropping"));
+    expect(out.startsWith("Common triggers are")).toBe(true);
+  });
+
+  it("chips on that reply are neutral: no chip pushes a hormonal conclusion", () => {
+    const meta: Record<string, unknown> = { conversation_starters: ["That makes sense", "So it's hormonal?", "What can I do"], cycle_day: 27 };
+    applyDistressMeta(meta, "post");
+    expect(meta.conversation_starters).toEqual(POST_CHIPS);
+    expect(POST_CHIPS).toEqual(["What can I do", "Talk it through"]);
+    expect(meta.cycle_day).toBeUndefined();
+  });
+
+  it("chat-ai looks the episode up in the history and passes it to the planner", () => {
+    const src = readFileSync("supabase/functions/chat-ai/index.ts", "utf8");
+    expect(src).toContain("metadata->>distress_post.eq.true,metadata->>distress_mode.eq.acute");
+    expect(src).toMatch(/acuteEpisodeAt,\n/);
+    expect(src).toContain("hasRecentDistress(lastAssistantMsg as any) || !!acuteEpisodeAt");
   });
 });
