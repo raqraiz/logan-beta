@@ -77,6 +77,54 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_drafts: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          body: string
+          created_at: string
+          created_by: string
+          feedback_id: string | null
+          id: string
+          kind: string
+          sent_at: string | null
+          status: string
+          target_filters: Json | null
+          target_user_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          body: string
+          created_at?: string
+          created_by: string
+          feedback_id?: string | null
+          id?: string
+          kind: string
+          sent_at?: string | null
+          status?: string
+          target_filters?: Json | null
+          target_user_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          body?: string
+          created_at?: string
+          created_by?: string
+          feedback_id?: string | null
+          id?: string
+          kind?: string
+          sent_at?: string | null
+          status?: string
+          target_filters?: Json | null
+          target_user_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       admin_settings: {
         Row: {
           goal_count: number
@@ -2330,23 +2378,50 @@ export type Database = {
       user_feedback: {
         Row: {
           category: string
+          channel: string
+          consent_at: string | null
+          consent_copy_version: string | null
           created_at: string
+          handled_at: string | null
+          handled_by: string | null
+          health_consent: boolean | null
+          health_detected: boolean | null
           id: string
           message: string
+          message_clean: string | null
+          theme: string | null
           user_id: string
         }
         Insert: {
           category?: string
+          channel?: string
+          consent_at?: string | null
+          consent_copy_version?: string | null
           created_at?: string
+          handled_at?: string | null
+          handled_by?: string | null
+          health_consent?: boolean | null
+          health_detected?: boolean | null
           id?: string
           message: string
+          message_clean?: string | null
+          theme?: string | null
           user_id: string
         }
         Update: {
           category?: string
+          channel?: string
+          consent_at?: string | null
+          consent_copy_version?: string | null
           created_at?: string
+          handled_at?: string | null
+          handled_by?: string | null
+          health_consent?: boolean | null
+          health_detected?: boolean | null
           id?: string
           message?: string
+          message_clean?: string | null
+          theme?: string | null
           user_id?: string
         }
         Relationships: []
@@ -2749,6 +2824,10 @@ export type Database = {
         }
         Returns: string
       }
+      _admin_deliver_team_message: {
+        Args: { _body: string; _draft: string; _user: string }
+        Returns: undefined
+      }
       _admin_eligible_users: {
         Args: never
         Returns: {
@@ -2805,6 +2884,24 @@ export type Database = {
           user_id: string
         }[]
       }
+      _feedback_needing_clean: {
+        Args: { _limit: number }
+        Returns: {
+          id: string
+          message: string
+        }[]
+      }
+      _feedback_text_state: {
+        Args: { _f: Database["public"]["Tables"]["user_feedback"]["Row"] }
+        Returns: string
+      }
+      _feedback_visible_text: {
+        Args: {
+          _f: Database["public"]["Tables"]["user_feedback"]["Row"]
+          _super: boolean
+        }
+        Returns: string
+      }
       _log_together_event: {
         Args: { _event: string; _reason?: string }
         Returns: undefined
@@ -2844,6 +2941,67 @@ export type Database = {
           sessions: number
           user_messages: number
         }[]
+      }
+      admin_draft_approve_send: { Args: { _draft: string }; Returns: undefined }
+      admin_draft_create: {
+        Args: {
+          _body: string
+          _feedback?: string
+          _kind: string
+          _user?: string
+        }
+        Returns: string
+      }
+      admin_draft_edit: {
+        Args: { _body: string; _draft: string }
+        Returns: undefined
+      }
+      admin_draft_list_waiting: {
+        Args: never
+        Returns: {
+          body: string
+          created_at: string
+          feedback_id: string
+          feedback_text: string
+          first_name: string
+          id: string
+          kind: string
+          last_initial: string
+          user_id: string
+          written_by: string
+        }[]
+      }
+      admin_draft_reject: { Args: { _draft: string }; Returns: undefined }
+      admin_feedback_counts: {
+        Args: { _tab: string }
+        Returns: {
+          key: string
+          n: number
+          scope: string
+        }[]
+      }
+      admin_feedback_list: {
+        Args: { _tab: string; _theme?: string }
+        Returns: {
+          channel: string
+          created_at: string
+          first_name: string
+          handled: boolean
+          id: string
+          last_initial: string
+          text_shown: string
+          text_state: string
+          theme: string
+          user_id: string
+        }[]
+      }
+      admin_feedback_mark_handled: {
+        Args: { _handled?: boolean; _id: string }
+        Returns: undefined
+      }
+      admin_feedback_set_theme: {
+        Args: { _id: string; _theme: string }
+        Returns: undefined
       }
       admin_get_goal: {
         Args: never
@@ -2921,6 +3079,15 @@ export type Database = {
       admin_review_word: {
         Args: { _action: string; _word: string }
         Returns: number
+      }
+      admin_send_team_message: {
+        Args: {
+          _body: string
+          _feedback?: string
+          _kind?: string
+          _user: string
+        }
+        Returns: string
       }
       admin_set_goal: {
         Args: { _count: number; _date: string }
@@ -3227,6 +3394,10 @@ export type Database = {
         Returns: undefined
       }
       resolve_referral_code: { Args: { _code: string }; Returns: boolean }
+      set_feedback_consent: {
+        Args: { _allow: boolean; _id: string }
+        Returns: undefined
+      }
       tip_own_cycles: {
         Args: { _symptom: string; _user_id: string }
         Returns: number
