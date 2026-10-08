@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { onboardedProfiles } from "@/lib/onboardedUsers";
-import { utcKey, toUTCDate, utcDayKeysBetween, USER_INITIATED_EVENT_TYPES, type ActivityIndex } from "@/lib/activeUsers";
+import { utcKey, toUTCDate, USER_INITIATED_EVENT_TYPES, type ActivityIndex } from "@/lib/activeUsers";
 
 /**
  * THE single source of truth for what "user" and "active user" mean on the
@@ -43,23 +43,6 @@ export const METRIC_TOOLTIPS = {
   totalMessages:
     "All chat messages in the range, split below into the ones she sent and the ones Logan sent.",
 } as const;
-
-/**
- * Distinct eligible users active anywhere in the selected range — the shared
- * denominator for the per-user averages.
- */
-export const activeInRange = (
-  index: ActivityIndex,
-  rangeFrom: Date,
-  rangeTo: Date,
-  eligible: Set<string> | null,
-): Set<string> => {
-  const out = new Set<string>();
-  for (const d of utcDayKeysBetween(rangeFrom, rangeTo)) {
-    for (const u of activeOnDay(index, d, eligible)) out.add(u);
-  }
-  return out;
-};
 
 /**
  * Invariant: active users are always a subset of the eligible (onboarded,
@@ -144,17 +127,11 @@ export const computeMau = (index: ActivityIndex, eligible: Set<string> | null) =
 export const computeStickiness = (dau: number, mau: number): number | null =>
   mau > 0 ? Math.round((dau / mau) * 1000) / 10 : null;
 
-/** Mean DAU across every UTC day in the selected range. */
-export const computeAvgDailyUsers = (
-  index: ActivityIndex,
-  rangeFrom: Date,
-  rangeTo: Date,
-  eligible: Set<string> | null,
-): number | null => {
-  const days = utcDayKeysBetween(rangeFrom, rangeTo);
-  if (days.length === 0) return null;
-  const sum = days.reduce((a, d) => a + activeOnDay(index, d, eligible).size, 0);
-  return Math.round((sum / days.length) * 10) / 10;
+/** Mean DAU across every UTC day in the selected range (server-side daily counts, one row per day). */
+export const computeAvgDailyUsers = (daily: { activeUsers: number }[]): number | null => {
+  if (daily.length === 0) return null;
+  const sum = daily.reduce((a, d) => a + d.activeUsers, 0);
+  return Math.round((sum / daily.length) * 10) / 10;
 };
 
 /**
@@ -163,30 +140,11 @@ export const computeAvgDailyUsers = (
  * completed week is in range the value is null.
  */
 export const computeAvgWeeklyUsers = (
-  index: ActivityIndex,
-  rangeFrom: Date,
-  rangeTo: Date,
-  eligible: Set<string> | null,
+  weeks: { weekStart: string; daysInRange: number; activeUsers: number }[],
 ): number | null => {
-  const days = utcDayKeysBetween(rangeFrom, rangeTo);
-  if (days.length === 0) return null;
   const today = utcKey(new Date());
-
-  const buckets = new Map<string, { days: string[]; users: Set<string> }>();
-  for (const d of days) {
-    const dt = toUTCDate(d);
-    const dow = (dt.getUTCDay() + 6) % 7; // 0 = Monday
-    const wk = utcKey(new Date(dt.getTime() - dow * 86400000));
-    let b = buckets.get(wk);
-    if (!b) { b = { days: [], users: new Set<string>() }; buckets.set(wk, b); }
-    b.days.push(d);
-    for (const u of activeOnDay(index, d, eligible)) b.users.add(u);
-  }
-
-  const complete = Array.from(buckets.entries()).filter(
-    ([wk, b]) => b.days.length === 7 && addDaysUTC(wk, 6) < today,
-  );
+  const complete = weeks.filter((w) => w.daysInRange === 7 && addDaysUTC(w.weekStart, 6) < today);
   if (complete.length === 0) return null;
-  const avg = complete.reduce((a, [, b]) => a + b.users.size, 0) / complete.length;
+  const avg = complete.reduce((a, w) => a + w.activeUsers, 0) / complete.length;
   return Math.round(avg * 10) / 10;
 };

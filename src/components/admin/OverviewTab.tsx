@@ -1,5 +1,8 @@
 import { MessageFailuresCard, ScheduledHeadsupRequestsCard } from "@/components/admin/MessageFailuresCard";
-import { fetchSymptomActivity } from "@/lib/symptomActivity";
+import {
+  fetchActiveUsersNow, fetchDailyActivity, fetchWeeklyActive, fetchActiveUsersInRange, fetchTimeSpent,
+  type ActiveNow, type DailyActivity as ServerDailyActivity, type WeeklyActive,
+} from "@/lib/adminActivity";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { onboardedProfiles, countOnboardedUsers } from "@/lib/onboardedUsers";
@@ -31,19 +34,30 @@ import {
 } from "lucide-react";
 import { format, subDays, startOfDay, parseISO, differenceInMinutes, eachWeekOfInterval } from "date-fns";
 import {
-  buildActivityIndex, utcKey, utcDayKeysBetween, type ActivityIndex,
+  buildActivityIndex, utcKey, type ActivityIndex,
 } from "@/lib/activeUsers";
 import {
   computeAvgPerUser, fetchSignupDayKeys, makeUsersAsOf,
 } from "@/lib/admin/engagementMetrics";
 import {
   METRIC_TOOLTIPS, fetchEligibleUserIds, computeDau, computeWau, computeMau,
-  computeStickiness, computeAvgDailyUsers, computeAvgWeeklyUsers, activeInRange,
+  computeStickiness, computeAvgDailyUsers, computeAvgWeeklyUsers,
   assertActiveSubset,
 } from "@/lib/metrics/definitions";
 
 
 import { Info } from "lucide-react";
+
+/** The card-level "Failed, retry" button (same look as the Total Users card). */
+const FailedRetry = ({ onRetry, title }: { onRetry: () => void; title?: string }) => (
+  <button
+    onClick={(e) => { e.stopPropagation(); onRetry(); }}
+    className="text-xs font-medium text-destructive underline underline-offset-2"
+    title={title}
+  >
+    Failed, retry
+  </button>
+);
 
 /** Info icon with a tap-friendly (not hover-only) one-line metric definition. */
 const InfoTip = ({ text }: { text: string }) => (
@@ -285,10 +299,19 @@ export const OverviewTab = () => {
     avgMessagesPerUser: 0,
   });
 
-  // Shared active-user index (src/lib/activeUsers.ts) — single source of truth
-  // for active-user counts, shared with the Growth "Daily log".
-  const [activityIndex, setActivityIndex] = useState<ActivityIndex | null>(null);
+  // Range-scoped activity counts, computed on the server from ALL user-initiated
+  // sources (chat messages she sent, symptom logs, activity events). Counts only.
+  const [rangeStats, setRangeStats] = useState<{ daily: ServerDailyActivity[]; weeks: WeeklyActive[]; activeInRange: number } | null>(null);
   const [activityLoading, setActivityLoading] = useState(true);
+  const [activityError, setActivityError] = useState<string | null>(null);
+  // Today / last 7 days / last 30 days, also from the server.
+  const [activeNow, setActiveNow] = useState<ActiveNow | null>(null);
+  const [activeNowLoading, setActiveNowLoading] = useState(true);
+  const [activeNowError, setActiveNowError] = useState<string | null>(null);
+  // Total time spent in the selected range, from the server.
+  const [timeSpentMin, setTimeSpentMin] = useState<number | null>(null);
+  const [timeSpentLoading, setTimeSpentLoading] = useState(true);
+  const [timeSpentError, setTimeSpentError] = useState<string | null>(null);
   const [allTimeUsers, setAllTimeUsers] = useState<number | null>(null);
   const [allTimeUsersLoading, setAllTimeUsersLoading] = useState(true);
   const [allTimeUsersError, setAllTimeUsersError] = useState<string | null>(null);
@@ -296,7 +319,8 @@ export const OverviewTab = () => {
   // shape for "users as of range end" (drift-corrected via allTimeUsers).
   const [signupDayKeys, setSignupDayKeys] = useState<string[]>([]);
 
-  // Fixed rolling window for today's cards — independent of the selected range.
+  // Fixed rolling window behind the "who was active" name lists only (the card
+  // numbers come from the server above) — independent of the selected range.
   const [todayIndex, setTodayIndex] = useState<ActivityIndex | null>(null);
   const [todayIndexLoading, setTodayIndexLoading] = useState(true);
   const [todayIndexError, setTodayIndexError] = useState<string | null>(null);
@@ -320,10 +344,8 @@ export const OverviewTab = () => {
   // user_activity_events). Sessions are built per user from merged timestamps,
   // so multiple tabs/devices can't double-count overlapping time, and an
   // abandoned session can never exceed its last event (no infinite tail).
-  const totalTimeMin = useMemo(
-    () => allSessions.reduce((a, s) => a + s.durationMin, 0),
-    [allSessions],
-  );
+  // The card total itself comes from the server (timeSpentMin) so symptom-only
+  // visits count; the list below still shows chat and in-app activity sessions.
   // Activity-event tracking started when the first event landed; earlier data
   // relies on chat messages only, so surface the earliest observed session date.
   const trackingSince = useMemo(() => {
@@ -348,56 +370,8 @@ export const OverviewTab = () => {
     setTodayTimeLoading(true);
     try {
       const fromIso = new Date().toISOString().slice(0, 10) + "T00:00:00.000Z";
-      const [chat, activity, symptoms] = await Promise.all([
-        fetchAllRows<{ user_id: string; created_at: string }>(
-          (from, to) => supabase.from("chat_messages")
-            .select("user_id, created_at")
-            .eq("role", "user")
-            .gte("created_at", fromIso)
-            .order("created_at", { ascending: true })
-            .range(from, to),
-          () => supabase.from("chat_messages").select("*", { count: "exact", head: true })
-            .eq("role", "user").gte("created_at", fromIso),
-        ),
-        fetchAllRows<{ user_id: string; created_at: string }>(
-          (from, to) => supabase.from("user_activity_events")
-            .select("user_id, created_at")
-            .gte("created_at", fromIso)
-            .order("created_at", { ascending: true })
-            .range(from, to),
-          () => supabase.from("user_activity_events").select("*", { count: "exact", head: true })
-            .gte("created_at", fromIso),
-        ),
-        fetchSymptomActivity(fromIso),
-      ]);
-      // Same population as every other active/session metric.
-      const eligible = await fetchEligibleUserIds();
-      // Same 30-min-gap reconstruction as loadSessions, per user so
-      // overlapping tabs/devices can't double-count.
-      const tsByUser = new Map<string, number[]>();
-      for (const e of [...chat, ...activity, ...symptoms]) {
-        if (!eligible.has(e.user_id)) continue;
-        const arr = tsByUser.get(e.user_id) ?? [];
-        arr.push(new Date(e.created_at).getTime());
-        tsByUser.set(e.user_id, arr);
-      }
-
-
-      let total = 0;
-      for (const times of tsByUser.values()) {
-        times.sort((a, b) => a - b);
-        let start = times[0];
-        let end = times[0];
-        for (let i = 1; i < times.length; i++) {
-          if (times[i] - times[i - 1] > SESSION_GAP_MS) {
-            total += Math.max(1, Math.round((end - start) / 60000));
-            start = times[i];
-          }
-          end = times[i];
-        }
-        total += Math.max(1, Math.round((end - start) / 60000));
-      }
-      setTodayTimeMin(total);
+      const t = await fetchTimeSpent(fromIso, null);
+      setTodayTimeMin(t.minutesRounded);
       setTodayTimeError(null);
     } catch (err) {
       console.error("Today time load error:", err);
@@ -407,6 +381,21 @@ export const OverviewTab = () => {
       setTodayTimeLoading(false);
     }
   }, []);
+
+  const loadTimeSpent = useCallback(async () => {
+    setTimeSpentLoading(true);
+    try {
+      const t = await fetchTimeSpent(fromIso, toIso);
+      setTimeSpentMin(t.minutes);
+      setTimeSpentError(null);
+    } catch (err) {
+      console.error("Time spent load error:", err);
+      setTimeSpentError(err instanceof Error ? err.message : "Failed to load");
+      setTimeSpentMin(null);
+    } finally {
+      setTimeSpentLoading(false);
+    }
+  }, [fromIso, toIso]);
 
   const formatDuration = (mins: number) => {
     if (mins < 60) return `${mins}m`;
@@ -632,7 +621,7 @@ export const OverviewTab = () => {
   const loadSessions = useCallback(async () => {
     setSessionsLoading(true);
     try {
-      const [profiles, recentChat, recentActivity, recentSymptoms] = await Promise.all([
+      const [profiles, recentChat, recentActivity] = await Promise.all([
         getProfiles(),
         fetchAllRows<{ user_id: string; created_at: string }>(
           (from, to) => supabase.from("chat_messages")
@@ -655,16 +644,14 @@ export const OverviewTab = () => {
           () => supabase.from("user_activity_events").select("*", { count: "exact", head: true })
             .gte("created_at", fromIso).lte("created_at", toIso),
         ),
-        fetchSymptomActivity(fromIso, toIso),
       ]);
       const profileMap = new Map(profiles.map((p: any) => [p.id, p]));
 
-      // Sessions are built from the SAME user-initiated event set that defines
-      // "active": messages she sent (never Logan's replies), symptom logs and
-      // in-app activity events.
+      // This list is built per person from chat and in-app activity events
+      // (symptom logs are counted in the server-side totals, which never expose IDs).
       const eligible = await fetchEligibleUserIds();
       const tsByUser = new Map<string, string[]>();
-      for (const e of [...recentChat, ...recentActivity, ...recentSymptoms]) {
+      for (const e of [...recentChat, ...recentActivity]) {
         if (!eligible.has(e.user_id)) continue;
         if (!tsByUser.has(e.user_id)) tsByUser.set(e.user_id, []);
         tsByUser.get(e.user_id)!.push(e.created_at);
@@ -918,18 +905,40 @@ export const OverviewTab = () => {
   }, []);
 
 
-  // ----- SHARED ACTIVE-USER INDEX -----
+  // ----- RANGE ACTIVITY (server-side counts) -----
   const loadActivityIndex = useCallback(async () => {
     setActivityLoading(true);
+    setActivityError(null);
     try {
-      const index = await buildActivityIndex(startOfDay(rangeFrom).toISOString());
-      setActivityIndex(index);
+      const fromKey = utcKey(rangeFrom), toKey = utcKey(rangeTo);
+      const [daily, weeks, activeInRange] = await Promise.all([
+        fetchDailyActivity(fromKey, toKey),
+        fetchWeeklyActive(fromKey, toKey),
+        fetchActiveUsersInRange(fromKey, toKey),
+      ]);
+      setRangeStats({ daily, weeks, activeInRange });
     } catch (err) {
-      console.error("Activity index load error:", err);
+      console.error("Activity load error:", err);
+      setActivityError(err instanceof Error ? err.message : "Failed to load");
+      setRangeStats(null);
     } finally {
       setActivityLoading(false);
     }
-  }, [rangeFrom]);
+  }, [rangeFrom, rangeTo]);
+
+  const loadActiveNow = useCallback(async () => {
+    setActiveNowLoading(true);
+    setActiveNowError(null);
+    try {
+      setActiveNow(await fetchActiveUsersNow());
+    } catch (err) {
+      console.error("Active now load error:", err);
+      setActiveNowError(err instanceof Error ? err.message : "Failed to load");
+      setActiveNow(null);
+    } finally {
+      setActiveNowLoading(false);
+    }
+  }, []);
 
   // Eligibility set for every active-user card: onboarded, non-internal users.
   const [eligibleIds, setEligibleIds] = useState<Set<string> | null>(null);
@@ -974,13 +983,15 @@ export const OverviewTab = () => {
     loadFeedback();
     loadMenu();
     loadActivityIndex();
+    loadActiveNow();
+    loadTimeSpent();
     loadTodayIndex();
     loadTodayTime();
     // 3) Main heavy loaders — render top stats + sessions before adoption
     await Promise.all([loadEngagement(), loadSessions()]);
     // 4) Defer the slowest query (feature_events scan) so it stops competing
     loadAdoption();
-  }, [loadFastCounts, loadAllTimeUsers, loadSignupDayKeys, loadEligibleIds, loadActivityIndex, loadTodayIndex, loadTodayTime, loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
+  }, [loadFastCounts, loadAllTimeUsers, loadSignupDayKeys, loadEligibleIds, loadActivityIndex, loadActiveNow, loadTimeSpent, loadTodayIndex, loadTodayTime, loadEngagement, loadSessions, loadFeedback, loadMenu, loadAdoption]);
 
 
 
@@ -1001,40 +1012,30 @@ export const OverviewTab = () => {
   useEffect(() => { if (rangeReady) refreshAll(); }, [refreshAll, rangeReady]);
 
   // Active-user metrics — every value comes from the shared definitions module
-  // (src/lib/metrics/definitions.ts); no card computes its own.
-  // - DAU / WAU / MAU are fixed to today and come from the rolling todayIndex.
-  // - Averages are computed from the range-scoped activityIndex.
+  // (src/lib/metrics/definitions.ts) and the server-side counts; no card computes its own.
+  // - DAU / WAU / MAU are fixed to today and come from admin_active_users_now().
+  // - Averages come from the range-scoped server counts.
+  // - The id sets below only feed the "who was active" name lists.
   const activeMetrics = useMemo(() => {
     const activeTodayIds = todayIndex ? computeDau(todayIndex, eligibleIds) : new Set<string>();
     const activeWeekIds = todayIndex ? computeWau(todayIndex, eligibleIds) : new Set<string>();
-    const activeMonthIds = todayIndex ? computeMau(todayIndex, eligibleIds) : new Set<string>();
 
     let avgDailyUsers: number | null = null;
     let avgWeeklyUsers: number | null = null;
     let avgMsgsPerUser: number | null = null;
     let avgSessionsPerUser: number | null = null;
-
     let activeInRangeCount = 0;
 
-    if (activityIndex) {
-      const days = utcDayKeysBetween(rangeFrom, rangeTo);
-
-      avgDailyUsers = computeAvgDailyUsers(activityIndex, rangeFrom, rangeTo, eligibleIds);
-      avgWeeklyUsers = computeAvgWeeklyUsers(activityIndex, rangeFrom, rangeTo, eligibleIds);
+    if (rangeStats) {
+      avgDailyUsers = computeAvgDailyUsers(rangeStats.daily);
+      avgWeeklyUsers = computeAvgWeeklyUsers(rangeStats.weeks);
 
       // Per-user averages: range totals ÷ distinct users active in the range.
       // Messages count only the ones she sent; sessions use the shared
       // user-initiated event set (messages + symptom logs + activity events).
-      let totalMessages = 0;
-      let totalSessions = 0;
-      for (const d of days) {
-        // Numerators are scoped to the same onboarded, non-internal population
-        // as the denominator, so messages/sessions from people who never
-        // finished onboarding can never inflate the averages.
-        totalMessages += activityIndex.getUserMessagesForDay(d, eligibleIds);
-        totalSessions += activityIndex.getSessionsForDay(d, eligibleIds);
-      }
-      activeInRangeCount = activeInRange(activityIndex, rangeFrom, rangeTo, eligibleIds).size;
+      const totalMessages = rangeStats.daily.reduce((a, d) => a + d.userMessages, 0);
+      const totalSessions = rangeStats.daily.reduce((a, d) => a + d.sessions, 0);
+      activeInRangeCount = rangeStats.activeInRange;
       const avgs = computeAvgPerUser({
         totalMessages,
         totalSessions,
@@ -1043,30 +1044,29 @@ export const OverviewTab = () => {
       avgMsgsPerUser = avgs.avgMsgsPerUser;
       avgSessionsPerUser = avgs.avgSessionsPerUser;
 
+      assertActiveSubset("range", activeInRangeCount, eligibleIds ? eligibleIds.size : null);
+    }
+    if (activeNow) {
       const population = eligibleIds ? eligibleIds.size : null;
-      assertActiveSubset("range", activeInRangeCount, population);
-      assertActiveSubset("today", activeTodayIds.size, population);
-      assertActiveSubset("week", activeWeekIds.size, population);
-      assertActiveSubset("month", activeMonthIds.size, population);
-
-
+      assertActiveSubset("today", activeNow.dau, population);
+      assertActiveSubset("week", activeNow.wau, population);
+      assertActiveSubset("month", activeNow.mau, population);
     }
 
     return {
       activeTodayIds,
       activeWeekIds,
-      activeToday: activeTodayIds.size,
-      activeThisWeek: activeWeekIds.size,
-      activeThisMonth: activeMonthIds.size,
+      activeToday: activeNow?.dau ?? 0,
+      activeThisWeek: activeNow?.wau ?? 0,
+      activeThisMonth: activeNow?.mau ?? 0,
       activeInRangeCount,
-      stickiness: computeStickiness(activeWeekIds.size, activeMonthIds.size),
+      stickiness: activeNow ? computeStickiness(activeNow.wau, activeNow.mau) : null,
       avgDailyUsers,
       avgWeeklyUsers,
       avgMsgsPerUser,
       avgSessionsPerUser,
     };
-
-  }, [todayIndex, activityIndex, rangeFrom, rangeTo, signupDayKeys, allTimeUsers, eligibleIds]);
+  }, [todayIndex, rangeStats, activeNow, eligibleIds]);
 
 
   const activeTodayUsers = useMemo(
@@ -1198,20 +1198,14 @@ export const OverviewTab = () => {
             <Card className="h-full cursor-help">
               <CardContent className="p-4 text-center">
                 <Clock className="w-5 h-5 mx-auto mb-1 text-amber-500" />
-                {sessionsError ? (
-                  <button
-                    onClick={loadSessions}
-                    className="text-xs font-medium text-destructive underline underline-offset-2"
-                    title={sessionsError}
-                  >
-                    Failed, retry
-                  </button>
-                ) : sessionsLoading ? (
+                {timeSpentError ? (
+                  <FailedRetry onRetry={loadTimeSpent} title={timeSpentError} />
+                ) : timeSpentLoading ? (
                   <div className="h-8 flex items-center justify-center">
                     <RefreshCw className="w-4 h-4 animate-spin text-amber-500" />
                   </div>
                 ) : (
-                  <p className="text-2xl font-bold text-foreground">{formatDuration(totalTimeMin)}</p>
+                  <p className="text-2xl font-bold text-foreground">{formatDuration(timeSpentMin ?? 0)}</p>
                 )}
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total time spent</p>
                 {/* "Today" chip — independent loader/range, never blocks the main number */}
@@ -1256,17 +1250,14 @@ export const OverviewTab = () => {
             <Card className="cursor-pointer hover:border-primary/50 transition-colors">
               <CardContent className="p-4 text-center">
                 <Activity className="w-5 h-5 mx-auto mb-1 text-green-500" />
-                {eligibleError ? (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); loadEligibleIds(); }}
-                    className="text-xs font-medium text-destructive underline underline-offset-2"
-                    title={eligibleError}
-                  >
-                    Failed, retry
-                  </button>
+                {activeNowError || eligibleError ? (
+                  <FailedRetry
+                    onRetry={() => { loadActiveNow(); loadEligibleIds(); }}
+                    title={activeNowError ?? eligibleError ?? undefined}
+                  />
                 ) : (
                   <p className="text-2xl font-bold text-foreground">
-                    {todayIndexLoading || !eligibleIds ? "…" : activeMetrics.activeToday}
+                    {activeNowLoading ? "…" : activeMetrics.activeToday}
                   </p>
                 )}
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
@@ -1287,9 +1278,13 @@ export const OverviewTab = () => {
         <Card>
           <CardContent className="p-4 text-center">
             <BarChart3 className="w-5 h-5 mx-auto mb-1 text-teal-500" />
-            <p className="text-2xl font-bold text-foreground">
-              {activityLoading || !eligibleIds ? "…" : activeMetrics.avgDailyUsers ?? ", "}
-            </p>
+            {activityError ? (
+              <FailedRetry onRetry={loadActivityIndex} title={activityError} />
+            ) : (
+              <p className="text-2xl font-bold text-foreground">
+                {activityLoading ? "…" : activeMetrics.avgDailyUsers ?? ", "}
+              </p>
+            )}
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
               Avg Daily Users <InfoTip text={METRIC_TOOLTIPS.avgDailyUsers} />
             </p>
@@ -1302,9 +1297,13 @@ export const OverviewTab = () => {
             <Card className="cursor-pointer hover:border-primary/50 transition-colors">
               <CardContent className="p-4 text-center">
                 <TrendingUp className="w-5 h-5 mx-auto mb-1 text-blue-500" />
-                <p className="text-2xl font-bold text-foreground">
-                  {todayIndexLoading || !eligibleIds ? "…" : activeMetrics.activeThisWeek}
-                </p>
+                {activeNowError ? (
+                  <FailedRetry onRetry={loadActiveNow} title={activeNowError} />
+                ) : (
+                  <p className="text-2xl font-bold text-foreground">
+                    {activeNowLoading ? "…" : activeMetrics.activeThisWeek}
+                  </p>
+                )}
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   Active This Week <InfoTip text={METRIC_TOOLTIPS.activeThisWeek} />
                 </p>
@@ -1323,25 +1322,29 @@ export const OverviewTab = () => {
         <Card>
           <CardContent className="p-4 text-center">
             <TrendingUp className="w-5 h-5 mx-auto mb-1 text-emerald-500" />
-            <p className="text-2xl font-bold text-foreground">
-              {todayIndexLoading || !eligibleIds ? "…" : activeMetrics.activeThisMonth}
-            </p>
+            {activeNowError ? (
+              <FailedRetry onRetry={loadActiveNow} title={activeNowError} />
+            ) : (
+              <p className="text-2xl font-bold text-foreground">
+                {activeNowLoading ? "…" : activeMetrics.activeThisMonth}
+              </p>
+            )}
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
               Active This Month <InfoTip text={METRIC_TOOLTIPS.activeThisMonth} />
             </p>
             <p className="text-[9px] text-muted-foreground/70">
               Stickiness{" "}
-              {/* WAU and MAU both come from the today-index load — if either
-                  failed, the ratio would be wrong, so show the failed state. */}
-              {todayIndexError || eligibleError ? (
+              {/* WAU and MAU come from the same server call — if it failed, the
+                  ratio would be wrong, so show the failed state. */}
+              {activeNowError ? (
                 <button
-                  onClick={() => { loadTodayIndex(); loadEligibleIds(); }}
+                  onClick={loadActiveNow}
                   className="text-destructive underline underline-offset-2"
-                  title={todayIndexError ?? eligibleError ?? undefined}
+                  title={activeNowError}
                 >
                   Failed, retry
                 </button>
-              ) : todayIndexLoading || !eligibleIds
+              ) : activeNowLoading
                 ? "…"
                 : activeMetrics.stickiness === null
                   ? ", "
@@ -1358,9 +1361,13 @@ export const OverviewTab = () => {
         <Card>
           <CardContent className="p-4 text-center">
             <TrendingUp className="w-5 h-5 mx-auto mb-1 text-purple-500" />
-            <p className="text-2xl font-bold text-foreground">
-              {activityLoading || !eligibleIds ? "…" : activeMetrics.avgWeeklyUsers ?? ", "}
-            </p>
+            {activityError ? (
+              <FailedRetry onRetry={loadActivityIndex} title={activityError} />
+            ) : (
+              <p className="text-2xl font-bold text-foreground">
+                {activityLoading ? "…" : activeMetrics.avgWeeklyUsers ?? ", "}
+              </p>
+            )}
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
               Avg Weekly Users (Mon–Sun) <InfoTip text={METRIC_TOOLTIPS.avgWeeklyUsers} />
             </p>
@@ -1369,9 +1376,13 @@ export const OverviewTab = () => {
         <Card>
           <CardContent className="p-4 text-center">
             <MessageSquare className="w-5 h-5 mx-auto mb-1 text-purple-500" />
-            <p className="text-2xl font-bold text-foreground">
-              {activityLoading ? "…" : activeMetrics.avgMsgsPerUser ?? ", "}
-            </p>
+            {activityError ? (
+              <FailedRetry onRetry={loadActivityIndex} title={activityError} />
+            ) : (
+              <p className="text-2xl font-bold text-foreground">
+                {activityLoading ? "…" : activeMetrics.avgMsgsPerUser ?? ", "}
+              </p>
+            )}
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
               Avg Msgs/User <InfoTip text={METRIC_TOOLTIPS.avgMsgsPerUser} />
             </p>
@@ -1380,9 +1391,13 @@ export const OverviewTab = () => {
         <Card>
           <CardContent className="p-4 text-center">
             <Clock className="w-5 h-5 mx-auto mb-1 text-orange-500" />
-            <p className="text-2xl font-bold text-foreground">
-              {activityLoading ? "…" : activeMetrics.avgSessionsPerUser ?? ", "}
-            </p>
+            {activityError ? (
+              <FailedRetry onRetry={loadActivityIndex} title={activityError} />
+            ) : (
+              <p className="text-2xl font-bold text-foreground">
+                {activityLoading ? "…" : activeMetrics.avgSessionsPerUser ?? ", "}
+              </p>
+            )}
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
               Avg Sessions/User <InfoTip text={METRIC_TOOLTIPS.avgSessionsPerUser} />
             </p>

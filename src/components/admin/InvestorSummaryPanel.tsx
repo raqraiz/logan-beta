@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { onboardedProfiles, countOnboardedUsers } from "@/lib/onboardedUsers";
 import { fetchSignupDayKeys, makeUsersAsOf, computeAvgPerUser, computeAvgWeeklyActiveUsers } from "@/lib/admin/engagementMetrics";
+import { fetchDailyActivity, fetchWeeklyActive, type DailyActivity, type WeeklyActive } from "@/lib/adminActivity";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -10,12 +11,10 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from "recharts";
 import { Loader2, TrendingUp } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
 import {
-  buildActivityIndex,
   utcDayKeysBetween,
   utcKey,
   toUTCDate,
   localDayKey,
-  type ActivityIndex,
 } from "@/lib/activeUsers";
 
 const GOAL_COUNT = 1000;
@@ -38,7 +37,11 @@ export const InvestorSummaryPanel = () => {
   });
 
   const [loading, setLoading] = useState(true);
-  const [index, setIndex] = useState<ActivityIndex | null>(null);
+  // Server-side counts for the range (onboarded, non-internal users; chat
+  // messages she sent, symptom logs and activity events; UTC days).
+  const [activity, setActivity] = useState<{ daily: DailyActivity[]; weeks: WeeklyActive[] } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   // Cumulative user count by UTC day (all profiles up to a frozen snapshot instant).
   const [signupDays, setSignupDays] = useState<string[]>([]);
   // Canonical all-time total from the SAME source the top-level "Total Users"
@@ -51,10 +54,19 @@ export const InvestorSummaryPanel = () => {
     let cancelled = false;
     (async () => {
       setLoading(true);
+      setError(null);
       // Freeze the read horizon once so paging can't shift while new signups land.
       const snapshotISO = new Date(Math.max(endOfDay(rangeTo).getTime(), Date.now())).toISOString();
-      const [idx, profiles, total] = await Promise.all([
-        buildActivityIndex(startOfDay(rangeFrom).toISOString()),
+      // Normalize the picker's local-timezone Dates to their intended calendar day
+      // before asking for UTC day keys (see the same note in `metrics` below).
+      const fromKey = localDayKey(rangeFrom), toKey = localDayKey(rangeTo);
+      const [act, profiles, total] = await Promise.all([
+        Promise.all([fetchDailyActivity(fromKey, toKey), fetchWeeklyActive(fromKey, toKey)])
+          .then(([daily, weeks]) => ({ daily, weeks }))
+          .catch((e) => {
+            console.error("Investor summary activity failed:", e);
+            return null;
+          }),
         fetchSignupDayKeys(snapshotISO),
         countOnboardedUsers().catch((e) => {
           console.error("Investor summary canonical total failed:", e);
@@ -62,13 +74,14 @@ export const InvestorSummaryPanel = () => {
         }),
       ]);
       if (cancelled) return;
-      setIndex(idx);
+      setActivity(act);
+      if (!act) setError("Failed to load");
       setSignupDays(profiles);
       setCanonicalTotal(total);
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [rangeFrom, rangeTo]);
+  }, [rangeFrom, rangeTo, reloadKey]);
 
   const usersAsOf = useMemo(
     () => makeUsersAsOf(signupDays, canonicalTotal),
@@ -76,7 +89,7 @@ export const InvestorSummaryPanel = () => {
   );
 
   const metrics = useMemo(() => {
-    if (!index) return null;
+    if (!activity) return null;
     // Normalize the picker's local-timezone Dates to their intended calendar
     // day before generating UTC day keys: in timezones ahead of UTC a
     // local-midnight rangeFrom is the previous UTC day (32 keys for a 31-day
@@ -93,21 +106,16 @@ export const InvestorSummaryPanel = () => {
     let totalMessages = 0;
     let totalSessions = 0;
     let anyActivity = false;
-    for (const d of days) {
-      const active = index.getActiveUsersForDay(d).size;
-      if (active > 0) anyActivity = true;
-      dailySum += active;
-      totalMessages += index.getUserMessagesForDay(d);
-      totalSessions += index.getSessionsForDay(d);
+    for (const d of activity.daily) {
+      if (d.activeUsers > 0) anyActivity = true;
+      dailySum += d.activeUsers;
+      totalMessages += d.userMessages;
+      totalSessions += d.sessions;
     }
 
-    // Canonical weekly active users (ISO Monday–Sunday weeks) — shared with
-    // the Overview tab via the same helper, so the two cards cannot drift.
-    const { avgWeeklyUsers: avgWeekly, fullWeekCount } = computeAvgWeeklyActiveUsers({
-      activityIndex: index,
-      rangeFrom,
-      rangeTo,
-    });
+    // Canonical weekly active users (ISO Monday–Sunday weeks) from the same
+    // server counts the Overview tab uses, so the two cards cannot drift.
+    const { avgWeeklyUsers: avgWeekly, fullWeekCount } = computeAvgWeeklyActiveUsers(activity.weeks);
 
     // Canonical per-user averages, shared with the Overview tab.
     const { avgMsgsPerUser, avgSessionsPerUser } = computeAvgPerUser({
@@ -128,7 +136,7 @@ export const InvestorSummaryPanel = () => {
       avgMsgsPerUser,
       avgSessionsPerUser,
     };
-  }, [index, rangeFrom, rangeTo, usersAsOf]);
+  }, [activity, rangeFrom, rangeTo, usersAsOf]);
 
 
   const chartData = useMemo(() => {
@@ -211,6 +219,16 @@ export const InvestorSummaryPanel = () => {
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
             <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+          </div>
+        ) : error ? (
+          <div className="py-8 text-center">
+            <button
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="text-sm font-medium text-destructive underline underline-offset-2"
+              title={error}
+            >
+              Failed, retry
+            </button>
           </div>
         ) : !metrics || !metrics.hasData ? (
           <p className="text-sm text-muted-foreground py-8 text-center">No data for this range</p>
