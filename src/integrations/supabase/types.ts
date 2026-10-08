@@ -1995,6 +1995,120 @@ export type Database = {
         }
         Relationships: []
       }
+      together_word_events: {
+        Row: {
+          day: string
+          event: string
+          id: number
+          reason: string | null
+        }
+        Insert: {
+          day?: string
+          event: string
+          id?: number
+          reason?: string | null
+        }
+        Update: {
+          day?: string
+          event?: string
+          id?: number
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      together_word_reports: {
+        Row: {
+          created_at: string
+          id: string
+          reason: string
+          reporter_id: string
+          word_key: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reason: string
+          reporter_id: string
+          word_key: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reason?: string
+          reporter_id?: string
+          word_key?: string
+        }
+        Relationships: []
+      }
+      together_word_review: {
+        Row: {
+          blocked: boolean
+          needs_review: boolean
+          report_count: number
+          reviewed_at: string | null
+          word_key: string
+        }
+        Insert: {
+          blocked?: boolean
+          needs_review?: boolean
+          report_count?: number
+          reviewed_at?: string | null
+          word_key: string
+        }
+        Update: {
+          blocked?: boolean
+          needs_review?: boolean
+          report_count?: number
+          reviewed_at?: string | null
+          word_key?: string
+        }
+        Relationships: []
+      }
+      together_words: {
+        Row: {
+          checked_at: string | null
+          created_at: string
+          id: string
+          kind: string
+          original_word: string
+          reject_category: string | null
+          source_key: string
+          status: string
+          updated_at: string
+          user_id: string
+          word: string
+          word_key: string
+        }
+        Insert: {
+          checked_at?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          original_word: string
+          reject_category?: string | null
+          source_key: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          word: string
+          word_key: string
+        }
+        Update: {
+          checked_at?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          original_word?: string
+          reject_category?: string | null
+          source_key?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          word?: string
+          word_key?: string
+        }
+        Relationships: []
+      }
       tracker_logs: {
         Row: {
           created_at: string
@@ -2571,6 +2685,11 @@ export type Database = {
           user_id: string
         }[]
       }
+      _log_together_event: {
+        Args: { _event: string; _reason?: string }
+        Returns: undefined
+      }
+      _symptoms_has_word: { Args: { _k: string; _s: Json }; Returns: boolean }
       _visible_symptom_ids: { Args: { _uid: string }; Returns: string[] }
       admin_active_users_in_range: {
         Args: { _from: string; _to: string }
@@ -2623,6 +2742,10 @@ export type Database = {
       }
       admin_review_tip: {
         Args: { _action: string; _tip_id: string }
+        Returns: number
+      }
+      admin_review_word: {
+        Args: { _action: string; _word: string }
         Returns: number
       }
       admin_set_user_internal: {
@@ -2679,12 +2802,29 @@ export type Database = {
           women_count: number
         }[]
       }
+      admin_together_word_event_totals: {
+        Args: { _days?: number }
+        Returns: {
+          event: string
+          reason: string
+          total: number
+        }[]
+      }
       admin_weekly_active_users: {
         Args: { _from: string; _to: string }
         Returns: {
           active_users: number
           days_in_range: number
           week_start: string
+        }[]
+      }
+      admin_word_queue: {
+        Args: never
+        Returns: {
+          reasons: string[]
+          report_count: number
+          status: string
+          word: string
         }[]
       }
       apply_manual_referral_code: { Args: never; Returns: boolean }
@@ -2750,6 +2890,15 @@ export type Database = {
           text: string
         }[]
       }
+      get_together_words: {
+        Args: never
+        Returns: {
+          label: string
+          mine: boolean
+          women_count: number
+          word: string
+        }[]
+      }
       get_visible_symptoms: {
         Args: never
         Returns: {
@@ -2768,6 +2917,9 @@ export type Database = {
         Returns: boolean
       }
       hide_tip_author: { Args: { _tip_id: string }; Returns: undefined }
+      keep_together_v2: { Args: never; Returns: boolean }
+      leave_together_v2: { Args: never; Returns: boolean }
+      purge_together_words: { Args: { _uid: string }; Returns: undefined }
       record_distress_event: { Args: { _kind: string }; Returns: undefined }
       refresh_postpartum_state: {
         Args: { _participant_id: string }
@@ -2778,12 +2930,24 @@ export type Database = {
         Args: { _reason: string; _tip_id: string }
         Returns: undefined
       }
+      report_word: {
+        Args: { _reason: string; _word: string }
+        Returns: undefined
+      }
       resolve_referral_code: { Args: { _code: string }; Returns: boolean }
       tip_own_cycles: {
         Args: { _symptom: string; _user_id: string }
         Returns: number
       }
       together_canonical: { Args: { _name: string }; Returns: string }
+      together_library_map: {
+        Args: never
+        Returns: {
+          canonical: string
+          retired: boolean
+          src: string
+        }[]
+      }
       together_norm: { Args: { _name: string }; Returns: string }
       together_stage: {
         Args: { _due: string; _life_stage: string; _lmp: string; _pp: string }
