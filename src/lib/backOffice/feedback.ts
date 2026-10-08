@@ -26,6 +26,7 @@ export interface FeedbackCounts { tabs: Record<FeedbackTab, number>; themes: Rec
 export interface WaitingDraft {
   id: string; kind: string; body: string; createdAt: string; feedbackText: string | null;
   firstName: string | null; lastInitial: string | null; userId: string | null; writtenBy: string | null;
+  audienceLabel: string | null; recipientCount: number | null; audience: unknown;
 }
 
 export const fetchFeedback = async (tab: FeedbackTab, theme: Theme | null): Promise<FeedbackItem[]> =>
@@ -58,6 +59,7 @@ export const fetchWaitingDrafts = async (): Promise<WaitingDraft[]> =>
   ((await call<Row[]>("admin_draft_list_waiting")) ?? []).map((r) => ({
     id: String(r.id), kind: String(r.kind), body: String(r.body), createdAt: String(r.created_at), feedbackText: s(r.feedback_text),
     firstName: s(r.first_name), lastInitial: s(r.last_initial), userId: s(r.user_id), writtenBy: s(r.written_by),
+    audienceLabel: s(r.audience_label), recipientCount: r.recipient_count == null ? null : n(r.recipient_count), audience: r.audience ?? null,
   }));
 export const editDraft = (id: string, body: string) => call("admin_draft_edit", { _draft: id, _body: body });
 export const rejectDraft = (id: string) => call("admin_draft_reject", { _draft: id });

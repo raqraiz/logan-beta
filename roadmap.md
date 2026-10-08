@@ -91,3 +91,8 @@
 
 ## Decisions
 - Decision: team messages live in a separate inbox, never in the Logan chat. The inbox is also an entry point for feedback.
+
+## Back office Phase 4: Send
+- [x] Decision: broadcasts go to the team inbox only, with a minimum audience of 10 women for any filtered group. No email or push yet.
+- [x] Send screen: audience (Everyone or life stages), live count, compose with inbox preview, drafts and approvals, confirm dialog, sent history, "Send a test to me" for super admins.
+- [x] Old chat-based Send tab removed from /admin/classic; send-broadcast and draft-broadcast now answer 410 "Moved to the new back office".

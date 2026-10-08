@@ -6,11 +6,10 @@ import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { LogOut, RefreshCw, Shield, User, BarChart3, Megaphone, TrendingUp, Mail, LineChart, Trophy, Heart } from "lucide-react";
+import { LogOut, RefreshCw, Shield, User, BarChart3, TrendingUp, Mail, LineChart, Trophy, Heart } from "lucide-react";
 import { AdminManagement } from "@/components/admin/AdminManagement";
 import { ProfilesTab } from "@/components/admin/ProfilesTab";
 import { OverviewTab } from "@/components/admin/OverviewTab";
-import { NotificationsTab } from "@/components/admin/NotificationsTab";
 import { AttributionTab } from "@/components/admin/AttributionTab";
 import { EmailsTab } from "@/components/admin/EmailsTab";
 import { GrowthTrackerTab } from "@/components/admin/GrowthTrackerTab";
@@ -131,7 +130,7 @@ const Admin = () => {
           </p>
         </div>
 
-        <Tabs defaultValue={new URLSearchParams(window.location.search).get("tab") || "overview"} className="space-y-6">
+        <Tabs defaultValue={(() => { const t = new URLSearchParams(window.location.search).get("tab"); return !t || t === "notifications" ? "overview" : t; })()} className="space-y-6">
           <TabsList
             className={`grid w-full max-w-3xl ${isSuperAdmin ? "grid-cols-9" : "grid-cols-7"} bg-muted border border-border`}
           >
@@ -154,10 +153,6 @@ const Admin = () => {
             <TabsTrigger value="emails" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Mail className="w-4 h-4" />
               <span className="hidden sm:inline">Emails</span>
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Megaphone className="w-4 h-4" />
-              <span className="hidden sm:inline">Notify</span>
             </TabsTrigger>
             <TabsTrigger value="tips" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Heart className="w-4 h-4" />
@@ -195,10 +190,6 @@ const Admin = () => {
 
           <TabsContent value="emails">
             <EmailsTab />
-          </TabsContent>
-
-          <TabsContent value="notifications">
-            <NotificationsTab />
           </TabsContent>
 
           <TabsContent value="tips">

@@ -12,6 +12,7 @@ import TodayPage from "./components/backoffice/TodayPage";
 import GrowthPage from "./components/backoffice/GrowthPage";
 import ReferralsPage from "@/components/backoffice/ReferralsPage";
 import TipsPage from "@/components/backoffice/TipsPage";
+import SendPage from "@/components/backoffice/SendPage";
 import FeedbackPage from "./components/backoffice/FeedbackPage";
 import UsersPage from "./components/backoffice/UsersPage";
 import UserPage from "./components/backoffice/UserPage";
@@ -52,6 +53,7 @@ const App = () => (
                 <Route path="feedback" element={<FeedbackPage />} />
                 <Route path="referrals" element={<ReferralsPage />} />
                 <Route path="tips" element={<TipsPage />} />
+                <Route path="send" element={<SendPage />} />
                 <Route path="users" element={<SuperOnly><UsersPage /></SuperOnly>} />
                 <Route path="users/:id" element={<SuperOnly><UserPage /></SuperOnly>} />
               </Route>
