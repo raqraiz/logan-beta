@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useBackOffice } from "@/components/backoffice/BackOfficeShell";
 import { Card, CardTitle, Failed, GhostButton, LINE, MainButton, MUTED, PillToggle, SELECTED, useLoad } from "@/components/backoffice/parts";
@@ -14,6 +14,14 @@ function ReplyBox({ item, sup, onDone }: { item: FeedbackItem; sup: boolean; onD
   const [body, setBody] = useState(replyStarter(item.firstName));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(false);
+  const box = useRef<HTMLTextAreaElement>(null);
+  // Cursor goes after the starter, ready to type.
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
+  }, []);
   const submit = async () => {
     setBusy(true); setErr(false);
     try {
@@ -23,9 +31,9 @@ function ReplyBox({ item, sup, onDone }: { item: FeedbackItem; sup: boolean; onD
   };
   return (
     <div className="mt-3 space-y-2">
-      <textarea aria-label="Your reply" className={`${field} min-h-[110px]`} maxLength={4000} value={body} onChange={(e) => setBody(e.target.value)} />
+      <textarea ref={box} aria-label="Your reply" className={`${field} min-h-[110px]`} maxLength={4000} value={body} onChange={(e) => setBody(e.target.value)} />
       <p className="text-xs text-[#6E675F]">
-        {sup ? "She sees this in her chat, marked as a message from the Logan team." : "A super admin approves it before she sees it."}
+        {sup ? "She sees this in her chat, marked as a reply to her feedback." : "A super admin approves it before she sees it."}
       </p>
       {err && <p className="text-sm text-[#23201C]">That didn't send. Please try again.</p>}
       <MainButton disabled={busy || !body.trim()} onClick={submit}>{busy ? "Sending…" : sup ? "Send" : "Send for approval"}</MainButton>

@@ -102,4 +102,4 @@ export const stateLabel = (state: TextState, superAdmin: boolean): string | null
 };
 
 export const replyStarter = (firstName: string | null): string =>
-  `${firstName ? `Hi ${firstName}, ` : "Hi, "}thank you for telling us this. We read every note, and it helps us make Logan better. `;
+  `${firstName ? `Hi ${firstName}, ` : "Hi, "}thank you for your feedback! `;
