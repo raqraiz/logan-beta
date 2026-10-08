@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { BlobReader, ZipReader, TextWriter } from "https://deno.land/x/zipjs@v2.7.45/index.js";
 import { parse as parseCsv } from "https://deno.land/std@0.224.0/csv/parse.ts";
 import { trackMessageFailures } from "../_shared/messageFailures.ts";
@@ -540,7 +540,7 @@ serve(async (req) => {
     } else {
       // screenshot mode — use Gemini vision
       detectedSource = "screenshot";
-      const extracted = await extractFromScreenshots(admin, imagePaths);
+      const extracted = await extractFromScreenshots(admin as any, imagePaths);
       if (!extracted) {
         await finalize({ status: "failed", error_message: "Vision extraction failed" });
         return new Response(JSON.stringify({ error: "Couldn't read those screenshots. Try clearer images or fewer per upload." }), {

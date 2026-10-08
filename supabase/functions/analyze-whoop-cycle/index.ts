@@ -74,7 +74,7 @@ async function analyzeUser(admin: ReturnType<typeof createClient>, userId: strin
   if (!participant || participant.life_stage !== "cycling") return { skipped: "not_cycling" };
 
   const { phase: expected, day } = expectedPhase(
-    participant.last_period_start, participant.cycle_length_days ?? 28,
+    participant.last_period_start as string | null, (participant.cycle_length_days as number | null) ?? 28,
   );
 
   // Pull last 35 days of Whoop trackers
@@ -205,7 +205,7 @@ Deno.serve(async (req) => {
     if (!userId) return new Response(JSON.stringify({ error: "user_id required" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-    const result = await analyzeUser(admin, String(userId));
+    const result = await analyzeUser(admin as any, String(userId));
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
