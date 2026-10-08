@@ -18,7 +18,7 @@ function Stat({ name, value, sub }: { name: string; value: string; sub?: string 
   return (
     <div className="min-w-0 flex-1 basis-[130px] space-y-0.5">
       <span className="block text-xs font-semibold text-[#6E675F]">{name}</span>
-      <Figure size={26}>{value}</Figure>
+      <Figure size={value.length > 12 ? 15 : 26} className={value.length > 12 ? "leading-snug" : ""}>{value}</Figure>
       {sub && <span className="block text-xs text-[#6E675F]">{sub}</span>}
     </div>
   );
@@ -113,13 +113,13 @@ function ReportBody({ report, role, onChanged, monthsCard }: { report: Report; r
 
         <div className="mt-4 flex flex-wrap gap-4">
           <Stat name="Monthly active" value={fmt(x.mau)} sub={`last 30 days ${when}`} />
-          <Stat name="Weekly active, average" value={x.avgWeeklyActive === null ? "n/a" : String(x.avgWeeklyActive)} sub="full weeks only" />
+          <Stat name="Weekly active, average" value={x.avgWeeklyActive === null ? (live ? "Fills in after the first full week" : "n/a") : String(x.avgWeeklyActive)} sub="full weeks only" />
           <Stat name="Stickiness" value={x.stickiness === null ? "n/a" : x.stickiness.toFixed(2)} sub="7 day ÷ 30 day" />
         </div>
 
         <div className="mt-4 rounded-2xl bg-[#F4F1EA] px-4 py-3">
           <span className="block text-xs font-semibold text-[#6E675F]">
-            Still active the next month <InfoTip text={`Of the women who joined in ${prevMonthName(report.month)}, the share who were active at any point during ${monthTitle(report.month)}. Active is counted the same way as everywhere else in the back office. Shows "Fewer than 10 joined" when that group is under 10.`} />
+            Still active the next month{live ? ", so far this month" : ""} <InfoTip text={`Of the women who joined in ${prevMonthName(report.month)}, the share who were active at any point during ${monthTitle(report.month)}. Active is counted the same way as everywhere else in the back office. Shows "Fewer than 10 joined" when that group is under 10.`} />
           </span>
           <span className="mt-0.5 block text-lg font-bold text-[#23201C]" style={{ fontVariantNumeric: "tabular-nums" }}>{retentionText(x.retention)}</span>
           <span className="block text-xs text-[#6E675F]">Women who joined in {prevMonthName(report.month)}</span>
