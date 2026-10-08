@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import {
   CHECKIN_REPLY, EMERGENCY_NUMBERS, sanitizeHormoneClaims, acuteReply, breatheReply, detectAcuteDistress, detectCalm, detectSelfHarm, detectSelfHarmAmbiguous,
   distressPromptBlock, planDistressTurn, regionForTimezone, selfHarmReply, stripDeepDive,
@@ -221,5 +222,28 @@ describe("hedged hormone wording after distress", () => {
     expect(sanitizeHormoneClaims(ok, "post")).toBe(ok);
     expect(sanitizeHormoneClaims("Breathe slowly. Your progesterone is low.", "acute")).toBe("Breathe slowly.");
     expect(sanitizeHormoneClaims("That sounds hard. Hormones may play a part.", "checkin_no")).toBe("That sounds hard.");
+  });
+});
+
+describe("hormone rewrite is limited to the post-distress why-answer", () => {
+  const T = "Asia/Jerusalem";
+  const now = new Date("2026-10-08T12:00:00Z");
+  const post = { metadata: { distress_post: true, distress_log_ask: true }, created_at: new Date(now.getTime() - 60000).toISOString() };
+
+  it("why-questions about the episode get the post mode", () => {
+    for (const m of ["why did this happen?", "Why did that happen", "why does it happen to me", "what caused this?", "is it my hormones?", "where did that come from"]) {
+      expect(planDistressTurn(m, T, post, now)).toEqual({ type: "ai", mode: "post" });
+    }
+  });
+  it("a normal luteal-phase question right after distress is plain chat: no mode, so nothing is rewritten", () => {
+    for (const m of ["what happens in the luteal phase?", "why does the luteal phase make me tired?", "how does progesterone change before my period?", "thanks", "what should I eat today?"]) {
+      expect(planDistressTurn(m, T, post, now)).toBeNull();
+    }
+  });
+  it("the rewrite is called in exactly one place in chat-ai, inside the distress-only block", () => {
+    const src = readFileSync("supabase/functions/chat-ai/index.ts", "utf8");
+    expect(src.match(/sanitizeHormoneClaims\(/g)?.length).toBe(1);
+    const i = src.indexOf("sanitizeHormoneClaims(");
+    expect(src.slice(src.lastIndexOf("\n    if (", i), i)).toContain("if (distressAiMode) {");
   });
 });
