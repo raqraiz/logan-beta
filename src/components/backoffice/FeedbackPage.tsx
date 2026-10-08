@@ -11,17 +11,20 @@ import {
 const field = "w-full rounded-2xl border border-[#E6E0D5] bg-white px-4 py-3 text-sm text-[#23201C] placeholder:text-[#6E675F]";
 
 function ReplyBox({ item, sup, onDone }: { item: FeedbackItem; sup: boolean; onDone: (note: string) => void }) {
-  const [body, setBody] = useState(replyStarter(item.firstName, item.state));
+  const [body, setBody] = useState(replyStarter(item.firstName, item.state, item.topic, item.theme));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(false);
   const box = useRef<HTMLTextAreaElement>(null);
-  // The placeholder opens selected, so typing replaces it.
+  // A leftover placeholder opens selected, so typing replaces it. Otherwise the cursor sits at the end of the first line.
   useEffect(() => {
     const el = box.current;
     if (!el) return;
     el.focus();
     const at = el.value.indexOf(REPLY_PLACEHOLDER);
-    if (at >= 0) el.setSelectionRange(at, at + REPLY_PLACEHOLDER.length);
+    if (at >= 0) { el.setSelectionRange(at, at + REPLY_PLACEHOLDER.length); return; }
+    const end = el.value.indexOf("\n\n");
+    const pos = end >= 0 ? end : el.value.length;
+    el.setSelectionRange(pos, pos);
   }, []);
   const submit = async () => {
     setBusy(true); setErr(false);
@@ -132,7 +135,7 @@ function BackfillCard() {
   return (
     <Card>
       <CardTitle>Older feedback</CardTitle>
-      <p className="text-sm text-[#6E675F]">{count} older {count === 1 ? "note needs" : "notes need"} a cleaned copy so admins can read them without health details. Nothing she wrote is changed.</p>
+      <p className="text-sm text-[#6E675F]">{count} older {count === 1 ? "note needs" : "notes need"} a cleaned copy and a short topic so admins can read them without health details. Nothing she wrote is changed.</p>
       {err && <p className="mt-2 text-sm text-[#23201C]">Stopped part way. You can run it again.</p>}
       <div className="mt-3">
         {running ? <span className="text-sm text-[#6E675F]">Cleaning… {count} left</span>
