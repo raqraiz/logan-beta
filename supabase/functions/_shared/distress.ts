@@ -274,7 +274,8 @@ export function talkItThroughReply(region: RegionCode | null): string {
 }
 
 export const calmAckReply = (): string => CALM_ACK;
-export const LOG_YES_REPLY = "Done. Tap below to save it.";
+export const LOG_YES_REPLY = "Logged for today.";
+export const LOG_SYMPTOM = { name: "Anxiety", severity: 3 };
 export const LOG_NO_REPLY = "Okay. I'm here whenever you need me.";
 
 export function selfHarmReply(region: RegionCode | null, userText: string, repeat: boolean): string {
@@ -299,6 +300,7 @@ export function selfHarmReply(region: RegionCode | null, userText: string, repea
   return parts.filter(Boolean).join("\n\n");
 }
 
+export const CHECKIN_CHIPS = ["Yes", "No, just exhausted", CHIP_TALK];
 export const CHECKIN_REPLY = "That sounds like a lot to carry. When you say that, do you mean you're having thoughts of hurting yourself or not wanting to be alive? Either way, I'm here.";
 
 /** She said she is not safe, or something suggesting immediate danger: emergency number first, brief and warm. */
@@ -339,6 +341,8 @@ export type DistressPlan =
       metadata: Record<string, unknown>;
       /** Set when this turn newly enters a distress mode (for the count-only analytics). */
       enteredKind?: DistressKind;
+      /** Symptoms to save straight away for today (only after her explicit yes). */
+      logSymptoms?: { name: string; severity: number }[];
     }
   | { type: "ai"; mode: DistressAiMode }
   | null;
@@ -404,7 +408,7 @@ export function planDistressTurn(
 
   // 4. Ambiguous phrase: gentle check-in, not the full reply.
   if (detectSelfHarmAmbiguous(userText)) {
-    return { type: "reply", message: CHECKIN_REPLY, metadata: { distress_checkin: true } };
+    return { type: "reply", message: CHECKIN_REPLY, metadata: { distress_checkin: true, conversation_starters: CHECKIN_CHIPS } };
   }
 
   // 5. She answered "Want me to log this?"
@@ -413,10 +417,8 @@ export function planDistressTurn(
       return {
         type: "reply",
         message: LOG_YES_REPLY,
-        metadata: {
-          distress_post: true,
-          log_offer: { symptoms: [{ name: "Anxiety", severity: 3 }], options: [{ label: "Just today", days: 1 }], cycle_day: null, cycle_phase: null },
-        },
+        metadata: { distress_post: true },
+        logSymptoms: [LOG_SYMPTOM],
       };
     }
     if (isNo(userText)) return { type: "reply", message: LOG_NO_REPLY, metadata: { distress_post: true } };
@@ -466,7 +468,7 @@ export function distressPromptBlock(mode: DistressAiMode, region: RegionCode | n
       : common + `Her answer did not clearly say yes or no. Respond to what she shared, then gently ask once more whether she is having thoughts of hurting herself or not wanting to be alive. Stay with her.`;
   }
   if (mode === "post") {
-    return `\n\nRUNTIME CONTEXT (this turn only) — JUST AFTER A DISTRESS MOMENT: She was in acute distress a moment ago and says she is calmer. Keep the reply short, warm, and plain. Do NOT open with her cycle day or phase. If she asks why it happened, you may say her cycle or hormones "may play a part", never that they are the cause, and also mention that stress, sleep, caffeine, and a lot of other things can set it off. Never state it as fact. No hormone lectures and no "---" deep dive. Do not offer to log anything.`;
+    return `\n\nRUNTIME CONTEXT (this turn only) — JUST AFTER A DISTRESS MOMENT: She was in acute distress a moment ago and says she is calmer. Keep the reply short, warm, and plain. Do NOT open with her cycle day or phase. If she asks why it happened, name the common triggers first (stress, poor sleep, caffeine, skipped meals, a lot going on, or sometimes no clear reason), and only then mention her cycle as ONE possible factor, in this hedged way: "progesterone may be dropping around this point, which can make some people more reactive". Never state her hormone levels or what her hormones are doing as fact, never say "the drop in progesterone", never say her cycle day or hormones caused it, and do not use "since you are on day X" reasoning. No hormone lectures and no "---" deep dive. Do not offer to log anything.`;
   }
   if (mode === "self_harm") {
     return `\n\nRUNTIME CONTEXT (this turn only) — SELF-HARM SAFETY MODE: She recently said something that suggests she may be thinking about harming herself. Stay with her. NO cycle talk of any kind: no day, no phase, no hormones. No advice lists, no logging, no partner suggestions, no "---" deep dive. Keep it short and warm. Gently keep the crisis line and ${emergencyPhrase(region, "self_harm")} within reach. Ask how she is doing right now and whether she is safe. Never say it will pass, never minimize.`;
@@ -478,4 +480,24 @@ export function distressPromptBlock(mode: DistressAiMode, region: RegionCode | n
 export function stripDeepDive(text: string): string {
   const i = text.indexOf("\n---\n");
   return (i >= 0 ? text.slice(0, i) : text).trimEnd();
+}
+
+const HEDGE_RE = /\b(?:may|might|could|can|sometimes|some people|for some)\b/i;
+const HORMONE_RE = /\b(?:progesterone|estrogen|oestrogen|hormon\w*)\b/i;
+const HEDGED_HORMONE_SENTENCE = "Progesterone may be dropping around this point in a cycle, which can make some people more reactive.";
+
+/**
+ * Last-line guard on AI replies in distress-related modes. Sentences that state hormones as fact are removed.
+ * After distress ("post"), one hedged sentence replaces them. In other modes hormones are not mentioned at all.
+ */
+export function sanitizeHormoneClaims(text: string, mode: DistressAiMode): string {
+  let removed = false;
+  const out = text.replace(/[^.!?\n]+[.!?]+/g, (sentence) => {
+    if (!HORMONE_RE.test(sentence)) return sentence;
+    if (mode === "post" && HEDGE_RE.test(sentence) && !/\b(?:the|a)\s+(?:sharp |big |massive |sudden )?(?:drop|fall|dip|crash)\b/i.test(sentence)) return sentence;
+    removed = true;
+    return "";
+  }).replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  if (removed && mode === "post") return `${out}${out ? " " : ""}${HEDGED_HORMONE_SENTENCE}`;
+  return out;
 }

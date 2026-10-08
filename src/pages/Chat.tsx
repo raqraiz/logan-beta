@@ -31,6 +31,8 @@ import { LoganTodaySection } from "@/components/chat/LoganTodaySection";
 import { OPEN_TOGETHER, type OpenTogetherDetail, type TogetherLens } from "@/lib/togetherOpen";
 import { TogetherAskCard } from "@/components/together/TogetherAskCard";
 import { TogetherConsentUpdate } from "@/components/together/TogetherConsentUpdate";
+import { DistressLogUndo } from "@/components/chat/DistressLogUndo";
+import { isDistressQuiet } from "@/lib/distressQuiet";
 import { loadTogether, markTogetherShown, setTogetherConsent } from "@/lib/together";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { refreshStageBoundary } from "@/hooks/useStageBoundary";
@@ -195,6 +197,7 @@ const DATE_ECHO_PREFIXES: Record<string, string> = {
 
 const Chat = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const distressQuiet = isDistressQuiet(messages);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -2266,6 +2269,9 @@ const Chat = () => {
                         );
                       })()}
 
+                      {message.role === "assistant" && user && Array.isArray((message.metadata as Record<string, unknown> | null)?.distress_logged_ids) && (
+                        <DistressLogUndo userId={user.id} ids={(message.metadata as Record<string, unknown>).distress_logged_ids as string[]} />
+                      )}
                       {message.role === "assistant" && user && (message.metadata as Record<string, unknown> | null)?.log_offer && (
                         <LogOfferCard userId={user.id} messageId={message.id} offer={(message.metadata as Record<string, unknown>).log_offer as LogOffer} />
                       )}
@@ -2655,8 +2661,8 @@ const Chat = () => {
             })
           )}
           {showTodaySection && messages.length > 0 && !messages.some(m => m.message_type !== "reaction" && m.message_type !== "checkin" && isMessageFromToday(m.created_at)) && renderTodaySection()}
-          {user && !isOnboarding && messages.length > 0 && <TogetherAskCard userId={user.id} />}
-          {user && !isOnboarding && messages.length > 0 && <TogetherConsentUpdate userId={user.id} />}
+          {user && !isOnboarding && messages.length > 0 && !distressQuiet && <TogetherAskCard userId={user.id} />}
+          {user && !isOnboarding && messages.length > 0 && !distressQuiet && <TogetherConsentUpdate userId={user.id} />}
           <div ref={scrollRef} />
         </div>
       </ScrollArea>
@@ -2774,7 +2780,7 @@ const Chat = () => {
           </form>
 
           {/* PWA install prompt — below input bar, above bottom nav */}
-          {!isOnboarding && user && messages.length > 0 && (
+          {!isOnboarding && user && messages.length > 0 && !distressQuiet && (
             <div className="max-w-3xl mx-auto px-4 pb-4">
               <InstallPWABanner userId={user.id} />
             </div>
@@ -2797,7 +2803,7 @@ const Chat = () => {
 
     {/* Forecast overlay removed — forecast now lives in Plan tab */}
     <CoachMarkTour
-      open={tourOpen}
+      open={tourOpen && !distressQuiet}
       anchorSymptom={tourAnchorSymptom}
       onLogNow={() => {
         setTourOpen(false);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  CHECKIN_REPLY, EMERGENCY_NUMBERS, acuteReply, breatheReply, detectAcuteDistress, detectCalm, detectSelfHarm, detectSelfHarmAmbiguous,
+  CHECKIN_REPLY, EMERGENCY_NUMBERS, sanitizeHormoneClaims, acuteReply, breatheReply, detectAcuteDistress, detectCalm, detectSelfHarm, detectSelfHarmAmbiguous,
   distressPromptBlock, planDistressTurn, regionForTimezone, selfHarmReply, stripDeepDive,
 } from "../../supabase/functions/_shared/distress.ts";
 
@@ -107,7 +107,9 @@ describe("planDistressTurn", () => {
     expect(calm.metadata.distress_mode).toBeUndefined();
     const yes = planDistressTurn("Yes, log it", T, at(calm.metadata), now);
     if (yes?.type !== "reply") throw new Error("expected reply");
-    expect(yes.metadata.log_offer).toBeTruthy();
+    expect(yes.message).toBe("Logged for today.");
+    expect(yes.logSymptoms).toEqual([{ name: "Anxiety", severity: 3 }]);
+    expect(yes.metadata.log_offer).toBeUndefined();
     const why = planDistressTurn("why did that happen?", T, at(yes.metadata), now);
     expect(why).toEqual({ type: "ai", mode: "post" });
   });
@@ -137,7 +139,7 @@ describe("planDistressTurn", () => {
   });
   it("AI prompt blocks forbid hormonal attribution and keep 'may play a part' for post-distress", () => {
     expect(distressPromptBlock("acute", "IL")).toMatch(/never attribute/i);
-    expect(distressPromptBlock("post", "IL")).toMatch(/may play a part/);
+    expect(distressPromptBlock("post", "IL")).toMatch(/may be dropping/);
     expect(distressPromptBlock("self_harm", "IL")).toMatch(/NO cycle talk/);
   });
   it("stripDeepDive removes the See more section", () => {
@@ -156,6 +158,7 @@ describe("self-harm session and check-in", () => {
     expect(p.message).toBe("That sounds like a lot to carry. When you say that, do you mean you're having thoughts of hurting yourself or not wanting to be alive? Either way, I'm here.");
     expect(p.message).toBe(CHECKIN_REPLY);
     expect(p.metadata.distress_checkin).toBe(true);
+    expect(p.metadata.conversation_starters).toEqual(["Yes", "No, just exhausted", "Talk it through"]);
     expect(p.metadata.distress_mode).toBeUndefined();
     expect(p.enteredKind).toBeUndefined();
   });
@@ -167,6 +170,9 @@ describe("self-harm session and check-in", () => {
     expect(planDistressTurn("no, just exhausted", T, last, now)).toEqual({ type: "ai", mode: "checkin_no" });
     expect(distressPromptBlock("checkin_no", "IL")).toMatch(/Do NOT mention her cycle, phase, hormones/);
     expect(planDistressTurn("my boss is awful", T, last, now)).toEqual({ type: "ai", mode: "checkin_open" });
+    expect(rep(planDistressTurn("Yes", T, last, now)).message).toContain("1201");
+    expect(planDistressTurn("No, just exhausted", T, last, now)).toEqual({ type: "ai", mode: "checkin_no" });
+    expect(planDistressTurn("Talk it through", T, last, now)).toEqual({ type: "ai", mode: "checkin_open" });
   });
   it("after the full reply: safe → supportive + crisis line + invite; not safe → emergency number first", () => {
     const last = at({ distress_mode: "self_harm", distress_safety_ask: true });
@@ -194,5 +200,26 @@ describe("self-harm session and check-in", () => {
   it("self-harm mode ignores acute handling and log offers", () => {
     const p = planDistressTurn("I'm having a panic attack", T, at({ distress_mode: "self_harm" }), now, { selfHarmSessionActive: true });
     expect(p).toEqual({ type: "ai", mode: "self_harm" });
+  });
+});
+
+describe("hedged hormone wording after distress", () => {
+  it("post prompt asks for the hedged line and forbids stating hormone levels", () => {
+    const p = distressPromptBlock("post", "IL");
+    expect(p).toContain("progesterone may be dropping around this point, which can make some people more reactive");
+    expect(p).toMatch(/Never state her hormone levels/);
+  });
+  it("rewrites the live-test sentence into a hedged one", () => {
+    const bad = "Stress and poor sleep can do this. Since you are on day 27, the sharp drop in progesterone can also make your nervous system much more reactive.";
+    const out = sanitizeHormoneClaims(bad, "post");
+    expect(out).toContain("Stress and poor sleep can do this.");
+    expect(out).not.toMatch(/day 27|sharp drop/);
+    expect(out).toContain("Progesterone may be dropping around this point in a cycle, which can make some people more reactive.");
+  });
+  it("keeps an already hedged sentence, and drops hormone talk entirely in acute and check-in modes", () => {
+    const ok = "Progesterone may be dropping around this point, which can make some people more reactive.";
+    expect(sanitizeHormoneClaims(ok, "post")).toBe(ok);
+    expect(sanitizeHormoneClaims("Breathe slowly. Your progesterone is low.", "acute")).toBe("Breathe slowly.");
+    expect(sanitizeHormoneClaims("That sounds hard. Hormones may play a part.", "checkin_no")).toBe("That sounds hard.");
   });
 });

@@ -68,4 +68,5 @@
 ## Acute-distress mode
 - [x] Acute-distress mode: no hormonal attribution, no auto-logging, red-flag line, localized emergency info.
 - [x] Self-harm path: explicit phrases get the full reply, ambiguous phrases get a gentle check-in, and the mode lasts the whole session.
+- [x] Live-test fixes: log saves on "yes", announcements paused during and 6h after distress, check-in chips, hedged hormone wording.
 - [ ] Follow-up (separate PR): Hebrew versions of the fixed replies, check-in and red-flag line, for Hebrew messages. Needs native review before shipping.
