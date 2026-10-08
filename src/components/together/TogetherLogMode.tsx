@@ -6,8 +6,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
 import { BubbleField, categoryFill, type Bubble } from "@/components/together/TogetherBoard";
-import { GROUPED, SYMPTOM_GROUPS, aliasesOf, canonicalSymptom, isKnownSymptom, loadAliases, normSymptom, sameSymptom, sentenceCase } from "@/lib/symptomCatalog";
+import { GROUPED, SYMPTOM_GROUPS, aliasesOf, canonicalSymptom, isKnownSymptom, loadAliases, normSymptom, sameSymptom, sentenceCase, togetherNorm } from "@/lib/symptomCatalog";
 import { validateSymptomName } from "@/lib/symptomModeration";
+import { loadMyWords, privateCopy, submitWord, type MyWord } from "@/lib/togetherWords";
+import { toast } from "sonner";
 import { useWordPrefs } from "@/hooks/useWordPrefs";
 import { mapCategory, type AggRow } from "@/lib/togetherData";
 import type { SymptomPageLog } from "@/lib/symptomPage";
@@ -60,6 +62,12 @@ export function TogetherLogMode({ userId, logs, aggRows, cycleDay, lastPeriodSta
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [wordsOpen, setWordsOpen] = useState(false);
+  const [myWords, setMyWords] = useState<MyWord[]>([]);
+  useEffect(() => { if (wordsOpen) loadMyWords(userId).then(setMyWords).catch(() => setMyWords([])); }, [wordsOpen, userId]);
+  const statusOf = (name: string) => {
+    const r = myWords.find((m) => togetherNorm(m.word) === togetherNorm(name));
+    return r?.status === "shared" ? "Shared in Together" : r?.status === "pending" ? "Being checked" : "Just yours";
+  };
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   useEffect(() => { loadAliases().then(() => setPicked((p) => p.map((s) => ({ ...s, name: canonicalSymptom(s.name) })))); }, []);
@@ -105,9 +113,10 @@ export function TogetherLogMode({ userId, logs, aggRows, cycleDay, lastPeriodSta
   }, [search, counts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addOwn = () => {
-    const check = validateSymptomName(search);
-    if (!check.ok) { setAddError(check.message?.replace(/\s—\s/g, ". ") ?? "That entry isn't allowed."); return; }
-    const name = sentenceCase(canonicalSymptom(check.value));
+    // She is never blocked from logging her own word. The server checks it before anything is shared.
+    const value = search.replace(/\s+/g, " ").trim();
+    if (value.length < 2) { setAddError("Add a word or two."); return; }
+    const name = sentenceCase(canonicalSymptom(value));
     setPicked((p) => p.some((x) => sameSymptom(x.name, name)) ? p : [...p, { name, severity: 1 }]);
     setSearch(""); setAddError(null);
   };
@@ -131,6 +140,10 @@ export function TogetherLogMode({ userId, logs, aggRows, cycleDay, lastPeriodSta
     setSaving(false);
     if (error || !data || !check?.data) { setSaveError(true); return; }
     onLogged({ symptoms: picked, isToday });
+    // Her own words go to the server check after the log is saved. Logging never waits on it.
+    for (const s of picked.filter((x) => !isKnownSymptom(x.name))) {
+      void submitWord(s.name).then((o) => { const msg = privateCopy(o); if (msg) toast(msg); });
+    }
   };
 
   const ownWords = counts.filter((c) => !isKnownSymptom(c.name));
@@ -169,7 +182,7 @@ export function TogetherLogMode({ userId, logs, aggRows, cycleDay, lastPeriodSta
           </ul>
         )}
         {addError && <p className="mt-2 text-sm text-destructive">{addError}</p>}
-        <p className="mt-2 text-xs text-muted-foreground">Your own words stay private. If 10 women use the same word, it joins Together.</p>
+        <p className="mt-2 text-xs text-muted-foreground">Your own words are checked first. If one can't be shared, it stays just yours.</p>
         {ownWords.length > 0 && <button type="button" onClick={() => setWordsOpen(true)} className="mt-1 text-xs font-semibold text-foreground underline underline-offset-2">Edit your words</button>}
       </div>
 
@@ -214,13 +227,13 @@ export function TogetherLogMode({ userId, logs, aggRows, cycleDay, lastPeriodSta
                 return (
                   <li key={w.name} className="flex items-center justify-between gap-3 border-b border-border py-3">
                     {renaming === k ? (
-                      <form className="flex flex-1 gap-2" onSubmit={(e) => { e.preventDefault(); const v = validateSymptomName(renameValue); if (v.ok) { void savePref(k, sentenceCase(v.value)); setRenaming(null); } }}>
+                      <form className="flex flex-1 gap-2" onSubmit={(e) => { e.preventDefault(); const v = validateSymptomName(renameValue); if (v.ok) { const nn = sentenceCase(v.value); void savePref(k, nn).then(() => submitWord(nn, { source: k, rename: true })).then(() => loadMyWords(userId).then(setMyWords)).catch(() => {}); setRenaming(null); } }}>
                         <input autoFocus value={renameValue} onChange={(e) => setRenameValue(e.target.value.slice(0, 40))} className="h-10 flex-1 rounded-full border border-border bg-card px-4 text-sm text-foreground outline-none" />
                         <button type="submit" className="text-sm font-semibold text-foreground">Save</button>
                       </form>
                     ) : (
                       <>
-                        <span className="text-[15px] text-foreground">{w.name}</span>
+                        <span className="flex flex-col"><span className="text-[15px] text-foreground">{w.name}</span><span className="text-xs text-muted-foreground">{statusOf(w.name)}</span></span>
                         <span className="flex gap-3 text-sm font-semibold">
                           <button type="button" onClick={() => { setRenaming(k); setRenameValue(w.name); }} className="text-foreground">Rename</button>
                           <button type="button" onClick={() => void savePref(k, null)} className="text-muted-foreground">Remove</button>

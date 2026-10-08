@@ -124,6 +124,7 @@ Deno.serve(async (req) => {
       "attribution_events",
     ];
     await supabaseAdmin.from("together_tip_reports").delete().eq("reporter_id", userId);
+    await supabaseAdmin.rpc("purge_together_words", { _uid: userId });
     await supabaseAdmin.from("together_tips").delete().eq("author_id", userId);
     await Promise.all(
       tablesByUserId.map((t) =>

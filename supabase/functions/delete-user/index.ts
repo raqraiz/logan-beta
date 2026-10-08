@@ -113,6 +113,9 @@ Deno.serve(async (req) => {
       if (error) console.error(`Error deleting ${table}:`, error);
     }
 
+    const { error: purgeError } = await supabaseAdmin.rpc("purge_together_words", { _uid: userId });
+    if (purgeError) console.error("Error deleting together words:", purgeError);
+
     // Delete linked participant and related data (matched by email)
     if (userEmail) {
       const { data: participant } = await supabaseAdmin

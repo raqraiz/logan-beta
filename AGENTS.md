@@ -31,6 +31,8 @@ Auth (sign-in, callbacks, roles, has_role), DB (migrations, RLS, grants, trigger
 - Together is the only symptom library and logging screen (Everyone / Mine lenses plus log mode in TogetherTab, opened app-wide via openTogether() in src/lib/togetherOpen.ts); the in-chat LogOfferCard is the only other way to log. Viewing Together needs no consent; together_consent only decides whether her logs count. Why: one place, so totals and her symptoms never drift apart.
 - What helped tips: together_tips/votes/reports/hidden_authors; together-tip-submit AI-checks every tip before it is public; stage-only labels; safety symptoms never collect tips; admin_review_tip only; delete_my_tips clears hers. Why: one gate.
 
+- Together words: together_words (written only by together-tip-submit "word"/"sync" modes and triggers; own-row read RLS), counted live and bucketed by get_together_words() for women at consent together-v2 only; daily aggregates and pairs use library entries only (together_library_map()). Reports: together_word_reports/review, admin_word_queue/admin_review_word (no author data); counts-only events in together_word_events. Leaving makes her words private, never deletes them. Why: custom words are shared right away, so the AI check, the consent version and server-side buckets are the only gates.
+
 <!-- LOVABLE:BEGIN -->
 - Symptom pairs use the locked together_daily_pairs cache, refreshed atomically by a statement trigger on the daily aggregate refresh and read only through get_together_pairs(); own fallback uses real cycle starts. Why: shared pairs never expose individuals and own pairings require recurrence across real cycles.
 <!-- LOVABLE:END -->

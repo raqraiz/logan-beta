@@ -2,6 +2,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
+import { handleSync, handleWord } from "./words.ts";
 
 const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -118,7 +119,13 @@ Deno.serve(async (req) => {
     const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: { user } } = await service.auth.getUser(token);
     if (!user) return json({ error: "unauthorized" }, 401);
-    const parsed = Body.safeParse(await req.json().catch(() => null));
+    const raw = await req.json().catch(() => null);
+    // Words (her own symptom words) share this one gate with tips; tips below are unchanged.
+    if (raw && (raw.mode === "word" || raw.mode === "sync")) {
+      const out = raw.mode === "word" ? await handleWord(service, user.id, raw) : await handleSync(service, user.id);
+      return json(out.body, out.status);
+    }
+    const parsed = Body.safeParse(raw);
     if (!parsed.success) return json({ error: "invalid", details: parsed.error.flatten().fieldErrors }, 400);
     const { symptom, text, tipId } = parsed.data;
 

@@ -1,10 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getAnalyticsConsent } from "@/lib/thirdPartyAnalytics";
 
-export const TOGETHER_CONSENT_VERSION = "together-v1";
+export const TOGETHER_CONSENT_VERSION = "together-v2";
+export const TOGETHER_OLD_CONSENT_VERSION = "together-v1";
 export const TOGETHER_CHANGED = "logan:together-consent";
-export const TOGETHER_BODY =
-  "Together shows what women like you are feeling, so you can see you're not the only one. If you join, the symptoms you log are added to anonymous totals. No one sees your name, your logs or your messages. Numbers only show when at least 10 women share something. You can leave anytime in Settings, and your logs stop counting from that day.";
+/** The one consent sentence, shown on the signup checkbox, the consent sheets, the chat ask and Settings. */
+export const TOGETHER_CONSENT_COPY = "Add my logs, without my name, to what women see in Together. Words I add may appear there too.";
+export const TOGETHER_BODY = TOGETHER_CONSENT_COPY;
 
 export type TogetherEvent =
   | "together_consent_shown"
@@ -26,16 +28,16 @@ export async function trackTogether(event: TogetherEvent) {
   await supabase.from("feature_events").insert({ user_id: user.id, feature_name: event } as any);
 }
 
-export interface TogetherState { consent: boolean; shownAt: string | null }
+export interface TogetherState { consent: boolean; shownAt: string | null; version: string | null }
 
 export async function loadTogether(userId: string): Promise<TogetherState> {
   const { data } = await supabase
     .from("profiles")
-    .select("together_consent, together_consent_shown_at")
+    .select("together_consent, together_consent_shown_at, together_consent_version")
     .eq("id", userId)
     .maybeSingle();
   const d = data as any;
-  return { consent: !!d?.together_consent, shownAt: d?.together_consent_shown_at ?? null };
+  return { consent: !!d?.together_consent, shownAt: d?.together_consent_shown_at ?? null, version: d?.together_consent_version ?? null };
 }
 
 export async function markTogetherShown(userId: string) {

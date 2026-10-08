@@ -7,12 +7,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { getAnalyticsConsent, setAnalyticsConsent } from "@/lib/thirdPartyAnalytics";
 import { countHiddenAuthors, showAllAuthors, TIPS_CHANGED } from "@/lib/tips";
 import { Button } from "@/components/ui/button";
-import { loadTogether, setTogetherConsent, trackTogether, TOGETHER_CHANGED } from "@/lib/together";
+import { loadTogether, setTogetherConsent, trackTogether, TOGETHER_CHANGED, TOGETHER_CONSENT_COPY } from "@/lib/together";
+import { isCurrentConsent, keepTogetherV2 } from "@/lib/togetherWords";
 
 export function PrivacySection() {
   const [on, setOn] = useState(() => getAnalyticsConsent() === "granted");
   const [userId, setUserId] = useState<string | null>(null);
   const [together, setTogether] = useState(false);
+  const [oldVersion, setOldVersion] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [hidden, setHidden] = useState(0);
   useEffect(() => {
@@ -34,7 +36,7 @@ export function PrivacySection() {
 
   useEffect(() => {
     let uid: string | null = null;
-    const load = () => uid && loadTogether(uid).then((s) => setTogether(s.consent));
+    const load = () => uid && loadTogether(uid).then((s) => { setTogether(s.consent); setOldVersion(s.consent && !isCurrentConsent(s.version)); });
     supabase.auth.getUser().then(({ data: { user } }) => { uid = user?.id ?? null; setUserId(uid); load(); });
     globalThis.addEventListener(TOGETHER_CHANGED, load as any);
     return () => globalThis.removeEventListener(TOGETHER_CHANGED, load as any);
@@ -66,8 +68,14 @@ export function PrivacySection() {
       </div>
       {userId && (
         <div className="mt-3 flex items-center justify-between gap-3">
-          <Label htmlFor="together-consent" className="text-sm font-normal text-muted-foreground">Count me in Together</Label>
+          <Label htmlFor="together-consent" className="text-sm font-normal text-muted-foreground">{TOGETHER_CONSENT_COPY}</Label>
           <Switch id="together-consent" checked={together} onCheckedChange={onTogether} />
+        </div>
+      )}
+      {userId && together && oldVersion && (
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <span className="text-sm text-muted-foreground">Your words stay private until you choose Keep me in.</span>
+          <Button variant="link" className="h-11 px-0 text-sm underline" onClick={() => void keepTogetherV2().then((ok) => { if (!ok) toast.error("That didn't save. Try again?"); })}>Keep me in</Button>
         </div>
       )}
       {userId && hidden > 0 && (
@@ -79,7 +87,7 @@ export function PrivacySection() {
       <AlertDialog open={confirmLeave} onOpenChange={setConfirmLeave}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Leave Together? Your logs will stop counting from today.</AlertDialogTitle>
+            <AlertDialogTitle>Leave Together? Your logs and words will stop counting from today. Your words stay in Your words.</AlertDialogTitle>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Stay</AlertDialogCancel>

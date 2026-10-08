@@ -18,6 +18,8 @@ import { useWordPrefs } from "@/hooks/useWordPrefs";
 import { mapCategory } from "@/lib/togetherData";
 import type { TogetherLens } from "@/lib/togetherOpen";
 import { AggRow, TogetherCategory, key, loadAggregates, loadCategories, sampleAggregates } from "@/lib/togetherData";
+import { TogetherWordsSection } from "@/components/together/TogetherWords";
+import { isCurrentConsent, maybeSyncWords } from "@/lib/togetherWords";
 import { loadTogether, markTogetherShown, setTogetherConsent, trackTogether, TOGETHER_BODY, TOGETHER_CHANGED } from "@/lib/together";
 
 export function TogetherCirclesIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
@@ -115,6 +117,7 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, c
       if (!alive) return;
       setJoined(s.consent);
       setLoaded(true);
+      if (s.consent && isCurrentConsent(s.version)) maybeSyncWords();
     });
     load();
     const sync = () => load();
@@ -277,6 +280,7 @@ export function TogetherTab({ userId, cycleDay, lastPeriodStart, isNonCycling, c
             {notCounted}
           </>
         )}
+        {lens === "everyone" && !demo && !aggError && <TogetherWordsSection />}
       </div>
 
       <button type="button" onClick={() => setLogging({})}
