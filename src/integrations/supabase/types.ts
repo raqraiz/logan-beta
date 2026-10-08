@@ -2390,6 +2390,7 @@ export type Database = {
           message: string
           message_clean: string | null
           theme: string | null
+          topic: string | null
           user_id: string
         }
         Insert: {
@@ -2406,6 +2407,7 @@ export type Database = {
           message: string
           message_clean?: string | null
           theme?: string | null
+          topic?: string | null
           user_id: string
         }
         Update: {
@@ -2422,6 +2424,7 @@ export type Database = {
           message?: string
           message_clean?: string | null
           theme?: string | null
+          topic?: string | null
           user_id?: string
         }
         Relationships: []
@@ -2825,7 +2828,7 @@ export type Database = {
         Returns: string
       }
       _admin_deliver_team_message: {
-        Args: { _body: string; _draft: string; _user: string }
+        Args: { _body: string; _draft: string; _kind: string; _user: string }
         Returns: undefined
       }
       _admin_eligible_users: {
@@ -2889,8 +2892,10 @@ export type Database = {
         Returns: {
           id: string
           message: string
+          message_clean: string
         }[]
       }
+      _feedback_needing_clean_count: { Args: never; Returns: number }
       _feedback_text_state: {
         Args: { _f: Database["public"]["Tables"]["user_feedback"]["Row"] }
         Returns: string
@@ -2992,6 +2997,7 @@ export type Database = {
           text_shown: string
           text_state: string
           theme: string
+          topic: string
           user_id: string
         }[]
       }
