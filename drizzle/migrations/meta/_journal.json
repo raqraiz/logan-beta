@@ -225,6 +225,13 @@
       "when": 1791470000000,
       "tag": "0031_together_words",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1791451942939,
+      "tag": "0032_apply_pending_together_words",
+      "breakpoints": true
     }
   ]
 }
