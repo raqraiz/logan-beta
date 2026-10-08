@@ -104,10 +104,10 @@ export default function TodayPage() {
   const stick = now.data ? stickiness(now.data.wau, now.data.mau) : null;
   const rows: { title: string; sub: string; count: number | null; to: string }[] = needs.data ? [
     { title: "New feedback", sub: "Not handled yet", count: needs.data.newFeedback, to: "/admin/feedback" },
-    { title: "Tips to review", sub: "Waiting for Logan's check, plus reported", count: needs.data.tipsWaiting + needs.data.tipsReported, to: OLD("tips") },
+    { title: "Tips to review", sub: "Waiting for Logan's check, plus reported", count: needs.data.tipsWaiting + needs.data.tipsReported, to: "/admin/tips" },
     sup
       ? { title: "Message failures", sub: "In the last 7 days", count: needs.data.messageFailures7d, to: OLD("overview") }
-      : { title: "New referrals this week", sub: "Referrers to thank", count: needs.data.newReferrersWeek, to: OLD("referrals") },
+      : { title: "New referrals this week", sub: "Referrers to thank", count: needs.data.newReferrersWeek, to: "/admin/referrals" },
   ] : [];
   // Until the first click is counted, show when counting started instead of a warning.
   const waitingForClick = sup && needs.data && (needs.data.linkCount ?? 0) > 0 && needs.data.linkClicksTotal === 0 && !!needs.data.clickCountingSince;

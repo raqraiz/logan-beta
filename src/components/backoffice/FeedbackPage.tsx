@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useBackOffice } from "@/components/backoffice/BackOfficeShell";
 import { Card, CardTitle, Failed, GhostButton, LINE, MainButton, MUTED, PillToggle, SELECTED, useLoad } from "@/components/backoffice/parts";
+import { WaitingDrafts } from "@/components/backoffice/WaitingDrafts";
 import {
-  THEMES, approveDraft, backfillBatch, backfillWaiting, createReplyDraft, displayName, editDraft, fetchFeedback, fetchFeedbackCounts,
-  fetchWaitingDrafts, markFeedbackHandled, rejectDraft, REPLY_PLACEHOLDER, replyStarter, sendTeamMessage, setFeedbackTheme, stateLabel, themeLabel, timeAgo,
+  THEMES, backfillBatch, backfillWaiting, createReplyDraft, displayName, fetchFeedback, fetchFeedbackCounts,
+  fetchWaitingDrafts, markFeedbackHandled, REPLY_PLACEHOLDER, replyStarter, sendTeamMessage, setFeedbackTheme, stateLabel, themeLabel, timeAgo,
   type FeedbackItem, type FeedbackTab, type Theme, type WaitingDraft,
 } from "@/lib/backOffice/feedback";
 
@@ -83,34 +84,6 @@ function FeedbackCard({ item, sup, onChanged }: { item: FeedbackItem; sup: boole
   );
 }
 
-function WaitingCard({ d, onChanged }: { d: WaitingDraft; onChanged: () => void }) {
-  const [editing, setEditing] = useState(false);
-  const [body, setBody] = useState(d.body);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState(false);
-  const run = async (fn: () => Promise<unknown>) => { setBusy(true); setErr(false); try { await fn(); onChanged(); } catch { setErr(true); setBusy(false); } };
-  return (
-    <div className="rounded-2xl border border-[#E6E0D5] p-4">
-      <p className="text-sm text-[#6E675F]">
-        To <span className="font-semibold text-[#23201C]">{displayName(d, true)}</span>
-        {d.writtenBy ? ` · written by ${d.writtenBy}` : ""} · {timeAgo(d.createdAt)}
-      </p>
-      {d.feedbackText && <p className="mt-2 text-sm italic text-[#6E675F]">She wrote: “{d.feedbackText}”</p>}
-      {editing
-        ? <textarea aria-label="Edit reply" className={`${field} mt-2 min-h-[100px]`} maxLength={4000} value={body} onChange={(e) => setBody(e.target.value)} />
-        : <p className="mt-2 whitespace-pre-wrap text-[15px] text-[#23201C]">{d.body}</p>}
-      {err && <p className="mt-2 text-sm text-[#23201C]">That didn't work. Please try again.</p>}
-      <div className="mt-3 flex flex-wrap gap-2">
-        {editing
-          ? <GhostButton disabled={busy || !body.trim()} onClick={() => run(async () => { await editDraft(d.id, body.trim()); setEditing(false); })}>Save edit</GhostButton>
-          : <GhostButton disabled={busy} onClick={() => setEditing(true)}>Edit</GhostButton>}
-        <MainButton disabled={busy || editing} onClick={() => run(() => approveDraft(d.id))}>Approve and send</MainButton>
-        <GhostButton disabled={busy} onClick={() => run(() => rejectDraft(d.id))}>Reject</GhostButton>
-      </div>
-    </div>
-  );
-}
-
 /** One-off: writes the cleaned copy for older feedback. Shows the count first and writes only after a confirm. */
 function BackfillCard() {
   const waiting = useLoad(backfillWaiting, []);
@@ -171,12 +144,7 @@ export default function FeedbackPage() {
         </p>
       </header>
 
-      {sup && (waiting.data?.length ?? 0) > 0 && (
-        <Card>
-          <CardTitle>Waiting for your approval</CardTitle>
-          <div className="space-y-3">{waiting.data!.map((d) => <WaitingCard key={d.id} d={d} onChanged={refresh} />)}</div>
-        </Card>
-      )}
+      {sup && <WaitingDrafts kind="feedback_reply" drafts={waiting.data} onChanged={refresh} />}
 
       <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
         <div className="space-y-4">

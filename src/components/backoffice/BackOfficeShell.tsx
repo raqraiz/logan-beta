@@ -20,8 +20,8 @@ const NAV: NavItem[] = [
   { label: "Today", to: "/admin" },
   { label: "Users", to: "/admin/users", superOnly: true, prefix: true },
   { label: "Feedback", to: "/admin/feedback" },
-  { label: "Referrals", to: OLD("referrals"), old: true },
-  { label: "Tips", to: OLD("tips"), old: true },
+  { label: "Referrals", to: "/admin/referrals" },
+  { label: "Tips", to: "/admin/tips" },
   { label: "Growth", to: "/admin/growth", superOnly: true },
   { label: "Reports", to: OLD("attribution"), old: true },
   { label: "Send", to: OLD("notifications"), old: true },
@@ -35,7 +35,7 @@ export default function BackOfficeShell() {
   const navigate = useNavigate();
   const path = useLocation().pathname;
   const title = path.startsWith("/admin/growth") ? "Growth" : "Today";
-  const ownHeader = path.startsWith("/admin/users") || path.startsWith("/admin/feedback"); // these pages draw their own heading
+  const ownHeader = path.startsWith("/admin/users") || path.startsWith("/admin/feedback") || path.startsWith("/admin/referrals") || path.startsWith("/admin/tips"); // these pages draw their own heading
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
   const [role, setRole] = useState<BackOfficeRole | null>(null);
