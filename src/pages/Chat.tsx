@@ -22,7 +22,7 @@ import { useFeedbackPrompt } from "@/hooks/useFeedbackPrompt";
 import { SettingsDialog } from "@/components/chat/SettingsDialog";
 import { CoachMarkTour } from "@/components/chat/CoachMarkTour";
 import { HistoryImportDialog } from "@/components/chat/HistoryImportDialog";
-import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
+import { VoiceInputButton, type VoiceInputHandle } from "@/components/chat/VoiceInputButton";
 import { format, addWeeks, subYears } from "date-fns";
 import { SymptomPicker } from "@/components/chat/SymptomPicker";
 import { AnchorPicker } from "@/components/chat/AnchorPicker";
@@ -211,6 +211,8 @@ const Chat = () => {
   // Dictation: text typed before the mic started, and whether the mic is live.
   const [isListening, setIsListening] = useState(false);
   const voiceBaseRef = useRef("");
+  const voiceRef = useRef<VoiceInputHandle>(null);
+  const voiceStoppingRef = useRef(false);
   // Birth control "Which kind?" follow-up, shown inline after a yes/hormonal/non-hormonal answer.
   const [bcFollowup, setBcFollowup] = useState<{ base: string; baseLabel: string } | null>(null);
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
@@ -1047,9 +1049,27 @@ const Chat = () => {
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!inputValue.trim() || !user || isSending || isListening) return;
+    if (!user || isSending || voiceStoppingRef.current) return;
 
-    const messageContent = inputValue.trim();
+    let messageContent = inputValue.trim();
+    if (isListening) {
+      let spokenText = "";
+      // Sending with the mic on: stop it, take the final text once, send that.
+      voiceStoppingRef.current = true;
+      try {
+        const spoken = await voiceRef.current?.stopAndGetText(600);
+        spokenText = spoken ?? "";
+        messageContent = joinWithBase(voiceBaseRef.current, spokenText).trim();
+      } finally {
+        voiceStoppingRef.current = false;
+      }
+      if (!spokenText.trim()) {
+        // Nothing was heard: mic is stopped, nothing is sent.
+        setInputValue(voiceBaseRef.current);
+        return;
+      }
+    }
+    if (!messageContent) return;
     
     // If onboarding is complete, use AI chat; otherwise use onboarding flow
     if (!isOnboarding) {
@@ -2795,6 +2815,7 @@ const Chat = () => {
                 readOnly={isListening}
               />
               <VoiceInputButton
+                ref={voiceRef}
                 onListeningChange={(listening) => {
                   if (listening) voiceBaseRef.current = inputValue;
                   setIsListening(listening);
@@ -2808,7 +2829,7 @@ const Chat = () => {
                 type="submit" 
                 size="icon" 
                 className="h-11 w-11 bg-[var(--send-bg)] text-[var(--send-fg)] hover:bg-[var(--send-bg)] hover:opacity-90 disabled:opacity-100 disabled:bg-[var(--send-off-bg)] disabled:text-[var(--send-off-fg)]"
-                disabled={!inputValue.trim() || isSending || isListening}
+                disabled={(!inputValue.trim() && !isListening) || isSending}
               >
                 {isSending ? (
                   <Loader2 className="w-5 h-5 animate-spin" />

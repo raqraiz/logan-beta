@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo, useEffect } from "react";
+import { forwardRef, useImperativeHandle, useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -22,7 +22,14 @@ interface VoiceInputButtonProps {
   className?: string;
 }
 
-export const VoiceInputButton = ({ onTranscript, onPartial, onListeningChange, disabled, className }: VoiceInputButtonProps) => {
+export interface VoiceInputHandle {
+  // Stops the mic, waits up to `maxWaitMs` for the final result, and returns the
+  // dictated text. Nothing is delivered to the callbacks afterwards, so no late
+  // speech can land in the input.
+  stopAndGetText: (maxWaitMs?: number) => Promise<string>;
+}
+
+export const VoiceInputButton = forwardRef<VoiceInputHandle, VoiceInputButtonProps>(({ onTranscript, onPartial, onListeningChange, disabled, className }, ref) => {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
   const deliveredRef = useRef(false);
@@ -40,6 +47,10 @@ export const VoiceInputButton = ({ onTranscript, onPartial, onListeningChange, d
   useEffect(() => {
     cbRef.current = { onTranscript, onPartial, onListeningChange };
   });
+  // Set while stopAndGetText is draining: results still update the text but are
+  // no longer pushed to the caller.
+  const mutedRef = useRef(false);
+  const flushResolveRef = useRef<(() => void) | null>(null);
   const isIOSDevice = useMemo(() => isIOS(), []);
 
   const startRecognition = useCallback(() => {
@@ -72,7 +83,7 @@ export const VoiceInputButton = ({ onTranscript, onPartial, onListeningChange, d
       sessionFinalRef.current = finals;
       interimRef.current = interim;
       const shown = mergeTranscript(mergeTranscript(committedRef.current, finals), interim);
-      cbRef.current.onPartial?.(shown);
+      if (!mutedRef.current) cbRef.current.onPartial?.(shown);
     };
 
     recognition.onerror = (event: any) => {
@@ -133,6 +144,10 @@ export const VoiceInputButton = ({ onTranscript, onPartial, onListeningChange, d
       }
       setIsListening(false);
       cbRef.current.onListeningChange?.(false);
+      if (mutedRef.current) {
+        flushResolveRef.current?.();
+        return;
+      }
       const text = committedRef.current;
       if (text && !deliveredRef.current) {
         deliveredRef.current = true;
@@ -142,6 +157,38 @@ export const VoiceInputButton = ({ onTranscript, onPartial, onListeningChange, d
 
     recognition.start();
   }, []);
+
+  useImperativeHandle(ref, () => ({
+    stopAndGetText: (maxWaitMs = 600) =>
+      new Promise<string>((resolve) => {
+        const rec = recognitionRef.current;
+        if (!wantListeningRef.current || !rec) {
+          resolve(committedRef.current);
+          return;
+        }
+        mutedRef.current = true;
+        deliveredRef.current = true;
+        wantListeningRef.current = false;
+        let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          flushResolveRef.current = null;
+          try { rec.abort?.(); } catch { /* already ended */ }
+          const text = mergeTranscript(
+            mergeTranscript(committedRef.current, sessionFinalRef.current),
+            interimRef.current,
+          );
+          setIsListening(false);
+          cbRef.current.onListeningChange?.(false);
+          resolve(text);
+        };
+        const timer = setTimeout(finish, maxWaitMs);
+        flushResolveRef.current = finish;
+        try { rec.stop(); } catch { finish(); }
+      }),
+  }), []);
 
   const toggleListening = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -164,6 +211,7 @@ export const VoiceInputButton = ({ onTranscript, onPartial, onListeningChange, d
     }
 
     wantListeningRef.current = true;
+    mutedRef.current = false;
     deliveredRef.current = false;
     committedRef.current = "";
     sessionFinalRef.current = "";
@@ -197,4 +245,5 @@ export const VoiceInputButton = ({ onTranscript, onPartial, onListeningChange, d
       )}
     </Button>
   );
-};
+});
+VoiceInputButton.displayName = "VoiceInputButton";
