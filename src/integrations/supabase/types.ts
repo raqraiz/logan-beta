@@ -2204,6 +2204,27 @@ export type Database = {
         }
         Relationships: []
       }
+      together_word_map: {
+        Row: {
+          canonical_name: string
+          created_at: string
+          disabled: boolean
+          word_key: string
+        }
+        Insert: {
+          canonical_name: string
+          created_at?: string
+          disabled?: boolean
+          word_key: string
+        }
+        Update: {
+          canonical_name?: string
+          created_at?: string
+          disabled?: boolean
+          word_key?: string
+        }
+        Relationships: []
+      }
       together_word_reports: {
         Row: {
           created_at: string
@@ -2258,6 +2279,7 @@ export type Database = {
           created_at: string
           id: string
           kind: string
+          map_checked_at: string | null
           original_word: string
           reject_category: string | null
           source_key: string
@@ -2272,6 +2294,7 @@ export type Database = {
           created_at?: string
           id?: string
           kind?: string
+          map_checked_at?: string | null
           original_word: string
           reject_category?: string | null
           source_key: string
@@ -2286,6 +2309,7 @@ export type Database = {
           created_at?: string
           id?: string
           kind?: string
+          map_checked_at?: string | null
           original_word?: string
           reject_category?: string | null
           source_key?: string
