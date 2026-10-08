@@ -40,6 +40,8 @@ Keep the prompt short and exact so it uses as few Lovable credits as possible.
 
 Lovable deploy prompts must say: "Deploy only. Do not edit, fix or refactor any code, even if the build log shows errors. Report errors instead."
 
+Before merging any PR into main, check the Lovable project for an in-flight prompt. If one is running, wait for it to finish before merging. After merging, don't send a Lovable prompt until Lovable's edit list shows that merge. Sequence: merge, wait for sync, then deploy.
+
 ## Do not touch
 
 - `.env` files and any API keys or secrets. Never commit secrets.
