@@ -294,6 +294,8 @@ export const CHIP_TALK = "Talk it through";
 export const CHIP_LOG_YES = "Yes, log it";
 export const CHIP_LOG_NO = "No thanks";
 export const DISTRESS_CHIPS = [CHIP_BREATHE, CHIP_CALMER, CHIP_TALK];
+/** Neutral chips under the post-distress "why" answer: never one that pushes a hormonal conclusion. */
+export const POST_CHIPS = ["What can I do", CHIP_TALK];
 
 /** Added to every distress-mode reply. */
 export function redFlagLine(region: RegionCode | null): string {
@@ -451,6 +453,12 @@ export interface PlanOptions {
   selfHarmAt?: string | null;
   /** Safe/calm confirmations saved on that latest self-harm-mode message. */
   sessionFlags?: { safe?: boolean; calm?: boolean };
+  /**
+   * created_at of the latest assistant message in the last 6 hours that belongs to an acute-distress episode
+   * (the fixed acute reply, the calm acknowledgement, "Logged for today." ...), looked up by the caller. It keeps the
+   * post-distress "why" handling alive however many normal turns came in between.
+   */
+  acuteEpisodeAt?: string | null;
 }
 
 /** The quiet line shown under Logan's replies in post-crisis mode. */
@@ -625,7 +633,11 @@ export function planDistressTurn(
 
   // 10. Right after distress ended, and only if she asks why it happened: the hedged "may play a part" answer.
   // Any other message (for example "what happens in the luteal phase?") is normal chat and is never touched.
-  if (md.distress_post === true && age <= POST_WINDOW_MS && asksWhyItHappened(userText) && !isFactualCycleQuestion(userText)) return { type: "ai", mode: "post" };
+  // The episode stays "open" for the whole 6-hour window, however many normal turns came in between. The last reply
+  // may be an ordinary one (for example a luteal-phase answer), so the caller also looks the episode up in the history.
+  const episodeAge = opts.acuteEpisodeAt ? now.getTime() - new Date(opts.acuteEpisodeAt).getTime() : Infinity;
+  const inAcuteEpisode = (md.distress_post === true && age <= MODE_WINDOW_MS) || (episodeAge >= 0 && episodeAge <= MODE_WINDOW_MS);
+  if (inAcuteEpisode && asksWhyItHappened(userText) && !isFactualCycleQuestion(userText)) return { type: "ai", mode: "post" };
 
   return null;
 }
@@ -665,16 +677,30 @@ const HEDGED_HORMONE_SENTENCE = "Progesterone may be dropping around this point 
  * Last-line guard on AI replies in distress-related modes. Sentences that state hormones as fact are removed.
  * After distress ("post"), one hedged sentence replaces them. In other modes hormones are not mentioned at all.
  */
+const TRIGGER_WORD_RE = /\b(?:stress\w*|sleep|caffeine|skipped meals?|a lot going on|no clear reason)\b/i;
+const TRIGGERS_SENTENCE = "Common triggers are stress, poor sleep, caffeine, skipped meals, a lot going on, or sometimes no clear reason.";
+const HER_DAY_RE = /\b(?:on|since|at|it'?s)\s+day\s*\d+\b|\byour\s+day\s*\d+\b/i;
+const PRONOUN_START_RE = /^(?:it|this|that|these|those|they|which|so)\b/i;
 export function sanitizeHormoneClaims(text: string, mode: DistressAiMode): string {
   if (mode === "post_crisis") return removeMoodAttribution(text);
-  let removed = false;
-  const out = text.replace(/[^.!?\n]+[.!?]+/g, (sentence) => {
-    if (!HORMONE_RE.test(sentence)) return sentence;
-    if (mode === "post" && HEDGE_RE.test(sentence) && !/\b(?:the|a)\s+(?:sharp |big |massive |sudden )?(?:drop|fall|dip|crash)\b/i.test(sentence)) return sentence;
-    removed = true;
-    return "";
+  let dropFollowing = false;
+  let out = text.replace(/[^.!?\n]+[.!?]+/g, (sentence) => {
+    // A sentence that only refers back to a removed one ("It makes your brain much more reactive.") goes too.
+    if (dropFollowing && PRONOUN_START_RE.test(sentence.trim())) return "";
+    dropFollowing = false;
+    const hormone = HORMONE_RE.test(sentence);
+    if (hormone && mode === "post" && HEDGE_RE.test(sentence) && !/\b(?:the|a)\s+(?:sharp |big |massive |sudden )?(?:drop|fall|dip|crash)\b/i.test(sentence)) return sentence;
+    if (hormone || (mode === "post" && HER_DAY_RE.test(sentence))) {
+      dropFollowing = true;
+      return "";
+    }
+    return sentence;
   }).replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
-  if (removed && mode === "post") return `${out}${out ? " " : ""}${HEDGED_HORMONE_SENTENCE}`;
+  if (mode === "post") {
+    // Other triggers first, then the one hedged line about her cycle. Never a statement about her levels.
+    if (!TRIGGER_WORD_RE.test(out)) out = out ? `${TRIGGERS_SENTENCE} ${out}` : TRIGGERS_SENTENCE;
+    if (!/may be dropping/i.test(out)) out = `${out} ${HEDGED_HORMONE_SENTENCE}`;
+  }
   return out;
 }
 
@@ -747,5 +773,7 @@ export function applyDistressMeta(meta: Record<string, unknown>, mode: DistressA
     meta.conversation_starters = DISTRESS_CHIPS;
   } else if (mode === "checkin_open") {
     meta.distress_checkin = true;
+  } else if (mode === "post") {
+    meta.conversation_starters = POST_CHIPS;
   }
 }
