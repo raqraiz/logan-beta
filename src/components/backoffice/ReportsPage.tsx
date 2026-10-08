@@ -24,21 +24,18 @@ function Stat({ name, value, sub }: { name: string; value: string; sub?: string 
   );
 }
 
-/** Month-end totals against the goal. Frozen with the month, so a locked chart never moves. */
-function GoalChart({ report }: { report: Report }) {
+/** Month-end totals. Frozen with the month, so a locked chart never moves. */
+function TotalsChart({ report }: { report: Report }) {
   const pts = report.numbers.chart;
-  const goal = report.numbers.goalCount;
-  if (pts.length < 2 || goal <= 0) return null;
-  const max = Math.max(goal, ...pts.map((p) => p.total));
+  if (pts.length < 2) return null;
+  const max = Math.max(...pts.map((p) => p.total), 1);
   const x = (i: number) => 8 + (i / (pts.length - 1)) * 600;
   const y = (v: number) => 130 - (v / max) * 110;
   const path = pts.map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)} ${y(p.total).toFixed(1)}`).join(" ");
   const last = pts[pts.length - 1];
   return (
-    <svg viewBox="0 0 640 150" width="100%" height="150" role="img" aria-label={`Women on Logan at each month end against the goal of ${fmt(goal)}`}>
+    <svg viewBox="0 0 640 150" width="100%" height="150" role="img" aria-label="Women on Logan at each month end">
       <defs><linearGradient id="rp-grad" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stopColor="#FF2E92" /><stop offset="0.5" stopColor="#A22BE8" /><stop offset="1" stopColor="#2BD4D9" /></linearGradient></defs>
-      <line x1="0" y1={y(goal)} x2="640" y2={y(goal)} stroke="#6E675F" strokeWidth="2" strokeDasharray="6 6" />
-      <text x="636" y={y(goal) - 6} textAnchor="end" fontSize="12" fill="#6E675F">Goal {fmt(goal)}</text>
       <path d={path} fill="none" stroke="url(#rp-grad)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
       <circle cx={x(pts.length - 1)} cy={y(last.total)} r="6" fill="#A22BE8" />
       <text x={x(pts.length - 1) - 10} y={y(last.total) - 10} textAnchor="end" fontSize="12" fontWeight="700" fill="#23201C">{fmt(last.total)}</text>
@@ -111,9 +108,8 @@ function ReportBody({ report, role, onChanged, monthsCard }: { report: Report; r
         <div className="mt-4 flex flex-wrap gap-4">
           <Stat name={live ? "Women on Logan so far" : "Women on Logan"} value={fmt(x.totalUsers)} sub={`+${fmt(x.newUsers)} this month`} />
           <Stat name="Growth vs last month" value={x.growthPct === null ? "n/a" : growthText(x.growthPct)} sub={x.growthPct === null ? "No users the month before" : `${fmt(x.prevTotal)} women a month earlier`} />
-          <Stat name="Goal" value={x.goalPct === null ? "n/a" : `${x.goalPct}%`} sub={`of ${fmt(x.goalCount)}${x.goalDate ? ` by ${longDate(x.goalDate)}` : ""}`} />
         </div>
-        <div className="mt-4"><GoalChart report={report} /></div>
+        <div className="mt-4"><TotalsChart report={report} /></div>
 
         <div className="mt-4 flex flex-wrap gap-4">
           <Stat name="Monthly active" value={fmt(x.mau)} sub={`last 30 days ${when}`} />
