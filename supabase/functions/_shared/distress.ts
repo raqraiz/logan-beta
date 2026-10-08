@@ -101,6 +101,12 @@ export const ACUTE_PATTERNS: RegExp[] = [
   /\b(?:hyperventilat\w*|short of breath|gasping for (?:air|breath))\b/,
   /\b(?:can'?t|cant|cannot|won'?t|wont|unable to|not able to)\s+(?:seem to\s+)?(?:calm(?:\s+(?:down|myself))?|settle(?:\s+down)?|relax)\b/,
   /\b(?:can'?t|cant|cannot)\s+stop\s+(?:shaking|trembling|panicking|spiral(?:l)?ing)\b/,
+  // Typed medical red-flag symptoms: the emergency line comes first in the reply.
+  /\bchest\s+(?:pain|pains|tightness|pressure)\b/,
+  /\b(?:tight|heavy)\s+chest\b/,
+  /\bmy\s+chest\s+(?:hurts?|is\s+(?:tight|hurting))\b/,
+  /\b(?:feel|feeling|feels|i'?m|im|am)\s+(?:like\s+)?(?:(?:i'?m\s+)?(?:going to|gonna|about to)\s+)?(?:faint(?:ing)?|pass(?:ing)?\s+out|black(?:ing)?\s+out)\b/,
+  /\b(?:going to|gonna|about to)\s+(?:faint|pass out|black out)\b/,
   /\bfreak(?:ing|in|ed)?\s*out\b/,
   /\b(?:i'?m|im|i am)\s+(?:so\s+|really\s+)?(?:losing it|spiral(?:l)?ing|having a (?:meltdown|breakdown))\b/,
   /\b(?:feel|feels|feeling)\s+like\s+(?:i'?m|im|i am)\s+(?:dying|going to die|gonna die|having a heart attack|losing my mind|going crazy)\b/,
@@ -108,6 +114,55 @@ export const ACUTE_PATTERNS: RegExp[] = [
   "התקף חרדה", "התקף פאניקה", "פאניקה", "בפאניקה", "לא יכולה לנשום", "לא יכול לנשום", "לא מצליחה לנשום", "לא מצליח לנשום",
   "קשה לי לנשום", "מתחרפנת", "מתחרפן", "לא מצליחה להירגע", "לא מצליח להירגע", "לא יכולה להירגע", "לא יכול להירגע", "מרגישה שאני מתה", "מרגיש שאני מת",
 ].map((p) => (typeof p === "string" ? new RegExp(p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) : p));
+
+// Typo tolerance: the same check must catch "panic attach", "panik atack", "cant brethe" and the like, because
+// every other rule for the turn (reply, chips, no log card) hangs off this one decision.
+function editDistance(a: string, b: string): number {
+  const d: number[][] = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 0; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+    }
+  }
+  return d[a.length][b.length];
+}
+const near = (token: string, word: string, max: number) => Math.abs(token.length - word.length) <= max && editDistance(token, word) <= max;
+/** "panic attack" with up to two typos in either word, and "can't breathe" with typos in the verb. */
+function fuzzyAcute(t: string): boolean {
+  const tokens = t.split(/[^a-z']+/).filter(Boolean);
+  for (let i = 0; i < tokens.length; i++) {
+    const w = tokens[i];
+    if (w.length >= 5 && w[0] === "p" && near(w, "panic", 2) && i + 1 < tokens.length) {
+      const n = tokens[i + 1];
+      if (n.length >= 4 && n.startsWith("at") && (near(n, "attack", 2) || near(n, "attacks", 2))) return true;
+    }
+    if (/^(?:can'?t|cant|cannot|couldn'?t|couldnt|unable)$/.test(w)) {
+      for (const n of tokens.slice(i + 1, i + 4)) {
+        if (n.length >= 5 && n[0] === "b" && (near(n, "breathe", 2) || near(n, "breath", 2))) return true;
+      }
+    }
+  }
+  return false;
+}
+
+/** Medical red-flag symptoms typed by her. The reply then gives the emergency line first. */
+const RED_FLAG_SYMPTOM_RE = /\bchest\s+(?:is\s+|feels\s+)?(?:pain|pains|tightness|pressure|tight|heavy|hurts?)\b|\b(?:tight|heavy)\s+chest\b|\bpain\s+in\s+(?:my\s+)?chest\b|\bheart\s+attack\b|\b(?:faint(?:ing)?|pass(?:ing)?\s+out|black(?:ing)?\s+out|collaps\w*)\b|\b(?:hard|difficult|difficulty|trouble|struggling)\s+(?:to\s+|with\s+)?breath\w*|\b(?:can'?t|cant|cannot|unable to)\s+(?:\w+\s+)?breath\w*|\bshort(?:ness)?\s+of\s+breath\b|\bnumb(?:ness)?\s+(?:in\s+)?(?:my\s+)?(?:arm|jaw)\b/;
+export function mentionsRedFlagSymptom(text: string): boolean {
+  const t = norm(text);
+  if (!t) return false;
+  if (RED_FLAG_SYMPTOM_RE.test(t)) return true;
+  const tokens = t.split(/[^a-z']+/).filter(Boolean);
+  return tokens.some((w, i) => /^(?:can'?t|cant|cannot|couldn'?t|couldnt|unable)$/.test(w)
+    && tokens.slice(i + 1, i + 4).some((n) => n.length >= 5 && n[0] === "b" && (near(n, "breathe", 2) || near(n, "breath", 2))));
+}
+/** Chips are never allowed to state a red-flag symptom (the chip row is for gentle replies, not for symptoms). */
+const RED_FLAG_CHIP_EXTRA_RE = /\b(?:dizz\w*|light-?headed|palpitations?|heart\s+(?:racing|pounding)|can'?t\s+move|bleeding\s+(?:a lot|heavily))\b/;
+export function isRedFlagChipText(text: string): boolean {
+  const t = norm(text);
+  return !!t && (mentionsRedFlagSymptom(t) || RED_FLAG_CHIP_EXTRA_RE.test(t));
+}
 
 /** Past or informational phrasing. Suppresses an acute trigger unless NOW_RE also matches. */
 const PAST_RE = /\b(?:had|have had|used to|last (?:night|week|month|year|time)|yesterday|ago|history of|i get|she gets|gets? them|when i (?:have|get)|after i had)\b|היה לי|הייתה לי|אתמול|פעם/;
@@ -117,7 +172,7 @@ const INFO_Q_RE = /^(?:what(?:'s| is| are)|why do|why does|what causes|is a pani
 export function detectAcuteDistress(text: string): boolean {
   const t = norm(text);
   if (!t || detectSelfHarm(t)) return false;
-  if (!ACUTE_PATTERNS.some((p) => p.test(t))) return false;
+  if (!ACUTE_PATTERNS.some((p) => p.test(t)) && !fuzzyAcute(t)) return false;
   if (INFO_Q_RE.test(t) && !/\b(?:i'?m|im|i am|my)\b/.test(t)) return false;
   if (PAST_RE.test(t) && !NOW_RE.test(t)) return false;
   return true;
@@ -283,10 +338,16 @@ const CALM_ACK = `I'm really glad it's easing. You got through that.
 
 Want me to log this so we can spot patterns?`;
 
+const ACUTE_RED_FLAG_FIRST = `I'm right here with you.
+Let's slow your breathing together. Breathe in through your nose for 4, then let it out slowly through your mouth for 6.`;
 export function acuteReply(region: RegionCode | null, userText: string, again: boolean): string {
-  return [again ? ACUTE_AGAIN : ACUTE_FIRST, redFlagLine(region), extraSupportLines(region, userText)].filter(Boolean).join("\n\n");
+  const extra = extraSupportLines(region, userText);
+  if (mentionsRedFlagSymptom(userText)) {
+    // She typed a red-flag symptom herself: the emergency line comes first.
+    return [redFlagLine(region), again ? ACUTE_AGAIN : /\bpan\w*/.test(norm(userText)) ? ACUTE_FIRST : ACUTE_RED_FLAG_FIRST, extra].filter(Boolean).join("\n\n");
+  }
+  return [again ? ACUTE_AGAIN : ACUTE_FIRST, redFlagLine(region), extra].filter(Boolean).join("\n\n");
 }
-
 export function breatheReply(region: RegionCode | null): string {
   return [BREATHE_ROUND, redFlagLine(region)].join("\n\n");
 }
@@ -648,4 +709,43 @@ export function finalizeDistressReply(text: string, mode: DistressAiMode, userTe
   // message (above all a factual cycle question) comes back exactly as the model wrote it: nothing removed, nothing added.
   if (mode === "post" && userText !== undefined && (!asksWhyItHappened(userText) || isFactualCycleQuestion(userText))) return text;
   return mode === "post_crisis" ? sanitizeHormoneClaims(text, mode) : sanitizeHormoneClaims(stripDeepDive(text), mode);
+}
+
+// ───────────────────────── One decision, one set of rules ─────────────────────────
+
+/**
+ * The symptom extractor can understand a typo the detector does not. This runs the SAME detector over the symptom
+ * names the extractor found ("panic attack"), with the same past-tense and information-question filters applied to
+ * her message, so the two can never disagree about whether this turn is an acute-distress turn.
+ */
+export function acuteFromSymptomNames(userText: string, symptomNames: string[]): boolean {
+  if (!symptomNames.some((n) => detectAcuteDistress(n))) return false;
+  const t = norm(userText);
+  if (!t || detectSelfHarm(t)) return false;
+  if (INFO_Q_RE.test(t) && !/\b(?:i'?m|im|i am|my)\b/.test(t)) return false;
+  if (PAST_RE.test(t) && !NOW_RE.test(t)) return false;
+  return true;
+}
+
+/**
+ * The turn rules for every AI-written reply in a distress mode, in one place so they cannot drift:
+ * no log card, ever; no cycle context (except in post-crisis, where factual answers stay complete); the fixed
+ * chips in acute mode.
+ */
+export function applyDistressMeta(meta: Record<string, unknown>, mode: DistressAiMode): void {
+  delete meta.log_offer;
+  if (mode === "post_crisis") {
+    for (const k of ["period_checkin", "suggested_day1"]) delete meta[k];
+    if (Array.isArray(meta.conversation_starters)) {
+      meta.conversation_starters = (meta.conversation_starters as string[]).filter((c) => !/partner|boyfriend|husband|heads.?up/i.test(c));
+    }
+    return;
+  }
+  for (const k of ["cycle_day", "cycle_phase", "cycle_length_days", "last_period_start", "logged_symptoms", "period_checkin", "suggested_day1"]) delete meta[k];
+  if (mode === "acute") {
+    meta.distress_mode = "acute";
+    meta.conversation_starters = DISTRESS_CHIPS;
+  } else if (mode === "checkin_open") {
+    meta.distress_checkin = true;
+  }
 }

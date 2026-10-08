@@ -5,6 +5,7 @@ import {
   distressPromptBlock, planDistressTurn, regionForTimezone, selfHarmReply, stripDeepDive,
   detectSafeConfirmation, detectCalmSignal, finalizeDistressReply, postCrisisMetadata, postCrisisSupportLine,
   isFactualCycleQuestion, hasRecentDistress, asksWhyItHappened,
+  acuteFromSymptomNames, applyDistressMeta, isRedFlagChipText, mentionsRedFlagSymptom, DISTRESS_CHIPS, redFlagLine,
 } from "../../supabase/functions/_shared/distress.ts";
 
 const ACUTE_YES = [
@@ -409,13 +410,15 @@ describe("soft exit: post-crisis mode", () => {
     it("other modes still drop the deep-dive section", () => {
       expect(finalizeDistressReply(PHASE_ANSWER, "acute")).not.toContain("The Science");
     });
-    it("the post-crisis reply path in chat-ai keeps cycle context and the full answer", () => {
+    it("the post-crisis reply path keeps cycle context and the full answer, but never a log card", () => {
+      const meta: Record<string, unknown> = { cycle_day: 27, cycle_phase: "Luteal", log_offer: { symptoms: [] }, conversation_starters: ["Tell me more", "Message my partner"] };
+      applyDistressMeta(meta, "post_crisis");
+      expect(meta.cycle_day).toBe(27);
+      expect(meta.cycle_phase).toBe("Luteal");
+      expect(meta.log_offer).toBeUndefined();
+      expect(meta.conversation_starters).toEqual(["Tell me more"]);
       const src = readFileSync("supabase/functions/chat-ai/index.ts", "utf8");
-      const i = src.indexOf('if (distressAiMode === "post_crisis") {');
-      expect(i).toBeGreaterThan(0);
-      const branch = src.slice(i, src.indexOf("} else {", i));
-      expect(branch).not.toMatch(/cycle_day|cycle_phase/);
-      expect(branch).not.toContain("stripDeepDive");
+      expect(src).toContain("finalizeDistressReply(finalAssistantMessage, distressAiMode, userMessage)");
       // the strict "emotional moment" rules (60 words, no physiology) are not forced on by post-crisis mode
       expect(src).toContain('distressAiMode !== "post_crisis"');
     });
@@ -506,5 +509,107 @@ describe("factual cycle question right after acute distress (live bug)", () => {
     expect(hasRecentDistress({ metadata: { distress_post: true }, created_at: "2026-10-08T05:00:00Z" }, now)).toBe(false);
     expect(hasRecentDistress({ metadata: { distress_post_crisis: true }, created_at: "2026-10-08T11:00:00Z" }, now)).toBe(true);
     expect(hasRecentDistress(null, now)).toBe(false);
+  });
+});
+
+describe("one distress decision per turn (typo bug)", () => {
+  const T = "Asia/Hebron";
+  const now = new Date("2026-10-08T10:30:33Z");
+  const TYPO = "im having a panic attach";
+
+  it("the exact typo message gets the fixed reply, the three fixed chips and no log card", () => {
+    const p = planDistressTurn(TYPO, T, null, now);
+    if (p?.type !== "reply") throw new Error("expected the fixed distress reply");
+    expect(p.message).toContain("Panic attacks can feel really scary, and they do pass.");
+    expect(p.message).toContain("Magen David Adom on 101");
+    expect(p.metadata.conversation_starters).toEqual(["Breathe with me", "I'm feeling calmer", "Talk it through"]);
+    expect(p.metadata.distress_mode).toBe("acute");
+    expect(p.metadata.log_offer).toBeUndefined();
+    expect(p.logSymptoms).toBeUndefined();
+    expect(p.enteredKind).toBe("acute");
+  });
+
+  it.each([
+    "im having a panic attach", "I'm having a panic atack", "having a panick attack", "i am having a pannic attak", "panik attck",
+    "im having a panic attacj", "paniic attack right now", "cant brethe", "I can't breathee", "cant even brethe", "cannot breath",
+  ])("typo-tolerant: %s", (m) => expect(detectAcuteDistress(m)).toBe(true));
+
+  it.each([
+    "I need to attach a file", "what is a panic attach", "I had a panic attack last night", "pain attack", "panic at the disco",
+    "I'm so tired", "my cramps are bad today", "snack attack",
+  ])("not acute: %s", (m) => expect(detectAcuteDistress(m)).toBe(false));
+
+  it("the symptom extractor can't disagree: the same detector runs over what it found", () => {
+    expect(acuteFromSymptomNames("im havin a paaniccc atttach", ["panic attack"])).toBe(true);
+    expect(acuteFromSymptomNames("I'm having cramps", ["cramps"])).toBe(false);
+    expect(acuteFromSymptomNames("I had a panic attack last night", ["panic attack"])).toBe(false);
+    expect(acuteFromSymptomNames("what is a panic attack?", ["panic attack"])).toBe(false);
+    expect(acuteFromSymptomNames("I want to die, panic attack", ["panic attack"])).toBe(false);
+  });
+
+  it.each(["acute", "checkin_open", "checkin_no", "post", "post_crisis"] as const)("no log card on any distress-mode turn: %s", (mode) => {
+    const meta: Record<string, unknown> = {
+      log_offer: { symptoms: [{ name: "panic attack", severity: 3 }], options: [{ days: 1, label: "Just today" }] },
+      conversation_starters: ["I'm trying", "It's hard to breathe", "Thank you for being here"],
+      cycle_day: 27, cycle_phase: "Luteal", logged_symptoms: ["x"], timezone: "Asia/Hebron",
+    };
+    applyDistressMeta(meta, mode);
+    expect(meta.log_offer).toBeUndefined();
+    if (mode === "acute") {
+      expect(meta.conversation_starters).toEqual(DISTRESS_CHIPS);
+      expect(meta.distress_mode).toBe("acute");
+    }
+    if (mode !== "post_crisis") expect(meta.cycle_day).toBeUndefined();
+  });
+
+  it("no chip may state a red-flag symptom, but the fixed chips and gentle chips are fine", () => {
+    for (const c of ["It's hard to breathe", "I have chest pain", "I feel faint", "I'm dizzy", "I can't breathe", "My chest is tight"]) {
+      expect(isRedFlagChipText(c)).toBe(true);
+    }
+    for (const c of [...DISTRESS_CHIPS, "I'm trying", "Thank you for being here", "Tell me more", "Yes, log it", "No thanks"]) {
+      expect(isRedFlagChipText(c)).toBe(false);
+    }
+  });
+
+  it("if she types a red-flag symptom herself, the 101 line comes first", () => {
+    for (const m of ["I can't breathe", "I have chest pain right now", "I feel faint", "my chest is tight and I can't breathe"]) {
+      expect(mentionsRedFlagSymptom(m)).toBe(true);
+      const p = planDistressTurn(m, T, null, now);
+      if (p?.type !== "reply") throw new Error("expected reply for " + m);
+      expect(p.message.split("\n\n")[0]).toBe(redFlagLine("IL"));
+      expect(p.message.split("\n\n")[0]).toContain("101");
+    }
+    // without a typed red flag the line stays at the end of the fixed reply
+    const plain = planDistressTurn(TYPO, T, null, now);
+    if (plain?.type !== "reply") throw new Error("expected reply");
+    expect(plain.message.endsWith(redFlagLine("IL"))).toBe(true);
+  });
+
+  it("chat-ai wires it all through the shared pieces, before the log card is built", () => {
+    const src = readFileSync("supabase/functions/chat-ai/index.ts", "utf8");
+    const promote = src.indexOf("acuteFromSymptomNames(userMessage");
+    const offer = src.indexOf("baseMeta.log_offer = {");
+    expect(promote).toBeGreaterThan(0);
+    expect(promote).toBeLessThan(offer);
+    expect(src.slice(src.lastIndexOf("if (offer.length", offer), offer)).toContain("!distressAiMode");
+    expect(src).toContain("applyDistressMeta(baseMeta, distressAiMode)");
+    expect(src.match(/isRedFlagChipText\(/g)?.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("chat-ai imports everything it uses from distress.ts", () => {
+  // Regression: a dropped import (stripDeepDive) would have crashed the self-harm AI reply path at runtime.
+  it("every distress.ts export that chat-ai calls is imported", () => {
+    const chat = readFileSync("supabase/functions/chat-ai/index.ts", "utf8");
+    const shared = readFileSync("supabase/functions/_shared/distress.ts", "utf8");
+    const exported = [...shared.matchAll(/^export (?:async )?(?:function|const) (\w+)/gm)].map((m) => m[1]);
+    const imp = chat.match(/import \{([^}]*)\} from "\.\.\/_shared\/distress\.ts"/);
+    expect(imp).not.toBeNull();
+    const imported = new Set(imp![1].split(",").map((x) => x.replace(/type\s+/, "").trim()).filter(Boolean));
+    const body = chat.replace(imp![0], "");
+    for (const name of exported) {
+      if (new RegExp(`\\b${name}\\(`).test(body)) expect(imported.has(name), `${name} is used but not imported`).toBe(true);
+    }
+    expect(imported.has("stripDeepDive")).toBe(true);
   });
 });
