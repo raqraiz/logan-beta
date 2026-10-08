@@ -45,13 +45,17 @@ type SortKey = "totalReferrals" | "activeReferrals" | "engagementScore";
 
 const PAGE = 1000;
 
-async function fetchAll<T>(table: "profiles" | "chat_messages" | "symptom_logs", columns: string): Promise<T[]> {
+interface Filterable {
+  eq: (column: string, value: string) => Filterable;
+  range: (from: number, to: number) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
+}
+
+async function fetchAll<T>(table: "profiles" | "chat_messages" | "symptom_logs", columns: string, onlyRole?: "user"): Promise<T[]> {
   const rows: T[] = [];
   for (let from = 0; ; from += PAGE) {
-    const { data, error } = await supabase
-      .from(table)
-      .select(columns)
-      .range(from, from + PAGE - 1);
+    const base = supabase.from(table).select(columns) as unknown as Filterable;
+    // her own messages only, never team messages
+    const { data, error } = await (onlyRole ? base.eq("role", onlyRole) : base).range(from, from + PAGE - 1);
     if (error) throw error;
     const chunk = (data ?? []) as unknown as T[];
     rows.push(...chunk);
@@ -77,7 +81,7 @@ export const ReferralLeaderboardTab = () => {
       try {
         const [profiles, chats, symptoms] = await Promise.all([
           fetchAll<ProfileRow>("profiles", "id, full_name, email, created_at, referred_by"),
-          fetchAll<{ user_id: string; created_at: string }>("chat_messages", "user_id, created_at"),
+          fetchAll<{ user_id: string; created_at: string }>("chat_messages", "user_id, created_at", "user"),
           fetchSymptomActivity(),
         ]);
 

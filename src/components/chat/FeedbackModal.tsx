@@ -8,6 +8,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Send } from "lucide-react";
 
+type RpcClient = { rpc: (fn: string, args?: Record<string, unknown>) => Promise<{ error: { message: string } | null }> };
+
 const CATEGORIES = [
   { value: "bug", label: "Bug report" },
   { value: "feature", label: "Feature request" },
@@ -25,33 +27,76 @@ export const FeedbackModal = ({ open, onOpenChange }: FeedbackModalProps) => {
   const [category, setCategory] = useState("general");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  // Set after Send when the text had health details. Until she answers, the details stay hidden from the team.
+  const [consentFor, setConsentFor] = useState<string | null>(null);
+
+  const reset = () => {
+    setMessage("");
+    setCategory("general");
+    setConsentFor(null);
+  };
 
   const handleSubmit = async () => {
     if (!message.trim() || !user) return;
 
     setSending(true);
-    const { error } = await supabase.from("user_feedback" as any).insert({
-      user_id: user.id,
-      category,
-      message: message.trim(),
+    // Saved on the server: it checks the text for health details first, and the feedback is always saved.
+    const { data, error } = await supabase.functions.invoke("submit-feedback", {
+      body: { category, message: message.trim() },
     });
-
     setSending(false);
 
-    if (error) {
+    if (error || !data?.id) {
       toast({ title: "Failed to send feedback", variant: "destructive" });
       return;
     }
 
     toast({ title: "Thanks for your feedback!", description: "It helps us make Logan better." });
-    setMessage("");
-    setCategory("general");
+    if (data.health_detected) {
+      setConsentFor(data.id as string);
+      return;
+    }
+    reset();
     onOpenChange(false);
   };
 
+  const answerConsent = async (allow: boolean) => {
+    const id = consentFor;
+    if (!id) return;
+    setSending(true);
+    const { error } = await (supabase as unknown as RpcClient).rpc("set_feedback_consent", { _id: id, _allow: allow });
+    setSending(false);
+    if (error) {
+      toast({ title: "We couldn't save your choice", description: "Your health details stay hidden.", variant: "destructive" });
+    }
+    reset();
+    onOpenChange(false);
+  };
+
+  // Closing without answering keeps the details hidden.
+  const handleOpenChange = (next: boolean) => {
+    if (!next && consentFor) reset();
+    onOpenChange(next);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        {consentFor ? (
+          <div className="space-y-4">
+            <DialogHeader>
+              <DialogTitle className="text-lg">You mentioned health details.</DialogTitle>
+              <DialogDescription className="text-base text-foreground">
+                Can a senior member of the Logan team read them?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button className="flex-1" disabled={sending} onClick={() => answerConsent(true)}>Yes, they can</Button>
+              <Button className="flex-1" variant="outline" disabled={sending} onClick={() => answerConsent(false)}>Keep them hidden</Button>
+            </div>
+            <p className="text-xs text-muted-foreground">If hidden, the team sees your feedback with health details removed.</p>
+          </div>
+        ) : (<>
         <DialogHeader>
           <DialogTitle className="text-lg">Send feedback</DialogTitle>
           <DialogDescription>
@@ -99,6 +144,7 @@ export const FeedbackModal = ({ open, onOpenChange }: FeedbackModalProps) => {
             </Button>
           </div>
         </div>
+        </>)}
       </DialogContent>
     </Dialog>
   );

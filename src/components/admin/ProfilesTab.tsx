@@ -180,6 +180,7 @@ export function ProfilesTab() {
             .from("chat_messages")
             .select("created_at, role")
             .eq("user_id", profile.id)
+            .neq("role", "system") // team messages are not hers
             .order("created_at", { ascending: true });
 
           if (userMessagesError) throw userMessagesError;

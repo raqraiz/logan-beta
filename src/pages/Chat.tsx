@@ -92,6 +92,7 @@ interface ChatMessage {
   metadata?: {
     onboarding_step?: number;
     onboarding_complete?: boolean;
+    team_message?: boolean;
     reaction_to?: string;
     input_type?: string;
     expecting_field?: string;
@@ -2128,9 +2129,15 @@ const Chat = () => {
                       className={`relative max-w-[85%] rounded-2xl px-4 py-3 ${
                         message.role === "user"
                           ? "bg-[var(--user-bubble)] text-[var(--user-bubble-fg)]"
-                          : "bg-card text-card-foreground border border-border"
+                          : message.role === "system" && message.metadata?.team_message
+                            ? "bg-card text-card-foreground border border-primary/40"
+                            : "bg-card text-card-foreground border border-border"
                       } ${searching && isMatch ? "ring-2 ring-primary" : ""}`}
                     >
+                      {/* A note from the Logan team (sent by a person, not Logan the AI) */}
+                      {message.role === "system" && message.metadata?.team_message && (
+                        <p className="mb-1 text-xs font-semibold text-primary">Message from the Logan team</p>
+                      )}
                       {/* Cycle visual first for insight messages — recomputed live
                           from participant data; stored metadata is the fallback while
                           participant data loads (prevents flicker on initial open). */}

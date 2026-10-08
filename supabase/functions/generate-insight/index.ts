@@ -193,6 +193,7 @@ serve(async (req) => {
       .from("chat_messages")
       .select("content, role")
       .eq("user_id", user.id)
+      .in("role", ["user", "assistant"]) // team messages (role system) are never input
       .neq("message_type", "checkin")
       .order("created_at", { ascending: false })
       .limit(5);

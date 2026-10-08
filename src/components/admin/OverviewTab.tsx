@@ -856,7 +856,7 @@ export const OverviewTab = () => {
         supabase.from("chat_messages").select("*", { count: "exact", head: true })
           .eq("role", "user").gte("created_at", fromIso).lte("created_at", toIso),
         supabase.from("chat_messages").select("*", { count: "exact", head: true })
-          .neq("role", "user").gte("created_at", fromIso).lte("created_at", toIso),
+          .eq("role", "assistant").gte("created_at", fromIso).lte("created_at", toIso),
       ]);
       if (msgsRes.error) throw msgsRes.error;
       if (loganRes.error) throw loganRes.error;
