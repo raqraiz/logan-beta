@@ -69,6 +69,8 @@
 - [x] Acute-distress mode: no hormonal attribution, no auto-logging, red-flag line, localized emergency info.
 - [x] Self-harm path: explicit phrases get the full reply, ambiguous phrases get a gentle check-in, and the mode lasts the whole session.
 - [x] Live-test fixes: log saves on "yes", announcements paused during and 6h after distress, check-in chips, hedged hormone wording.
+- [x] Heavy-mood tier (decision): sadness and intrusive thoughts get their own mode between normal chat and acute/self-harm. Precedence, highest first: self-harm > acute > heavy mood > normal chat. Brief warm reply, no phase/cycle day/hormone attribution, no See more, no partner mentions, fixed safe chips, one gentle safety question when intrusive thoughts matched (a yes goes to the existing self-harm mode), and the existing tap-to-log card with Low mood when she asks to log (shown once, never auto-saved). Lasts 6 hours; "log it" does not end it. Counts only (kind heavy_mood), no user ID. Needs the chat-ai deploy and the 20261008230000 migration.
+- [x] Chip tone filter on every emotional turn: no dismissive or impatient chips ("Wish it would hurry up").
 - [ ] Follow-up (separate PR): Hebrew versions of the fixed replies, check-in and red-flag line, for Hebrew messages. Needs native review before shipping.
 
 ## Together words in other languages

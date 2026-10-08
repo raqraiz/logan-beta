@@ -7,7 +7,7 @@ interface MaybeDistressMessage {
   metadata?: unknown;
 }
 
-const FLAGS = ["distress_mode", "distress_checkin", "distress_post", "distress_log_ask", "distress_logged_ids", "distress_post_crisis"];
+const FLAGS = ["distress_mode", "distress_checkin", "distress_post", "distress_log_ask", "distress_logged_ids", "distress_post_crisis", "distress_heavy_exit"];
 
 /** True while a distress-mode message is the latest of its kind within the last 6 hours (newest distress message + 6h). */
 export function isDistressQuiet(messages: MaybeDistressMessage[], now: number = Date.now()): boolean {

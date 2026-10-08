@@ -178,6 +178,65 @@ export function detectAcuteDistress(text: string): boolean {
   return true;
 }
 
+// ───────────────────────── Heavy mood (between normal chat and acute / self-harm) ─────────────────────────
+// Low mood and intrusive thoughts. Err broad: a false positive is acceptable, a miss is not.
+// Precedence, highest first: self-harm > acute > heavy mood > normal chat. Self-harm and acute are checked first in
+// planDistressTurn, so these detectors never need to out-rank them.
+
+const LOW_INTENSIFIER = "so|really|very|extremely|incredibly|super|truly|deeply|completely|totally";
+const LOW_WORD = "sad|down|empty|hopeless|miserable|depressed|worthless|broken|numb|lonely|alone";
+export const HEAVY_LOW_MOOD_PATTERNS: RegExp[] = [
+  new RegExp(`\\b(?:${LOW_INTENSIFIER})\\s+(?:\\w+\\s+)?(?:${LOW_WORD})\\b`),
+  new RegExp(`\\b(?:feel|feels|feeling|i'?m|im|i am)\\s+(?:\\w+\\s+)?(?:sad|empty|numb|hopeless|worthless|miserable|depressed|broken)\\b`),
+  /\b(?:everything|life|the world|it all)\s+(?:feels?|seems?|is)\s+(?:\w+\s+)?(?:dark|bleak|pointless|hopeless|empty|meaningless|too much|heavy)\b/,
+  /\bcan'?t\s+stop\s+cry(?:ing)?\b/,
+  /\bcrying\s+(?:all\s+(?:the\s+)?(?:time|day)|non\s*-?stop|constantly|for hours)\b/,
+  /\bhate\s+(?:my\s*self|myself|my life)\b/,
+  /\bnothing\s+(?:matters|helps|feels?\s+(?:good|right))\b/,
+  /\b(?:i'?m|im|i am)\s+(?:such\s+)?a\s+(?:failure|burden|mess)\b/,
+  /\b(?:feel|feeling)\s+(?:like\s+)?(?:a\s+)?(?:failure|burden)\b/,
+  /\bno\s*(?:one|body)\s+(?:cares|loves me)\b/,
+  /\b(?:dark|bad)\s+place\b/,
+  // Hebrew
+  "עצובה", "עצוב לי", "חסרת תקווה", "חסר תקווה", "לא מפסיקה לבכות", "לא מפסיק לבכות", "ריקנות", "מרגישה ריקה", "שונאת את עצמי", "שונא את עצמי",
+].map((p) => (typeof p === "string" ? new RegExp(p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) : p));
+
+export const HEAVY_INTRUSIVE_PATTERNS: RegExp[] = [
+  /\b(?:bad|dark|scary|awful|horrible|terrible|intrusive|negative|disturbing|racing)\s+thoughts?\b/,
+  /\bcan'?t\s+stop\s+(?:the\s+|these\s+|those\s+|my\s+|all\s+the\s+)?(?:\w+\s+)?thoughts?\b/,
+  /\bthoughts?\s+(?:keep|keeps|won'?t|wont|are)\s+(?:\w+\s+)?(?:coming|pouring|racing|looping|spiral\w*|stop|going|flooding)\b/,
+  /\bkeeps?\s+(?:pouring|flooding)\s+in\b/,
+  /\bmy\s+(?:mind|head)\s+(?:won'?t|wont|doesn'?t|does not)\s+(?:stop|shut up|quiet down|turn off)\b/,
+  /\bcan'?t\s+get\s+(?:these\s+|the\s+|those\s+)?thoughts?\s+out\b/,
+  // Hebrew
+  "מחשבות רעות", "מחשבות שחורות", "מחשבות מפחידות", "מחשבות טורדניות", "לא מפסיקה לחשוב", "לא מפסיק לחשוב",
+].map((p) => (typeof p === "string" ? new RegExp(p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) : p));
+
+function heavyContextOk(t: string): boolean {
+  if (INFO_Q_RE.test(t) && !/\b(?:i'?m|im|i am|my)\b/.test(t)) return false;
+  if (PAST_RE.test(t) && !NOW_RE.test(t)) return false;
+  return true;
+}
+/** Intrusive-thought language. This is the part that adds the gentle safety question. */
+export function detectIntrusiveThoughts(text: string): boolean {
+  const t = norm(text);
+  return !!t && !detectSelfHarm(t) && HEAVY_INTRUSIVE_PATTERNS.some((p) => p.test(t)) && heavyContextOk(t);
+}
+/** Low mood or intrusive thoughts, in the present tense. */
+export function detectHeavyMood(text: string): boolean {
+  const t = norm(text);
+  if (!t || detectSelfHarm(t)) return false;
+  if (!HEAVY_LOW_MOOD_PATTERNS.some((p) => p.test(t)) && !HEAVY_INTRUSIVE_PATTERNS.some((p) => p.test(t))) return false;
+  return heavyContextOk(t);
+}
+
+/** "I want to log", "log it for me", "just log it". Not a question about past logs. */
+const LOG_ASK_RE = /\b(?:i\s+(?:want|wanna|need)\s+to\s+log|log\s+(?:it|this|that|how i feel|my mood|today)|(?:please\s+)?log\s+for me|just\s+log\s+it|track\s+(?:it|this))\b|^(?:please\s+)?log\b/;
+export function detectLogRequest(text: string): boolean {
+  const t = norm(text);
+  return !!t && LOG_ASK_RE.test(t) && !/\b(?:did i|have i|what did|show me|history)\b/.test(t);
+}
+
 // Err broad: a false positive is acceptable, a miss is not.
 // Tier 1, explicit: gets the full self-harm reply straight away.
 export const SELF_HARM_EXPLICIT_PATTERNS: RegExp[] = [
@@ -294,6 +353,20 @@ export const CHIP_TALK = "Talk it through";
 export const CHIP_LOG_YES = "Yes, log it";
 export const CHIP_LOG_NO = "No thanks";
 export const DISTRESS_CHIPS = [CHIP_BREATHE, CHIP_CALMER, CHIP_TALK];
+
+// Heavy mood: fixed chips, wording for the founder's approval before merge.
+export const CHIP_HEAVY_TALK = "I want to talk about it";
+export const CHIP_HEAVY_LOG = "Just log it";
+export const CHIP_HEAVY_OK = "I'm okay for now";
+export const HEAVY_CHIPS = [CHIP_HEAVY_TALK, CHIP_HEAVY_LOG, CHIP_HEAVY_OK];
+/** Added by the server after the AI reply when intrusive-thought language matched. */
+export const HEAVY_SAFETY_QUESTION = "I want to ask you something directly, because you matter: are any of these thoughts about hurting yourself or not wanting to be alive?";
+/** Only used when the filters leave nothing of the AI reply. */
+export const HEAVY_FALLBACK = "I'm so sorry it feels this heavy. I'm here, and you don't have to sort it out alone right now.";
+export const HEAVY_LOG_LINE = "Here's what you shared. Tap the card if you'd like it saved.";
+export const HEAVY_CARD_ABOVE = "The card above is ready whenever you want it. Tap it if you'd like it saved.";
+export const HEAVY_OK_REPLY = "I'm glad. I'm here whenever you want to talk or log something.";
+export const HEAVY_LOG_SYMPTOM = { name: "Low mood", severity: 3 };
 /** Neutral chips under the post-distress "why" answer: never one that pushes a hormonal conclusion. */
 export const POST_CHIPS = ["What can I do", CHIP_TALK];
 
@@ -412,7 +485,9 @@ export function selfHarmSafeReply(region: RegionCode | null): string {
 
 export type DistressKind = "acute" | "self_harm";
 /** AI-answered turns: still in a mode, just after distress, or after a check-in. */
-export type DistressAiMode = DistressKind | "post" | "checkin_no" | "checkin_open" | "post_crisis" | "acute_exit";
+export type DistressAiMode = DistressKind | "post" | "checkin_no" | "checkin_open" | "post_crisis" | "acute_exit" | "heavy_mood";
+/** What the count-only analytics can record. */
+export type CountKind = DistressKind | "heavy_mood";
 
 export interface LastAssistant {
   metadata?: Record<string, unknown> | null;
@@ -434,8 +509,10 @@ export type DistressPlan =
       mode: DistressAiMode;
       /** Self-harm mode only: safe/calm confirmations so far, saved on the reply so they carry to the next turn. */
       carry?: { distress_safe?: true; distress_calm?: true };
-      /** Post-crisis mode only: markers saved on the reply (quiet line, window end). */
+      /** Post-crisis and heavy-mood modes: markers saved on the reply (quiet line, window end, flags, log card). */
       metadata?: Record<string, unknown>;
+      /** Set when this turn newly enters a mode (for the count-only analytics). */
+      enteredKind?: CountKind;
     }
   | null;
 
@@ -459,6 +536,15 @@ export interface PlanOptions {
    * post-distress "why" handling alive however many normal turns came in between.
    */
   acuteEpisodeAt?: string | null;
+  /** Heavy mood: her previous (up to 2) messages before this one, so "I want to log" a turn ago still counts. */
+  recentUserTexts?: string[];
+  /** Heavy mood: a log card was already shown in the last few assistant messages, so she is pointed to it, not shown a second. */
+  logCardRecentlyShown?: boolean;
+}
+
+/** The tap-to-log card for a heavy-mood turn. Cycle fields are filled in by the caller; nothing is saved until she taps. */
+export function heavyLogOffer(): Record<string, unknown> {
+  return { symptoms: [HEAVY_LOG_SYMPTOM], options: [{ label: "Just today", days: 1 }], cycle_day: null, cycle_phase: null };
 }
 
 /** The quiet line shown under Logan's replies in post-crisis mode. */
@@ -635,6 +721,51 @@ export function planDistressTurn(
   // 9. Still in acute mode but nothing above matched: the AI answers under strict rules.
   if (mode === "acute") return { type: "ai", mode: "acute" };
 
+  // 9b. Heavy mood (below self-harm and acute in precedence, so everything above already had its say).
+  // It lasts 6 hours. "Log it" never ends it; a calm signal, "I'm okay for now" or a factual cycle question does.
+  const heavyActive = md.distress_mode === "heavy_mood" && age <= MODE_WINDOW_MS;
+  const heavyNow = detectHeavyMood(userText);
+  if (heavyActive || heavyNow) {
+    const keep = { distress_mode: "heavy_mood", conversation_starters: HEAVY_CHIPS } as Record<string, unknown>;
+    // She answered the safety question.
+    if (heavyActive && md.distress_heavy_ask === true) {
+      if (CHECKIN_YES_RE.test(t) || detectSelfHarmAmbiguous(userText)) {
+        return {
+          type: "reply",
+          message: selfHarmReply(region, userText, false),
+          metadata: { distress_mode: "self_harm", distress_safety_ask: true, conversation_starters: [CHIP_TALK] },
+          enteredKind: "self_harm",
+        };
+      }
+    }
+    if (heavyActive && !heavyNow && (t === CHIP_HEAVY_OK.toLowerCase() || detectCalm(userText))) {
+      return { type: "reply", message: HEAVY_OK_REPLY, metadata: { distress_heavy_exit: true } };
+    }
+    if (heavyActive && !heavyNow && isFactualCycleQuestion(userText)) return { type: "ai", mode: "acute_exit" };
+    const asked = md.distress_heavy_asked === true;
+    const answeredNo = heavyActive && md.distress_heavy_ask === true && CHECKIN_NO_RE.test(t);
+    const noEarlier = md.distress_heavy_no === true || answeredNo;
+    const intrusive = detectIntrusiveThoughts(userText);
+    // Once per episode, and again only if intrusive thoughts come up after she said no.
+    const askSafety = intrusive && (!asked || (noEarlier && md.distress_heavy_ask !== true));
+    const carried: Record<string, unknown> = {
+      ...keep,
+      ...(asked || askSafety ? { distress_heavy_asked: true } : {}),
+      ...(noEarlier && !askSafety ? { distress_heavy_no: true } : {}),
+      ...(askSafety ? { distress_heavy_ask: true } : {}),
+    };
+    const logAsk = [userText, ...(opts.recentUserTexts ?? []).slice(-2)].some((x) => detectLogRequest(x));
+    const wantsCard = logAsk && !opts.logCardRecentlyShown;
+    const enteredKind: CountKind | undefined = heavyActive ? undefined : "heavy_mood";
+    // A bare log request while already in heavy mood is answered with a fixed line: no AI, so no chance of a false "logged".
+    if (heavyActive && !heavyNow && detectLogRequest(userText)) {
+      return opts.logCardRecentlyShown
+        ? { type: "reply", message: HEAVY_CARD_ABOVE, metadata: carried }
+        : { type: "reply", message: HEAVY_LOG_LINE, metadata: { ...carried, log_offer: heavyLogOffer() } };
+    }
+    return { type: "ai", mode: "heavy_mood", metadata: { ...carried, ...(wantsCard ? { log_offer: heavyLogOffer() } : {}) }, enteredKind };
+  }
+
   // 10. Right after distress ended, and only if she asks why it happened: the hedged "may play a part" answer.
   // Any other message (for example "what happens in the luteal phase?") is normal chat and is never touched.
   // The episode stays "open" for the whole 6-hour window, however many normal turns came in between. The last reply
@@ -664,6 +795,9 @@ export function distressPromptBlock(mode: DistressAiMode, region: RegionCode | n
   if (mode === "self_harm") {
     return `\n\nRUNTIME CONTEXT (this turn only) — SELF-HARM SAFETY MODE: She recently said something that suggests she may be thinking about harming herself. Stay with her. NO cycle talk of any kind: no day, no phase, no hormones. No advice lists, no logging, no partner suggestions, no "---" deep dive. Keep it short and warm. Gently keep the crisis line and ${emergencyPhrase(region, "self_harm")} within reach. Ask how she is doing right now and whether she is safe. Never say it will pass, never minimize.`;
   }
+  if (mode === "heavy_mood") {
+    return `\n\nRUNTIME CONTEXT (this turn only) — HEAVY MOOD: She shared that she is feeling very low, or that distressing thoughts will not stop. Reply in 2 to 3 short, warm sentences about what she actually said, in plain language. Do not tell her what she feels or why. Do NOT mention her cycle, cycle day, phase or hormones, and never attribute her mood or thoughts to them. No "---" deep dive, no advice lists, no partner or other-person suggestions, and do not offer or promise to log anything (the app handles that). Never say it will pass or minimize. Not medical advice.`;
+  }
   return `\n\nRUNTIME CONTEXT (this turn only) — ACUTE DISTRESS MODE: She is in acute distress (for example a panic attack). Reply in at most 4 short sentences, plain warm language, no clinical terms. Offer one or two grounding steps (slow breathing with a longer exhale, or naming things she can see or touch). Do NOT mention her cycle day, phase, or hormones, and never attribute this to progesterone, estrogen, or her cycle. No "---" deep dive. Do not suggest logging anything. Do not suggest messaging a partner or anyone else. Stay with her.`;
 }
 
@@ -684,6 +818,7 @@ const HEDGED_HORMONE_SENTENCE = "Progesterone may be dropping around this point 
 const TRIGGER_WORD_RE = /\b(?:stress\w*|sleep|caffeine|skipped meals?|a lot going on|no clear reason)\b/i;
 const TRIGGERS_SENTENCE = "Common triggers are stress, poor sleep, caffeine, skipped meals, a lot going on, or sometimes no clear reason.";
 const HER_DAY_RE = /\b(?:on|since|at|it'?s)\s+day\s*\d+\b|\byour\s+day\s*\d+\b/i;
+const HEAVY_CYCLE_RE = /\b(?:luteal|follicular|ovulat\w*|menstrual\w*|premenstrual|pms|pmdd|cycle|phase|phases)\b/i;
 const PRONOUN_START_RE = /^(?:it|this|that|these|those|they|which|so)\b/i;
 export function sanitizeHormoneClaims(text: string, mode: DistressAiMode): string {
   if (mode === "post_crisis") return removeMoodAttribution(text);
@@ -692,7 +827,7 @@ export function sanitizeHormoneClaims(text: string, mode: DistressAiMode): strin
     // A sentence that only refers back to a removed one ("It makes your brain much more reactive.") goes too.
     if (dropFollowing && PRONOUN_START_RE.test(sentence.trim())) return "";
     dropFollowing = false;
-    const hormone = HORMONE_RE.test(sentence);
+    const hormone = HORMONE_RE.test(sentence) || (mode === "heavy_mood" && (HEAVY_CYCLE_RE.test(sentence) || HER_DAY_RE.test(sentence)));
     if (hormone && mode === "post" && HEDGE_RE.test(sentence) && !/\b(?:the|a)\s+(?:sharp |big |massive |sudden )?(?:drop|fall|dip|crash)\b/i.test(sentence)) return sentence;
     if (hormone || (mode === "post" && HER_DAY_RE.test(sentence))) {
       dropFollowing = true;
@@ -775,6 +910,9 @@ export function applyDistressMeta(meta: Record<string, unknown>, mode: DistressA
   if (mode === "acute") {
     meta.distress_mode = "acute";
     meta.conversation_starters = DISTRESS_CHIPS;
+  } else if (mode === "heavy_mood") {
+    meta.distress_mode = "heavy_mood";
+    meta.conversation_starters = HEAVY_CHIPS;
   } else if (mode === "checkin_open") {
     meta.distress_checkin = true;
   } else if (mode === "post") {
@@ -810,4 +948,28 @@ export function ensureSubstance(filtered: string, raw: string, userText: string,
   if (isFactualCycleQuestion(userText) && raw.trim()) return { text: raw.trim(), kind: "raw" };
   if (mode === "acute") return { text: acuteReply(region, userText, false), kind: "fixed" };
   return { text: "I'm here with you. What's on your mind?", kind: "fixed" };
+}
+
+// ───────────────────────── Heavy-mood reply assembly and chip tone ─────────────────────────
+
+/**
+ * Final heavy-mood reply: the AI text with the deep dive and every cycle or hormone sentence removed, then the fixed
+ * lines. The safety question is added here (not by the model) so it can never be dropped. The log line is added only
+ * when a card is attached, and says nothing was saved.
+ */
+export function assembleHeavyMoodReply(raw: string, opts: { askSafety: boolean; hasCard: boolean }): string {
+  let text = sanitizeHormoneClaims(stripDeepDive(raw || ""), "heavy_mood").trim();
+  if (!text) text = HEAVY_FALLBACK;
+  if (opts.hasCard) text += `\n\n${HEAVY_LOG_LINE}`;
+  if (opts.askSafety) text += `\n\n${HEAVY_SAFETY_QUESTION}`;
+  return text;
+}
+
+/** Chips that brush off or hurry how she feels. Blocked on every emotional turn. */
+const DISMISSIVE_CHIP_RE = /\b(?:hurry|wish it|wish this|get it over|over with|snap out|cheer up|bright side|at least|could be worse|whatever|get over it|move on|just relax|calm down|not a big deal|no big deal|so what|can'?t wait)\b/i;
+export function isDismissiveChip(text: string): boolean {
+  return DISMISSIVE_CHIP_RE.test(norm(text));
+}
+export function filterToneChips(chips: string[]): string[] {
+  return chips.filter((c) => !isDismissiveChip(c));
 }
