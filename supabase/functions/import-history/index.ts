@@ -540,7 +540,7 @@ serve(async (req) => {
     } else {
       // screenshot mode — use Gemini vision
       detectedSource = "screenshot";
-      const extracted = await extractFromScreenshots(admin, imagePaths);
+      const extracted = await extractFromScreenshots(admin as any, imagePaths);
       if (!extracted) {
         await finalize({ status: "failed", error_message: "Vision extraction failed" });
         return new Response(JSON.stringify({ error: "Couldn't read those screenshots. Try clearer images or fewer per upload." }), {

@@ -74,7 +74,7 @@ async function analyzeUser(admin: ReturnType<typeof createClient>, userId: strin
   if (!participant || participant.life_stage !== "cycling") return { skipped: "not_cycling" };
 
   const { phase: expected, day } = expectedPhase(
-    participant.last_period_start, participant.cycle_length_days ?? 28,
+    participant.last_period_start as string | null, (participant.cycle_length_days as number | null) ?? 28,
   );
 
   // Pull last 35 days of Whoop trackers
