@@ -20,7 +20,7 @@ export const themeLabel = (t: string): string => THEMES.find((x) => x.value === 
 export type TextState = "none" | "hidden" | "shared" | "before_question";
 export interface FeedbackItem {
   id: string; text: string; state: TextState; firstName: string | null; lastInitial: string | null;
-  userId: string | null; channel: string; theme: Theme; createdAt: string; handled: boolean;
+  userId: string | null; channel: string; theme: Theme; createdAt: string; handled: boolean; topic: string | null;
 }
 export interface FeedbackCounts { tabs: Record<FeedbackTab, number>; themes: Record<Theme, number>; month: Record<Theme, number> }
 export interface WaitingDraft {
@@ -32,7 +32,7 @@ export const fetchFeedback = async (tab: FeedbackTab, theme: Theme | null): Prom
   ((await call<Row[]>("admin_feedback_list", { _tab: tab, _theme: theme })) ?? []).map((r) => ({
     id: String(r.id), text: String(r.text_shown ?? ""), state: String(r.text_state) as TextState,
     firstName: s(r.first_name), lastInitial: s(r.last_initial), userId: s(r.user_id), channel: String(r.channel ?? "in_app"),
-    theme: String(r.theme ?? "other") as Theme, createdAt: String(r.created_at), handled: Boolean(r.handled),
+    theme: String(r.theme ?? "other") as Theme, createdAt: String(r.created_at), handled: Boolean(r.handled), topic: s(r.topic),
   }));
 
 const emptyThemes = (): Record<Theme, number> => ({ bug: 0, feature: 0, praise: 0, content: 0, other: 0 });
@@ -101,11 +101,21 @@ export const stateLabel = (state: TextState, superAdmin: boolean): string | null
   return null;
 };
 
-/** Left in the starter for the writer to replace. Sending is blocked while it is still there. */
+/** Sending is blocked only if this text is still literally in the reply. */
 export const REPLY_PLACEHOLDER = "[what it's about]";
 
-export const replyStarter = (firstName: string | null, state: TextState = "none"): string => {
-  const first = `${firstName ? `Hi ${firstName}, ` : "Hi, "}thank you for your feedback! We read your note about ${REPLY_PLACEHOLDER}.`;
+/** Used in the starter when a note has no saved topic. */
+const THEME_TOPIC: Record<Theme, string> = {
+  bug: "the issue you hit",
+  feature: "your feature idea",
+  praise: "your kind words",
+  content: "the content",
+  other: "what you shared",
+};
+
+export const replyStarter = (firstName: string | null, state: TextState = "none", topic: string | null = null, theme: Theme = "other"): string => {
+  const about = topic?.trim() || THEME_TOPIC[theme] || THEME_TOPIC.other;
+  const first = `${firstName ? `Hi ${firstName}, ` : "Hi, "}thank you for your feedback! We read your note about ${about}.`;
   return state === "hidden"
     ? `${first}\n\nYou chose to keep some health details private, so we didn't see those parts. That's completely fine.`
     : first;

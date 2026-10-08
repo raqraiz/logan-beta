@@ -42,8 +42,14 @@ Deno.serve(async (req) => {
     consent_copy_version: COPY_VERSION,
     theme: result.theme ?? THEME_FROM_CATEGORY[category],
     channel: "in_app",
+    topic: result.topic, // from the cleaned text only; null when it failed
   };
-  const { data, error } = await service.from("user_feedback").insert(row).select("id").single();
+  let { data, error } = await service.from("user_feedback").insert(row).select("id").single();
+  if (error) {
+    // Her feedback comes first: if the save failed (for example before the topic column exists), try once more without the topic.
+    const { topic: _topic, ...withoutTopic } = row;
+    ({ data, error } = await service.from("user_feedback").insert(withoutTopic).select("id").single());
+  }
   if (error || !data) { console.error("[submit-feedback] save failed", error?.code ?? "unknown"); return json({ error: "save_failed" }, 500); }
   return json({ id: data.id, health_detected: result.healthDetected });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { displayName, replyStarter, stateLabel, timeAgo } from "./feedback";
+import { REPLY_PLACEHOLDER, displayName, replyStarter, stateLabel, timeAgo } from "./feedback";
 
 describe("feedback display", () => {
   it("shows first name and last initial to super admins, first name only to admins", () => {
@@ -23,14 +23,24 @@ describe("feedback display", () => {
     expect(timeAgo("2026-10-12T09:00:00Z", now)).toBe("3h ago");
     expect(timeAgo("2026-10-09T12:00:00Z", now)).toBe("3d ago");
   });
-  it("starter has no em dash and uses her first name", () => {
-    expect(replyStarter("Dana")).toBe("Hi Dana, thank you for your feedback! We read your note about [what it's about].");
-    expect(replyStarter(null)).toMatch(/^Hi, thank you for your feedback! We read your note about \[what it's about\]\.$/);
-    expect(replyStarter("Dana", "shared")).toBe(replyStarter("Dana"));
-    expect(replyStarter("Dana", "hidden")).toBe(
-      "Hi Dana, thank you for your feedback! We read your note about [what it's about].\n\nYou chose to keep some health details private, so we didn't see those parts. That's completely fine.",
+  it("starter uses the topic, falls back to the theme, and never blocks send when filled", () => {
+    expect(replyStarter("Dana", "none", "the new cycle chart", "feature")).toBe(
+      "Hi Dana, thank you for your feedback! We read your note about the new cycle chart.",
     );
-    expect(replyStarter("Dana", "hidden")).not.toMatch(/[—–]/);
-    expect(replyStarter("Dana")).not.toMatch(/[—–]/);
+    expect(replyStarter("Dana", "none", null, "bug")).toContain("about the issue you hit.");
+    expect(replyStarter("Dana", "none", null, "feature")).toContain("about your feature idea.");
+    expect(replyStarter("Dana", "none", null, "praise")).toContain("about your kind words.");
+    expect(replyStarter("Dana", "none", null, "content")).toContain("about the content.");
+    expect(replyStarter("Dana", "none", "  ", "other")).toContain("about what you shared.");
+    expect(replyStarter(null, "none", "the login screen", "bug")).toMatch(/^Hi, thank you/);
+    expect(replyStarter("Dana", "none", null, "other")).not.toContain(REPLY_PLACEHOLDER);
+  });
+  it("hidden health details add the second paragraph, with no em dashes anywhere", () => {
+    const hidden = replyStarter("Dana", "hidden", "the new cycle chart", "feature");
+    expect(hidden).toBe(
+      "Hi Dana, thank you for your feedback! We read your note about the new cycle chart.\n\nYou chose to keep some health details private, so we didn't see those parts. That's completely fine.",
+    );
+    expect(hidden).not.toMatch(/[\u2014\u2013]/);
+    expect(replyStarter("Dana", "shared", "x y z", "bug")).not.toContain("health details private");
   });
 });
