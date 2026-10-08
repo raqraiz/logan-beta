@@ -11,6 +11,7 @@ export interface WeekToDate { weekStart: string; activeWeek: number; newWeek: nu
 export interface NeedsYou {
   newFeedback: number; tipsWaiting: number; tipsReported: number;
   messageFailures7d: number | null; newReferrersWeek: number; linkClicksTotal: number | null; linkCount: number | null;
+  clickCountingSince: string | null;
 }
 export interface TogetherStrip {
   womenJoined: number; symptoms10Plus: number; tipsLive: number; tipsWaiting: number; tipsReported: number; newWordsWeek: number;
@@ -43,6 +44,7 @@ export const fetchNeedsYou = async (): Promise<NeedsYou> => {
     newFeedback: n(r?.new_feedback), tipsWaiting: n(r?.tips_waiting), tipsReported: n(r?.tips_reported),
     messageFailures7d: nn(r?.message_failures_7d), newReferrersWeek: n(r?.new_referrers_week),
     linkClicksTotal: nn(r?.link_clicks_total), linkCount: nn(r?.link_count),
+    clickCountingSince: r?.click_counting_since ? String(r.click_counting_since) : null,
   };
 };
 export const fetchTogetherStrip = async (): Promise<TogetherStrip> => {
@@ -65,8 +67,8 @@ export const fetchSignupSources = async (from: string | null, to: string, by: "c
   ((await call<Row[]>("admin_signup_sources", { _from: from, _to: to, _by: by, _stage: stage })) ?? []).map((r) => ({
     source: String(r.source), clicks: nn(r.clicks), signups: n(r.signups), active14Base: n(r.active_14d_base), active14: n(r.active_14d),
   }));
-export const fetchCampaignLinks = async (): Promise<CampaignLink[]> =>
-  ((await call<Row[]>("admin_campaign_links")) ?? []).map((r) => ({
+export const fetchCampaignLinks = async (from: string | null, to: string): Promise<CampaignLink[]> =>
+  ((await call<Row[]>("admin_campaign_links", { _from: from, _to: to })) ?? []).map((r) => ({
     slug: String(r.slug), targetUrl: String(r.target_url), campaign: (r.utm_campaign as string) ?? null,
     source: (r.utm_source as string) ?? null, medium: (r.utm_medium as string) ?? null,
     clicks: n(r.clicks), signups: n(r.signups), createdAt: String(r.created_at),

@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { UtmLinkBuilder } from "@/components/admin/UtmLinkBuilder";
 import { useBackOffice } from "@/components/backoffice/BackOfficeShell";
 import { Card, CardTitle, Failed, GhostButton, MainButton, PillToggle, useLoad } from "@/components/backoffice/parts";
-import { fetchCampaignLinks, fetchSignupSources, fetchWeeklyMeasurement } from "@/lib/backOffice/api";
+import { fetchCampaignLinks, fetchNeedsYou, fetchSignupSources, fetchWeeklyMeasurement } from "@/lib/backOffice/api";
 import { active14, cell, rangeDates, returnedPct, weekLabel } from "@/lib/backOffice/math";
 import { LIFE_STAGE_LABELS, type LifeStageKey } from "@/lib/metrics/lifeStage";
 
@@ -23,14 +23,19 @@ export default function GrowthPage() {
 
   const sources = useLoad(() => fetchSignupSources(from, to, by, st), [from, to, by, st]);
   const weekly = useLoad(() => fetchWeeklyMeasurement(from, to, st), [from, to, st]);
-  const links = useLoad(fetchCampaignLinks, []);
+  const links = useLoad(() => fetchCampaignLinks(from, to), [from, to]);
+  const since = useLoad(fetchNeedsYou, []);
 
   if (role !== "super_admin") return <Navigate to="/admin" replace />;
 
   const copy = async (slug: string) => {
     try { await navigator.clipboard.writeText(`https://asklogan.ai/s/${slug}`); setCopied(slug); setTimeout(() => setCopied(""), 1500); } catch { /* clipboard blocked */ }
   };
-  const allClicksZero = !!links.data && links.data.length > 0 && links.data.every((l) => l.clicks === 0);
+  // Clicks only exist from the day counting started; say so when the chosen range reaches back before that.
+  const sinceDay = since.data?.clickCountingSince ? since.data.clickCountingSince.slice(0, 10) : null;
+  const sinceNote = sinceDay && (from === null || from < sinceDay)
+    ? `Clicks counted from ${new Date(`${sinceDay}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}.`
+    : "";
 
   return (
     <>
@@ -68,7 +73,7 @@ export default function GrowthPage() {
           </div>
         )}
         <ul className="mt-3 space-y-1 text-xs text-[#6E675F]">
-          <li>Clicks are each link's lifetime count, so they ignore the date range{st ? " and are not available by life stage (—)" : ""}.{allClicksZero ? " They read 0 because clicks aren't being counted yet." : ""}</li>
+          <li>Clicks are link clicks inside the date range{st ? ", and are not available by life stage (—)" : ""}.{sinceNote ? ` ${sinceNote}` : ""}</li>
           <li>Active 14d: signups active again within 14 days of joining, out of those whose 14 days are over. — means none have finished yet.</li>
         </ul>
       </Card>
