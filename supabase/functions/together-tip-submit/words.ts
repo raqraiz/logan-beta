@@ -37,7 +37,8 @@ Library list (one per line):`;
 
 type Verdict = { decision: string; category: string; library_match: string };
 
-async function callAI(instructions: string, schema: object, name: string, word: string): Promise<any | null> {
+// One gateway call for both jobs (checking a word, suggesting an existing one). Returns the parsed JSON or null.
+async function runAi(instructions: string, schemaName: string, schema: unknown, input: string): Promise<any | null> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), AI_TIMEOUT_MS);
   try {
@@ -45,8 +46,8 @@ async function callAI(instructions: string, schema: object, name: string, word: 
       method: "POST", signal: ctrl.signal,
       headers: { "Lovable-API-Key": Deno.env.get("LOVABLE_API_KEY") ?? "", "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
       body: JSON.stringify({
-        model: "openai/gpt-6-astra", instructions, input: word, stream: true, store: false, reasoning: { effort: "low" },
-        text: { format: { type: "json_schema", name, strict: true, schema } },
+        model: "openai/gpt-6-astra", instructions, input, stream: true, store: false, reasoning: { effort: "low" },
+        text: { format: { type: "json_schema", name: schemaName, strict: true, schema } },
       }),
     });
     if (!r.ok || !r.body) { console.error("[word] gateway", r.status); return null; }
@@ -71,7 +72,7 @@ async function callAI(instructions: string, schema: object, name: string, word: 
 
 /** Safety check plus "which library entry does this mean". Nothing from the word or the answer is logged. */
 async function checkWord(word: string, names: string[]): Promise<Verdict | null> {
-  const parsed = await callAI(`${INSTRUCTIONS}\n${MATCH_RULES}\n${names.join("\n")}`, SCHEMA, "word_check", word);
+  const parsed = await runAi(`${INSTRUCTIONS}\n${MATCH_RULES}\n${names.join("\n")}`, "word_check", SCHEMA, word);
   return parsed && (parsed.decision === "approve" || parsed.decision === "reject")
     ? { decision: parsed.decision, category: String(parsed.category), library_match: typeof parsed.library_match === "string" ? parsed.library_match : "" }
     : null;
@@ -79,7 +80,7 @@ async function checkWord(word: string, names: string[]): Promise<Verdict | null>
 
 /** For words that already passed the safety check: only the library meaning. */
 async function matchOnly(word: string, names: string[]): Promise<string | null> {
-  const parsed = await callAI(`You match one short symptom word, in any language, to the symptom library of a women's health app. Return JSON.\n${MATCH_RULES}\n${names.join("\n")}`, MATCH_SCHEMA, "word_match", word);
+  const parsed = await runAi(`You match one short symptom word, in any language, to the symptom library of a women's health app. Return JSON.\n${MATCH_RULES}\n${names.join("\n")}`, "word_match", MATCH_SCHEMA, word);
   return parsed && typeof parsed.library_match === "string" ? parsed.library_match : null;
 }
 
@@ -103,6 +104,15 @@ async function saveMapping(service: Svc, wordKey: string, canonical: string): Pr
   if (error && error.code !== "23505") { console.error("[word] map", error.code); return false; }
   return true;
 }
+
+const SUGGEST_SCHEMA = {
+  type: "object", additionalProperties: false, required: ["matches"],
+  properties: { matches: { type: "array", maxItems: 3, items: { type: "string" } } },
+};
+const SUGGEST_INSTRUCTIONS = `A woman typed her own word for a symptom or feeling in a women's health app. You get her word, then a numbered list of words that already exist.
+Return JSON with "matches": up to 3 words from the list that mean the same thing as hers, best first. Copy each one exactly as written in the list.
+Consider typos and every language (Hebrew, Spanish, Arabic and others): a word in another language matches its meaning.
+Only include a word when it plainly means the same thing. Return an empty list when nothing does. Never invent a word.`;
 
 async function loadLibrary(service: Svc): Promise<Map<string, LibEntry>> {
   const { data } = await service.rpc("together_library_map");
@@ -278,4 +288,30 @@ export async function handleSync(service: Svc, userId: string) {
   }
   const remaining = Math.max(0, todo.length - batch.length) + Math.max(0, recheck.length - recheckBatch.length);
   return { status: 200, body: { status: "ok", processed: batch.length + recheckBatch.length, shared, remaining } };
+}
+
+
+/** Suggests up to 3 existing words that mean the same as hers. Saves nothing and logs no word text. */
+export async function handleSuggest(service: Svc, userId: string, body: { word?: string }) {
+  const none = { status: 200, body: { status: "suggest", matches: [] as string[] } };
+  const guard = guardWord(String(body.word ?? ""));
+  if (!guard.ok) return none;
+  const member = await isV2Member(service, userId);
+  if (!member.ok) return none;
+  const lib = await loadLibrary(service);
+  const names = new Map<string, string>(); // togetherNorm -> display name
+  for (const v of lib.values()) if (!v.retired) names.set(togetherNorm(v.canonical), v.canonical);
+  const { data: shared } = await service.from("together_words").select("word").eq("status", "shared").limit(400);
+  for (const r of (shared ?? []) as { word: string }[]) if (!names.has(togetherNorm(r.word))) names.set(togetherNorm(r.word), r.word);
+  names.delete(togetherNorm(guard.value));
+  const list = [...names.values()];
+  if (!list.length) return none;
+  const out = await runAi(SUGGEST_INSTRUCTIONS, "word_suggest", SUGGEST_SCHEMA, `Her word: ${guard.value}\n\nExisting words:\n${list.map((w, i) => `${i + 1}. ${w}`).join("\n")}`);
+  const picked = Array.isArray(out?.matches) ? (out.matches as unknown[]) : [];
+  const matches: string[] = [];
+  for (const m of picked) {
+    const hit = typeof m === "string" ? names.get(togetherNorm(m)) : undefined;
+    if (hit && !matches.includes(hit)) matches.push(hit);
+  }
+  return { status: 200, body: { status: "suggest", matches: matches.slice(0, 3) } };
 }

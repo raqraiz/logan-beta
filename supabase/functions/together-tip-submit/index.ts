@@ -2,7 +2,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
-import { handleSync, handleWord } from "./words.ts";
+import { handleSuggest, handleSync, handleWord } from "./words.ts";
 
 const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
     const raw = await req.json().catch(() => null);
     // Words (her own symptom words) share this one gate with tips; tips below are unchanged.
     if (raw && (raw.mode === "word" || raw.mode === "sync")) {
-      const out = raw.mode === "word" ? await handleWord(service, user.id, raw) : await handleSync(service, user.id);
+      const out = raw.mode === "sync" ? await handleSync(service, user.id) : raw.suggest === true ? await handleSuggest(service, user.id, raw) : await handleWord(service, user.id, raw);
       return json(out.body, out.status);
     }
     const parsed = Body.safeParse(raw);
