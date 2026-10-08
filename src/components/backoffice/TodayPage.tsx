@@ -109,7 +109,11 @@ export default function TodayPage() {
       ? { title: "Message failures", sub: "In the last 7 days", count: needs.data.messageFailures7d, to: OLD("overview") }
       : { title: "New referrals this week", sub: "Referrers to thank", count: needs.data.newReferrersWeek, to: OLD("referrals") },
   ] : [];
-  const linksDead = sup && needs.data && (needs.data.linkCount ?? 0) > 0 && needs.data.linkClicksTotal === 0;
+  // Until the first click is counted, show when counting started instead of a warning.
+  const waitingForClick = sup && needs.data && (needs.data.linkCount ?? 0) > 0 && needs.data.linkClicksTotal === 0 && !!needs.data.clickCountingSince;
+  const sinceLabel = needs.data?.clickCountingSince
+    ? new Date(needs.data.clickCountingSince).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
+    : "";
 
   return (
     <>
@@ -162,7 +166,7 @@ export default function TodayPage() {
         {needs.error ? <Failed onRetry={needs.reload} /> : (
           <ul className="divide-y divide-[#F4F1EA]">
             {rows.map((r) => <NeedsRow key={r.title} title={r.title} sub={r.sub} to={r.to} bubble={fmt(r.count)} />)}
-            {linksDead && <NeedsRow title="Link clicks read 0" sub="Clicks aren't being counted across any campaign link" to="/admin/growth" bubble="!" warn />}
+            {waitingForClick && <li className="py-3 text-sm text-[#6E675F]">Click counting started {sinceLabel}. No clicks yet.</li>}
             {!needs.data && <li className="py-3 text-sm text-[#6E675F]">…</li>}
           </ul>
         )}

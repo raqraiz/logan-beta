@@ -3,6 +3,23 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { recordShortLinkAttribution } from "@/lib/attribution";
 
+// Counts the click without ever holding up or breaking the redirect: fire and forget, 1.5 second limit, errors ignored.
+// Sends the link name only; nothing about the visitor.
+function recordClick(slug: string) {
+  try {
+    const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/record_link_click`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: key, Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ _slug: slug }),
+      keepalive: true,
+      signal: AbortSignal.timeout(1500),
+    }).catch(() => {});
+  } catch {
+    // never block the redirect
+  }
+}
+
 export default function ShortRedirect() {
   const { slug } = useParams<{ slug: string }>();
   const [status, setStatus] = useState<"loading" | "notfound">("loading");
@@ -58,6 +75,7 @@ export default function ShortRedirect() {
         utm_content: utm.utm_content,
       });
 
+      recordClick(slug);
       window.location.replace(data.target_url);
     };
 
