@@ -12,10 +12,7 @@
 -- ============================================================================
 
 -- Which rows may this woman see? Her own, plus:
---   - built-in words (made by an admin, or the main name of a symptom alias), and
---   - custom words once 10 or more distinct women who agreed to Together have logged
---     that word (matched through together_canonical, same 90-day window as the
---     Together totals).
+--   - built-in words (made by an admin, or the main name of a symptom alias).
 -- Internal helper. Not callable from the app.
 CREATE OR REPLACE FUNCTION public._visible_symptom_ids(_uid uuid)
 RETURNS SETOF uuid
@@ -26,26 +23,14 @@ SET search_path = public
 AS $$
   WITH builtin AS (
     SELECT together_norm(a.main_name) AS n FROM symptom_aliases a
-  ),
-  usage AS (
-    SELECT together_canonical(CASE WHEN jsonb_typeof(e) = 'string' THEN e #>> '{}' ELSE e->>'name' END) AS symptom,
-           count(DISTINCT sl.user_id) AS women
-    FROM symptom_logs sl
-    JOIN profiles pr ON pr.id = sl.user_id AND pr.together_consent = true
-    CROSS JOIN LATERAL jsonb_array_elements(
-      CASE WHEN jsonb_typeof(sl.symptoms) = 'array' THEN sl.symptoms ELSE '[]'::jsonb END) e
-    WHERE sl.logged_at >= now() - interval '90 days'
-    GROUP BY 1
   )
   SELECT cs.id
   FROM community_symptoms cs
-  LEFT JOIN usage u ON u.symptom = together_canonical(cs.name)
   WHERE cs.added_by = _uid
      OR cs.submitted_by = _uid
      OR EXISTS (SELECT 1 FROM user_roles r
                 WHERE r.user_id = cs.added_by AND r.role IN ('admin', 'super_admin'))
      OR together_canonical(cs.name) IN (SELECT n FROM builtin WHERE n IS NOT NULL)
-     OR coalesce(u.women, 0) >= 10
 $$;
 
 -- The shared symptom list: approved, not deleted, no author columns.

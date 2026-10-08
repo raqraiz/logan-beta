@@ -53,3 +53,6 @@
 - [x] Admin Tips queue incl. remove all from author
 - [x] Delete all memory and account deletion cover tips
 - [x] Tip rules recorded in the project notes
+
+## Later
+- [ ] Custom community symptoms become visible to everyone once 10+ consenting women log them. Implement by reading the precomputed Together daily totals, never by scanning symptom_logs at request time.
