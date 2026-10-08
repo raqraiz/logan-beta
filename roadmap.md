@@ -70,3 +70,8 @@
 - [x] Self-harm path: explicit phrases get the full reply, ambiguous phrases get a gentle check-in, and the mode lasts the whole session.
 - [x] Live-test fixes: log saves on "yes", announcements paused during and 6h after distress, check-in chips, hedged hormone wording.
 - [ ] Follow-up (separate PR): Hebrew versions of the fixed replies, check-in and red-flag line, for Hebrew messages. Needs native review before shipping.
+
+## Together words in other languages
+- [x] Words in other languages map to existing library entries by meaning, and only when the meaning is clear (e.g. a Hebrew "headache" counts as Headache, never Migraine). Unsure means a new word with the usual checks.
+- [x] Mappings live in a locked table, follow library merges, stop when an entry is retired, and can be switched off with one SQL line. Her logs are never rewritten.
+- [ ] Not built: a language setting and translated library names (own task).
