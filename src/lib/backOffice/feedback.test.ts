@@ -24,8 +24,8 @@ describe("feedback display", () => {
     expect(timeAgo("2026-10-09T12:00:00Z", now)).toBe("3d ago");
   });
   it("starter has no em dash and uses her first name", () => {
-    expect(replyStarter("Dana")).toMatch(/^Hi Dana, /);
-    expect(replyStarter(null)).toMatch(/^Hi, /);
+    expect(replyStarter("Dana")).toBe("Hi Dana, thank you for your feedback! ");
+    expect(replyStarter(null)).toBe("Hi, thank you for your feedback! ");
     expect(replyStarter("Dana")).not.toMatch(/[—–]/);
   });
 });

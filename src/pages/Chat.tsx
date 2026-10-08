@@ -2136,7 +2136,9 @@ const Chat = () => {
                     >
                       {/* A note from the Logan team (sent by a person, not Logan the AI) */}
                       {message.role === "system" && message.metadata?.team_message && (
-                        <p className="mb-1 text-xs font-semibold text-primary">Message from the Logan team</p>
+                        <p className="mb-1 text-xs font-semibold text-primary">
+                          {message.metadata?.kind === "feedback_reply" ? "Reply to your feedback" : "Message from the Logan team"}
+                        </p>
                       )}
                       {/* Cycle visual first for insight messages — recomputed live
                           from participant data; stored metadata is the fallback while
