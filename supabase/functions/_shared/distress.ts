@@ -357,6 +357,10 @@ export interface PlanOptions {
   selfHarmSessionActive?: boolean;
 }
 
+/** "Why did that happen?" about the episode she just had. Deliberately narrow. */
+const WHY_RE = /\bwhy\s+(?:did|does|do|is|was|would|has|have)\s+(?:that|this|it)\b|\bwhy\s+(?:did|do|does|am)\s+(?:i|it)\s+(?:have|get|feel|having|getting|feeling|keep)\b|\bwhat\s+(?:caused|triggered|set off|made|is causing|brought on)\s+(?:that|this|it)\b|\bwhere\s+did\s+(?:that|this|it)\s+come\s+from\b|\bis\s+it\s+(?:my\s+|the\s+)?(?:hormones?|cycle|period|pms|progesterone)\b/i;
+export const asksWhyItHappened = (text: string): boolean => WHY_RE.test(norm(text));
+
 export function planDistressTurn(
   userText: string,
   timezone: string | null | undefined,
@@ -452,8 +456,9 @@ export function planDistressTurn(
   // 9. Still in acute mode but nothing above matched: the AI answers under strict rules.
   if (mode === "acute") return { type: "ai", mode: "acute" };
 
-  // 10. The turn right after distress ended: normal chat, with cycle context only on request.
-  if (md.distress_post === true && age <= POST_WINDOW_MS) return { type: "ai", mode: "post" };
+  // 10. Right after distress ended, and only if she asks why it happened: the hedged "may play a part" answer.
+  // Any other message (for example "what happens in the luteal phase?") is normal chat and is never touched.
+  if (md.distress_post === true && age <= POST_WINDOW_MS && asksWhyItHappened(userText)) return { type: "ai", mode: "post" };
 
   return null;
 }

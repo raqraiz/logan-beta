@@ -2661,8 +2661,13 @@ const Chat = () => {
             })
           )}
           {showTodaySection && messages.length > 0 && !messages.some(m => m.message_type !== "reaction" && m.message_type !== "checkin" && isMessageFromToday(m.created_at)) && renderTodaySection()}
-          {user && !isOnboarding && messages.length > 0 && !distressQuiet && <TogetherAskCard userId={user.id} />}
-          {user && !isOnboarding && messages.length > 0 && !distressQuiet && <TogetherConsentUpdate userId={user.id} />}
+          {/* Hidden (not unmounted) while a reply is pending so it can't flash before Logan answers. */}
+          {user && !isOnboarding && messages.length > 0 && !distressQuiet && (
+            <div className={isSending ? "hidden" : undefined}>
+              <TogetherAskCard userId={user.id} />
+              <TogetherConsentUpdate userId={user.id} />
+            </div>
+          )}
           <div ref={scrollRef} />
         </div>
       </ScrollArea>
