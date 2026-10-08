@@ -398,6 +398,24 @@ export type Database = {
         }
         Relationships: []
       }
+      distress_mode_daily_counts: {
+        Row: {
+          count: number
+          day: string
+          kind: string
+        }
+        Insert: {
+          count?: number
+          day: string
+          kind: string
+        }
+        Update: {
+          count?: number
+          day?: string
+          kind?: string
+        }
+        Relationships: []
+      }
       email_opens: {
         Row: {
           id: string
@@ -1557,6 +1575,24 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_code_attempts: {
+        Row: {
+          attempted_at: string
+          id: number
+          user_id: string
+        }
+        Insert: {
+          attempted_at?: string
+          id?: number
+          user_id: string
+        }
+        Update: {
+          attempted_at?: string
+          id?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       resource_feedback: {
         Row: {
           comment: string | null
@@ -2504,8 +2540,72 @@ export type Database = {
           },
         ]
       }
+      short_links_public: {
+        Row: {
+          slug: string | null
+          target_url: string | null
+        }
+        Insert: {
+          slug?: string | null
+          target_url?: string | null
+        }
+        Update: {
+          slug?: string | null
+          target_url?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      _admin_eligible_users: {
+        Args: never
+        Returns: {
+          user_id: string
+        }[]
+      }
+      _admin_user_events: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          from_chat: boolean
+          ts: string
+          user_id: string
+        }[]
+      }
+      _visible_symptom_ids: { Args: { _uid: string }; Returns: string[] }
+      admin_active_users_in_range: {
+        Args: { _from: string; _to: string }
+        Returns: number
+      }
+      admin_active_users_now: {
+        Args: never
+        Returns: {
+          dau: number
+          mau: number
+          wau: number
+        }[]
+      }
+      admin_daily_activity: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          active_users: number
+          day: string
+          sessions: number
+          user_messages: number
+        }[]
+      }
+      admin_life_stage_activity: {
+        Args: { _groups: Json }
+        Returns: {
+          active_30: number
+          active_7: number
+          active_days_30: number
+          grp: string
+          minutes_30: number
+          retained: number
+          retention_base: number
+          sessions_30: number
+        }[]
+      }
       admin_measurement_weekly: {
         Args: { _weeks?: number }
         Returns: {
@@ -2532,8 +2632,17 @@ export type Database = {
       admin_symptom_log_activity: {
         Args: { _from?: string; _to?: string }
         Returns: {
-          logged_at: string
-          user_id: string
+          day: string
+          logs: number
+          women: number
+        }[]
+      }
+      admin_time_spent: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          minutes: number
+          minutes_rounded: number
+          sessions: number
         }[]
       }
       admin_tip_queue: {
@@ -2570,6 +2679,15 @@ export type Database = {
           women_count: number
         }[]
       }
+      admin_weekly_active_users: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          active_users: number
+          days_in_range: number
+          week_start: string
+        }[]
+      }
+      apply_manual_referral_code: { Args: never; Returns: boolean }
       count_hidden_tip_authors: { Args: never; Returns: number }
       count_onboarded_users: { Args: never; Returns: number }
       delete_my_tips: { Args: never; Returns: undefined }
@@ -2582,6 +2700,15 @@ export type Database = {
       get_referral_count:
         | { Args: never; Returns: number }
         | { Args: { _user_id: string }; Returns: number }
+      get_symptom_name_map: {
+        Args: never
+        Returns: {
+          canonical_id: string
+          id: string
+          name: string
+          status: string
+        }[]
+      }
       get_tip_summary: {
         Args: { _symptom: string }
         Returns: {
@@ -2623,6 +2750,16 @@ export type Database = {
           text: string
         }[]
       }
+      get_visible_symptoms: {
+        Args: never
+        Returns: {
+          aliases: string[]
+          canonical_id: string
+          category: string
+          id: string
+          name: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2631,6 +2768,7 @@ export type Database = {
         Returns: boolean
       }
       hide_tip_author: { Args: { _tip_id: string }; Returns: undefined }
+      record_distress_event: { Args: { _kind: string }; Returns: undefined }
       refresh_postpartum_state: {
         Args: { _participant_id: string }
         Returns: undefined
@@ -2640,7 +2778,7 @@ export type Database = {
         Args: { _reason: string; _tip_id: string }
         Returns: undefined
       }
-      resolve_referral_code: { Args: { _code: string }; Returns: string }
+      resolve_referral_code: { Args: { _code: string }; Returns: boolean }
       tip_own_cycles: {
         Args: { _symptom: string; _user_id: string }
         Returns: number
