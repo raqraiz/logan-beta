@@ -20,7 +20,8 @@ import { trackMessageFailures } from "../_shared/messageFailures.ts";
 import { loadCatalog, matchSymptoms } from "../_shared/symptomMatch.ts";
 import {
   CHIP_TALK, DISTRESS_CHIPS, SELF_HARM_SESSION_MS, distressPromptBlock, planDistressTurn, redFlagLine, regionForTimezone,
-  finalizeDistressReply, hasRecentDistress, isFactualCycleQuestion, selfHarmSafeReply, type DistressAiMode,
+  acuteFromSymptomNames, acuteReply, applyDistressMeta, finalizeDistressReply, hasRecentDistress, isFactualCycleQuestion,
+  isRedFlagChipText, mentionsRedFlagSymptom, selfHarmSafeReply, stripDeepDive, type DistressAiMode,
 } from "../_shared/distress.ts";
 
 const corsHeaders = {
@@ -5285,6 +5286,7 @@ serve(async (req) => {
             conversationStarters = parsed
               .filter((s) => typeof s === "string" && s.trim().length > 0)
               .filter((s) => !isDataMutatingChipText(s))
+              .filter((s) => !isRedFlagChipText(s))
               .slice(0, 3);
           }
         }
@@ -5318,6 +5320,19 @@ serve(async (req) => {
         : assistantMessageWithoutDay1Prompt + bleedDay1Prompt.text;
       baseMeta.period_checkin = true;
       baseMeta.suggested_day1 = bleedDay1Prompt.suggestedDay1;
+    }
+
+    // --- One distress decision per turn ---
+    // If the symptom extractor understood something the distress detector missed (an unusual typo), the SAME
+    // detector is run over the extracted symptom names. A hit makes this an acute turn, so the log card, the chips
+    // and the reply all follow the distress rules. There is no second, separate opinion.
+    let promotedToAcute = false;
+    if (!distressAiMode && acuteFromSymptomNames(userMessage, [...offerSymptoms.map((o) => o.name), ...loggedSymptomNames])) {
+      distressAiMode = "acute";
+      promotedToAcute = true;
+      console.log("[distress] promoted to acute from extracted symptom names");
+      const { error: countErr } = await supabase.rpc("record_distress_event", { _kind: "acute" });
+      if (countErr) console.error("[distress] count failed:", countErr.message);
     }
 
     // --- Pass 1: server-authored logging confirmation ---
@@ -5465,27 +5480,28 @@ serve(async (req) => {
     }
 
     if (distressAiMode) {
-      // Distress turns: no "See more", no cycle context, no log or day-1 prompts. Post-crisis replies keep their
-      // full factual answer (and cycle context); they only lose prompts, offers and partner suggestions.
-      finalAssistantMessage = finalizeDistressReply(finalAssistantMessage, distressAiMode, userMessage);
-      if (distressAiMode === "post_crisis") {
-        for (const k of ["log_offer", "period_checkin", "suggested_day1"]) delete baseMeta[k];
-        if (Array.isArray(baseMeta.conversation_starters)) {
-          baseMeta.conversation_starters = (baseMeta.conversation_starters as string[]).filter((c) => !/partner|boyfriend|husband|heads.?up/i.test(c));
-        }
-        Object.assign(baseMeta, distressAiMeta ?? {});
+      // Distress turns: no "See more", no log card, no log or day-1 prompts. Post-crisis replies keep their full
+      // factual answer and cycle context. The rules live in applyDistressMeta so every path uses the same ones.
+      const dRegion = regionForTimezone((participant as any)?.timezone);
+      if (promotedToAcute) {
+        // The normal pipeline wrote this reply, so replace it with the fixed acute reply.
+        finalAssistantMessage = acuteReply(dRegion, userMessage, false);
       } else {
-        for (const k of ["cycle_day", "cycle_phase", "cycle_length_days", "last_period_start", "log_offer", "logged_symptoms", "period_checkin", "suggested_day1"]) delete baseMeta[k];
+        finalAssistantMessage = finalizeDistressReply(finalAssistantMessage, distressAiMode, userMessage);
+        if (distressAiMode === "acute") {
+          const rf = redFlagLine(dRegion);
+          // If she typed a red-flag symptom herself, the emergency line comes first.
+          finalAssistantMessage = mentionsRedFlagSymptom(userMessage) ? `${rf}\n\n${finalAssistantMessage}` : `${finalAssistantMessage}\n\n${rf}`;
+        }
       }
-      if (distressAiMode === "acute") {
-        finalAssistantMessage = `${finalAssistantMessage}\n\n${redFlagLine(regionForTimezone((participant as any)?.timezone))}`;
-        baseMeta.distress_mode = "acute";
-        baseMeta.conversation_starters = DISTRESS_CHIPS;
-      } else if (distressAiMode === "checkin_open") {
-        baseMeta.distress_checkin = true;
-      }
+      applyDistressMeta(baseMeta, distressAiMode);
+      if (distressAiMode === "post_crisis") Object.assign(baseMeta, distressAiMeta ?? {});
     }
     finalAssistantMessage = stripDashes(finalAssistantMessage);
+    // No chip, from any source, may state a medical red-flag symptom ("It's hard to breathe", chest pain, fainting).
+    if (Array.isArray(baseMeta.conversation_starters)) {
+      baseMeta.conversation_starters = (baseMeta.conversation_starters as string[]).filter((c) => !isRedFlagChipText(c));
+    }
     if (Array.isArray(baseMeta.conversation_starters)) {
       baseMeta.conversation_starters = (baseMeta.conversation_starters as string[]).map(stripDashes);
     }
