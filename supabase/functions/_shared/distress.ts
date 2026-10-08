@@ -412,6 +412,30 @@ export function postCrisisMetadata(region: RegionCode | null, selfHarmAt: string
 const WHY_RE = /\bwhy\s+(?:did|does|do|is|was|would|has|have)\s+(?:that|this|it)\b|\bwhy\s+(?:did|do|does|am)\s+(?:i|it)\s+(?:have|get|feel|having|getting|feeling|keep)\b|\bwhat\s+(?:caused|triggered|set off|made|is causing|brought on)\s+(?:that|this|it)\b|\bwhere\s+did\s+(?:that|this|it)\s+come\s+from\b|\bis\s+it\s+(?:my\s+|the\s+)?(?:hormones?|cycle|period|pms|progesterone)\b/i;
 export const asksWhyItHappened = (text: string): boolean => WHY_RE.test(norm(text));
 
+const FACT_Q_RE = /^(?:what|what's|whats|how|when|which|where|does|do|is|are|can you (?:explain|tell)|could you (?:explain|tell)|tell me|explain|walk me through)\b/;
+const CYCLE_TOPIC_RE = /\b(?:luteal|follicular|ovulat\w*|menstrual|cycle|phase|phases|period|periods|progesterone|estrogen|oestrogen|hormones?|pms|day\s*\d+)\b/;
+const FEELING_RE = /\b(?:mood\w*|anxi\w*|panic\w*|sad|cry\w*|feel\w*|emotion\w*|stress\w*|overwhelm\w*|depress\w*|angry|irritab\w*|why)\b/;
+/**
+ * A plain factual question about the cycle or hormones ("what phase am I in?", "what happens in the luteal phase?").
+ * Not a question about her feelings or about why something happened to her. Such a question always gets the
+ * normal, complete answer, even right after a distress moment.
+ */
+export function isFactualCycleQuestion(text: string): boolean {
+  const t = norm(text);
+  if (!t || t.length > 200) return false;
+  if (detectSelfHarm(t) || detectSelfHarmAmbiguous(t) || detectAcuteDistress(t) || WHY_RE.test(t) || FEELING_RE.test(t)) return false;
+  return FACT_Q_RE.test(t) && CYCLE_TOPIC_RE.test(t);
+}
+
+/** True when the last assistant message is a distress-related one from the last 6 hours (any `distress_*` marker). */
+export function hasRecentDistress(last: LastAssistant | null | undefined, now: Date = new Date()): boolean {
+  const md = (last?.metadata ?? null) as Record<string, unknown> | null;
+  if (!md || typeof md !== "object" || !last?.created_at) return false;
+  const age = now.getTime() - new Date(last.created_at).getTime();
+  if (!(age >= 0 && age <= MODE_WINDOW_MS)) return false;
+  return Object.keys(md).some((k) => k.startsWith("distress_") && md[k] !== undefined && md[k] !== null && md[k] !== false);
+}
+
 export function planDistressTurn(
   userText: string,
   timezone: string | null | undefined,
@@ -540,7 +564,7 @@ export function planDistressTurn(
 
   // 10. Right after distress ended, and only if she asks why it happened: the hedged "may play a part" answer.
   // Any other message (for example "what happens in the luteal phase?") is normal chat and is never touched.
-  if (md.distress_post === true && age <= POST_WINDOW_MS && asksWhyItHappened(userText)) return { type: "ai", mode: "post" };
+  if (md.distress_post === true && age <= POST_WINDOW_MS && asksWhyItHappened(userText) && !isFactualCycleQuestion(userText)) return { type: "ai", mode: "post" };
 
   return null;
 }
@@ -597,21 +621,31 @@ export function sanitizeHormoneClaims(text: string, mode: DistressAiMode): strin
 // The main guard in post-crisis mode is the instruction in distressPromptBlock. This only removes a sentence that
 // links HER mood or emotions to hormones or her cycle. Factual cycle answers (phase, dates, what happens in a phase)
 // pass untouched.
-const SECOND_PERSON_RE = /\b(?:you|your|yours|you'?re|you'?ve|you'?ll)\b/i;
-const CYCLE_TERM_RE = /\b(?:cycle|phase|luteal|follicular|ovulat\w*|menstrual\w*|pmdd|pms|premenstrual|period|periods)\b/i;
-const MOOD_RE = /\b(?:mood\w*|emotion\w*|anxi\w*|sad(?:ness)?|irritab\w*|overwhelm\w*|upset|tearful|cry(?:ing)?|reactive|stress\w*|panic\w*|depress\w*|angry|anger|snappy|on edge|hopeless|nervous system|(?:feel(?:ing)?|felt)\s+(?:so\s+|really\s+|very\s+)?(?:low|down|off|awful|terrible|worse|heavy))\b/i;
+const CYCLE_TERM_RE = /\b(?:cycle|phase|luteal|follicular|ovulat\w*|menstrual\w*|pmdd|pms|premenstrual|period|periods|day\s*\d+)\b/i;
+const FEELING_WORDS = "anxious|sad|irritable|emotional|reactive|overwhelmed|low|down|tearful|sensitive|moody|angry|on edge|hopeless|stressed|panicky";
+/** Her own feelings stated as hers: "your anxiety", "you feel more sensitive", "makes you reactive". Generic statements don't match. */
+const HER_FEELINGS_RE = new RegExp(
+  `\\byour\\s+(?:\\w+\\s+)?(?:mood\\w*|emotion\\w*|anxi\\w*|feelings?|nervous system|reactions?|sadness|stress|irritab\\w*|panic\\w*)\\b`
+  + `|\\byou(?:'re|\\s+are|\\s+may|\\s+might|\\s+can|\\s+could)?\\s+(?:\\w+\\s+){0,3}?(?:feel(?:ing)?|more|so|very|much)\\s+(?:\\w+\\s+){0,2}?(?:${FEELING_WORDS})\\b`
+  + `|\\b(?:make|makes|making)\\s+you\\s+(?:\\w+\\s+){0,3}?(?:${FEELING_WORDS})\\b`,
+  "i",
+);
 function removeMoodAttribution(text: string): string {
   return text.replace(/[^.!?\n]+[.!?]+/g, (sentence) => {
     const linksToBody = HORMONE_RE.test(sentence) || CYCLE_TERM_RE.test(sentence);
-    return linksToBody && SECOND_PERSON_RE.test(sentence) && MOOD_RE.test(sentence) ? "" : sentence;
+    return linksToBody && HER_FEELINGS_RE.test(sentence) ? "" : sentence;
   }).replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 }
 
 /**
  * Final cleanup of an AI reply in a distress-related mode.
  * Post-crisis replies keep their full length and "See more" section; only the backup filter above runs.
- * Every other mode drops the deep-dive section and applies its own hormone rules.
+ * Post-distress replies are only touched when she asked why it happened. Every other mode drops the deep-dive
+ * section and applies its own hormone rules.
  */
-export function finalizeDistressReply(text: string, mode: DistressAiMode): string {
+export function finalizeDistressReply(text: string, mode: DistressAiMode, userText?: string): string {
+  // Last line of defence: the post-distress rewrite is only for "why did this happen?" questions. Any other
+  // message (above all a factual cycle question) comes back exactly as the model wrote it: nothing removed, nothing added.
+  if (mode === "post" && userText !== undefined && (!asksWhyItHappened(userText) || isFactualCycleQuestion(userText))) return text;
   return mode === "post_crisis" ? sanitizeHormoneClaims(text, mode) : sanitizeHormoneClaims(stripDeepDive(text), mode);
 }

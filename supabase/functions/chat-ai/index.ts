@@ -20,7 +20,7 @@ import { trackMessageFailures } from "../_shared/messageFailures.ts";
 import { loadCatalog, matchSymptoms } from "../_shared/symptomMatch.ts";
 import {
   CHIP_TALK, DISTRESS_CHIPS, SELF_HARM_SESSION_MS, distressPromptBlock, planDistressTurn, redFlagLine, regionForTimezone,
-  finalizeDistressReply, selfHarmSafeReply, type DistressAiMode,
+  finalizeDistressReply, hasRecentDistress, isFactualCycleQuestion, selfHarmSafeReply, type DistressAiMode,
 } from "../_shared/distress.ts";
 
 const corsHeaders = {
@@ -1479,6 +1479,8 @@ serve(async (req) => {
         return new Response(JSON.stringify({ success: true, message: reply }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       if (plan && plan.type === "ai" && plan.mode !== "self_harm") { distressAiMode = plan.mode; distressAiMeta = plan.metadata ?? null; }
+      // The post-distress rewrite is only for "why did this happen?" questions, never for a factual cycle question.
+      if (distressAiMode === "post" && isFactualCycleQuestion(userMessage)) distressAiMode = null;
     }
 
     // Recent user turns — used so a day number stated earlier in the thread
@@ -4722,7 +4724,10 @@ serve(async (req) => {
     // Emotional context for THIS turn — computed before prompt construction so the
     // deep-dive/phase-tip mandates can be suspended at the source rather than
     // contradicted by a later runtime block.
-    const emotionalFollowUp = isEmotionalFollowUp(userMessage, recentMessages as any);
+    // A plain factual cycle question right after a distress moment (for example "what happens in the luteal phase?")
+    // is NOT a continuation of the emotional thread: she gets the normal, complete answer.
+    const factualAfterDistress = isFactualCycleQuestion(userMessage) && hasRecentDistress(lastAssistantMsg as any);
+    const emotionalFollowUp = !factualAfterDistress && isEmotionalFollowUp(userMessage, recentMessages as any);
     const emotionalContextActive = isEmotionalOrHeavyMessage(userMessage) || emotionalFollowUp || (distressAiMode !== null && distressAiMode !== "post_crisis");
     let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext + backfillBlock + libraryBlock + libraryGuidance, emotionalContextActive, activeBoundaries);
     systemPrompt += anchorPromptRule(currentCycleAnchorType(participant));
@@ -5462,7 +5467,7 @@ serve(async (req) => {
     if (distressAiMode) {
       // Distress turns: no "See more", no cycle context, no log or day-1 prompts. Post-crisis replies keep their
       // full factual answer (and cycle context); they only lose prompts, offers and partner suggestions.
-      finalAssistantMessage = finalizeDistressReply(finalAssistantMessage, distressAiMode);
+      finalAssistantMessage = finalizeDistressReply(finalAssistantMessage, distressAiMode, userMessage);
       if (distressAiMode === "post_crisis") {
         for (const k of ["log_offer", "period_checkin", "suggested_day1"]) delete baseMeta[k];
         if (Array.isArray(baseMeta.conversation_starters)) {
