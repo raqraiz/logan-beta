@@ -97,42 +97,20 @@ const ensureProfile = async (user: User) => {
 };
 
 // Fallback for referral codes the user typed in manually at signup.
-// Only fills referred_by when automatic attribution left it null, so a
-// captured ?ref= click always wins and nobody gets double-credited.
+// The server reads the code from her own sign-up details and attaches the
+// referrer only when automatic attribution left it empty, so a captured ?ref=
+// click always wins and nobody gets double-credited. The app never learns who
+// the referrer is.
 const applyManualReferralCode = async (user: User): Promise<boolean> => {
   const raw = user.user_metadata?.manual_referral_code;
-  const code = typeof raw === "string" ? raw.trim().toUpperCase() : "";
-  if (!code) return false;
+  if (typeof raw !== "string" || !raw.trim()) return false;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, referred_by")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile || profile.referred_by) return false;
-
-  const { data: referrerId, error } = await supabase.rpc("resolve_referral_code", { _code: code });
+  const { data, error } = await (supabase as any).rpc("apply_manual_referral_code");
   if (error) {
-    console.warn("manual referral code lookup failed:", error.message);
+    console.warn("manual referral code could not be applied:", error.message);
     return false;
   }
-  if (!referrerId || referrerId === user.id) {
-    // Unknown or self-referral code — silently ignore, never block signup.
-    console.info("manual referral code not matched:", code);
-    return false;
-  }
-
-  const { error: updateErr } = await supabase
-    .from("profiles")
-    .update({ referred_by: referrerId })
-    .eq("id", user.id)
-    .is("referred_by", null);
-  if (updateErr) {
-    console.warn("manual referral credit failed:", updateErr.message);
-    return false;
-  }
-  return true;
+  return data === true;
 };
 
 
