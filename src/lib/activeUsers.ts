@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { fetchSymptomActivity } from "@/lib/symptomActivity";
 
 /**
  * Shared active-user definition used by both the admin Overview tab and the
@@ -115,17 +114,18 @@ export interface ActivityIndex {
 const keyOf = (date: Date | string) => (typeof date === "string" ? date : utcKey(date));
 
 /**
- * Builds the shared activity index from `since` (ISO string) onwards.
+ * Builds the activity index from `since` (ISO string) onwards. It has no symptom
+ * logs (those are only available as server-side totals), so it feeds only the
+ * "who was active" name lists; every count comes from src/lib/adminActivity.ts.
  */
 export const buildActivityIndex = async (since: string): Promise<ActivityIndex> => {
-  const [msgs, symptoms, profiles, events] = await Promise.all([
+  const [msgs, profiles, events] = await Promise.all([
     fetchAll<{ user_id: string; role: string; created_at: string }>(
       "chat_messages",
       "user_id, role, created_at",
       "created_at",
       since,
     ),
-    fetchSymptomActivity(since),
     fetchAll<{ created_at: string }>("profiles", "created_at", "created_at", since),
     fetchAll<{ user_id: string; event_type: string; created_at: string }>(
       "user_activity_events",
@@ -168,12 +168,6 @@ export const buildActivityIndex = async (since: string): Promise<ActivityIndex> 
     const key = utcKey(new Date(m.created_at));
     markActive(key, m.user_id, ts);
     pushTs(userMsgsByDay, key, m.user_id, ts);
-  }
-
-  for (const s of symptoms) {
-    if (!s.logged_at) continue;
-    const ts = new Date(s.logged_at).getTime();
-    markActive(utcKey(new Date(s.logged_at)), s.user_id, ts);
   }
 
   for (const e of events) {
