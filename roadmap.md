@@ -55,7 +55,7 @@
 - [x] Tip rules recorded in the project notes
 
 ## Later
-- [ ] Custom community symptoms become visible to everyone once 10+ consenting women log them. Implement by reading the precomputed Together daily totals, never by scanning symptom_logs at request time.
+- [x] Superseded: custom words no longer wait for 10+ women. See "Together custom words" below.
 
 ## Together custom words
 - [x] Custom words are shared immediately after AI moderation (library match first, then the existing tips check function in a word mode). A word that is rejected, or whose check fails or times out, stays private in "Your words".
