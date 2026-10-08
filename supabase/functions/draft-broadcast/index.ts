@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
     const data = await resp.json();
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall) {
-      console.error("No tool call in response:", JSON.stringify(data));
+      console.error("No tool call in response, finish_reason:", data.choices?.[0]?.finish_reason ?? null);
       return new Response(JSON.stringify({ error: "AI did not return structured output" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
