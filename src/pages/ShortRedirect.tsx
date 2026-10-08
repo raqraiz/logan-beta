@@ -16,11 +16,20 @@ export default function ShortRedirect() {
     let cancelled = false;
 
     const go = async () => {
-      const { data, error } = await (supabase as any)
-        .from("short_links")
-        .select("target_url, utm_source, utm_medium, utm_campaign, utm_term, utm_content")
+      // Public view: slug and target_url only. Falls back to the table until the
+      // matching migration is applied (remove once it is live).
+      let { data, error } = await (supabase as any)
+        .from("short_links_public")
+        .select("target_url")
         .eq("slug", slug)
-        .single();
+        .maybeSingle();
+      if (error && (error.code === "PGRST205" || error.code === "42P01")) {
+        ({ data, error } = await (supabase as any)
+          .from("short_links")
+          .select("target_url")
+          .eq("slug", slug)
+          .maybeSingle());
+      }
 
       if (cancelled) return;
 
@@ -29,15 +38,24 @@ export default function ShortRedirect() {
         return;
       }
 
+      // The campaign tags travel inside the target URL, so read them from there.
+      const utm = { utm_source: null, utm_medium: null, utm_campaign: null, utm_term: null, utm_content: null } as Record<string, string | null>;
+      try {
+        const q = new URL(data.target_url).searchParams;
+        for (const k of Object.keys(utm)) utm[k] = q.get(k);
+      } catch {
+        // not a parseable URL: skip attribution, still redirect
+      }
+
       // Persist the campaign behind this short link before the redirect, so the
       // signup is credited even if the tagged target page never gets to record it.
       recordShortLinkAttribution({
         slug,
-        utm_source: data.utm_source ?? null,
-        utm_medium: data.utm_medium ?? null,
-        utm_campaign: data.utm_campaign ?? null,
-        utm_term: data.utm_term ?? null,
-        utm_content: data.utm_content ?? null,
+        utm_source: utm.utm_source,
+        utm_medium: utm.utm_medium,
+        utm_campaign: utm.utm_campaign,
+        utm_term: utm.utm_term,
+        utm_content: utm.utm_content,
       });
 
       window.location.replace(data.target_url);

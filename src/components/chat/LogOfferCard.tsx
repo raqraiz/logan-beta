@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchVisibleSymptoms } from "@/lib/communitySymptoms";
 
 export interface LogOffer {
   symptoms: { name: string; severity?: number }[];
@@ -24,9 +25,10 @@ export function LogOfferCard({ userId, messageId, offer }: { userId: string; mes
   // Use the log's own names: match the shared symptom list, add it there if it's new.
   const resolveNames = async () => {
     const out: { name: string; severity: number }[] = [];
+    const shared = await fetchVisibleSymptoms();
     for (const s of offer.symptoms) {
-      const { data } = await supabase.from("community_symptoms").select("name").ilike("name", s.name).is("deleted_at", null).limit(1);
-      let name = data?.[0]?.name as string | undefined;
+      const wanted = s.name.trim().toLowerCase();
+      let name = shared.find((r) => r.name.trim().toLowerCase() === wanted)?.name;
       if (!name) {
         const ins = await supabase.from("community_symptoms").insert({ name: s.name, added_by: userId, submitted_by: userId, status: "approved" }).select("name").maybeSingle();
         name = (ins.data?.name as string | undefined) ?? s.name;

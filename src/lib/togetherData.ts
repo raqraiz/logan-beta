@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { fetchVisibleSymptoms } from "@/lib/communitySymptoms";
 import { canonicalSymptom, groupOf, togetherDisplay, togetherNorm } from "@/lib/symptomCatalog";
 
 export type TogetherCategory = "mood" | "body" | "sleep";
@@ -35,9 +36,9 @@ export async function loadAggregates(): Promise<AggRow[]> {
 }
 
 export async function loadCategories(): Promise<Map<string, TogetherCategory>> {
-  const { data } = await supabase.from("community_symptoms").select("name, aliases, category").is("deleted_at", null);
+  const data = await fetchVisibleSymptoms();
   const m = new Map<string, TogetherCategory>();
-  for (const r of (data ?? []) as any[]) {
+  for (const r of data as any[]) {
     const c = mapCategory(r.category);
     if (!c) continue;
     m.set(key(r.name), mapCategory(groupOf(r.name)) ?? c);

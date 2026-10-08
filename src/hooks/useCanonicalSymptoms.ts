@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchSymptomNameMapRows } from "@/lib/communitySymptoms";
 import { buildCanonicalNameMap, resolveSymptomName, type CanonicalRow } from "@/lib/symptomModeration";
 
 /**
@@ -11,14 +11,10 @@ export function useCanonicalSymptoms() {
 
   useEffect(() => {
     let active = true;
-    supabase
-      .from("community_symptoms")
-      .select("id, name, status, canonical_id")
-      .in("status", ["approved", "merged", "deprecated"])
-      .then(({ data }) => {
-        if (!active || !data) return;
-        setMap(buildCanonicalNameMap(data as CanonicalRow[]));
-      });
+    fetchSymptomNameMapRows().then((data) => {
+      if (!active || !data.length) return;
+      setMap(buildCanonicalNameMap(data as CanonicalRow[]));
+    });
     return () => { active = false; };
   }, []);
 
