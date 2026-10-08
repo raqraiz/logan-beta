@@ -56,6 +56,8 @@ export type Database = {
           id: string
           kind: string
           recipient_count: number | null
+          report_month: string | null
+          report_notes: Json | null
           sent_at: string | null
           status: string
           target_filters: Json | null
@@ -73,6 +75,8 @@ export type Database = {
           id?: string
           kind: string
           recipient_count?: number | null
+          report_month?: string | null
+          report_notes?: Json | null
           sent_at?: string | null
           status?: string
           target_filters?: Json | null
@@ -90,6 +94,8 @@ export type Database = {
           id?: string
           kind?: string
           recipient_count?: number | null
+          report_month?: string | null
+          report_notes?: Json | null
           sent_at?: string | null
           status?: string
           target_filters?: Json | null
@@ -960,6 +966,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      investor_report_notes: {
+        Row: {
+          asks: string
+          final: boolean
+          finalized_at: string | null
+          highlights: string
+          lowlights: string
+          month: string
+          updated_at: string
+        }
+        Insert: {
+          asks?: string
+          final?: boolean
+          finalized_at?: string | null
+          highlights?: string
+          lowlights?: string
+          month: string
+          updated_at?: string
+        }
+        Update: {
+          asks?: string
+          final?: boolean
+          finalized_at?: string | null
+          highlights?: string
+          lowlights?: string
+          month?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      investor_report_settings: {
+        Row: {
+          id: boolean
+          started_on: string
+        }
+        Insert: {
+          id?: boolean
+          started_on?: string
+        }
+        Update: {
+          id?: boolean
+          started_on?: string
+        }
+        Relationships: []
+      }
+      investor_report_snapshots: {
+        Row: {
+          calculated_late: boolean
+          locked_at: string
+          month: string
+          numbers: Json
+        }
+        Insert: {
+          calculated_late: boolean
+          locked_at?: string
+          month: string
+          numbers: Json
+        }
+        Update: {
+          calculated_late?: boolean
+          locked_at?: string
+          month?: string
+          numbers?: Json
+        }
+        Relationships: []
       }
       lab_markers: {
         Row: {
@@ -2742,6 +2814,13 @@ export type Database = {
       }
     }
     Functions: {
+      _admin_active_asof: {
+        Args: { _day: string }
+        Returns: {
+          mau: number
+          wau: number
+        }[]
+      }
       _admin_came_from: {
         Args: {
           _campaign: string
@@ -2763,6 +2842,13 @@ export type Database = {
       }
       _admin_is_onboarded: { Args: { _user: string }; Returns: boolean }
       _admin_is_super: { Args: never; Returns: boolean }
+      _admin_next_month_retention: {
+        Args: { _month: string }
+        Returns: {
+          active: number
+          cohort: number
+        }[]
+      }
       _admin_onboarded_users: {
         Args: never
         Returns: {
@@ -2856,6 +2942,15 @@ export type Database = {
         }
         Returns: string
       }
+      _investor_report_body: {
+        Args: { _a: string; _h: string; _l: string }
+        Returns: string
+      }
+      _investor_report_check_month: {
+        Args: { _month: string }
+        Returns: undefined
+      }
+      _investor_report_compute: { Args: { _month: string }; Returns: Json }
       _log_together_event: {
         Args: { _event: string; _reason?: string }
         Returns: undefined
@@ -3085,6 +3180,54 @@ export type Database = {
           referrers: number
           signups: number
         }[]
+      }
+      admin_report_draft_approve: {
+        Args: { _draft: string }
+        Returns: undefined
+      }
+      admin_report_draft_edit: {
+        Args: {
+          _asks: string
+          _draft: string
+          _highlights: string
+          _lowlights: string
+        }
+        Returns: undefined
+      }
+      admin_report_draft_reject: {
+        Args: { _draft: string }
+        Returns: undefined
+      }
+      admin_report_draft_save: {
+        Args: {
+          _asks: string
+          _highlights: string
+          _lowlights: string
+          _month: string
+        }
+        Returns: string
+      }
+      admin_report_finalize: { Args: { _month: string }; Returns: undefined }
+      admin_report_get: { Args: { _month: string }; Returns: Json }
+      admin_report_log_copy: { Args: { _month: string }; Returns: undefined }
+      admin_report_months: {
+        Args: never
+        Returns: {
+          calculated_late: boolean
+          draft_waiting: boolean
+          locked_at: string
+          month: string
+          status: string
+        }[]
+      }
+      admin_report_notes_save: {
+        Args: {
+          _asks: string
+          _highlights: string
+          _lowlights: string
+          _month: string
+        }
+        Returns: undefined
       }
       admin_review_tip: {
         Args: { _action: string; _tip_id: string }
