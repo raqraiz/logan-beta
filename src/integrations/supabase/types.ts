@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          id: string
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string
+          id?: string
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string
+          id?: string
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
       admin_broadcasts: {
         Row: {
           content: string
@@ -50,6 +74,33 @@ export type Database = {
           status?: string
           title?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      admin_settings: {
+        Row: {
+          goal_count: number
+          goal_date: string
+          id: boolean
+          link_clicks_since: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          goal_count: number
+          goal_date: string
+          id?: boolean
+          link_clicks_since?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          goal_count?: number
+          goal_date?: string
+          id?: boolean
+          link_clicks_since?: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -975,6 +1026,24 @@ export type Database = {
           storage_path?: string | null
           taken_on?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      link_clicks: {
+        Row: {
+          clicked_at: string
+          id: number
+          slug: string
+        }
+        Insert: {
+          clicked_at?: string
+          id?: never
+          slug: string
+        }
+        Update: {
+          clicked_at?: string
+          id?: never
+          slug?: string
         }
         Relationships: []
       }
@@ -2671,17 +2740,68 @@ export type Database = {
       }
     }
     Functions: {
+      _admin_came_from: {
+        Args: {
+          _campaign: string
+          _referred_by: string
+          _referrer: string
+          _source: string
+        }
+        Returns: string
+      }
       _admin_eligible_users: {
         Args: never
         Returns: {
           user_id: string
         }[]
       }
+      _admin_is_onboarded: { Args: { _user: string }; Returns: boolean }
+      _admin_is_super: { Args: never; Returns: boolean }
+      _admin_onboarded_users: {
+        Args: never
+        Returns: {
+          conflicting: boolean
+          onboarded_at: string
+          referred_by: string
+          stage: string
+          user_id: string
+          utm_campaign: string
+          utm_medium: string
+          utm_source: string
+        }[]
+      }
+      _admin_short_name: { Args: { _full: string }; Returns: string }
+      _admin_small: {
+        Args: { _filtered: boolean; _n: number }
+        Returns: number
+      }
       _admin_user_events: {
         Args: { _from: string; _to: string }
         Returns: {
           from_chat: boolean
           ts: string
+          user_id: string
+        }[]
+      }
+      _admin_user_events_any: {
+        Args: { _from: string; _user?: string }
+        Returns: {
+          from_chat: boolean
+          ts: string
+          user_id: string
+        }[]
+      }
+      _admin_user_rows: {
+        Args: never
+        Returns: {
+          came_from: string
+          display_name: string
+          email: string
+          is_internal: boolean
+          joined_at: string
+          last_active_at: string
+          msgs_30d: number
+          referrals: number
           user_id: string
         }[]
       }
@@ -2703,6 +2823,19 @@ export type Database = {
           wau: number
         }[]
       }
+      admin_campaign_links: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          clicks: number
+          created_at: string
+          signups: number
+          slug: string
+          target_url: string
+          utm_campaign: string
+          utm_medium: string
+          utm_source: string
+        }[]
+      }
       admin_daily_activity: {
         Args: { _from: string; _to: string }
         Returns: {
@@ -2712,18 +2845,38 @@ export type Database = {
           user_messages: number
         }[]
       }
+      admin_get_goal: {
+        Args: never
+        Returns: {
+          goal_count: number
+          goal_date: string
+        }[]
+      }
+      admin_leftover_rows: {
+        Args: { _user_id: string }
+        Returns: {
+          row_count: number
+          table_name: string
+        }[]
+      }
       admin_life_stage_activity: {
-        Args: { _groups: Json }
+        Args: never
         Returns: {
           active_30: number
           active_7: number
           active_days_30: number
+          conflicting: number
           grp: string
           minutes_30: number
           retained: number
           retention_base: number
           sessions_30: number
+          users: number
         }[]
+      }
+      admin_log_action: {
+        Args: { _action: string; _target: string }
+        Returns: undefined
       }
       admin_measurement_weekly: {
         Args: { _weeks?: number }
@@ -2740,6 +2893,27 @@ export type Database = {
           week: string
         }[]
       }
+      admin_needs_you: {
+        Args: never
+        Returns: {
+          click_counting_since: string
+          link_clicks_total: number
+          link_count: number
+          message_failures_7d: number
+          new_feedback: number
+          new_referrers_week: number
+          tips_reported: number
+          tips_waiting: number
+        }[]
+      }
+      admin_onboarded_by_day: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          day: string
+          new_users: number
+          total_users: number
+        }[]
+      }
       admin_review_tip: {
         Args: { _action: string; _tip_id: string }
         Returns: number
@@ -2748,9 +2922,23 @@ export type Database = {
         Args: { _action: string; _word: string }
         Returns: number
       }
+      admin_set_goal: {
+        Args: { _count: number; _date: string }
+        Returns: undefined
+      }
       admin_set_user_internal: {
         Args: { _internal: boolean; _user_id: string }
         Returns: undefined
+      }
+      admin_signup_sources: {
+        Args: { _by: string; _from: string; _stage?: string; _to: string }
+        Returns: {
+          active_14d: number
+          active_14d_base: number
+          clicks: number
+          signups: number
+          source: string
+        }[]
       }
       admin_symptom_log_activity: {
         Args: { _from?: string; _to?: string }
@@ -2789,6 +2977,17 @@ export type Database = {
           total: number
         }[]
       }
+      admin_together_strip: {
+        Args: never
+        Returns: {
+          new_words_week: number
+          symptoms_10_plus: number
+          tips_live: number
+          tips_reported: number
+          tips_waiting: number
+          women_joined: number
+        }[]
+      }
       admin_together_totals: {
         Args: never
         Returns: {
@@ -2810,11 +3009,103 @@ export type Database = {
           total: number
         }[]
       }
+      admin_user_detail: {
+        Args: { _user_id: string }
+        Returns: {
+          came_from: string
+          email: string
+          feedback_count: number
+          full_name: string
+          headsups_sent: number
+          health_consent: boolean
+          health_consent_at: string
+          is_internal: boolean
+          joined_at: string
+          last_active_at: string
+          marketing_on: boolean
+          msgs_30d: number
+          referrals_active: number
+          referrals_invited: number
+          sessions_30d: number
+          tips_live: number
+          tips_reported: number
+          together_consent: boolean
+          together_consent_at: string
+          together_consent_version: string
+          user_id: string
+        }[]
+      }
+      admin_user_set_internal: {
+        Args: { _internal: boolean; _user_id: string }
+        Returns: undefined
+      }
+      admin_user_set_name: {
+        Args: { _name: string; _user_id: string }
+        Returns: undefined
+      }
+      admin_users_export: {
+        Args: {
+          _filter?: string
+          _hide_internal?: boolean
+          _search?: string
+          _sort?: string
+        }
+        Returns: {
+          came_from: string
+          display_name: string
+          email: string
+          joined_at: string
+          last_active_at: string
+          msgs_30d: number
+          referrals: number
+        }[]
+      }
+      admin_users_list: {
+        Args: {
+          _filter?: string
+          _hide_internal?: boolean
+          _limit?: number
+          _offset?: number
+          _search?: string
+          _sort?: string
+        }
+        Returns: {
+          came_from: string
+          display_name: string
+          is_internal: boolean
+          joined_at: string
+          last_active_at: string
+          msgs_30d: number
+          referrals: number
+          total_count: number
+          user_id: string
+        }[]
+      }
+      admin_week_to_date: {
+        Args: never
+        Returns: {
+          active_week: number
+          new_week: number
+          week_start: string
+        }[]
+      }
       admin_weekly_active_users: {
         Args: { _from: string; _to: string }
         Returns: {
           active_users: number
           days_in_range: number
+          week_start: string
+        }[]
+      }
+      admin_weekly_measurement: {
+        Args: { _from: string; _stage?: string; _to: string }
+        Returns: {
+          active_users: number
+          feedback: number
+          headsups_opened: number
+          new_users: number
+          returned: number
+          returned_base: number
           week_start: string
         }[]
       }
@@ -2921,6 +3212,7 @@ export type Database = {
       leave_together_v2: { Args: never; Returns: boolean }
       purge_together_words: { Args: { _uid: string }; Returns: undefined }
       record_distress_event: { Args: { _kind: string }; Returns: undefined }
+      record_link_click: { Args: { _slug: string }; Returns: undefined }
       refresh_postpartum_state: {
         Args: { _participant_id: string }
         Returns: undefined
