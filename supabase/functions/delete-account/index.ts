@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendAppEmail } from "../_shared/send-app-email.ts";
+import { deleteAccountData } from "../_shared/accountDeletion.ts";
 
 
 const corsHeaders = {
@@ -68,11 +69,13 @@ Deno.serve(async (req) => {
 
     // Look up participant display name for the confirmation email
     let displayName: string | null = null;
-    if (userEmail) {
+    {
       const { data: p } = await supabaseAdmin
         .from("participants")
         .select("full_name")
-        .eq("email", userEmail)
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
       displayName = (p as any)?.full_name ?? null;
     }
@@ -91,79 +94,14 @@ Deno.serve(async (req) => {
     }
 
 
-    // Delete user-owned rows (best-effort; ignore errors)
-    const tablesByUserId = [
-      "chat_messages",
-      "notification_preferences",
-      "user_roles",
-      "tracker_logs",
-      "symptom_logs",
-      "custom_trackers",
-      "home_widget_preferences",
-      "user_credits",
-      "credit_transactions",
-      "user_integrations",
-      "lab_markers",
-      "lab_panels",
-      "meals",
-      "nutrition_goals",
-      "user_dietary_prefs",
-      "user_resources",
-      "resource_feedback",
-      "user_activity_events",
-      "feature_events",
-      "insight_feedback_events",
-      "user_memory_notes",
-      "user_word_prefs",
-      "together_tip_votes",
-      "together_tip_hidden_authors",
-      "weight_logs",
-      "user_feedback",
-      "history_imports",
-      "email_opens",
-      "attribution_events",
-    ];
-    await supabaseAdmin.from("together_tip_reports").delete().eq("reporter_id", userId);
-    await supabaseAdmin.rpc("purge_together_words", { _uid: userId });
-    await supabaseAdmin.from("together_tips").delete().eq("author_id", userId);
-    await Promise.all(
-      tablesByUserId.map((t) =>
-        supabaseAdmin.from(t as any).delete().eq("user_id", userId).then(
-          ({ error }) => error && console.warn(`del ${t}:`, error.message)
-        )
-      )
-    );
-
-    // Delete linked participant + children (matched by email)
-    if (userEmail) {
-      const { data: participant } = await supabaseAdmin
-        .from("participants")
-        .select("id")
-        .eq("email", userEmail)
-        .maybeSingle();
-
-      if (participant) {
-        const pid = (participant as any).id;
-        await supabaseAdmin.from("cycle_history").delete().eq("participant_id", pid);
-        await supabaseAdmin.from("cycle_updates").delete().eq("participant_id", pid);
-        await supabaseAdmin.from("feedback").delete().eq("participant_id", pid);
-        await supabaseAdmin.from("insights").delete().eq("participant_id", pid);
-        await supabaseAdmin.from("participants").delete().eq("id", pid);
-      }
-    }
-
-    await supabaseAdmin.from("profiles").delete().eq("id", userId);
-
-    // Finally delete auth user
-    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
-    if (authError) {
-      const msg = authError.message?.toLowerCase() ?? "";
-      if (!msg.includes("not found") && !msg.includes("database error")) {
-        return new Response(
-          JSON.stringify({ error: "Failed to delete account: " + authError.message }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+    // One shared list of tables, so this and delete-user can never drift apart.
+    const result = await deleteAccountData(supabaseAdmin, userId, userEmail ?? null);
+    if (!result.ok) {
+      console.error(`Self-delete failed at "${result.stage}":`, result.failures.join("; "), JSON.stringify(result.leftover));
+      return new Response(
+        JSON.stringify({ error: "We couldn't finish deleting your account. Please contact us so we can complete it.", stage: result.stage }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     console.log(`Self-deleted account ${userId}`);

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { deleteAccountData } from "../_shared/accountDeletion.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -77,107 +78,49 @@ Deno.serve(async (req) => {
 
     // supabaseAdmin already created above for auth validation
 
-    // Look up user's email to find linked participant
+    // Never delete staff accounts from here.
+    const { data: targetRoles, error: targetRolesErr } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    if (targetRolesErr) {
+      console.error("delete-user: role lookup failed", targetRolesErr.message);
+      return new Response(JSON.stringify({ error: "Could not check this account's role. Nothing was deleted." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if ((targetRoles ?? []).some((r: { role: string }) => r.role === "admin" || r.role === "super_admin")) {
+      return new Response(JSON.stringify({ error: "Admin accounts can't be deleted here. Remove the admin role first." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("email")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
 
-    const userEmail = profile?.email;
-
-    // Delete chat messages first
-    const { error: messagesError } = await supabaseAdmin
-      .from("chat_messages")
-      .delete()
-      .eq("user_id", userId);
-
-    if (messagesError) {
-      console.error("Error deleting messages:", messagesError);
-    }
-
-    // Delete notification preferences
-    const { error: notifError } = await supabaseAdmin
-      .from("notification_preferences")
-      .delete()
-      .eq("user_id", userId);
-
-    if (notifError) {
-      console.error("Error deleting notification preferences:", notifError);
-    }
-
-    const { error: wordsError } = await supabaseAdmin.from("user_word_prefs").delete().eq("user_id", userId);
-    if (wordsError) console.error("Error deleting word prefs:", wordsError);
-    for (const [table, col] of [["together_tip_votes", "user_id"], ["together_tip_hidden_authors", "user_id"], ["together_tip_reports", "reporter_id"], ["together_tips", "author_id"]]) {
-      const { error } = await supabaseAdmin.from(table).delete().eq(col, userId);
-      if (error) console.error(`Error deleting ${table}:`, error);
-    }
-
-    const { error: purgeError } = await supabaseAdmin.rpc("purge_together_words", { _uid: userId });
-    if (purgeError) console.error("Error deleting together words:", purgeError);
-
-    // Delete linked participant and related data (matched by email)
-    if (userEmail) {
-      const { data: participant } = await supabaseAdmin
-        .from("participants")
-        .select("id")
-        .eq("email", userEmail)
-        .single();
-
-      if (participant) {
-        // Delete cycle history, cycle updates, feedback, insights for this participant
-        await supabaseAdmin.from("cycle_history").delete().eq("participant_id", participant.id);
-        await supabaseAdmin.from("cycle_updates").delete().eq("participant_id", participant.id);
-        await supabaseAdmin.from("feedback").delete().eq("participant_id", participant.id);
-        await supabaseAdmin.from("insights").delete().eq("participant_id", participant.id);
-        await supabaseAdmin.from("participants").delete().eq("id", participant.id);
-        console.log(`Deleted participant ${participant.id} for user ${userId}`);
-      }
-    }
-
-    // Delete profile
-    const { error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .delete()
-      .eq("id", userId);
-
-    if (profileError) {
-      console.error("Error deleting profile:", profileError);
-    }
-
-    // Delete user roles
-    const { error: rolesError } = await supabaseAdmin
-      .from("user_roles")
-      .delete()
-      .eq("user_id", userId);
-
-    if (rolesError) {
-      console.error("Error deleting roles:", rolesError);
-    }
-
-    // Delete auth user
-    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
-
-    if (authError) {
-      console.error("Error deleting auth user:", authError);
-      // If user doesn't exist in auth or there's a database error (user already gone), treat as success
-      const errorMsg = authError.message?.toLowerCase() || "";
-      if (errorMsg.includes("not found") || errorMsg.includes("user not found") || errorMsg.includes("database error")) {
-        console.log(`User ${userId} - auth deletion failed but treating as deleted (error: ${authError.message})`);
-      } else {
-        return new Response(
-          JSON.stringify({ error: "Failed to delete user: " + authError.message }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
+    // One shared list of tables, so this and delete-account can never drift apart.
+    const result = await deleteAccountData(supabaseAdmin, userId, profile?.email ?? null);
+    if (!result.ok) {
+      console.error(`delete-user: failed at "${result.stage}" for ${userId}:`, result.failures.join("; "));
+      return new Response(
+        JSON.stringify({
+          error: `Delete did not finish (${result.stage}). Some of her data may already be removed. Try again, or check the details.`,
+          stage: result.stage,
+          failures: result.failures,
+          leftover: result.leftover,
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     console.log(`User ${userId} fully deleted by admin ${caller.id}`);
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true, unlinkedParticipants: result.unlinkedParticipants }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

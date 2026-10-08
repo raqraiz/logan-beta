@@ -14,10 +14,10 @@ export const useBackOffice = () => useOutletContext<BackOfficeContext>();
 
 /** Screens not rebuilt yet open the existing admin screens. */
 const OLD = (tab: string) => `/admin/classic?tab=${tab}`;
-interface NavItem { label: string; to: string; old?: boolean; superOnly?: boolean }
+interface NavItem { label: string; to: string; old?: boolean; superOnly?: boolean; prefix?: boolean }
 const NAV: NavItem[] = [
   { label: "Today", to: "/admin" },
-  { label: "Users", to: OLD("users"), old: true, superOnly: true },
+  { label: "Users", to: "/admin/users", superOnly: true, prefix: true },
   { label: "Feedback", to: OLD("overview"), old: true },
   { label: "Referrals", to: OLD("referrals"), old: true },
   { label: "Tips", to: OLD("tips"), old: true },
@@ -31,7 +31,9 @@ const itemClass = (active: boolean) =>
 
 export default function BackOfficeShell() {
   const navigate = useNavigate();
-  const title = useLocation().pathname.startsWith("/admin/growth") ? "Growth" : "Today";
+  const path = useLocation().pathname;
+  const title = path.startsWith("/admin/growth") ? "Growth" : "Today";
+  const ownHeader = path.startsWith("/admin/users"); // Users pages draw their own heading
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
   const [role, setRole] = useState<BackOfficeRole | null>(null);
@@ -85,7 +87,7 @@ export default function BackOfficeShell() {
             i.old ? (
               <Link key={i.label} to={i.to} className={itemClass(false) + " whitespace-nowrap"}>{i.label}</Link>
             ) : (
-              <NavLink key={i.label} to={i.to} end className={({ isActive }) => itemClass(isActive) + " whitespace-nowrap"}>{i.label}</NavLink>
+              <NavLink key={i.label} to={i.to} end={!i.prefix} className={({ isActive }) => itemClass(isActive) + " whitespace-nowrap"}>{i.label}</NavLink>
             ),
           )}
           {role === "super_admin" && <Link to={OLD("admins")} className={itemClass(false) + " whitespace-nowrap lg:hidden"}>Settings and admins</Link>}
@@ -100,13 +102,13 @@ export default function BackOfficeShell() {
 
       <main className="min-w-0 flex-1 px-4 py-6 lg:px-8">
         <div className="mx-auto max-w-5xl space-y-5">
-          <header>
+          {!ownHeader && <header>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h1 className="font-display text-[42px] font-semibold leading-none text-[#23201C]">{title}</h1>
               <RangeToggle value={range} onChange={setRange} />
             </div>
             <p className="mt-2 text-xs text-[#6E675F]">Counts only. No health data, no names.</p>
-          </header>
+          </header>}
           <Outlet context={{ role, range } satisfies BackOfficeContext} />
         </div>
       </main>

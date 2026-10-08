@@ -79,3 +79,6 @@
 ## Back office
 - [ ] Back office rebuilt from the hi-fi design in 6 phases. Rule: no health data in the back office for anyone. Super admins can see a woman's name, email, engagement counts and consent; admins see first names on feedback and referrals; everything else is totals. Send audiences need 10+ women when filtered by stage.
   - [x] Phase 1: shell, Today, Growth.
+  - [x] Phase 2: Users list and one woman's page (super admin only), audit log, safer account delete.
+  - [ ] Data export: private bucket, signed link that expires, one export list per table, email template.
+  - [ ] Health-data consent needs a stored version (consent_version), written at sign-up. Part of the Beta 2.0 onboarding.
