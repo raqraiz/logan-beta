@@ -15,6 +15,7 @@ import { LoganFullLogo } from "@/components/LoganFullLogo";
 
 import { Send, Loader2, LogOut, ChevronLeft, ChevronRight, ArrowDown, MessageSquarePlus, MessageCircle, Settings as SettingsIcon, Paperclip, Search, X, ChevronUp, ChevronDown, Megaphone, ArrowLeft } from "lucide-react";
 import { FeedbackModal } from "@/components/chat/FeedbackModal";
+import { TeamInboxButton, TeamInboxSheet, useTeamInbox } from "@/components/chat/TeamInbox";
 import { FeedbackPromptCard } from "@/components/chat/FeedbackPromptCard";
 import { useFeedbackPrompt } from "@/hooks/useFeedbackPrompt";
 import { SettingsDialog } from "@/components/chat/SettingsDialog";
@@ -92,7 +93,6 @@ interface ChatMessage {
   metadata?: {
     onboarding_step?: number;
     onboarding_complete?: boolean;
-    team_message?: boolean;
     reaction_to?: string;
     input_type?: string;
     expecting_field?: string;
@@ -298,6 +298,8 @@ const Chat = () => {
   }, [searchOpen]);
   
   const { user, loading: authLoading, signOut } = useAuth();
+  const teamInbox = useTeamInbox(user?.id);
+  const [inboxOpen, setInboxOpen] = useState(false);
   const { showFeedbackPrompt, dismissFeedbackPrompt } = useFeedbackPrompt(user?.id);
   usePresence(user?.id, user?.email || undefined, user?.user_metadata?.full_name);
   const { trackTabSwitch, trackPageView } = useActivityTracker(user?.id);
@@ -1688,6 +1690,7 @@ const Chat = () => {
                 <Search className="w-4 h-4" />
               </Button>
             )}
+            <TeamInboxButton hasUnread={teamInbox.hasUnread} onClick={() => setInboxOpen(true)} />
             <button
               type="button"
               onClick={() => setSettingsOpen(true)}
@@ -2129,17 +2132,9 @@ const Chat = () => {
                       className={`relative max-w-[85%] rounded-2xl px-4 py-3 ${
                         message.role === "user"
                           ? "bg-[var(--user-bubble)] text-[var(--user-bubble-fg)]"
-                          : message.role === "system" && message.metadata?.team_message
-                            ? "bg-card text-card-foreground border border-primary/40"
-                            : "bg-card text-card-foreground border border-border"
+                          : "bg-card text-card-foreground border border-border"
                       } ${searching && isMatch ? "ring-2 ring-primary" : ""}`}
                     >
-                      {/* A note from the Logan team (sent by a person, not Logan the AI) */}
-                      {message.role === "system" && message.metadata?.team_message && (
-                        <p className="mb-1 text-xs font-semibold text-primary">
-                          {message.metadata?.kind === "feedback_reply" ? "Reply to your feedback" : message.metadata?.kind === "thank_you" ? "A thank-you from the Logan team" : "Message from the Logan team"}
-                        </p>
-                      )}
                       {/* Cycle visual first for insight messages — recomputed live
                           from participant data; stored metadata is the fallback while
                           participant data loads (prevents flicker on initial open). */}
@@ -2836,6 +2831,13 @@ const Chat = () => {
       onDismiss={() => setTourOpen(false)}
     />
     <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
+    <TeamInboxSheet
+      open={inboxOpen}
+      onOpenChange={setInboxOpen}
+      messages={teamInbox.messages}
+      onOpened={teamInbox.reload}
+      onSendFeedback={() => { setInboxOpen(false); setFeedbackOpen(true); }}
+    />
     <SettingsDialog
       open={settingsOpen}
       onOpenChange={setSettingsOpen}

@@ -88,3 +88,6 @@
 
 ## Back office phase 3b: Referrals and Tips
 - [ ] Tips: store Logan's reason when it's unsure about a tip (needs a change to the moderation edge function), so the review card can show the real reason instead of the generic line.
+
+## Decisions
+- Decision: team messages live in a separate inbox, never in the Logan chat. The inbox is also an entry point for feedback.
