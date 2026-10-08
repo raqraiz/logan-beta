@@ -12,7 +12,6 @@ export interface ReportNotes { highlights: string; lowlights: string; asks: stri
 export interface ReportDraft extends ReportNotes { id: string; mine: boolean; writtenBy: string | null }
 export interface ReportNumbers {
   asOf: string; totalUsers: number; newUsers: number; prevTotal: number; growthPct: number | null;
-  goalCount: number; goalDate: string; goalPct: number | null;
   mau: number; wau: number; avgWeeklyActive: number | null; stickiness: number | null;
   /** cohort is -1 when fewer than 10 women joined the month before (the server never sends the real count). */
   retention: { cohort: number; active: number | null; pct: number | null };
@@ -55,7 +54,6 @@ export const fetchReport = async (month: string): Promise<Report> => {
     month: str(r.month), status: str(r.status) as Report["status"], lockedAt: r.locked_at ? str(r.locked_at) : null, late: Boolean(r.calculated_late),
     numbers: {
       asOf: str(x.as_of), totalUsers: n(x.total_users), newUsers: n(x.new_users), prevTotal: n(x.prev_total), growthPct: nn(x.growth_pct),
-      goalCount: n(x.goal_count), goalDate: str(x.goal_date), goalPct: nn(x.goal_pct),
       mau: n(x.mau), wau: n(x.wau), avgWeeklyActive: nn(x.avg_weekly_active), stickiness: nn(x.stickiness),
       retention: { cohort: n(ret.cohort), active: nn(ret.active), pct: nn(ret.pct) },
       sources: ((x.sources ?? []) as Row[]).map((s) => ({ source: str(s.source), signups: n(s.signups) })),
@@ -110,7 +108,6 @@ export function reportToText(r: Report): string {
     ? x.sources.map((s, i) => `  ${i + 1}. ${s.source}: ${fmt(s.signups)}`).join("\n")
     : "  None this month";
   const when = live ? "so far" : "at month end";
-  const goalLine = x.goalPct === null ? "n/a" : `${x.goalPct}% of the goal of ${fmt(x.goalCount)} women${x.goalDate ? ` by ${longDate(x.goalDate)}` : ""}`;
   const note = (s: string) => (s.trim() ? s.trim() : "None this month.");
   const lines = [
     `Logan update, ${monthTitle(r.month)}`,
@@ -120,7 +117,6 @@ export function reportToText(r: Report): string {
     `Total users ${when}: ${fmt(x.totalUsers)}`,
     `New users this month: ${fmt(x.newUsers)}`,
     `Growth vs previous month: ${growthText(x.growthPct)}`,
-    `Progress toward goal: ${goalLine}`,
     "",
     "ENGAGEMENT",
     `Monthly active users (last 30 days ${when}): ${fmt(x.mau)}`,
