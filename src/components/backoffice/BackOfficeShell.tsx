@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, Outlet, useNavigate, useOutletContext } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 import { LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,6 +31,7 @@ const itemClass = (active: boolean) =>
 
 export default function BackOfficeShell() {
   const navigate = useNavigate();
+  const title = useLocation().pathname.startsWith("/admin/growth") ? "Growth" : "Today";
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
   const [role, setRole] = useState<BackOfficeRole | null>(null);
@@ -71,15 +72,15 @@ export default function BackOfficeShell() {
   const signOut = async () => { await supabase.auth.signOut(); navigate("/auth"); };
 
   return (
-    <div className="min-h-screen bg-[#F4F1EA] font-sans text-[#23201C] md:flex">
-      <aside className="flex shrink-0 flex-col border-b border-[#E6E0D5] bg-white p-4 md:sticky md:top-0 md:h-screen md:w-[220px] md:border-b-0 md:border-r">
-        <div className="flex items-center justify-between md:block">
+    <div className="min-h-screen bg-[#F4F1EA] font-sans text-[#23201C] lg:flex">
+      <aside className="flex shrink-0 flex-col border-b border-[#E6E0D5] bg-white p-4 lg:sticky lg:top-0 lg:h-screen lg:w-[220px] lg:border-b-0 lg:border-r">
+        <div className="flex items-center justify-between lg:block">
           <Link to="/admin" aria-label="Logan back office"><LoganFullLogo size="sm" className="text-[#23201C]" /></Link>
-          <span className="rounded-full border border-[#E6E0D5] px-3 py-1 text-xs font-semibold text-[#6E675F] md:mt-3 md:inline-block">
+          <span className="rounded-full border border-[#E6E0D5] px-3 py-1 text-xs font-semibold text-[#6E675F] lg:mt-3 lg:inline-block">
             {role === "super_admin" ? "Super admin" : "Admin"}
           </span>
         </div>
-        <nav aria-label="Back office" className="mt-4 flex gap-1 overflow-x-auto md:flex-1 md:flex-col md:overflow-visible">
+        <nav aria-label="Back office" className="mt-4 flex gap-1 overflow-x-auto lg:flex-1 lg:flex-col lg:overflow-visible">
           {items.map((i) =>
             i.old ? (
               <Link key={i.label} to={i.to} className={itemClass(false) + " whitespace-nowrap"}>{i.label}</Link>
@@ -87,8 +88,9 @@ export default function BackOfficeShell() {
               <NavLink key={i.label} to={i.to} end className={({ isActive }) => itemClass(isActive) + " whitespace-nowrap"}>{i.label}</NavLink>
             ),
           )}
+          {role === "super_admin" && <Link to={OLD("admins")} className={itemClass(false) + " whitespace-nowrap lg:hidden"}>Settings and admins</Link>}
         </nav>
-        <div className="mt-2 hidden md:block">
+        <div className="mt-2 hidden lg:block">
           {role === "super_admin" && <Link to={OLD("admins")} className={itemClass(false)}>Settings and admins</Link>}
           <button type="button" onClick={signOut} className={`${itemClass(false)} flex w-full items-center gap-2 text-left`}>
             <LogOut className="h-3.5 w-3.5" /> Sign out
@@ -96,12 +98,15 @@ export default function BackOfficeShell() {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 px-4 py-6 md:px-8">
+      <main className="min-w-0 flex-1 px-4 py-6 lg:px-8">
         <div className="mx-auto max-w-5xl space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-[#6E675F]">Counts only. No health data, no names.</p>
-            <RangeToggle value={range} onChange={setRange} />
-          </div>
+          <header>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h1 className="font-display text-[42px] font-semibold leading-none text-[#23201C]">{title}</h1>
+              <RangeToggle value={range} onChange={setRange} />
+            </div>
+            <p className="mt-2 text-xs text-[#6E675F]">Counts only. No health data, no names.</p>
+          </header>
           <Outlet context={{ role, range } satisfies BackOfficeContext} />
         </div>
       </main>

@@ -34,8 +34,7 @@ export default function GrowthPage() {
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-3xl font-semibold text-[#23201C]">Growth</h1>
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <label className="flex items-center gap-2 text-sm text-[#6E675F]">
           Life stage
           <select value={stage} onChange={(e) => setStage(e.target.value)} className="rounded-full border border-[#E6E0D5] bg-white px-3.5 py-1.5 text-sm text-[#23201C]">

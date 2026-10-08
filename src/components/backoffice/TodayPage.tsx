@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis } from "recharts";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useBackOffice } from "@/components/backoffice/BackOfficeShell";
-import { Card, CardTitle, Failed, GhostButton, InfoTip, MainButton, useLoad } from "@/components/backoffice/parts";
+import { Card, CardTitle, Failed, Figure, GhostButton, InfoTip, MainButton, useLoad } from "@/components/backoffice/parts";
 import { fetchActiveUsersNow } from "@/lib/adminActivity";
 import {
   fetchGoal, fetchNeedsYou, fetchOnboardedByDay, fetchTogetherStrip, fetchWeekToDate, saveGoal,
@@ -26,9 +26,29 @@ function Tile({ label, tip, value, loading, error, retry }: {
   return (
     <Card className="!p-4">
       <p className="text-sm font-medium text-[#6E675F]">{label} <InfoTip text={tip} /></p>
-      <p className="mt-1 font-display text-4xl font-semibold text-[#23201C]">{error ? "—" : loading ? "…" : value}</p>
+      <Figure size={34} className="mt-2">{error ? "—" : loading ? "…" : value}</Figure>
       {error && <Failed onRetry={retry} />}
     </Card>
+  );
+}
+
+function NeedsRow({ title, sub, to, bubble, warn }: { title: string; sub: string; to: string; bubble: string; warn?: boolean }) {
+  return (
+    <li>
+      <Link to={to} className="flex items-center gap-3 py-3 text-[#23201C] hover:opacity-80">
+        <span
+          className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-[#F4F1EA] text-[13px]"
+          style={{ fontFamily: "Quicksand, system-ui, sans-serif", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: warn ? "#C4247A" : "#23201C" }}
+        >
+          {bubble}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold text-[#23201C]">{title}</span>
+          <span className="block text-xs text-[#6E675F]">{sub}</span>
+        </span>
+        <span aria-hidden className="text-lg text-[#6E675F]">›</span>
+      </Link>
+    </li>
   );
 }
 
@@ -82,19 +102,17 @@ export default function TodayPage() {
   }, [series.data, goal.data, today, range]);
 
   const stick = now.data ? stickiness(now.data.wau, now.data.mau) : null;
-  const rows: { label: string; count: number | null; to: string; warn?: boolean }[] = needs.data ? [
-    { label: "New feedback (last 7 days)", count: needs.data.newFeedback, to: OLD("overview") },
-    { label: "Tips to review (waiting for Logan's check, plus reported)", count: needs.data.tipsWaiting + needs.data.tipsReported, to: OLD("tips") },
+  const rows: { title: string; sub: string; count: number | null; to: string }[] = needs.data ? [
+    { title: "New feedback", sub: "From the last 7 days", count: needs.data.newFeedback, to: OLD("overview") },
+    { title: "Tips to review", sub: "Waiting for Logan's check, plus reported", count: needs.data.tipsWaiting + needs.data.tipsReported, to: OLD("tips") },
     sup
-      ? { label: "Message failures (last 7 days)", count: needs.data.messageFailures7d, to: OLD("overview") }
-      : { label: "New referrals this week (referrers to thank)", count: needs.data.newReferrersWeek, to: OLD("referrals") },
+      ? { title: "Message failures", sub: "In the last 7 days", count: needs.data.messageFailures7d, to: OLD("overview") }
+      : { title: "New referrals this week", sub: "Referrers to thank", count: needs.data.newReferrersWeek, to: OLD("referrals") },
   ] : [];
   const linksDead = sup && needs.data && (needs.data.linkCount ?? 0) > 0 && needs.data.linkClicksTotal === 0;
 
   return (
     <>
-      <h1 className="font-display text-3xl font-semibold text-[#23201C]">Today</h1>
-
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Tile label="Active today" tip={TIPS.today} value={fmt(now.data?.dau)} loading={now.loading && !now.data} error={now.error} retry={now.reload} />
         <Tile label="Active this week" tip={TIPS.week} value={fmt(week.data?.activeWeek)} loading={week.loading && !week.data} error={week.error} retry={week.reload} />
@@ -142,23 +160,9 @@ export default function TodayPage() {
       <Card>
         <CardTitle>Needs you</CardTitle>
         {needs.error ? <Failed onRetry={needs.reload} /> : (
-          <ul className="divide-y divide-[#E6E0D5]">
-            {rows.map((r) => (
-              <li key={r.label}>
-                <Link to={r.to} className="flex items-center justify-between gap-3 py-3 text-sm hover:opacity-80">
-                  <span>{r.label}</span>
-                  <span className="font-display text-2xl font-semibold">{fmt(r.count)}</span>
-                </Link>
-              </li>
-            ))}
-            {linksDead && (
-              <li>
-                <Link to="/admin/growth" className="flex items-center justify-between gap-3 py-3 text-sm hover:opacity-80">
-                  <span><span aria-hidden>⚠ </span>Campaign link clicks read 0 across all links, so clicks aren't being counted</span>
-                  <span className="font-display text-2xl font-semibold">0</span>
-                </Link>
-              </li>
-            )}
+          <ul className="divide-y divide-[#F4F1EA]">
+            {rows.map((r) => <NeedsRow key={r.title} title={r.title} sub={r.sub} to={r.to} bubble={fmt(r.count)} />)}
+            {linksDead && <NeedsRow title="Link clicks read 0" sub="Clicks aren't being counted across any campaign link" to="/admin/growth" bubble="!" warn />}
             {!needs.data && <li className="py-3 text-sm text-[#6E675F]">…</li>}
           </ul>
         )}
@@ -177,7 +181,7 @@ export default function TodayPage() {
               ["New community words this week", fmt(strip.data?.newWordsWeek)],
             ].map(([k, v]) => (
               <div key={k}>
-                <dd className="font-display text-3xl font-semibold">{strip.data ? v : "…"}</dd>
+                <dd><Figure size={22}>{strip.data ? v : "…"}</Figure></dd>
                 <dt className="text-sm text-[#6E675F]">{k}</dt>
               </div>
             ))}

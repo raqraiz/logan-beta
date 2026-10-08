@@ -9,6 +9,16 @@ export const MUTED = "#6E675F";
 export const LINE = "#E6E0D5";
 export const SELECTED = "rgba(43,212,217,0.42)";
 
+/** Big figures: Quicksand 700 with tabular figures (Cormorant is for headings only). */
+export const Figure = ({ size, children, className = "" }: { size: number; children: ReactNode; className?: string }) => (
+  <span
+    className={`block leading-none text-[#23201C] ${className}`}
+    style={{ fontFamily: "Quicksand, system-ui, sans-serif", fontWeight: 700, fontSize: size, fontVariantNumeric: "tabular-nums" }}
+  >
+    {children}
+  </span>
+);
+
 export const Card = ({ children, className = "" }: { children: ReactNode; className?: string }) => (
   <section className={`rounded-[22px] border border-[#E6E0D5] bg-white p-5 ${className}`}>{children}</section>
 );
@@ -31,22 +41,24 @@ export const InfoTip = ({ text }: { text: string }) => (
   </Popover>
 );
 
-/** Pill toggle group. The selected pill is teal with a ✓. */
+/** Pill toggle in a white pill container. Selected: teal fill, Ink text, one ✓. Unselected: transparent, secondary text.
+ *  Uses radio semantics on purpose: the app's global style adds its own ✓ and ink fill to any aria-pressed button. */
 export function PillToggle<T extends string>({
   value, onChange, options, label,
 }: { value: T; onChange: (v: T) => void; options: { value: T; label: string }[]; label: string }) {
   return (
-    <div role="group" aria-label={label} className="inline-flex flex-wrap gap-1.5">
+    <div role="radiogroup" aria-label={label} className="inline-flex flex-wrap gap-1 rounded-full border border-[#E6E0D5] bg-white p-1">
       {options.map((o) => {
         const on = o.value === value;
         return (
           <button
             key={o.value}
             type="button"
-            aria-pressed={on}
+            role="radio"
+            aria-checked={on}
             onClick={() => onChange(o.value)}
-            className="rounded-full border border-[#E6E0D5] px-3.5 py-1.5 text-sm font-medium text-[#23201C] transition-colors hover:border-[#23201C]/40"
-            style={on ? { background: SELECTED, borderColor: "transparent" } : { background: "white" }}
+            className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${on ? "text-[#23201C]" : "text-[#6E675F] hover:text-[#23201C]"}`}
+            style={{ background: on ? SELECTED : "transparent" }}
           >
             {on ? "✓ " : ""}{o.label}
           </button>
