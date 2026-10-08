@@ -412,7 +412,7 @@ export function selfHarmSafeReply(region: RegionCode | null): string {
 
 export type DistressKind = "acute" | "self_harm";
 /** AI-answered turns: still in a mode, just after distress, or after a check-in. */
-export type DistressAiMode = DistressKind | "post" | "checkin_no" | "checkin_open" | "post_crisis";
+export type DistressAiMode = DistressKind | "post" | "checkin_no" | "checkin_open" | "post_crisis" | "acute_exit";
 
 export interface LastAssistant {
   metadata?: Record<string, unknown> | null;
@@ -628,6 +628,10 @@ export function planDistressTurn(
     };
   }
 
+  // 9a. A plain factual cycle question while still in acute mode is an implicit calm signal: she is well enough to ask.
+  // Acute mode ends and the question gets the normal, complete answer. (Questions about her own feelings, or any
+  // distress wording, are not factual questions, so they stay in acute mode.)
+  if (mode === "acute" && isFactualCycleQuestion(userText)) return { type: "ai", mode: "acute_exit" };
   // 9. Still in acute mode but nothing above matched: the AI answers under strict rules.
   if (mode === "acute") return { type: "ai", mode: "acute" };
 
@@ -776,4 +780,34 @@ export function applyDistressMeta(meta: Record<string, unknown>, mode: DistressA
   } else if (mode === "post") {
     meta.conversation_starters = POST_CHIPS;
   }
+}
+
+// ───────────────────────── Leaving acute mode, and never sending an empty reply ─────────────────────────
+
+/** Opens the answer when a factual question ends acute mode. No red-flag line follows it. */
+export const ACUTE_EXIT_OPENER = "Glad you're up for a question.";
+
+const KNOWN_FIXED_LINES = ["IL", "US", "UK"].map((r) => redFlagLine(r as RegionCode)).concat(redFlagLine(null));
+/** The reply with every fixed red-flag line taken out: what is left is the real content. */
+function contentBesidesFixedLines(text: string): string {
+  let t = text;
+  for (const line of KNOWN_FIXED_LINES) t = t.split(line).join("");
+  return t.replace(/\s+/g, " ").trim();
+}
+/** True when a reply has no content besides the fixed red-flag line (or nothing at all). */
+export function isOnlyFixedLines(text: string): boolean {
+  return contentBesidesFixedLines(text).length < 12;
+}
+
+export type SubstanceKind = "filtered" | "raw" | "fixed";
+/**
+ * Safety net for every filtered distress reply. If the filters would leave nothing but the red-flag line (or nothing),
+ * the reply is never sent: a factual question gets the full unfiltered answer, a distress message gets the fixed
+ * acute reply, and anything else gets a short fixed line.
+ */
+export function ensureSubstance(filtered: string, raw: string, userText: string, region: RegionCode | null, mode: DistressAiMode): { text: string; kind: SubstanceKind } {
+  if (!isOnlyFixedLines(filtered)) return { text: filtered, kind: "filtered" };
+  if (isFactualCycleQuestion(userText) && raw.trim()) return { text: raw.trim(), kind: "raw" };
+  if (mode === "acute") return { text: acuteReply(region, userText, false), kind: "fixed" };
+  return { text: "I'm here with you. What's on your mind?", kind: "fixed" };
 }
