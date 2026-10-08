@@ -17,10 +17,18 @@ export const THEMES: { value: Theme; label: string }[] = [
 ];
 export const themeLabel = (t: string): string => THEMES.find((x) => x.value === t)?.label ?? "Other";
 
+/** Whether the woman has opened a sent message. seenAt is only filled in for super admins. */
+export type SeenState = "none" | "not_seen" | "seen";
+export const toSeenState = (v: unknown): SeenState => (v === "seen" || v === "not_seen" ? v : "none");
+/** "Seen 3 Oct" / "Seen" (admins) / "Not seen yet". Null when nothing was sent. */
+export const seenText = (state: SeenState, seenAt: string | null, fmt: (iso: string) => string): string | null =>
+  state === "none" ? null : state === "not_seen" ? "Not seen yet" : seenAt ? `Seen ${fmt(seenAt)}` : "Seen";
+
 export type TextState = "none" | "hidden" | "shared" | "before_question";
 export interface FeedbackItem {
   id: string; text: string; state: TextState; firstName: string | null; lastInitial: string | null;
   userId: string | null; channel: string; theme: Theme; createdAt: string; handled: boolean; topic: string | null;
+  seen: SeenState; seenAt: string | null;
 }
 export interface FeedbackCounts { tabs: Record<FeedbackTab, number>; themes: Record<Theme, number>; month: Record<Theme, number> }
 export interface WaitingDraft {
@@ -34,6 +42,7 @@ export const fetchFeedback = async (tab: FeedbackTab, theme: Theme | null): Prom
     id: String(r.id), text: String(r.text_shown ?? ""), state: String(r.text_state) as TextState,
     firstName: s(r.first_name), lastInitial: s(r.last_initial), userId: s(r.user_id), channel: String(r.channel ?? "in_app"),
     theme: String(r.theme ?? "other") as Theme, createdAt: String(r.created_at), handled: Boolean(r.handled), topic: s(r.topic),
+    seen: toSeenState(r.reply_state), seenAt: s(r.reply_seen_at),
   }));
 
 const emptyThemes = (): Record<Theme, number> => ({ bug: 0, feature: 0, praise: 0, content: 0, other: 0 });

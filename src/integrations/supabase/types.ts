@@ -2984,7 +2984,9 @@ export type Database = {
           audience_label: string
           body: string
           created_at: string
+          delivered_count: number
           id: string
+          opened_count: number
           recipient_count: number
           sent_at: string
           sent_by: string
@@ -3069,6 +3071,8 @@ export type Database = {
           handled: boolean
           id: string
           last_initial: string
+          reply_seen_at: string
+          reply_state: string
           text_shown: string
           text_state: string
           theme: string
@@ -3169,6 +3173,8 @@ export type Database = {
           ref_key: string
           signups: number
           thanked_at: string
+          thanks_seen_at: string
+          thanks_state: string
           user_id: string
         }[]
       }

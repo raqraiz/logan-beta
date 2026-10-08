@@ -1,4 +1,5 @@
 import { call } from "@/lib/adminActivity";
+import { toSeenState, type SeenState } from "@/lib/backOffice/feedback";
 
 /** Referrals screen data. Roles are checked in the database functions; admins never receive a user ID. */
 type Row = Record<string, unknown>;
@@ -10,6 +11,7 @@ export interface ReferralSummary { signups: number; activeBase: number; active: 
 export interface ReferrerRow {
   refKey: string; firstName: string | null; lastInitial: string | null; userId: string | null;
   signups: number; allTime: number; activeBase: number; active: number; lastReferral: string; thankedAt: string | null;
+  seen: SeenState; seenAt: string | null;
 }
 
 export const fetchReferralSummary = async (period: ReferralPeriod): Promise<ReferralSummary> => {
@@ -22,6 +24,7 @@ export const fetchReferrers = async (period: ReferralPeriod): Promise<ReferrerRo
     refKey: String(r.ref_key), firstName: s(r.first_name), lastInitial: s(r.last_initial), userId: s(r.user_id),
     signups: n(r.signups), allTime: n(r.all_time), activeBase: n(r.active_base), active: n(r.active),
     lastReferral: String(r.last_referral), thankedAt: s(r.thanked_at),
+    seen: toSeenState(r.thanks_state), seenAt: s(r.thanks_seen_at),
   }));
 
 /** Returns "sent" (super admin) or "waiting" (admin: a super admin approves it first). */
