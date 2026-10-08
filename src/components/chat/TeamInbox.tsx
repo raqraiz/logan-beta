@@ -116,7 +116,7 @@ export const TeamInboxSheet = ({ open, onOpenChange, messages, onOpened, onSendF
                 className={`rounded-2xl px-4 py-3 bg-card text-card-foreground border ${newIds.has(m.id) ? "border-primary/40" : "border-border"}`}
               >
                 <p className="mb-1 text-xs font-semibold text-primary">{labelFor(m.kind)}</p>
-                <p className="text-sm whitespace-pre-wrap">{m.body}</p>
+                <p className="text-sm whitespace-pre-wrap [overflow-wrap:anywhere]">{m.body}</p>
                 <p className="mt-2 text-xs text-muted-foreground">{format(new Date(m.created_at), "d MMM yyyy")}</p>
               </div>
             ))
