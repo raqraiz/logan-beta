@@ -571,7 +571,7 @@ async function logSymptomRejections(
         matched_existing: r.matched ?? null,
       })),
     );
-    console.log(`[symptom_rejections] ${source}:`, rows.map(r => `${r.name} (${r.reason})`).join(", "));
+    console.log(`[symptom_rejections] ${source}: count=${rows.length}`, JSON.stringify(rows.reduce((acc: Record<string, number>, r) => { acc[r.reason] = (acc[r.reason] ?? 0) + 1; return acc; }, {})));
   } catch (e) {
     console.warn("[symptom_rejections] log failed:", (e as Error)?.message);
   }
@@ -786,7 +786,7 @@ async function extractSymptomsViaLLM(
       out.push({ name, severity: Math.min(5, Math.max(1, Math.round(sev))) });
       if (out.length >= 5) break;
     }
-    console.log(`[symptom_extraction] ${Date.now() - started}ms ->`, out.map(o => o.name).join(", ") || "(none)");
+    console.log(`[symptom_extraction] ${Date.now() - started}ms -> count=${out.length}`);
     return out;
   } catch (e) {
     console.warn("[symptom_extraction] failed:", (e as Error)?.message);
@@ -1208,7 +1208,7 @@ serve(async (req) => {
       );
     }
 
-    console.log("Chat AI request from user:", user.id, "message:", userMessage.substring(0, 50));
+    console.log("Chat AI request from user:", user.id, "message_length:", userMessage.length);
 
     // --- Credit check (DISABLED — free access during alpha) ---
     const CREDITS_ENABLED = false;
@@ -1922,7 +1922,7 @@ serve(async (req) => {
             current_period_end_date: endDateStr,
             period_still_active: false,
           } as typeof participant;
-          console.log("[chat-ai] persisted current_period_end_date:", endDateStr);
+          console.log("[chat-ai] persisted current_period_end_date");
         }
       }
     }
@@ -2397,7 +2397,7 @@ serve(async (req) => {
         /^\s*(?:day\s*)?(\d{1,2})\s*[.!?]?\s*$/i
       ) : null);
 
-      console.log("[chat-ai] cycleDayCorrectionMatch:", !!cycleDayCorrectionMatch, "isCorrectionContext:", isCorrectionContext, "lastAssistantMentionedDay:", lastAssistantMentionedDay, "msg:", userMessage.substring(0, 60));
+      console.log("[chat-ai] cycleDayCorrectionMatch:", !!cycleDayCorrectionMatch, "isCorrectionContext:", isCorrectionContext, "lastAssistantMentionedDay:", lastAssistantMentionedDay, "message_length:", userMessage.length);
 
       // Skip if the user is speaking hypothetically / rhetorically / about expectations rather than asserting today's day
       // e.g. "I thought I'd be day 2 today", "would mean I'm on day 36", "how can that be?", "if I'm on day 5"
@@ -2941,7 +2941,7 @@ serve(async (req) => {
               .join(", ");
             const symptomLabels = symptoms.map(s => s.name).join(", ");
             backfillConfirmation = `Internal note (do NOT quote, paraphrase, or repeat this note, do NOT mention any tag, label, brackets, or the word "confirmed"): The system has saved ${symptomLabels} to her symptom log for: ${dateLabels}. In your reply, just say naturally: "Done — added ${symptomLabels} for ${dateLabels}." Do NOT include any bracketed tag, do NOT tell her to add it from the Home tab.`;
-            console.log("Backfilled symptom logs:", dateLabels, "->", symptomLabels);
+            console.log("Backfilled symptom logs: symptoms=", symptoms.length, "dates=", uniq.size);
           }
         }
       }
@@ -3010,7 +3010,7 @@ serve(async (req) => {
               } else {
                 const list = newOnes.join(", ");
                 libraryConfirmation = `Internal note (do NOT quote, paraphrase, or repeat this note, do NOT mention any tag, label, or brackets): The system has added these to the shared symptom library anonymously: ${list}. In your reply, say naturally: "Done — added ${list} to the shared symptom library. You'll find them in Home → Log Symptoms next time you open it." Do NOT include any bracketed tag.`;
-                console.log("Added to community_symptoms:", list);
+                console.log("Added to community_symptoms: count=", newOnes.length);
               }
             }
 
@@ -5013,7 +5013,7 @@ serve(async (req) => {
           canonical_phase: canonicalPhase,
           cycle_day: cycleInfo.cycleDay,
           contradicting_phases: Array.from(new Set(mismatches)),
-          user_message_preview: (userMessage || "").slice(0, 120),
+          user_message_length: (userMessage || "").length,
           rewritten: originalMessage !== assistantMessage,
         }));
       }
@@ -5022,7 +5022,7 @@ serve(async (req) => {
           user_id: user?.id,
           canonical_phase: canonicalPhase,
           preserved: Array.from(new Set(comparativeSkips)),
-          user_message_preview: (userMessage || "").slice(0, 120),
+          user_message_length: (userMessage || "").length,
         }));
       }
     }
@@ -5062,7 +5062,7 @@ serve(async (req) => {
           canonical_day: canonicalDay,
           canonical_phase: cycleInfo.phase,
           stated_days: Array.from(new Set(wrongDays)),
-          user_message_preview: (userMessage || "").slice(0, 120),
+          user_message_length: (userMessage || "").length,
         }));
       }
     }
@@ -5078,7 +5078,7 @@ serve(async (req) => {
         console.warn("[no_cycle_day_claim_stripped]", JSON.stringify({
           user_id: user?.id,
           life_stage: participant?.life_stage ?? null,
-          user_message_preview: (userMessage || "").slice(0, 120),
+          user_message_length: (userMessage || "").length,
         }));
       }
       if (!assistantMessage.trim()) {
@@ -5124,8 +5124,8 @@ serve(async (req) => {
         assistantMessage = stripUnbackedLoggingClaims(assistantMessage);
         console.warn("[false_logging_claim_stripped]", JSON.stringify({
           user_id: user?.id,
-          user_message_preview: (userMessage || "").slice(0, 120),
-          removed_preview: before.slice(0, 160),
+          user_message_length: (userMessage || "").length,
+          removed_length: before.length,
         }));
       }
     }
@@ -5276,7 +5276,7 @@ serve(async (req) => {
       finalAssistantMessage = stripped.trim() ? `${stripped}\n\n${truth}` : truth;
       console.warn("[false_cycle_update_claim_stripped]", JSON.stringify({
         user_id: user?.id,
-        user_message_preview: (userMessage || "").slice(0, 120),
+        user_message_length: (userMessage || "").length,
       }));
     }
 
@@ -5342,7 +5342,7 @@ serve(async (req) => {
           if (addErr) {
             console.error("Post-reply library add failed:", addErr);
           } else {
-            console.log("Post-reply added to community_symptoms:", toAdd.join(", "));
+            console.log("Post-reply added to community_symptoms: count=", toAdd.length);
           }
         }
       }

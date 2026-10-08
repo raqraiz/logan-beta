@@ -471,7 +471,7 @@ serve(async (req) => {
         }
       });
 
-      console.log("Sent welcome + education + first question to:", userName);
+      console.log("Sent welcome + education + first question to user:", user.id);
       return new Response(
         JSON.stringify({ success: true }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -643,7 +643,7 @@ serve(async (req) => {
         if (updateData.is_breastfeeding !== undefined) {
           (participant as any).is_breastfeeding = updateData.is_breastfeeding;
         }
-        console.log("Updated participant field:", currentQuestion.field, "=", parsedValue);
+        console.log("Updated participant field:", currentQuestion.field);
       } else if (!participant && currentQuestion.field) {
         const { data: newParticipant, error: createError } = await supabase
           .from("participants")

@@ -278,7 +278,7 @@ Generate 3 alternative ${slot} options.`;
     try {
       parsed = JSON.parse(jsonSlice);
     } catch (e) {
-      console.error("Parse failed:", e, content.slice(0, 300));
+      console.error("Parse failed:", (e as Error)?.name, "response_length:", content.length);
       return new Response(JSON.stringify({ error: "Couldn't parse alternatives" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

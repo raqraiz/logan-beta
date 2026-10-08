@@ -119,7 +119,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Admin role added for user ${targetUser.email}`);
+    console.log(`Admin role added for user ${targetUser.id}`);
 
     return new Response(
       JSON.stringify({ success: true, userId: targetUser.id }),
