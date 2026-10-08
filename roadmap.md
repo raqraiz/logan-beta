@@ -96,3 +96,13 @@
 - [x] Decision: broadcasts go to the team inbox only, with a minimum audience of 10 women for any filtered group. No email or push yet.
 - [x] Send screen: audience (Everyone or life stages), live count, compose with inbox preview, drafts and approvals, confirm dialog, sent history, "Send a test to me" for super admins.
 - [x] Old chat-based Send tab removed from /admin/classic; send-broadcast and draft-broadcast now answer 410 "Moved to the new back office".
+
+## Back office phase 5: Investor reports
+Decision: investor numbers lock on first view after month end and never change. Reports are copied out, not sent from Logan.
+- [x] One report per UTC month: total users at month end, new users, growth % vs previous month (n/a when the previous month had no users), goal progress, monthly active, average weekly active, stickiness (7 day / 30 day), top signup sources, referral joins, feedback counts by theme. Same functions and definitions as Today and Growth; no names, emails, health data or message text.
+- [x] Lazy lock: the first open after the month ends freezes the numbers into a snapshot table (no user IDs in it). The current month is live and labelled "So far this month, not locked". Months that ended before this feature are labelled "Calculated after the month ended". The audit log records who locked it and when (`report_locked`), plus `report_finalized` and `report_copied` (no content).
+- [x] Notes per month: Highlights, Lowlights, Asks. Admins write a draft (`admin_drafts`, kind `investor_report`); super admin edits, approves or rejects. Only super admin marks a report Final; Final reports are read-only.
+- [x] "Copy report" gives plain text for the investor email. No em dashes: any in the notes become hyphens at copy time.
+- Definition: "Still active the next month" = of the women who joined in the previous month, the share who had at least one active event (`_admin_user_events`) at any point during this month. Shown as a % plus the counts (for example "62%, 31 of 50"). If the previous month's group is under 10, it shows "Fewer than 10 joined" and no percentage (the real count never leaves the database).
+- Definition: monthly active = women active in the 30 days up to month end; stickiness = active in the last 7 days divided by active in the last 30 days, at month end; average weekly active = mean of the Monday to Sunday weeks that fall entirely inside the month.
+- Not in v1: life stage breakdown, quarterly reports, PDF export.
