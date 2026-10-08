@@ -1928,6 +1928,36 @@ export type Database = {
           },
         ]
       }
+      team_messages: {
+        Row: {
+          body: string
+          created_at: string
+          draft_id: string | null
+          id: string
+          kind: string | null
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          draft_id?: string | null
+          id?: string
+          kind?: string | null
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          draft_id?: string | null
+          id?: string
+          kind?: string | null
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       together_daily_aggregates: {
         Row: {
           cohort_key: string
@@ -3400,6 +3430,7 @@ export type Database = {
         Returns: undefined
       }
       resolve_referral_code: { Args: { _code: string }; Returns: boolean }
+      mark_team_messages_read: { Args: Record<PropertyKey, never>; Returns: undefined }
       set_feedback_consent: {
         Args: { _allow: boolean; _id: string }
         Returns: undefined

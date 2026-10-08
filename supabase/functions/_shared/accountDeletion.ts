@@ -12,7 +12,7 @@ type Client = any;
 /** Tables cleared by `user_id`. */
 export const USER_ID_TABLES = [
   // chat and settings
-  "chat_messages", "notification_preferences", "home_widget_preferences", "daily_home_insights",
+  "chat_messages", "team_messages", "notification_preferences", "home_widget_preferences", "daily_home_insights",
   "user_topic_boundaries", "user_hidden_symptoms", "symptom_candidate_rejections", "user_word_prefs",
   // tracking and health records
   "tracker_logs", "custom_trackers", "symptom_logs", "weight_logs", "meals", "nutrition_goals",

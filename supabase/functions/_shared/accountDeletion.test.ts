@@ -3,7 +3,7 @@ import { CLEARED_TABLES, KEPT_TABLES, USER_ID_TABLES } from "./accountDeletion.t
 
 // Tables that hold a woman's own data. If you add one, add it to accountDeletion.ts too.
 const MUST_BE_CLEARED = [
-  "chat_messages", "symptom_logs", "tracker_logs", "meals", "lab_panels", "lab_markers", "weight_logs",
+  "chat_messages", "team_messages", "symptom_logs", "tracker_logs", "meals", "lab_panels", "lab_markers", "weight_logs",
   "user_memory_notes", "partner_headsup_events", "partner_headsup_settings", "partner_headsup_style_examples",
   "push_tokens", "together_tips", "together_tip_votes", "together_tip_reports", "email_send_log",
   "participants", "profiles", "user_roles", "cycle_history", "insights",
