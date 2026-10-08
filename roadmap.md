@@ -85,3 +85,6 @@
 
 ## Back office phase 3a: Feedback
 - [x] Feedback health rule: admins always see health details replaced by [health detail]; super admins see them only when she taps 'Yes, they can' (or for feedback sent before the question existed). Check failure = hidden.
+
+## Back office phase 3b: Referrals and Tips
+- [ ] Tips: store Logan's reason when it's unsure about a tip (needs a change to the moderation edge function), so the review card can show the real reason instead of the generic line.
