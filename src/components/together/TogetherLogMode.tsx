@@ -10,6 +10,8 @@ import { GROUPED, SYMPTOM_GROUPS, aliasesOf, canonicalSymptom, isKnownSymptom, l
 import { validateSymptomName } from "@/lib/symptomModeration";
 import { loadMyWords, privateCopy, submitWord, type MyWord } from "@/lib/togetherWords";
 import { toast } from "sonner";
+import { findCloseWords, type WordSuggestion } from "@/lib/wordSuggest";
+import { WordSuggestRows } from "@/components/together/WordSuggestRows";
 import { useWordPrefs } from "@/hooks/useWordPrefs";
 import { mapCategory, type AggRow } from "@/lib/togetherData";
 import type { SymptomPageLog } from "@/lib/symptomPage";
@@ -57,6 +59,8 @@ export function TogetherLogMode({ userId, logs, aggRows, cycleDay, lastPeriodSta
   const [picked, setPicked] = useState<{ name: string; severity: number }[]>(() => preselect ? [{ name: canonicalSymptom(preselect), severity: 1 }] : []);
   const [search, setSearch] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
+  const [close, setClose] = useState<WordSuggestion[] | null>(null);
+  const [checking, setChecking] = useState(false);
   const [date, setDate] = useState(() => new Date());
   const [calOpen, setCalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -112,13 +116,25 @@ export function TogetherLogMode({ userId, logs, aggRows, cycleDay, lastPeriodSta
     return out.slice(0, 6);
   }, [search, counts]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const addOwn = () => {
-    // She is never blocked from logging her own word. The server checks it before anything is shared.
+  const keepOwn = () => {
     const value = search.replace(/\s+/g, " ").trim();
-    if (value.length < 2) { setAddError("Add a word or two."); return; }
     const name = sentenceCase(canonicalSymptom(value));
     setPicked((p) => p.some((x) => sameSymptom(x.name, name)) ? p : [...p, { name, severity: 1 }]);
-    setSearch(""); setAddError(null);
+    setSearch(""); setAddError(null); setClose(null);
+  };
+  const useExisting = (name: string) => {
+    if (!isPicked(name)) toggle(name);
+    setSearch(""); setAddError(null); setClose(null);
+  };
+  const addOwn = async () => {
+    // She is never blocked from logging her own word. Close matches are offered first, then the server checks it before anything is shared.
+    const value = search.replace(/\s+/g, " ").trim();
+    if (value.length < 2) { setAddError("Add a word or two."); return; }
+    if (checking) return;
+    setChecking(true);
+    const rows = await findCloseWords(value);
+    setChecking(false);
+    if (rows.length) setClose(rows); else keepOwn();
   };
 
   const isToday = date.toDateString() === new Date().toDateString();
@@ -166,9 +182,9 @@ export function TogetherLogMode({ userId, logs, aggRows, cycleDay, lastPeriodSta
       </div>
 
       <div>
-        <input value={search} onChange={(e) => { setSearch(e.target.value.slice(0, 40)); setAddError(null); }} placeholder="Search or add your own" aria-label="Search or add your own"
+        <input value={search} onChange={(e) => { setSearch(e.target.value.slice(0, 40)); setAddError(null); setClose(null); }} placeholder="Search or add your own" aria-label="Search or add your own"
           className="h-12 w-full rounded-full border border-border bg-card px-5 text-[15px] text-foreground outline-none placeholder:text-muted-foreground" />
-        {search.trim().length >= 2 && (
+        {search.trim().length >= 2 && !close && (
           <ul className="mt-2 overflow-hidden rounded-[18px] border border-border bg-card">
             {results.map((r) => (
               <li key={r.name}>
@@ -178,9 +194,10 @@ export function TogetherLogMode({ userId, logs, aggRows, cycleDay, lastPeriodSta
                 </button>
               </li>
             ))}
-            <li><button type="button" onClick={addOwn} className="w-full px-4 py-3 text-left text-[15px] font-semibold text-foreground">+ Add “{search.trim()}” as your own</button></li>
+            <li><button type="button" onClick={() => void addOwn()} disabled={checking} className="w-full px-4 py-3 text-left text-[15px] font-semibold text-foreground disabled:opacity-60">{checking ? "Looking for close matches" : `+ Add “${search.trim()}” as your own`}</button></li>
           </ul>
         )}
+        {close && <WordSuggestRows suggestions={close} onUse={useExisting} onKeep={keepOwn} />}
         {addError && <p className="mt-2 text-sm text-destructive">{addError}</p>}
         <p className="mt-2 text-xs text-muted-foreground">Your own words are checked first. If one can't be shared, it stays just yours.</p>
         {ownWords.length > 0 && <button type="button" onClick={() => setWordsOpen(true)} className="mt-1 text-xs font-semibold text-foreground underline underline-offset-2">Edit your words</button>}

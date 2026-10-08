@@ -5,6 +5,8 @@ import { PatternPage } from "@/components/you/PatternPage";
 import type { SymptomPageLog } from "@/lib/symptomPage";
 import { symptomPoints, groupCycles, usualWindow, PATTERNS_CHANGED, PATTERN_WINDOW_DAYS, type LogRow } from "@/lib/patternCycles";
 import { loadCycleStarts, withRealCycleDays } from "@/lib/realCycleDays";
+import { findCloseWords, type WordSuggestion } from "@/lib/wordSuggest";
+import { WordSuggestRows } from "@/components/together/WordSuggestRows";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 
 type Status = "Confirmed" | "Emerging" | "Watching";
@@ -63,6 +65,8 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
   const [draft, setDraft] = useState<string[]>([]);
   const [custom, setCustom] = useState("");
   const [adding, setAdding] = useState(false);
+  const [close, setClose] = useState<WordSuggestion[] | null>(null);
+  const [checking, setChecking] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [page, setPage] = useState<string | null>(null);
@@ -108,7 +112,8 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
     return () => globalThis.removeEventListener(PATTERNS_CHANGED, h);
   }, []);
 
-  const openChooser = () => { setDraft(watch); setCustom(""); setAdding(false); setSaveError(false); setChooser(true); };
+  const openChooser = () => { setDraft(watch); setCustom(""); setAdding(false); setClose(null); setSaveError(false); setChooser(true); };
+  const addToDraft = (name: string) => { const v = cap(name.trim()); if (v && draft.length < 3 && !draft.includes(v)) setDraft([...draft, v]); setCustom(""); setAdding(false); setClose(null); };
   const toggle = (n: string) => setDraft((d) => d.includes(n) ? d.filter((x) => x !== n) : d.length >= 3 ? d : [...d, n]);
   const save = async () => {
     const { error } = await supabase.from("participants").update({ watch_symptoms: draft }).eq("user_id", userId);
@@ -210,8 +215,15 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
                 );
               })}
               {adding ? (
-                <form onSubmit={(e) => { e.preventDefault(); const v = cap(custom.trim()); if (v && draft.length < 3 && !draft.includes(v)) setDraft([...draft, v]); setCustom(""); setAdding(false); }}>
-                  <input autoFocus value={custom} onChange={(e) => setCustom(e.target.value.slice(0, 40))} onBlur={() => !custom && setAdding(false)}
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (checking || close) return;
+                  setChecking(true);
+                  const rows = await findCloseWords(custom);
+                  setChecking(false);
+                  if (rows.length) setClose(rows); else addToDraft(custom);
+                }}>
+                  <input autoFocus value={custom} onChange={(e) => { setCustom(e.target.value.slice(0, 40)); setClose(null); }} onBlur={() => !custom && setAdding(false)}
                     placeholder="Type and press enter" className="rounded-full border border-border bg-card px-4 py-2 text-sm text-foreground outline-none" />
                 </form>
               ) : (
@@ -219,6 +231,7 @@ export function YourPatterns({ userId, lastPeriodStart, cycleLengthDays, isNonCy
                   className="rounded-full border border-dashed border-border bg-card px-4 py-2 text-sm font-semibold text-foreground disabled:opacity-40">+ Add your own</button>
               )}
             </div>
+            {close && <WordSuggestRows suggestions={close} onUse={addToDraft} onKeep={() => addToDraft(custom)} />}
             {saveError && <p className="mt-3 text-sm text-muted-foreground">That didn't save. Try again in a moment.</p>}
             <button type="button" onClick={save} className="mt-5 w-full rounded-full bg-foreground py-3 text-sm font-semibold text-background">Save</button>
           </div>
