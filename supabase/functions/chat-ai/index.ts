@@ -20,7 +20,7 @@ import { trackMessageFailures } from "../_shared/messageFailures.ts";
 import { loadCatalog, matchSymptoms } from "../_shared/symptomMatch.ts";
 import {
   CHIP_TALK, DISTRESS_CHIPS, SELF_HARM_SESSION_MS, distressPromptBlock, planDistressTurn, redFlagLine, regionForTimezone,
-  selfHarmSafeReply, stripDeepDive, type DistressAiMode,
+  sanitizeHormoneClaims, selfHarmSafeReply, stripDeepDive, type DistressAiMode,
 } from "../_shared/distress.ts";
 
 const corsHeaders = {
@@ -1408,10 +1408,28 @@ serve(async (req) => {
           const { error: countErr } = await supabase.rpc("record_distress_event", { _kind: plan.enteredKind });
           if (countErr) console.error("[distress] count failed:", countErr.message);
         }
+        const metadata: Record<string, unknown> = { ...plan.metadata };
+        let message = plan.message;
+        if (plan.logSymptoms?.length) {
+          // Her explicit "yes" saves the log for today. Undo is shown under the reply.
+          const cyc = participant?.last_period_start && participant?.cycle_length_days
+            ? calculateCycleInfo(participant.last_period_start, participant.cycle_length_days, participant.timezone || "UTC")
+            : null;
+          const { data: saved, error: logErr } = await supabase.from("symptom_logs").insert({
+            user_id: user.id, symptoms: plan.logSymptoms, notes: null, logged_at: new Date().toISOString(),
+            cycle_day: cyc?.cycleDay ?? null, cycle_phase: cyc?.phase ?? null,
+          }).select("id");
+          if (logErr || !saved?.length) {
+            console.error("[distress] log save failed:", logErr?.message);
+            message = "I couldn't save that just now. Want to try again later from the Home tab?";
+          } else {
+            metadata.distress_logged_ids = saved.map((r: any) => r.id);
+          }
+        }
         await supabase.from("chat_messages").insert({
-          user_id: user.id, role: "assistant", content: plan.message, message_type: "text", metadata: plan.metadata,
+          user_id: user.id, role: "assistant", content: message, message_type: "text", metadata,
         });
-        return new Response(JSON.stringify({ success: true, message: plan.message }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ success: true, message }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       if (plan && plan.type === "ai" && plan.mode === "self_harm") {
         // Self-harm mode skips the normal pipeline entirely, so no cycle context, logging or partner chips can leak in.
@@ -5431,7 +5449,7 @@ serve(async (req) => {
 
     if (distressAiMode) {
       // No "See more", no cycle context, no log or day-1 prompts on distress turns.
-      finalAssistantMessage = stripDeepDive(finalAssistantMessage);
+      finalAssistantMessage = sanitizeHormoneClaims(stripDeepDive(finalAssistantMessage), distressAiMode);
       for (const k of ["cycle_day", "cycle_phase", "cycle_length_days", "last_period_start", "log_offer", "logged_symptoms", "period_checkin", "suggested_day1"]) delete baseMeta[k];
       if (distressAiMode === "acute") {
         finalAssistantMessage = `${finalAssistantMessage}\n\n${redFlagLine(regionForTimezone((participant as any)?.timezone))}`;
