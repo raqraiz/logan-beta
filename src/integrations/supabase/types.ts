@@ -398,6 +398,24 @@ export type Database = {
         }
         Relationships: []
       }
+      distress_mode_daily_counts: {
+        Row: {
+          count: number
+          day: string
+          kind: string
+        }
+        Insert: {
+          count?: number
+          day: string
+          kind: string
+        }
+        Update: {
+          count?: number
+          day?: string
+          kind?: string
+        }
+        Relationships: []
+      }
       email_opens: {
         Row: {
           id: string
@@ -2750,6 +2768,7 @@ export type Database = {
         Returns: boolean
       }
       hide_tip_author: { Args: { _tip_id: string }; Returns: undefined }
+      record_distress_event: { Args: { _kind: string }; Returns: undefined }
       refresh_postpartum_state: {
         Args: { _participant_id: string }
         Returns: undefined
