@@ -2098,6 +2098,7 @@ export type Database = {
         Row: {
           author_id: string
           created_at: string
+          first_reported_at: string | null
           id: string
           label: string
           needs_review: boolean
@@ -2113,6 +2114,7 @@ export type Database = {
         Insert: {
           author_id: string
           created_at?: string
+          first_reported_at?: string | null
           id?: string
           label?: string
           needs_review?: boolean
@@ -2128,6 +2130,7 @@ export type Database = {
         Update: {
           author_id?: string
           created_at?: string
+          first_reported_at?: string | null
           id?: string
           label?: string
           needs_review?: boolean
@@ -2882,6 +2885,17 @@ export type Database = {
           utm_source: string
         }[]
       }
+      _admin_referred: {
+        Args: never
+        Returns: {
+          in_base: boolean
+          in_month: boolean
+          is_active: boolean
+          onboarded_at: string
+          referrer: string
+          user_id: string
+        }[]
+      }
       _admin_short_name: { Args: { _full: string }; Returns: string }
       _admin_small: {
         Args: { _filtered: boolean; _n: number }
@@ -2917,6 +2931,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      _admin_words_waiting: { Args: never; Returns: number }
       _feedback_needing_clean: {
         Args: { _limit: number }
         Returns: {
@@ -3108,6 +3123,34 @@ export type Database = {
           total_users: number
         }[]
       }
+      admin_referral_thank_you: {
+        Args: { _body: string; _ref_key: string }
+        Returns: string
+      }
+      admin_referrals_list: {
+        Args: { _period: string }
+        Returns: {
+          active: number
+          active_base: number
+          all_time: number
+          first_name: string
+          last_initial: string
+          last_referral: string
+          ref_key: string
+          signups: number
+          thanked_at: string
+          user_id: string
+        }[]
+      }
+      admin_referrals_summary: {
+        Args: { _period: string }
+        Returns: {
+          active: number
+          active_base: number
+          referrers: number
+          signups: number
+        }[]
+      }
       admin_review_tip: {
         Args: { _action: string; _tip_id: string }
         Returns: number
@@ -3160,7 +3203,7 @@ export type Database = {
         }[]
       }
       admin_tip_queue: {
-        Args: never
+        Args: { _tab?: string }
         Returns: {
           author_tip_count: number
           created_at: string
@@ -3171,6 +3214,7 @@ export type Database = {
           status: string
           symptom: string
           text: string
+          why: string
         }[]
       }
       admin_tip_totals: {
@@ -3413,6 +3457,7 @@ export type Database = {
       hide_tip_author: { Args: { _tip_id: string }; Returns: undefined }
       keep_together_v2: { Args: never; Returns: boolean }
       leave_together_v2: { Args: never; Returns: boolean }
+      mark_team_messages_read: { Args: never; Returns: undefined }
       purge_together_words: { Args: { _uid: string }; Returns: undefined }
       record_distress_event: { Args: { _kind: string }; Returns: undefined }
       record_link_click: { Args: { _slug: string }; Returns: undefined }
@@ -3430,7 +3475,6 @@ export type Database = {
         Returns: undefined
       }
       resolve_referral_code: { Args: { _code: string }; Returns: boolean }
-      mark_team_messages_read: { Args: Record<PropertyKey, never>; Returns: undefined }
       set_feedback_consent: {
         Args: { _allow: boolean; _id: string }
         Returns: undefined
