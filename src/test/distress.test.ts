@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import {
   CHECKIN_REPLY, EMERGENCY_NUMBERS, sanitizeHormoneClaims, acuteReply, breatheReply, detectAcuteDistress, detectCalm, detectSelfHarm, detectSelfHarmAmbiguous,
   distressPromptBlock, planDistressTurn, regionForTimezone, selfHarmReply, stripDeepDive,
+  detectSafeConfirmation, detectCalmSignal, finalizeDistressReply, postCrisisMetadata, postCrisisSupportLine,
 } from "../../supabase/functions/_shared/distress.ts";
 
 const ACUTE_YES = [
@@ -188,8 +189,12 @@ describe("self-harm session and check-in", () => {
   });
   it("stays in self-harm mode for the whole session, even on calm-sounding messages, and has no chips except Talk it through", () => {
     const opts = { selfHarmSessionActive: true };
-    for (const m of ["I'm ok now", "feeling better", "what should I eat today?", "why did that happen?"]) {
+    // Feeling calmer alone does not end it: it is only recorded, and the reply is still the strict self-harm one.
+    for (const m of ["what should I eat today?", "why did that happen?"]) {
       expect(planDistressTurn(m, T, at({}), now, opts)).toEqual({ type: "ai", mode: "self_harm" });
+    }
+    for (const m of ["I'm ok now", "feeling better"]) {
+      expect(planDistressTurn(m, T, at({}), now, opts)).toEqual({ type: "ai", mode: "self_harm", carry: { distress_calm: true } });
     }
     const again = rep(planDistressTurn("I want to die", T, at({ distress_mode: "self_harm" }), now, opts));
     expect(again.enteredKind).toBeUndefined();
@@ -242,8 +247,176 @@ describe("hormone rewrite is limited to the post-distress why-answer", () => {
   });
   it("the rewrite is called in exactly one place in chat-ai, inside the distress-only block", () => {
     const src = readFileSync("supabase/functions/chat-ai/index.ts", "utf8");
-    expect(src.match(/sanitizeHormoneClaims\(/g)?.length).toBe(1);
-    const i = src.indexOf("sanitizeHormoneClaims(");
+    expect(src.match(/finalizeDistressReply\(/g)?.length).toBe(1);
+    expect(src.match(/sanitizeHormoneClaims\(/g)).toBeNull();
+    const i = src.indexOf("finalizeDistressReply(");
     expect(src.slice(src.lastIndexOf("\n    if (", i), i)).toContain("if (distressAiMode) {");
+  });
+});
+
+describe("soft exit: post-crisis mode", () => {
+  const T = "Asia/Jerusalem";
+  const now = new Date("2026-10-08T12:00:00Z");
+  const shAt = new Date(now.getTime() - 60 * 60000).toISOString();
+  const at = (m: Record<string, unknown>, min = 2) => ({ metadata: m, created_at: new Date(now.getTime() - min * 60000).toISOString() });
+  const rep = (p: ReturnType<typeof planDistressTurn>) => { if (p?.type !== "reply") throw new Error("expected reply"); return p; };
+  const sh = { selfHarmSessionActive: true, selfHarmAt: shAt };
+  const askLast = at({ distress_mode: "self_harm", distress_safety_ask: true });
+  const plainLast = at({ distress_mode: "self_harm" });
+  // In post-crisis mode the previous reply is a post-crisis one, not a self-harm-mode one.
+  const pcLast = at(postCrisisMetadata("IL", shAt, now));
+
+  describe("what counts as safe", () => {
+    it("'yes' counts only as a direct reply to the safety question", () => {
+      expect(detectSafeConfirmation("yes", true)).toBe(true);
+      expect(detectSafeConfirmation("yeah", true)).toBe(true);
+      expect(detectSafeConfirmation("yes", false)).toBe(false);
+      expect(detectSafeConfirmation("yeah sure", false)).toBe(false);
+      expect(detectSafeConfirmation("I'm ok", false)).toBe(false);
+    });
+    it("explicit phrases count anywhere", () => {
+      for (const m of ["I'm safe", "I am safe", "I'm somewhere safe", "im safe now", "I'm in a safe place", "אני בטוחה"]) {
+        expect(detectSafeConfirmation(m, false)).toBe(true);
+      }
+    });
+    it("negated answers never count, even as a direct reply", () => {
+      for (const m of ["I'm not safe", "no", "no I'm not safe", "yes but I'm not safe", "I don't feel safe", "לא בטוחה"]) {
+        expect(detectSafeConfirmation(m, true)).toBe(false);
+        expect(detectSafeConfirmation(m, false)).toBe(false);
+      }
+    });
+    it("the words that confirm safety don't also count as calmer", () => {
+      expect(detectCalmSignal("I'm safe", false)).toBe(false);
+      expect(detectCalmSignal("I'm ok", true)).toBe(false);
+      expect(detectCalmSignal("yes", true)).toBe(false);
+      expect(detectCalmSignal("yes, I feel calmer", true)).toBe(true);
+      expect(detectCalmSignal("I'm feeling calmer", false)).toBe(true);
+      expect(detectCalmSignal("I'm not feeling better", false)).toBe(false);
+    });
+  });
+
+  it("a bare 'yes' that does not answer the safety question changes nothing", () => {
+    expect(planDistressTurn("yes", T, plainLast, now, sh)).toEqual({ type: "ai", mode: "self_harm" });
+    // and calm after it still isn't enough
+    expect(planDistressTurn("I'm feeling calmer", T, plainLast, now, sh)).toEqual({ type: "ai", mode: "self_harm", carry: { distress_calm: true } });
+  });
+
+  it("safe then calmer → post-crisis (safe reply first, then normal answers)", () => {
+    const safe = rep(planDistressTurn("yes", T, askLast, now, sh));
+    expect(safe.message).toContain("1201");
+    expect(safe.metadata.distress_mode).toBe("self_harm");
+    expect(safe.metadata.distress_safe).toBe(true);
+    expect(safe.metadata.distress_post_crisis).toBeUndefined();
+    const calm = planDistressTurn("I'm feeling calmer now", T, at(safe.metadata), now, { ...sh, sessionFlags: { safe: true } });
+    if (calm?.type !== "ai" || calm.mode !== "post_crisis") throw new Error("expected post_crisis");
+    expect(calm.metadata?.distress_post_crisis).toBe(true);
+    expect(calm.metadata?.distress_support_line).toBe("ERAN 1201 is there anytime.");
+  });
+
+  it("calmer then safe → post-crisis, with the fixed safe reply carrying the quiet-line markers", () => {
+    const calm = planDistressTurn("I feel better", T, askLast, now, sh);
+    expect(calm).toEqual({ type: "ai", mode: "self_harm", carry: { distress_calm: true } });
+    const safe = rep(planDistressTurn("yes", T, at({ distress_mode: "self_harm", distress_safety_ask: true, distress_calm: true }), now, { ...sh, sessionFlags: { calm: true } }));
+    expect(safe.metadata.distress_post_crisis).toBe(true);
+    expect(safe.metadata.distress_support_line).toBe("ERAN 1201 is there anytime.");
+  });
+
+  it("one answer can't do both jobs: 'I'm okay' to the safety question is safe only", () => {
+    const p = rep(planDistressTurn("I'm okay", T, askLast, now, sh));
+    expect(p.metadata.distress_safe).toBe(true);
+    expect(p.metadata.distress_calm).toBeUndefined();
+    expect(p.metadata.distress_post_crisis).toBeUndefined();
+  });
+
+  it("safe alone, or calm alone, keeps full self-harm mode", () => {
+    expect(planDistressTurn("I'm safe", T, plainLast, now, sh)).toEqual({ type: "ai", mode: "self_harm", carry: { distress_safe: true } });
+    expect(planDistressTurn("what should I eat?", T, plainLast, now, { ...sh, sessionFlags: { safe: true } })).toEqual({ type: "ai", mode: "self_harm", carry: { distress_safe: true } });
+  });
+
+  it("in post-crisis mode normal questions go to the AI, with a window that never restarts", () => {
+    const p = planDistressTurn("what should I eat today?", T, pcLast, now, { ...sh, postCrisis: true });
+    if (p?.type !== "ai" || p.mode !== "post_crisis") throw new Error("expected post_crisis");
+    expect(p.metadata?.distress_window_end).toBe(new Date(new Date(shAt).getTime() + 6 * 3600_000).toISOString());
+    // the marker on the last reply is enough on its own, until the window ends
+    const marked = at(postCrisisMetadata("IL", shAt, now));
+    expect(planDistressTurn("hi", T, marked, now)).toMatchObject({ type: "ai", mode: "post_crisis" });
+    expect(planDistressTurn("hi", T, marked, new Date(now.getTime() + 6 * 3600_000))).toBeNull();
+  });
+
+  it("relapse: self-harm, ambiguous or acute language goes straight back to the full reply and resets confirmations", () => {
+    const opts = { ...sh, postCrisis: true };
+    for (const m of ["I want to die", "I can't do this anymore", "I'm having a panic attack"]) {
+      const p = rep(planDistressTurn(m, T, pcLast, now, opts));
+      expect(p.metadata.distress_mode).toBe("self_harm");
+      expect(p.metadata.distress_safety_ask).toBe(true);
+      expect(p.metadata.distress_safe).toBeUndefined();
+      expect(p.metadata.distress_calm).toBeUndefined();
+      expect(p.message).toContain("1201");
+      expect(p.enteredKind).toBe("self_harm");
+    }
+  });
+
+  it("acute language during full self-harm mode resets earlier confirmations", () => {
+    expect(planDistressTurn("I can't breathe", T, plainLast, now, { ...sh, sessionFlags: { safe: true, calm: true } })).toEqual({ type: "ai", mode: "self_harm" });
+  });
+
+  it("'not safe' in self-harm mode gets the emergency number and does not count", () => {
+    expect(rep(planDistressTurn("I'm not safe", T, askLast, now, sh)).message.startsWith("Please call Magen David Adom")).toBe(true);
+  });
+
+  it("the window ends 6 hours after the last self-harm message", () => {
+    expect(planDistressTurn("what should I eat today?", T, at({}, 600), now, { selfHarmSessionActive: false })).toBeNull();
+  });
+
+  describe("quiet line", () => {
+    it("is region mapped with a generic fallback", () => {
+      expect(postCrisisSupportLine("IL")).toBe("ERAN 1201 is there anytime.");
+      expect(postCrisisSupportLine("US")).toBe("988 is there anytime.");
+      expect(postCrisisSupportLine("UK")).toBe("Samaritans 116 123 is there anytime.");
+      expect(postCrisisSupportLine(null)).toBe("A crisis line in your area is there anytime.");
+    });
+  });
+
+  describe("AI instruction and backup filter", () => {
+    it("the AI instruction forbids attributing her mood to hormones or cycle, and allows factual answers", () => {
+      const p = distressPromptBlock("post_crisis", "IL");
+      expect(p).toMatch(/Don't attribute her mood or emotions to hormones or her cycle/);
+      expect(p).toMatch(/factual cycle answers/);
+      expect(p).toMatch(/No partner suggestions, no announcements/);
+    });
+    it("the backup filter removes only sentences linking HER mood or emotions to hormones or cycle", () => {
+      const bad = "Thanks for telling me. Your anxiety is probably your luteal phase. Since you are on day 27, the drop in progesterone can make your nervous system more reactive. Be gentle with yourself.";
+      const out = finalizeDistressReply(bad, "post_crisis");
+      expect(out).toBe("Thanks for telling me. Be gentle with yourself.");
+    });
+    it("no hedged hormone sentence is added in post-crisis mode", () => {
+      expect(finalizeDistressReply("Your mood is driven by your cycle.", "post_crisis")).toBe("");
+    });
+    // Realistic complete answers, with the "See more" divider, must come back byte for byte.
+    const PHASE_ANSWER = "You're on day 22 of your cycle, which puts you in the luteal phase.\n\nProgesterone is usually higher in this phase, and your next period is expected in about 6 days.\n---\n### The Science\nAfter ovulation the corpus luteum makes progesterone. If there's no pregnancy, it breaks down and both progesterone and estrogen fall, which triggers your period.";
+    const LUTEAL_ANSWER = "The luteal phase runs from ovulation until your next period, usually 12 to 14 days.\n\nProgesterone rises, then falls if there's no pregnancy. Body temperature stays slightly higher, and many people notice changes in appetite, sleep or bloating.\n\nSome people also notice mood changes before their period, which is what PMS describes.\n---\n### The Science\nThe corpus luteum releases progesterone and some estrogen. When it fades, the lining sheds.";
+    it("'what phase am I in?' comes back complete", () => {
+      expect(finalizeDistressReply(PHASE_ANSWER, "post_crisis")).toBe(PHASE_ANSWER);
+      const plan = planDistressTurn("what phase am I in?", T, pcLast, now, { ...sh, postCrisis: true });
+      expect(plan).toMatchObject({ type: "ai", mode: "post_crisis" });
+    });
+    it("'what happens in the luteal phase?' comes back complete", () => {
+      expect(finalizeDistressReply(LUTEAL_ANSWER, "post_crisis")).toBe(LUTEAL_ANSWER);
+      const plan = planDistressTurn("what happens in the luteal phase?", T, pcLast, now, { ...sh, postCrisis: true });
+      expect(plan).toMatchObject({ type: "ai", mode: "post_crisis" });
+    });
+    it("other modes still drop the deep-dive section", () => {
+      expect(finalizeDistressReply(PHASE_ANSWER, "acute")).not.toContain("The Science");
+    });
+    it("the post-crisis reply path in chat-ai keeps cycle context and the full answer", () => {
+      const src = readFileSync("supabase/functions/chat-ai/index.ts", "utf8");
+      const i = src.indexOf('if (distressAiMode === "post_crisis") {');
+      expect(i).toBeGreaterThan(0);
+      const branch = src.slice(i, src.indexOf("} else {", i));
+      expect(branch).not.toMatch(/cycle_day|cycle_phase/);
+      expect(branch).not.toContain("stripDeepDive");
+      // the strict "emotional moment" rules (60 words, no physiology) are not forced on by post-crisis mode
+      expect(src).toContain('distressAiMode !== "post_crisis"');
+    });
   });
 });

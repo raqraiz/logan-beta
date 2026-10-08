@@ -32,7 +32,7 @@ import { OPEN_TOGETHER, type OpenTogetherDetail, type TogetherLens } from "@/lib
 import { TogetherAskCard } from "@/components/together/TogetherAskCard";
 import { TogetherConsentUpdate } from "@/components/together/TogetherConsentUpdate";
 import { DistressLogUndo } from "@/components/chat/DistressLogUndo";
-import { isDistressQuiet } from "@/lib/distressQuiet";
+import { isDistressQuiet, postCrisisLine } from "@/lib/distressQuiet";
 import { loadTogether, markTogetherShown, setTogetherConsent } from "@/lib/together";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { refreshStageBoundary } from "@/hooks/useStageBoundary";
@@ -307,6 +307,8 @@ const Chat = () => {
   }, [trackPageView]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const headsupVisible = usePartnerHeadsupFlag(user?.id);
+  // Partner chips stay hidden while the distress quiet window is open.
+  const headsupChipsVisible = headsupVisible && !distressQuiet;
   useEffect(() => {
     const openChat = async (e: Event) => {
       setActiveTab("ask");
@@ -2272,19 +2274,22 @@ const Chat = () => {
                       {message.role === "assistant" && user && Array.isArray((message.metadata as Record<string, unknown> | null)?.distress_logged_ids) && (
                         <DistressLogUndo userId={user.id} ids={(message.metadata as Record<string, unknown>).distress_logged_ids as string[]} />
                       )}
+                      {message.role === "assistant" && postCrisisLine(message.metadata) && (
+                        <p className="mt-1 text-xs text-muted-foreground">{postCrisisLine(message.metadata)}</p>
+                      )}
                       {message.role === "assistant" && user && (message.metadata as Record<string, unknown> | null)?.log_offer && (
                         <LogOfferCard userId={user.id} messageId={message.id} offer={(message.metadata as Record<string, unknown>).log_offer as LogOffer} />
                       )}
                       {/* Resource offer card (Logan suggesting a downloadable) */}
-                      {headsupVisible && message.message_type === "partner_headsup_checkin" && typeof message.metadata?.event_id === "string" && user && (
+                      {headsupChipsVisible && message.message_type === "partner_headsup_checkin" && typeof message.metadata?.event_id === "string" && user && (
                         <PartnerHeadsupCheckinCard userId={user.id} eventId={message.metadata.event_id as string} />
                       )}
-                      {headsupVisible && message.message_type === "partner_headsup_hardday" && user && (
+                      {headsupChipsVisible && message.message_type === "partner_headsup_hardday" && user && (
                         <PartnerHeadsupOfferChips userId={user.id} messageId={message.id}
                           name={(message.metadata as Record<string, unknown> | null)?.partner_headsup === "offer" ? ((message.metadata?.partner_name as string) || null) : null}
                           preselect={Array.isArray(message.metadata?.preselect) ? (message.metadata.preselect as string[]) : []} />
                       )}
-                      {headsupVisible && message.message_type === "partner_headsup_schedreq" && user && (
+                      {headsupChipsVisible && message.message_type === "partner_headsup_schedreq" && user && (
                         <PartnerHeadsupWriteNowChip userId={user.id} messageId={message.id} />
                       )}
 
@@ -2313,7 +2318,7 @@ const Chat = () => {
                       {message.role === "assistant" && ["proactive", "awareness", "symptom_validation"].includes(message.metadata?.insight_type as string) && !showInteractiveInput && (
                         <InsightConfirm userId={user.id} messageId={message.id} insightType={message.metadata.insight_type} />
                       )}
-                      {attachedOffer && headsupVisible && user && (
+                      {attachedOffer && headsupChipsVisible && user && (
                         <PartnerHeadsupOfferChips userId={user.id} messageId={attachedOffer.id}
                           name={(attachedOffer.metadata as Record<string, unknown> | null)?.partner_headsup === "offer" ? ((attachedOffer.metadata?.partner_name as string) || null) : null}
                           preselect={Array.isArray(attachedOffer.metadata?.preselect) ? (attachedOffer.metadata.preselect as string[]) : []} />
