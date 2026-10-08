@@ -9,7 +9,7 @@ export type RegionCode = "IL" | "US" | "UK";
 export type Situation = "medical_red_flag" | "self_harm" | "abuse" | "trauma";
 /** crisis = talk to someone now, emergency = immediate danger, secondary = extra support. */
 export type EntryRole = "crisis" | "emergency" | "secondary";
-export interface NumberEntry { role: EntryRole; label: string; contact: string }
+export interface NumberEntry { role: EntryRole; label: string; contact: string; /** Short name used in the quiet post-crisis line. */ short?: string }
 
 /** Each situation lists at most 3 entries (checked by a test). */
 export const EMERGENCY_NUMBERS: Record<RegionCode, Partial<Record<Situation, NumberEntry[]>>> = {
@@ -19,7 +19,7 @@ export const EMERGENCY_NUMBERS: Record<RegionCode, Partial<Record<Situation, Num
       { role: "emergency", label: "Police", contact: "100" },
     ],
     self_harm: [
-      { role: "crisis", label: "ERAN emotional first aid, free, anonymous, 24/7", contact: "call 1201 (for English, extension 10) or WhatsApp 052-8451201" },
+      { role: "crisis", label: "ERAN emotional first aid, free, anonymous, 24/7", contact: "call 1201 (for English, extension 10) or WhatsApp 052-8451201", short: "ERAN 1201" },
       { role: "emergency", label: "Magen David Adom", contact: "101" },
       { role: "secondary", label: "SAHAR, written online support", contact: "sahar.org.il" },
     ],
@@ -35,14 +35,14 @@ export const EMERGENCY_NUMBERS: Record<RegionCode, Partial<Record<Situation, Num
   US: {
     medical_red_flag: [{ role: "emergency", label: "Emergency services", contact: "911" }],
     self_harm: [
-      { role: "crisis", label: "988 Suicide & Crisis Lifeline", contact: "call or text 988" },
+      { role: "crisis", label: "988 Suicide & Crisis Lifeline", contact: "call or text 988", short: "988" },
       { role: "emergency", label: "Emergency services", contact: "911" },
     ],
   },
   UK: {
     medical_red_flag: [{ role: "emergency", label: "Emergency services", contact: "999" }],
     self_harm: [
-      { role: "crisis", label: "Samaritans, free, 24/7", contact: "116 123" },
+      { role: "crisis", label: "Samaritans, free, 24/7", contact: "116 123", short: "Samaritans 116 123" },
       { role: "emergency", label: "Emergency services", contact: "999" },
     ],
   },
@@ -180,7 +180,11 @@ export function detectSelfHarmAmbiguous(text: string): boolean {
 
 /** Immediate-danger language, only used while already in self-harm mode. */
 const IMMINENT_RE = /\b(?:not safe|unsafe|i'?m not (?:ok|okay|safe)|no,? i'?m not|i have (?:the |a |my )?(?:pills|knife|gun|rope|blade)|(?:about to|going to|gonna|plan(?:ning)? to)\s+(?:do it|hurt|kill|end|take|jump|cut)|already (?:took|did|cut|swallowed)|took (?:the |all |some |a lot of )?(?:pills|meds)|overdosed|bleeding)\b|לא בטוחה|לא בטוח|עומדת לעשות|עומד לעשות/;
+/** Accepted only as a direct reply to Logan's safety question. */
 const SAFE_RE = /^(?:yes|yeah|yep|yup|i'?m safe|i am safe|safe|i'?m (?:ok|okay|fine)|for now|כן|אני בטוחה|אני בטוח)\b/;
+/** Explicit phrases that count as "safe" anywhere in the conversation. A bare "yes" never does. */
+const SAFE_EXPLICIT_RE = /\b(?:i'?m|im|i am)\s+(?:now\s+|really\s+|totally\s+|actually\s+)?(?:somewhere\s+safe|in\s+a\s+safe\s+(?:place|spot)|safe)\b|אני בטוחה|אני בטוח/;
+const NOT_SAFE_RE = /\b(?:not|never|unsafe|no)\b|n't|(?:^|\s)לא(?:\s|$)/;
 const CHECKIN_YES_RE = /^(?:yes|yeah|yep|yup|kind of|kinda|sort of|sometimes|a (?:little|bit)|i think so|maybe|i guess|both|כן)\b/;
 const CHECKIN_NO_RE = /^(?:no|nope|nah|not really|not like that|nothing like that|just (?:tired|stressed|venting|frustrated|overwhelmed|exhausted)|i (?:don'?t|do not) mean that|i'?m not|לא)\b/;
 
@@ -191,6 +195,24 @@ const NOT_CALM_RE = /\b(?:not|isn'?t|aren'?t|wasn'?t|doesn'?t|don'?t|didn'?t|can
 export function detectCalm(text: string): boolean {
   const t = norm(text);
   return !!t && CALM_RE.test(t) && !NOT_CALM_RE.test(t);
+}
+
+/**
+ * Did she just confirm she is safe? "Yes" and similar only count when it replies directly to Logan's
+ * safety question. Anywhere else only explicit phrases count ("I'm safe", "I'm somewhere safe").
+ * Anything negated ("I'm not safe", "no") never counts.
+ */
+export function detectSafeConfirmation(text: string, directReplyToSafetyQuestion: boolean): boolean {
+  const t = norm(text);
+  if (!t || NOT_SAFE_RE.test(t)) return false;
+  return SAFE_EXPLICIT_RE.test(t) || (directReplyToSafetyQuestion && SAFE_RE.test(t));
+}
+/** "Calmer" signal for the soft exit. The words that made it a safety answer don't also count as calm. */
+export function detectCalmSignal(text: string, directReplyToSafetyQuestion: boolean): boolean {
+  let t = norm(text);
+  t = t.replace(new RegExp(SAFE_EXPLICIT_RE.source, "g"), " ");
+  if (directReplyToSafetyQuestion) t = t.replace(SAFE_RE, " ");
+  return detectCalm(t);
 }
 
 /** Only used to decide which extra numbers to show; never to trigger distress mode. */
@@ -327,7 +349,7 @@ export function selfHarmSafeReply(region: RegionCode | null): string {
 
 export type DistressKind = "acute" | "self_harm";
 /** AI-answered turns: still in a mode, just after distress, or after a check-in. */
-export type DistressAiMode = DistressKind | "post" | "checkin_no" | "checkin_open";
+export type DistressAiMode = DistressKind | "post" | "checkin_no" | "checkin_open" | "post_crisis";
 
 export interface LastAssistant {
   metadata?: Record<string, unknown> | null;
@@ -344,7 +366,14 @@ export type DistressPlan =
       /** Symptoms to save straight away for today (only after her explicit yes). */
       logSymptoms?: { name: string; severity: number }[];
     }
-  | { type: "ai"; mode: DistressAiMode }
+  | {
+      type: "ai";
+      mode: DistressAiMode;
+      /** Self-harm mode only: safe/calm confirmations so far, saved on the reply so they carry to the next turn. */
+      carry?: { distress_safe?: true; distress_calm?: true };
+      /** Post-crisis mode only: markers saved on the reply (quiet line, window end). */
+      metadata?: Record<string, unknown>;
+    }
   | null;
 
 const MODE_WINDOW_MS = 6 * 3600_000;
@@ -355,6 +384,28 @@ export const SELF_HARM_SESSION_MS = MODE_WINDOW_MS;
 export interface PlanOptions {
   /** True when a self-harm-mode assistant message exists within SELF_HARM_SESSION_MS (looked up by the caller). */
   selfHarmSessionActive?: boolean;
+  /** True when a post-crisis message is newer than the latest self-harm-mode message (looked up by the caller). */
+  postCrisis?: boolean;
+  /** created_at of the latest self-harm-mode assistant message: the 6-hour window ends 6h after it. */
+  selfHarmAt?: string | null;
+  /** Safe/calm confirmations saved on that latest self-harm-mode message. */
+  sessionFlags?: { safe?: boolean; calm?: boolean };
+}
+
+/** The quiet line shown under Logan's replies in post-crisis mode. */
+export function postCrisisSupportLine(region: RegionCode | null): string {
+  const crisis = entries(region, "self_harm").find((e) => e.role === "crisis");
+  return crisis?.short ? `${crisis.short} is there anytime.` : "A crisis line in your area is there anytime.";
+}
+
+/** Markers saved on every post-crisis reply. The window never restarts: it ends 6h after the last self-harm-mode message. */
+export function postCrisisMetadata(region: RegionCode | null, selfHarmAt: string | Date | null | undefined, now: Date = new Date()): Record<string, unknown> {
+  const start = selfHarmAt ? new Date(selfHarmAt).getTime() : now.getTime();
+  return {
+    distress_post_crisis: true,
+    distress_support_line: postCrisisSupportLine(region),
+    distress_window_end: new Date((Number.isFinite(start) ? start : now.getTime()) + MODE_WINDOW_MS).toISOString(),
+  };
 }
 
 /** "Why did that happen?" about the episode she just had. Deliberately narrow. */
@@ -373,11 +424,16 @@ export function planDistressTurn(
   const age = last?.created_at ? now.getTime() - new Date(last.created_at).getTime() : Infinity;
   const lastMode: DistressKind | null =
     age <= MODE_WINDOW_MS && (md.distress_mode === "acute" || md.distress_mode === "self_harm") ? (md.distress_mode as DistressKind) : null;
-  const inSelfHarm = opts.selfHarmSessionActive === true || lastMode === "self_harm";
+  const inSession = opts.selfHarmSessionActive === true || lastMode === "self_harm";
+  const windowEnd = typeof md.distress_window_end === "string" ? new Date(md.distress_window_end).getTime() : NaN;
+  // Post-crisis: she confirmed she is safe AND calmer, and nothing self-harm related has been said since.
+  const postCrisis = lastMode !== "self_harm" && ((opts.postCrisis === true && inSession) || (md.distress_post_crisis === true && windowEnd > now.getTime()));
+  const inSelfHarm = inSession && !postCrisis;
   const mode: DistressKind | null = inSelfHarm ? "self_harm" : lastMode;
   const t = norm(userText);
+  const selfHarmAt = opts.selfHarmAt ?? (typeof md.distress_window_end === "string" ? new Date(windowEnd - MODE_WINDOW_MS).toISOString() : null);
 
-  // 1. Explicit self-harm language always wins, in any mode.
+  // 1. Explicit self-harm language always wins, in any mode (including post-crisis: straight back to full mode).
   if (detectSelfHarm(userText)) {
     return {
       type: "reply",
@@ -386,16 +442,42 @@ export function planDistressTurn(
       enteredKind: inSelfHarm ? undefined : "self_harm",
     };
   }
+  // 1b. Post-crisis: ambiguous or acute-distress language also goes straight back to the full self-harm reply.
+  if (postCrisis) {
+    if (detectSelfHarmAmbiguous(userText) || detectAcuteDistress(userText)) {
+      return {
+        type: "reply",
+        message: selfHarmReply(region, userText, false),
+        metadata: { distress_mode: "self_harm", distress_safety_ask: true, conversation_starters: [CHIP_TALK] },
+        enteredKind: "self_harm",
+      };
+    }
+    return { type: "ai", mode: "post_crisis", metadata: postCrisisMetadata(region, selfHarmAt, now) };
+  }
 
-  // 2. Already in self-harm mode: it stays on for the whole session. No cycle, hormones, logging or partner chips.
+  // 2. Already in self-harm mode: it stays on for the whole session unless she has confirmed BOTH that she is
+  // safe and that she is calmer. No cycle, hormones, logging or partner chips until then.
   if (inSelfHarm) {
     const meta = { distress_mode: "self_harm", conversation_starters: [CHIP_TALK] };
     if (IMMINENT_RE.test(t)) return { type: "reply", message: selfHarmDangerReply(region), metadata: meta };
-    if (md.distress_safety_ask === true && SAFE_RE.test(t)) return { type: "reply", message: selfHarmSafeReply(region), metadata: meta };
     if (detectSelfHarmAmbiguous(userText)) return { type: "reply", message: selfHarmReply(region, userText, true), metadata: { ...meta, distress_safety_ask: true } };
-    return { type: "ai", mode: "self_harm" };
+    // Acute-distress language resets any earlier confirmations.
+    if (detectAcuteDistress(userText)) return { type: "ai", mode: "self_harm" };
+    const direct = md.distress_safety_ask === true;
+    const hadSafe = opts.sessionFlags?.safe ?? md.distress_safe === true;
+    const hadCalm = opts.sessionFlags?.calm ?? md.distress_calm === true;
+    const safe = hadSafe || detectSafeConfirmation(userText, direct);
+    const calm = hadCalm || detectCalmSignal(userText, direct);
+    const carry = { ...(safe ? { distress_safe: true as const } : {}), ...(calm ? { distress_calm: true as const } : {}) };
+    const hasCarry = Object.keys(carry).length > 0;
+    if (safe && calm) {
+      // Both confirmed: soft exit. If this very message was the answer to the safety question, reply with the fixed safe reply.
+      if (direct && !hadSafe) return { type: "reply", message: selfHarmSafeReply(region), metadata: postCrisisMetadata(region, selfHarmAt, now) };
+      return { type: "ai", mode: "post_crisis", metadata: postCrisisMetadata(region, selfHarmAt, now) };
+    }
+    if (direct && !hadSafe && safe) return { type: "reply", message: selfHarmSafeReply(region), metadata: { ...meta, ...carry } };
+    return hasCarry ? { type: "ai", mode: "self_harm", carry } : { type: "ai", mode: "self_harm" };
   }
-
   // 3. Answer to the gentle check-in.
   if (md.distress_checkin === true && age <= POST_WINDOW_MS) {
     if (CHECKIN_YES_RE.test(t) || detectSelfHarmAmbiguous(userText)) {
@@ -472,6 +554,9 @@ export function distressPromptBlock(mode: DistressAiMode, region: RegionCode | n
       ? common + `She said no, so go back to supportive chat about what she actually shared.`
       : common + `Her answer did not clearly say yes or no. Respond to what she shared, then gently ask once more whether she is having thoughts of hurting herself or not wanting to be alive. Stay with her.`;
   }
+  if (mode === "post_crisis") {
+    return `\n\nRUNTIME CONTEXT (this turn only) — SETTLED AFTER A SELF-HARM MOMENT: Earlier she said something that suggested she might be thinking about harming herself. Since then she has said she is safe and that she feels calmer. Answer what she asks normally and completely, including plain factual cycle answers (for example which phase she is in, or what happens in a phase). Don't attribute her mood or emotions to hormones or her cycle: never say that her feelings, anxiety, sadness, irritability or reactions are caused or driven by progesterone, estrogen, her phase or her cycle day. Do not open with her cycle day or phase unless she asked about it. Keep the tone warm, calm and plain. No partner suggestions, no announcements and no offers to log anything. If she says anything about hurting herself or about being in distress, respond with care first. Not medical advice.`;
+  }
   if (mode === "post") {
     return `\n\nRUNTIME CONTEXT (this turn only) — JUST AFTER A DISTRESS MOMENT: She was in acute distress a moment ago and says she is calmer. Keep the reply short, warm, and plain. Do NOT open with her cycle day or phase. If she asks why it happened, name the common triggers first (stress, poor sleep, caffeine, skipped meals, a lot going on, or sometimes no clear reason), and only then mention her cycle as ONE possible factor, in this hedged way: "progesterone may be dropping around this point, which can make some people more reactive". Never state her hormone levels or what her hormones are doing as fact, never say "the drop in progesterone", never say her cycle day or hormones caused it, and do not use "since you are on day X" reasoning. No hormone lectures and no "---" deep dive. Do not offer to log anything.`;
   }
@@ -496,6 +581,7 @@ const HEDGED_HORMONE_SENTENCE = "Progesterone may be dropping around this point 
  * After distress ("post"), one hedged sentence replaces them. In other modes hormones are not mentioned at all.
  */
 export function sanitizeHormoneClaims(text: string, mode: DistressAiMode): string {
+  if (mode === "post_crisis") return removeMoodAttribution(text);
   let removed = false;
   const out = text.replace(/[^.!?\n]+[.!?]+/g, (sentence) => {
     if (!HORMONE_RE.test(sentence)) return sentence;
@@ -505,4 +591,27 @@ export function sanitizeHormoneClaims(text: string, mode: DistressAiMode): strin
   }).replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
   if (removed && mode === "post") return `${out}${out ? " " : ""}${HEDGED_HORMONE_SENTENCE}`;
   return out;
+}
+
+// ───────────────────────── Post-crisis backup filter ─────────────────────────
+// The main guard in post-crisis mode is the instruction in distressPromptBlock. This only removes a sentence that
+// links HER mood or emotions to hormones or her cycle. Factual cycle answers (phase, dates, what happens in a phase)
+// pass untouched.
+const SECOND_PERSON_RE = /\b(?:you|your|yours|you'?re|you'?ve|you'?ll)\b/i;
+const CYCLE_TERM_RE = /\b(?:cycle|phase|luteal|follicular|ovulat\w*|menstrual\w*|pmdd|pms|premenstrual|period|periods)\b/i;
+const MOOD_RE = /\b(?:mood\w*|emotion\w*|anxi\w*|sad(?:ness)?|irritab\w*|overwhelm\w*|upset|tearful|cry(?:ing)?|reactive|stress\w*|panic\w*|depress\w*|angry|anger|snappy|on edge|hopeless|nervous system|(?:feel(?:ing)?|felt)\s+(?:so\s+|really\s+|very\s+)?(?:low|down|off|awful|terrible|worse|heavy))\b/i;
+function removeMoodAttribution(text: string): string {
+  return text.replace(/[^.!?\n]+[.!?]+/g, (sentence) => {
+    const linksToBody = HORMONE_RE.test(sentence) || CYCLE_TERM_RE.test(sentence);
+    return linksToBody && SECOND_PERSON_RE.test(sentence) && MOOD_RE.test(sentence) ? "" : sentence;
+  }).replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/**
+ * Final cleanup of an AI reply in a distress-related mode.
+ * Post-crisis replies keep their full length and "See more" section; only the backup filter above runs.
+ * Every other mode drops the deep-dive section and applies its own hormone rules.
+ */
+export function finalizeDistressReply(text: string, mode: DistressAiMode): string {
+  return mode === "post_crisis" ? sanitizeHormoneClaims(text, mode) : sanitizeHormoneClaims(stripDeepDive(text), mode);
 }

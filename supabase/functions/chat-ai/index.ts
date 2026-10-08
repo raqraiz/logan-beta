@@ -20,7 +20,7 @@ import { trackMessageFailures } from "../_shared/messageFailures.ts";
 import { loadCatalog, matchSymptoms } from "../_shared/symptomMatch.ts";
 import {
   CHIP_TALK, DISTRESS_CHIPS, SELF_HARM_SESSION_MS, distressPromptBlock, planDistressTurn, redFlagLine, regionForTimezone,
-  sanitizeHormoneClaims, selfHarmSafeReply, stripDeepDive, type DistressAiMode,
+  finalizeDistressReply, selfHarmSafeReply, type DistressAiMode,
 } from "../_shared/distress.ts";
 
 const corsHeaders = {
@@ -1395,13 +1395,25 @@ serve(async (req) => {
     // while she is still in distress (and the one right after) go to the AI under strict rules.
     // Count-only analytics: a daily counter, no user ID and no message text.
     let distressAiMode: Exclude<DistressAiMode, "self_harm"> | null = null;
+    let distressAiMeta: Record<string, unknown> | null = null;
     {
       // Self-harm mode lasts the whole session: until 6 hours pass with no self-harm-mode message.
-      const { data: shSession } = await supabase.from("chat_messages").select("id").eq("user_id", user.id).eq("role", "assistant")
-        .contains("metadata", { distress_mode: "self_harm" })
-        .gte("created_at", new Date(Date.now() - SELF_HARM_SESSION_MS).toISOString()).limit(1);
+      // It softens to "post-crisis" only after she has confirmed she is safe AND calmer.
+      const windowStart = new Date(Date.now() - SELF_HARM_SESSION_MS).toISOString();
+      const { data: shRows } = await supabase.from("chat_messages").select("created_at, metadata").eq("user_id", user.id).eq("role", "assistant")
+        .contains("metadata", { distress_mode: "self_harm" }).gte("created_at", windowStart).order("created_at", { ascending: false }).limit(1);
+      const shLast = shRows?.[0] as { created_at: string; metadata: Record<string, unknown> | null } | undefined;
+      let postCrisis = false;
+      if (shLast) {
+        const { data: pcRows } = await supabase.from("chat_messages").select("created_at").eq("user_id", user.id).eq("role", "assistant")
+          .contains("metadata", { distress_post_crisis: true }).gt("created_at", shLast.created_at).limit(1);
+        postCrisis = !!pcRows?.length;
+      }
       const plan = planDistressTurn(userMessage, (participant as any)?.timezone, lastAssistantMsg as any, new Date(), {
-        selfHarmSessionActive: !!shSession?.length,
+        selfHarmSessionActive: !!shLast,
+        postCrisis,
+        selfHarmAt: shLast?.created_at ?? null,
+        sessionFlags: { safe: shLast?.metadata?.distress_safe === true, calm: shLast?.metadata?.distress_calm === true },
       });
       if (plan && plan.type === "reply") {
         if (plan.enteredKind) {
@@ -1462,11 +1474,11 @@ serve(async (req) => {
         if (!reply) reply = selfHarmSafeReply(region);
         await supabase.from("chat_messages").insert({
           user_id: user.id, role: "assistant", content: reply, message_type: "text",
-          metadata: { distress_mode: "self_harm", conversation_starters: [CHIP_TALK] },
+          metadata: { distress_mode: "self_harm", conversation_starters: [CHIP_TALK], ...(plan.carry ?? {}) },
         });
         return new Response(JSON.stringify({ success: true, message: reply }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      if (plan && plan.type === "ai" && plan.mode !== "self_harm") distressAiMode = plan.mode;
+      if (plan && plan.type === "ai" && plan.mode !== "self_harm") { distressAiMode = plan.mode; distressAiMeta = plan.metadata ?? null; }
     }
 
     // Recent user turns — used so a day number stated earlier in the thread
@@ -4711,7 +4723,7 @@ serve(async (req) => {
     // deep-dive/phase-tip mandates can be suspended at the source rather than
     // contradicted by a later runtime block.
     const emotionalFollowUp = isEmotionalFollowUp(userMessage, recentMessages as any);
-    const emotionalContextActive = isEmotionalOrHeavyMessage(userMessage) || emotionalFollowUp || distressAiMode !== null;
+    const emotionalContextActive = isEmotionalOrHeavyMessage(userMessage) || emotionalFollowUp || (distressAiMode !== null && distressAiMode !== "post_crisis");
     let systemPrompt = buildSystemPrompt(participant, cycleInfo, cycleHistoryContext, symptomContext + trackerContext + whoopContext + backfillBlock + libraryBlock + libraryGuidance, emotionalContextActive, activeBoundaries);
     systemPrompt += anchorPromptRule(currentCycleAnchorType(participant));
 
@@ -5448,9 +5460,18 @@ serve(async (req) => {
     }
 
     if (distressAiMode) {
-      // No "See more", no cycle context, no log or day-1 prompts on distress turns.
-      finalAssistantMessage = sanitizeHormoneClaims(stripDeepDive(finalAssistantMessage), distressAiMode);
-      for (const k of ["cycle_day", "cycle_phase", "cycle_length_days", "last_period_start", "log_offer", "logged_symptoms", "period_checkin", "suggested_day1"]) delete baseMeta[k];
+      // Distress turns: no "See more", no cycle context, no log or day-1 prompts. Post-crisis replies keep their
+      // full factual answer (and cycle context); they only lose prompts, offers and partner suggestions.
+      finalAssistantMessage = finalizeDistressReply(finalAssistantMessage, distressAiMode);
+      if (distressAiMode === "post_crisis") {
+        for (const k of ["log_offer", "period_checkin", "suggested_day1"]) delete baseMeta[k];
+        if (Array.isArray(baseMeta.conversation_starters)) {
+          baseMeta.conversation_starters = (baseMeta.conversation_starters as string[]).filter((c) => !/partner|boyfriend|husband|heads.?up/i.test(c));
+        }
+        Object.assign(baseMeta, distressAiMeta ?? {});
+      } else {
+        for (const k of ["cycle_day", "cycle_phase", "cycle_length_days", "last_period_start", "log_offer", "logged_symptoms", "period_checkin", "suggested_day1"]) delete baseMeta[k];
+      }
       if (distressAiMode === "acute") {
         finalAssistantMessage = `${finalAssistantMessage}\n\n${redFlagLine(regionForTimezone((participant as any)?.timezone))}`;
         baseMeta.distress_mode = "acute";
@@ -5525,7 +5546,7 @@ serve(async (req) => {
       if (isOnboardingComplete && await partnerHeadsupVisibleFor(supabase, user.id)) {
         const { data: hs } = await supabase.from("partner_headsup_settings").select("enabled").eq("user_id", user.id).maybeSingle();
         const offersOn = !hs || hs.enabled;
-        if (headsupSchedAsk) {
+        if (headsupSchedAsk && !distressAiMode) {
           await supabase.from("feature_requests").insert({ user_id: user.id, feature: "scheduled_headsup" });
           if (offersOn) {
             await supabase.from("chat_messages").insert({ user_id: user.id, role: "assistant", message_type: "partner_headsup_schedreq", content: "", metadata: { partner_headsup: "schedreq" } });
