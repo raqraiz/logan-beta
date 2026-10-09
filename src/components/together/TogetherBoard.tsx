@@ -78,7 +78,6 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, cycleLength, hasCycl
     const others = field.filter((r) => !mine.has(key(r.symptom))).slice(0, 20 - hers.length);
     return [...hers, ...others].sort((x, y) => (y.women_count ?? 0) - (x.women_count ?? 0));
   }, [field, mine]);
-  const max = Math.max(10, ...field.map((r) => r.women_count ?? 0));
 
   const len = cycleLength && cycleLength >= 20 && cycleLength <= 60 ? cycleLength : 28;
   const wrap = (d: number) => ((((d - 1) % len) + len) % len) + 1;
@@ -164,14 +163,15 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, cycleLength, hasCycl
         {CATEGORY_PILLS.map((p) => <Pill key={p.id} active={cat === p.id} onClick={() => setCat(p.id)}>{p.label}</Pill>)}
         <span aria-hidden className="w-3 shrink-0" />
       </PillRow>
-      <BubbleCluster rows={shown} max={max} mine={mine} cats={cats} onOpen={onOpenSymptom} />
+      <BubbleCluster rows={shown} mine={mine} cats={cats} onOpen={onOpenSymptom} />
       {field.length < 3 && <p className="text-center text-sm text-muted-foreground">{MORE}</p>}
-      <p className="text-center text-sm text-muted-foreground">
-        Bigger bubbles are felt by more women.<br />
-        <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="inline-block h-3 w-3 rounded-full border-2 border-[#C4247A]" />Circled ones, you feel too.
-        </span>
-      </p>
+      <div className="flex flex-col items-start gap-1 text-left text-sm text-muted-foreground">
+        <p>Bigger bubbles are felt by more women.</p>
+        <p className="inline-flex items-center gap-1.5">
+          <span aria-hidden className="inline-block h-3 w-3 rounded-full border-[2.5px] border-[#C4247A]" />Circled ones, you feel too.
+        </p>
+        <button type="button" onClick={() => setView("list")} className="relative py-1 text-left text-sm font-semibold text-foreground underline after:absolute after:inset-x-0 after:-inset-y-2 after:content-['']">{field.length > shown.length ? `See all ${field.length} as a list ›` : "See all as a list ›"}</button>
+      </div>
       {notCounted}
       <section className={CARD} aria-labelledby="together-around-days">
         <h2 id="together-around-days" className="pb-1 pt-3 font-sans text-[15px] font-bold text-foreground">{showWeek ? `What women log around day ${lo} to ${hi}` : "What women in your stage log most"}</h2>
@@ -180,12 +180,11 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, cycleLength, hasCycl
           <li><button type="button" onClick={() => { setListPill(showWeek ? "week" : "stage"); setView("list"); }} className="w-full py-3 text-left text-[13px] font-semibold text-foreground">See all ›</button></li>
         </ul> : <p className="pb-3 text-[13px] text-[#6E675F] dark:text-muted-foreground">Once more women share, you'll see what's common around your days.</p>}
       </section>
-      <button type="button" onClick={() => setView("list")} className="self-center text-sm font-semibold text-foreground underline">{field.length > shown.length ? `See all ${field.length} as a list ›` : "See all as a list ›"}</button>
     </div>
   );
 }
 
-const GAP = 4, R_MIN = 32, R_MAX = 51, BASE_W = 342;
+const GAP = 2, R_MIN = 32, R_MAX = 51, BASE_W = 342;
 function fillFor(c: TogetherCategory | undefined, t: number, i: number) {
   if (c === "sleep" || c === "mood") return `var(--bubble-${c}-${i % 3})`;
   const alpha = c === "body" ? (0.14 + 0.2 * t).toFixed(2) : "0.18";
@@ -230,11 +229,14 @@ function fitLabel(text: string, r: number, start: number) {
 export interface Bubble { id: string; label: string; t: number; fill: string; ring?: boolean; star?: boolean; selected?: boolean }
 
 /** Everyone lens: size by women, magenta ring for hers. */
-function BubbleCluster({ rows, max, mine, cats, onOpen }: {
-  rows: AggRow[]; max: number; mine: Set<string>; cats: Map<string, TogetherCategory>; onOpen: (s: string) => void;
+function BubbleCluster({ rows, mine, cats, onOpen }: {
+  rows: AggRow[]; mine: Set<string>; cats: Map<string, TogetherCategory>; onOpen: (s: string) => void;
 }) {
+  // Area-proportional: radius follows sqrt(count), stretched over the shown set so close counts still differ.
+  const roots = rows.filter(isExact).map((r) => Math.sqrt(r.women_count!));
+  const lo = Math.min(...roots), hi = Math.max(...roots);
   const items: Bubble[] = rows.map((r, i) => {
-    const t = isExact(r) ? Math.sqrt((r.women_count! - 10) / Math.max(1, max - 10)) : 0;
+    const t = !isExact(r) ? 0 : hi > lo ? (Math.sqrt(r.women_count!) - lo) / (hi - lo) : 0.5;
     return { id: r.symptom, label: display(r.symptom), t, fill: fillFor(cats.get(key(r.symptom)), t, i), ring: mine.has(key(r.symptom)) };
   });
   return <BubbleField items={items} onTap={onOpen} />;
@@ -274,7 +276,7 @@ export function BubbleField({ items, onTap }: { items: Bubble[]; onTap: (id: str
         const x = w / 2 + (p.x - layout.cx) * scale - d / 2;
         const y = 4 + h / 2 + (p.y - layout.cy) * scale - d / 2;
         const text = `${b.selected ? "✓ " : ""}${b.star ? "★ " : ""}${b.label}`;
-        const label = fitLabel(text, d / 2, 12 + 5 * b.t);
+        const label = fitLabel(text, d / 2, 11.5 + 5.5 * b.t);
         return (
            <Button key={b.id} variant="ghost" type="button" onClick={() => onTap(b.id)} aria-label={b.selected ? `${b.label}, picked` : b.label}
              data-selected={b.selected ? "true" : "false"} data-ring={b.ring ? "true" : "false"}
