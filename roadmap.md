@@ -122,3 +122,9 @@ Decision: admins have no direct table access. All back office data goes through 
 - [x] send-broadcast and draft-broadcast edge functions deleted. The admin_broadcasts table and the onboarded_profiles view are dropped.
 - [x] Every direct admin policy is dropped (chat messages, profiles, participants, activity and feature events, attribution, email logs, policy notifications, growth tracker, short links, feature flags, aliases, symptom reports, admin read of roles). Community symptoms and symptom reports keep only the woman's own-row access. Super admin role management on user_roles stays.
 - [ ] Decide whether policy update and AMA invite sending move into Send. (send-policy-update and send-ama-invite are kept but have no screen right now.)
+
+## Check-in reflects logged input only
+- [x] Rule: the daily check-in card ("Sound like you?") reflects only what she logged in the last 3 days. No logs or neutral logs give a neutral or warm opener and an open question. No assumed distress, ever.
+- [x] Onboarding anchor and typical symptoms no longer feed the opener; her own recent words only (earlier cards no longer feed back in); birth control and irregular cycle described neutrally; no supplement, medication or dose named (guardrail plus one retry and a plain fallback).
+- [x] "Not quite" on a card steers the next 5 cards away from that theme; opener style varies daily; "emotionally allergic" chip renamed "Wanting space from people".
+- [ ] Check in preview: continuous-pill account with no logs, one with only positive logs, one with a logged low mood.

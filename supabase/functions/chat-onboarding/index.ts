@@ -54,7 +54,7 @@ const SYMPTOM_CATEGORIES = {
     symptoms: [
       "Random shame spiral",
       "One stinky armpit",
-      "Feeling emotionally allergic to people",
+      "Wanting space from people",
       "Sudden urge to delete your whole life online"
     ]
   }
