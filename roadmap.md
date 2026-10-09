@@ -9,6 +9,7 @@
 ## Log mode bubbles
 - [x] Share Together packing, category colors and Mine size rules; rank her 12-month counts before minimum-size suggestions, max 14.
 - [x] Add exact dark category, selected and ring colors to the shared field.
+- [x] "Yours" on Together bubbles is a soft ring (#C4247A at 30%, 1.5px), drawn inside the bubble edge so packing is unchanged.
 - [x] Verify ranking, selection and non-overlapping packing on phone/desktop; minimum measured contrast 9.99:1 dark and 11.96:1 light, 41 unit and 9 boundary tests pass, no data saved.
 
 ## Real-data symptom page fixes

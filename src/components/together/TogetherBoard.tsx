@@ -168,7 +168,7 @@ export function TogetherBoard({ rows, mine, cats, cycleDay, cycleLength, hasCycl
       <div className="flex flex-col items-start gap-1 text-left text-sm text-muted-foreground">
         <p>Bigger bubbles are felt by more women.</p>
         <p className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="inline-block h-3 w-3 rounded-full border-[2.5px] border-[#C4247A]" />Circled ones, you feel too.
+          <span aria-hidden className="inline-block h-3 w-3 rounded-full border-[1.5px] border-[color:var(--bubble-ring)]" />Circled ones, you feel too.
         </p>
         <button type="button" onClick={() => setView("list")} className="relative py-1 text-left text-sm font-semibold text-foreground underline after:absolute after:inset-x-0 after:-inset-y-2 after:content-['']">{field.length > shown.length ? `See all ${field.length} as a list ›` : "See all as a list ›"}</button>
       </div>
