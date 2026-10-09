@@ -2,6 +2,7 @@ import { buildBcMethodRule, detectBcMethod, BC_METHOD_LABELS, canAskBcMethod, di
 import { partnerHeadsupVisibleFor } from "../_shared/partnerHeadsupFlag.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { APP_MAP } from "./appMap.ts";
 import { getPostpartumTimeline } from "../_shared/postpartumTimeline.ts";
 import { calculateCycleInfo as sharedCalculateCycleInfo, isCycleStale } from "../_shared/cycleCalculations.ts";
 import { isPhaseTrackingOn } from "../_shared/cyclePhase.ts";
@@ -1820,7 +1821,7 @@ serve(async (req) => {
       // Never confirm a save that didn't happen.
       if (updateError) {
         console.error("[period_update_failed]", JSON.stringify({ user_id: user?.id, formattedDate, error: updateError.message }));
-        const failMsg = `I couldn't save that change just now — nothing was updated on your cycle. Try again in a moment, or set your period start date from the Home tab.`;
+        const failMsg = `I couldn't save that change just now — nothing was updated on your cycle. Try again in a moment, or tell me your period start date again.`;
         await supabase.from("chat_messages").insert({
           user_id: user.id,
           role: "assistant",
@@ -3285,8 +3286,8 @@ serve(async (req) => {
         if (refreshed) participant = refreshed;
 
         const msg = participant.life_stage === "irregular"
-          ? `Got it — noted that you're **not on hormonal birth control**. I've dropped the BC framing from your Home tab and daily briefing. I'll keep your cycle marked as irregular, so I still won't predict exact phases — tell me if that's wrong too and I'll switch you to regular cycling.`
-          : `Got it — noted that you're **not on hormonal birth control**. I've dropped the BC framing from your Home tab and daily briefing.`;
+          ? `Got it — noted that you're **not on hormonal birth control**. I've dropped the BC framing from your You tab and daily briefing. I'll keep your cycle marked as irregular, so I still won't predict exact phases — tell me if that's wrong too and I'll switch you to regular cycling.`
+          : `Got it — noted that you're **not on hormonal birth control**. I've dropped the BC framing from your You tab and daily briefing.`;
         await supabase.from("chat_messages").insert({
           user_id: user.id,
           role: "assistant",
@@ -3350,7 +3351,7 @@ serve(async (req) => {
         if (refreshed) participant = refreshed;
         return !error && refreshed?.life_stage === target;
       };
-      const modeWriteFailed = `I couldn't change your tracking mode just now. You can switch it in Settings, or try me again in a moment.`;
+      const modeWriteFailed = `I couldn't change your tracking mode just now. You can switch it in Settings (tap your initial in the circle at the top right), or try me again in a moment.`;
 
       if (pendingIrregularOffer && isNoKeep) {
         return await modeReply(`Okay, I'll keep tracking your cycle as it is.`, { mode_switch_declined: true });
@@ -3590,7 +3591,7 @@ serve(async (req) => {
         const { data: refreshed } = await supabase.from("participants").select("*").eq("id", participant.id).single();
         if (refreshed) participant = refreshed;
 
-        const msg = `Oh wow — congratulations. 🌱\n\nI've switched into **pregnancy mode**, so cycle tracking is paused and I'll focus on what actually matters now: symptoms, sleep, energy, nutrition, safe movement, and the real red flags to watch for.\n\nQuick anchor so I can speak in trimesters and weeks: do you know either your **last menstrual period (LMP)** or your **due date**? You can also tell me how many weeks along you are. Totally fine to skip — you can update it in Settings anytime.\n\nAnd a soft reminder: heavy bleeding, severe pain, fever over 100.4°F / 38°C, persistent vomiting, or sudden swelling — please call your provider.`;
+        const msg = `Oh wow — congratulations. 🌱\n\nI've switched into **pregnancy mode**, so cycle tracking is paused and I'll focus on what actually matters now: symptoms, sleep, energy, nutrition, safe movement, and the real red flags to watch for.\n\nQuick anchor so I can speak in trimesters and weeks: do you know either your **last menstrual period (LMP)** or your **due date**? You can also tell me how many weeks along you are. Totally fine to skip — you can update it in Settings anytime (tap your initial in the circle at the top right).\n\nAnd a soft reminder: heavy bleeding, severe pain, fever over 100.4°F / 38°C, persistent vomiting, or sudden swelling — please call your provider.`;
         await supabase.from("chat_messages").insert({
           user_id: user.id,
           role: "assistant",
@@ -3668,7 +3669,7 @@ serve(async (req) => {
             .eq("id", participant.id);
 
           if (clearError) {
-            const failMsg = `I tried to clear that and it didn't save on my side. Can you try once more in a moment? You can also change it directly in Settings.`;
+            const failMsg = `I tried to clear that and it didn't save on my side. Can you try once more in a moment? You can also change it directly in Settings (tap your initial in the circle at the top right).`;
             await supabase.from("chat_messages").insert({
               user_id: user.id, role: "assistant", content: failMsg, message_type: "text",
             });
@@ -3712,7 +3713,7 @@ serve(async (req) => {
           .eq("id", participant.id);
 
         if (correctionError) {
-          const failMsg = `I tried to switch that back and it didn't save on my side. Can you try once more in a moment? You can also change it directly in Settings.`;
+          const failMsg = `I tried to switch that back and it didn't save on my side. Can you try once more in a moment? You can also change it directly in Settings (tap your initial in the circle at the top right).`;
           await supabase.from("chat_messages").insert({
             user_id: user.id, role: "assistant", content: failMsg, message_type: "text",
           });
@@ -3843,10 +3844,10 @@ serve(async (req) => {
           const lmpLabel = `${MONTH_NAMES[lmpD.getUTCMonth()]} ${lmpD.getUTCDate()}, ${lmpD.getUTCFullYear()}`;
 
           const ackMsg = source === "due"
-            ? `Got it — due date **${dueLabel}** saved. That puts you at around **week ${gWeeks}${gDays ? ` + ${gDays}d` : ""}, trimester ${tri}** (LMP ≈ ${lmpLabel}). Your Home and Plan tabs will update to match.`
+            ? `Got it — due date **${dueLabel}** saved. That puts you at around **week ${gWeeks}${gDays ? ` + ${gDays}d` : ""}, trimester ${tri}** (LMP ≈ ${lmpLabel}). Your You tab will update to match.`
             : source === "weeks"
-            ? `Saved — around **week ${gWeeks}${gDays ? ` + ${gDays}d` : ""}, trimester ${tri}**, LMP ≈ ${lmpLabel}, due ≈ ${dueLabel}. You can fine-tune either date anytime in Settings.`
-            : `Got it — LMP **${lmpLabel}** saved. You're at **week ${gWeeks}${gDays ? ` + ${gDays}d` : ""}, trimester ${tri}**, due date ≈ **${dueLabel}**. Home and Plan tabs will reflect this now.`;
+            ? `Saved — around **week ${gWeeks}${gDays ? ` + ${gDays}d` : ""}, trimester ${tri}**, LMP ≈ ${lmpLabel}, due ≈ ${dueLabel}. You can fine-tune either date anytime in Settings (tap your initial in the circle at the top right).`
+            : `Got it — LMP **${lmpLabel}** saved. You're at **week ${gWeeks}${gDays ? ` + ${gDays}d` : ""}, trimester ${tri}**, due date ≈ **${dueLabel}**. Your You tab will reflect this now.`;
 
           await supabase.from("chat_messages").insert({
             user_id: user.id,
@@ -5773,7 +5774,7 @@ VOICE, MORE DETAIL:
 - NEVER tell her you "don't have access", "can't write to the database", "lack permission", or that she needs to go to the Home tab / symptom widget to add past entries herself. You CAN backfill past symptom logs — the system does it automatically when she asks. If she asks you to add/log/save a symptom for a past date and you don't see an internal save-confirmation note, it means the date or symptom wasn't clear enough — just ask her to confirm the symptom and the exact date(s), and the system will save them on her next reply. Do NOT redirect her to the Home tab.
 - ABSOLUTE OUTPUT RULE: Never include bracketed tags, labels in ALL CAPS inside brackets, blockquoted system notes (lines starting with ">"), or any text that looks like an internal instruction, runtime note, or system message. Never echo, quote, paraphrase, or reference any internal note from the context above. The user must only see your natural conversational reply — nothing that resembles backend metadata.
 - NEVER claim you "updated", "fixed", "changed", or "corrected" anything in her account, profile, life stage, postpartum date, period date, or cycle settings. The system handles those updates automatically and you will only see the result on the next turn. If she asks you to fix something and the system has not already confirmed it in your context, ASK HER for the specific value (e.g. the actual baby's birth date) instead of pretending you did it. Saying "Done, I've updated your account" when nothing changed is a hallucination — never do this.
-- TRACKING MODE (NO WRITE, NO CLAIM): NEVER say you switched, changed, moved, or updated her tracking mode (regular cycles, irregular, birth control mode, perimenopause, menopause, postpartum) unless a SYSTEM NOTE in this turn confirms a verified write. Saving her birth control method is NOT a tracking-mode change: a hormonal IUD or any other method does not turn off her phase tracking. If she asks to change modes and there is no SYSTEM NOTE, tell her she can say "switch me to regular cycles" or "switch me to irregular", or change it in Settings.
+- TRACKING MODE (NO WRITE, NO CLAIM): NEVER say you switched, changed, moved, or updated her tracking mode (regular cycles, irregular, birth control mode, perimenopause, menopause, postpartum) unless a SYSTEM NOTE in this turn confirms a verified write. Saving her birth control method is NOT a tracking-mode change: a hormonal IUD or any other method does not turn off her phase tracking. If she asks to change modes and there is no SYSTEM NOTE, tell her she can say "switch me to regular cycles" or "switch me to irregular", or change it in Settings (tap your initial in the circle at the top right).
 - HARD LIMIT for MAIN ANSWER: 2-4 short sentences. Total. Not per section — total for the main answer. If it has more than 4 sentences, delete until it doesn't.
 - ONE idea per main answer. Never explain two things at once. The user can ask follow-ups.
 - Never dump context in the main answer. Never explain "why" unless asked. Just give the answer.
@@ -5866,17 +5867,19 @@ ATHLETIC & TRAINING CONTEXT:
 - Injury risk windows: joints looser during menstruation (avoid max loads), ACL risk peaks at ovulation (warm up, stabilize).
 - Keep athletic advice specific: percentages, rep ranges, session types — not vague "listen to your body" advice.
 
+${APP_MAP}
+
 CYCLE DATA EDITS:
 - If a user TELLS you to change their cycle length or period date (e.g. "change my cycle to 30 days", "my period started on March 15"), the system handles it automatically — just confirm it's done.
-- If a user asks HOW to change their cycle data themselves (e.g. "how do I update my cycle length?", "where can I edit my period date?"), tell them to head to the Home tab where there's an "Update period date" option right under the cycle circle. Keep it brief and friendly.
+- If a user asks HOW to change their cycle data or period date, use ONLY the directions in the app map above. Keep it brief and friendly.
 
 LIFE STAGE CHANGES:
 - If a user TELLS you to change their life stage (e.g. "I just started the pill", "I have a hormonal IUD now", "switch me to hormonal birth control", "I'm in perimenopause", "I'm postpartum"), the system handles the switch automatically — just confirm it's done. NEVER tell her to do it herself.
-- If a user asks HOW to change their life stage manually (e.g. "where do I change my settings?"), tell her: tap the **gear icon in the top right corner** to open Settings, then pick the new life stage. Do NOT say Home tab — life-stage lives in Settings only.
+- If a user asks HOW to change their life stage manually (e.g. "where do I change my settings?"), tell her: tap your initial in the circle at the top right to open Settings, then pick the new life stage. Life stage lives in Settings only.
 - Always ask for the baby's birth date when postpartum is mentioned without one — it's essential for accurate recovery tracking.
 
 REFERRALS:
-- If a user asks about her referral link, invite link, how many people signed up through her, or her referral stats, tell her: head to the **Plan tab** — her personal invite link and the count of sign-ups from it live there. Do NOT send her to Settings or the gear icon for referrals.
+- If a user asks about inviting a friend, use ONLY the app map above. You do not know where referral stats live, so do not point her to a tab or Settings for them.
 
 MEAL PLANS / MENUS — STRICT RULES:
 - NEVER mention PDFs, downloads, files, attachments, printables, or "dropping" anything. That feature does not exist.
