@@ -16,6 +16,15 @@ import {
 } from "../_shared/topicBoundaries.ts";
 import { fetchMemoryNotes, buildMemoryBlock, type MemoryNotes } from "../_shared/memoryNotes.ts";
 import { trackMessageFailures } from "../_shared/messageFailures.ts";
+import {
+  RECENT_WINDOW_DAYS,
+  buildOpenerRules,
+  breaksOpenerGuardrail,
+  fetchRecentLoggedSymptoms,
+  fetchRejectedOpeners,
+  recentCheckinLines,
+  windowStartIso,
+} from "../_shared/openerContext.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -193,8 +202,9 @@ serve(async (req) => {
       .from("chat_messages")
       .select("content, role")
       .eq("user_id", user.id)
-      .in("role", ["user", "assistant"]) // team messages (role system) are never input
+      .eq("role", "user") // her own words only: earlier cards must never feed back into the next one
       .neq("message_type", "checkin")
+      .gte("created_at", windowStartIso())
       .order("created_at", { ascending: false })
       .limit(5);
 
@@ -210,6 +220,11 @@ serve(async (req) => {
     // Active "don't bring up X" boundaries — absolute, enforced on every surface.
     const boundaries = await fetchActiveBoundaries(supabase, user.id);
     const memoryNotes = await fetchMemoryNotes(supabase, user.id);
+    const openerRules = buildOpenerRules({
+      loggedSymptoms: await fetchRecentLoggedSymptoms(supabase, user.id),
+      checkins: recentCheckinLines(checkinMessages || []),
+      rejected: await fetchRejectedOpeners(supabase, user.id),
+    });
     // Strip prior boundary disputes / apologies out of the context we feed back in.
     const safeRecentMessages = sanitizeRecentMessages(recentMessages || []);
     const stageSuppressed = hasStageBoundary(boundaries, userLifeStage);
@@ -222,14 +237,13 @@ serve(async (req) => {
         participant,
         userLifeStage,
         safeRecentMessages,
-        checkinMessages || [],
         boundaries,
         memoryNotes,
-      );
+      ) + openerRules;
 
       let aiResult;
       try {
-        aiResult = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt + anchorPromptRule(currentCycleAnchorType(participant)) + CALM_VOICE_RULE);
+        aiResult = await generateGuardedInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt + anchorPromptRule(currentCycleAnchorType(participant)) + CALM_VOICE_RULE);
       } catch (aiErr) {
         const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
         console.error("AI insight generation failed, removing placeholder:", msg);
@@ -404,14 +418,13 @@ serve(async (req) => {
         cycleInfo,
         participant,
         safeRecentMessages,
-        checkinMessages || [],
         boundaries,
         memoryNotes,
-      );
+      ) + openerRules;
 
       let aiResult;
       try {
-        aiResult = await generateAIInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt + anchorPromptRule(currentCycleAnchorType(participant)) + CALM_VOICE_RULE);
+        aiResult = await generateGuardedInsight(Deno.env.get("LOVABLE_API_KEY")!, prompt + anchorPromptRule(currentCycleAnchorType(participant)) + CALM_VOICE_RULE);
       } catch (aiErr) {
         const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
         console.error("AI insight generation failed, removing placeholder:", msg);
@@ -497,12 +510,9 @@ function buildInsightPrompt(
   cycleInfo: { cycleDay: number; phase: string; daysUntilNextPhase: number },
   participant: Record<string, any>,
   recentMessages: { content: string; role: string }[],
-  checkinMessages: { content: string; metadata: any; created_at: string }[],
   boundaries: TopicBoundary[] = [],
   memoryNotes: MemoryNotes = { corrections: [], confirmed: [] },
 ): string {
-  const anchorSymptom = participant.anchor_symptom;
-  const symptoms = participant.typical_symptoms || [];
   const topics = participant.goals || [];
   const age = participant.age || null;
   const firstName = userName.split(" ")[0];
@@ -518,32 +528,6 @@ function buildInsightPrompt(
 
   const strengthContext = phaseStrengths[cycleInfo.phase] || "";
 
-  // Anchor-specific phase context with food connection
-  // During Follicular & Ovulation: SUPPRESS symptom context — these are peak phases
-  let anchorContext = "";
-  if (anchorSymptom && (cycleInfo.phase === "Luteal" || cycleInfo.phase === "Menstruation")) {
-    const foodMap: Record<string, Record<string, string>> = {
-      "Luteal": {
-        "muffled hearing": "Inner ear inflammation tends to peak now. Omega-3s (salmon, sardines) and turmeric can quiet it.",
-        "Anxiety spikes": "GABA drops as progesterone shifts. Magnesium-rich foods (dark chocolate, pumpkin seeds) support the nervous system.",
-        "Migraines": "Estrogen withdrawal can trigger vascular headaches. Ginger, magnesium, and anti-inflammatory fats help.",
-        "Rage spikes": "Serotonin dips in late luteal. Complex carbs (sweet potato, oats) support serotonin production.",
-        "Brain fog": "Progesterone is sedating. Protein-rich meals and healthy fats keep blood sugar steady.",
-        "Energy crashes": "Blood sugar instability peaks now. Protein + fat at every meal prevents the crashes.",
-        "Deep fatigue": "Iron stores may be depleting pre-period. Red meat, lentils, or leafy greens with vitamin C.",
-        "Chin or jaw acne breakouts": "Androgens spike in luteal. Anti-inflammatory foods and cutting dairy can help.",
-        "_default": `"${anchorSymptom}" is likely active or building. Anti-inflammatory foods (fatty fish, leafy greens, berries) can take the edge off.`,
-      },
-      "Menstruation": {
-        "_default": `"${anchorSymptom}" may be present or easing. Warm, iron-rich, anti-inflammatory meals support recovery.`,
-      },
-    };
-
-    const phaseMap = foodMap[cycleInfo.phase] || {};
-    const foodNote = phaseMap[anchorSymptom] || phaseMap["_default"] || "";
-    anchorContext = `Their anchor symptom: ${foodNote}`;
-  }
-
   // Topic preferences context
   const topicContext = topics.length > 0
     ? `- Interest areas: ${topics.join(", ")}. Weave relevant tips from these areas into the intro when naturally fitting.`
@@ -551,7 +535,7 @@ function buildInsightPrompt(
 
   const isPerimenopause = (participant.life_stage === "perimenopause");
   const perimenopauseContext = isPerimenopause
-    ? `\n- LIFE STAGE: **Perimenopause**. ${firstName} STILL HAS PERIODS and is still cycling, but the pattern is shifting (cycles getting shorter/longer, heavier/lighter, skipped months, new symptoms like hot flashes, sleep changes, sharper mood swings). DO NOT call her menopausal — perimenopause ≠ menopause. Reference her cycle day and phase as usual, but acknowledge swings can be sharper and less predictable than her baseline. Weave in awareness of sleep, hot flashes, mood, energy, and bone/muscle health where it fits naturally.`
+    ? `\n- LIFE STAGE: **Perimenopause**. ${firstName} STILL HAS PERIODS and is still cycling, but the pattern is shifting (cycles getting shorter/longer, heavier/lighter, skipped months, new symptoms like hot flashes, sleep changes, sharper mood swings). DO NOT call her menopausal — perimenopause ≠ menopause. Reference her cycle day and phase as usual. Mention sleep, hot flashes, mood or energy only if she logged them recently.`
     : "";
 
   // NO-UTERUS BRANCH (hysterectomy, ovaries retained) — layered on top of life_stage,
@@ -560,51 +544,42 @@ function buildInsightPrompt(
     ? `\n- NO UTERUS (hysterectomy, ovaries intact): She is NOT menopausal — her ovaries still cycle, so hormone patterns still apply. But she will NEVER bleed again: never ask for, reference, or imply a period date, Day 1, a late/due period, or "when your period starts". Any cycle day or phase here is an ESTIMATE with no bleed anchor — hedge it ("roughly", "estimated") and lean on her tracked symptoms over calendar timing.`
     : "";
 
-  return `You are Logan. You know ${firstName}'s cycle so well you can name what she's feeling before she does. You're not giving advice or instructions. You're the person who just gets it.${buildBoundaryRuleBlock(boundaries)}${buildBcMethodRule(participant)}${buildMemoryBlock(memoryNotes)}
+  return `You are Logan. You're ${firstName}'s warm, steady companion. You know her cycle, and you only talk about feelings she has actually shared. You're not giving advice or instructions.${buildBoundaryRuleBlock(boundaries)}${buildBcMethodRule(participant)}${buildMemoryBlock(memoryNotes)}
 
 CONTEXT:
 - Today is Day ${cycleInfo.cycleDay} of your cycle · **${cycleInfo.phase}**
 - ${cycleInfo.daysUntilNextPhase} days until next phase
 - Age: ${age || "unknown"}
-- Anchor symptom: ${anchorSymptom || "not set"}${(participant.watch_symptoms?.length ? `\n- She chose to watch: ${participant.watch_symptoms.join(", ")}. Prioritise these in tips and check-in questions when relevant to today.` : "")}
-- Other symptoms: ${symptoms.join(", ") || "none"}
-- PHASE STRENGTHS: ${strengthContext}${perimenopauseContext}${noUterusNote}
-${anchorContext ? `- ${anchorContext}` : ""}
+${(participant.watch_symptoms?.length ? `- She chose to watch: ${participant.watch_symptoms.join(", ")}. This only tells you what she cares about. Never say or imply she is having any of these today unless she logged it.\n` : "")}- PHASE STRENGTHS: ${strengthContext}${perimenopauseContext}${noUterusNote}
 ${topicContext}
 ${age && age <= 16 ? "- TONE: User is young. Use simple, relatable language. Keep intro under 25 words. Make the question feel like a text from a friend." : ""}
 ${age && age >= 17 && age <= 22 ? "- TONE: Keep it casual and brief. Max 35 words for intro." : ""}
 
-RECENT CONVERSATION:
-${recentMessages.map(m => `${m.role}: ${m.content.slice(0, 80)}`).join("\n") || "None"}
-
-RECENT SELF-REPORTED CHECK-INS (use to personalize — if they reported low energy yesterday, acknowledge it):
-${checkinMessages.length > 0 ? checkinMessages.map(m => {
-  const meta = m.metadata || {};
-  return `- ${meta.dimension}: "${meta.response}" (${meta.phase}, day ${meta.cycle_day})`;
-}).join("\n") : "None yet"}
+HER OWN RECENT WORDS (last ${RECENT_WINDOW_DAYS} days, context only):
+${recentMessages.map(m => `${m.content.slice(0, 80)}`).join("\n") || "None"}
 
 IMPORTANT TONE RULE:
 - Every phase has superpowers. LEAD with what's going well — the strengths, the high-performing qualities of this phase.
 - During Follicular and Ovulation: emphasize peak energy, creativity, confidence, and capability. Anchor symptom context is secondary or absent.
-- During Luteal and Menstruation: acknowledge strengths first (detail-oriented thinking, intuition, reflection), then gently reference anchor symptom context if relevant.
+- During Luteal and Menstruation: acknowledge strengths first (detail-oriented thinking, intuition, reflection). Mention a symptom only if she logged it in the last few days.
 - Never frame any phase as purely negative. Even challenging phases have powerful qualities.
 
 Generate a JSON object:
 
 1. "intro": 2-3 short sentences. Max 40 words total.
-   - Sentence 1: Open with exactly "Today is Day ${cycleInfo.cycleDay} of your cycle · **${cycleInfo.phase}** phase" or a very close variation. Make it clear the day number refers to the whole cycle, not the phase. Lead with what this phase is great for.
-   - Sentence 2: Name a strength or high-performing quality they're likely feeling today. During Follicular/Ovulation, lean into peak performance. During Luteal/Menstruation, acknowledge the quieter superpowers.
-   - Sentence 3 (optional, only in Luteal or Menstruation): A single, specific food mention that connects to their anchor symptom. Frame it as something their body might be drawn to, not as a prescription.
+   - Include that today is Day ${cycleInfo.cycleDay} of her cycle and the **${cycleInfo.phase}** phase (bold only the phase name). Make it clear the day number refers to the whole cycle, not the phase. Vary the sentence shape from day to day.
+   - Mention what this phase tends to be good for (a strength, not a feeling you assume she has). During Follicular/Ovulation, lean into peak performance. During Luteal/Menstruation, acknowledge the quieter strengths.
+   - No food, supplement or symptom suggestions.
 
-2. "question": One short question (under 12 words). During Follicular/Ovulation: ask about a strength or creative/energetic moment. During Luteal/Menstruation: ask about a strength OR a hyper-specific sensation tied to "${anchorSymptom}". The kind of question that makes them stop and think "wait, yes." Write it as its own full sentence: start with a capital letter and end with "?".
+2. "question": One short, open question (under 12 words), such as "How's today landing?". If she logged something recently, ask how that is going. Otherwise keep it open, never a guess at a negative state. Write it as its own full sentence: start with a capital letter and end with "?".
 
-3. "starters": 3 replies (2-4 words each). One confirms ("Yeah exactly"), one pushes back ("Not today actually"), one opens up ("Tell me more").
+3. "starters": 3 replies (2-4 words each) that fit the open question. One good ("Pretty good"), one mixed ("A bit flat"), one opens up ("Tell me more").
 
 4. "cheat_sheet": Personalized energy/focus/emotions/nutrition for THIS user in THIS phase. Each has "level" (high/medium/low/variable) and "note" (max 12 words). Notes must be INQUIRY-BASED — ask the user how they're feeling, don't tell them. Frame each note as a gentle question or check-in that invites them to reflect. Never declare what they're experiencing. Any question in a note is a full sentence that starts with a capital letter and ends with "?". During high-performing phases, levels should reflect the strengths (e.g., energy: high, focus: high).
    - "energy": Ask how their energy is today given their phase.
    - "focus": Ask about their mental clarity or creative state.
    - "emotions": Ask what their emotional landscape feels like right now.
-   - "nutrition": Ask about cravings or what their body wants to eat. During Luteal/Menstruation, "level" should be "high" (cravings are strongest). During Follicular/Ovulation, "level" should be "medium". Tie the note to their anchor symptom when relevant (e.g., "Craving magnesium-rich foods like dark chocolate?").
+   - "nutrition": Ask about cravings or what their body wants to eat. During Luteal/Menstruation, "level" should be "high" (cravings are strongest). During Follicular/Ovulation, "level" should be "medium". Keep it open (e.g., "Anything your body is asking for?").
 
 VOICE:
 - You're a friend who just knows, not a coach giving a plan
@@ -632,15 +607,12 @@ function buildNonCyclingInsightPrompt(
   participant: Record<string, any>,
   lifeStage: string,
   recentMessages: { content: string; role: string }[],
-  checkinMessages: { content: string; metadata: any; created_at: string }[],
   boundaries: TopicBoundary[] = [],
   memoryNotes: MemoryNotes = { corrections: [], confirmed: [] },
 ): string {
   const stageSuppressed = hasStageBoundary(boundaries, lifeStage);
   const firstName = userName.split(" ")[0];
   const age = participant.age || null;
-  const anchorSymptom = participant.anchor_symptom;
-  const symptoms = participant.typical_symptoms || [];
   const topics = participant.goals || [];
 
   let timelineContext = "";
@@ -724,10 +696,10 @@ function buildNonCyclingInsightPrompt(
               ? (participant.birth_control_method === "copper_iud"
                   ? `${firstName} has an **irregular cycle** and ${bcFramingSummary(participant)}. Follow the BIRTH CONTROL METHOD rule above for all method wording. DO NOT use menopause, perimenopause, postpartum, or pregnancy framing. DO NOT confidently quote a specific cycle phase. Focus on steady-state levers: sleep, protein, strength, stress, and her own tracked patterns.`
                   : onHormonalBc === true
-                  ? `${firstName} ${bcFramingSummary(participant)}. Phase predictions are not reliable for her. DO NOT use menopause, perimenopause, postpartum, or pregnancy framing. DO NOT confidently quote a specific cycle phase. Focus on steady-state levers: sleep, protein, strength, stress, and hydration. How to word anything about her specific method (bleeding, breaks, nutrients) is governed ONLY by the BIRTH CONTROL METHOD rules. Acknowledge symptoms in terms of daily patterns, not phase predictions.`
+                  ? `${firstName} ${bcFramingSummary(participant)}. Her cycle is not tied to phases, so describe her day through what she tells you, with no phase labels. Describe her birth control plainly and neutrally. DO NOT use menopause, perimenopause, postpartum, or pregnancy framing. DO NOT confidently quote a specific cycle phase. Good everyday topics: sleep, food, movement, stress, and hydration. How to word anything about her specific method (bleeding, breaks, nutrients) is governed ONLY by the BIRTH CONTROL METHOD rules. Acknowledge symptoms in terms of daily patterns, not phase predictions.`
                   : onHormonalBc === false
-                    ? `${firstName} has an **irregular cycle** and has explicitly confirmed she is NOT on hormonal birth control (could be PMOS — formerly called PCOS; both terms are in active use, so mirror whichever term she used — hypothalamic amenorrhea, thyroid, stress, or just unpredictable timing). ABSOLUTE RULE: NEVER mention the pill, IUD, implant, ring, patch, hormonal contraception, or BC-related nutrient depletion — she has told us this does not apply to her. DO NOT use menopause, perimenopause, postpartum, or pregnancy framing. DO NOT confidently quote a specific cycle phase. Focus on steady-state levers: sleep, protein, strength, stress, hydration, and her own observed patterns over calendar timing.`
-                    : `${firstName} has an **irregular cycle**. We do NOT know whether she is on hormonal birth control — never assert or assume that she is, and do not give BC-specific nutrient-depletion advice. DO NOT use menopause, perimenopause, postpartum, or pregnancy framing. DO NOT confidently quote a specific cycle phase. Focus on steady-state levers: sleep, protein, strength, stress, hydration, and daily patterns rather than phase predictions.`)
+                    ? `${firstName} has an **irregular cycle** and has explicitly confirmed she is NOT on hormonal birth control (could be PMOS — formerly called PCOS; both terms are in active use, so mirror whichever term she used — hypothalamic amenorrhea, thyroid, stress, or just unpredictable timing). ABSOLUTE RULE: NEVER mention the pill, IUD, implant, ring, patch, hormonal contraception, or BC-related nutrient depletion — she has told us this does not apply to her. DO NOT use menopause, perimenopause, postpartum, or pregnancy framing. DO NOT confidently quote a specific cycle phase. Good everyday topics: sleep, food, movement, stress, hydration, and her own observed patterns over calendar timing.`
+                    : `${firstName} has an **irregular cycle**. We do NOT know whether she is on hormonal birth control — never assert or assume that she is, and do not give BC-specific nutrient-depletion advice. DO NOT use menopause, perimenopause, postpartum, or pregnancy framing. DO NOT confidently quote a specific cycle phase. Good everyday topics: sleep, food, movement, stress, hydration, and daily patterns rather than phase predictions.`)
               : `${firstName} is navigating menopause. Estrogen and progesterone are declining. Focus on bone health, sleep quality, mood stability, and managing symptoms like hot flashes or brain fog.`;
 
 
@@ -744,24 +716,16 @@ CONTEXT:
 ${timelineContext ? `- Timeline: ${timelineContext}` : ""}
 - ${stageContext}${noUterusNote}
 - Age: ${age || "unknown"}
-- Anchor symptom: ${anchorSymptom || "not set"}${(participant.watch_symptoms?.length ? `\n- She chose to watch: ${participant.watch_symptoms.join(", ")}. Prioritise these in tips and check-in questions when relevant to today.` : "")}
-- Other symptoms: ${symptoms.join(", ") || "none"}
-${topics.length > 0 ? `- Interest areas: ${topics.join(", ")}` : ""}
+${(participant.watch_symptoms?.length ? `- She chose to watch: ${participant.watch_symptoms.join(", ")}. This only tells you what she cares about. Never say or imply she is having any of these today unless she logged it.\n` : "")}${topics.length > 0 ? `- Interest areas: ${topics.join(", ")}` : ""}
 
-RECENT CONVERSATION:
-${recentMessages.map(m => `${m.role}: ${m.content.slice(0, 80)}`).join("\n") || "None"}
-
-RECENT SELF-REPORTED CHECK-INS:
-${checkinMessages.length > 0 ? checkinMessages.map(m => {
-    const meta = m.metadata || {};
-    return `- ${meta.dimension}: "${meta.response}"`;
-  }).join("\n") : "None yet"}
+HER OWN RECENT WORDS (last ${RECENT_WINDOW_DAYS} days, context only):
+${recentMessages.map(m => `${m.content.slice(0, 80)}`).join("\n") || "None"}
 
 RULES:
 ${stageSuppressed
   ? `- STAGE AUTHORITY IS SUSPENDED: She has asked you not to bring up this life stage. Do NOT name it, allude to it, or frame the opener around it. Do NOT substitute another stage's framing either. Write a neutral, warm, everyday opener.`
   : `- STAGE AUTHORITY: The life stage above is **${stageLabel}** and is authoritative. It is IMPOSSIBLE for this response to use framing from any other stage. Never mention menopause for a pregnant/postpartum/perimenopause user. Never mention pregnancy for a menopause user. Never mention cycle phases or ovulation for pregnant, pregnancy_loss, postpartum, or menopause users.`}
-- Lead with empathy and validation. ${stageLabel} is not a deficit — it's a transition with its own strengths.
+- Lead with warmth. ${stageLabel} is not a deficit, it's a stage with its own strengths. Do not assume how she feels (except where the pregnancy loss rule above applies).
 - For postpartum: match the EXACT phase guidance above. Acute/early phases = healing, rest, gentle pelvic floor. Rebuilding+ = strength, capacity, identity — NOT "healing/recovery" framing. Never prescribe. Never guilt.
 - For perimenopause: she is STILL CYCLING. Never call her menopausal. Acknowledge pattern shifts, sharper swings, and new signals (hot flashes, sleep, mood). Perimenopause ≠ menopause.
 - For menopause: focus on adaptation, strength preservation, and reframing the narrative. Only use menopause framing when life stage is actually "menopause".
@@ -770,19 +734,19 @@ ${stageSuppressed && lifeStage === "pregnancy_loss"
   ? `- Pregnancy loss must NOT be referenced at all in this message — no grief language, no "healing", no "what you've been through". This overrides every other instruction.`
   : `- For pregnancy loss: lead with grief-aware witnessing. Never rush to cycle tracking or "next steps." NEVER use cycle-phase, menopause, or generic postpartum framing.`}
 - NEVER reference cycle phases, ovulation, or period timing for menopause, postpartum, pregnant, or pregnancy_loss users (perimenopause users still cycle, so cycle references are fine for them).
-- For irregular / hormonal BC: never use menopause, perimenopause, postpartum, or pregnancy framing. Do NOT confidently assign a cycle phase. Focus on steady-state levers (sleep, protein, strength, stress, micronutrients B6/B12/magnesium/zinc/folate).
+- For irregular / hormonal BC: never use menopause, perimenopause, postpartum, or pregnancy framing. Do NOT confidently assign a cycle phase. Describe it neutrally. Keep to everyday topics (sleep, food, movement, stress). Never name vitamins, minerals or supplements.
 - NEVER assume breastfeeding status unless the user has explicitly mentioned it.
 
 Generate a JSON object:
 
 1. "intro": 2-3 short sentences. Max 40 words total.
-   - Sentence 1: Ground them in their stage and where they are in the journey (bold the stage name).
-   - Sentence 2: Name something they're likely feeling or experiencing right now — with warmth.
-   - Sentence 3 (optional): A gentle, specific tip or validation tied to their anchor symptom or stage.
+   - Sentence 1: Ground them in their stage (bold the stage name). Vary the shape from day to day.
+   - Sentence 2: Something warm and true about this stage. Do not name a feeling she has not logged.
+   - Sentence 3 (optional): A gentle, neutral note. No tips about symptoms, food, supplements or medication.
 
-2. "question": One short question (under 12 words). Hyper-specific to their stage. Start with a capital letter and end with "?".
+2. "question": One short, open question (under 12 words), such as "How's today landing?". If she logged something recently, ask how that is going. Never a guess at a negative state. Start with a capital letter and end with "?".
 
-3. "starters": 3 replies (2-4 words each). One confirms, one pushes back, one opens up.
+3. "starters": 3 replies (2-4 words each) that fit an open question. One good, one mixed, one opens up.
 
 4. "cheat_sheet": Personalized energy/focus/emotions/nutrition. Each has "level" (high/medium/low/variable) and "note" (max 12 words, inquiry-based; any question is a full sentence starting with a capital letter and ending with "?").
 
@@ -807,6 +771,29 @@ RESPOND ONLY WITH VALID JSON:
 }`;
 }
 
+type InsightResult = Awaited<ReturnType<typeof generateAIInsight>>;
+
+/** Same guardrail as chat: a card never names a supplement, medication or dose. One retry, then a plain fallback. */
+async function generateGuardedInsight(apiKey: string, prompt: string): Promise<InsightResult> {
+  const bad = (r: InsightResult) => breaksOpenerGuardrail(
+    r.insight, r.question,
+    ...Object.values(r.cheatSheet ?? {}).map((c) => (c as { note?: string })?.note),
+  );
+  const first = await generateAIInsight(apiKey, prompt);
+  if (!bad(first)) return first;
+  console.warn("Opener broke the medication/supplement guardrail, regenerating once");
+  try {
+    const retry = await generateAIInsight(apiKey, prompt + "\n\nYOUR PREVIOUS ATTEMPT NAMED A SUPPLEMENT, MEDICATION OR DOSE. Rewrite with none.");
+    if (!bad(retry)) return retry;
+  } catch { /* fall through to fallback */ }
+  return {
+    insight: "Here for whatever today looks like.",
+    question: "How's today landing?",
+    conversationStarters: ["Pretty good", "A bit flat", "Tell me more"],
+    cheatSheet: null,
+  };
+}
+
 async function generateAIInsight(apiKey: string, prompt: string): Promise<{
   insight: string;
   question: string;
@@ -822,7 +809,7 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [
-        { role: "system", content: "You are Logan. You predict what women feel before they notice it themselves, based on their cycle. You're not clinical. You're the friend who just knows. Always respond in valid JSON." },
+        { role: "system", content: "You are Logan, a warm, steady friend. You never assume how she feels. You only refer to feelings she has logged recently. You're not clinical. Always respond in valid JSON." },
         { role: "user", content: prompt }
       ],
       max_tokens: 400,
@@ -869,7 +856,7 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{
     return {
       insight: parsed.intro || "How are you feeling today?",
       question: parsed.question || "",
-      conversationStarters: parsed.starters || ["Yeah exactly", "Not today", "Tell me more"],
+      conversationStarters: parsed.starters || ["Pretty good", "A bit flat", "Tell me more"],
       cheatSheet: parsed.cheat_sheet || null,
     };
   }
@@ -878,7 +865,7 @@ async function generateAIInsight(apiKey: string, prompt: string): Promise<{
   return {
     insight: "How are you feeling today?",
     question: "",
-    conversationStarters: ["Yeah exactly", "Not today", "Tell me more"],
+    conversationStarters: ["Pretty good", "A bit flat", "Tell me more"],
     cheatSheet: null,
   };
 }

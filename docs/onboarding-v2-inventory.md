@@ -190,7 +190,7 @@ Picking Hormonal or Non-hormonal opens a second prompt, "Which kind?" (`Chat.tsx
 - Helper text "Select all that apply"; group headings and chips:
   - **EMOTIONAL & COGNITIVE:** Rage spikes, Anxiety spikes, Short fuse, Sudden dread, Feeling overwhelmed, Low stress tolerance, Irritability, Brain fog, Mood swings, Insomnia or poor sleep.
   - **PHYSICAL:** Energy crashes, Wired but tired, Full body inflammation, Bloating, Breast tenderness, Acne breakouts, Cramps, Nausea, Dizziness, Ringing in ears, Muffled hearing, Migraines, Deep fatigue, Back pain, Digestive issues, Cravings, Smell sensitivity, Knee pain.
-  - **IS IT JUST ME?:** Random shame spiral, One stinky armpit, Feeling emotionally allergic to people, Sudden urge to delete your whole life online.
+  - **IS IT JUST ME?:** Random shame spiral, One stinky armpit, Wanting space from people, Sudden urge to delete your whole life online.
   - **POSTPARTUM-SPECIFIC** (postpartum only): Night sweats, Hair shedding, Healing/incision pain, Engorgement or feeding pain, Postpartum rage, Intrusive thoughts, Touched out.
 - "Not on the list?" text area, placeholder "Add anything else, like symptoms we missed or patterns you've noticed..."; button "Continue"; counter "{n} symptom(s) selected".
 - The echo bubble reads "Selected: a, b, c". Logan then replies with a stage-specific validation message (`chat-onboarding/index.ts:777 to 811`) and a card "Now let's pick your anchor symptom:".
