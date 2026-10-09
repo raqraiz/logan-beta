@@ -2280,6 +2280,7 @@ export type Database = {
         Row: {
           checked_at: string | null
           created_at: string
+          hidden: boolean
           id: string
           kind: string
           map_checked_at: string | null
@@ -2295,6 +2296,7 @@ export type Database = {
         Insert: {
           checked_at?: string | null
           created_at?: string
+          hidden?: boolean
           id?: string
           kind?: string
           map_checked_at?: string | null
@@ -2310,6 +2312,7 @@ export type Database = {
         Update: {
           checked_at?: string | null
           created_at?: string
+          hidden?: boolean
           id?: string
           kind?: string
           map_checked_at?: string | null
@@ -3588,6 +3591,10 @@ export type Database = {
       resolve_referral_code: { Args: { _code: string }; Returns: boolean }
       set_feedback_consent: {
         Args: { _allow: boolean; _id: string }
+        Returns: undefined
+      }
+      set_my_word_hidden: {
+        Args: { _hidden: boolean; _word: string }
         Returns: undefined
       }
       tip_own_cycles: {
