@@ -382,7 +382,7 @@ html:not(.dark) .headsup-primary, .theme-light .headsup-primary { background: hs
   --bubble-text: #23201C;
   --bubble-selected-fill: #23201C;
   --bubble-selected-text: #F4F1EA;
-  --bubble-ring: #C4247A;
+  --bubble-ring: rgba(196,36,122,0.30);
 }
 .dark {
   --bubble-body-dark: rgba(43,212,217,0.24);
@@ -395,8 +395,8 @@ html:not(.dark) .headsup-primary, .theme-light .headsup-primary { background: hs
   --bubble-text: #F4F1EA;
   --bubble-selected-fill: #F4F1EA;
   --bubble-selected-text: #23201C;
-  --bubble-ring: #FF7AB8;
+  --bubble-ring: rgba(255,122,184,0.30);
 }
 .together-bubble, .together-bubble:hover { color: var(--bubble-text) !important; }
 .together-bubble[data-selected="true"], .together-bubble[data-selected="true"]:hover { color: var(--bubble-selected-text) !important; }
-.together-bubble[data-ring="true"]:not([data-selected="true"]) { box-shadow: inset 0 0 0 2.5px var(--bubble-ring); }
+.together-bubble[data-ring="true"]:not([data-selected="true"]) { box-shadow: inset 0 0 0 1.5px var(--bubble-ring); }
