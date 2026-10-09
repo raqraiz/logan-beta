@@ -267,6 +267,20 @@
       "when": 1791534764114,
       "tag": "0037_cycle_history_confirmed_by_user_retry",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1791535814795,
+      "tag": "0038_together_words_cleanup",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1791535841905,
+      "tag": "0039_together_words_cleanup_retry",
+      "breakpoints": true
     }
   ]
 }
