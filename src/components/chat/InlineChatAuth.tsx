@@ -11,10 +11,12 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { LoganLogo } from "@/components/LoganLogo";
 import { z } from "zod";
+import { usePasswordResetRequest } from "@/hooks/usePasswordResetRequest";
+import { MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT_MESSAGE } from "@/lib/passwordReset";
 
 const authSchema = z.object({
   email: z.string().email("Please enter a valid email"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT_MESSAGE),
 });
 
 type AuthView = "signup" | "signin" | "forgot-password";
@@ -43,6 +45,7 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
 
   const isSignUp = view === "signup";
   const isForgotPassword = view === "forgot-password";
+  const resetRequest = usePasswordResetRequest();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,20 +57,7 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
         toast({ title: "Please enter a valid email", variant: "destructive" });
         return;
       }
-      setIsLoading(true);
-      try {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
-        });
-        if (error) throw error;
-        toast({ title: "Check your email", description: "We've sent you a password reset link." });
-        setView("signin");
-        setEmail("");
-      } catch (error) {
-        toast({ title: "Something went wrong", description: error instanceof Error ? error.message : "Please try again", variant: "destructive" });
-      } finally {
-        setIsLoading(false);
-      }
+      await resetRequest.send(email);
       return;
     }
 
@@ -200,6 +190,24 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
 
 
         {/* Inline auth form */}
+        {isForgotPassword && resetRequest.sent ? (
+          <div className="space-y-4 text-center" role="status">
+            <p className="text-foreground font-medium text-sm">Check your email</p>
+            <p className="text-sm text-muted-foreground">
+              I've sent a reset link. Please check your spam folder too, and tap the link soon after it arrives. It can only be used once.
+            </p>
+            {resetRequest.error && <p className="text-sm text-destructive" role="alert">{resetRequest.error}</p>}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-12"
+              disabled={resetRequest.isSending || resetRequest.cooldown > 0}
+              onClick={() => void resetRequest.send(email)}
+            >
+              {resetRequest.isSending ? "Sending..." : resetRequest.cooldown > 0 ? `Send again in ${resetRequest.cooldown}s` : "Send again"}
+            </Button>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-4">
           {isSignUp && !isForgotPassword && (
             <div className="space-y-2">
@@ -337,25 +345,34 @@ export const InlineChatAuth = ({ onAuthSuccess, defaultView }: InlineChatAuthPro
             </div>
           )}
 
-          <Button type="submit" disabled={isLoading || (isSignUp && !isForgotPassword && !consentGiven)} className="w-full h-12 !bg-black !text-white hover:opacity-90 disabled:opacity-50">
-            {isLoading ? (
+          {isForgotPassword && resetRequest.error && (
+            <p className="text-sm text-destructive" role="alert">{resetRequest.error}</p>
+          )}
+
+          <Button type="submit" disabled={isLoading || (isForgotPassword && (resetRequest.isSending || resetRequest.cooldown > 0)) || (isSignUp && !isForgotPassword && !consentGiven)} className="w-full h-12 !bg-black !text-white hover:opacity-90 disabled:opacity-50">
+            {isLoading || (isForgotPassword && resetRequest.isSending) ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : !isForgotPassword ? (
               <LoganLogo size="sm" className="w-5 h-5 mr-2" />
             ) : null}
-            {isLoading
-              ? isForgotPassword ? "Sending..." : isSignUp ? "Creating account..." : "Signing in..."
-              : isForgotPassword ? "Send reset link" : isSignUp ? "Start my journey" : "Continue chatting"
+            {isForgotPassword && resetRequest.isSending
+              ? "Sending..."
+              : isForgotPassword && resetRequest.cooldown > 0
+                ? `Try again in ${resetRequest.cooldown}s`
+                : isLoading
+                  ? isForgotPassword ? "Sending..." : isSignUp ? "Creating account..." : "Signing in..."
+                  : isForgotPassword ? "Send reset link" : isSignUp ? "Start my journey" : "Continue chatting"
             }
             {!isLoading && !isForgotPassword && <ArrowRight className="w-4 h-4 ml-2" />}
           </Button>
         </form>
+        )}
 
         <div className="mt-4 text-center space-y-2">
           {isForgotPassword ? (
             <button
               type="button"
-              onClick={() => { setView("signin"); setPassword(""); }}
+              onClick={() => { setView("signin"); setPassword(""); resetRequest.reset(); }}
               className="text-sm text-muted-foreground hover:text-primary transition-colors"
             >
               ← Back to sign in

@@ -10,10 +10,12 @@ import { Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { LoganLogo } from "@/components/LoganLogo";
 import { LoganFullLogo } from "@/components/LoganFullLogo";
+import { usePasswordResetRequest } from "@/hooks/usePasswordResetRequest";
+import { MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT_MESSAGE } from "@/lib/passwordReset";
 
 const authSchema = z.object({
   email: z.string().email("Please enter a valid email"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT_MESSAGE),
 });
 
 const emailSchema = z.object({
@@ -21,7 +23,7 @@ const emailSchema = z.object({
 });
 
 const passwordSchema = z.object({
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT_MESSAGE),
 });
 
 type AuthView = "login" | "signup" | "forgot-password" | "reset-password";
@@ -34,12 +36,10 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  
+  const resetRequest = usePasswordResetRequest();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth event:", event);
-      
       if (event === "PASSWORD_RECOVERY") {
         // User clicked the password reset link - show reset form
         setView("reset-password");
@@ -89,18 +89,9 @@ const Auth = () => {
           return;
         }
 
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
-        });
-        
-        if (error) throw error;
-        
-        toast({
-          title: "Check your email",
-          description: "We've sent you a password reset link.",
-        });
-        setView("login");
-        setEmail("");
+        setIsLoading(false);
+        await resetRequest.send(email);
+        return;
       } else if (view === "reset-password") {
         const validation = passwordSchema.safeParse({ password });
         if (!validation.success) {
@@ -238,6 +229,24 @@ const Auth = () => {
             <p className="text-muted-foreground mt-2">{getTitle()}</p>
           </div>
 
+          {view === "forgot-password" && resetRequest.sent ? (
+            <div className="space-y-4 text-center" role="status">
+              <p className="text-foreground font-medium">Check your email</p>
+              <p className="text-sm text-muted-foreground">
+                We've sent a reset link. Please check your spam folder too. Tap the link soon after it arrives; it can only be used once.
+              </p>
+              {resetRequest.error && <p className="text-sm text-destructive" role="alert">{resetRequest.error}</p>}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-12 rounded-xl"
+                disabled={resetRequest.isSending || resetRequest.cooldown > 0}
+                onClick={() => void resetRequest.send(email)}
+              >
+                {resetRequest.isSending ? "Sending..." : resetRequest.cooldown > 0 ? `Send again in ${resetRequest.cooldown}s` : "Send again"}
+              </Button>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             {(view === "login" || view === "signup" || view === "forgot-password") && (
               <div className="space-y-2">
@@ -295,14 +304,19 @@ const Auth = () => {
               </div>
             )}
 
+            {view === "forgot-password" && resetRequest.error && (
+              <p className="text-sm text-destructive" role="alert">{resetRequest.error}</p>
+            )}
+
             <Button 
               type="submit" 
               className="w-full h-14 rounded-xl text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow" 
-              disabled={isLoading}
+              disabled={isLoading || resetRequest.isSending || (view === "forgot-password" && resetRequest.cooldown > 0)}
             >
-              {getButtonText()}
+              {view === "forgot-password" && resetRequest.isSending ? "Sending..." : view === "forgot-password" && resetRequest.cooldown > 0 ? `Try again in ${resetRequest.cooldown}s` : getButtonText()}
             </Button>
           </form>
+          )}
 
           <div className="mt-6 text-center">
             {view === "forgot-password" || view === "reset-password" ? (
@@ -312,6 +326,7 @@ const Auth = () => {
                   setView("login");
                   setEmail("");
                   setPassword("");
+                  resetRequest.reset();
                 }}
                 className="text-sm text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-1"
               >

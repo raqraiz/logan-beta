@@ -21,6 +21,36 @@ const ROOT_DOMAIN = "asklogan.ai"
 const FROM_DOMAIN = "asklogan.ai"
 const SITE_URL = `https://${ROOT_DOMAIN}`
 
+// Hosts a reset link may point at: production, plus Lovable preview builds so
+// the flow can be tested before publishing.
+const RESET_LINK_HOSTS = /^(asklogan\.ai|www\.asklogan\.ai|id-preview--[0-9a-f-]+\.lovable\.app)$/
+
+// Supabase's own recovery link is consumed the moment anything opens it, which
+// email security scanners do. Point the email at our reset page instead; it
+// only spends the one-time token when she taps "Continue" there.
+// Falls back to Supabase's link if the URL isn't in the expected shape.
+function buildRecoveryUrl(supabaseUrl: string): string {
+  try {
+    const verifyUrl = new URL(supabaseUrl)
+    const tokenHash = verifyUrl.searchParams.get('token')
+    if (!tokenHash || verifyUrl.searchParams.get('type') !== 'recovery') return supabaseUrl
+
+    let origin = SITE_URL
+    const redirectTo = verifyUrl.searchParams.get('redirect_to')
+    if (redirectTo) {
+      const target = new URL(redirectTo)
+      if (target.protocol === 'https:' && RESET_LINK_HOSTS.test(target.hostname)) origin = target.origin
+    }
+
+    const link = new URL('/reset-password', origin)
+    link.searchParams.set('token_hash', tokenHash)
+    link.searchParams.set('type', 'recovery')
+    return link.toString()
+  } catch {
+    return supabaseUrl
+  }
+}
+
 // Template mapping for preview mode
 const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
   signup: SignupEmail,
@@ -160,7 +190,7 @@ const handler = createAuthEmailHandler({
       render: (data) =>
         React.createElement(RecoveryEmail, {
           siteName: SITE_NAME,
-          confirmationUrl: data.url,
+          confirmationUrl: buildRecoveryUrl(data.url),
         }),
     },
     email_change: {
