@@ -136,3 +136,10 @@ Decision: admins have no direct table access. All back office data goes through 
 - [x] Confirmed cycles count as trusted data: median, regularity score, chart and period-length predictions all use one shared check (`src/lib/cycleTrust.ts`). Confirm/unconfirm lives in one function (`setCycleConfirmed`) so chat can call it later.
 - [x] Editing a confirmed cycle's dates clears the confirmation, so the flag re-evaluates.
 - Needs the `20261023100000_cycle_history_confirmed_by_user` migration applied.
+
+## Current weight on Nutrition > Goals
+- [x] Weight is stored as dated entries in `weight_logs` (one row per user per day, kg). No schema change was needed; the table already existed with owner-only access.
+- [x] Goals has a "Current weight" field next to "Target weight", in the unit she chose in the Home weight tracker (kg if never chosen). Values are converted to kg on save. Saving adds or updates today's entry.
+- [x] "Auto-calculate targets" uses the latest entry (or what she just typed) and shows inline guidance instead of a toast when weight is missing.
+- [x] Saving a weight from Goals does not turn on the Home weight card; that stays her choice under You > Your data.
+- [ ] Future task: a richer weight trend graph built on these dated entries.

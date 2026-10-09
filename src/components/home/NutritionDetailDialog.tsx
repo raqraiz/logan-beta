@@ -20,6 +20,8 @@ import {
   ResponsiveContainer, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid, ReferenceLine,
 } from "recharts";
 import { calcNutritionTargets, type ActivityLevel, type GoalDirection } from "@/lib/nutrition";
+import { Skeleton } from "@/components/ui/skeleton";
+import { kgToInputText, parseWeightInput, readWeightUnit, saveTodaysWeight, trackWeightEntrySaved } from "@/lib/weightEntry";
 
 interface Meal {
   id: string;
@@ -473,7 +475,15 @@ function GoalsEditor({ userId, goal, onSaved }: { userId: string; goal: Goal | n
   const [heightCm, setHeightCm] = useState<number | "">(goal?.height_cm ?? "");
   const [activity, setActivity] = useState<ActivityLevel>(goal?.activity_level ?? "moderate");
   const [direction, setDirection] = useState<GoalDirection>(goal?.weight_goal_direction ?? "maintain");
-  const [weightGoal, setWeightGoal] = useState<number | "">(goal?.weight_goal_kg ?? "");
+  const [unit] = useState(readWeightUnit);
+  const [weightGoal, setWeightGoal] = useState<string>(kgToInputText(goal?.weight_goal_kg, unit));
+  const [currentWeight, setCurrentWeight] = useState("");
+  const [latestKg, setLatestKg] = useState<number | null>(null);
+  const [weightLoading, setWeightLoading] = useState(true);
+  const [weightLoadFailed, setWeightLoadFailed] = useState(false);
+  const [currentError, setCurrentError] = useState<string | null>(null);
+  const [targetError, setTargetError] = useState<string | null>(null);
+  const currentEdited = useRef(false);
   const [calorieTarget, setCalorieTarget] = useState<number | "">(goal?.calorie_target ?? "");
   const [proteinTarget, setProteinTarget] = useState<number | "">(goal?.protein_target_g ?? "");
   const [carbsTarget, setCarbsTarget] = useState<number | "">(goal?.carbs_target_g ?? "");
@@ -481,18 +491,42 @@ function GoalsEditor({ userId, goal, onSaved }: { userId: string; goal: Goal | n
   const [auto, setAuto] = useState(goal?.auto_calculated ?? true);
   const [saving, setSaving] = useState(false);
 
+  const loadLatestWeight = useCallback(async () => {
+    setWeightLoading(true);
+    setWeightLoadFailed(false);
+    const { data, error } = await supabase.from("weight_logs").select("weight_kg").eq("user_id", userId).order("logged_on", { ascending: false }).limit(1).maybeSingle();
+    if (error) { setWeightLoadFailed(true); setWeightLoading(false); return; }
+    const kg = data?.weight_kg ? Number(data.weight_kg) : null;
+    setLatestKg(kg);
+    // don't overwrite something she has already started typing
+    if (!currentEdited.current) setCurrentWeight(kgToInputText(kg, unit));
+    setWeightLoading(false);
+  }, [userId, unit]);
+
+  useEffect(() => { void loadLatestWeight(); }, [loadLatestWeight]);
+
   async function autoCalc() {
     if (!age || !heightCm) { toast({ title: "Add age and height first" }); return; }
-    // get most recent weight
-    const { data: w } = await supabase.from("weight_logs").select("weight_kg").eq("user_id", userId).order("logged_on", { ascending: false }).limit(1).maybeSingle();
-    const weightKg = w?.weight_kg ? Number(w.weight_kg) : null;
-    if (!weightKg) { toast({ title: "Log a weight first so we can calculate" }); return; }
+    // latest entry, or what she has just typed in the field
+    const parsed = parseWeightInput(currentWeight, unit);
+    if (!parsed.ok) { setCurrentError(parsed.message); return; }
+    if (parsed.empty) {
+      setCurrentError(weightLoadFailed ? null : "Add your current weight so we can calculate your targets.");
+      return;
+    }
+    setCurrentError(null);
+    const weightKg = parsed.kg;
     const t = calcNutritionTargets({ weightKg, heightCm: Number(heightCm), age: Number(age), activity, goal: direction });
     setCalorieTarget(t.calories); setProteinTarget(t.protein_g); setCarbsTarget(t.carbs_g); setFatTarget(t.fat_g);
     toast({ title: "Auto-calculated", description: `${t.calories} kcal · ${t.protein_g}P / ${t.carbs_g}C / ${t.fat_g}F` });
   }
 
   async function save() {
+    const cur = parseWeightInput(currentWeight, unit);
+    const tgt = parseWeightInput(weightGoal, unit);
+    setCurrentError(cur.ok ? null : cur.message);
+    setTargetError(tgt.ok ? null : tgt.message);
+    if (!cur.ok || !tgt.ok) return;
     setSaving(true);
     const payload = {
       user_id: userId,
@@ -500,7 +534,7 @@ function GoalsEditor({ userId, goal, onSaved }: { userId: string; goal: Goal | n
       height_cm: heightCm === "" ? null : Number(heightCm),
       activity_level: activity,
       weight_goal_direction: direction,
-      weight_goal_kg: weightGoal === "" ? null : Number(weightGoal),
+      weight_goal_kg: tgt.empty ? null : tgt.kg,
       calorie_target: calorieTarget === "" ? null : Number(calorieTarget),
       protein_target_g: proteinTarget === "" ? null : Number(proteinTarget),
       carbs_target_g: carbsTarget === "" ? null : Number(carbsTarget),
@@ -508,9 +542,23 @@ function GoalsEditor({ userId, goal, onSaved }: { userId: string; goal: Goal | n
       auto_calculated: auto,
     };
     const { data, error } = await supabase.from("nutrition_goals").upsert(payload, { onConflict: "user_id" }).select().single();
-    setSaving(false);
-    if (error) { toast({ title: "Save failed", description: error.message, variant: "destructive" }); return; }
+    if (error) { setSaving(false); toast({ title: "We couldn't save your goals", description: "Please try again in a moment.", variant: "destructive" }); return; }
     onSaved(data as Goal);
+
+    // add today's weight entry (or update today's) only when it changed
+    const changed = !cur.empty && (latestKg == null || Math.abs(cur.kg - latestKg) > 0.005);
+    if (changed) {
+      const ok = await saveTodaysWeight(userId, cur.kg, format(new Date(), "yyyy-MM-dd"));
+      if (!ok) {
+        setSaving(false);
+        setCurrentError("Your goals are saved, but we couldn't save your weight. Please try again.");
+        return;
+      }
+      setLatestKg(cur.kg);
+      currentEdited.current = false;
+      void trackWeightEntrySaved(userId);
+    }
+    setSaving(false);
     toast({ title: "Goals saved" });
   }
 
@@ -540,7 +588,33 @@ function GoalsEditor({ userId, goal, onSaved }: { userId: string; goal: Goal | n
             <option value="gain">Gain weight</option>
           </select>
         </label>
-        <label className="space-y-1"><span className={labelCls}>Target weight (kg)</span><Input type="number" step="0.1" value={weightGoal} onChange={(e) => setWeightGoal(e.target.value === "" ? "" : Number(e.target.value))} /></label>
+        <label className="space-y-1">
+          <span className={labelCls}>Target weight ({unit})</span>
+          <Input type="number" inputMode="decimal" step="0.1" value={weightGoal} aria-invalid={!!targetError} onChange={(e) => { setWeightGoal(e.target.value); setTargetError(null); }} />
+          {targetError && <span className="block text-[11px] text-destructive">{targetError}</span>}
+        </label>
+      </div>
+
+      <div className="space-y-1">
+        <label htmlFor="current-weight" className={labelCls}>Current weight ({unit})</label>
+        {weightLoading ? (
+          <Skeleton className="h-10 w-full" />
+        ) : (
+          <Input
+            id="current-weight" type="number" inputMode="decimal" step="0.1" value={currentWeight}
+            aria-invalid={!!currentError} aria-describedby="current-weight-hint"
+            className={cn(currentError && "border-destructive ring-1 ring-destructive focus-visible:ring-destructive")}
+            onChange={(e) => { currentEdited.current = true; setCurrentWeight(e.target.value); setCurrentError(null); }}
+          />
+        )}
+        {!weightLoading && weightLoadFailed && (
+          <p className="text-[11px] text-destructive">
+            We couldn't load your weight. <button type="button" className="underline" onClick={() => void loadLatestWeight()}>Try again</button>
+          </p>
+        )}
+        <p id="current-weight-hint" role={currentError ? "alert" : undefined} className={cn("text-[11px]", currentError ? "text-destructive" : "text-muted-foreground")}>
+          {currentError ?? "Saving adds today's entry to your weight history."}
+        </p>
       </div>
 
       <Button onClick={autoCalc} variant="outline" size="sm" className="w-full gap-2">
