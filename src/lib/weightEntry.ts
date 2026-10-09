@@ -6,17 +6,29 @@ export type WeightUnit = "kg" | "lbs";
 
 export const MIN_WEIGHT_KG = 30;
 export const MAX_WEIGHT_KG = 300;
-/** Same key the Home weight tracker uses. Goals only reads it, never writes it. */
 const UNIT_KEY = "logan_weight_unit";
 
-/** Her unit from the Home weight tracker; kg if she never chose one. */
-export function readWeightUnit(): WeightUnit {
+/** lbs for America/* time zones, kg everywhere else. Only used until she picks a unit. */
+export function defaultWeightUnit(): WeightUnit {
   try {
-    const v = localStorage.getItem(UNIT_KEY);
-    return v === "lbs" ? "lbs" : "kg";
+    return Intl.DateTimeFormat().resolvedOptions().timeZone?.startsWith("America/") ? "lbs" : "kg";
   } catch {
     return "kg";
   }
+}
+
+/** The one place the weight unit is read: her saved choice, else the time zone default. */
+export function readWeightUnit(): WeightUnit {
+  try {
+    const v = localStorage.getItem(UNIT_KEY);
+    if (v === "kg" || v === "lbs") return v;
+  } catch { /* storage blocked: fall through to the default */ }
+  return defaultWeightUnit();
+}
+
+/** Saves her choice. Call only when she picks a unit, never to store the default. */
+export function saveWeightUnit(unit: WeightUnit) {
+  try { localStorage.setItem(UNIT_KEY, unit); } catch { /* storage blocked: choice lasts this session only */ }
 }
 
 /** kg to the text shown in an input, one decimal, no trailing ".0". */

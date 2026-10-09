@@ -4,6 +4,7 @@ import { Scale, ChevronRight, TrendingDown, TrendingUp, Minus } from "lucide-rea
 import { LineChart, Line, ResponsiveContainer, YAxis } from "recharts";
 import { format, parseISO } from "date-fns";
 import { kgToLbs } from "@/lib/nutrition";
+import { readWeightUnit, saveWeightUnit, type WeightUnit } from "@/lib/weightEntry";
 import { WeightDetailDialog } from "./WeightDetailDialog";
 import { weightTrendLine } from "@/lib/weightPrefs";
 
@@ -18,17 +19,16 @@ const COLORS = {
 interface Log { id: string; weight_kg: number; logged_on: string }
 interface Props { userId: string; trendOnly?: boolean }
 
-const UNIT_KEY = "logan_weight_unit";
 
 export function WeightTrendWidget({ userId, trendOnly = false }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<Log[]>([]);
   const [goalKg, setGoalKg] = useState<number | null>(null);
-  const [unit, setUnit] = useState<"kg" | "lbs">((typeof localStorage !== "undefined" && (localStorage.getItem(UNIT_KEY) as "kg" | "lbs")) || "lbs");
+  const [unit, setUnitState] = useState<WeightUnit>(readWeightUnit);
+  const setUnit = (u: WeightUnit) => { saveWeightUnit(u); setUnitState(u); };
   const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => { localStorage.setItem(UNIT_KEY, unit); }, [unit]);
 
   const load = useCallback(async () => {
     const [{ data: l }, { data: g }] = await Promise.all([

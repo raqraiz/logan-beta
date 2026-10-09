@@ -11,6 +11,7 @@ import { format, parseISO } from "date-fns";
 import { Trash2 } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine, ReferenceArea, ScatterChart, Scatter } from "recharts";
 import { kgToLbs, lbsToKg } from "@/lib/nutrition";
+import { readWeightUnit, saveWeightUnit, type WeightUnit } from "@/lib/weightEntry";
 import { getPhaseForDate, PHASES, type Phase } from "@/lib/cycleCorrelation";
 
 interface WeightLog {
@@ -29,7 +30,6 @@ interface Props {
   onUnitChange?: (u: "kg" | "lbs") => void;
 }
 
-const UNIT_KEY = "logan_weight_unit";
 
 export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged, unit: propUnit, onUnitChange }: Props) {
   const [logs, setLogs] = useState<WeightLog[]>([]);
@@ -37,9 +37,9 @@ export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged, 
   const [lastPeriodStart, setLastPeriodStart] = useState<string | null>(null);
   const [cycleLengthDays, setCycleLengthDays] = useState<number | null>(null);
   const [view, setView] = useState<"trend" | "phase" | "cycleDay">("trend");
-  const [localUnit, setLocalUnit] = useState<"kg" | "lbs">((typeof localStorage !== "undefined" && (localStorage.getItem(UNIT_KEY) as "kg" | "lbs")) || "lbs");
+  const [localUnit, setLocalUnit] = useState<WeightUnit>(readWeightUnit);
   const unit = propUnit ?? localUnit;
-  const setUnit = onUnitChange ?? setLocalUnit;
+  const setUnit = (u: WeightUnit) => { saveWeightUnit(u); (onUnitChange ?? setLocalUnit)(u); };
   const [value, setValue] = useState<string>("");
   const [date, setDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [saving, setSaving] = useState(false);
@@ -60,7 +60,6 @@ export function WeightDetailDialog({ open, onOpenChange, userId, onDataChanged, 
 
 
   useEffect(() => { if (open) load(); }, [open, load]);
-  useEffect(() => { localStorage.setItem(UNIT_KEY, unit); }, [unit]);
 
   const display = (kg: number) => unit === "kg" ? kg : kgToLbs(kg);
   const fromInput = (v: number) => unit === "kg" ? v : lbsToKg(v);
