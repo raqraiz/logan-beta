@@ -1836,7 +1836,7 @@ const Chat = () => {
             if (phase === "auto") {
               const { data: hist } = await (supabase as any)
                 .from("cycle_history")
-                .select("cycle_length_days")
+                .select("cycle_length_days, confirmed_by_user_at")
                 .eq("user_id", user.id)
                 .order("created_at", { ascending: false })
                 .limit(6);

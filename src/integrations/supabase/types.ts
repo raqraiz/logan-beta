@@ -336,6 +336,7 @@ export type Database = {
       }
       cycle_history: {
         Row: {
+          confirmed_by_user_at: string | null
           created_at: string
           cycle_anchor_type: string
           cycle_end_date: string
@@ -349,6 +350,7 @@ export type Database = {
           participant_id: string
         }
         Insert: {
+          confirmed_by_user_at?: string | null
           created_at?: string
           cycle_anchor_type?: string
           cycle_end_date: string
@@ -362,6 +364,7 @@ export type Database = {
           participant_id: string
         }
         Update: {
+          confirmed_by_user_at?: string | null
           created_at?: string
           cycle_anchor_type?: string
           cycle_end_date?: string

@@ -1,6 +1,8 @@
 // Shared cycle phase helpers — used by both client (HomeTab) and
 // edge function (chat-ai). Keep mirrored at supabase/functions/_shared/cyclePhase.ts
 
+import { isCycleTrusted, type TrustCheckRow } from "@/lib/cycleTrust";
+
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 
 export type DeclaredPhase = "Menstruation" | "Follicular" | "Ovulation" | "Luteal";
@@ -18,9 +20,11 @@ export function inferCycleLengthForDeclaredPhase(
   return currentDay <= 5 ? currentLength : clamp(Math.max(currentLength, currentDay + 16), 18, 45);
 }
 
-// "Auto" = average of the most recent archived cycles, clamped + fallback 28.
-export function autoCycleLengthFromHistory(rows: { cycle_length_days: number }[]): number {
-  if (!rows?.length) return 28;
+// "Auto" = average of the most recent trusted archived cycles (typical length
+// or confirmed by her), clamped + fallback 28.
+export function autoCycleLengthFromHistory(allRows: TrustCheckRow[]): number {
+  const rows = (allRows ?? []).filter(isCycleTrusted);
+  if (!rows.length) return 28;
   const avg = Math.round(rows.reduce((s, r) => s + (r.cycle_length_days || 0), 0) / rows.length);
   return clamp(avg || 28, 18, 45);
 }
