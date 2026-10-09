@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { kgToInputText, parseWeightInput } from "./weightEntry";
+import { afterEach, vi } from "vitest";
+import { defaultWeightUnit, kgToInputText, parseWeightInput, readWeightUnit, saveWeightUnit } from "./weightEntry";
 
 describe("parseWeightInput", () => {
   it("treats blank as empty, not zero", () => {
@@ -38,5 +39,34 @@ describe("kgToInputText", () => {
   it("shows her unit", () => {
     expect(kgToInputText(68, "kg")).toBe("68");
     expect(kgToInputText(68, "lbs")).toBe("149.9");
+  });
+});
+
+function withTimeZone(tz: string) {
+  vi.spyOn(Intl, "DateTimeFormat").mockReturnValue({ resolvedOptions: () => ({ timeZone: tz }) } as unknown as Intl.DateTimeFormat);
+}
+
+describe("weight unit default", () => {
+  afterEach(() => { vi.restoreAllMocks(); localStorage.clear(); });
+  it("is lbs for America/* and kg elsewhere", () => {
+    withTimeZone("America/New_York");
+    expect(defaultWeightUnit()).toBe("lbs");
+    withTimeZone("Europe/London");
+    expect(defaultWeightUnit()).toBe("kg");
+    withTimeZone("Australia/Sydney");
+    expect(defaultWeightUnit()).toBe("kg");
+  });
+  it("uses the default when nothing is saved, and does not save it", () => {
+    withTimeZone("America/Chicago");
+    expect(readWeightUnit()).toBe("lbs");
+    expect(localStorage.getItem("logan_weight_unit")).toBeNull();
+  });
+  it("never overrides a saved choice", () => {
+    withTimeZone("America/Chicago");
+    saveWeightUnit("kg");
+    expect(readWeightUnit()).toBe("kg");
+    withTimeZone("Europe/Paris");
+    saveWeightUnit("lbs");
+    expect(readWeightUnit()).toBe("lbs");
   });
 });
