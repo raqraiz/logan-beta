@@ -6,12 +6,31 @@ export type WeightUnit = "kg" | "lbs";
 
 export const MIN_WEIGHT_KG = 30;
 export const MAX_WEIGHT_KG = 300;
-const UNIT_KEY = "logan_weight_unit";
+// v2: the first version was also written automatically on load, so those values were not real choices.
+const UNIT_KEY = "logan_weight_unit_v2";
+const OLD_UNIT_KEY = "logan_weight_unit";
 
-/** lbs for America/* time zones, kg everywhere else. Only used until she picks a unit. */
+/** US time zones (IANA zone.tab for US, plus older names browsers can still report). */
+const US_TIME_ZONES = new Set([
+  "America/New_York", "America/Detroit", "America/Chicago", "America/Menominee",
+  "America/Denver", "America/Boise", "America/Phoenix", "America/Los_Angeles",
+  "America/Anchorage", "America/Juneau", "America/Sitka", "America/Metlakatla", "America/Yakutat", "America/Nome", "America/Adak",
+  "Pacific/Honolulu",
+  // legacy names for the same places
+  "America/Indianapolis", "America/Fort_Wayne", "America/Louisville", "America/Knox_IN", "America/Shiprock", "America/Atka", "Pacific/Johnston",
+  "US/Eastern", "US/Central", "US/Mountain", "US/Pacific", "US/Alaska", "US/Arizona", "US/Hawaii", "US/Aleutian", "US/Michigan", "US/East-Indiana", "US/Indiana-Starke",
+]);
+const US_TIME_ZONE_PREFIXES = ["America/Indiana/", "America/Kentucky/", "America/North_Dakota/"];
+
+function isUsTimeZone(tz: string | undefined): boolean {
+  if (!tz) return false;
+  return US_TIME_ZONES.has(tz) || US_TIME_ZONE_PREFIXES.some((p) => tz.startsWith(p));
+}
+
+/** lbs for US time zones, kg everywhere else. Only used until she picks a unit. */
 export function defaultWeightUnit(): WeightUnit {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone?.startsWith("America/") ? "lbs" : "kg";
+    return isUsTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone) ? "lbs" : "kg";
   } catch {
     return "kg";
   }
@@ -20,6 +39,7 @@ export function defaultWeightUnit(): WeightUnit {
 /** The one place the weight unit is read: her saved choice, else the time zone default. */
 export function readWeightUnit(): WeightUnit {
   try {
+    localStorage.removeItem(OLD_UNIT_KEY); // one-time clear of values the old auto-save wrote
     const v = localStorage.getItem(UNIT_KEY);
     if (v === "kg" || v === "lbs") return v;
   } catch { /* storage blocked: fall through to the default */ }
