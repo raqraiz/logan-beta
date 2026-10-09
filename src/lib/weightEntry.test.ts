@@ -48,17 +48,27 @@ function withTimeZone(tz: string) {
 
 describe("weight unit default", () => {
   afterEach(() => { vi.restoreAllMocks(); localStorage.clear(); });
-  it("is lbs for America/* and kg elsewhere", () => {
-    withTimeZone("America/New_York");
-    expect(defaultWeightUnit()).toBe("lbs");
-    withTimeZone("Europe/London");
-    expect(defaultWeightUnit()).toBe("kg");
-    withTimeZone("Australia/Sydney");
-    expect(defaultWeightUnit()).toBe("kg");
+  it("is lbs for US time zones", () => {
+    for (const tz of ["America/New_York", "America/Chicago", "America/Denver", "America/Phoenix", "America/Los_Angeles", "America/Anchorage", "America/Detroit", "America/Boise", "America/Indiana/Indianapolis", "America/Kentucky/Louisville", "America/North_Dakota/Center", "America/Adak", "Pacific/Honolulu", "US/Pacific"]) {
+      withTimeZone(tz);
+      expect(defaultWeightUnit(), tz).toBe("lbs");
+    }
+  });
+  it("is kg for everywhere else, including other America/* zones", () => {
+    for (const tz of ["Europe/London", "Australia/Sydney", "America/Toronto", "America/Mexico_City", "America/Sao_Paulo", "America/Argentina/Buenos_Aires", "Pacific/Auckland", "UTC"]) {
+      withTimeZone(tz);
+      expect(defaultWeightUnit(), tz).toBe("kg");
+    }
   });
   it("uses the default when nothing is saved, and does not save it", () => {
     withTimeZone("America/Chicago");
     expect(readWeightUnit()).toBe("lbs");
+    expect(localStorage.getItem("logan_weight_unit")).toBeNull();
+  });
+  it("ignores the old unit key and clears it once", () => {
+    withTimeZone("Europe/Paris");
+    localStorage.setItem("logan_weight_unit", "lbs");
+    expect(readWeightUnit()).toBe("kg");
     expect(localStorage.getItem("logan_weight_unit")).toBeNull();
   });
   it("never overrides a saved choice", () => {
