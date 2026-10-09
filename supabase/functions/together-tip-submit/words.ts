@@ -8,6 +8,8 @@ const AI_TIMEOUT_MS = 12000;
 // Private for these reasons means "try again later". Everything else is final until she changes the word.
 const RETRY_NOW = ["not_consented", "left", "no_logs"];
 const RETRY_LATER = ["check_failed", "daily_limit"];
+// Tracker widgets save structured names like "Discharge: Watery". Those are never her own words.
+const TRACKER_VALUE = /^[^:]{1,40}:\s*\S/;
 
 type Svc = any; // deno-lint-ignore no-explicit-any
 interface LibEntry { canonical: string; retired: boolean }
@@ -227,6 +229,7 @@ export async function handleSync(service: Svc, userId: string) {
       for (const e of Array.isArray(l.symptoms) ? l.symptoms : []) {
         const name = typeof e === "string" ? e : e?.name;
         if (!name || typeof name !== "string" || (typeof e?.severity === "number" && e.severity < 0)) continue;
+        if (TRACKER_VALUE.test(name.trim())) continue;
         const k = togetherNorm(name);
         if (!k || lib.get(k) && !lib.get(k)!.retired) continue;
         const cur = seen.get(k);

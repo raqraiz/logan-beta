@@ -69,7 +69,8 @@
 - [x] Daily totals and symptom pairs now include library entries only. Custom words reach Together only through get_together_words().
 - [x] Consent version bumped to together-v2 with new copy. Existing members see one chat message ("Keep me in" / "Leave Together"). Until they answer, their logs keep counting and none of their words are shared.
 - [x] Words can be reported from a "..." menu (3 reports hide a word); reported words are reviewed in the existing Tips screen. Counts-only word events live in together_word_events.
-
+- [x] Tracker values (any "Prefix: value" name, e.g. "Discharge: Watery") never count as custom words. They are skipped when words are collected and filtered from the list. Custom words resolve against library names and aliases first. Words can be hidden (not deleted); she can hide or show her own from "Your words".
+- [ ] Possible follow-up: fuzzy matching so near-matches (anger/angry style) fold into library entries automatically.
 
 ## Acute-distress mode
 - [x] Acute-distress mode: no hormonal attribution, no auto-logging, red-flag line, localized emergency info.

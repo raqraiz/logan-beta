@@ -8,7 +8,7 @@ import { calculateCycleInfo } from "@/components/chat/ChatCycleCircle";
 import { BubbleField, categoryFill, type Bubble } from "@/components/together/TogetherBoard";
 import { GROUPED, SYMPTOM_GROUPS, aliasesOf, canonicalSymptom, isKnownSymptom, loadAliases, normSymptom, sameSymptom, sentenceCase, togetherNorm } from "@/lib/symptomCatalog";
 import { validateSymptomName } from "@/lib/symptomModeration";
-import { loadMyWords, privateCopy, submitWord, type MyWord } from "@/lib/togetherWords";
+import { isTrackerValue, loadMyWords, privateCopy, setWordHidden, submitWord, type MyWord } from "@/lib/togetherWords";
 import { toast } from "sonner";
 import { findCloseWords, type WordSuggestion } from "@/lib/wordSuggest";
 import { WordSuggestRows } from "@/components/together/WordSuggestRows";
@@ -70,7 +70,13 @@ export function TogetherLogMode({ userId, logs, aggRows, cycleDay, lastPeriodSta
   useEffect(() => { if (wordsOpen) loadMyWords(userId).then(setMyWords).catch(() => setMyWords([])); }, [wordsOpen, userId]);
   const statusOf = (name: string) => {
     const r = myWords.find((m) => togetherNorm(m.word) === togetherNorm(name));
-    return r?.status === "shared" ? "Shared in Together" : r?.status === "pending" ? "Being checked" : "Just yours";
+    return r?.hidden ? "Hidden from Together" : r?.status === "shared" ? "Shared in Together" : r?.status === "pending" ? "Being checked" : "Just yours";
+  };
+  const isHidden = (name: string) => !!myWords.find((m) => togetherNorm(m.word) === togetherNorm(name))?.hidden;
+  const toggleHidden = async (name: string) => {
+    const hide = !isHidden(name);
+    try { await setWordHidden(name, hide); loadMyWords(userId).then(setMyWords).catch(() => {}); toast(hide ? "Hidden from Together. You can show it again here." : "Showing in Together again."); }
+    catch { toast.error("That didn't save. Try again."); }
   };
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -162,7 +168,7 @@ export function TogetherLogMode({ userId, logs, aggRows, cycleDay, lastPeriodSta
     }
   };
 
-  const ownWords = counts.filter((c) => !isKnownSymptom(c.name));
+  const ownWords = counts.filter((c) => !isKnownSymptom(c.name) && !isTrackerValue(c.name));
 
   return (
     <div className="flex w-full flex-col gap-4 text-left">
@@ -252,6 +258,9 @@ export function TogetherLogMode({ userId, logs, aggRows, cycleDay, lastPeriodSta
                       <>
                         <span className="flex flex-col"><span className="text-[15px] text-foreground">{w.name}</span><span className="text-xs text-muted-foreground">{statusOf(w.name)}</span></span>
                         <span className="flex gap-3 text-sm font-semibold">
+                          {myWords.some((m) => togetherNorm(m.word) === togetherNorm(w.name) && m.status === "shared") && (
+                            <button type="button" onClick={() => void toggleHidden(w.name)} className="text-foreground">{isHidden(w.name) ? "Show in Together" : "Hide from Together"}</button>
+                          )}
                           <button type="button" onClick={() => { setRenaming(k); setRenameValue(w.name); }} className="text-foreground">Rename</button>
                           <button type="button" onClick={() => void savePref(k, null)} className="text-muted-foreground">Remove</button>
                         </span>

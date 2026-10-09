@@ -11,6 +11,12 @@ export const WORD_REPORT_REASONS: { key: WordReportReason; label: string }[] = [
   { key: "other", label: "Something else" },
 ];
 
+/** Structured names written by tracker widgets ("Discharge: Watery"). Never her own words. Same rule as the server. */
+export const isTrackerValue = (name: string) => /^[^:]{1,40}:\s*\S/.test(name.trim());
+
+/** One subtitle when every word is under 3 women; otherwise each pill carries its own label. */
+export const allSingle = (words: TogetherWord[]) => words.length > 0 && words.every((w) => w.label === "single");
+
 export const WORDS_CHANGED = "logan:together-words";
 export const WORD_PRIVATE_COPY = "This one stays just yours. It couldn't be shared as written.";
 export const WORD_LIMIT_COPY = "This one stays just yours for today. You can add more new words tomorrow.";
@@ -36,12 +42,19 @@ export async function reportWord(word: string, reason: WordReportReason) {
   if (error) throw error;
 }
 
-export interface MyWord { word: string; original_word: string; status: "pending" | "shared" | "private" | "rejected"; reject_category: string | null }
+export interface MyWord { word: string; original_word: string; status: "pending" | "shared" | "private" | "rejected"; reject_category: string | null; hidden: boolean }
 /** Her own words and what happened to them. RLS only returns her rows. */
 export async function loadMyWords(userId: string): Promise<MyWord[]> {
-  const { data, error } = await supabase.from("together_words" as any).select("word, original_word, status, reject_category").eq("user_id", userId);
+  const { data, error } = await supabase.from("together_words" as any).select("word, original_word, status, reject_category, hidden").eq("user_id", userId);
   if (error) throw error;
   return (data ?? []) as unknown as MyWord[];
+}
+
+/** Hides or shows one of her own words in Together. Nothing is deleted, so it can be undone from "Your words". */
+export async function setWordHidden(word: string, hidden: boolean) {
+  const { error } = await supabase.rpc("set_my_word_hidden" as any, { _word: word, _hidden: hidden });
+  if (error) throw error;
+  globalThis.dispatchEvent(new Event(WORDS_CHANGED));
 }
 
 export type SubmitOutcome = { status: "shared" | "private" | "rejected" | "library" | "pending"; reason?: string };
