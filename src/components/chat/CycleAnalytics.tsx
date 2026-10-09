@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pencil, Trash2, Check, X, Plus, Sliders } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { cycleUnusualKind, isCycleTrusted } from "@/lib/cycleTrust";
+import { setCycleConfirmed } from "@/lib/cycleConfirm";
 import { format, differenceInDays } from "date-fns";
 import { useStageBoundary, isStageHidden } from "@/hooks/useStageBoundary";
 import {
@@ -49,6 +51,7 @@ interface CycleHistoryRow {
   follicular_days: number | null;
   ovulation_days: number | null;
   luteal_days: number | null;
+  confirmed_by_user_at: string | null;
 }
 
 type PhaseDraft = {
@@ -83,6 +86,8 @@ export function CycleAnalytics({
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
   const [saving, setSaving] = useState(false);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [confirmFailedId, setConfirmFailedId] = useState<string | null>(null);
   const [phaseEditId, setPhaseEditId] = useState<string | null>(null);
   const [phaseDraft, setPhaseDraft] = useState<PhaseDraft>({
     menstruation: "",
@@ -94,7 +99,7 @@ export function CycleAnalytics({
   const reload = async (pid: string) => {
     const { data } = await supabase
       .from("cycle_history")
-      .select("id, cycle_start_date, cycle_end_date, cycle_length_days, menstruation_days, follicular_days, ovulation_days, luteal_days")
+      .select("id, cycle_start_date, cycle_end_date, cycle_length_days, menstruation_days, follicular_days, ovulation_days, luteal_days, confirmed_by_user_at")
       .eq("participant_id", pid)
       .order("cycle_start_date", { ascending: false })
       .limit(24);
@@ -178,13 +183,26 @@ export function CycleAnalytics({
     return days;
   };
 
+  const confirmCycle = async (row: CycleHistoryRow) => {
+    if (!participantId) return;
+    setConfirmingId(row.id);
+    setConfirmFailedId(null);
+    const err = await setCycleConfirmed(row.id, true);
+    setConfirmingId(null);
+    if (err) {
+      setConfirmFailedId(row.id);
+    } else {
+      await reload(participantId);
+    }
+  };
+
   const saveEdit = async (row: CycleHistoryRow) => {
     const days = validateDates(editStart, editEnd);
     if (days === null || !participantId) return;
     setSaving(true);
     const { error } = await supabase
       .from("cycle_history")
-      .update({ cycle_start_date: editStart, cycle_end_date: editEnd, cycle_length_days: days })
+      .update({ cycle_start_date: editStart, cycle_end_date: editEnd, cycle_length_days: days, confirmed_by_user_at: null })
       .eq("id", row.id);
     setSaving(false);
     if (error) {
@@ -307,7 +325,7 @@ export function CycleAnalytics({
   // Compute stats — exclude unrealistic outliers (>45d are almost always the
   // onboarding-estimate-to-first-real-reset gap, which inflates the average).
   const allLengths = history.map((h) => h.cycle_length_days);
-  const lengths = allLengths.filter((l) => l >= 15 && l <= 45);
+  const lengths = history.filter(isCycleTrusted).map((h) => h.cycle_length_days);
   const excludedCount = allLengths.length - lengths.length;
 
   const sortedLengths = [...lengths].sort((a, b) => a - b);
@@ -376,7 +394,7 @@ export function CycleAnalytics({
   const isPregnant = lifeStage === "pregnant";
 
   if (embedded) {
-    const recent = [...history].filter((h) => h.cycle_length_days >= 15 && h.cycle_length_days <= 45).slice(0, 6).reverse();
+    const recent = [...history].filter(isCycleTrusted).slice(0, 6).reverse();
     const chart = recent.map((h) => ({ length: h.cycle_length_days, label: format(new Date(h.cycle_start_date + "T12:00:00Z"), "MMM d") }));
     const displayedAverage = lengths.length ? Math.round(meanForVariance * 10) / 10 : null;
     const bleeding = currentMenstruationDays ?? history.find((h) => h.menstruation_days !== null)?.menstruation_days ?? null;
@@ -662,7 +680,9 @@ export function CycleAnalytics({
                   {history.map((row) => {
                     const isEditing = editingId === row.id;
                     const isEditingPhases = phaseEditId === row.id;
-                    const isOutlier = row.cycle_length_days > 45 || row.cycle_length_days < 15;
+                    const unusualKind = cycleUnusualKind(row.cycle_length_days);
+                    const isConfirmed = !!row.confirmed_by_user_at;
+                    const needsConfirm = unusualKind !== null && !isConfirmed;
                     const hasCustomPhases =
                       row.menstruation_days != null &&
                       row.follicular_days != null &&
@@ -761,11 +781,33 @@ export function CycleAnalytics({
                           <p className="text-xs text-foreground truncate">
                             {format(new Date(row.cycle_start_date), "MMM d, yyyy")} → {format(new Date(row.cycle_end_date), "MMM d")}
                           </p>
-                          <p className={`text-[10px] ${isOutlier ? "text-destructive" : "text-muted-foreground"}`}>
+                          <p className="text-[10px] text-muted-foreground">
                             {row.cycle_length_days} days
                             {hasCustomPhases ? ` · ${row.menstruation_days}/${row.follicular_days}/${row.ovulation_days}/${row.luteal_days}` : ""}
-                            {isOutlier ? " · likely inaccurate" : ""}
+                            {needsConfirm ? ` · Unusually ${unusualKind}. Is this right?` : ""}
+                            {unusualKind !== null && isConfirmed ? " · Confirmed by you" : ""}
                           </p>
+                          {needsConfirm && (
+                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                              <button
+                                onClick={() => confirmCycle(row)}
+                                disabled={confirmingId === row.id}
+                                className="rounded-full border border-border bg-card px-2.5 py-0.5 text-[11px] font-semibold text-foreground disabled:opacity-50"
+                              >
+                                {confirmingId === row.id ? "Saving..." : confirmFailedId === row.id ? "Retry" : "Yes, it's right"}
+                              </button>
+                              <button
+                                onClick={() => startEdit(row)}
+                                disabled={confirmingId === row.id}
+                                className="rounded-full border border-border bg-card px-2.5 py-0.5 text-[11px] font-semibold text-foreground disabled:opacity-50"
+                              >
+                                Edit dates
+                              </button>
+                              {confirmFailedId === row.id && (
+                                <span className="text-[10px] text-muted-foreground">Couldn't save. Retry</span>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <div className="flex items-center gap-0.5 shrink-0">
                           <button

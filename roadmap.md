@@ -128,3 +128,9 @@ Decision: admins have no direct table access. All back office data goes through 
 - [x] Onboarding anchor and typical symptoms no longer feed the opener; her own recent words only (earlier cards no longer feed back in); birth control and irregular cycle described neutrally; no supplement, medication or dose named (guardrail plus one retry and a plain fallback).
 - [x] "Not quite" on a card steers the next 5 cards away from that theme; opener style varies daily; "emotionally allergic" chip renamed "Wanting space from people".
 - [ ] Check in preview: continuous-pill account with no logs, one with only positive logs, one with a logged low mood.
+
+## Confirm unusual cycles
+- [x] Users can confirm a flagged (unusually long or short) tracked cycle with "Yes, it's right". The red "likely inaccurate" is now a neutral "Unusually long. Is this right?" with "Yes, it's right" and "Edit dates".
+- [x] Confirmed cycles count as trusted data: median, regularity score, chart and period-length predictions all use one shared check (`src/lib/cycleTrust.ts`). Confirm/unconfirm lives in one function (`setCycleConfirmed`) so chat can call it later.
+- [x] Editing a confirmed cycle's dates clears the confirmation, so the flag re-evaluates.
+- Needs the `20261023100000_cycle_history_confirmed_by_user` migration applied.
